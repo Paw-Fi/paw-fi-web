@@ -399,19 +399,19 @@ function GoalDetail() {
       )}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Hero Header */}
-        <div className="mb-8 sm:mb-12 md:mb-16">
+        <div className="mb-12">
           {/* Header with Actions */}
-          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 sm:justify-between mb-6 sm:mb-8 lg:mb-12">
+          <div className="flex flex-col sm:flex-row items-start gap-6 sm:justify-between mb-8">
             <div className="flex-1">
               {/* Title - Inline Editing */}
-              <div className="mb-3 sm:mb-4 lg:mb-6" data-tour="goal-title">
+              <div className="mb-4" data-tour="goal-title">
                 {isEditingTitle ? (
                   <div className="flex items-center gap-3">
                     <input
                       type="text"
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold bg-transparent border-b-2 border-blue-500 text-gray-900 dark:text-white focus:outline-none focus:border-blue-600 flex-1 pb-2 min-h-[44px]"  
+                      className="text-3xl font-semibold bg-transparent border-b-2 border-blue-500 text-gray-900 dark:text-white focus:outline-none focus:border-blue-600 flex-1 pb-2 min-h-[44px]"  
                       placeholder="Enter goal title"
                       autoFocus
                       onKeyDown={(e) => {
@@ -422,7 +422,7 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <h1 
-                    className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white leading-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group min-h-[44px] flex items-center break-words hyphens-auto"
+                    className="text-3xl font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingTitle}
                   >
                     {currentGoal.title}
@@ -441,7 +441,7 @@ function GoalDetail() {
                     <textarea
                       value={editedDescription}
                       onChange={(e) => setEditedDescription(e.target.value)}
-                      className="bg-transparent border-b-2 border-blue-500 text-gray-600 dark:text-gray-400 focus:outline-none focus:border-blue-600 flex-1 pb-2 resize-none text-sm sm:text-base lg:text-lg min-h-[44px]"
+                      className="bg-transparent border-b-2 border-blue-500 text-gray-600 dark:text-gray-400 focus:outline-none focus:border-blue-600 flex-1 pb-2 resize-none min-h-[44px]"
                       placeholder="Describe your goal"
                       rows={2}
                       autoFocus
@@ -453,7 +453,7 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <p 
-                    className="text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group text-sm sm:text-base lg:text-lg min-h-[44px] flex items-center break-words hyphens-auto"
+                    className="text-gray-600 dark:text-gray-400 max-w-3xl cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingDescription}
                   >
                     {currentGoal.description || 'Working towards your financial independence goal'}
@@ -466,7 +466,7 @@ function GoalDetail() {
               </div>
             </div>
             
-            <div className="relative flex items-center gap-3 sm:gap-4 w-full sm:w-auto sm:ml-4 lg:ml-8">
+            <div className="relative flex items-center gap-3 w-full sm:w-auto">
               {/* Inline Edit Controls */}
               <AnimatePresence>
                 {(isEditingTitle || isEditingDescription) && (
@@ -479,7 +479,7 @@ function GoalDetail() {
                     <button
                       onClick={saveInlineChanges}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 sm:p-3 rounded-lg sm:rounded-xl bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 text-green-600 dark:text-green-400 transition-all duration-200 disabled:opacity-50 touch-manipulation flex items-center justify-center"
+                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-all duration-200 disabled:opacity-50"
                       title="Save changes"
                     >
                       <FontAwesomeIcon 
@@ -490,7 +490,7 @@ function GoalDetail() {
                     <button
                       onClick={cancelEditing}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 sm:p-3 rounded-lg sm:rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition-all duration-200 disabled:opacity-50 touch-manipulation flex items-center justify-center"
+                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-all duration-200 disabled:opacity-50"
                       title="Cancel editing"
                     >
                       <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
@@ -501,7 +501,7 @@ function GoalDetail() {
               
               <button
                 onClick={() => setShowGoalMenu(!showGoalMenu)}
-                className="min-w-[44px] min-h-[44px] p-3 sm:p-3 rounded-lg sm:rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 group touch-manipulation flex items-center justify-center"
+                className="min-w-[44px] min-h-[44px] p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
                 aria-label="Goal options"
               >
                 <FontAwesomeIcon 
@@ -518,7 +518,7 @@ function GoalDetail() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
+                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
                   >
                     <div className="py-3">
                       <button
@@ -570,26 +570,26 @@ function GoalDetail() {
           </div>
           
           {/* Visual Progress Section */}
-          <div className="mb-6 sm:mb-8 lg:mb-12">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 sm:justify-between mb-6 sm:mb-8">
+          <div className="mb-12">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:justify-between mb-8">
               <div data-tour="current-savings">
                 <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Current Saving</div>
                 <AnimatedNumber 
                   value={progressData.currentAmount} 
                   prefix="$" 
-                  className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 dark:text-white"
+                  className="text-4xl font-semibold text-gray-900 dark:text-white"
                   isAnimated={numbersAnimated}
                 />
-                <div className="text-sm sm:text-base lg:text-lg text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">
+                <div className="text-gray-500 dark:text-gray-400 mt-2">
                   ${(progressData.targetAmount - progressData.currentAmount).toLocaleString()} to go
                 </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                 {!isGoalCompleted && (
                   <button
                     onClick={() => setShowUpdateProgressModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-6 py-3 sm:py-3 rounded-lg sm:rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation min-h-[48px] text-sm sm:text-base"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-medium transition-all duration-200 hover:shadow-sm"
                     data-tour="update-progress-btn"
                   >
                     Update Progress
@@ -597,7 +597,7 @@ function GoalDetail() {
                 )}
                 
                 {isGoalCompleted && (
-                  <div className="flex items-center justify-center gap-2 px-6 sm:px-6 py-3 sm:py-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg sm:rounded-xl font-semibold min-h-[48px] text-sm sm:text-base">
+                  <div className="flex items-center justify-center gap-2 px-6 py-3 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl font-medium">
                     <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                     Goal Completed!
                   </div>
@@ -605,7 +605,7 @@ function GoalDetail() {
                 
                 <button 
                   onClick={() => setShowTrackerModal(true)}
-                  className="bg-teal-600 hover:bg-teal-700 text-white px-6 sm:px-6 py-3 sm:py-3 rounded-lg sm:rounded-xl font-medium flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation min-h-[48px] text-sm sm:text-base"
+                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-2xl font-medium transition-all duration-200 hover:shadow-sm"
                   data-tour="goal-summary-btn"
                 >
                  Goal Summary
@@ -615,79 +615,77 @@ function GoalDetail() {
             
             {/* Enhanced Progress Bar */}
             <div className="relative" data-tour="progress-bar">
-              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 sm:h-3 overflow-hidden">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                 <motion.div
-                  className="bg-gradient-to-r from-teal-500 to-teal-600 h-2 sm:h-3 rounded-full relative"
+                  className="bg-blue-500 h-3 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progressData.progressPercentage}%` }}
                   transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
-                >
-                  <div className="absolute inset-0 bg-white/20" />
-                </motion.div>
+                />
               </div>
-              <div className="flex justify-between mt-2 sm:mt-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex justify-between mt-3 text-sm text-gray-500 dark:text-gray-400">
                 <span>$0</span>
                 <span className="font-medium text-gray-900 dark:text-white">${progressData.targetAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
             {/* Key Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6" data-tour="key-metrics">
-                      <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6">
-                        <div className="flex items-center justify-center mb-2 sm:mb-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-blue-500 rounded-lg sm:rounded-xl flex items-center justify-center">
-                            <FontAwesomeIcon icon={faCalendar} className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
-                          </div>
-                        </div>
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Start Date</div>
-                        <div className="text-xs sm:text-sm lg:text-base font-bold text-gray-900 dark:text-white break-all">
-                          {currentGoal.start_date ? new Date(currentGoal.start_date).toLocaleDateString() : 'Not set'}
-                        </div>
-                      </div>
-                      
-                      <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6">
-                        <div className="flex items-center justify-center mb-2 sm:mb-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-green-500 rounded-lg sm:rounded-xl flex items-center justify-center">
-                            <FontAwesomeIcon icon={faBullseye} className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
-                          </div>
-                        </div>
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Target</div>
-                        <div className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white break-all">
-                          <AnimatedNumber value={progressData.targetAmount} prefix="$" isAnimated={numbersAnimated} />
-                        </div>
-                      </div>
-                      
-                      <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6">
-                        <div className="flex items-center justify-center mb-2 sm:mb-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-purple-500 rounded-lg sm:rounded-xl flex items-center justify-center">
-                            <FontAwesomeIcon icon={faClock} className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
-                          </div>
-                        </div>
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Timeline</div>
-                        <div className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white break-all">
-                          {Math.floor(progressData.daysLeft / 365)}y {Math.floor((progressData.daysLeft % 365) / 30)}m
-                        </div>
-                      </div>
-                      
-                      <div className="text-center bg-gray-50 dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6">
-                        <div className="flex items-center justify-center mb-2 sm:mb-3">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-orange-500 rounded-lg sm:rounded-xl flex items-center justify-center">
-                            <FontAwesomeIcon icon={faChartLine} className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white" />
-                          </div>
-                        </div>
-                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Progress</div>
-                        <div className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white break-all">
-                          <AnimatedNumber value={progressData.progressPercentage} suffix="%" isAnimated={numbersAnimated} />
-                        </div>
-                      </div>
-                    </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6" data-tour="key-metrics">
+              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                    <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Start Date</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {currentGoal.start_date ? new Date(currentGoal.start_date).toLocaleDateString() : 'Not set'}
+                </div>
+              </div>
+              
+              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <FontAwesomeIcon icon={faBullseye} className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Target</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <AnimatedNumber value={progressData.targetAmount} prefix="$" isAnimated={numbersAnimated} />
+                </div>
+              </div>
+              
+              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+                    <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Timeline</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {Math.floor(progressData.daysLeft / 365)}y {Math.floor((progressData.daysLeft % 365) / 30)}m
+                </div>
+              </div>
+              
+              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
+                <div className="flex items-center justify-center mb-3">
+                  <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
+                    <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Progress</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <AnimatedNumber value={progressData.progressPercentage} suffix="%" isAnimated={numbersAnimated} />
+                </div>
+              </div>
+            </div>
         </div>
         
         {/* Tabbed Interface */}
-        <div className="mb-6 sm:mb-8 lg:mb-12">
+        <div className="mb-12">
           {/* Tab Navigation */}
-          <div className="mb-4 sm:mb-6 lg:mb-8">
-            <nav className="flex flex-wrap gap-1 sm:gap-2" aria-label="Goal sections" data-tour="tab-navigation">
+          <div className="mb-8">
+            <nav className="flex flex-wrap gap-2" aria-label="Goal sections" data-tour="tab-navigation">
               {[
                 { id: "Quick Actions", label: "Quick Actions", icon: faFlag, tour: "quick-actions-tab" },
                 { id: 'Analytics', label: 'Analytics', icon: faChartLine, tour: "analytics-tab" },
@@ -697,16 +695,16 @@ function GoalDetail() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`group flex items-center gap-1 sm:gap-2 px-3 sm:px-4 lg:px-6 py-3 sm:py-3 text-xs sm:text-sm font-medium rounded-lg sm:rounded-xl transition-all duration-200 touch-manipulation min-h-[44px] ${
+                  className={`group flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-2xl transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                   data-tour={tab.tour}
                 >
                   <FontAwesomeIcon 
                     icon={tab.icon} 
-                    className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors ${
+                    className={`w-4 h-4 transition-colors ${
                       activeTab === tab.id 
                         ? 'text-blue-500 dark:text-blue-400' 
                         : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300'

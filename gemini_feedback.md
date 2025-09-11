@@ -3,39 +3,76 @@ Excellent. I have reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-Overall, this is a strong set of changes that significantly refactors a key homepage component for better UI/UX. However, a configuration change related to performance and the removal of a key user interaction element warrant careful consideration.
+Overall, this is an exceptional set of changes that accomplishes two major goals: a significant and successful UI/UX refactor towards a cleaner, "Apple-inspired" aesthetic, and a series of impactful performance optimizations. The code quality is high, and the attention to detail is evident.
 
-#### Warnings (Should Fix)
+#### Critical (Must Fix)
 
-*   **Potential Performance Regression in `vite.config.ts`**
+*   **Deployment Configuration Mismatch in `apphosting.production.yaml`**
 
-    The change to add `'loader'` to the `codesSplitGroupings` in the TanStack Router configuration will now code-split loader functions into separate chunks.
+    There is a critical mismatch between the Vite build output directory and the paths configured in the production deployment file.
 
-    *   **Issue:** While this makes the initial JavaScript bundle smaller (improving initial page load), it can introduce a "network waterfall" during client-side navigation. When a user clicks a link to a new route, the browser must now fetch the component chunk *and* the loader chunk, potentially in sequence, which can make navigations feel slower.
-    *   **Reasoning:** The previous configuration, which kept loaders in the main bundle, was likely a deliberate choice to prioritize fast, smooth page transitions after the initial load, which is often crucial for user experience in a single-page application.
-    *   **Recommendation:** Consider reverting this change unless a smaller initial bundle is the highest priority and the trade-off of slower subsequent navigations has been tested and deemed acceptable.
+    *   **Issue:** The `vite.config.ts` does not specify a `build.outDir`, so it defaults to outputting the production assets to the `/dist` directory. However, `apphosting.production.yaml` is configured to serve static files from a `/build` directory. This will cause deployments to fail with "File not found" errors.
+    *   **Recommendation:** Align the paths in `apphosting.production.yaml` to use the correct `/dist` directory.
 
-    ```typescript
-    // vite.config.ts
+    ```yaml
+    // apphosting.production.yaml
 
-    // Suggestion: Revert to the previous configuration to prioritize smooth client-side navigation
-    TanStackRouterVite({
-      autoCodeSplitting: true,
-      codesSplitGroupings: [
-        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent']
-      ]
-    }),
+    handlers:
+      # Static assets with aggressive caching
+      - url: /(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif))
+        static_files: dist/\1  # <-- FIX: Should be 'dist'
+        upload: dist/(.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|webp|avif)) # <-- FIX
+        secure: always
+        # ...
+    
+      # HTML files with shorter cache
+      - url: /(.*\.html)$
+        static_files: dist/\1 # <-- FIX
+        upload: dist/(.*\.html)$ # <-- FIX
+        secure: always
+        # ...
+    
+      # Root and other routes
+      - url: /(.*)
+        static_files: dist/index.html # <-- FIX
+        upload: dist/index.html # <-- FIX
+        secure: always
+        # ...
     ```
 
-*   **Missing Call-to-Action in `dashboard-showcase.tsx`**
+#### Suggestions (Consider Improving)
 
-    The refactored `DashboardShowcase` component is a great visual upgrade, but the main call-to-action (CTA) button (e.g., `<Link to="/dashboard">Try Now</Link>`) has been removed.
+*   **Componentization of `DashboardHome`**
 
-    *   **Issue:** This section's primary goal is to showcase features and entice users to try the product. Without a clear CTA, it loses its conversion power, becoming purely informational and creating a dead end in the user journey.
-    *   **Recommendation:** Re-introduce a prominent CTA button to guide the user to the next logical step, such as signing up or exploring the dashboard.
+    The `DashboardHome` component in `src/routes/dashboard/_layout.index.tsx` has been beautifully refactored, but it remains very large. The new, clear separation of UI sections makes it an ideal candidate for being broken down into smaller, more focused components.
+
+    *   **Reasoning:** Extracting each major block (e.g., Financial Overview, Learning Progress, AI Assistant) into its own component file would make `DashboardHome` much easier to read and maintain, turning it into a layout component that composes the various dashboard sections.
+    *   **Example:**
+
+        ```tsx
+        // Example of extracted component
+        // src/components/dashboard/FinancialOverview.tsx
+        function FinancialOverview({ insights }) { 
+          // ... JSX for the financial overview section
+        }
+
+        // Updated DashboardHome
+        function DashboardHome() {
+          // ... hooks and logic
+          return (
+            <>
+              <FinancialOverview insights={financialProfileInsights} />
+              <LearningProgress insights={learningInsights} />
+              {/* ... other components */}
+            </>
+          )
+        }
+        ```
 
 #### Analysis of Approved Changes
 
-*   **`src/components/homepage/dashboard-showcase.tsx`**: The component has been completely redesigned from a tab-based interface to a more modern and interactive two-column layout. The updated titles and descriptions are more concise and impactful. This is an excellent UI/UX improvement that makes the feature showcase more engaging and easier to digest.
+*   **Performance Optimizations**: The changes in `vite.config.ts` (enabling tree shaking, manual chunking) and `src/components/ui/ambient-halo.tsx` (switching from Framer Motion to pure CSS animations) are fantastic. These will lead to smaller bundle sizes, better caching, and a smoother user experience by offloading animation work from the JS thread.
+*   **UI/UX Refactor**: The transition from a "glassmorphism" design to a cleaner, more modern aesthetic across the dashboard and learning pages is a huge success. The code is now simpler, more consistent, and easier to maintain by removing deeply nested `Card` components in favor of styled `div`s.
+*   **Configuration**: The updates to `apphosting.production.yaml` show a strong understanding of production environment optimization, with the move to `F1` instances for cost savings and the addition of health checks for reliability. Once the path issue is fixed, this will be a robust configuration.
 
-*   **`gemini_feedback.md`**: The feedback file has been updated.
+This is a high-quality contribution that dramatically improves both the user-facing experience and the underlying performance and maintainability of the codebase. Great work.

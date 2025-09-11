@@ -16,18 +16,22 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   build: {
     rollupOptions: {
-      treeshake: false,
+      treeshake: true, // Enable tree shaking for smaller bundles
+      output: {       
+      }
     },
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
     },
     cssMinify: true,
     target: 'es2020',
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500, // Lower threshold to catch large chunks
+    sourcemap: false, // Disable sourcemaps in production for smaller files
   },
   server: {
     port: 3000,

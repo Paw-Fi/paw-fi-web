@@ -1,105 +1,107 @@
 import { motion, Variants } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition } from "@fortawesome/free-solid-svg-icons";
+import { LucideIcon } from "lucide-react";
 
 export interface MetricConfig {
-  icon: IconDefinition;
+  icon: LucideIcon;
   value: string | number;
   label: string;
-  gradientColors: string;
-  iconColors: string;
-  delay: number;
+  color: string;
+  delay?: number;
 }
 
-interface FinancialGlassMetricsPanelProps {
+interface CleanMetricsPanelProps {
   title?: string;
   subtitle?: string;
   metrics: MetricConfig[];
   className?: string;
-  compact?: boolean;
+  layout?: 'grid' | 'row';
 }
 
-export function FinancialGlassMetricsPanel({
+export function CleanMetricsPanel({
   title,
   subtitle,
   metrics,
   className = "",
-  compact = false
-}: FinancialGlassMetricsPanelProps) {
-  // Financial Glass material variants
-  const glassVariants: Variants = {
-    initial: { 
-      backdropFilter: "blur(0px)",
-      background: "rgba(255, 255, 255, 0)"
-    },
+  layout = 'grid'
+}: CleanMetricsPanelProps) {
+  // Clean Apple-inspired animation variants
+  const containerVariants: Variants = {
+    initial: { opacity: 0 },
     animate: { 
-      backdropFilter: "blur(20px)",
-      background: "rgba(255, 255, 255, 0.08)",
+      opacity: 1,
       transition: { 
-        duration: 0.3,
-        ease: [0.4, 0.0, 0.2, 1]
+        duration: 0.4,
+        staggerChildren: 0.1,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
+  const itemVariants: Variants = {
+    initial: { opacity: 0, y: 12 },
+    animate: { 
+      opacity: 1,
+      y: 0,
+      transition: { 
+        duration: 0.4,
+        ease: [0.25, 0.46, 0.45, 0.94]
       }
     }
   };
 
   return (
     <motion.div 
-      className={`rounded-2xl ${compact ? 'p-4' : 'p-6'} border border-border/50 shadow-xl backdrop-blur-xl ${className}`}
-      variants={glassVariants}
-      style={{
-        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(59, 130, 246, 0.03) 100%)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
-      }}
+      className={`bg-background rounded-3xl p-8 ${className}`}
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
     >
-      {/* Header */}
+      {/* Clean Header */}
       {(title || subtitle) && (
-        <div className={`text-center ${compact ? 'mb-4' : 'mb-6'}`}>
+        <motion.div className="text-center mb-8" variants={itemVariants}>
           {title && (
-            <motion.h2 
-              className="text-lg lg:text-base xl:text-lg font-bold text-foreground mb-2"
-              style={{
-                fontVariationSettings: "'wght' 600"
-              }}
-            >
+            <h2 className="text-2xl font-light text-foreground mb-2">
               {title}
-            </motion.h2>
+            </h2>
           )}
           {subtitle && (
-            <p className="text-sm lg:text-xs xl:text-sm text-muted-foreground">
+            <p className="text-muted-foreground leading-relaxed">
               {subtitle}
             </p>
           )}
-        </div>
+        </motion.div>
       )}
 
-      {/* Metrics Grid */}
-      <div className={`${compact ? 'flex items-center justify-between gap-6 overflow-x-auto' : 'grid grid-cols-4 gap-4'}`}>
-        {metrics.map((metric, index) => (
-          <div key={metric.label} className={`${compact ? 'flex items-center gap-3 min-w-0 flex-shrink-0' : 'text-center'}`}>
-            {/* Icon */}
-            <div className={`${compact ? 'w-8 h-8' : 'w-12 h-12 mx-auto'} bg-gradient-to-br ${metric.iconColors} rounded-${compact ? 'lg' : 'xl'} flex items-center justify-center ${compact ? 'mb-0' : 'mb-3'} shadow-${compact ? 'md' : 'lg'}`}>
-              <FontAwesomeIcon 
-                icon={metric.icon} 
-                className={`${compact ? 'h-4 w-4' : 'w-6 h-6'} text-white`} 
-              />
-            </div>
-            
-            {/* Content */}
-            <div className={compact ? 'flex flex-col' : ''}>
-              {/* Kinetic Typography for metrics */}
-              <motion.span 
-                className={`${compact ? 'text-lg lg:text-base xl:text-lg' : 'text-xl lg:text-lg xl:text-xl'} font-bold bg-gradient-to-r ${metric.gradientColors} bg-clip-text text-transparent ${compact ? '' : 'block'}`}
-                style={{
-                  fontVariationSettings: "'wght' 700"
-                }}
+      {/* Clean Metrics Layout */}
+      <div className={`${
+        layout === 'row' 
+          ? 'flex items-center justify-between gap-8' 
+          : `grid grid-cols-${Math.min(metrics.length, 4)} gap-8`
+      }`}>
+        {metrics.map((metric, index) => {
+          const IconComponent = metric.icon;
+          return (
+            <motion.div 
+              key={metric.label}
+              className="text-center"
+              variants={itemVariants}
+            >
+              {/* Clean Icon */}
+              <div className="w-12 h-12 mx-auto mb-4 bg-muted/20 rounded-2xl flex items-center justify-center">
+                <IconComponent className="h-6 w-6 text-muted-foreground" />
+              </div>
+              
+              {/* Clean Value */}
+              <motion.div 
+                className={`text-3xl font-light mb-2 ${metric.color}`}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ 
                   scale: 1, 
                   opacity: 1,
                   transition: { 
-                    delay: metric.delay,
+                    delay: (metric.delay || 0) + index * 0.1,
                     duration: 0.4,
-                    ease: [0.2, 0.8, 0.4, 1]
+                    ease: [0.25, 0.46, 0.45, 0.94]
                   }
                 }}
               >
@@ -107,19 +109,28 @@ export function FinancialGlassMetricsPanel({
                   ? metric.value.toLocaleString() 
                   : metric.value
                 }
-              </motion.span>
-              <span className={`${compact ? 'text-xs lg:text-xs' : 'text-sm lg:text-xs xl:text-sm'} text-foreground ${compact ? 'whitespace-nowrap' : ''} font-medium`}>
+              </motion.div>
+              
+              {/* Clean Label */}
+              <div className="text-sm text-muted-foreground font-medium">
                 {metric.label}
-              </span>
-            </div>
-            
-            {/* Divider for compact mode (except last item) */}
-            {compact && index < metrics.length - 1 && (
-              <div className="w-px h-8 bg-border flex-shrink-0" />
-            )}
-          </div>
-        ))}
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </motion.div>
   );
 }
+
+// Backward compatibility - keep the old name but use the new clean implementation
+export function FinancialGlassMetricsPanel(props: any) {
+  // Convert old props to new format if needed
+  const cleanProps = {
+    ...props,
+    layout: props.compact ? 'row' : 'grid',
+  };
+  return <CleanMetricsPanel {...cleanProps} />;
+}
+
+export type { MetricConfig, CleanMetricsPanelProps };

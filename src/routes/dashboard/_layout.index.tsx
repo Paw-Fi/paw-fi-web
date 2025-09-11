@@ -13,7 +13,6 @@ import {
   Calculator,
   MessageCircle,
   Target,
-  Award,
   Flame,
   DollarSign,
   GraduationCap,
@@ -21,14 +20,11 @@ import {
   Shield,
   Home,
   Calendar,
-  ChevronRight,
   Plus,
   ArrowRight,
   Gift,
   Trophy,
   User,
-  Lightbulb,
-  X,
   CheckCircle,
   CreditCard
 } from "lucide-react";
@@ -299,17 +295,14 @@ export const Route = createFileRoute("/dashboard/_layout/")({
   },
 });
 
-// Modern 2025 animation variants with ultra-smooth spring physics
+// Subtle Apple-inspired animation variants
 const containerVariants: Variants = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    y: 0,
     transition: {
-      type: "spring",
-      damping: 30,
-      stiffness: 100,
-      staggerChildren: 0.05,
+      duration: 0.4,
+      staggerChildren: 0.08,
       delayChildren: 0.1,
     },
   },
@@ -318,18 +311,14 @@ const containerVariants: Variants = {
 const itemVariants: Variants = {
   hidden: { 
     opacity: 0, 
-    y: 20,
-    scale: 0.98,
+    y: 12,
   },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: {
-      type: "spring",
-      damping: 30,
-      stiffness: 120,
-      mass: 0.8,
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94], // Apple-like easing
     },
   },
 };
@@ -720,103 +709,87 @@ function DashboardHome() {
             </motion.div>
           )}
 
-          {/* Welcome Header - Apple-inspired */}
-          <motion.div variants={itemVariants} className="mb-12">
-            <div className="flex flex-col space-y-6 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-6">
-                <Avatar className="h-20 w-20 ring-2 ring-border shadow-sm">
+          {/* Welcome Header - Clean Apple-inspired */}
+          <motion.div variants={itemVariants} className="mb-16">
+            <div className="flex flex-col space-y-8 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col space-y-6 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-8">
+                <Avatar className="h-24 w-24">
                   <AvatarImage src={monekoAvatar} alt="Moneko Avatar" />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-lg font-bold">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xl font-medium">
                     M
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <h1 className="text-4xl font-semibold text-foreground tracking-tight">
+                <div className="space-y-2">
+                  <h1 className="text-5xl font-light text-foreground tracking-tight">
                     {getGreeting()}
                   </h1>
-                  <p className="text-lg text-muted-foreground mt-1">
+                  <p className="text-xl text-muted-foreground">
                     Ready to master your finances today?
                   </p>
                 </div>
               </div>
               
-              {/* Level and Streak Info - Redesigned */}
-              <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-3">
+              {/* Level and Streak Info - Clean Design */}
+              <div className="flex space-x-4">
                 {currentLevelReward && (
-                  <Card className="shadow-sm">
-                    <CardContent className="flex items-center space-x-3 p-4 sm:p-5">
-                      <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-                        {React.createElement(currentLevelReward.icon, { className: "h-4 w-4" })}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-foreground">Level {levelInfo.level}</div>
-                        <div className="text-xs text-muted-foreground">{currentLevelReward.title}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="bg-muted/30 rounded-2xl p-6 text-center">
+                    <div className="text-2xl font-semibold text-foreground mb-1">Level {levelInfo.level}</div>
+                    <div className="text-sm text-muted-foreground">{currentLevelReward.title}</div>
+                  </div>
                 )}
                 
-                <Card className="shadow-sm">
-                  <CardContent className="flex items-center space-x-3 p-4 sm:p-5">
-                    <div className="p-2 rounded-lg bg-orange-500/90 text-white">
-                      <Flame className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{currentStreak}</div>
-                      <div className="text-xs text-muted-foreground">day streak</div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-orange-50 dark:bg-orange-950/30 rounded-2xl p-6 text-center">
+                  <div className="text-2xl font-semibold text-orange-600 dark:text-orange-400 mb-1">
+                    {currentStreak}
+                  </div>
+                  <div className="text-sm text-orange-600/70 dark:text-orange-400/70">day streak</div>
+                </div>
               </div>
             </div>
           </motion.div>
 
-          {/* XP Progress Bar - Clean Design */}
-          <motion.div variants={itemVariants} className="mb-12">
-            <Card className="shadow-sm">
-              <CardHeader className="pb-4 px-5 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl font-semibold flex items-center space-x-2">
-                      <Trophy className="h-5 w-5 text-primary" />
-                      <span>Progress to Next Level</span>
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
-                    </CardDescription>
-                  </div>
-                  {!levelInfo.isMaxLevel && (
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-primary">
-                        {levelInfo.xpNeededForNext.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-muted-foreground">XP to level {levelInfo.level + 1}</div>
-                    </div>
-                  )}
+          {/* XP Progress Bar - Clean Apple Design */}
+          <motion.div variants={itemVariants} className="mb-16">
+            <div className="bg-background rounded-3xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-medium text-foreground mb-2">
+                    Progress to Next Level
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
+                  </p>
                 </div>
-              </CardHeader>
-              <CardContent className="px-5 sm:px-6">
-                <div className="mb-6">
-                  <Progress value={levelInfo.progressPercentage} className="h-3" />
-                </div>
-                
-                {nextLevelReward && (
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Gift className="h-4 w-4" />
-                      <span>Next reward: {nextLevelReward.reward}</span>
+                {!levelInfo.isMaxLevel && (
+                  <div className="text-right">
+                    <div className="text-4xl font-light text-primary mb-1">
+                      {levelInfo.xpNeededForNext.toLocaleString()}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowRewardsModal(true)}
-                    >
-                      View All Rewards
-                    </Button>
+                    <div className="text-sm text-muted-foreground">XP to level {levelInfo.level + 1}</div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+              
+              <div className="mb-8">
+                <Progress value={levelInfo.progressPercentage} className="h-2" />
+              </div>
+              
+              {nextLevelReward && (
+                <div className="flex items-center justify-between pt-6">
+                  <div className="text-sm text-muted-foreground">
+                    Next reward: {nextLevelReward.reward}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowRewardsModal(true)}
+                    className="text-primary hover:text-primary/80 transition-colors duration-200"
+                  >
+                    View All Rewards
+                  </Button>
+                </div>
+              )}
+            </div>
           </motion.div>
 
           {/* Main Dashboard Grid - Enhanced Layout */}
@@ -825,264 +798,216 @@ function DashboardHome() {
             {/* Left Column - 2 spans */}
             <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               
-              {/* Financial Overview Card - Clean Design */}
-       
-                  <Card className="shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="p-3 rounded-lg bg-primary text-primary-foreground">
-                            <DollarSign className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl font-semibold">Financial Overview</CardTitle>
-                            <CardDescription>Your financial snapshot</CardDescription>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to="/dashboard/user-settings/profile">
-                            Update Profile
-                          </Link>
-                        </Button>
+              {/* Financial Overview Card - Clean Apple Design */}
+              <motion.div variants={itemVariants}>
+                  <div className="bg-background rounded-3xl p-8 mb-8">
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-2xl font-medium text-foreground mb-2">Financial Overview</h2>
+                        <p className="text-muted-foreground">Your financial snapshot</p>
                       </div>
-                    </CardHeader>
+                      <Button variant="outline" size="sm" asChild className="rounded-full">
+                        <Link to="/dashboard/user-settings/profile">
+                          Update Profile
+                        </Link>
+                      </Button>
+                    </div>
 
-                    <CardContent>
-                      {financialProfileInsights.hasProfile ? (
+                    {financialProfileInsights.hasProfile ? (
                         <div className="space-y-8">
-                          {/* Key Metrics Grid - Clean Design */}
+                          {/* Key Metrics Grid - Clean Apple Design */}
                           {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                               {financialProfileInsights.keyMetrics.monthlyIncome && (
-                                <Card>
-                                  <CardContent className="p-6 text-center">
-                                    <DollarSign className="h-8 w-8 text-primary mx-auto mb-3" />
-                                    <div className="text-2xl font-bold text-foreground mb-1">
-                                      ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground font-medium">Monthly Income</div>
-                                  </CardContent>
-                                </Card>
+                                <div className="bg-green-50/50 dark:bg-green-950/30 rounded-2xl p-6 text-center">
+                                  <div className="text-3xl font-light text-foreground mb-2">
+                                    ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">Monthly Income</div>
+                                </div>
                               )}
 
                               {financialProfileInsights.keyMetrics.monthlySavings && (
-                                <Card>
-                                  <CardContent className="p-6 text-center">
-                                    <PiggyBank className="h-8 w-8 text-secondary mx-auto mb-3" />
-                                    <div className="text-2xl font-bold text-foreground mb-1">
-                                      ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground font-medium">Monthly Savings</div>
-                                  </CardContent>
-                                </Card>
+                                <div className="bg-blue-50/50 dark:bg-blue-950/30 rounded-2xl p-6 text-center">
+                                  <div className="text-3xl font-light text-foreground mb-2">
+                                    ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">Monthly Savings</div>
+                                </div>
                               )}
 
                               {financialProfileInsights.keyMetrics.emergencyFund && (
-                                <Card>
-                                  <CardContent className="p-6 text-center">
-                                    <Shield className="h-8 w-8 text-accent mx-auto mb-3" />
-                                    <div className="text-2xl font-bold text-foreground mb-1">
-                                      ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground font-medium">Emergency Fund</div>
-                                  </CardContent>
-                                </Card>
+                                <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-2xl p-6 text-center">
+                                  <div className="text-3xl font-light text-foreground mb-2">
+                                    ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">Emergency Fund</div>
+                                </div>
                               )}
 
                               {financialProfileInsights.keyMetrics.yearsToRetirement && (
-                                <Card>
-                                  <CardContent className="p-6 text-center">
-                                    <Calendar className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                                    <div className="text-2xl font-bold text-foreground mb-1">
-                                      {financialProfileInsights.keyMetrics.yearsToRetirement}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground font-medium">Years to Retire</div>
-                                  </CardContent>
-                                </Card>
+                                <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-2xl p-6 text-center">
+                                  <div className="text-3xl font-light text-foreground mb-2">
+                                    {financialProfileInsights.keyMetrics.yearsToRetirement}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">Years to Retire</div>
+                                </div>
                               )}
                             </div>
                           )}
 
                           {/* Profile Completion - Clean */}
-                          <Card>
-                            <CardContent className="p-6">
-                              <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-lg font-semibold">Profile Completion</h4>
-                                <Badge variant="secondary">
-                                  {financialProfileInsights.completionPercentage}%
-                                </Badge>
-                              </div>
-                              <Progress value={financialProfileInsights.completionPercentage} className="h-2" />
-                            </CardContent>
-                          </Card>
+                          <div className="bg-muted/20 rounded-2xl p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-lg font-medium">Profile Completion</h4>
+                              <span className="text-sm font-medium text-primary">
+                                {financialProfileInsights.completionPercentage}%
+                              </span>
+                            </div>
+                            <Progress value={financialProfileInsights.completionPercentage} className="h-2" />
+                          </div>
                         </div>
                       ) : (
-                        <div className="text-center py-12">
-                          <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-2xl flex items-center justify-center">
-                            <User className="h-10 w-10 text-muted-foreground" />
+                        <div className="text-center py-16">
+                          <div className="w-24 h-24 mx-auto mb-8 bg-muted/30 rounded-3xl flex items-center justify-center">
+                            <User className="h-12 w-12 text-muted-foreground" />
                           </div>
-                          <h4 className="text-2xl font-semibold mb-3">Create Your Financial Profile</h4>
-                          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                          <h3 className="text-2xl font-light mb-4">Create Your Financial Profile</h3>
+                          <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                             Get personalized recommendations based on your financial goals and current situation
                           </p>
-                          <Button size="lg" asChild>
+                          <Button size="lg" asChild className="rounded-full">
                             <Link to="/dashboard/user-settings/profile">
-                              <Plus className="mr-2 h-4 w-4" />
                               Create Profile
                             </Link>
                           </Button>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                  </div>
+              </motion.div>
             
 
-              {/* Learning Progress Card - Clean */}
-       
-                  <Card className="shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="p-3 rounded-lg bg-secondary text-secondary-foreground">
-                            <GraduationCap className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-xl font-semibold">Learning Progress</CardTitle>
-                            <CardDescription>Your educational journey</CardDescription>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to="/dashboard/learning">
-                            View All Courses
-                          </Link>
-                        </Button>
+              {/* Learning Progress Card - Clean Apple Design */}
+              <motion.div variants={itemVariants}>
+                  <div className="bg-background rounded-3xl p-8">
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-2xl font-medium text-foreground mb-2">Learning Progress</h2>
+                        <p className="text-muted-foreground">Your educational journey</p>
                       </div>
-                    </CardHeader>
+                      <Button variant="outline" size="sm" asChild className="rounded-full">
+                        <Link to="/dashboard/learning">
+                          View All Courses
+                        </Link>
+                      </Button>
+                    </div>
 
-                    <CardContent>
-                      {learningInsights.hasCourses ? (
+                    {learningInsights.hasCourses ? (
                         <div className="space-y-8">
-                          {/* Stats Grid - Clean */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-                            <div className="text-center">
-                              <div className="text-3xl font-bold text-primary mb-2">
+                          {/* Stats Grid - Clean Apple Design */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <div className="bg-green-50/50 dark:bg-green-950/30 rounded-2xl p-6 text-center">
+                              <div className="text-3xl font-light text-foreground mb-2">
                                 {learningInsights.completedLessons}
                               </div>
-                              <div className="text-sm text-muted-foreground font-medium">Completed</div>
+                              <div className="text-sm text-muted-foreground">Completed</div>
                             </div>
-                            <div className="text-center">
-                              <div className="text-3xl font-bold text-secondary mb-2">
+                            <div className="bg-blue-50/50 dark:bg-blue-950/30 rounded-2xl p-6 text-center">
+                              <div className="text-3xl font-light text-foreground mb-2">
                                 {learningInsights.earnedXP}
                               </div>
-                              <div className="text-sm text-muted-foreground font-medium">XP Earned</div>
+                              <div className="text-sm text-muted-foreground">XP Earned</div>
                             </div>
-                            <div className="text-center">
-                              <div className="text-3xl font-bold text-accent-foreground mb-2">
+                            <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-2xl p-6 text-center">
+                              <div className="text-3xl font-light text-foreground mb-2">
                                 {Math.round(learningInsights.progress)}%
                               </div>
-                              <div className="text-sm text-muted-foreground font-medium">Progress</div>
+                              <div className="text-sm text-muted-foreground">Progress</div>
                             </div>
                           </div>
 
                           {/* Progress Bar - Clean */}
-                          <div className="mb-6">
-                            <Progress value={learningInsights.progress} className="h-3" />
+                          <div className="mb-8">
+                            <Progress value={learningInsights.progress} className="h-2" />
                           </div>
 
                           {/* Next Lesson - Clean */}
                           {learningInsights.nextLesson && (
-                            <Card>
-                              <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <h4 className="text-lg font-semibold mb-2">Continue Learning</h4>
-                                    <p className="font-medium mb-1">{learningInsights.nextLesson.title}</p>
-                                    <p className="text-sm text-muted-foreground">{learningInsights.currentCourse?.title}</p>
-                                  </div>
-                                  <Button size="sm" asChild>
-                                    <Link to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}>
-                                      Continue
-                                    </Link>
-                                  </Button>
+                            <div className="bg-muted/20 rounded-2xl p-6">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h4 className="text-lg font-medium mb-3">Continue Learning</h4>
+                                  <p className="font-medium mb-1">{learningInsights.nextLesson.title}</p>
+                                  <p className="text-sm text-muted-foreground">{learningInsights.currentCourse?.title}</p>
                                 </div>
-                              </CardContent>
-                            </Card>
+                                <Button size="sm" asChild className="rounded-full ml-6">
+                                  <Link to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}>
+                                    Continue
+                                  </Link>
+                                </Button>
+                              </div>
+                            </div>
                           )}
 
                           {/* Recent Activity */}
-                          <Card>
-                            <CardContent className="p-6">
-                              <h4 className="text-lg font-semibold mb-4">Recent Activity</h4>
-                              <Timeline/>
-                            </CardContent>
-                          </Card>
+                          <div className="bg-muted/20 rounded-2xl p-6">
+                            <h4 className="text-lg font-medium mb-6">Recent Activity</h4>
+                            <Timeline/>
+                          </div>
                         </div>
                       ) : (
-                        <div className="text-center py-12">
-                          <div className="w-20 h-20 mx-auto mb-6 bg-muted rounded-2xl flex items-center justify-center">
-                            <BookOpen className="h-10 w-10 text-muted-foreground" />
+                        <div className="text-center py-16">
+                          <div className="w-24 h-24 mx-auto mb-8 bg-muted/30 rounded-3xl flex items-center justify-center">
+                            <BookOpen className="h-12 w-12 text-muted-foreground" />
                           </div>
-                          <h4 className="text-2xl font-semibold mb-3">Start Learning</h4>
-                          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                          <h3 className="text-2xl font-light mb-4">Start Learning</h3>
+                          <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
                             Begin your financial education journey with our comprehensive courses
                           </p>
-                          <Button size="lg" asChild>
+                          <Button size="lg" asChild className="rounded-full">
                             <Link to="/dashboard/learning">
-                              <GraduationCap className="mr-2 h-4 w-4" />
                               Explore Courses
                             </Link>
                           </Button>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                  </div>
+              </motion.div>
          
           </div>
 
             {/* Right Column - 1 span */}
-            <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-8">
               
-              {/* AI Assistant Card - Clean */}
-        
-                  <Card className="shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 rounded-lg bg-accent text-accent-foreground">
-                          <MessageCircle className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg font-semibold">Moneko AI</CardTitle>
-                          <CardDescription>Your personal financial advisor</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
+              {/* AI Assistant Card - Clean Apple Design */}
+              <motion.div variants={itemVariants}>
+                  <div className="bg-background rounded-3xl p-8">
+                    <div className="mb-8">
+                      <h2 className="text-2xl font-medium text-foreground mb-2">Moneko AI</h2>
+                      <p className="text-muted-foreground">Your personal financial advisor</p>
+                    </div>
 
-                    <CardContent>
-                      {conversationInsights.hasConversations ? (
+                    {conversationInsights.hasConversations ? (
                         <div className="space-y-6">
                           <div className="grid grid-cols-2 gap-4">
-                            <Card>
-                              <CardContent className="p-4 text-center">
-                                <div className="text-2xl font-bold text-foreground mb-1">
-                                  {conversationInsights.totalConversations}
-                                </div>
-                                <div className="text-xs text-muted-foreground font-medium">Chats</div>
-                              </CardContent>
-                            </Card>
-                            <Card>
-                              <CardContent className="p-4 text-center">
-                                <div className="text-2xl font-bold text-foreground mb-1">
-                                  {conversationInsights.totalMessages}
-                                </div>
-                                <div className="text-xs text-muted-foreground font-medium">Messages</div>
-                              </CardContent>
-                            </Card>
+                            <div className="bg-muted/20 rounded-2xl p-4 text-center">
+                              <div className="text-2xl font-light text-foreground mb-1">
+                                {conversationInsights.totalConversations}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Chats</div>
+                            </div>
+                            <div className="bg-muted/20 rounded-2xl p-4 text-center">
+                              <div className="text-2xl font-light text-foreground mb-1">
+                                {conversationInsights.totalMessages}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Messages</div>
+                            </div>
                           </div>
 
                           <Button 
                             size="lg" 
                             onClick={() => openChat('advisor')}
-                            className="w-full"
+                            className="w-full rounded-full"
                           >
                             Continue Chat
                           </Button>
@@ -1090,123 +1015,89 @@ function DashboardHome() {
                       ) : (
                         <div className="space-y-6">
                           <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground font-medium mb-3">Get personalized help with:</p>
+                            <p className="text-sm text-muted-foreground mb-4">Get personalized help with:</p>
                             <div className="space-y-3">
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <Target className="h-4 w-4 mr-3 text-accent" />
-                                Investment strategies
-                              </div>
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <DollarSign className="h-4 w-4 mr-3 text-accent" />
-                                Budget planning
-                              </div>
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <Shield className="h-4 w-4 mr-3 text-accent" />
-                                Financial goals
-                              </div>
+                              <div className="text-sm text-muted-foreground">Investment strategies</div>
+                              <div className="text-sm text-muted-foreground">Budget planning</div>
+                              <div className="text-sm text-muted-foreground">Financial goals</div>
                             </div>
                           </div>
                           <Button 
                             size="lg" 
                             onClick={() => openChat('advisor')}
-                            className="w-full"
+                            className="w-full rounded-full"
                           >
                             Start Chat
                           </Button>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                  </div>
+              </motion.div>
           
 
-              {/* Quick Tools Card - Clean */}
-       
-                  <Card className="shadow-sm">
-                    <CardHeader>
+              {/* Quick Tools Card - Clean Apple Design */}
+              <motion.div variants={itemVariants}>
+                  <div className="bg-background rounded-3xl p-8">
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-2xl font-medium text-foreground mb-2">Quick Tools</h2>
+                        <p className="text-muted-foreground">Financial calculators</p>
+                      </div>
+                      <Button variant="outline" size="sm" asChild className="rounded-full">
+                        <Link to="/calculators">
+                          View All
+                        </Link>
+                      </Button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {availableCalculators.slice(0, 4).map((calculator) => {
+                        return (
+                          <motion.div key={calculator.title} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
+                            <Link to={calculator.path}>
+                              <div className="bg-muted/10 hover:bg-muted/20 transition-colors duration-200 rounded-2xl p-4">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="text-sm font-medium mb-1">
+                                      {calculator.title}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">{calculator.category}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+              </motion.div>
+              
+
+              {/* Essential Lessons Card - Clean Apple Design */}
+              <motion.div variants={itemVariants}>
+                  <div className="bg-background rounded-3xl p-8">
+                    <div className="mb-8">
+                      <h2 className="text-2xl font-medium text-foreground mb-2">Essential Lessons</h2>
+                      <p className="text-muted-foreground">Foundation knowledge</p>
+                    </div>
+
+                    <div className="bg-muted/20 rounded-2xl p-6">
+                      <h4 className="text-lg font-medium mb-3">Your 2025 Guide to Investing</h4>
+                      <p className="text-muted-foreground text-sm mb-6 leading-relaxed">Master investment fundamentals with 20+ comprehensive lessons</p>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="p-3 rounded-lg bg-secondary text-secondary-foreground">
-                            <Calculator className="h-6 w-6" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg font-semibold">Quick Tools</CardTitle>
-                            <CardDescription>Financial calculators</CardDescription>
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          20+ lessons available
                         </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <Link to="/calculators">
-                            View All
+                        <Button variant="outline" size="sm" asChild className="rounded-full">
+                          <Link to="/dashboard/essentials">
+                            Start Learning
                           </Link>
                         </Button>
                       </div>
-                    </CardHeader>
-
-                    <CardContent>
-                      <div className="space-y-3">
-                        {availableCalculators.slice(0, 4).map((calculator) => {
-                          const IconComponent = calculator.icon;
-                          return (
-                            <motion.div key={calculator.title} whileHover={{ x: 2 }} transition={{ duration: 0.2 }}>
-                              <Link to={calculator.path}>
-                                <Card className="hover:bg-muted/50 transition-colors">
-                                  <CardContent className="flex items-center p-4">
-                                    <div className="p-2 rounded-lg bg-primary text-primary-foreground mr-4">
-                                      <IconComponent className="h-4 w-4" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="text-sm font-semibold mb-1">
-                                        {calculator.title}
-                                      </div>
-                                      <Badge variant="secondary" className="text-xs">{calculator.category}</Badge>
-                                    </div>
-                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                  </CardContent>
-                                </Card>
-                              </Link>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-              
-
-              {/* Essential Lessons Card - Clean */}
-          
-                  <Card className="shadow-sm">
-                    <CardHeader>
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 rounded-lg bg-muted text-muted-foreground">
-                          <Lightbulb className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg font-semibold">Essential Lessons</CardTitle>
-                          <CardDescription>Foundation knowledge</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent>
-                      <Card>
-                        <CardContent className="p-6">
-                          <h4 className="text-lg font-semibold mb-2">Your 2025 Guide to Investing</h4>
-                          <p className="text-muted-foreground text-sm mb-6">Master investment fundamentals with 20+ comprehensive lessons</p>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <BookOpen className="mr-2 h-4 w-4" />
-                              20+ lessons available
-                            </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to="/dashboard/essentials">
-                                Start Learning
-                                <ArrowRight className="ml-1 h-3 w-3" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
+              </motion.div>
            
             </div>
           </div>

@@ -6,7 +6,7 @@ import { useCompletedLessons } from "@/hooks/useCompletedLessons";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { useState, useMemo } from 'react';
-// Using Font Awesome exclusively for icons
+// Clean design with minimal Lucide icons
 import { useFinancialHealthProfile } from '@/hooks/use-financial-health-profile';
 import basicCourse from '@/data/basic-lessons.json';
 import { seo } from "@/utils/seo";
@@ -17,8 +17,7 @@ import { useGamification } from "@/hooks/use-gamification";
 import { FinancialGlassMetricsPanel } from "@/components/shared/FinancialGlassMetricsPanel";
 import { DashboardHeroSection } from "@/components/shared/DashboardHeroSection";
 import { useAIChat } from "@/contexts/ai-chat-context";
-import { faLightbulb, faRocket, faBolt, faBookOpen, faRobot, faGraduationCap, faPlus, faGem, faCirclePlay, faComments, faWandMagicSparkles, faFire, faStar, faTrophy } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Book, GraduationCap, Plus, Play, MessageCircle, Sparkles, Flame, Star, Trophy } from "lucide-react";
 import React from "react";
 
 export const Route = createFileRoute("/dashboard/learning/")({
@@ -321,10 +320,9 @@ export function UnifiedLearningPage() {
   
   const { profile: financialProfile, hasProfile } = useFinancialHealthProfile(user?.id);
   
-  // Learning prompts organized by category
+  // Learning prompts organized by category (simplified for clean design)
   const promptCategories = [
     {
-      icon: faLightbulb,
       title: "Getting Started",
       prompts: [
         "Help me choose the right course to start with",
@@ -333,16 +331,14 @@ export function UnifiedLearningPage() {
       ]
     },
     {
-      icon: faRocket,
       title: "Advanced Topics",
       prompts: [
-        "Create a custom lesson about investing",
+        "Create a custom lesson about investing", 
         "Teach me about retirement planning",
         "Help me understand investment risks"
       ]
     },
     {
-      icon: faBolt,
       title: "Personalized Learning",
       prompts: [
         "Create a personalized learning path",
@@ -402,254 +398,162 @@ export function UnifiedLearningPage() {
         activeTab === 'personalized' ? course.type === 'personalized' : course.type === 'essential'
       );
 
-  // Enhanced Animation variants with physics-based motion (2025 Design System)
+  // Subtle Apple-inspired animation variants
   const pageVariants: Variants = {
     initial: { opacity: 0 },
     animate: { 
       opacity: 1,
       transition: { 
         duration: 0.4, 
-        staggerChildren: 0.08,
-        ease: [0.2, 0.8, 0.4, 1] // Structured Expression easing
+        staggerChildren: 0.06,
+        ease: [0.25, 0.46, 0.45, 0.94] // Apple easing
       }
     }
   };
 
   const itemVariants: Variants = {
-    initial: { opacity: 0, y: 20, scale: 0.98 },
+    initial: { opacity: 0, y: 12 },
     animate: { 
       opacity: 1, 
       y: 0,
-      scale: 1,
       transition: { 
-        duration: 0.3,
-        ease: [0.25, 0.8, 0.5, 1] // Educational reveal timing
+        duration: 0.4,
+        ease: [0.25, 0.46, 0.45, 0.94] // Apple easing
       }
     }
   };
 
   const courseCardVariants: Variants = {
-    initial: { opacity: 0, scale: 0.96, y: 10 },
+    initial: { opacity: 0, y: 16 },
     animate: { 
       opacity: 1, 
-      scale: 1,
       y: 0,
       transition: { 
         duration: 0.4,
-        ease: [0.15, 0.8, 0.4, 1] // Premium feel transition
+        ease: [0.25, 0.46, 0.45, 0.94] // Apple easing
       }
     },
     hover: {
-      scale: 1.015, // Subtle, confident hover
-      y: -2,
+      y: -4, // Subtle hover lift
       transition: { 
         duration: 0.2,
-        ease: [0.4, 0.0, 0.2, 1] // Glass material timing
-      }
-    }
-  };
-
-  // Financial Glass material variants
-  const glassVariants: Variants = {
-    initial: { 
-      backdropFilter: "blur(0px)",
-      background: "rgba(255, 255, 255, 0)"
-    },
-    animate: { 
-      backdropFilter: "blur(20px)",
-      background: "rgba(255, 255, 255, 0.08)",
-      transition: { 
-        duration: 0.3,
-        ease: [0.4, 0.0, 0.2, 1]
+        ease: [0.25, 0.46, 0.45, 0.94] // Apple easing
       }
     }
   };
 
   return (
-    <>
-      {/* Design System CSS Injection */}
-      <style>{`
-        /* Financial Glass Material System */
-        .financial-glass {
-          background: rgba(255, 255, 255, 0.08);
-          backdrop-filter: blur(20px) saturate(150%);
-          border: 1px solid rgba(255, 255, 255, 0.125);
-          box-shadow: 
-            0 8px 32px rgba(0, 0, 0, 0.1),
-            inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-        
-        /* Responsive Typography Classes */
-        .text-display {
-          font-size: clamp(1.75rem, 3.5vw, 3.5rem);
-          font-weight: 700;
-          line-height: 1.1;
-          letter-spacing: -0.02em;
-        }
-        
-        .text-headline {
-          font-size: clamp(1.5rem, 2.5vw, 2.25rem);
-          font-weight: 600;
-          line-height: 1.2;
-          letter-spacing: -0.01em;
-        }
-        
-        .text-title {
-          font-size: clamp(1.125rem, 1.5vw, 1.375rem);
-          font-weight: 600;
-          line-height: 1.3;
-        }
-        
-        .text-body {
-          font-size: clamp(0.875rem, 1.2vw, 1rem);
-          font-weight: 400;
-          line-height: 1.6;
-        }
-        
-        .text-label {
-          font-size: clamp(0.75rem, 1vw, 0.875rem);
-          font-weight: 500;
-          line-height: 1.4;
-          letter-spacing: 0.01em;
-        }
-        
-        /* Variable Font Support */
-        * {
-          font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-        }
-        
-        /* Reduced Motion Support */
-        @media (prefers-reduced-motion: reduce) {
-          * {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-          }
-        }
-      `}</style>
-
+    <motion.div 
+      className="min-h-screen bg-background"
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+    >
+      {/* Clean Apple-inspired Header */}
       <motion.div 
-        className="min-h-screen bg-gradient-to-br from-background via-background/80 to-primary/5"
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
+        className="px-8 py-16 mb-16"
+        variants={itemVariants}
       >
-      {/* Learning Hub Hero Section */}
-      <DashboardHeroSection
-        title="Master Your Financial Future"
-        emoji=""
-        emojiAnimation={{ rotate: [0, 10, -10, 0], duration: 2, repeatDelay: 5 }}
-        description="Build wealth through expert-led essentials and personalized AI courses. From budgeting basics to advanced investing strategies."
-        actions={[
-          {
-            label: "Start Learning Path",
-            icon: faGraduationCap,
-            onClick: () => {
-              const nextCourse = learningStats.completedLessons === 0 
-                ? `/dashboard/learning/${basicCourse.course_id}`
-                : aiCourses.length > 0 
-                  ? `/dashboard/learning/${aiCourses[0].course_id}`
-                  : `/dashboard/essentials`;
-              navigate({ to: nextCourse });
-            },
-            variant: 'primary' as const,
-          },
-          {
-            label: "Create AI Course",
-            icon: faWandMagicSparkles,
-            onClick: () => openChat('educator'),
-            variant: 'secondary' as const,
-          }
-        ]}
-        metrics={[
-          {
-            icon: faFire,
-            value: learningStats.streak,
-            label: "Learning Streak",
-            gradientColors: "from-orange-600 to-red-600",
-            iconColors: "from-orange-400 to-red-500",
-            delay: 0.5
-          },
-          {
-            icon: faBookOpen,
-            value: learningStats.completedLessons,
-            label: "Lessons Complete",
-            gradientColors: "from-green-600 to-emerald-600",
-            iconColors: "from-green-400 to-emerald-500",
-            delay: 0.6
-          },
-          {
-            icon: faStar,
-            value: `${Math.round((learningStats.completedLessons / Math.max(learningStats.totalCourses * 5, 1)) * 100)}%`,
-            label: "Progress",
-            gradientColors: "from-blue-600 to-indigo-600",
-            iconColors: "from-blue-400 to-indigo-500",
-            delay: 0.7
-          },
-          {
-            icon: faTrophy,
-            value: learningStats.earnedXP.toLocaleString(),
-            label: "Skills XP",
-            gradientColors: "from-purple-600 to-pink-600",
-            iconColors: "from-purple-400 to-pink-500",
-            delay: 0.8
-          }
-        ]}
-      />
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-6xl font-light text-foreground mb-6 tracking-tight">
+            Master Your Financial Future
+          </h1>
+          <p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
+            Build wealth through expert-led essentials and personalized AI courses. From budgeting basics to advanced investing strategies.
+          </p>
+          
+          {/* Action buttons */}
+          <div className="flex items-center justify-center gap-6 mb-16">
+            <button
+              onClick={() => {
+                const nextCourse = learningStats.completedLessons === 0 
+                  ? `/dashboard/learning/${basicCourse.course_id}`
+                  : aiCourses.length > 0 
+                    ? `/dashboard/learning/${aiCourses[0].course_id}`
+                    : `/dashboard/essentials`;
+                navigate({ to: nextCourse });
+              }}
+              className="bg-primary text-primary-foreground px-8 py-4 rounded-full font-medium text-lg hover:opacity-90 transition-opacity duration-200"
+            >
+              Start Learning Path
+            </button>
+            <button
+              onClick={() => openChat('educator')}
+              className="border border-border bg-background px-8 py-4 rounded-full font-medium text-lg hover:bg-muted/50 transition-colors duration-200"
+            >
+              Create AI Course
+            </button>
+          </div>
 
-      {/* Modern Tab Navigation */}
+          {/* Stats Grid - Clean Design */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 max-w-4xl mx-auto">
+            <div className="text-center">
+              <div className="text-4xl font-light text-orange-600 dark:text-orange-400 mb-2">
+                {learningStats.streak}
+              </div>
+              <div className="text-sm text-muted-foreground">Learning Streak</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-light text-green-600 dark:text-green-400 mb-2">
+                {learningStats.completedLessons}
+              </div>
+              <div className="text-sm text-muted-foreground">Lessons Complete</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-light text-blue-600 dark:text-blue-400 mb-2">
+                {Math.round((learningStats.completedLessons / Math.max(learningStats.totalCourses * 5, 1)) * 100)}%
+              </div>
+              <div className="text-sm text-muted-foreground">Progress</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-light text-purple-600 dark:text-purple-400 mb-2">
+                {learningStats.earnedXP.toLocaleString()}
+              </div>
+              <div className="text-sm text-muted-foreground">Skills XP</div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Clean Tab Navigation */}
       <motion.div 
-        className="px-4 sm:px-6 mb-6 sm:mb-8"
+        className="px-8 mb-12"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
-          <motion.div 
-            className="rounded-xl sm:rounded-2xl p-2 sm:p-3 shadow-xl border border-border/50 backdrop-blur-xl"
-            variants={glassVariants}
-            style={{
-              background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(124, 58, 237, 0.03) 100%)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)"
-            }}
-          >
-            <div className="flex flex-col sm:flex-row gap-2">
-              {[
-                { id: 'all', label: 'All Courses', icon: faBookOpen },
-                { id: 'personalized', label: 'AI Personalized', icon: faRobot },
-                { id: 'essentials', label: 'Essentials', icon: faGraduationCap }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`
-                    flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-lg sm:rounded-xl font-medium transition-all duration-200 relative overflow-hidden touch-manipulation
-                    ${activeTab === tab.id 
-                      ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transform scale-[1.02]' 
-                      : 'text-foreground/70 hover:text-foreground hover:bg-background/50 hover:backdrop-blur-sm hover:scale-[1.01]'
-                    }
-                  `}
-                >
-                  <FontAwesomeIcon icon={tab.icon} className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
+          <div className="bg-muted/30 rounded-2xl p-2 flex">
+            {[
+              { id: 'all', label: 'All Courses' },
+              { id: 'personalized', label: 'AI Personalized' },
+              { id: 'essentials', label: 'Essentials' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`
+                  flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200
+                  ${activeTab === tab.id 
+                    ? 'bg-background text-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground'
+                  }
+                `}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </motion.div>
 
       {/* Course Grid */}
       <motion.section 
-        className="px-4 sm:px-6 mb-8 sm:mb-12"
+        className="px-8 mb-16"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
           {isAICoursesLoading && activeTab !== 'essentials' ? (
             <div className="flex justify-center py-20">
-              <motion.div 
-                className="w-16 h-16 border-4 border-purple-200 dark:border-purple-800 border-t-purple-600 dark:border-t-purple-400 rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
+              <div className="w-8 h-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
             </div>
           ) : filteredCourses.length === 0 ? (
             <motion.div 
@@ -657,20 +561,22 @@ export function UnifiedLearningPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-100 dark:from-purple-900/30 to-indigo-100 dark:to-indigo-900/30 rounded-full flex items-center justify-center">
-                <FontAwesomeIcon icon={faPlus} className="h-10 w-10 text-purple-600 dark:text-purple-400" />
+              <div className="w-24 h-24 mx-auto mb-8 bg-muted/30 rounded-3xl flex items-center justify-center">
+                <Plus className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-xl lg:text-lg xl:text-xl font-bold text-foreground mb-3">No courses yet</h3>
-              <p className="text-muted-foreground mb-6">Start your learning journey by creating your first AI-powered course!</p>
+              <h3 className="text-2xl font-light text-foreground mb-4">No courses yet</h3>
+              <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+                Start your learning journey by creating your first AI-powered course!
+              </p>
               <button
                 onClick={() => openChat('educator')}
-                className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium hover:opacity-90 transition-opacity duration-200"
               >
                 Create Your First Course
               </button>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               <AnimatePresence mode="popLayout">
                 {filteredCourses.map((course, index) => (
                   <motion.div
@@ -678,75 +584,42 @@ export function UnifiedLearningPage() {
                     variants={courseCardVariants}
                     initial="initial"
                     animate="animate"
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    exit={{ opacity: 0, y: 20 }}
                     whileHover="hover"
                     layout
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.05 }}
                   >
                     <Link
                       to={`/dashboard/learning/${course.course_id}`}
                       className="block h-full"
                     >
-                      <div className={`
-                        h-full bg-background/90 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border group
-                        ${course.type === 'essential' 
-                          ? 'border-green-200/50 hover:border-green-400/70 hover:bg-green-50/30 dark:hover:bg-green-950/20' 
-                          : 'border-purple-200/50 hover:border-purple-400/70 hover:bg-purple-50/30 dark:hover:bg-purple-950/20'
-                        }
-                      `}>
+                      <div className="h-full bg-background rounded-3xl hover:bg-muted/20 transition-colors duration-200 overflow-hidden group p-8">
                         {/* Course Header */}
-                        <div className={`
-                          p-6 pb-4 relative overflow-hidden
-                          ${course.type === 'essential' 
-                            ? 'bg-gradient-to-br from-emerald-50 dark:from-emerald-900/20 to-green-50 dark:to-green-900/20' 
-                            : 'bg-gradient-to-br from-purple-50 dark:from-purple-900/20 to-indigo-50 dark:to-indigo-900/20'
-                          }
-                        `}>
-                          {/* Decorative background */}
-                          <div className="absolute -top-20 -right-20 w-40 h-40 bg-white/20 rounded-full blur-2xl" />
-                          
-                          <div className="relative flex items-start gap-4">
-                            <div className="text-4xl flex-shrink-0">{course.icon || "📚"}</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className={`
-                                  px-3 py-1 text-xs font-semibold rounded-full
-                                  ${course.type === 'essential' 
-                                    ? 'bg-emerald-500 text-white' 
-                                    : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
-                                  }
-                                `}>
-                                  {course.type === 'essential' ? 'Expert-Led' : 'AI-Powered'}
-                                </span>
-                                {course.type === 'personalized' && (
-                                  <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full">
-                                    <FontAwesomeIcon icon={faGem} className="h-3 w-3 mr-1" />
-                                    Premium
-                                  </span>
-                                )}
-                              </div>
-                              <motion.h3 
-                              className="text-lg lg:text-base xl:text-lg font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-foreground/80 transition-colors duration-200"
-                                style={{
-                                  fontVariationSettings: "'wght' 600",
-                                  lineHeight: "1.3"
-                                }}
-                              >
-                                {course.title}
-                              </motion.h3>
-                            </div>
+                        <div className="mb-6">
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="text-2xl">{course.icon || "📚"}</div>
+                            <span className={`
+                              px-3 py-1 text-xs font-medium rounded-full
+                              ${course.type === 'essential' 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                                : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                              }
+                            `}>
+                              {course.type === 'essential' ? 'Expert-Led' : 'AI-Powered'}
+                            </span>
                           </div>
                           
-                          <p className="text-base lg:text-sm xl:text-base text-muted-foreground line-clamp-3 leading-relaxed" style={{
-                            fontWeight: "400",
-                            lineHeight: "1.6"
-                          }}>
+                          <h3 className="text-xl font-medium text-foreground mb-3 group-hover:text-foreground/80 transition-colors duration-200">
+                            {course.title}
+                          </h3>
+                          
+                          <p className="text-muted-foreground leading-relaxed line-clamp-3">
                             {course.description}
                           </p>
                         </div>
 
                         {/* Course Info */}
-                        <div className="p-6 pt-4 space-y-4">
+                        <div className="space-y-6">
                           {/* Progress Bar (for all courses) */}
                           {(() => {
                             // Calculate course-specific completion using consistent logic
@@ -759,31 +632,27 @@ export function UnifiedLearningPage() {
                             
                             return (
                               <div>
-                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                <div className="flex justify-between text-sm text-muted-foreground mb-2">
                                   <span>Progress</span>
                                   <span>
-                                    {completedCount}/{totalCount} lessons completed
+                                    {completedCount}/{totalCount} lessons
                                   </span>
                                 </div>
-                                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                                   <motion.div 
                                     className={`h-full rounded-full ${
                                       course.type === 'essential' 
-                                        ? 'bg-gradient-to-r from-emerald-500 to-green-500'
-                                        : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                                        ? 'bg-green-600' 
+                                        : 'bg-purple-600'
                                     }`}
-                                    initial={{ width: 0, scaleX: 0 }}
+                                    initial={{ width: 0 }}
                                     animate={{ 
-                                      width: `${progressPercentage}%`,
-                                      scaleX: 1
+                                      width: `${progressPercentage}%`
                                     }}
                                     transition={{ 
-                                      duration: 1.2, 
-                                      delay: 0.5,
-                                      ease: [0.25, 0.8, 0.5, 1] // Structured Expression timing
-                                    }}
-                                    style={{
-                                      transformOrigin: "left center"
+                                      duration: 0.8, 
+                                      delay: 0.3,
+                                      ease: [0.25, 0.46, 0.45, 0.94]
                                     }}
                                   />
                                 </div>
@@ -792,37 +661,37 @@ export function UnifiedLearningPage() {
                           })()}
 
                           {/* Course Meta */}
-                          <div className="grid grid-cols-3 gap-3 text-center">
+                          <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
-                              <p className="text-xs lg:text-xs text-muted-foreground">Difficulty</p>
-                              <p className="text-sm lg:text-xs xl:text-sm font-semibold text-foreground">{course.difficulty}</p>
+                              <p className="text-xs text-muted-foreground mb-1">Difficulty</p>
+                              <p className="text-sm font-medium text-foreground">{course.difficulty}</p>
                             </div>
                             <div>
-                              <p className="text-xs lg:text-xs text-muted-foreground">Duration</p>
-                              <p className="text-sm lg:text-xs xl:text-sm font-semibold text-foreground">{course.duration}</p>
+                              <p className="text-xs text-muted-foreground mb-1">Duration</p>
+                              <p className="text-sm font-medium text-foreground">{course.duration}</p>
                             </div>
                             <div>
-                              <p className="text-xs lg:text-xs text-muted-foreground">Students</p>
-                              <p className="text-sm lg:text-xs xl:text-sm font-semibold text-foreground">{course.students}</p>
+                              <p className="text-xs text-muted-foreground mb-1">Students</p>
+                              <p className="text-sm font-medium text-foreground">{course.students}</p>
                             </div>
                           </div>
 
                           {/* CTA Button */}
                           <button className={`
-                            w-full py-3 rounded-xl font-medium transition-all duration-300 flex items-center justify-center gap-2
+                            w-full py-4 rounded-full font-medium transition-colors duration-200 flex items-center justify-center gap-2
                             ${course.type === 'essential' 
-                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50' 
-                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40' 
+                              : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/40'
                             }
                           `}>
                             {course.type === 'personalized' && course.lessons.some((l: any) => l.unlocked) ? (
                               <>
-                                <FontAwesomeIcon icon={faCirclePlay} className="h-4 w-4" />
+                                <Play className="h-4 w-4" />
                                 Continue Learning
                               </>
                             ) : (
                               <>
-                                <FontAwesomeIcon icon={faRocket} className="h-4 w-4" />
+                                <Play className="h-4 w-4" />
                                 Start Course
                               </>
                             )}
@@ -833,7 +702,7 @@ export function UnifiedLearningPage() {
                   </motion.div>
                 ))}
 
-                {/* Add New Course Card */}
+                {/* Add New Course Card - Clean Design */}
                 {activeTab !== 'essentials' && (
                   <motion.div
                     variants={courseCardVariants}
@@ -843,17 +712,17 @@ export function UnifiedLearningPage() {
                     onClick={() => openChat('educator')}
                     className="cursor-pointer"
                   >
-                    <div className="h-full bg-gradient-to-br from-muted/30 to-muted/50 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-dashed border-border hover:border-purple-400 flex items-center justify-center p-8">
+                    <div className="h-full bg-muted/20 rounded-3xl hover:bg-muted/30 transition-colors duration-200 border-2 border-dashed border-muted hover:border-purple-400/50 flex items-center justify-center p-8">
                       <div className="text-center">
                         <motion.div 
-                          className="w-20 h-20 mx-auto mb-4 bg-background rounded-full flex items-center justify-center shadow-lg"
-                          whileHover={{ rotate: 180 }}
-                          transition={{ duration: 0.5 }}
+                          className="w-16 h-16 mx-auto mb-6 bg-background rounded-2xl flex items-center justify-center"
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ duration: 0.2 }}
                         >
-                          <FontAwesomeIcon icon={faPlus} className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                          <Plus className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                         </motion.div>
-                        <h3 className="text-base lg:text-sm xl:text-base font-bold text-foreground mb-2">Create New Course</h3>
-                        <p className="text-xs lg:text-xs xl:text-sm text-muted-foreground">Let AI design a course tailored to your goals</p>
+                        <h3 className="text-lg font-medium text-foreground mb-3">Create New Course</h3>
+                        <p className="text-muted-foreground leading-relaxed">Let AI design a course tailored to your goals</p>
                       </div>
                     </div>
                   </motion.div>
@@ -864,20 +733,23 @@ export function UnifiedLearningPage() {
         </div>
       </motion.section>
 
-      {/* AI Coach Floating Button (Mobile) */}
+      {/* AI Coach Floating Button (Mobile) - Clean Design */}
       <motion.button
         onClick={() => openChat('educator')}
-        className="lg:hidden fixed bottom-4 sm:bottom-6 right-4 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full shadow-2xl flex items-center justify-center text-white z-40 touch-manipulation"
-        whileHover={{ scale: 1.1 }}
+        className="lg:hidden fixed bottom-4 sm:bottom-6 right-4 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 bg-purple-600 rounded-full shadow-lg flex items-center justify-center text-white z-40 touch-manipulation"
+        whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        transition={{ delay: 0.5 }}
+        transition={{ 
+          delay: 0.5,
+          duration: 0.3,
+          ease: [0.25, 0.46, 0.45, 0.94]
+        }}
       >
-        <FontAwesomeIcon icon={faComments} className="h-5 w-5 sm:h-6 sm:w-6" />
+        <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
       </motion.button>
     
       </motion.div>
-    </>
-  );
+  );  
 }
