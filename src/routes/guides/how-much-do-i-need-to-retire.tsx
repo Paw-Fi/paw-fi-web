@@ -12,8 +12,8 @@ export const Route = createFileRoute('/guides/how-much-do-i-need-to-retire')({
   component: RetirementNeedsGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-much-do-i-need-to-retire');
-    const title = 'How Much Do I Need to Retire? | Complete Retirement Calculator 2025 | Moneko';
-    const description = 'Calculate how much money you need to retire comfortably. Learn the 4% rule, replacement ratios, and personalized retirement planning strategies for 2025.';
+    const title = 'How Much Do I Need to Retire? | Calculator 2025 | Moneko';
+    const description = 'Calculate how much money you need to retire comfortably. Learn the 4% rule, replacement ratios, and retirement planning strategies for 2025.';
     const keywords = 'how much to retire, retirement calculator, retirement savings needed, 4% rule retirement, retirement planning 2025';
 
     const meta = seo({

@@ -14,8 +14,8 @@ export const Route = createFileRoute('/guides/complete-beginner-guide-to-investi
   component: CompleteInvestingGuide,
     head: () => {
       const pageUrl = getCanonicalUrl('/guides/complete-beginner-guide-to-investing');
-      const title = 'Complete Beginner\'s Guide to Investing in 2025 | Step-by-Step | Moneko';
-      const description = 'Learn how to start investing from scratch. Complete guide covering investment basics, types of investments, portfolio allocation, risk management, and step-by-step investment strategy for beginners.';
+      const title = 'Beginner\'s Guide to Investing 2025 | Step-by-Step | Moneko';
+      const description = 'Learn to start investing from scratch. Complete guide covering investment basics, portfolio allocation, and step-by-step strategy for beginners.';
       const keywords = 'beginner investing guide, how to start investing, investment basics, stock market for beginners, portfolio allocation, investment strategy 2025';
 
       const meta = seo({

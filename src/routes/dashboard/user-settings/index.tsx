@@ -14,8 +14,8 @@ export const Route = createFileRoute('/dashboard/user-settings/')({
   component: UserSettings,
   head: () => {
     const canonicalUrl = getCanonicalUrl('/dashboard/user-settings/');
-    const title = 'Account Settings - Profile & Preferences Management | Moneko';
-    const description = 'Manage your Moneko account settings, update your profile information, customize preferences, and control your financial dashboard experience with secure account management tools.';
+    const title = 'Account Settings - Profile & Preferences | Moneko';
+    const description = 'Manage Moneko account settings, update profile, customize preferences & control financial dashboard experience.';
     const keywords = 'account settings, user profile, account management, dashboard preferences, financial account settings, profile customization, account security, user preferences';
 
     const meta = seo({

@@ -21,7 +21,7 @@ export const Route = createFileRoute('/calculators/mortgage-calculator')({
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
       title: 'Mortgage Calculator - Home Loan Payment Estimator | Moneko',
-      description: 'Calculate monthly mortgage payments with our free home loan calculator. Get accurate PITI estimates, view amortization schedules, and compare loan terms with taxes and insurance.',
+      description: 'Calculate monthly mortgage payments with free home loan calculator. Get PITI estimates, amortization schedules & loan comparisons.',
       keywords: 'mortgage calculator, home loan calculator, mortgage payment calculator, amortization schedule, PITI calculator, home affordability calculator, mortgage rates, loan calculator',
       image: 'https://moneko.io/og-img.png',
       url: pageUrl,
@@ -113,19 +113,15 @@ function MortgageCalculatorPage  ()  {
           requirements: "Web Browser, JavaScript enabled",
           softwareVersion: "2.1",
           dateModified: new Date().toISOString().split('T')[0],
-          screenshot: screenshotData.screenshot,
+          screenshot: [screenshotData.screenshot],
           publisher: {
             name: 'Moneko',
             url: 'https://moneko.io',
             logo: 'https://moneko.io/logo192.png',
           },
           aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: "4.9",
-            bestRating: "5",
-            worstRating: "1",
-            ratingCount: "3,152",
-            reviewCount: "2,284"
+            ratingValue: 4.9,
+            ratingCount: 3152
           }
         }}
       />
@@ -345,20 +341,6 @@ function MortgageCalculatorPage  ()  {
               answer: "Closing costs typically run 2-5% of home price. Buyers usually pay loan origination, appraisal, inspection, title insurance, and prepaid items. Sellers typically pay realtor commissions. You can negotiate who pays what or ask for seller concessions."
             }
           ]}
-        />
-        
-        {/* Speakable Schema for Voice Assistants */}
-        <StructuredData
-          type="speakable"
-          data={{
-            "@type": "SpeakableSpecification",
-            "cssSelector": [".key-takeaways", ".quick-facts", ".comparison-block"],
-            "xpath": [
-              "//div[contains(@class, 'key-takeaways')]",
-              "//div[contains(@class, 'quick-facts')]",
-              "//div[contains(@class, 'comparison-block')]"
-            ]
-          }}
         />
 
         <MortgageCalculatorSEOContent />

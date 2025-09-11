@@ -612,7 +612,7 @@ export const Route = createFileRoute('/calculators/retirement-calculator')({
     const pageUrl = getCanonicalUrl(routePath);
     const meta = seo({
       title: 'Retirement Calculator - 401k & IRA Planner | Moneko',
-      description: 'Plan your retirement savings with our comprehensive calculator. Calculate 401k contributions, IRA limits, catch-up contributions, and get personalized retirement strategies by age.',
+      description: 'Calculate retirement savings needs, 401k contributions, IRA limits, and catch-up contributions. Get personalized strategies by age for financial independence.',
       keywords: 'retirement calculator, 401k calculator, IRA calculator, retirement planning calculator, catch-up contributions, retirement savings calculator, 401k contribution limits, retirement planner',
       image: 'https://moneko.io/og-img.png',
       url: pageUrl,

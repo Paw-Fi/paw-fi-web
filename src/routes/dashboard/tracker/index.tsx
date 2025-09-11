@@ -34,8 +34,8 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   component: GoalsTracker,
   head: () => {
     const canonicalUrl = getCanonicalUrl('/dashboard/tracker/');
-    const title = 'Financial Goal Tracker - AI-Powered Achievement & Progress Monitoring | Moneko';
-    const description = 'Set, track, and achieve your financial goals with AI-powered insights, smart milestones, and personalized strategies. Monitor progress, celebrate achievements, and stay motivated on your wealth-building journey.';
+    const title = 'Goal Tracker - AI-Powered Achievement & Progress | Moneko';
+    const description = 'Set, track & achieve financial goals with AI insights, smart milestones & personalized strategies for wealth building.';
     const keywords = 'financial goal tracker, AI financial planning, savings goals, investment goals, milestone management, financial objectives, goal setting, progress tracking, wealth building goals, retirement planning goals';
 
     const meta = seo({

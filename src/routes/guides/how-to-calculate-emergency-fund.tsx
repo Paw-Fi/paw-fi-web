@@ -15,7 +15,7 @@ export const Route = createFileRoute('/guides/how-to-calculate-emergency-fund')(
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-to-calculate-emergency-fund');
     const title = 'How to Calculate Emergency Fund Amount | Complete Guide 2025 | Moneko';
-    const description = 'Learn how to calculate the right emergency fund amount for your situation. Discover the 3-6 month rule, factors to consider, and step-by-step calculation methods.';
+    const description = 'Learn how to calculate the right emergency fund amount for your situation. Discover the 3-6 month rule, factors to consider, and calculation methods.';
     const keywords = 'emergency fund calculator, how much emergency fund, emergency savings amount, 3 months expenses, 6 months emergency fund';
 
     const meta = seo({

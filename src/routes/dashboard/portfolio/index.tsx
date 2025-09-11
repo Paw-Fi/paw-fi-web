@@ -41,8 +41,8 @@ export const Route = createFileRoute("/dashboard/portfolio/")({
   component: Profile,
   head: () => {
     const canonicalUrl = getCanonicalUrl("/dashboard/portfolio");
-    const title = "Financial Portfolio Dashboard - Real-Time Wealth & Health Tracking | Moneko";
-    const description = "Monitor your complete financial picture with customizable portfolio dashboards. Track investments, assets, goals, and financial health metrics with real-time insights and AI-powered recommendations.";
+    const title = "Portfolio Dashboard - Real-Time Wealth & Health Tracking | Moneko";
+    const description = "Monitor complete financial picture with customizable dashboards. Track investments, assets & financial health with AI insights.";
     const keywords = "financial portfolio dashboard, investment tracking, asset management, financial health monitoring, wealth tracking, portfolio analytics, financial dashboard, retirement planning, investment portfolio";
     const imageUrl = "https://moneko.io/og-img.png";
 

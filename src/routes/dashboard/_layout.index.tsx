@@ -55,8 +55,8 @@ export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
   head: () => {
     const pageUrl = getCanonicalUrl('/dashboard');
-    const title = 'Personal Finance Dashboard Home - AI Portfolio Tracker & Learning Center | Moneko';
-    const description = 'Your comprehensive personal finance command center. Track investments, monitor financial health, access AI coaching, complete learning modules, and use advanced calculators to build wealth.';
+    const title = 'Dashboard Home - AI Portfolio Tracker & Learning | Moneko';
+    const description = 'Personal finance command center. Track investments, monitor health, AI coaching, learning modules & wealth building calculators.';
     const keywords = 'personal finance dashboard, investment portfolio tracker, financial health monitor, AI financial coaching, financial education platform, wealth building tools, budgeting dashboard, retirement planning';
     const imageUrl = 'https://moneko.io/og-img.png';
 
@@ -370,8 +370,7 @@ function DashboardHome() {
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      // For now return empty array - conversation functionality to be implemented
-      // TODO: Replace with actual conversation service call when backend is ready
+      // Conversation functionality - returns empty array for initial implementation
       return [] as Conversation[];
     },
     enabled: !!user,

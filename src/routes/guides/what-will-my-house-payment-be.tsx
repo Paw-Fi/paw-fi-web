@@ -13,8 +13,8 @@ export const Route = createFileRoute('/guides/what-will-my-house-payment-be')({
   component: HousePaymentGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/what-will-my-house-payment-be');
-    const title = 'What Will My House Payment Be? | Complete PITI Calculator | Moneko';
-    const description = 'Find out "what will my house payment be" with our complete guide. Calculate PITI payments including principal, interest, taxes, and insurance with current 2025 rates.';
+    const title = 'What Will My House Payment Be? | PITI Calculator | Moneko';
+    const description = 'Find out what your house payment will be with our complete guide. Calculate PITI payments with principal, interest, taxes, and insurance for 2025.';
     const keywords = 'what will my house payment be, monthly mortgage payment, PITI calculator, house payment calculator, mortgage payment estimate';
 
     const meta = seo({

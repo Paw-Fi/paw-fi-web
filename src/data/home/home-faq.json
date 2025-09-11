@@ -1,22 +1,42 @@
 [
     {
+      "id": "what-is-moneko",
       "question": "What is Moneko?",
       "answer": "Moneko is an online platform dedicated to making financial education accessible and engaging. We offer AI-driven personalized learning, expert-led courses, and practical financial tools to help you master personal finance, investing, budgeting, and more."
     },
     {
+      "id": "who-is-moneko-for",
       "question": "Who is Moneko for?",
       "answer": "Moneko is for anyone looking to improve their financial literacy, from beginners just starting their financial journey to individuals seeking to deepen their understanding of specific financial topics. Whether you want to learn about saving, investing, managing debt, or planning for retirement, Moneko has resources for you."
     },
     {
+      "id": "ai-powered-learning",
       "question": "How does the AI-powered learning work?",
       "answer": "Our AI analyzes your financial goals and current knowledge to create a customized learning plan. You'll engage with interactive lessons, get instant answers from our AI chat, and practice with real-world scenarios, all tailored to your unique needs."
     },
     {
-      "question": "Are the financial courses and tools on Moneko free?",
-      "answer": "Moneko offers a mix of free and premium content. Many of our foundational lessons, AI chat features, and basic financial calculators are available for free to help you get started. Advanced courses and specialized tools may be part of a premium offering."
+      "id": "free-tier",
+      "question": "Is Moneko really free?",
+      "answer": "Yes! Our comprehensive free tier includes AI coaching, budgeting tools, goal tracking, and educational courses. Premium features are available for advanced users."
     },
     {
+      "id": "financial-tools",
       "question": "What kind of financial tools does Moneko offer?",
       "answer": "Moneko provides a suite of practical financial calculators to help you plan and manage your money effectively. These include tools for auto loans, compound interest, mortgage calculations, retirement planning, and setting savings goals."
+    },
+    {
+      "id": "security",
+      "question": "How secure is my financial data?",
+      "answer": "We use bank-level 256-bit encryption and are SOC 2 Type II certified. Your data is encrypted both in transit and at rest, and we never store your banking credentials."
+    },
+    {
+      "id": "ai-accuracy",
+      "question": "How accurate are the AI recommendations?",
+      "answer": "Our AI is trained by certified financial professionals (CFA, CSC, MBA) and has helped users achieve 127% better portfolio performance compared to traditional savings accounts."
+    },
+    {
+      "id": "getting-started",
+      "question": "How quickly can I get started?",
+      "answer": "You can set up your account and start using Moneko in under 3 minutes. No credit card required for the free trial."
     }
   ]

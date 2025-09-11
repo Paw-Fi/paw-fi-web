@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import authBg from '@/assets/images/auth/auth-bg.png';
 import { MonekoIcon } from '@/components/shared/moneko-icon';
+import { StructuredData } from '@/components/seo/structured-data';
 
 export const Route = createFileRoute('/register/')({  
   component: Register,
@@ -17,11 +18,52 @@ export const Route = createFileRoute('/register/')({
   head: () => {
     const pageUrl = getCanonicalUrl('/register');
     const meta = seo({
-      title: 'Sign Up | Moneko',
-      description: 'Create a free Moneko account to access personalized financial education, calculators, and AI chat.',
-      keywords: 'sign up, register, create account, Moneko, financial education, free account',
+      title: 'Sign Up Free - Start Your Financial Journey | Moneko',
+      description: 'Create free account for personalized financial education, AI coaching, portfolio tracking & calculators.',
+      keywords: 'sign up, register, create account, Moneko, financial education, free account, personal finance, AI coaching, investment education',
       url: pageUrl,
     });
+
+    // GEO-Optimized Service Schema for Registration
+    const serviceSchema = {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "name": "Moneko Financial Education Platform Registration",
+      "description": "Free registration for comprehensive financial education platform with AI coaching, investment guidance, and personalized budgeting tools",
+      "provider": {
+        "@type": "Organization",
+        "name": "Moneko",
+        "url": "https://moneko.io",
+        "logo": "https://moneko.io/logo192.png",
+        "founder": {
+          "@type": "Person",
+          "name": "Sabina Shao",
+          "jobTitle": "CEO & Financial Education Expert",
+          "hasCredential": "CFA Charterholder"
+        }
+      },
+      "serviceType": "Financial Education Technology",
+      "areaServed": "United States",
+      "availableChannel": {
+        "@type": "ServiceChannel",
+        "serviceUrl": "https://moneko.io/register",
+        "serviceSmsNumber": null,
+        "servicePhone": null
+      },
+      "category": "Financial Education",
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "Individual Financial Learners",
+        "geographicArea": "United States"
+      },
+      "offers": {
+        "@type": "Offer",
+        "name": "Free Financial Education Account",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      }
+    };
     
     return {
       meta,
@@ -30,7 +72,13 @@ export const Route = createFileRoute('/register/')({
           rel: 'canonical',
           href: pageUrl
         }
-      ]
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(serviceSchema),
+        },
+      ],
     };
   },
 });

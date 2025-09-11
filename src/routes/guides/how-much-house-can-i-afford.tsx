@@ -13,8 +13,8 @@ export const Route = createFileRoute('/guides/how-much-house-can-i-afford')({
   component: HouseAffordabilityGuide,
   head: () => {
     const pageUrl = getCanonicalUrl('/guides/how-much-house-can-i-afford');
-    const title = 'How Much House Can I Afford? | Home Affordability Calculator 2025 | Moneko';
-    const description = 'Calculate exactly how much house you can afford with your salary and budget. Use the 28/36 rule, debt-to-income ratios, and current market rates for accurate home buying guidance.';
+    const title = 'How Much House Can I Afford? | Calculator 2025 | Moneko';
+    const description = 'Calculate exactly how much house you can afford with your salary. Use the 28/36 rule, debt-to-income ratios, and current market rates.';
     const keywords = 'how much house can I afford, home affordability calculator, house affordability, mortgage affordability, home buying budget';
 
     const meta = seo({

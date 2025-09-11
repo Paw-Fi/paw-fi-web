@@ -25,8 +25,8 @@ export const Route = createFileRoute("/dashboard/learning/")({
   component: UnifiedLearningPage,
   head: () => {
     const canonicalUrl = getCanonicalUrl('/dashboard/learning/');
-    const title = 'Personal Finance Learning Hub - AI-Powered Courses & Expert Education | Moneko';
-    const description = 'Access comprehensive financial education with AI-personalized courses and expert-led fundamentals. Master budgeting, investing, retirement planning, and wealth building at your own pace.';
+    const title = 'Finance Learning Hub - AI Courses & Expert Education | Moneko';
+    const description = 'Comprehensive financial education with AI courses & expert fundamentals. Master budgeting, investing & wealth building.';
     const keywords = 'financial education, personal finance courses, AI learning, investment education, financial literacy, money management, budgeting courses, retirement planning, wealth building education, personalized learning';
 
     const meta = seo({
