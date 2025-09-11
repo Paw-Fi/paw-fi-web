@@ -55,18 +55,16 @@ export default defineConfig({
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    // TanStack Router with balanced code splitting
+    // TanStack Router - disable auto code splitting to prevent CSS recursion
     TanStackRouterVite({
-      autoCodeSplitting: true,
+      autoCodeSplitting: false,
     }),
     VitePluginRadar({
       analytics: {
         id: 'G-KBNN5QXD4G',
       },
     }),
-    tanstackStart({
-      customViteReactPlugin: true
-    }),
+    tanstackStart(),
     react(),
     compression({
       algorithm: 'gzip',
