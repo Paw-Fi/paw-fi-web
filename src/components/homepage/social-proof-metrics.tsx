@@ -5,23 +5,23 @@ import { Card, CardContent } from "@/components/ui/card";
 const metrics = [
   {
     value: "50,000+",
-    label: "Active Users",
-    description: "Trust Moneko with their finances"
+    label: "Former Mint Users",
+    description: "Switched to Moneko's AI finance coach"
   },
   {
     value: "$2.3M+",
     label: "Total Saved",
-    description: "By our users in the last year"
+    description: "By users in first 12 months"
   },
   {
     value: "4.9★",
-    label: "User Rating",
-    description: "Based on 10,000+ reviews"
+    label: "App Store Rating", 
+    description: "From 10,000+ verified users"
   },
   {
     value: "127%",
-    label: "Better Returns",
-    description: "Vs traditional savings accounts"
+    label: "Better ROI",
+    description: "Than traditional robo-advisors"
   }
 ];
 
@@ -37,10 +37,10 @@ export function SocialProofMetrics() {
           viewport={{ once: true }}
         >
           <h2 className="text-3xl font-bold text-foreground mb-6 sm:text-4xl md:text-5xl">
-            Trusted by Thousands, Proven by Results
+            The #1 Mint Alternative: Proven Results from Real Users
           </h2>
           <p className="text-muted-foreground text-xl max-w-2xl mx-auto">
-            Real metrics from real users who've transformed their financial lives
+            Join thousands of former Mint users who've transformed their finances with Moneko's AI personal finance coach
           </p>
         </motion.div>
 

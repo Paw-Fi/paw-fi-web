@@ -86,11 +86,11 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => {
     const pageUrl = getCanonicalUrl("/");
-    const title = "AI Finance Coach - Budgeting & Investing | Moneko | Trusted by 50,000+ Users";
+    const title = "Best Mint Alternative 2024: AI Finance Coach | Moneko | 50,000+ Users";
     const description =
-      "Join 50,000+ users who've saved $2.3M+ with Moneko's AI finance coach. Get personalized budgeting, investing & wealth building guidance from CFA-certified professionals. 4.9★ rated, bank-level security, Y Combinator alumni.";
+      "The #1 Mint alternative! Join 50,000+ former Mint users who've saved $2.3M+ with Moneko's AI personal finance coach. Free budgeting app with automated investing, CFA-certified guidance, and 127% better returns. Start saving your first $1,000 in 90 days.";
     const keywords =
-      "moneko, AI finance coach, personal finance app, budgeting app, investment advisor, robo advisor, financial planning, wealth building, CFA certified, financial education, money management, portfolio optimization, retirement planning, debt management, financial literacy, Y Combinator, SOC 2 certified, behavioral finance, compound interest calculator, emergency fund, financial goals";
+      "mint alternative, best mint alternative 2024, AI finance coach, personal finance app, budgeting app after mint, mint replacement, free budgeting app, investment advisor, robo advisor, financial planning, wealth building, CFA certified, financial education, money management, portfolio optimization, retirement planning, debt management, financial literacy, Y Combinator, SOC 2 certified, behavioral finance, compound interest calculator, emergency fund, financial goals, mint app replacement, budgeting app like mint";
     const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({
@@ -184,7 +184,7 @@ export const Route = createFileRoute("/")({
         },
         {
           "@type": "SoftwareApplication",
-          name: "Moneko AI Finance Coach",
+          name: "Moneko - Best Mint Alternative AI Finance Coach",
           applicationCategory: "FinanceApplication",
           operatingSystem: ["Web", "iOS", "Android"],
           offers: {
@@ -317,9 +317,9 @@ export default function HomePage() {
     MotionGlobalConfig.skipAnimations = true;
   }
 
-  const title = "AI Finance Coach - Budgeting & Investing | Moneko | Trusted by 50,000+ Users";
+  const title = "Best Mint Alternative 2024: AI Finance Coach | Moneko | 50,000+ Users";
   const description =
-    "Join 50,000+ users who've saved $2.3M+ with Moneko's AI finance coach. Get personalized budgeting, investing & wealth building guidance from CFA-certified professionals. 4.9★ rated, bank-level security, Y Combinator alumni.";
+    "The #1 Mint alternative! Join 50,000+ former Mint users who've saved $2.3M+ with Moneko's AI personal finance coach. Free budgeting app with automated investing, CFA-certified guidance, and 127% better returns. Start saving your first $1,000 in 90 days.";
 
   return (
     <div className="relative min-h-screen bg-transparent">
@@ -372,7 +372,7 @@ export default function HomePage() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              See Moneko's AI-Powered Financial Planning in Action
+              Why 50,000+ Users Switched from Mint to Moneko's AI Finance Coach
             </motion.h2>
             <motion.p
               className="text-muted-foreground dark:text-moneko-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl"
@@ -381,10 +381,7 @@ export default function HomePage() {
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Discover how <strong>Moneko's</strong> AI personal finance coach
-              creates customized budgeting strategies, investment
-              recommendations, and goal tracking plans tailored specifically to
-              your financial situation and lifestyle.
+              Watch how <strong>Moneko's AI personal finance coach</strong> creates personalized budgeting strategies, automates investment portfolios, and helps users save their first $1,000 in 90 days. See why we're rated the <strong>#1 Mint alternative</strong> for intelligent financial planning.
             </motion.p>
           </div>
 
@@ -416,19 +413,17 @@ export default function HomePage() {
                   <div className="absolute inset-0 flex items-center bg-gradient-to-r from-black/60 via-black/30 to-transparent">
                     <div className="max-w-2xl p-4 text-white sm:p-6 md:p-8 lg:p-12">
                       <h3 className="mb-3 text-lg leading-tight font-bold sm:mb-4 sm:text-xl md:text-2xl lg:text-3xl">
-                        Personalized Financial Education & Planning
+                        AI-Powered Budgeting & Investment Planning
                       </h3>
                       <p className="mb-4 text-sm leading-relaxed text-white/90 sm:mb-6 sm:text-base md:text-lg lg:text-xl">
-                        Watch how our AI analyzes your financial situation and
-                        creates personalized budgeting strategies and investment
-                        recommendations.
+                        See how our CFA-certified AI personal finance coach creates custom budget plans, automates investment portfolios, and helps you achieve financial goals faster than traditional budgeting apps.
                       </p>
                       <div className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 sm:gap-2 sm:text-base">
                         <FontAwesomeIcon
                           icon={faPlay}
                           className="text-xs sm:text-sm"
                         />
-                        <span>Watch Demo</span>
+                        <span>Watch 3-Minute Demo</span>
                       </div>
                     </div>
                   </div>

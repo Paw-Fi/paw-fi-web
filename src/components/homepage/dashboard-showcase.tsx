@@ -6,38 +6,38 @@ import { Link } from "@tanstack/react-router";
 const features = [
   {
     id: "ai-coach",
-    title: "AI Financial Coach",
-    description: "Get personalized lessons, help with your budget, and insights to help you save money.",
+    title: "AI Personal Finance Coach",
+    description: "Get personalized budgeting advice, investment recommendations, and money-saving insights from CFA-certified AI that learns your spending habits and financial goals.",
     image: "/src/assets/images/home-showcase/finni-ai.png",
     stats: "95% accuracy rate"
   },  
   {
     id: "ai-assistant",
-    title: "AI Financial Assistant",
-    description: "Get personalized financial advice and insights powered by certified CFA professionals. Your AI coach learns your habits and provides tailored recommendations.",
+    title: "Smart Budgeting App",
+    description: "Create budgets that actually work with AI-powered spending analysis, bill tracking, and automated savings recommendations. Better than Mint's basic categorization.",
     image: "/src/assets/images/home-showcase/moneko-ai.png",
-    stats: "95% accuracy rate"
+    stats: "Users save $15K+ annually"
   },  
   {
     id: "goal-tracking",
-    title: "Smart Goal Tracking",
-    description: "Set, monitor, and achieve your financial goals with intelligent progress tracking and automated milestone celebrations.",
+    title: "Financial Goal Tracker",
+    description: "Set and achieve specific savings goals like emergency funds, vacation money, or debt payoff. Track progress automatically and celebrate milestones with gamified rewards.",
     image: "/src/assets/images/home-showcase/dashboard-goal-tracker.png",
-    stats: "Average $15K saved"
+    stats: "Average $15K saved in year 1"
   },
   {
     id: "portfolio",
-    title: "Portfolio Analytics",
-    description: "Track your investments with real-time performance insights, risk analysis, and automated rebalancing recommendations.",
+    title: "Investment Portfolio Manager",
+    description: "Build diversified investment portfolios with AI-guided asset allocation, automatic rebalancing, and risk management. Outperform traditional robo-advisors.",
     image: "/src/assets/images/home-showcase/dashboard-porfolio.png",
-    stats: "127% better returns"
+    stats: "127% better returns than savings"
   },
   {
     id: "learning",
-    title: "Financial Education Hub",
-    description: "Learn from expert-led courses, interactive lessons, and personalized learning paths designed by certified professionals.",
+    title: "Financial Education Platform",
+    description: "Master personal finance with interactive courses on budgeting, investing, retirement planning, and debt management. Learn from MBA and CFA-certified instructors.",
     image: "/src/assets/images/home-showcase/dashboard-learning.png",
-    stats: "50+ expert courses"
+    stats: "50+ courses from financial experts"
   }
 ];
 
@@ -56,7 +56,7 @@ export function DashboardShowcase() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            Your Complete Financial Command Center
+            The Best Mint Alternative: Your AI-Powered Financial Dashboard
           </motion.h2>
           
           <motion.p
@@ -66,7 +66,7 @@ export function DashboardShowcase() {
             transition={{ duration: 0.6, delay: 0.1 }}
             viewport={{ once: true }}
           >
-            Explore the powerful tools that have helped 50,000+ users take control of their financial future
+            Discover why 50,000+ former Mint users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
           </motion.p>
         </div>
 

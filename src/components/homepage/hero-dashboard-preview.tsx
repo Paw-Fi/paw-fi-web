@@ -7,12 +7,12 @@ import { Link } from "@tanstack/react-router";
 import { AISearchInput } from "@/components/ui/ai-search-input";
 
 const chatSuggestions = [
-  "Help me set up a budget",
-  "How do I start investing?",
-  "Tell me about retirement planning",
-  "What's an emergency fund?",
-  "Explain compound interest",
-  "Tips for saving money"
+  "Help me save my first $1,000",
+  "Create a budget that actually works",
+  "Start investing with just $100",
+  "Pay off my debt faster", 
+  "Build my emergency fund",
+  "Best Mint alternative features"
 ];
 
 export function HeroDashboardPreview() {
@@ -36,7 +36,7 @@ export function HeroDashboardPreview() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <strong>Moneko</strong> builds you a high-interest portfolio and automates the cash flow into it.
+          The best <strong>Mint alternative</strong> that helps you save your first $1,000 in 90 days
         </motion.h2>
 
         <motion.div
@@ -46,7 +46,7 @@ export function HeroDashboardPreview() {
           transition={{ duration: 0.6, delay: 0.3 }}
         >
           <AISearchInput
-            placeholder="Ask Moneko AI: help me create a budget or How should I start investing?"
+            placeholder="Ask Moneko AI: 'Help me save $1,000' or 'Create my first budget' or 'Best investment for beginners'"
             suggestions={chatSuggestions}
           />
         </motion.div>

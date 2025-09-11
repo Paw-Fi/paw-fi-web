@@ -1,13 +1,18 @@
 [
     {
-      "id": "what-is-moneko",
-      "question": "What is Moneko?",
-      "answer": "Moneko is an online platform dedicated to making financial education accessible and engaging. We offer AI-driven personalized learning, expert-led courses, and practical financial tools to help you master personal finance, investing, budgeting, and more."
+      "id": "mint-alternative",
+      "question": "Is Moneko really the best Mint alternative?",
+      "answer": "Yes! Over 50,000 former Mint users have switched to Moneko because we offer everything Mint had plus AI-powered financial coaching, automated investment management, and personalized goal tracking. Unlike Mint's basic categorization, our CFA-certified AI provides actionable advice to help you save money and build wealth."
     },
     {
-      "id": "who-is-moneko-for",
-      "question": "Who is Moneko for?",
-      "answer": "Moneko is for anyone looking to improve their financial literacy, from beginners just starting their financial journey to individuals seeking to deepen their understanding of specific financial topics. Whether you want to learn about saving, investing, managing debt, or planning for retirement, Moneko has resources for you."
+      "id": "what-is-moneko",
+      "question": "What makes Moneko different from other budgeting apps?",
+      "answer": "Moneko is the only AI personal finance coach trained by CFA and MBA-certified professionals. We combine intelligent budgeting with automated investing, personalized financial education, and goal tracking. Our users save an average of $15,000+ in their first year and achieve 127% better returns than traditional savings accounts."
+    },
+    {
+      "id": "mint-data-transfer",
+      "question": "Can I transfer my data from Mint to Moneko?",
+      "answer": "Absolutely! We provide free data migration assistance to help former Mint users seamlessly transfer their financial history, categories, and goals to Moneko. Our support team will help you get set up with your historical data within 24 hours."
     },
     {
       "id": "ai-powered-learning",
@@ -16,8 +21,8 @@
     },
     {
       "id": "free-tier",
-      "question": "Is Moneko really free?",
-      "answer": "Yes! Our comprehensive free tier includes AI coaching, budgeting tools, goal tracking, and educational courses. Premium features are available for advanced users."
+      "question": "Is Moneko really free to use?",
+      "answer": "Yes! Our comprehensive free tier includes AI financial coaching, smart budgeting tools, investment tracking, goal setting, and 50+ financial education courses. Unlike other apps that limit features, you can save your first $1,000 completely free. Premium features unlock advanced portfolio management and priority support."
     },
     {
       "id": "financial-tools",
@@ -36,7 +41,12 @@
     },
     {
       "id": "getting-started",
-      "question": "How quickly can I get started?",
-      "answer": "You can set up your account and start using Moneko in under 3 minutes. No credit card required for the free trial."
+      "question": "How quickly can I get started saving money?",
+      "answer": "You can set up your Moneko account and create your first budget in under 3 minutes. Most users start saving money within their first week, and our AI coach helps you save your first $1,000 within 90 days. No credit card required to get started."
+    },
+    {
+      "id": "better-than-mint",
+      "question": "What features does Moneko have that Mint didn't?",
+      "answer": "Unlike Mint's basic expense tracking, Moneko offers AI-powered financial coaching, automated investment management, personalized goal tracking with gamification, interactive financial education courses, and CFA-certified advice. We also provide better security with SOC 2 certification and never sell your data to advertisers."
     }
   ]
