@@ -28,12 +28,37 @@ Allow: /budgeting-app/freelancers-budgeting
 Allow: /budgeting-app/entrepreneurs-budgeting
 Allow: /budgeting-app/retirees-budgeting
 
-# Passive income and financial learning content - high SEO value
+# Passive income and financial learning content - high SEO value (26 variants total)
 Allow: /passive-income/
 Allow: /passive-income/high-interest-portfolios
 Allow: /passive-income/goal-tracker-focus
 Allow: /passive-income/compound-interest-focus
 Allow: /passive-income/financial-learning-focus
+Allow: /passive-income/automated-portfolios
+
+# Time-to-wealth revolutionary positioning (6 new variants)
+Allow: /passive-income/time-to-wealth-converter
+Allow: /passive-income/zero-to-wealth-pathway
+Allow: /passive-income/time-value-optimizer
+Allow: /passive-income/broke-to-building
+Allow: /passive-income/hourly-wealth-maximizer
+
+# Comprehensive financial targeting variants (15 additional variants)
+Allow: /passive-income/side-hustle-income
+Allow: /passive-income/debt-payoff-budgeting
+Allow: /passive-income/emergency-fund-builder
+Allow: /passive-income/paycheck-to-paycheck-relief
+Allow: /passive-income/mint-alternative-budgeting
+Allow: /passive-income/financial-anxiety-relief
+Allow: /passive-income/beginner-financial-literacy
+Allow: /passive-income/gig-economy-finances
+Allow: /passive-income/low-income-budgeting
+Allow: /passive-income/credit-building-focus
+Allow: /passive-income/micro-investing-focus
+Allow: /passive-income/retirement-low-income
+Allow: /passive-income/single-parent-finances
+Allow: /passive-income/student-money-management
+Allow: /passive-income/small-business-budgeting
 
 # Financial questions and advice - high-priority content for SEO
 Allow: /questions/

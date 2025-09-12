@@ -1,19 +1,16 @@
 Data collection is disabled.
-Excellent, I have reviewed the provided changes. Here is my feedback.
+Excellent, I've reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-This change removes the `manualChunks` configuration from `vite.config.ts`, which simplifies the build process by relying on Vite/Rollup's default code-splitting logic. This is a valid approach that can often yield good results without manual tuning.
+Overall, this is an excellent and ambitious expansion of the website's content strategy. The addition of 21 new passive income variants is a significant move to capture a much wider range of search intent and target diverse user demographics. The changes are consistent and well-executed across the content, sitemap, and `robots.txt` files.
 
 #### Suggestions (Consider Improving)
 
-*   **Verify Performance Impact:** Removing manual chunking delegates the responsibility of creating optimal chunks to the bundler. While Vite's default strategy is sophisticated, it might not be perfect for every project. Manual chunking is often used to isolate large, infrequently changing vendor libraries from more frequently changing application code, which improves long-term caching for end-users.
+*   **Video URL Typo:** In `src/data/home/passive-income-variants.json`, for the `hourly-wealth-maximizer` variant, the `videoUrl` is set to `/hourly-wealth-demo.webv`. This appears to be a typo and should likely be `/hourly-wealth-demo.webm` to match the other video formats.
 
-    **Recommendation:** It is important to analyze the output of the production build to ensure this change doesn't negatively impact performance. You can use a tool like `rollup-plugin-visualizer` to inspect the generated bundle. Check for:
-    1.  The size of the initial chunks.
-    2.  Whether vendor libraries are being bundled with application code.
-    3.  Any unexpected duplication of modules across chunks.
+*   **Sitemap `lastmod` Dates:** All new entries in `public/sitemap.xml` have the `lastmod` date set to `2025-09-12`. While accurate for this deployment, consider automating the update of this field to reflect the actual date of content modification. This provides more accurate information to search engine crawlers. You have a `scripts/update-sitemap.js` script which might be a good place to implement this logic.
 
-    If the automatic chunking proves to be less efficient, you may want to reintroduce a `manualChunks` configuration.
+*   **Asset Verification:** The new variants in `passive-income-variants.json` reference several new video and poster assets (e.g., `/time-wealth-demo.webm`, `/time-wealth-poster.webp`). Please ensure that all these assets have been created and placed in the `public` directory to avoid broken media links on the new landing pages.
 
-There are no critical issues or warnings to report. This is a clean simplification of the build configuration, but the outcome should be verified.
+There are no critical issues or warnings to report. This is a very strong set of changes that massively expands the site's SEO footprint and content offerings. Great work.
