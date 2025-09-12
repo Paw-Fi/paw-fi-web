@@ -12,7 +12,6 @@ import { useChatContext } from "@/contexts/chat-context";
 // Removed useAuthQuerySync import - now handled at root level
 import { getCanonicalUrl } from '@/utils/canonical';
 import { seo } from '@/utils/seo';
-import { useUserCourses } from "@/services/course-service";
 import { supabase } from "@/lib/supabase";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -26,13 +25,10 @@ import {
   faHandHoldingDollar,
   faHouseChimney,
   faHome,
-  faChartBar,
   faIdCard,
   faHeadphones,
-  faCrown,
   faTrophy,
   faLightbulb,
-  faMoneyBillWave,
   faHammer,
 } from "@fortawesome/free-solid-svg-icons";
 import { AnimatePresence, motion } from "framer-motion";
@@ -53,7 +49,6 @@ import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advis
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { ExpandableFAB } from "@/components/ui/expandable-fab";
 import { useAIChat } from "@/contexts/ai-chat-context";
-import { GoalTrackerChatInterface } from "@/components/chat/goal-tracker-chat-interface";
 import { RightSidebar, RightSidebarRef } from "@/components/dashboard/RightSidebar";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ProtectedRouteSubscription } from "@/components/auth/ProtectedRouteSubscription";
@@ -290,10 +285,7 @@ export function Dashboard() {
   });
 
   const { user, signOut, isLoading } = useAuth();
-  const { data: courses = [] } = useUserCourses(
-    user?.id ?? "",
-    { enabled: !!user },
-  );
+
   const { isActive,isLoading: isSubscriptionLoading } = useSubscription(user?.id);
   const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();

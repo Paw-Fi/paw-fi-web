@@ -18,14 +18,6 @@ export default defineConfig({
     rollupOptions: {
       treeshake: false,
       output: {
-        // Optimize chunking strategy (excluding externalized modules)
-        manualChunks: {
-          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-accordion', '@radix-ui/react-tabs'],
-          'vendor-motion': ['framer-motion', 'motion'],
-          'vendor-icons': ['@fortawesome/react-fontawesome', '@fortawesome/free-solid-svg-icons', '@fortawesome/free-brands-svg-icons'],
-          'vendor-charts': ['chart.js', 'react-chartjs-2', 'recharts'],
-          'vendor-utils': ['lodash', 'date-fns', 'zod'],
-        },
         // Better asset naming for long-term caching
         assetFileNames: (assetInfo) => {
           const info = assetInfo.name.split('.');

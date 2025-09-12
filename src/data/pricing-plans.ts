@@ -1,25 +1,17 @@
 import { DISCORD_URL } from "@/routes";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
-  faCheck,
   faGift,
-  faRocket,
-  faMoneyBillWave,
-  faChartPie,
   faBullseye,
-  faCalendarCheck,
-  faStar,
   faBook, 
   faUsers, 
   faHeadset, 
   faChartLine, 
   faUserTie, 
-  faTools,
   faGraduationCap,
   faUserGraduate,
   faRobot,
   faComments,
-  faLock,
   faEdit
 } from "@fortawesome/free-solid-svg-icons";
 

@@ -3,14 +3,12 @@ import { motion, Variants } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { Switch } from "@/components/ui/switch";
-import React, { useState } from "react";
+import { useState } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 import {
-  FeatureItem,
-  PricingTier,
   getPricingTiers,
 } from "@/data/pricing-plans";
 import { Button } from "@/components/ui/button";
