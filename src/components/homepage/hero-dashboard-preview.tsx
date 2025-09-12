@@ -1,9 +1,4 @@
-import React from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
 import { AISearchInput } from "@/components/ui/ai-search-input";
 
 const chatSuggestions = [

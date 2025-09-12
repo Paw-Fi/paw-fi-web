@@ -2,38 +2,47 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import monekoImg from "@/assets/images/home-showcase/moneko-ai.png"
-import goalImg from "@/assets/images/home-showcase/dashboard-goal-tracker.png"
-import portfolioImg from "@/assets/images/home-showcase/dashboard-porfolio.png"
-import learningImg from "@/assets/images/home-showcase/dashboard-learning.png"
+// Import WebP images with PNG fallback
+import monekoImgWebp from "@/assets/images/home-showcase/moneko-ai.webp"
+import monekoImgPng from "@/assets/images/home-showcase/moneko-ai.png"
+import goalImgWebp from "@/assets/images/home-showcase/dashboard-goal-tracker.webp"
+import goalImgPng from "@/assets/images/home-showcase/dashboard-goal-tracker.png"
+import portfolioImgWebp from "@/assets/images/home-showcase/dashboard-porfolio.webp"
+import portfolioImgPng from "@/assets/images/home-showcase/dashboard-porfolio.png"
+import learningImgWebp from "@/assets/images/home-showcase/dashboard-learning.webp"
+import learningImgPng from "@/assets/images/home-showcase/dashboard-learning.png"
 
 const features = [
   {
     id: "ai-coach",
     title: "AI Financial Coach",
     description: "Get personalized financial advice and insights powered by certified CFA professionals. Your AI coach learns your habits and provides tailored recommendations.",
-    image: monekoImg,
+    imageWebp: monekoImgWebp,
+    imagePng: monekoImgPng,
     stats: "95% accuracy rate"
   },
   {
     id: "goal-tracking",
     title: "Smart Goal Tracking",
     description: "Set, monitor, and achieve your financial goals with intelligent progress tracking and automated milestone celebrations.",
-    image: goalImg,
+    imageWebp: goalImgWebp,
+    imagePng: goalImgPng,
     stats: "Average $15K saved"
   },
   {
     id: "portfolio",
     title: "Portfolio Analytics",
     description: "Track your investments with real-time performance insights, risk analysis, and automated rebalancing recommendations.",
-    image: portfolioImg,
+    imageWebp: portfolioImgWebp,
+    imagePng: portfolioImgPng,
     stats: "127% better returns"
   },
   {
     id: "learning",
     title: "Financial Education Hub",
     description: "Learn from expert-led courses, interactive lessons, and personalized learning paths designed by certified professionals.",
-    image: learningImg,
+    imageWebp: learningImgWebp,
+    imagePng: learningImgPng,
     stats: "50+ expert courses"
   }
 ];
@@ -130,11 +139,14 @@ export function DashboardShowcase() {
                   transition={{ duration: 0.4 }}
                   className="relative"
                 >
-                  <img
-                    src={selectedFeature.image}
-                    alt={selectedFeature.title}
-                    className="w-full h-auto object-cover"
-                  />
+                  <picture>
+                    <source srcSet={selectedFeature.imageWebp} type="image/webp" />
+                    <img
+                      src={selectedFeature.imagePng}
+                      alt={selectedFeature.title}
+                      className="w-full h-auto object-cover"
+                    />
+                  </picture>
                 </motion.div>
               </AnimatePresence>
             </div>

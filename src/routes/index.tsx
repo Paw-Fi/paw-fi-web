@@ -1,74 +1,30 @@
 "use client";
 
-import React, { Suspense } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
 import { motion, MotionGlobalConfig } from "framer-motion";
 import { Helmet } from "@dr.pogodin/react-helmet";
+import video from "../../public/Moneko-onboard .webm";
+import videoPoster from "../../public/video-poster.webp";
 
-// Lazy load Lottie animations for better performance
-import Lottie from "lottie-react";
-import aiChatAnimation from "@/assets/videos/AI-Chat.json";
-import badgeUnlockAnimation from "@/assets/videos/Badge-Unlock.json";
 
-// Create lazy-loaded Lottie wrapper
-const LazyLottieAnimation = React.lazy(() =>
-  Promise.resolve({
-    default: ({
-      animationData,
-      className = "w-3/4 h-3/4",
-      ...props
-    }: {
-      animationData: any;
-      className?: string;
-    }) => (
-      <Suspense
-        fallback={
-          <div className={`${className} bg-muted animate-pulse rounded-lg`} />
-        }
-      >
-        <Lottie
-          animationData={animationData}
-          loop={true}
-          className={className}
-          {...props}
-        />
-      </Suspense>
-    ),
-  }),
-);
 
 // Assets and icons
-import catCoin from "@/assets/images/icon.svg";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faChevronDown,
   faPlay,
-  faX,
-  faShieldAlt,
-  faTrophy,
-  faGraduationCap,
-  faPlus,
 } from "@fortawesome/free-solid-svg-icons";
-import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 
 // UI Components
-import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { OptimizedImage } from "@/components/seo/optimized-image";
 
 // Custom Components
 import { HomeHeader } from "@/components/index/header";
-import { AISearchInput } from "@/components/ui/ai-search-input";
-import { EarlyAccessSection } from "@/components/index/early-access-section";
 import AmbientHalo from "@/components/ui/ambient-halo";
 
 // New Homepage Components
 import { HeroDashboardPreview } from "@/components/homepage/hero-dashboard-preview";
 import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
-import { FeaturesShowcase } from "@/components/homepage/features-showcase";
 import { SocialProofMetrics } from "@/components/homepage/social-proof-metrics";
 import { StreamlinedFAQ } from "@/components/homepage/streamlined-faq";
 
@@ -77,7 +33,6 @@ import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { useDeviceType } from "@/hooks/use-device-type";
 import { disableAnimationsOnMobile } from "../utils/disable-framer-motion-mobile";
-import basicLessonsData from "@/data/basic-lessons.json";
 import { Footer } from "@/components/homepage/footer";
 import { useEffect } from "react";
 
@@ -411,8 +366,8 @@ export default function HomePage() {
                   <div className="relative aspect-video w-full">
                     <video
                       className="h-full w-full object-cover"
-                      src="/Moneko-onboard%20.webm"
-                      poster="/video-poster.webp"
+                      src={video}
+                      poster={videoPoster}
                       width={800}
                       height={450}
                       muted
@@ -514,7 +469,7 @@ export default function HomePage() {
               >
                 <video
                   className="absolute inset-0 h-full w-full object-contain"
-                  src="/Moneko-onboard .webm"
+                  src={video}
                   poster="/video-poster.webp"
                   width={1920}
                   height={1080}
