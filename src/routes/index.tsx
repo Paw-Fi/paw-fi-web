@@ -85,6 +85,7 @@ export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  staticData: () => ({}), // Enable static generation for faster rendering
   head: () => {
     const pageUrl = getCanonicalUrl("/");
     const title = "AI Finance Coach | Moneko | 50,000+ Users";
