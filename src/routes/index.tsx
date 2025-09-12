@@ -4,37 +4,27 @@ import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
 import { motion, MotionGlobalConfig } from "framer-motion";
 import { Helmet } from "@dr.pogodin/react-helmet";
-import video from "../../public/Moneko-onboard .webm";
-import videoPoster from "../../public/video-poster.webp";
-
-
-
-// Assets and icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPlay,
-} from "@fortawesome/free-solid-svg-icons";
-
-// UI Components
+import { faPlay } from "@fortawesome/free-solid-svg-icons";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-
-// Custom Components
 import { HomeHeader } from "@/components/index/header";
 import AmbientHalo from "@/components/ui/ambient-halo";
-
-// New Homepage Components
-import { HeroDashboardPreview } from "@/components/homepage/hero-dashboard-preview";
-import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
-import { SocialProofMetrics } from "@/components/homepage/social-proof-metrics";
-import { StreamlinedFAQ } from "@/components/homepage/streamlined-faq";
-
-// Utils and data
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { useDeviceType } from "@/hooks/use-device-type";
 import { disableAnimationsOnMobile } from "../utils/disable-framer-motion-mobile";
-import { Footer } from "@/components/homepage/footer";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
+
+// Lazy load heavy components for better initial page load
+const HeroDashboardPreview = lazy(() => import("@/components/homepage/hero-dashboard-preview").then(m => ({ default: m.HeroDashboardPreview })));
+const DashboardShowcase = lazy(() => import("@/components/homepage/dashboard-showcase").then(m => ({ default: m.DashboardShowcase })));
+const SocialProofMetrics = lazy(() => import("@/components/homepage/social-proof-metrics").then(m => ({ default: m.SocialProofMetrics })));
+const StreamlinedFAQ = lazy(() => import("@/components/homepage/streamlined-faq").then(m => ({ default: m.StreamlinedFAQ })));
+const Footer = lazy(() => import("@/components/homepage/footer").then(m => ({ default: m.Footer })));
+
+// Preload critical resources
+const video = "/Moneko-onboard%20.webm";
+const videoPoster = "/video-poster.webp";
 
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
@@ -246,7 +236,19 @@ export const Route = createFileRoute("/")({
 
     return {
       meta,
-      link: [{ rel: "canonical", href: pageUrl }],
+      link: [
+        { rel: "canonical", href: pageUrl },
+        // Resource hints for performance
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        { rel: "preconnect", href: "https://static.cloudflareinsights.com" },
+        // Preload critical images
+        { rel: "preload", href: "/logo192.webp", as: "image", type: "image/webp" },
+        { rel: "preload", href: "/video-poster.webp", as: "image", type: "image/webp" },
+        // Prefetch likely navigation targets
+        { rel: "prefetch", href: "/dashboard" },
+        { rel: "prefetch", href: "/auth/signup" },
+      ],
       script: [
         {
           type: "application/ld+json",
@@ -310,7 +312,14 @@ export default function HomePage() {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Moneko" />
-        <link rel="apple-touch-icon" href="/logo192.png" />
+        <link rel="apple-touch-icon" href="/logo192.webp" />
+        
+        {/* Preload critical resources */}
+        <link rel="preload" href={videoPoster} as="image" />
+        <link rel="preload" href="/logo192.webp" as="image" />
+        
+        {/* Preload critical CSS */}
+        <link rel="preload" href="/assets/main-Cf_3aJ4a.css" as="style" />
       </Helmet>
 
       <AmbientHalo />
@@ -319,8 +328,10 @@ export default function HomePage() {
         <HomeHeader />
       </nav>
 
-      {/* Hero Dashboard Preview */}
-      <HeroDashboardPreview />
+      {/* Hero Dashboard Preview - Lazy loaded */}
+      <Suspense fallback={<div className="h-96 bg-gradient-to-b from-background to-background/50 animate-pulse" />}>
+        <HeroDashboardPreview />
+      </Suspense>
 
       {/* Video Demo Section */}
       <section className="relative z-10 px-4 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8">
@@ -374,7 +385,8 @@ export default function HomePage() {
                       autoPlay
                       loop
                       playsInline
-                      preload="metadata"
+                      preload="none"
+                      loading="lazy"
                     />
 
                     {/* Text overlay container */}
@@ -470,7 +482,7 @@ export default function HomePage() {
                 <video
                   className="absolute inset-0 h-full w-full object-contain"
                   src={video}
-                  poster="/video-poster.webp"
+                  poster={videoPoster}
                   width={1920}
                   height={1080}
                   controls
@@ -486,19 +498,25 @@ export default function HomePage() {
 
    
 
-      {/* Dashboard Showcase with Animated Beam */}
-      <DashboardShowcase />
+      {/* Dashboard Showcase with Animated Beam - Lazy loaded */}
+      <Suspense fallback={<div className="h-96 bg-gradient-to-b from-background to-background/50 animate-pulse" />}>
+        <DashboardShowcase />
+      </Suspense>
 
-   {/* Social Proof Metrics */}
-   <SocialProofMetrics />
+      {/* Social Proof Metrics - Lazy loaded */}
+      <Suspense fallback={<div className="h-48 bg-gradient-to-b from-background to-background/50 animate-pulse" />}>
+        <SocialProofMetrics />
+      </Suspense>
 
-      {/* Streamlined FAQ */}
-      <StreamlinedFAQ />
+      {/* Streamlined FAQ - Lazy loaded */}
+      <Suspense fallback={<div className="h-64 bg-gradient-to-b from-background to-background/50 animate-pulse" />}>
+        <StreamlinedFAQ />
+      </Suspense>
 
-      {/* Early Access Section */}
-      {/* <EarlyAccessSection /> */}
-
-      <Footer/>
+      {/* Footer - Lazy loaded */}
+      <Suspense fallback={<div className="h-32 bg-gradient-to-b from-background to-background/50 animate-pulse" />}>
+        <Footer />
+      </Suspense>
     </div>
   );
 }
