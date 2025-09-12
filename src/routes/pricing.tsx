@@ -333,16 +333,7 @@ function PricingPage() {
         variants={prefersReducedMotion ? undefined : pageVariants}
         className="container mx-auto min-h-screen px-4 py-12 md:py-20"
       >
-        {/* Expert Attribution Header */}
-        <motion.div 
-          className="mb-8 text-center"
-          variants={prefersReducedMotion ? undefined : cardVariants}
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-full border mb-4">
-            <Badge variant="secondary" className="text-xs">EXPERT-DESIGNED</Badge>
-            <span className="text-sm font-medium">By CFA Charterholder Sabina Shao</span>
-          </div>
-        </motion.div>
+     
 
         <motion.header
           // Removed variants from header as children are individually animated
