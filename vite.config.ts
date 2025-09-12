@@ -17,22 +17,6 @@ export default defineConfig({
   build: {
     rollupOptions: {
       treeshake: false,
-      output: {
-        // Better asset naming for long-term caching
-        assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.');
-          const ext = info[info.length - 1];
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico|webp/i.test(ext)) {
-            return `assets/images/[name]-[hash][extname]`;
-          }
-          if (/woff2?|eot|ttf|otf/i.test(ext)) {
-            return `assets/fonts/[name]-[hash][extname]`;
-          }
-          return `assets/[name]-[hash][extname]`;
-        },
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
-      },
     },
     minify: 'terser',
     terserOptions: {
@@ -44,8 +28,6 @@ export default defineConfig({
     cssMinify: true,
     target: 'es2020',
     chunkSizeWarningLimit: 1000,
-    // Enable asset inlining for small assets
-    assetsInlineLimit: 2048,
   },
   server: {
     port: 3000,
