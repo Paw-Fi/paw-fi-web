@@ -76,12 +76,7 @@ export const HomeHeader = () => {
                     </div>
                 ) : (
                     <div className="flex flex-col items-end gap-1">
-                        <Badge 
-                            variant="secondary" 
-                            className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700"
-                        >
-                            Early Access
-                        </Badge>
+                      
                         <Button
                             onClick={() => navigate({ to: "/onboarding", search: { q: undefined } })}
                             className="font-medium px-4 sm:px-6 py-2 inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
