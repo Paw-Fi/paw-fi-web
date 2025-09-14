@@ -126,13 +126,9 @@ export function AISearchInput({
     }, 500);
   };
 
-  const containerClasses = variant === 'compact' 
-    ? "mx-auto max-w-2xl" 
-    : "mx-auto max-w-3xl";
-
   return (
     <motion.div
-      className={`${containerClasses} ${className}`}
+      className={`${className}`}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
@@ -145,10 +141,10 @@ export function AISearchInput({
           y: 0,
           opacity: 1,
         }}
-        className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl border transition-all duration-500 ${
+        className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl transition-all duration-500 ${
           isAnimating 
-            ? "bg-muted border-primary/20" 
-            : "bg-background border-border shadow-sm hover:shadow-md hover:border-border/60"
+            ? "bg-muted" 
+            : "bg-background shadow-sm hover:shadow-md"
         }`}
         style={{
           opacity: animationComplete ? 0 : 1,
@@ -162,7 +158,7 @@ export function AISearchInput({
             onChange={(e) => setChatQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full border-none bg-transparent px-4 sm:px-6 py-3 sm:py-4 text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none focus:ring-0 touch-manipulation"
+            className="w-full h-16 border-0 !border-none bg-transparent px-4 sm:px-6 py-6 sm:py-4 text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none !shadow-none touch-manipulation"
             aria-label="Ask a financial question"
             ref={inputRef}
             disabled={isTransitioning}
@@ -237,7 +233,7 @@ export function AISearchInput({
       {/* Suggestion chips */}
       {showSuggestionPills && showSuggestions && (
         <motion.div
-          className="mx-auto mt-4 sm:mt-6 max-w-3xl"
+          className="mx-auto mt-4 sm:mt-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}

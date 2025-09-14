@@ -56,23 +56,23 @@ export function DashboardShowcase() {
         {/* Section Header */}
         <div className="mb-16 text-center">
           <motion.h2
-            className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl"
+            className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl font-lato"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            The Best Mint Alternative: Your AI-Powered Financial Dashboard
+            Your AI-Powered Financial Dashboard
           </motion.h2>
           
           <motion.p
-            className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed"
+            className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
             viewport={{ once: true }}
           >
-            Discover why 50,000+ former Mint users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
+            Discover why 50,000+ users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
           </motion.p>
         </div>
 
@@ -160,10 +160,10 @@ export function DashboardShowcase() {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="mt-8 text-center"
           >
-            <h3 className="text-2xl font-bold text-foreground mb-4">
+            <h3 className="text-2xl font-bold text-foreground mb-4 font-lato">
               {selectedFeature.title}
             </h3>
-            <p className="text-muted-foreground text-lg leading-relaxed max-w-3xl mx-auto mb-8">
+            <p className="text-muted-foreground text-lg leading-relaxed max-w-3xl mx-auto mb-8 font-lato">
               {selectedFeature.description}
             </p>
             <Button 

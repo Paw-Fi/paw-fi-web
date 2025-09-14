@@ -2,6 +2,7 @@ import { faArrowRight } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { Link, useLocation } from "@tanstack/react-router"
 import { Button } from "../ui/button"
+import { Badge } from "../ui/badge"
 import { OptimizedImage } from "@components/seo/optimized-image";
 import catCoin from "@/assets/images/icon.svg";
 import { DISCORD_URL } from "@/routes";
@@ -74,14 +75,22 @@ export const HomeHeader = () => {
                         </Button>
                     </div>
                 ) : (
-                    <Button
-                        onClick={() => navigate({ to: "/onboarding", search: { q: undefined } })}
-                        className="font-medium px-4 sm:px-6 py-2 inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
-                        size="default"
-                    >
-                        Get Started
-                        <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                    </Button>
+                    <div className="flex flex-col items-end gap-1">
+                        <Badge 
+                            variant="secondary" 
+                            className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-700"
+                        >
+                            Early Access
+                        </Badge>
+                        <Button
+                            onClick={() => navigate({ to: "/onboarding", search: { q: undefined } })}
+                            className="font-medium px-4 sm:px-6 py-2 inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
+                            size="default"
+                        >
+                            Get Started
+                            <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                        </Button>
+                    </div>
                 )}
             </div>
         </div>

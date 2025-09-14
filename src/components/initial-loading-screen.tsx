@@ -115,7 +115,7 @@ export const initialLoadingStyles = `
     line-height: 1.3;
     margin-bottom: 0.5rem;
     color: hsl(var(--foreground));
-    font-family: 'Hepta Slab', serif;
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   }
   
   .moneko-loader-subtitle {
@@ -125,7 +125,7 @@ export const initialLoadingStyles = `
     letter-spacing: 0.01em;
     color: hsl(var(--muted-foreground));
     margin-bottom: 2rem;
-    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   }
   
   .moneko-loader-dots {
