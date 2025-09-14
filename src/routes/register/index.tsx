@@ -4,9 +4,11 @@ import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import authBg from '@/assets/images/auth/auth-bg.png';
+import authBg from '@/assets/images/auth/auth-bg.webp';
+import authBgPng from '@/assets/images/auth/auth-bg.png';
 import { MonekoIcon } from '@/components/shared/moneko-icon';
 import { StructuredData } from '@/components/seo/structured-data';
+import { OptimizedImage } from '@/components/seo/optimized-image';
 
 export const Route = createFileRoute('/register/')({  
   component: Register,
@@ -162,10 +164,15 @@ export function Register() {
 
       {/* Right: Image side */}
       <div className="hidden lg:block relative overflow-hidden rounded-3xl m-4 ml-0">
-        <img
-          src={authBg}
+        <OptimizedImage
+          src={authBgPng}
+          webpSrc={authBg}
           alt="Start your financial education journey with expert-designed courses and AI coaching"
           className="absolute inset-0 h-full w-full object-cover dark:contrast-80 dark:brightness-90"
+          priority={true}
+          loading="eager"
+          width={1080}
+          height={1080}
         />
         
         {/* GEO-Enhanced Success Stories & Benefits */}

@@ -9,13 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/lib/supabase';
-import authBg from '@/assets/images/auth/auth-bg.png';
+import authBg from '@/assets/images/auth/auth-bg.webp';
+import authBgPng from '@/assets/images/auth/auth-bg.png';
 import { MonekoIcon } from '@/components/shared/moneko-icon';
 import { StructuredData } from '@/components/seo/structured-data';
+import { OptimizedImage } from '@/components/seo/optimized-image';
 
 export const Route = createFileRoute('/login/')({  
   component: Login,
-  validateSearch: (search: Record<string, unknown>) => {
+validateSearch: (search: Record<string, unknown>) => {
     return {
       redirect: (search.redirect as string) || undefined,
     };
@@ -220,10 +222,15 @@ export function Login() {
 
       {/* Right: Image side */}
       <div className="hidden lg:block relative overflow-hidden rounded-3xl m-4 ml-0">
-        <img
-          src={authBg}
+        <OptimizedImage
+          src={authBgPng}
+          webpSrc={authBg}
           alt="Secure financial dashboard access for personalized budgeting and investment education"
           className="absolute inset-0 h-full w-full object-cover dark:contrast-80 dark:brightness-90"
+          priority={true}
+          loading="eager"
+          width={1080}
+          height={1080}
         />
         
         {/* GEO-Enhanced Value Proposition Overlay */}
