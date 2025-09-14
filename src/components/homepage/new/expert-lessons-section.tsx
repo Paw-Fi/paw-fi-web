@@ -49,7 +49,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
   const lessons = defaultLessons;
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50/30 to-gray-50/20 dark:from-slate-900/30 dark:to-gray-900/20">
+    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
@@ -91,7 +91,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
           {lessons.map((lesson, index) => (
             <motion.div
               key={index}
-              className="group p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg border border-border hover:shadow-xl transition-all duration-300"
+              className="group p-8 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -111,7 +111,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
                 <div className="flex justify-center">
                   <Button
                     asChild
-                    className="w-16 h-16 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground p-0 flex items-center justify-center"
+                    className="w-16 h-16 rounded-xl p-0 flex items-center justify-center border border-white/20"
                   >
                     <Link to="/dashboard/learning">
                       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

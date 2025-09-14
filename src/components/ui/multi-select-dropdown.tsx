@@ -66,10 +66,10 @@ export function MultiSelectDropdown({
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       {label && (
-        <label className="mb-2 block text-sm font-medium text-foreground text-start">
+        <label className="mb-2 block text-sm font-medium text-white text-start">
           {label}
           {helperText && (
-            <span className="text-sm text-muted-foreground"> {helperText}</span>
+            <span className="text-sm text-purple-300"> {helperText}</span>
           )}
         </label>
       )}
@@ -78,25 +78,25 @@ export function MultiSelectDropdown({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full rounded-lg border border-border bg-background/70 p-3 text-left outline-none backdrop-blur-sm transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-primary dark:bg-background/70 flex items-center justify-between ${
-          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        className={`w-full rounded-xl bg-white/10 p-4 text-left outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-white/30 flex items-center justify-between ${
+          disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/15'
         }`}
       >
-        <span className="text-foreground">
+        <span className="text-white placeholder-purple-300">
           {getDisplayText()}
         </span>
         <FontAwesomeIcon 
           icon={isOpen ? faChevronUp : faChevronDown} 
-          className="text-muted-foreground"
+          className="text-purple-300 text-sm"
         />
       </button>
       
       {isOpen && !disabled && (
-        <div className="absolute z-40 w-full mt-1 bg-background border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-40 w-full mt-2 bg-white/10 backdrop-blur-xl rounded-xl max-h-48 overflow-y-auto">
           {options.map((option) => (
             <label
               key={option.id}
-              className={`flex items-center p-3 hover:bg-accent cursor-pointer transition-colors duration-150 ${
+              className={`flex items-center p-4 hover:bg-white/10 cursor-pointer transition-colors duration-150 ${
                 isOptionDisabled(option.id) && !selectedValues.includes(option.id)
                   ? 'opacity-50 cursor-not-allowed'
                   : ''
@@ -107,12 +107,12 @@ export function MultiSelectDropdown({
                 checked={selectedValues.includes(option.id)}
                 onChange={() => onChange(option.id)}
                 disabled={isOptionDisabled(option.id)}
-                className="mr-3 h-4 w-4 text-primary focus:ring-primary border-border rounded accent-primary"
+                className="mr-3 h-4 w-4 rounded accent-purple-500"
                 style={{
-                  accentColor: selectedValues.includes(option.id) ? 'hsl(var(--primary))' : undefined
+                  accentColor: selectedValues.includes(option.id) ? '#a855f7' : undefined
                 }}
               />
-              <span className="text-sm text-foreground">
+              <span className="text-sm text-white">
                 {option.label}
               </span>
             </label>

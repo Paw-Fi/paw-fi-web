@@ -84,7 +84,7 @@ export function DashboardShowcase() {
           viewport={{ once: true }}
           className="mb-12"
         >
-          <div className="flex flex-wrap justify-center gap-2 p-2 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/20">
+          <div className="flex flex-wrap justify-center gap-2 p-2 backdrop-blur-xl rounded-2xl border border-white/20">
             {features.map((feature) => (
               <button
                 key={feature.id}
@@ -92,7 +92,7 @@ export function DashboardShowcase() {
                 className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   selectedFeature.id === feature.id
                     ? 'bg-primary text-primary-foreground shadow-lg'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-slate-800/50'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {feature.title}
@@ -110,7 +110,7 @@ export function DashboardShowcase() {
           className="relative"
         >
           {/* Browser Frame */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+          <div className="backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
             {/* Browser Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/20">
               <div className="flex items-center space-x-2">
@@ -119,7 +119,7 @@ export function DashboardShowcase() {
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
               <div className="flex-1 mx-6">
-                <div className="bg-white/50 dark:bg-slate-800/50 rounded-lg px-4 py-2 text-sm text-muted-foreground">
+                <div className="rounded-lg px-4 py-2 text-sm text-muted-foreground border border-white/20">
                   moneko.io/dashboard
                 </div>
               </div>
@@ -129,7 +129,7 @@ export function DashboardShowcase() {
             </div>
 
             {/* Dashboard Content */}
-            <div className="relative bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+            <div className="relative">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={selectedFeature.id}
@@ -169,7 +169,7 @@ export function DashboardShowcase() {
             <Button 
               asChild
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg font-semibold"
+              className="px-8 py-3 text-lg font-semibold"
             >
               <Link to="/dashboard">
                 Try {selectedFeature.title}

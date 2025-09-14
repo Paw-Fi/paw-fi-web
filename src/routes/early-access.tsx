@@ -130,8 +130,8 @@ function CountdownTimer({ targetCount = SPOTS }: { targetCount?: number }) {
   if (isExpired) {
     return (
       <div className="text-center">
-        <div className="rounded-2xl border border-red-300 bg-red-100/20 p-6 backdrop-blur-xl">
-          <div className="text-2xl font-bold text-red-200 mb-2">Campaign Ended</div>
+        <div className="rounded-2xl bg-red-100/20 p-8 backdrop-blur-xl">
+          <div className="text-2xl font-bold text-red-200 mb-3">Campaign Ended</div>
           <div className="text-red-300">The early access period has concluded.</div>
         </div>
       </div>
@@ -139,11 +139,11 @@ function CountdownTimer({ targetCount = SPOTS }: { targetCount?: number }) {
   }
 
   return (
-    <div className="flex justify-center gap-2 sm:gap-4">
+    <div className="flex justify-center gap-4 sm:gap-6">
       {Object.entries(timeLeft).filter(([unit]) => unit !== "seconds").map(([unit, value]) => (
         <motion.div
           key={unit}
-          className="flex flex-col items-center rounded-2xl border border-white/30 bg-white/20 p-3 sm:p-4 backdrop-blur-xl min-w-[60px] sm:min-w-[80px]"
+          className="flex flex-col items-center rounded-2xl bg-white/20 p-4 sm:p-6 backdrop-blur-xl min-w-[70px] sm:min-w-[90px]"
           variants={elasticScale}
           initial="hidden"
           animate="visible"
@@ -161,23 +161,23 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
   const percentage = ((total - current) / total) * 100;
 
   return (
-    <div className="w-full">
-      <div className="mb-2 flex justify-between text-sm">
+    <div className="w-full max-w-md mx-auto">
+      <div className="mb-3 flex justify-between text-sm">
         <span className="text-purple-200">Progress</span>
         <span className="text-white font-medium">
           {total - current} / {total} claimed
         </span>
       </div>
-      <div className="h-3 w-full rounded-full bg-white/20 backdrop-blur-sm">
+      <div className="h-2 w-full rounded-full bg-white/20 backdrop-blur-sm">
         <motion.div
-          className="h-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
+          className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 1, ease: "easeOut" }}
         />
       </div>
-      <div className="mt-2 text-center text-xs text-purple-200">
-        {current} spots remaining - Hurry up!
+      <div className="mt-3 text-center text-sm text-purple-200">
+        {current} spots remaining
       </div>
     </div>
   );
@@ -190,19 +190,20 @@ export default function EarlyAccessPage() {
   const { data: remainingSpots = 0, isLoading: spotsLoading } = useRemainingSpots();
 
   return (
-    <div className="min-h-screen bg-[#7e46eb]">
-      {/* Animated background particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+    <div className="min-h-screen bg-gradient-to-br from-[#7e46eb] via-[#6d28d9] to-[#5b21b6]">
+      {/* Subtle animated background */}
+      <div className="absolute inset-0 overflow-hidden opacity-30">
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute h-2 w-2 rounded-full bg-white/20"
+            className="absolute h-1 w-1 rounded-full bg-white/30"
             animate={{
-              x: [0, 100, 0],
-              y: [0, -100, 0],
+              x: [0, 50, 0],
+              y: [0, -50, 0],
+              opacity: [0.3, 0.6, 0.3],
             }}
             transition={{
-              duration: 10 + i * 0.5,
+              duration: 15 + i * 0.8,
               repeat: Infinity,
               ease: "linear",
             }}
@@ -216,24 +217,24 @@ export default function EarlyAccessPage() {
 
       {/* Header */}
       <motion.header
-        className="relative z-10 border-b border-white/10 bg-black/20 backdrop-blur-xl"
+        className="relative z-10 bg-black/10 backdrop-blur-xl"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="mx-auto max-w-7xl px-6 py-4">
+        <div className="mx-auto max-w-7xl px-6 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <OptimizedImage src={icon} alt="Moneko" className="size-8 rounded-md" />
+            <div className="flex items-center space-x-3">
+              <OptimizedImage src={icon} alt="Moneko" className="size-8 rounded-lg" />
               <span className="text-xl font-bold text-white">Moneko</span>
             </div>
             <motion.button
               onClick={() => navigate({ to: "/" })}
-              className="text-purple-200 hover:text-white transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="text-purple-200 hover:text-white transition-colors duration-200"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              ← Back to Home
+              Back to Home
             </motion.button>
           </div>
         </div>
@@ -242,7 +243,7 @@ export default function EarlyAccessPage() {
       {/* Main Content */}
       <main className="relative z-10">
         {/* Hero Section */}
-        <section className="px-6 min-h-screen text-center pt-24">
+        <section className="px-6 min-h-screen text-center pt-32">
           <div className="mx-auto max-w-4xl">
             <motion.div
               variants={staggerContainer}
@@ -251,16 +252,15 @@ export default function EarlyAccessPage() {
             >
              
                 <motion.div
-                  className="mb-6 inline-flex items-center rounded-full bg-gradient-to-r from-[#ec4899] to-[#9333ea] px-4 py-2 text-white"
+                  className="mb-8 inline-flex items-center rounded-full bg-gradient-to-r from-[#ec4899] to-[#9333ea] px-6 py-3 text-white"
                   variants={fadeInDown}
                 >
-                  <FontAwesomeIcon icon={faRocket} className="mr-2" />
                   Limited Time Offer - Only {remainingSpots} Spots Left!
                 </motion.div>
               
 
               <motion.h1
-                className="mb-6 text-4xl font-bold text-white md:text-6xl"
+                className="mb-8 text-4xl font-bold text-white md:text-6xl leading-tight"
                 variants={fadeInUp}
                 custom={0.1}
               >
@@ -268,7 +268,7 @@ export default function EarlyAccessPage() {
               </motion.h1>
 
               <motion.p
-                className="mb-8 text-lg text-purple-100 md:text-xl"
+                className="mb-12 text-lg text-purple-100 md:text-xl leading-relaxed max-w-3xl mx-auto"
                 variants={fadeInUp}
                 custom={0.2}
               >
@@ -276,7 +276,7 @@ export default function EarlyAccessPage() {
               </motion.p>
 
               <motion.div
-                className="mb-12"
+                className="mb-16"
                 variants={fadeInUp}
                 custom={0.3}
               >
@@ -284,7 +284,7 @@ export default function EarlyAccessPage() {
               </motion.div>
 
               <motion.div
-                className="mb-8"
+                className="mb-12"
                 variants={fadeInUp}
                 custom={0.4}
               >
@@ -304,10 +304,10 @@ export default function EarlyAccessPage() {
         </section>
 
         {/* Features Section */}
-        <section className="px-6 py-20">
+        <section className="px-6 py-24">
           <div className="mx-auto max-w-6xl">
             <motion.h2
-              className="mb-12 text-center text-4xl font-bold text-white"
+              className="mb-16 text-center text-4xl font-bold text-white"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -325,26 +325,26 @@ export default function EarlyAccessPage() {
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
-                  className="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-xl transition-all duration-300 hover:border-purple-400/50 hover:bg-white/20"
+                  className="group relative overflow-hidden rounded-3xl bg-white/10 p-8 backdrop-blur-xl transition-all duration-200 hover:bg-white/15"
                   variants={fadeInUp}
                   custom={index * 0.1}
-                  whileHover={{ y: -5 }}
+                  whileHover={{ y: -2 }}
                 >
-                  <div className="absolute top-4 right-4">
+                  <div className="absolute top-6 right-6">
                     <div className="rounded-full bg-gradient-to-br from-purple-400 to-pink-400 px-3 py-1 text-xs font-bold text-white">
                       PREMIUM
                     </div>
                   </div>
-                  <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm">
+                  <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm">
                     <FontAwesomeIcon
                       icon={feature.icon}
-                      className="text-2xl text-purple-300"
+                      className="text-xl text-purple-300"
                     />
                   </div>
-                  <h3 className="mb-3 text-xl font-bold text-white">
+                  <h3 className="mb-4 text-xl font-bold text-white">
                     {feature.title}
                   </h3>
-                  <p className="text-purple-200">{feature.description}</p>
+                  <p className="text-purple-200 leading-relaxed">{feature.description}</p>
                 </motion.div>
               ))}
             </motion.div>
@@ -352,31 +352,31 @@ export default function EarlyAccessPage() {
         </section>
 
         {/* Social Proof */}
-        <section className="px-6 py-20">
+        <section className="px-6 py-24">
           <div className="mx-auto max-w-4xl text-center">
             <motion.div
-              className="rounded-3xl border border-white/20 bg-white/10 p-8 backdrop-blur-xl"
+              className="rounded-3xl bg-white/10 p-12 backdrop-blur-xl"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <div className="mb-6 flex justify-center space-x-8">
+              <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-8">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-white">5000+</div>
+                  <div className="text-3xl font-bold text-white mb-2">5000+</div>
                   <div className="text-purple-200">People Waiting</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-white">
+                  <div className="text-3xl font-bold text-white mb-2">
                     {SPOTS - remainingSpots}
                   </div>
                   <div className="text-purple-200">Already Joined</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-white">98%</div>
+                  <div className="text-3xl font-bold text-white mb-2">98%</div>
                   <div className="text-purple-200">Satisfaction Rate</div>
                 </div>
               </div>
-              <p className="text-purple-100">
+              <p className="text-purple-100 leading-relaxed">
                 Join thousands of users who are already improving their
                 financial future with Moneko
               </p>

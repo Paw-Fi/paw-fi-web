@@ -110,7 +110,7 @@
   --secondary: 215 28% 17%;
   --secondary-foreground: 210 20% 98%;
   --muted: 215 28% 17%;
-  --muted-foreground: 217 11% 75%;
+  --muted-foreground: 217 11% 85%;
   --accent: 215 28% 17%;
   --accent-foreground: 210 20% 98%;
   --destructive: 0 63% 63%; /* Match danger color brightness */
@@ -135,21 +135,21 @@
 
   /* Dark halo colors */
   --halo-bg: #0A0E1A;
-  --dark-halo-purple: rgba(139, 112, 255, 0.6);
-  --dark-halo-purple-mid: rgba(124, 95, 240, 0.55);
-  --dark-halo-purple-outer: rgba(155, 130, 255, 0.4);
+  --dark-halo-purple: rgba(100, 75, 200, 0.4);
+  --dark-halo-purple-mid: rgba(90, 65, 180, 0.35);
+  --dark-halo-purple-outer: rgba(110, 85, 210, 0.25);
 
-  --dark-halo-pink: rgba(243, 221, 247, 0.5);
-  --dark-halo-pink-mid: rgba(235, 210, 240, 0.45);
-  --dark-halo-pink-outer: rgba(245, 225, 250, 0.35);
+  --dark-halo-pink: rgba(180, 140, 185, 0.35);
+  --dark-halo-pink-mid: rgba(170, 130, 175, 0.3);
+  --dark-halo-pink-outer: rgba(190, 150, 195, 0.2);
 
-  --dark-halo-blue: rgba(96, 165, 250, 0.6);
-  --dark-halo-blue-mid: rgba(76, 145, 230, 0.55);
-  --dark-halo-blue-outer: rgba(116, 185, 255, 0.45);
+  --dark-halo-blue: rgba(70, 120, 180, 0.4);
+  --dark-halo-blue-mid: rgba(60, 110, 170, 0.35);
+  --dark-halo-blue-outer: rgba(80, 130, 190, 0.3);
 
-  --dark-halo-light-blue: rgba(125, 186, 220, 0.5);
-  --dark-halo-light-blue-mid: rgba(105, 166, 200, 0.45);
-  --dark-halo-light-blue-outer: rgba(145, 206, 240, 0.35);
+  --dark-halo-light-blue: rgba(90, 140, 160, 0.35);
+  --dark-halo-light-blue-mid: rgba(80, 130, 150, 0.3);
+  --dark-halo-light-blue-outer: rgba(100, 150, 170, 0.25);
 
   /* Dark accent colors */
   --accent-pink: #F472B6;

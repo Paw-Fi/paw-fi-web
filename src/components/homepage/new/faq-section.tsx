@@ -26,7 +26,7 @@ export default function FAQSection() {
   };
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8 bg-gradient-to-br from-purple-100 via-blue-50 to-indigo-100 dark:from-purple-900/20 dark:via-blue-900/20 dark:to-indigo-900/20">
+    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl w-full">
         {/* Section Header */}
         <div className="mb-12 text-center">
@@ -88,7 +88,7 @@ export default function FAQSection() {
           {faqItems.map((item, index) => (
             <div 
               key={item.id}
-              className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer p-6"
+              className="backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer p-6 border border-white/20"
               onClick={() => toggleItem(item.id)}
             >
               <div className="flex items-center justify-between">

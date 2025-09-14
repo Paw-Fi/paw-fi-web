@@ -21,7 +21,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
   const { videoSection } = data;
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-100 via-sky-50 to-cyan-100 dark:from-blue-900/20 dark:via-sky-900/20 dark:to-cyan-900/20">
+    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
@@ -67,7 +67,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
           className="relative"
         >
           {/* Browser Frame - matching dashboard-showcase.tsx structure */}
-          <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+          <div className="backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
             {/* Browser Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/20">
               <div className="flex items-center space-x-2">
@@ -76,7 +76,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
               <div className="flex-1 mx-6">
-                <div className="bg-white/50 dark:bg-slate-800/50 rounded-lg px-4 py-2 text-sm text-muted-foreground">
+                <div className="rounded-lg px-4 py-2 text-sm text-muted-foreground border border-white/20">
                   moneko.io/demo
                 </div>
               </div>
@@ -86,7 +86,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
             </div>
 
             {/* Video Content */}
-            <div className="relative bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
+            <div className="relative">
               <Dialog>
                 <DialogTrigger asChild>
                   <div className="group relative cursor-pointer">
@@ -106,7 +106,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
                       
                       {/* Play button overlay */}
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-20 h-20 bg-black/50 rounded-full flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                        <div className="w-20 h-20 rounded-full flex items-center justify-center transition-colors border-2 border-white/50">
                           <FontAwesomeIcon
                             icon={faPlay}
                             className="text-white text-2xl ml-1"
@@ -115,8 +115,8 @@ export default function VideoSection({ data }: VideoSectionProps) {
                       </div>
 
                       {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                        <div className="bg-white/90 dark:bg-slate-800/90 rounded-full p-4">
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <div className="rounded-full p-4 border border-white/20">
                           <FontAwesomeIcon
                             icon={faPlay}
                             className="text-primary text-xl ml-1"
@@ -126,7 +126,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
                     </div>
                   </div>
                 </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-6xl border-none bg-black p-0">
+                <DialogContent className="w-[95vw] max-w-6xl border-none p-0">
                   <div
                     className="relative w-full"
                     style={{ paddingBottom: "56.25%" }}

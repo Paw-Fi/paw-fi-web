@@ -76,7 +76,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
           {steps.map((step, index) => (
             <motion.div
               key={index}
-              className="text-center p-6 rounded-2xl bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg"
+              className="text-center p-6 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -104,7 +104,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
             <Button
               asChild
               size="lg"
-              className="bg-black hover:bg-black/90 text-white px-8 py-3 text-lg font-semibold dark:bg-white dark:text-black dark:hover:bg-white/90"
+              className="px-8 py-3 text-lg font-semibold"
             >
               <a href={DISCORD_URL} target="_blank">
                 <FontAwesomeIcon icon={faDiscord} className="mr-2" />
@@ -122,7 +122,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
             <Button
               asChild
               size="lg"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg font-semibold"
+              className="px-8 py-3 text-lg font-semibold"
             >
               <Link to="/onboarding">
                 Try Moneko for free

@@ -27,12 +27,12 @@ export function CustomSelect({
 }: CustomSelectProps) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={className}>
-        <SelectValue placeholder={placeholder} />
+      <SelectTrigger className={`w-full rounded-xl bg-white/10 backdrop-blur-sm p-4 text-white border-0 hover:bg-white/15 focus:ring-2 focus:ring-white/30 ${className}`}>
+        <SelectValue placeholder={placeholder} className="text-purple-300" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-white/10 backdrop-blur-xl border-0 rounded-xl">
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/10 focus:bg-white/10">
             {option.label}
           </SelectItem>
         ))}

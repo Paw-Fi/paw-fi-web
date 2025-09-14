@@ -85,26 +85,38 @@ export default function HomePage() {
         <HomeHeader />
       </nav>
 
-      {/* Hero Section */}
-      <HeroSection data={pageData} />
+      {/* Hero Section - Transparent background with halo */}
+      <section className="relative">
+        <HeroSection data={pageData} />
+      </section>
 
       {/* Dashboard Showcase Section */}
-      <DashboardShowcase />
+      <section className="relative bg-white/80 dark:bg-gray-900/80">
+        <DashboardShowcase />
+      </section>
 
       {/* Video Section */}
-      <VideoSection data={pageData} />
+      <section className="relative bg-white/80 dark:bg-gray-900/80">
+        <VideoSection data={pageData} />
+      </section>
 
       {/* Three Steps Section */}
-      <ThreeStepsSection data={pageData} />
+      <section className="relative bg-white/80 dark:bg-gray-900/80">
+        <ThreeStepsSection data={pageData} />
+      </section>
 
       {/* Testimonials Section */}
       {/* <TestimonialsSection /> */}
 
       {/* Expert-Led Lessons Section */}
-      <ExpertLessonsSection data={pageData} />
+      <section className="relative bg-white/80 dark:bg-gray-900/80">
+        <ExpertLessonsSection data={pageData} />
+      </section>
 
       {/* FAQ Section */}
-      <FAQSection />
+      <section className="relative ">
+        <FAQSection />
+      </section>
 
       {/* Footer */}
       <Footer />
