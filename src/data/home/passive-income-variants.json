@@ -1,25 +1,41 @@
 {
   "high-interest-portfolios": {
     "meta": {
-      "title": "High-Interest Passive Income Portfolios - Build Wealth Without Trading | Moneko",
-      "description": "Build wealth through high-yield passive income portfolios without complex trading. Learn simple compound interest strategies and create sustainable income streams to live on interest.",
-      "keywords": "passive income, high-interest portfolios, compound interest, passive investing, income investing, high-yield investments, dividend investing, wealth building, live on interest, passive income strategies"
+      "title": "Build Your First Interest Portfolio - High-Yield Passive Income | Moneko",
+      "description": "Meet Moneko — your AI agent for high-interest portfolios and automated cash flow. Start investing with $100 and build wealth through compound interest.",
+      "keywords": "interest portfolio, passive income, high-interest investing, compound interest, automated cash flow, AI investing, dividend portfolio, wealth building"
     },
     "hero": {
-      "title": "Build Your First High-Interest Portfolio",
+      "title": "Build Your First Interest Portfolio",
       "subtitle": "Meet Moneko — your AI agent for high-interest portfolios and automated cash flow.",
-      "ctaText": "Start Building Passive Income",
+      "ctaText": "Start Building Your Portfolio",
       "ctaRoute": "/dashboard/income-builder",
       "chatSuggestions": [
-        "Help me pay off $5k debt fast",
-        "How much should I save aside for taxes?",
-        "When can I afford to go full-time?",
-        "How Do I grow wealth starting at $0"
+        "How do I start investing with $100?",
+        "Where should I put extra freelance income so it grows?",
+        "What's the safest way to earn interest?",
+        "How much can I make in a year from interest?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Set Your Goals",
+          "description": "From paying off debt to building your first portfolio, Moneko helps you define clear financial goals based on your income and what you want to achieve."
+        },
+        {
+          "title": "Get your Portfolio",
+          "description": "Our AI designs a tailored, high-interest portfolio that matches your goals and risk profile—so you can invest with confidence."
+        },
+        {
+          "title": "Grow on autopilot",
+          "description": "Track your progress with simple updates while your portfolio automatically rebalances and compounds over time."
+        }
       ]
     },
     "videoSection": {
-      "title": "See How Simple Passive Income Really Works",
-      "subtitle": "Discover how our platform helps you identify and build high-interest portfolios that generate sustainable passive income, without requiring trading expertise or constant monitoring."
+      "title": "See How Simple Interest Portfolios Really Work",
+      "subtitle": "Discover how our AI helps you build high-yield portfolios that generate consistent returns, starting with just $100."
     },
     "features": [
       {
@@ -29,29 +45,171 @@
         "route": "/dashboard/income-builder"
       },
       {
-        "title": "Live on Interest Calculator",
-        "description": "Calculate exactly how much you need to invest to live entirely on passive income from your high-interest portfolio.",
-        "icon": "🏖️",
-        "route": "/calculators/retirement"
+        "title": "Compound Interest Calculator",
+        "description": "See how your money grows over time with our advanced compound interest calculator and portfolio projections.",
+        "icon": "📈",
+        "route": "/calculators/compound-calculator"
       }
     ],
     "lessons": [
       {
-        "title": "High-Yield Dividend Investing",
-        "description": "Learn how to identify and invest in high-dividend stocks that provide steady passive income streams.",
-        "icon": "📈"
+        "title": "Starting with $100",
+        "description": "Learn how to begin building wealth with small amounts and grow your portfolio systematically.",
+        "icon": "💵"
       },
       {
-        "title": "Living on Interest Strategy",
-        "description": "Master the art of building enough wealth to live entirely on investment income without touching principal.",
+        "title": "Automated Investing Strategy",
+        "description": "Master the art of setting up automated investment systems that work while you sleep.",
         "icon": "🎯"
       }
     ],
     "benefits": [
-      "No complex trading required",
-      "Focus on high-yield investments",
-      "Build sustainable income streams",
-      "Simple compound interest strategies"
+      "Start with just $100",
+      "AI-guided portfolio creation",
+      "Automated money management",
+      "Compound interest optimization"
+    ]
+  },
+  "business-cash-flow": {
+    "meta": {
+      "title": "Business Cash Flow on Autopilot - Small Business Financial Management | Moneko",
+      "description": "Late invoices, payroll, and taxes don't have to be a headache. Moneko helps small business owners organize revenue, stretch runway, and put idle cash to work.",
+      "keywords": "business cash flow, small business finances, payroll management, business runway, idle cash investing, business financial planning, revenue management"
+    },
+    "hero": {
+      "title": "Business Cash Flow on Autopilot",
+      "subtitle": "Late invoices, payroll, and taxes don't have to be a headache. Moneko helps small business owners organize revenue, stretch runway, and put idle cash to work.",
+      "ctaText": "Optimize Your Cash Flow",
+      "ctaRoute": "/dashboard/business",
+      "chatSuggestions": [
+        "How much runway does my business have?",
+        "How do I split revenue between payroll, taxes, and savings?",
+        "What happens if clients pay late — how long can I last?",
+        "Where should I keep extra business cash so it earns more?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Set Priorities",
+          "description": "Payroll, taxes, savings, or growth."
+        },
+        {
+          "title": "Automate the Flow",
+          "description": "Revenue routes where it needs to go."
+        },
+        {
+          "title": "Grow Your Runway",
+          "description": "Idle cash earns interest instead of sitting still."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See How Business Cash Flow Automation Works",
+      "subtitle": "Discover how our platform helps you manage business finances, extend runway, and optimize cash flow automatically."
+    },
+    "features": [
+      {
+        "title": "Business Runway Calculator",
+        "description": "Calculate how long your business can operate with current cash flow and identify ways to extend runway.",
+        "icon": "🛬",
+        "route": "/calculators/business-runway"
+      },
+      {
+        "title": "Cash Flow Automation",
+        "description": "Set up automated systems to allocate revenue between operations, taxes, and growth investments.",
+        "icon": "⚡",
+        "route": "/dashboard/cash-flow"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Revenue Allocation Strategy",
+        "description": "Learn how to split business income between essential expenses, taxes, and growth investments.",
+        "icon": "📊"
+      },
+      {
+        "title": "Business Runway Management",
+        "description": "Master techniques to extend your business runway and survive client payment delays.",
+        "icon": "🎯"
+      }
+    ],
+    "benefits": [
+      "Automated revenue allocation",
+      "Extended business runway",
+      "Optimized idle cash returns",
+      "Simplified tax preparation"
+    ]
+  },
+  "time-to-wealth": {
+    "meta": {
+      "title": "Turn Free Time Into Your First $1k - Time to Wealth Converter | Moneko",
+      "description": "Even if you're broke, your hours have value. Moneko helps you see where time is wasted, turn it into extra income, and stack your first savings.",
+      "keywords": "time to wealth, side hustle income, free time monetization, first $1000, time management, income optimization, wealth building from zero"
+    },
+    "hero": {
+      "title": "Turn Free Time Into Your First $1k",
+      "subtitle": "Even if you're broke, your hours have value. Moneko helps you see where time is wasted, turn it into extra income, and stack your first savings.",
+      "ctaText": "Convert Your Time to Wealth",
+      "ctaRoute": "/dashboard/time-tracker",
+      "chatSuggestions": [
+        "If I save 5 hours a week, what's it worth?",
+        "How can I turn free time into my first $1k?",
+        "What's the fastest way to grow from $0 to $10k?",
+        "How much could I make by adding one side hustle?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Track Your Hours",
+          "description": "See the real \"pay rate\" of your time."
+        },
+        {
+          "title": "Find Free Time",
+          "description": "Spot wasted hours you could redirect."
+        },
+        {
+          "title": "Turn Time Into Money",
+          "description": "Use small wins to build your first savings."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See How Time Converts to Wealth",
+      "subtitle": "Discover how to identify wasted time, optimize your hours, and build your first $1,000 even starting from zero."
+    },
+    "features": [
+      {
+        "title": "Time Value Calculator",
+        "description": "Calculate the true monetary value of your time and identify opportunities to optimize your hourly worth.",
+        "icon": "⏰",
+        "route": "/calculators/time-value"
+      },
+      {
+        "title": "Side Hustle Optimizer",
+        "description": "Find the best side hustles for your schedule and skills, with income projections and time requirements.",
+        "icon": "💪",
+        "route": "/dashboard/side-hustle"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Time Audit Mastery",
+        "description": "Learn how to track and analyze your time to identify wasted hours that could generate income.",
+        "icon": "🔍"
+      },
+      {
+        "title": "From Zero to $1k Strategy",
+        "description": "Master the step-by-step process to build your first $1,000 in savings, even starting with nothing.",
+        "icon": "🎯"
+      }
+    ],
+    "benefits": [
+      "Turn wasted time into income",
+      "Build wealth from zero",
+      "Optimize hourly value",
+      "Track time investment ROI"
     ]
   }
 }

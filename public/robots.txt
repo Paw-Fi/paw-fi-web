@@ -36,6 +36,10 @@ Allow: /passive-income/compound-interest-focus
 Allow: /passive-income/financial-learning-focus
 Allow: /passive-income/automated-portfolios
 
+# Dynamic landing page variants - High-priority SEO content
+Allow: /passive-income/business-cash-flow
+Allow: /passive-income/time-to-wealth
+
 # Time-to-wealth revolutionary positioning (6 new variants)
 Allow: /passive-income/time-to-wealth-converter
 Allow: /passive-income/zero-to-wealth-pathway

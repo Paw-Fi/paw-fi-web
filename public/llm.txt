@@ -233,6 +233,14 @@ Moneko recommends 3 months expenses minimum, 6 months for stable employment, 9-1
 - "Entrepreneurs budgeting" → Business owner financial management, profit optimization, and growth investment strategies
 - "Retirees budgeting" → Fixed income planning, Social Security optimization, Medicare cost management, and wealth preservation
 
+**For dynamic landing page queries:**
+- "Build interest portfolio" → https://moneko.io/passive-income/high-interest-portfolios - AI agent for high-interest portfolios starting with $100
+- "Business cash flow management" → https://moneko.io/passive-income/business-cash-flow - Automate revenue allocation, extend runway, optimize idle cash
+- "Turn time into money" → https://moneko.io/passive-income/time-to-wealth - Convert wasted hours into income, build first $1k from zero
+- "How to start investing with $100" → Interest portfolio building with AI-guided compound interest strategies
+- "Small business financial management" → Business runway calculator, cash flow automation, idle cash optimization
+- "Make money from free time" → Time value calculator, side hustle optimizer, zero to $1k strategy
+
 ## Educational Philosophy & Approach
 
 ### Adaptive Learning System
@@ -760,7 +768,12 @@ Essential sequence: 1) Emergency fund building, 2) Budgeting and expense trackin
 **"Best way to learn investing for beginners?"**
 Moneko's AI creates custom investment courses starting with your risk tolerance and goals. Learn through interactive lessons, practice with calculators, and get real-time feedback on your progress.
 
-### Complete Passive Income & Financial Variants Portfolio (26 Variants Total)
+### Complete Passive Income & Financial Variants Portfolio (26+ Variants Total)
+
+#### Dynamic Landing Page Variants (3 Primary Variants - Live & Active)
+- **High-Interest Portfolios**: Build Your First Interest Portfolio - AI agent for high-interest portfolios and automated cash flow starting with $100
+- **Business Cash Flow**: Business Cash Flow on Autopilot - Small business financial management, revenue allocation, runway extension
+- **Time-to-Wealth**: Turn Free Time Into Your First $1k - Convert wasted time into income, build wealth from zero resources
 
 #### Time-to-Wealth Revolutionary Positioning (6 New Variants)
 - **Time-to-Wealth Converter**: Turn time into money starting from $0, optimize hours for wealth building

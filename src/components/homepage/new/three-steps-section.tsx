@@ -8,7 +8,7 @@ import { DISCORD_URL } from "@/routes";
 
 interface ThreeStepsSectionProps {
   data: {
-    features: Array<{
+    features?: Array<{
       title: string;
       description: string;
       icon: string;
@@ -17,6 +17,12 @@ interface ThreeStepsSectionProps {
     hero: {
       ctaText: string;
       ctaRoute: string;
+    };
+    howItWorks?: {
+      steps: Array<{
+        title: string;
+        description: string;
+      }>;
     };
   };
 }
@@ -39,6 +45,9 @@ const stepsData = [
 
 export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
   const { isMobile } = useDeviceType();
+  
+  // Use dynamic steps if available, otherwise fall back to default
+  const steps = data.howItWorks?.steps || stepsData;
 
   return (
     <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
@@ -64,7 +73,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {stepsData.map((step, index) => (
+          {steps.map((step, index) => (
             <motion.div
               key={index}
               className="text-center p-6 rounded-2xl bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg"
@@ -73,9 +82,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
               transition={{ duration: 0.6, delay: index * 0.1 }}
               viewport={{ once: true }}
             >
-              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">{index + 1}</span>
-              </div>
+              
               <h3 className="text-xl font-bold text-foreground mb-4 font-lato">
                 {step.title}
               </h3>

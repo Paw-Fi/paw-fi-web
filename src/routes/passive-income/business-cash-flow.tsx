@@ -9,7 +9,7 @@ import AmbientHalo from "@/components/ui/ambient-halo";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { useDeviceType } from "@/hooks/use-device-type";
-import { disableAnimationsOnMobile } from "../utils/disable-framer-motion-mobile";
+import { disableAnimationsOnMobile } from "../../utils/disable-framer-motion-mobile";
 import { useEffect } from "react";
 
 // Dynamic content system
@@ -28,15 +28,15 @@ import { Footer } from "@/components/homepage/footer";
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
-// For now, use the first variant (high-interest-portfolios)
-const contentVariant = "high-interest-portfolios";
+// Use business cash flow variant
+const contentVariant = "business-cash-flow";
 const pageData = passiveIncomeVariants[contentVariant];
 
-export const Route = createFileRoute("/")({
-  component: HomePage,
+export const Route = createFileRoute("/passive-income/business-cash-flow")({
+  component: BusinessCashFlowPage,
   staticData: () => ({}),
   head: () => {
-    const pageUrl = getCanonicalUrl("/");
+    const pageUrl = getCanonicalUrl("/passive-income/business-cash-flow");
     const meta = seo({
       title: pageData.meta.title,
       description: pageData.meta.description,
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/")({
   },
 });
 
-export default function HomePage() {
+export default function BusinessCashFlowPage() {
   const { isMobile } = useDeviceType();
   
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function HomePage() {
       <ThreeStepsSection data={pageData} />
 
       {/* Testimonials Section */}
-      {/* <TestimonialsSection /> */}
+      <TestimonialsSection />
 
       {/* Expert-Led Lessons Section */}
       <ExpertLessonsSection data={pageData} />
