@@ -20,7 +20,6 @@ import HeroSection from "@/components/homepage/new/hero-section";
 import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 import VideoSection from "@/components/homepage/new/video-section";
 import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
-import TestimonialsSection from "@/components/homepage/new/testimonials-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";

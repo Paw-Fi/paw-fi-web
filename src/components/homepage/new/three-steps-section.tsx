@@ -104,7 +104,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
             <Button
               asChild
               size="lg"
-              className="px-8 py-3 text-lg font-semibold"
+              className="px-8 py-3 text-lg font-semibold dark:text-white"
             >
               <a href={DISCORD_URL} target="_blank">
                 <FontAwesomeIcon icon={faDiscord} className="mr-2" />
@@ -122,7 +122,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
             <Button
               asChild
               size="lg"
-              className="px-8 py-3 text-lg font-semibold"
+              className="px-8 py-3 text-lg font-semibold dark:text-white"
             >
               <Link to="/onboarding">
                 Try Moneko for free

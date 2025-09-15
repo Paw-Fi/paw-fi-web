@@ -1,16 +1,10 @@
-import { faArrowRight } from "@fortawesome/free-solid-svg-icons"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { Link, useLocation } from "@tanstack/react-router"
 import { Button } from "../ui/button"
-import { Badge } from "../ui/badge"
-import { OptimizedImage } from "@components/seo/optimized-image";
-import catCoin from "@/assets/images/icon.svg";
 import { DISCORD_URL } from "@/routes";
 import classNames from "classnames";
 import { useAuth } from "@/contexts/auth-context";
 import { useNavigate } from "@tanstack/react-router";
 import { UserAvatar } from "../ui/user-avatar";
-import { ModeToggle } from "@/components/theme/mode-toggle";
 import { MonekoIcon } from "../shared/moneko-icon";
 
 export const HomeHeader = () => {
@@ -28,7 +22,7 @@ export const HomeHeader = () => {
     return (
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4 lg:px-8">
             {/* Logo */}
-          <MonekoIcon/>
+         <MonekoIcon/>
 
             {/* Navigation */}
             <nav className="hidden items-center space-x-4 sm:space-x-6 md:space-x-8 md:flex">
@@ -79,11 +73,10 @@ export const HomeHeader = () => {
                       
                         <Button
                             onClick={() => navigate({ to: "/onboarding", search: { q: undefined } })}
-                            className="font-medium px-4 sm:px-6 py-2 inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base touch-manipulation active:scale-95"
+                            className="font-medium px-4 sm:px-6 py-2 inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base touch-manipulation active:scale-95 dark:text-white"
                             size="default"
                         >
-                            Get Started
-                            <FontAwesomeIcon icon={faArrowRight} className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                            Get Started for Free
                         </Button>
                     </div>
                 )}

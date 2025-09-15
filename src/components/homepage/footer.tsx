@@ -13,7 +13,9 @@ export const Footer = () => {
          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10 md:gap-12 lg:grid-cols-4">
            {/* Brand */}
            <div className="space-y-3 sm:space-y-4">
+
              <div className="flex items-center">
+           <div className="dark:bg-primary/90 rounded-xl dark:size-10 flex justify-center items-center">
                <OptimizedImage
                  src={catCoin}
                  alt="Moneko Logo"
@@ -23,6 +25,7 @@ export const Footer = () => {
                  loading="lazy"
                  decoding="async"
                />
+               </div>
                <span className="text-card-foreground ml-2 text-lg font-bold sm:text-xl">
                  Moneko
                </span>

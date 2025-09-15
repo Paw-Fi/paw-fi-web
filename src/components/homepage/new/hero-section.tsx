@@ -48,7 +48,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
           transition={{ duration: 0.6, delay: 0.0 }}
         >
           <Link to="/early-access">
-            <Badge className="bg-primary  rounded-full hover:bg-primary/90 text-primary-foreground px-4 py-2 text-md font-medium inline-flex items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-105">
+            <Badge className="bg-primary  rounded-full hover:bg-primary/90 text-primary-foreground px-4 py-2 text-md font-medium inline-flex items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-105 dark:text-white">
               Early Access
               <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3" />
             </Badge>
@@ -66,7 +66,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
             <span key={index}>
               {index === highlightIndex ? (
                 <AuroraText
-                  colors={["#4F46E5", "#A855F7"]}
+                  colors={isMobile?["#A855F7"]: ["#4F46E5", "#A855F7"]}
                   speed={1.5}
                 >
                   {word}

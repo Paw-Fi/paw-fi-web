@@ -10,8 +10,6 @@ interface VideoSectionProps {
     videoSection: {
       title: string;
       subtitle: string;
-      videoUrl: string;
-      poster: string;
     };
   };
 }

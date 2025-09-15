@@ -169,7 +169,7 @@ export function DashboardShowcase() {
             <Button 
               asChild
               size="lg"
-              className="px-8 py-3 text-lg font-semibold"
+              className="px-8 py-3 text-lg font-semibold dark:text-white"
             >
               <Link to="/dashboard">
                 Try {selectedFeature.title}
