@@ -16,6 +16,6 @@ body,
     width: 100%;
     margin: 0;
     padding: 0;
-    /* Prevents overflow on the x-axis */
+    /* Prevents overflow on the x-axis to fix framer motion not working on mobile issue*/
     overflow-x: hidden;
 }

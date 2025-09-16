@@ -2,16 +2,11 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
-import { motion, MotionGlobalConfig } from "framer-motion";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import { HomeHeader } from "@/components/index/header";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
-import { useDeviceType } from "@/hooks/use-device-type";
-import { disableAnimationsOnMobile } from "../utils/disable-framer-motion-mobile";
-import { useEffect } from "react";
-
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
@@ -57,11 +52,6 @@ export const Route = createFileRoute("/")({
 });
 
 export default function HomePage() {
-  const { isMobile } = useDeviceType();
-  
-  useEffect(() => {
-    disableAnimationsOnMobile();
-  }, [isMobile]);
 
   return (
     <div className="relative min-h-screen bg-background">
