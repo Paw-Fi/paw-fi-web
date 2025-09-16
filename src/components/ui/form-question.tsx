@@ -7,6 +7,9 @@ import {
   faDollarSign,
   faPercent
 } from "@fortawesome/free-solid-svg-icons";
+import { Input } from "./input";
+import { Textarea } from "./textarea";
+import { cn } from "@/lib/utils";
 import type { QuestionType, QuestionOption, QuestionValidation } from '@/types/financial-quiz-constants';
 
 interface FormQuestionProps {
@@ -36,32 +39,37 @@ export function FormQuestion({
   validation,
   optionsPerRow = 2
 }: FormQuestionProps) {
-  const inputClasses = `w-full rounded-lg border border-border bg-background text-foreground px-4 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary ${
-    error ? 'border-destructive focus:ring-destructive/50' : ''
-  }`;
+  const getInputClassName = (hasError: boolean) => {
+    if (hasError) {
+      return "border-red-200 dark:border-red-800 focus-visible:border-red-500 focus-visible:ring-red-100 dark:focus-visible:ring-red-900";
+    }
+    return "";
+  };
 
   const renderInput = () => {
     switch (type) {
       case 'text':
       case 'email':
         return (
-          <input
+          <Input
+            id={id}
             type={type === 'text' ? 'text' : 'email'}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className={inputClasses}
+            className={getInputClassName(!!error)}
           />
         );
         
       case 'text_area':
         return (
-          <textarea
+          <Textarea
+            id={id}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             rows={4}
-            className={inputClasses}
+            className={getInputClassName(!!error)}
           />
         );
 
@@ -73,22 +81,27 @@ export function FormQuestion({
             {type === 'currency' && (
               <FontAwesomeIcon 
                 icon={faDollarSign} 
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground-color w-4 h-4 z-10" 
               />
             )}
-            <input
+            <Input
+              id={id}
               type="number"
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
               min={validation?.min}
               max={validation?.max}
-              className={`${inputClasses} ${type === 'currency' ? 'pl-10' : ''} ${type === 'percentage' ? 'pr-10' : ''}`}
+              className={cn(
+                getInputClassName(!!error),
+                type === 'currency' ? 'pl-12' : '',
+                type === 'percentage' ? 'pr-12' : ''
+              )}
             />
             {type === 'percentage' && (
               <FontAwesomeIcon 
                 icon={faPercent} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" 
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground-color w-4 h-4 z-10" 
               />
             )}
           </div>
@@ -96,11 +109,12 @@ export function FormQuestion({
 
       case 'date':
         return (
-          <input
+          <Input
+            id={id}
             type="date"
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
-            className={inputClasses}
+            className={getInputClassName(!!error)}
           />
         );
 
@@ -110,16 +124,16 @@ export function FormQuestion({
             optionsPerRow === 4 ? "md:grid-cols-4" : 
             optionsPerRow === 3 ? "md:grid-cols-3" : 
             "md:grid-cols-2"
-          } gap-2`}>
+          } gap-3`}>
             {options?.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => onChange(option.value)}
-                className={`rounded-md p-2 text-sm transition-colors ${
+                className={`rounded-xl p-4 text-sm font-medium transition-all duration-200 border ${
                   value === option.value 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    ? 'bg-primary text-white border-primary shadow-sm' 
+                    : 'bg-card text-foreground border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm'
                 }`}
               >
                 {option.label}
@@ -135,7 +149,7 @@ export function FormQuestion({
             optionsPerRow === 4 ? "md:grid-cols-4" : 
             optionsPerRow === 3 ? "md:grid-cols-3" : 
             "md:grid-cols-2"
-          } gap-2`}>
+          } gap-3`}>
             {options?.map((option) => {
               const isSelected = selectedValues.includes(option.value);
               return (
@@ -148,10 +162,10 @@ export function FormQuestion({
                       : [...selectedValues, option.value];
                     onChange(newValues);
                   }}
-                  className={`rounded-md p-2 text-sm transition-colors flex items-center justify-center space-x-2 ${
+                  className={`rounded-xl p-4 text-sm font-medium transition-all duration-200 border flex items-center gap-3 ${
                     isSelected 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                      ? 'bg-primary text-white border-primary shadow-sm' 
+                      : 'bg-card text-foreground border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm'
                   }`}
                 >
                   <FontAwesomeIcon 
@@ -169,14 +183,15 @@ export function FormQuestion({
         // For now, show a simple text input with instructions
         return (
           <div>
-            <textarea
+            <Textarea
+              id={id}
               value={value || ''}
               onChange={(e) => onChange(e.target.value)}
               placeholder="List your debts (one per line): Name, Balance, Interest Rate, Min Payment"
               rows={6}
-              className={inputClasses}
+              className={getInputClassName(!!error)}
             />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground-color mt-2">
               Enter each debt on a separate line with details separated by commas
             </p>
           </div>
@@ -184,16 +199,16 @@ export function FormQuestion({
         
       case 'rating_scale':
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-3">
             {[1, 2, 3, 4, 5].map(rating => (
               <button
                 key={rating}
                 type="button"
                 onClick={() => onChange(rating)}
-                className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
+                className={`w-12 h-12 rounded-xl text-sm font-semibold transition-all duration-200 border ${
                   value === rating 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted text-muted-foreground hover:bg-muted/70'
+                    ? 'bg-primary text-white border-primary shadow-sm' 
+                    : 'bg-card text-foreground border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm'
                 }`}
               >
                 {rating}
@@ -204,18 +219,24 @@ export function FormQuestion({
         
       case 'slider':
         return (
-          <div>
+          <div className="py-2">
             <input
+              id={id}
               type="range"
               min={validation?.min || 0}
               max={validation?.max || 100}
               value={value || (validation?.min || 0)}
               onChange={(e) => onChange(Number(e.target.value))}
-              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
+              className={cn(
+                "w-full h-3 bg-subtle-background rounded-full appearance-none cursor-pointer slider",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all duration-200",
+                "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-sm",
+                "[&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:shadow-sm"
+              )}
             />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <div className="flex justify-between text-sm text-muted-foreground-color mt-3">
               <span>{validation?.min || 0}</span>
-              <span className="font-medium">{value || (validation?.min || 0)}</span>
+              <span className="font-semibold text-foreground px-3 py-1 bg-subtle-background rounded-lg shadow-sm">{value || (validation?.min || 0)}</span>
               <span>{validation?.max || 100}</span>
             </div>
           </div>
@@ -230,27 +251,30 @@ export function FormQuestion({
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col"
+      className="space-y-3"
     >
-      <label className="mb-1 text-sm font-medium text-foreground">
+      <label className="block text-sm font-semibold text-foreground">
         {question}
-        {validation?.required && <span className="text-destructive ml-1">*</span>}
+        {validation?.required && <span className="text-warning ml-1">*</span>}
       </label>
       {description && (
-        <p className="mb-2 text-xs text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground-color leading-relaxed">{description}</p>
       )}
-      {renderInput()}
+      <div className="mt-2">
+        {renderInput()}
+      </div>
       <AnimatePresence>
         {error && (
-          <motion.p 
-            initial={{ opacity: 0, y: -10 }}
+          <motion.div 
+            initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-2 text-sm text-destructive flex items-center"
+            className="mt-2"
           >
-            <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-            {error}
-          </motion.p>
+            <p className="text-xs text-warning">
+              {error}
+            </p>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

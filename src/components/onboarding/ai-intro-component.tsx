@@ -577,7 +577,7 @@ Sound good?`,
       <Modal
         isOpen={isQuestionnaireModalOpen}
         onClose={handleCloseModal}
-        width="wide"
+        width="xwide"
         fullHeight={true}
         disableOverlayClick
       >

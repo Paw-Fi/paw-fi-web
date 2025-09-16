@@ -32,17 +32,17 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
   const getToneBadge = (tone: AdvisorTone) => {
     switch (tone) {
       case 'congratulatory':
-        return { text: '🎉 Excellent!', classes: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' };
+        return { text: '🎉 Excellent!', classes: 'bg-success/10 text-success' };
       case 'encouraging':
-        return { text: '💪 Great Progress!', classes: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' };
+        return { text: '💪 Great Progress!', classes: 'bg-primary/10 text-primary' };
       case 'motivational':
-        return { text: '🚀 Keep Going!', classes: 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' };
+        return { text: '🚀 Keep Going!', classes: 'bg-primary/10 text-primary' };
       case 'reassuring':
-        return { text: '🤝 I\'m Here!', classes: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' };
+        return { text: '🤝 I\'m Here!', classes: 'bg-warning/10 text-warning' };
       case 'informative':
-        return { text: '💡 Good to Know!', classes: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' };
+        return { text: '💡 Good to Know!', classes: 'bg-primary/10 text-primary' };
       default:
-        return { text: '✨ Moneko', classes: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' };
+        return { text: '✨ Moneko', classes: 'bg-primary/10 text-primary' };
     }
   };
 
@@ -70,31 +70,31 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className={`${transparentBackground ? '' : 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 shadow-lg border border-blue-100 dark:border-blue-800'} ${className}`}
+      className={`${transparentBackground ? '' : 'bg-subtle-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700'} ${className}`}
     >
-      <div className="flex items-start space-x-4">
+      <div className="flex items-start gap-4">
         {/* Moneko Avatar */}
         <div className="flex-shrink-0">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 dark:from-blue-500 dark:to-indigo-600 p-1 shadow-md">
+          <div className="w-12 h-12 rounded-full bg-primary p-1 shadow-sm">
             <img 
               src={avatarSrc} 
               alt="Moneko AI" 
-              className="w-full h-full rounded-full object-cover bg-white dark:bg-gray-800"
+              className="w-full h-full rounded-full object-cover bg-card"
             />
           </div>
         </div>
         
         {/* Message Content */}
         <div className="flex-1 min-w-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-100 dark:border-gray-700 relative">
+          <div className="bg-card rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
             {/* Speech bubble tail */}
-            <div className="absolute left-0 top-4 w-0 h-0 border-r-8 border-r-white dark:border-r-gray-800 border-t-4 border-b-4 border-t-transparent border-b-transparent -ml-2"></div>
+            <div className="absolute left-0 top-4 w-0 h-0 border-r-8 border-gray-200 dark:border-gray-700  border-r-card border-t-4 border-b-4 border-t-transparent border-b-transparent -ml-2"></div>
             
-            <div className="flex items-center gap-2 mb-3">
-              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <div className="flex items-center gap-3 mb-3">
+              <h4 className="font-semibold text-foreground">
                 Moneko
               </h4>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.classes}`}>
+              <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium ${badge.classes}`}>
                 {badge.text}
               </span>
             </div>
@@ -103,9 +103,9 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
               text={`${message.message}`}
               speed={typewriterSpeed}
               delay={300}
-              className="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+              className="text-sm leading-relaxed text-muted-foreground-color"
               showCursor={true}
-              cursorClassName="animate-pulse text-blue-400 dark:text-blue-300"
+              cursorClassName="animate-pulse text-primary"
               onComplete={handleTypewriterComplete}
             />}
           </div>

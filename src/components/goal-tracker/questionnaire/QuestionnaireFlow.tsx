@@ -34,12 +34,12 @@ const PrivacyInfoExpandable: React.FC = () => {
     <div>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full text-left text-xs text-muted-foreground-color dark:text-muted-foreground-color hover:text-foreground dark:hover:text-foreground transition-colors duration-150 cursor-pointer"
+        className="flex items-center justify-between w-full text-left text-sm text-muted-foreground-color hover:text-foreground transition-colors duration-200"
       >
         <span className="font-medium">Why do we need this information?</span>
         <FontAwesomeIcon 
           icon={faChevronDown} 
-          className={`text-xs transition-transform duration-200 cursor-pointer ${isExpanded ? 'rotate-180' : ''}`}
+          className={`text-sm transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
         />
       </button>
       
@@ -52,7 +52,7 @@ const PrivacyInfoExpandable: React.FC = () => {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <p className="text-xs text-muted-foreground-color dark:text-muted-foreground-color leading-relaxed mt-2 pt-2">
+            <p className="text-sm text-muted-foreground-color leading-relaxed mt-4 pt-4">
               We collect these details to ensure your personalized financial plan is fully dedicated to your unique situation, goals, and circumstances. The more accurate information you provide, the better we can tailor recommendations specifically for you.
             </p>
           </motion.div>
@@ -627,14 +627,14 @@ export function QuestionnaireFlow({
   // Show loading state while fetching profile data for auto-fill
   if (userId && isLoadingProfile) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-16">
-        <div className="w-16 h-16 mx-auto mb-6">
-          <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+      <div className="max-w-2xl mx-auto text-center py-20">
+        <div className="w-16 h-16 mx-auto mb-8">
+          <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-2xl font-bold text-foreground mb-4">
           Loading Your Profile
         </h2>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground-color">
           We're loading your existing information to save you time...
         </p>
       </div>
@@ -646,12 +646,12 @@ export function QuestionnaireFlow({
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center mb-12"
       >
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-3">
           Tell us about your goal
         </h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-muted-foreground-color">
           Fill out the details below to create your personalized financial plan.
         </p>
       </motion.div>
@@ -660,16 +660,16 @@ export function QuestionnaireFlow({
         <motion.div
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-700 rounded-lg shadow-lg"
+          className="mb-8 p-6 bg-card border border-red-200 dark:border-red-800 rounded-xl shadow-sm"
         >
-          <div className="flex items-center">
-            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 animate-pulse" />
-            <div>
-              <p className="text-red-800 dark:text-red-200 text-sm font-semibold">
+          <div className="flex items-start gap-4">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-foreground font-medium mb-1">
                 {generalError}
               </p>
               {Object.keys(errors).length > 0 && (
-                <p className="text-red-600 dark:text-red-300 text-xs mt-1">
+                <p className="text-muted-foreground-color text-sm">
                   Check the highlighted fields below for specific errors.
                 </p>
               )}
@@ -678,64 +678,52 @@ export function QuestionnaireFlow({
         </motion.div>
       )}
 
-      {/* Privacy Notice */}
-      <div className="mb-6 rounded-xl bg-subtle-background dark:bg-subtle-background p-6">
-        <div>
-          <h4 className="text-sm font-semibold text-foreground dark:text-foreground mb-3">
-            Privacy Protected
-          </h4>
-          <p className="text-xs text-muted-foreground-color dark:text-muted-foreground-color mb-3 leading-relaxed">
-            Your financial information is stored privately with end-to-end encryption. 
-            No one can access your data, not even our developers. Your privacy are always our top priority.
-          </p>
-          <PrivacyInfoExpandable />
-          
-          {/* Preset Profile Selector - only show on first category */}
-          {activeCategory === categories[0]?.id && (
-            <div className="mt-4">
-              <PresetProfileSelector onProfileSelect={handlePresetProfileSelect} />
-            </div>
-          )}
-          
-          {/* Profile Applied Banner */}
-          {showPresetBanner && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
-                    "{appliedProfileName}" profile applied successfully!
-                  </h4>
-                  <p className="text-xs text-green-700 dark:text-green-400">
-                    All questions have been auto-filled. You can still modify any answers as needed.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPresetBanner(false)}
-                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-xs"
-              >
-                ✕
-              </button>
-            </motion.div>
-          )}
-        </div>
-      </div>
-
+      {/* 1. CategoryProgress - Steps component */}
       <CategoryProgress
         categories={categories}
         activeCategory={activeCategory}
         progress={progress}
       />
 
+      {/* 2. Preset Profile Selector - only show on first category */}
+      {activeCategory === categories[0]?.id && (
+        <div className="mb-6">
+          <PresetProfileSelector onProfileSelect={handlePresetProfileSelect} />
+        </div>
+      )}
+      
+      {/* Profile Applied Banner */}
+      {showPresetBanner && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 bg-card border border-green-200 dark:border-green-800 rounded-xl p-6 shadow-sm"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-success rounded-full flex items-center justify-center">
+                <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-foreground mb-1">
+                "{appliedProfileName}" profile applied successfully!
+              </h4>
+              <p className="text-sm text-muted-foreground-color">
+                All questions have been auto-filled. You can still modify any answers as needed.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPresetBanner(false)}
+              className="text-muted-foreground-color hover:text-foreground transition-colors duration-200 p-1"
+            >
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* 3. Main Form Component */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeCategory}
@@ -743,9 +731,9 @@ export function QuestionnaireFlow({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="space-y-4"
+          className="mb-12"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {questionsByCategory[activeCategory]?.map(question => (
               <div 
                 key={question.id} 
@@ -773,7 +761,7 @@ export function QuestionnaireFlow({
 
           {/* Moneko Advisor Message */}
           {showAdvisorMessage && advisorMessage && (
-            <div className="mt-6">
+            <div className="mt-8">
               <MonekoAdvisorMessage
                 message={advisorMessage}
                 showMessage={showAdvisorMessage}
@@ -784,6 +772,7 @@ export function QuestionnaireFlow({
         </motion.div>
       </AnimatePresence>
 
+      {/* 4. Navigation Component */}
       <FormNavigation
         canGoBack={canGoBack}
         canGoNext={canGoNext}
@@ -797,6 +786,18 @@ export function QuestionnaireFlow({
         isSubmitting={isLoading}
         hasValidationErrors={Object.keys(errors).length > 0 || !!generalError}
       />
+
+      {/* 5. Privacy Notice Component (least important, at the bottom) */}
+      <div className="mt-16 bg-subtle-background rounded-xl p-8">
+        <h4 className="font-semibold text-foreground mb-4">
+          Privacy Protected
+        </h4>
+        <p className="text-sm text-muted-foreground-color mb-6 leading-relaxed">
+          Your financial information is stored privately with end-to-end encryption. 
+          No one can access your data, not even our developers. Your privacy are always our top priority.
+        </p>
+        <PrivacyInfoExpandable />
+      </div>
     </div>
   );
 }
@@ -806,43 +807,43 @@ export function QuestionnaireFlow({
 function GeneratingGoalView({ progress, error, onCancel }: any) {
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-16">
-        <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
-          <FontAwesomeIcon icon={faExclamationTriangle} className="w-8 h-8 text-red-600 dark:text-red-400" />
+      <div className="max-w-2xl mx-auto text-center py-20">
+        <div className="w-16 h-16 mx-auto bg-card border border-red-200 dark:border-red-800 rounded-full flex items-center justify-center mb-8 shadow-sm">
+          <FontAwesomeIcon icon={faExclamationTriangle} className="w-8 h-8 text-warning" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground dark:text-dark-foreground mb-4">
+        <h2 className="text-2xl font-bold text-foreground mb-4">
           Goal Creation Failed
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+        <p className="text-muted-foreground-color mb-8">{error}</p>
         <Button onClick={onCancel} variant="outline">Go Back</Button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto text-center py-16">
+    <div className="max-w-2xl mx-auto text-center py-20">
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-        className="w-16 h-16 mx-auto mb-6"
+        className="w-16 h-16 mx-auto mb-8"
       >
-        <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full"></div>
+        <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full"></div>
       </motion.div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+      <h2 className="text-2xl font-bold text-foreground mb-4">
         Creating Your AI-Powered Goal
       </h2>
-      <p className="text-gray-600 dark:text-gray-400 mb-6">
+      <p className="text-muted-foreground-color mb-8">
         Our AI is analyzing your responses and creating a personalized strategy...
       </p>
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
+      <div className="w-full bg-subtle-background rounded-full h-3 mb-6 shadow-inner">
         <motion.div
-          className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+          className="bg-primary h-3 rounded-full shadow-sm"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.5 }}
         />
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-500 mb-8">
+      <p className="text-sm text-muted-foreground-color">
         {Math.round(progress)}% Complete
       </p>     
     </div>

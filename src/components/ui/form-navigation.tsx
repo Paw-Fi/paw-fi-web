@@ -41,13 +41,13 @@ export function FormNavigation({
   hasValidationErrors = false
 }: FormNavigationProps) {
   return (
-    <div className="flex items-center justify-between border-t border-border pt-6 mt-8">
+    <div className="flex items-center justify-between pt-8 mt-8">
       <button
-        className="flex items-center rounded-lg border border-border px-4 py-2.5 font-medium text-muted-foreground transition-all hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center rounded-xl bg-card border border-gray-200 dark:border-gray-700 px-6 py-3 font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={onBack}
         disabled={!canGoBack}
       >
-        <FontAwesomeIcon icon={faChevronLeft} className="mr-2" />
+        <FontAwesomeIcon icon={faChevronLeft} className="mr-2 w-4 h-4" />
         {backLabel}
       </button>
 
@@ -55,32 +55,32 @@ export function FormNavigation({
         <Button 
           onClick={onSubmit} 
           size="lg" 
-          className={`px-8 py-3 transition-all duration-300 ${
+          className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
             hasValidationErrors 
-              ? 'bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 border-red-500 shadow-red-200 dark:shadow-red-900/30' 
-              : ''
+              ? 'bg-warning hover:bg-warning/90 text-white shadow-sm' 
+              : 'shadow-sm hover:shadow-md'
           }`}
           disabled={!isFormComplete || isSubmitting}
           title={hasValidationErrors ? "Please fix validation errors before submitting" : ""}
         >
           <FontAwesomeIcon 
             icon={hasValidationErrors ? faExclamationTriangle : submitIcon} 
-            className={`mr-3 ${hasValidationErrors ? 'animate-pulse' : ''}`} 
+            className={`mr-3 w-4 h-4 ${hasValidationErrors ? 'animate-pulse' : ''}`} 
           />
           {isSubmitting ? "Submitting..." : hasValidationErrors ? "Fix Errors" : submitLabel}
         </Button>
       ) : (
         <button
-          className={`flex items-center rounded-lg px-6 py-2.5 font-medium shadow-sm transition-all ${
+          className={`flex items-center rounded-xl px-8 py-3 font-semibold transition-all duration-200 ${
             canGoNext 
-              ? "bg-primary text-white hover:bg-secondary" 
-              : "cursor-not-allowed bg-muted text-muted-foreground"
+              ? "bg-primary text-white hover:shadow-md shadow-sm" 
+              : "cursor-not-allowed bg-subtle-background text-muted-foreground-color"
           }`}
           onClick={onNext}
           disabled={!canGoNext}
         >
           {nextLabel}
-          <FontAwesomeIcon icon={faChevronRight} className="ml-2" />
+          <FontAwesomeIcon icon={faChevronRight} className="ml-2 w-4 h-4" />
         </button>
       )}
     </div>
