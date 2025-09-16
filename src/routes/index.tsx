@@ -61,10 +61,6 @@ export default function HomePage() {
   
   useEffect(() => {
     disableAnimationsOnMobile();
-    if (isMobile) {
-      // Disable framer motion animations on mobile for performance
-      MotionGlobalConfig.skipAnimations = true;
-    }
   }, [isMobile]);
 
   return (

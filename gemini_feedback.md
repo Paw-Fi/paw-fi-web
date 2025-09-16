@@ -3,40 +3,46 @@ Excellent, I've reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-Overall, the changes are minor, adding video assets to a JSON configuration and removing a component from the main page. However, there are potential issues regarding asset management and a significant change in the user-facing content that should be clarified.
+Overall, this is a great refactoring that improves the logic for disabling animations on mobile devices. The changes make the function more robust, reusable, and safer in a server-side rendering (SSR) context.
 
-#### Warnings (Should Fix)
-
-*   **Repetitive Video URL:** The same `videoUrl` (`/Moneko-onboard .webm`) is used for three different content sections in `passive-income-variants.json`: "Simple Interest Portfolios," "Business Cash Flow Automation," and "Time Converts to Wealth." Using the same generic video for distinct topics can be confusing for users and might not effectively explain each specific concept.
-
-    *File*: `src/data/home/passive-income-variants.json`
-
-    *Recommendation*: If this is not a temporary placeholder, consider creating unique videos tailored to each section to provide more value and clarity to the user.
-
-*   **Removal of Testimonials Section:** The `TestimonialsSection` has been removed from the homepage. This is a significant content change that could negatively impact the site's social proof and conversion rates.
-
-    *File*: `src/routes/index.tsx`
-    ```diff
-    -import TestimonialsSection from "@/components/homepage/new/testimonials-section";
-    ```
-    *Recommendation*: Was this removal intentional? If so, please ensure this aligns with the project's current marketing and content strategy. If it was accidental, the component should be restored.
+There are no critical issues or warnings to report. This is a high-quality contribution.
 
 #### Suggestions (Consider Improving)
 
-*   **URL/File Naming Convention:** The video file `/Moneko-onboard .webm` contains a space. While most modern browsers can handle spaces in URLs (by encoding them as `%20`), it is a best practice to avoid them in file names for the web. This can prevent potential issues with some tools, CDNs, or older browsers.
+*   **Dynamic Resize Handling**: The `useEffect` in `HomePage` component runs the check whenever `isMobile` changes, which is good. However, to make the `disableAnimationsOnMobile` utility truly robust and self-contained, you might consider attaching a resize event listener directly within the utility itself. This would allow it to dynamically enable or disable animations as the viewport changes, without relying on a component's lifecycle. This is a minor suggestion, as the current implementation works perfectly fine within the context of the `HomePage` component.
 
-    *File*: `src/data/home/passive-income-variants.json`
-    ```json
-    "videoUrl": "/Moneko-onboard .webm",
-    ```
-    *Recommendation*: Rename the file to use a hyphen or underscore instead of a space (e.g., `Moneko-onboard.webm`) and update the path in the JSON file accordingly.
+Here is an example of how that could look:
 
-*   **Missing Video Poster:** The `poster` attribute for the video sections is empty. A poster image is displayed while the video is downloading or until the user hits play. It improves the user experience and perceived performance.
+```typescript
+// src/utils/disable-framer-motion-mobile.ts
+import { MotionGlobalConfig } from 'framer-motion';
 
-    *File*: `src/data/home/passive-income-variants.json`
-    ```json
-    "poster": ""
-    ```
-    *Recommendation*: Create a relevant thumbnail/poster image for the video and add its path to the `poster` field. This will make the video component look more professional and inviting.
+export const manageAnimationsBasedOnViewport = () => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') return;
 
-There are no critical issues to report. These changes are straightforward, but addressing the warnings and suggestions will improve the user experience and asset management.
+  const handleResize = () => {
+    const isMobile = window.innerWidth < 640;
+    MotionGlobalConfig.skipAnimations = isMobile;
+  };
+
+  // Run on initial load
+  handleResize();
+
+  // Add event listener for window resize
+  window.addEventListener('resize', handleResize);
+
+  // Return a cleanup function to remove the listener
+  return () => window.removeEventListener('resize', handleResize);
+};
+```
+
+You could then call this from a `useEffect` with an empty dependency array in your main App component to set it up once globally.
+
+```tsx
+// Example usage in a root component like App.tsx
+useEffect(() => {
+  const cleanup = manageAnimationsBasedOnViewport();
+  return cleanup; // Cleanup listener on component unmount
+}, []);
+```
