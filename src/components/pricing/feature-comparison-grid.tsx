@@ -80,28 +80,28 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
 
   return (
     <motion.div
-      className="mt-16 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-slate-800"
+      className="mt-20 overflow-hidden rounded-xl bg-card shadow-sm"
       variants={prefersReducedMotion ? undefined : gridVariants}
       initial={prefersReducedMotion ? undefined : "hidden"}
       whileInView={prefersReducedMotion ? undefined : "visible"}
       viewport={{ once: true }}
     >
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
-        <h3 className="text-xl font-bold text-white">Feature Comparison</h3>
-        <p className="text-purple-100">Compare what you get with each plan</p>
+      <div className="bg-subtle-background px-8 py-6">
+        <h3 className="text-xl font-bold text-foreground">Feature Comparison</h3>
+        <p className="text-muted-foreground-color mt-2">Compare what you get with each plan</p>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 dark:bg-slate-700">
-              <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-white">
+            <tr className="bg-subtle-background">
+              <th className="px-8 py-5 text-left text-sm font-semibold text-foreground">
                 Feature
               </th>
               {plans.map((plan) => (
                 <th
                   key={plan.id}
-                  className="px-6 py-4 text-center text-sm font-semibold text-gray-900 dark:text-white"
+                  className="px-6 py-5 text-center text-sm font-semibold text-foreground"
                 >
                   {plan.title}
                 </th>
@@ -113,15 +113,13 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
               <motion.tr
                 key={feature.key}
                 variants={prefersReducedMotion ? undefined : rowVariants}
-                className={`${
-                  index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-gray-50 dark:bg-slate-700"
-                } border-b border-gray-200 dark:border-gray-600`}
+                className="hover:bg-subtle-background/50 transition-colors duration-150"
               >
-                <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                <td className="px-8 py-4">
+                  <div className="text-sm font-medium text-foreground">
                     {feature.category}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-muted-foreground-color mt-1">
                     {feature.description}
                   </div>
                 </td>
@@ -135,16 +133,16 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
                             icon={faCheck}
                             className={`h-5 w-5 ${
                               planFeature.highlight
-                                ? "text-purple-600 dark:text-purple-400"
-                                : "text-green-500 dark:text-green-400"
+                                ? "text-primary"
+                                : "text-success"
                             }`}
                           />
                           {planFeature.limit && (
                             <span
                               className={`mt-1 text-xs font-medium ${
                                 planFeature.highlight
-                                  ? "text-purple-600 dark:text-purple-400"
-                                  : "text-gray-600 dark:text-gray-400"
+                                  ? "text-primary"
+                                  : "text-muted-foreground-color"
                               }`}
                             >
                               {planFeature.limit}
@@ -154,7 +152,7 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
                       ) : (
                         <FontAwesomeIcon
                           icon={faTimes}
-                          className="h-5 w-5 text-gray-300 dark:text-gray-600"
+                          className="h-5 w-5 text-muted-foreground-color/50"
                         />
                       )}
                     </td>

@@ -336,17 +336,16 @@ function PricingPage() {
      
 
         <motion.header
-          // Removed variants from header as children are individually animated
-          className="mb-12 text-center md:mb-16"
+          className="mb-16 text-center md:mb-20"
         >
           <motion.h1
-            className="mb-4 bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400"
-            variants={prefersReducedMotion ? undefined : cardVariants} // Re-use card variant for simple entrance
+            className="mb-6 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl"
+            variants={prefersReducedMotion ? undefined : cardVariants}
           >
             Master Your Money with Expert Financial Education
           </motion.h1>
           <motion.p
-            className="mx-auto max-w-2xl text-lg text-gray-700 md:text-xl dark:text-gray-300"
+            className="mx-auto max-w-2xl text-lg text-muted-foreground-color md:text-xl"
             variants={prefersReducedMotion ? undefined : cardVariants}
           >
             From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor. Created by certified financial experts.
@@ -370,7 +369,7 @@ function PricingPage() {
         </motion.header>
 
         <motion.div
-          className="mt-8 grid grid-cols-1 justify-center gap-6 md:grid-cols-2 lg:grid-cols-3"
+          className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3"
           variants={prefersReducedMotion ? undefined : gridVariants}
         >
           {pricingTiers.map((tier) => (
@@ -381,12 +380,11 @@ function PricingPage() {
             >
               {tier.badgeText && (
                 <Badge 
-                  variant={tier.badgeText === "Most Popular" ? "default" : "secondary"}
                   className={classNames(
-                    "absolute -top-3 left-1/2 -translate-x-1/2 z-10 shadow-lg",
+                    "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
                     {
-                      "bg-gradient-to-r from-pink-500 to-purple-600 text-white border-0":
-                        tier.badgeText === "Most Popular",
+                      "bg-primary text-primary-foreground": tier.badgeText === "Most Popular",
+                      "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular",
                     },
                   )}
                 >
@@ -395,54 +393,54 @@ function PricingPage() {
               )}
               
               <Card className={classNames(
-                "h-full transition-all duration-300 group hover:shadow-xl",
+                "h-full transition-all duration-200 hover:shadow-md",
                 {
-                  "border-primary shadow-lg scale-105": tier.highlight,
-                  "border-border": !tier.highlight,
+                  "bg-card shadow-sm": tier.highlight,
+                  "bg-card": !tier.highlight,
                 }
               )}>
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl font-bold">
+                <CardHeader className="text-center pb-6">
+                  <CardTitle className="text-2xl font-bold text-foreground">
                     {tier.title}
                   </CardTitle>
-                  <CardDescription className="text-base">
+                  <CardDescription className="text-base text-muted-foreground-color">
                     {tier.subtitle}
                   </CardDescription>
                 </CardHeader>
 
                 <CardContent className="pt-0">
-                  <div className="mb-6 text-center">
+                  <div className="mb-8 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <span className="text-4xl font-extrabold">
+                      <span className="text-4xl font-bold text-foreground">
                         {isAnnual && tier.priceYearly
                           ? tier.priceYearly.replace("/year", "")
                           : tier.priceMonthly}
                       </span>
-                      <span className="text-base font-medium text-muted-foreground">
+                      <span className="text-base font-medium text-muted-foreground-color">
                         /month
                       </span>
                     </div>
                     
                     {isAnnual && tier.annualTotal && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        (${tier.annualTotal}/year)
+                      <p className="text-sm text-muted-foreground-color mt-2">
+                        ${tier.annualTotal}/year
                       </p>
                     )}
                     
                     {tier.priceYearly && tier.title !== "Starter" && (
-                      <p className={`mt-2 text-xs font-semibold text-primary transition-opacity duration-300 ${isAnnual ? "opacity-100" : "opacity-0"}`}>
+                      <p className={`mt-3 text-sm font-medium text-primary transition-opacity duration-300 ${isAnnual ? "opacity-100" : "opacity-0"}`}>
                         {isAnnual&&tier.title==="Plus" &&(
-                          "That's 4 months free!"
+                          "Save 4 months"
                         )}
                       </p>
                     )}
                   </div>
 
-                  <ul className="space-y-3 mb-6">
+                  <ul className="space-y-4 mb-8">
                     {tier.features.map((feature) => (
                       <li key={feature.text} className="flex items-start gap-3">
-                        <Check className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">
+                        <Check className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground-color leading-relaxed">
                           {feature.text}
                         </span>
                       </li>
@@ -450,8 +448,8 @@ function PricingPage() {
                   </ul>
 
                   {tier.trialText && (
-                    <div className="mb-4 text-center">
-                      <span className="bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600 bg-clip-text text-lg font-bold text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-indigo-400 whitespace-pre-line">
+                    <div className="mb-6 text-center rounded-lg bg-subtle-background p-4">
+                      <span className="text-base font-semibold text-primary whitespace-pre-line">
                         {tier.trialText}
                       </span>
                     </div>
@@ -461,9 +459,9 @@ function PricingPage() {
                 <CardFooter className="pt-0 flex-col gap-4">
                   <Button
                     className={classNames(
-                      "w-full transition-all duration-200",
+                      "w-full transition-all duration-200 hover:shadow-sm",
                       {
-                        "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 group-hover:scale-105": tier.highlight,
+                        "bg-primary hover:bg-primary/90": tier.highlight,
                       }
                     )}
                     variant={tier.highlight ? "default" : "outline"}
@@ -487,7 +485,7 @@ function PricingPage() {
                   </Button>
 
                   {tier.audienceText && (
-                    <p className="text-xs text-muted-foreground text-center">
+                    <p className="text-xs text-muted-foreground-color text-center">
                       {tier.audienceText}
                     </p>
                   )}
@@ -504,22 +502,22 @@ function PricingPage() {
         <FaqSection faqData={faqData} />
 
         <motion.div
-          className="mt-16 md:mt-24"
+          className="mt-20 md:mt-24"
           variants={prefersReducedMotion ? undefined : cardVariants}
         >
-          <Card className="text-center bg-card/60 backdrop-blur-md shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl">
+          <Card className="text-center bg-subtle-background">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl text-foreground">
                 Not Sure Which Plan is Right for You?
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CardDescription className="text-base max-w-lg mx-auto mb-6">
+              <CardDescription className="text-base max-w-lg mx-auto mb-6 text-muted-foreground-color">
                 Start with our Free plan to explore core features, or dive deeper
                 with a Plus trial. You can always upgrade as your financial needs
                 grow.
               </CardDescription>
-              <Button variant="link" className="text-primary" asChild>
+              <Button variant="link" className="text-primary hover:text-primary/80" asChild>
                 <a href="mailto:hello@moneko.io" className="inline-flex items-center gap-2">
                   Contact Us for a Recommendation
                   <Rocket className="h-4 w-4" />

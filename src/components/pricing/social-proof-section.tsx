@@ -53,7 +53,7 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
 
   return (
     <motion.section
-      className="mt-16 space-y-12"
+      className="mt-20 space-y-16"
       variants={prefersReducedMotion ? undefined : staggerVariants}
       initial={prefersReducedMotion ? undefined : "hidden"}
       whileInView={prefersReducedMotion ? undefined : "visible"}
@@ -61,18 +61,18 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
     >
       {/* Trust Stats */}
       <motion.div 
-        className="grid grid-cols-2 gap-4 md:grid-cols-4"
+        className="grid grid-cols-2 gap-6 md:grid-cols-4"
         variants={prefersReducedMotion ? undefined : cardVariants}
       >
         {stats.map((stat, index) => (
           <div
             key={index}
-            className="rounded-lg bg-white/80 p-4 text-center shadow-sm backdrop-blur-sm dark:bg-slate-800/80"
+            className="rounded-xl bg-subtle-background p-6 text-center transition-all duration-200 hover:shadow-sm"
           >
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+            <div className="text-2xl font-bold text-primary">
               {stat.number}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-muted-foreground-color mt-2">
               {stat.label}
             </div>
           </div>
@@ -83,42 +83,42 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
       <motion.div
         variants={prefersReducedMotion ? undefined : cardVariants}
       >
-        <h3 className="mb-8 text-center text-2xl font-bold text-gray-900 dark:text-white">
+        <h3 className="mb-12 text-center text-2xl font-bold text-foreground">
           What Our Students Say
         </h3>
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={index}
-              className="rounded-xl bg-white p-6 shadow-lg dark:bg-slate-800"
+              className="rounded-xl bg-card p-8 shadow-sm transition-all duration-200 hover:shadow-md"
               variants={prefersReducedMotion ? undefined : cardVariants}
             >
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex">
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex gap-1">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <FontAwesomeIcon
                       key={i}
                       icon={faStar}
-                      className="h-4 w-4 text-yellow-400"
+                      className="h-4 w-4 text-warning"
                     />
                   ))}
                 </div>
                 <FontAwesomeIcon
                   icon={faQuoteLeft}
-                  className="h-6 w-6 text-purple-200 dark:text-purple-800"
+                  className="h-6 w-6 text-muted-foreground-color/30"
                 />
               </div>
-              <blockquote className="mb-4 text-sm text-gray-700 dark:text-gray-300">
+              <blockquote className="mb-6 text-sm text-muted-foreground-color leading-relaxed">
                 "{testimonial.quote}"
               </blockquote>
-              <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
-                <div className="font-semibold text-gray-900 dark:text-white">
+              <div className="pt-4">
+                <div className="font-semibold text-foreground">
                   {testimonial.author}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-muted-foreground-color mt-1">
                   {testimonial.role}
                 </div>
-                <div className="mt-1 inline-block rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                <div className="mt-2 inline-block rounded-full bg-subtle-background px-3 py-1 text-xs font-medium text-primary">
                   {testimonial.plan} User
                 </div>
               </div>
@@ -129,27 +129,27 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
 
       {/* Security & Trust Badges */}
       <motion.div
-        className="rounded-xl bg-gradient-to-r from-green-50 to-blue-50 p-6 text-center dark:from-green-900/20 dark:to-blue-900/20"
+        className="rounded-xl bg-subtle-background p-8 text-center"
         variants={prefersReducedMotion ? undefined : cardVariants}
       >
-        <h4 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        <h4 className="mb-6 text-lg font-semibold text-foreground">
           Your Financial Data is Secure
         </h4>
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+        <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground-color">
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-success"></div>
             <span>Bank-Level Encryption</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-success"></div>
             <span>SOC 2 Compliant</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-success"></div>
             <span>Read-Only Account Access</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+          <div className="flex items-center gap-3">
+            <div className="h-2 w-2 rounded-full bg-success"></div>
             <span>30-Day Money Back</span>
           </div>
         </div>

@@ -21,10 +21,10 @@ interface FaqSectionProps {
 // Exported Component
 export function FaqSection({ faqData, title = "Frequently Asked Questions" }: FaqSectionProps) {
   return (
-    <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8">
+    <section className="py-16 sm:py-20 md:py-24">
       <div className="mx-auto max-w-4xl">
         <motion.h2 
-          className="text-center text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-8 sm:mb-12 md:mb-16 leading-tight"
+          className="text-center text-2xl sm:text-3xl font-bold text-foreground mb-12 sm:mb-16"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}

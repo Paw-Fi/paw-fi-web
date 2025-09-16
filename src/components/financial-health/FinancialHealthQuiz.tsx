@@ -7,6 +7,7 @@ import {
   faChevronRight,
   faCheck,
   faTimes,
+  faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@components/ui/button";
 import { useQuizDashboard } from "./useQuizDashboard";
@@ -59,6 +60,42 @@ interface ExtendedCalculationResults extends CalculationResults {
 }
 
 // Categories are now imported from shared constants
+
+// Privacy Info Expandable Component
+const PrivacyInfoExpandable: React.FC = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center justify-between w-full text-left text-xs text-muted-foreground-color dark:text-muted-foreground-color hover:text-foreground dark:hover:text-foreground transition-colors duration-150 cursor-pointer"
+      >
+        <span className="font-medium">Why do we need this information?</span>
+        <FontAwesomeIcon 
+          icon={faChevronDown} 
+          className={`text-xs transition-transform duration-200 cursor-pointer ${isExpanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+      
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <p className="text-xs text-muted-foreground-color dark:text-muted-foreground-color leading-relaxed mt-2 pt-2">
+              We collect these details to ensure your personalized financial plan is fully dedicated to your unique situation, goals, and circumstances. The more accurate information you provide, the better we can tailor recommendations specifically for you.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 // Debt Repeater Component
 const DebtRepeater: React.FC<{
@@ -1193,6 +1230,20 @@ export function FinancialHealthQuiz(props: {onDashboardCreated: (profile: Pick<F
                 <span className="text-sm font-medium text-gray-500">
                   {categories.find((category)=> category.id === state.activeCategory)?.title}
                 </span>
+              </div>
+              
+              {/* Privacy Notice */}
+              <div className="mb-6 rounded-xl bg-subtle-background dark:bg-subtle-background p-6">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground dark:text-foreground mb-3">
+                    Privacy Protected
+                  </h4>
+                  <p className="text-xs text-muted-foreground-color dark:text-muted-foreground-color mb-3 leading-relaxed">
+                    Your financial information is stored privately with end-to-end encryption. 
+                    No one can access your data, not even our developers. Your privacy are always our top priority.
+                  </p>
+                  <PrivacyInfoExpandable />
+                </div>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                 <motion.div

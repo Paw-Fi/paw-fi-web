@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faRocket,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faCheck,
+  faChevronDown
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import { FormQuestion } from "@/components/ui/form-question";
@@ -16,12 +18,49 @@ import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import MonekoAdvisorMessage, { type AdvisorMessage } from "@/components/ui/MonekoAdvisorMessage";
 import { GoalAdvisorMessageGenerator } from "./goal-advisor-messages";
+import { PresetProfileSelector } from "@/components/financial-health/PresetProfileSelector";
 import type { 
   GoalType, 
   QuestionnaireTemplate, 
 } from "@/data/questionnaire-templates";
 import type { ComprehensiveFinancialProfile, CategoryInfo, FinancialProfileQuestion, QuestionCategory, GoalSpecificAnswers } from "@/types/financial-quiz-constants";
 import { categories as allCategories, getGoalSpecificQuestions } from "@/types/financial-quiz-constants";
+
+// Privacy Info Expandable Component
+const PrivacyInfoExpandable: React.FC = () => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex items-center justify-between w-full text-left text-xs text-muted-foreground-color dark:text-muted-foreground-color hover:text-foreground dark:hover:text-foreground transition-colors duration-150 cursor-pointer"
+      >
+        <span className="font-medium">Why do we need this information?</span>
+        <FontAwesomeIcon 
+          icon={faChevronDown} 
+          className={`text-xs transition-transform duration-200 cursor-pointer ${isExpanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+      
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <p className="text-xs text-muted-foreground-color dark:text-muted-foreground-color leading-relaxed mt-2 pt-2">
+              We collect these details to ensure your personalized financial plan is fully dedicated to your unique situation, goals, and circumstances. The more accurate information you provide, the better we can tailor recommendations specifically for you.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 interface QuestionnaireFlowProps {
   goalType: GoalType;
@@ -44,6 +83,8 @@ export function QuestionnaireFlow({
   const [generalError, setGeneralError] = useState<string>('');
   const [advisorMessage, setAdvisorMessage] = useState<AdvisorMessage | null>(null);
   const [showAdvisorMessage, setShowAdvisorMessage] = useState(false);
+  const [showPresetBanner, setShowPresetBanner] = useState(false);
+  const [appliedProfileName, setAppliedProfileName] = useState<string>('');
   
   // Cookie utilities for guest profile management
   const { getCookie, setCookie } = useCookie();
@@ -207,6 +248,19 @@ export function QuestionnaireFlow({
       setGeneralError('');
     }
   };
+
+  // Handle preset profile application
+  const handlePresetProfileSelect = useCallback((profileAnswers: Record<string, any>, profileName: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      ...profileAnswers,
+      // Preserve debt-details and multiple choice arrays structure
+      'debt-details': profileAnswers['debt-details'] || [],
+      'additional_income_sources': profileAnswers['additional_income_sources'] || [],
+    }));
+    setShowPresetBanner(true);
+    setAppliedProfileName(profileName);
+  }, []);
 
   // Auto-fill questionnaire with existing profile data
   useEffect(() => {
@@ -623,6 +677,58 @@ export function QuestionnaireFlow({
           </div>
         </motion.div>
       )}
+
+      {/* Privacy Notice */}
+      <div className="mb-6 rounded-xl bg-subtle-background dark:bg-subtle-background p-6">
+        <div>
+          <h4 className="text-sm font-semibold text-foreground dark:text-foreground mb-3">
+            Privacy Protected
+          </h4>
+          <p className="text-xs text-muted-foreground-color dark:text-muted-foreground-color mb-3 leading-relaxed">
+            Your financial information is stored privately with end-to-end encryption. 
+            No one can access your data, not even our developers. Your privacy are always our top priority.
+          </p>
+          <PrivacyInfoExpandable />
+          
+          {/* Preset Profile Selector - only show on first category */}
+          {activeCategory === categories[0]?.id && (
+            <div className="mt-4">
+              <PresetProfileSelector onProfileSelect={handlePresetProfileSelect} />
+            </div>
+          )}
+          
+          {/* Profile Applied Banner */}
+          {showPresetBanner && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-green-800 dark:text-green-300">
+                    "{appliedProfileName}" profile applied successfully!
+                  </h4>
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    All questions have been auto-filled. You can still modify any answers as needed.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPresetBanner(false)}
+                className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-xs"
+              >
+                ✕
+              </button>
+            </motion.div>
+          )}
+        </div>
+      </div>
 
       <CategoryProgress
         categories={categories}
