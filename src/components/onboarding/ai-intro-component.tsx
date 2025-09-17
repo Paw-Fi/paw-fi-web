@@ -566,7 +566,9 @@ return (
             useExternalMessages: true,
             externalMessages: messages,
             customMessageHandler: handleSendMessage,
+            enableLoadingDuration: true,
           }}
+          externalIsLoading={isSendingMessage}
           welcomeMessage="Hi! I'm Moneko, your AI money coach 👋 Tell me what financial goal you'd like to work on!"
           welcomeSubtitle="I'll help you create a personalized plan step by step."
           onGoalTemplateClick={handleGoalTemplateClick}

@@ -62,6 +62,9 @@ interface ChatConversationDisplayProps {
   // Optional customization
   agentName: string;
   agentIcon: React.ReactNode;
+  
+  // External loading state (for custom message handlers)
+  externalIsLoading?: boolean;
   welcomeMessage?: string;
   welcomeSubtitle?: string;
   
@@ -286,7 +289,8 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
   backgroundGradient,
   footerContent,
   signupModalConfig,
-  agentName
+  agentName,
+  externalIsLoading
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -309,7 +313,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
 
   // Get messages from context
   const messages = chatConfig.useExternalMessages ? (chatConfig.externalMessages || []) : getMessages(aiRole);
-  const isLoading = isSendingMessage(aiRole);
+  const isLoading = chatConfig.useExternalMessages ? (externalIsLoading || false) : isSendingMessage(aiRole);
   
   // State management for UI only
   const [connectionError, setConnectionError] = useState<string | null>(null);
