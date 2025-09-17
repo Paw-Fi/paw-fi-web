@@ -296,7 +296,7 @@ export function InteractiveProjectionChart({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      className="bg-card rounded-3xl shadow-sm p-8"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -312,12 +312,12 @@ export function InteractiveProjectionChart({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`p-4 rounded-lg mb-6 ${
+            className={`p-4 rounded-2xl mb-6 ${
               statusMessage.type === 'success' 
-                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 text-green-800 dark:text-green-200'
+                ? 'bg-success/10 border border-success/20 text-success'
                 : statusMessage.type === 'warning'
-                ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-200'
-                : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 text-blue-800 dark:text-blue-200'
+                ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                : 'bg-primary/10 border border-primary/20 text-primary'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -342,7 +342,7 @@ export function InteractiveProjectionChart({
             className="space-y-6"
           >
             {/* Goal Parameter Controls - Always Visible */}
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6 space-y-6">
+            <div className="bg-muted/50 rounded-3xl p-8 space-y-8">
                
                 {/* Save/Cancel buttons - only show when there are changes */}
                 <AnimatePresence>
@@ -356,7 +356,7 @@ export function InteractiveProjectionChart({
                       <button
                         onClick={saveChanges}
                         disabled={isUpdating}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-lg transition-all duration-200 flex items-center gap-2"
+                        className="px-6 py-3 bg-success hover:bg-success/90 disabled:bg-muted text-success-foreground rounded-full transition-all duration-200 flex items-center gap-2 hover:scale-105"
                       >
                         <FontAwesomeIcon 
                           icon={isUpdating ? faClock : faCheck} 
@@ -367,7 +367,7 @@ export function InteractiveProjectionChart({
                       <button
                         onClick={cancelEditing}
                         disabled={isUpdating}
-                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded-lg transition-all duration-200 flex items-center gap-2"
+                        className="px-6 py-3 bg-muted hover:bg-muted/80 disabled:bg-muted/50 text-muted-foreground hover:text-foreground rounded-full transition-all duration-200 flex items-center gap-2 hover:scale-105"
                       >
                         <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                         Cancel
@@ -414,62 +414,62 @@ export function InteractiveProjectionChart({
 
             {/* Projection Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className={`p-4 rounded-lg border ${
+              <div className={`p-6 rounded-2xl border ${
                 isOnTrack 
-                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-500/30'
-                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-500/30'
+                  ? 'bg-success/10 border-success/20'
+                  : 'bg-destructive/10 border-destructive/20'
               }`}>
                 <div className="flex items-center gap-2 mb-1">
                   <FontAwesomeIcon 
                     icon={isOnTrack ? faCheckCircle : faExclamationTriangle} 
                     className={`w-4 h-4 ${
-                      isOnTrack ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                      isOnTrack ? 'text-success' : 'text-destructive'
                     }`} 
                   />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Completion Date
                   </span>
                 </div>
-                <div className={`text-lg font-bold ${
-                  isOnTrack ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'
+                <div className={`text-lg font-semibold ${
+                  isOnTrack ? 'text-success' : 'text-destructive'
                 }`}>
                   {completionDate.toLocaleDateString()}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   {projectedCompletion} months
                 </div>
               </div>
 
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg">
+              <div className="p-6 bg-primary/10 border border-primary/20 rounded-2xl">
                 <div className="flex items-center gap-2 mb-1">
-                  <FontAwesomeIcon icon={faDollarSign} className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <FontAwesomeIcon icon={faDollarSign} className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-muted-foreground">
                     Monthly Gap
                   </span>
                 </div>
-                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                <div className="text-lg font-semibold text-primary">
                   {monthlyGap > 0 ? `+$${monthlyGap}` : monthlyGap < 0 ? `-$${Math.abs(monthlyGap)}` : '$0'}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   {monthlyGap > 0 ? 'Need more' : monthlyGap < 0 ? 'Ahead of schedule' : 'On track'}
                 </div>
               </div>
 
-              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-lg">
+              <div className="p-6 bg-purple-50 border border-purple-200 rounded-2xl">
                 <div className="flex items-center gap-2 mb-1">
-                  <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <FontAwesomeIcon icon={faCalendar} className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-muted-foreground">
                     Time Difference
                   </span>
                 </div>
-                <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                <div className="text-lg font-semibold text-purple-800">
                   {projectedCompletion - monthsToTarget > 0 
                     ? `+${projectedCompletion - monthsToTarget}` 
                     : projectedCompletion - monthsToTarget < 0 
                     ? `${projectedCompletion - monthsToTarget}` 
                     : '0'} months
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   vs. target timeline
                 </div>
               </div>

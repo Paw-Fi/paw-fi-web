@@ -165,7 +165,7 @@ export const DashboardBlockModal = ({onClose,isVisible}: {onClose: () => void,is
        </motion.h2>
 
        <motion.p
-         className="mb-6 text-center text-lg text-gray-700 dark:text-gray-300"
+         className="mb-6 text-center text-lg text-muted-foreground"
          initial={{ opacity: 0 }}
          animate={{ opacity: 1 }}
          transition={{ delay: 0.3, duration: 0.5 }}
@@ -183,15 +183,15 @@ export const DashboardBlockModal = ({onClose,isVisible}: {onClose: () => void,is
          {config.features.map((feature, index) => (
            <motion.div 
              key={index}
-             className="flex items-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-white/20 dark:border-slate-700/30"
+             className="flex items-center p-4 rounded-2xl bg-card/50 border border-border/20 shadow-sm"
              initial={{ opacity: 0, x: -10 }}
              animate={{ opacity: 1, x: 0 }}
              transition={{ delay: 0.5 + (index * 0.1), duration: 0.4 }}
            >
-             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/80 to-purple-500/80 text-white shadow-md">
+             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
                <FontAwesomeIcon icon={feature.icon} className="h-5 w-5" />
              </div>
-             <span className="ml-3 text-sm md:text-base font-medium text-gray-700 dark:text-gray-200">
+             <span className="ml-4 text-sm md:text-base font-medium text-foreground">
                {feature.text}
              </span>
            </motion.div>
@@ -207,7 +207,7 @@ export const DashboardBlockModal = ({onClose,isVisible}: {onClose: () => void,is
          {/* Primary CTA - Get Early Access */}
          <Link to="/early-access" className="group w-full sm:w-auto">
            <motion.div
-             className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 px-8 py-4 text-white shadow-lg shadow-purple-500/30 transition-all duration-200"
+             className="flex w-full sm:w-auto items-center justify-center space-x-3 rounded-full bg-primary px-8 py-4 text-primary-foreground shadow-sm hover:shadow-md transition-all duration-200"
              whileHover={{ scale: 1.03, y: -2 }}
              whileTap={{ scale: 0.98 }}
              transition={{
@@ -219,7 +219,7 @@ export const DashboardBlockModal = ({onClose,isVisible}: {onClose: () => void,is
              <span className="text-lg font-medium">
                Get Early Access
              </span>
-             <span className="text-sm bg-white/20 px-2 py-1 rounded-full">
+             <span className="text-sm bg-primary-foreground/20 px-3 py-1 rounded-full">
                FREE
              </span>
            </motion.div>
@@ -228,25 +228,25 @@ export const DashboardBlockModal = ({onClose,isVisible}: {onClose: () => void,is
          {/* Secondary CTA - Original Action */}
          <Link to={config.ctaLink} search={!user ? { redirect: "/dashboard" } : undefined} className="group">
                 
-             <span className="text-sm font-medium mt-2 underline">
+             <span className="text-sm font-medium mt-3 text-muted-foreground hover:text-foreground transition-colors duration-200">
                {config.ctaText}
              </span>
          </Link>
        </motion.div>
          {/* Free Trial Banner */}
          <motion.div
-         className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800"
+         className="mt-8 p-6 rounded-3xl bg-success/10 border border-success/20"
          initial={{ opacity: 0, scale: 0.95 }}
          animate={{ opacity: 1, scale: 1 }}
          transition={{ delay: 0.1, duration: 0.5 }}
        >
          <Link to="/early-access" className="text-center">
-           <div className="text-lg font-bold text-green-600 dark:text-green-400 mb-1">
+           <div className="text-lg font-semibold text-success mb-2">
            🚀 FREE TRIAL AVAILABLE
            </div>
-           <div className="text-sm text-gray-600 dark:text-gray-400">
-             We're currently offering a <span className="font-bold text-primary">free trial</span> to the first{' '}
-             <span className="font-bold text-primary">100 users</span>!
+           <div className="text-sm text-muted-foreground">
+             We're currently offering a <span className="font-semibold text-primary">free trial</span> to the first{' '}
+             <span className="font-semibold text-primary">100 users</span>!
            </div>
          </Link>
        </motion.div>

@@ -45,37 +45,37 @@ export function AllInsightsModal({
   const insightTypeConfigs: Record<string, any> = {
     recommendation: {
       icon: faLightbulb,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-500/30',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
+      borderColor: 'border-primary/20',
       label: 'Recommendation'
     },
     warning: {
       icon: faExclamationTriangle,
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-      borderColor: 'border-red-200 dark:border-red-500/30',
+      color: 'text-destructive',
+      bgColor: 'bg-destructive/10',
+      borderColor: 'border-destructive/20',
       label: 'Warning'
     },
     opportunity: {
       icon: faBullseye,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
-      borderColor: 'border-emerald-200 dark:border-emerald-500/30',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+      borderColor: 'border-success/20',
       label: 'Opportunity'
     },
     milestone: {
       icon: faFlag,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      borderColor: 'border-purple-200 dark:border-purple-500/30',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
       label: 'Milestone'
     },
     performance: {
       icon: faChartLine,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      borderColor: 'border-orange-200 dark:border-orange-500/30',
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-200',
       label: 'Performance'
     }
   };
@@ -84,22 +84,22 @@ export function AllInsightsModal({
     switch (priority) {
       case 'high':
         return {
-          color: 'text-red-600 dark:text-red-400',
-          bgColor: 'bg-red-100 dark:bg-red-900/30',
+          color: 'text-destructive',
+          bgColor: 'bg-destructive/10',
           label: 'High Priority',
           order: 3
         };
       case 'medium':
         return {
-          color: 'text-amber-600 dark:text-amber-400',
-          bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+          color: 'text-amber-600',
+          bgColor: 'bg-amber-50',
           label: 'Medium Priority',
           order: 2
         };
       default:
         return {
-          color: 'text-gray-600 dark:text-gray-400',
-          bgColor: 'bg-gray-100 dark:bg-gray-700/30',
+          color: 'text-muted-foreground',
+          bgColor: 'bg-muted',
           label: 'Low Priority',
           order: 1
         };
@@ -332,33 +332,33 @@ export function AllInsightsModal({
       <div className="p-8 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-pink-500/20 to-pink-600/10 dark:from-pink-400/30 dark:to-pink-500/20 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-pink-500/20 dark:border-pink-400/30">
+          <div className="flex items-center gap-6">
+            <div className="flex-shrink-0 w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center shadow-sm">
               <FontAwesomeIcon
                 icon={faLightbulb}
-                className="w-7 h-7 text-pink-600 dark:text-pink-400"
+                className="w-8 h-8 text-primary"
               />
             </div>
             
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <div className="flex items-center gap-3 mb-3">
+                <h1 className="text-3xl font-light text-foreground">
                   All of Moneko's Insights
                 </h1>
                 {highPriorityCount > 0 && (
-                  <div className="flex items-center gap-1 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-sm font-medium">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-full text-sm font-medium">
                     <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
                     {highPriorityCount} urgent
                   </div>
                 )}
                 {insights.filter(i => i.is_ai_generated).length > 0 && (
-                  <div className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium">
                     <FontAwesomeIcon icon={faBrain} className="w-3 h-3" />
                     Moneko
                   </div>
                 )}
               </div>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Everything Moneko has learned about "{goal.title}"
               </p>
             </div>
@@ -370,7 +370,7 @@ export function AllInsightsModal({
             disabled={isGeneratingNew}
             whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
             whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
-            className="flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
+            className="flex items-center gap-3 px-6 py-3 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200"
           >
             {isGeneratingNew ? (
               <motion.div
@@ -387,10 +387,10 @@ export function AllInsightsModal({
         </div>
 
         {/* Filters and Sort */}
-        <div className="flex flex-wrap items-center gap-4 mb-8 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+        <div className="flex flex-wrap items-center gap-6 mb-8 p-6 bg-muted/50 rounded-3xl">
           {/* Type Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground">Filter:</span>
             <div className="flex gap-2">
               {insightTypes.map((type) => (
                 <motion.button
@@ -398,10 +398,10 @@ export function AllInsightsModal({
                   onClick={() => setSelectedFilter(type)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors capitalize ${
+                  className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 capitalize ${
                     selectedFilter === type
-                      ? 'bg-pink-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-card text-muted-foreground hover:bg-card/80 hover:text-foreground'
                   }`}
                 >
                   {type}
@@ -411,12 +411,12 @@ export function AllInsightsModal({
           </div>
 
           {/* Sort */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Sort:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground">Sort:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20"
+              className="px-4 py-2 text-sm bg-card border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200"
             >
               <option value="priority">Priority</option>
               <option value="date">Date</option>
@@ -425,7 +425,7 @@ export function AllInsightsModal({
           </div>
 
           {/* Stats */}
-          <div className="ml-auto flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="ml-auto flex items-center gap-4 text-sm text-muted-foreground">
             <span>{filteredAndSortedInsights.length} insights shown</span>
             <span>•</span>
             <span>{insights.length} total</span>
@@ -437,13 +437,13 @@ export function AllInsightsModal({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-xl text-red-700 dark:text-red-400 mb-6"
+            className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive mb-6"
           >
             <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5" />
             <span className="font-medium">{error}</span>
             <button 
               onClick={() => setError(null)}
-              className="ml-auto text-red-500 hover:text-red-700"
+              className="ml-auto text-destructive hover:text-destructive/80 transition-colors duration-200"
             >
               <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
             </button>
@@ -453,13 +453,13 @@ export function AllInsightsModal({
         {/* Insights List */}
         {filteredAndSortedInsights.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
-              <FontAwesomeIcon icon={faLightbulb} className="w-10 h-10 text-gray-400" />
+            <div className="w-24 h-24 mx-auto bg-muted rounded-3xl flex items-center justify-center mb-8 shadow-sm">
+              <FontAwesomeIcon icon={faLightbulb} className="w-12 h-12 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-2xl font-light text-foreground mb-3">
               Moneko Hasn't Shared Insights Yet
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
+            <p className="text-muted-foreground mb-8 leading-relaxed">
               Let Moneko analyze your goal and provide personalized recommendations to help you succeed.
             </p>
             <motion.button
@@ -467,7 +467,7 @@ export function AllInsightsModal({
               disabled={isGeneratingNew}
               whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
               whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200"
             >
               <FontAwesomeIcon icon={faRocket} className="w-4 h-4" />
               Get Moneko's First Insights
@@ -487,7 +487,7 @@ export function AllInsightsModal({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className={`bg-white dark:bg-gray-700/50 rounded-xl border-2 ${typeConfig.borderColor} hover:shadow-lg transition-all group`}
+                  className={`bg-card rounded-3xl border-2 ${typeConfig.borderColor} hover:shadow-md transition-all duration-200 group`}
                 >
                   {/* Insight Header */}
                   <div className="p-6">
@@ -498,28 +498,28 @@ export function AllInsightsModal({
                         </div>
                         
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2 flex-wrap">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-3 mb-3 flex-wrap">
+                            <h3 className="text-lg font-medium text-foreground">
                               {insight.title}
                             </h3>
                             
-                            <div className={`px-2 py-1 ${priorityConfig.bgColor} ${priorityConfig.color} rounded-full text-xs font-medium`}>
+                            <div className={`px-3 py-1 ${priorityConfig.bgColor} ${priorityConfig.color} rounded-full text-xs font-medium`}>
                               {priorityConfig.label}
                             </div>
                             
-                            <div className={`px-2 py-1 ${typeConfig.bgColor} ${typeConfig.color} rounded-full text-xs font-medium`}>
+                            <div className={`px-3 py-1 ${typeConfig.bgColor} ${typeConfig.color} rounded-full text-xs font-medium`}>
                               {typeConfig.label}
                             </div>
 
                             {insight.is_ai_generated && (
-                              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium">
+                              <div className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">
                                 <FontAwesomeIcon icon={faBrain} className="w-3 h-3" />
                                 Moneko
                               </div>
                             )}
                           </div>
                           
-                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                             <div className="flex items-center gap-1">
                               <FontAwesomeIcon icon={faClock} className="w-3 h-3" />
                               {getTimeSinceCreated(insight.created_at)}
@@ -533,7 +533,7 @@ export function AllInsightsModal({
                             )}
                             
                             {insight.actionable && (
-                              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                              <div className="flex items-center gap-1 text-success">
                                 <FontAwesomeIcon icon={faCheckCircle} className="w-3 h-3" />
                                 Actionable
                               </div>
@@ -547,19 +547,19 @@ export function AllInsightsModal({
                         onClick={() => toggleInsightExpansion(insight.id)}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        className="p-2 hover:bg-muted rounded-2xl transition-all duration-200"
                       >
                         <motion.div
                           animate={{ rotate: isExpanded ? 90 : 0 }}
                           transition={{ duration: 0.2 }}
                         >
-                          <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4 text-gray-400" />
+                          <FontAwesomeIcon icon={faArrowUp} className="w-4 h-4 text-muted-foreground" />
                         </motion.div>
                       </motion.button>
                     </div>
 
                     {/* Content Preview */}
-                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed">
                       {isExpanded ? insight.content : `${insight.content.substring(0, 200)}${insight.content.length > 200 ? '...' : ''}`}
                     </p>
 
@@ -569,21 +569,21 @@ export function AllInsightsModal({
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         transition={{ duration: 0.3 }}
-                        className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600"
+                        className="mt-6 pt-6 border-t border-border"
                       >
                         {insight.ai_confidence_score && (
-                          <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          <div className="mb-6 p-4 bg-muted/50 rounded-2xl">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-medium text-muted-foreground">
                                 Moneko's Confidence
                               </span>
-                              <span className="text-sm font-bold text-gray-900 dark:text-white">
+                              <span className="text-sm font-semibold text-foreground">
                                 {Math.round(insight.ai_confidence_score * 100)}%
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                            <div className="w-full bg-muted rounded-full h-2">
                               <motion.div
-                                className="h-2 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full"
+                                className="h-2 bg-primary rounded-full"
                                 initial={{ width: 0 }}
                                 animate={{ width: `${insight.ai_confidence_score * 100}%` }}
                                 transition={{ duration: 1, delay: 0.5 }}
@@ -600,12 +600,12 @@ export function AllInsightsModal({
                               onClick={() => handleInsightAction(insight.id, action.id)}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className={`flex items-center gap-2 px-4 py-2 font-medium rounded-lg transition-colors ${
+                              className={`flex items-center gap-2 px-4 py-2 font-medium rounded-full transition-all duration-200 ${
                                 action.type === 'primary'
-                                  ? 'bg-pink-600 hover:bg-pink-700 text-white'
+                                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md'
                                   : action.type === 'danger'
-                                  ? 'bg-red-600 hover:bg-red-700 text-white'
-                                  : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-300'
+                                  ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm hover:shadow-md'
+                                  : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
                               }`}
                             >
                               <FontAwesomeIcon icon={action.icon} className="w-3 h-3" />
@@ -623,12 +623,12 @@ export function AllInsightsModal({
         )}
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="mt-8 pt-6 border-t border-border">
           <div className="flex justify-end">
             <Button
               onClick={onClose}
               variant="outline"
-              className="px-6"
+              className="px-8 py-3 rounded-full hover:scale-105 transition-all duration-200"
             >
               Close
             </Button>

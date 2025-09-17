@@ -3,8 +3,6 @@ import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faCheck } from '@fortawesome/free-solid-svg-icons';
 import { GoalTypeSelector } from '@/components/goal-tracker/questionnaire/GoalTypeSelector';
 import { QuestionnaireFlow } from '@/components/goal-tracker/questionnaire/QuestionnaireFlow';
 import { getQuestionnaireTemplate } from '@/data/questionnaire-templates';
@@ -68,7 +66,7 @@ function CreateGoalPage() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -116,15 +114,15 @@ function CreateGoalPage() {
   };
 
   return (
-    <div className="h-full bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-900/50 dark:to-gray-900 p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-7xl">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={state.currentStep}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
           >
             {renderStep()}
           </motion.div>
@@ -137,51 +135,59 @@ function CreateGoalPage() {
 function GoalCreationSuccess({ result, onGoToDashboard }: { result: GoalCreationResult; onGoToDashboard: () => void; }) {
   const navigate = useNavigate();
   return (
-    <div className="text-center p-8">
-      <motion.div
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-        className="w-24 h-24 mx-auto bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-lg"
-      >
-        <FontAwesomeIcon icon={faCheck} className="w-12 h-12 text-white" />
-      </motion.div>
-      <motion.h1 
-        initial={{ y: 20, opacity: 0 }} 
-        animate={{ y: 0, opacity: 1, transition: { delay: 0.2 } }} 
-        className="text-4xl font-bold text-gray-900 dark:text-white mb-4"
-      >
-        Goal Created!
-      </motion.h1>
-      <motion.div 
-        initial={{ y: 20, opacity: 0 }} 
-        animate={{ y: 0, opacity: 1, transition: { delay: 0.3 } }}
-        className="mb-8"
-      >
-        {result?.goal && (
-          <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-4 mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {result.goal.title}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Target: ${result.goal.target_amount?.toLocaleString()} by {new Date(result.goal.target_date).toLocaleDateString()}
-            </p>
-            {result.milestones && result.milestones.length > 0 && (
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                {result.milestones.length} milestones created to help you reach your goal
-              </p>
-            )}
+    <div className="bg-card rounded-3xl p-8 sm:p-12 shadow-sm hover:shadow-md transition-all duration-200 max-w-2xl mx-auto">
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          className="w-24 h-24 mx-auto bg-success rounded-3xl flex items-center justify-center mb-8 shadow-sm"
+        >
+          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center">
+            <div className="text-success text-2xl font-light">✓</div>
           </div>
-        )}
-        <p className="text-lg text-gray-600 dark:text-gray-400">
-          You're all set to start working on your financial future.
-        </p>
-      </motion.div>
-      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.4 } }}>
-        <Button onClick={() => navigate({ to: '/dashboard/tracker/$goalId', params: { goalId: result.goal.id } })} size="lg">
-          Check your goal
-        </Button>
-      </motion.div>
+        </motion.div>
+        <motion.h1 
+          initial={{ y: 20, opacity: 0 }} 
+          animate={{ y: 0, opacity: 1, transition: { delay: 0.2 } }} 
+          className="text-4xl font-light text-foreground mb-6"
+        >
+          Goal Created!
+        </motion.h1>
+        <motion.div 
+          initial={{ y: 20, opacity: 0 }} 
+          animate={{ y: 0, opacity: 1, transition: { delay: 0.3 } }}
+          className="mb-8"
+        >
+          {result?.goal && (
+            <div className="bg-muted/30 rounded-2xl p-6 mb-6">
+              <h3 className="text-xl font-medium text-foreground mb-3">
+                {result.goal.title}
+              </h3>
+              <p className="text-muted-foreground mb-3">
+                Target: ${result.goal.target_amount?.toLocaleString()} by {new Date(result.goal.target_date).toLocaleDateString()}
+              </p>
+              {result.milestones && result.milestones.length > 0 && (
+                <p className="text-sm text-primary font-medium">
+                  {result.milestones.length} milestones created to help you reach your goal
+                </p>
+              )}
+            </div>
+          )}
+          <p className="text-lg text-muted-foreground">
+            You're all set to start working on your financial future.
+          </p>
+        </motion.div>
+        <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1, transition: { delay: 0.4 } }}>
+          <Button 
+            onClick={() => navigate({ to: '/dashboard/tracker/$goalId', params: { goalId: result.goal.id } })} 
+            size="lg"
+            className="rounded-full px-8"
+          >
+            Check your goal
+          </Button>
+        </motion.div>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faRocket,
-  faExclamationTriangle,
-  faChevronDown
-} from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
 import { FormQuestion } from "@/components/ui/form-question";
 import { CategoryProgress } from "@/components/ui/category-progress";
@@ -33,13 +27,12 @@ const PrivacyInfoExpandable: React.FC = () => {
     <div>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full text-left text-sm text-muted-foreground-color hover:text-foreground transition-colors duration-200"
+        className="flex items-center justify-between w-full text-left text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
       >
         <span className="font-medium">Why do we need this information?</span>
-        <FontAwesomeIcon 
-          icon={faChevronDown} 
-          className={`text-sm transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-        />
+        <span className={`text-sm transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''} inline-block`}>
+          ▼
+        </span>
       </button>
       
       <AnimatePresence>
@@ -51,7 +44,7 @@ const PrivacyInfoExpandable: React.FC = () => {
             transition={{ duration: 0.2, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            <p className="text-sm text-muted-foreground-color leading-relaxed mt-4 pt-4">
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
               We collect these details to ensure your personalized financial plan is fully dedicated to your unique situation, goals, and circumstances. The more accurate information you provide, the better we can tailor recommendations specifically for you.
             </p>
           </motion.div>
@@ -714,10 +707,10 @@ export function QuestionnaireFlow({
         <div className="w-16 h-16 mx-auto mb-8">
           <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-4">
+        <h2 className="text-2xl font-medium text-foreground mb-4">
           Loading Your Profile
         </h2>
-        <p className="text-muted-foreground-color">
+        <p className="text-muted-foreground">
           We're loading your existing information to save you time...
         </p>
       </div>
@@ -733,10 +726,10 @@ export function QuestionnaireFlow({
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-3xl font-bold text-foreground mb-3">
+          <h1 className="text-3xl font-light text-foreground mb-3">
             Choose Your Setup Experience
           </h1>
-          <p className="text-muted-foreground-color">
+          <p className="text-muted-foreground">
             How would you like to create your financial plan? Choose the option that works best for you.
           </p>
         </motion.div>
@@ -750,38 +743,38 @@ export function QuestionnaireFlow({
           >
             <button
               onClick={() => handleSetupExperienceSelect('customized')}
-              className={`w-full bg-card hover:bg-subtle-background border rounded-xl p-6 text-left transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+              className={`w-full bg-card hover:bg-muted/20 border rounded-2xl p-8 text-left transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                 selectedSetupMode === 'customized' 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border hover:border-primary/50'
+                  ? 'border-primary bg-primary/10 shadow-sm' 
+                  : 'border-border hover:border-primary/50'
               }`}
             >
               <div className="flex justify-end mb-4">
-                <span className="bg-primary text-white text-xs font-medium px-3 py-1 rounded-lg">
+                <span className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
                   Recommended
                 </span>
               </div>
 
-              <h3 className="text-lg font-semibold text-foreground mb-2">
+              <h3 className="text-lg font-medium text-foreground mb-3">
                 Customized Setup
               </h3>
-              <p className="text-sm text-muted-foreground-color mb-4 leading-relaxed">
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                 Answer detailed questions to get a personalized financial plan tailored specifically to your situation and goals.
               </p>
 
-              <div className="space-y-2 mb-4">
-                <div className="text-sm text-muted-foreground-color">
+              <div className="space-y-3 mb-6">
+                <div className="text-sm text-muted-foreground">
                   • Fully personalized recommendations
                 </div>
-                <div className="text-sm text-muted-foreground-color">
+                <div className="text-sm text-muted-foreground">
                   • Detailed financial analysis
                 </div>
-                <div className="text-sm text-muted-foreground-color">
+                <div className="text-sm text-muted-foreground">
                   • Custom strategies & milestones
                 </div>
               </div>
 
-              <div className="text-sm text-muted-foreground-color">
+              <div className="text-sm text-muted-foreground">
                 <span>⏱ 5-8 minutes</span>
               </div>
             </button>
@@ -810,23 +803,23 @@ export function QuestionnaireFlow({
               <h3 className="text-lg font-semibold text-foreground mb-2">
                 Faster Setup
               </h3>
-              <p className="text-sm text-muted-foreground-color mb-4 leading-relaxed">
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                 Choose from pre-built financial profiles and get started immediately with proven strategies tailored to common financial situations.
               </p>
 
               <div className="space-y-2 mb-4">
-                <div className="text-sm text-muted-foreground-color">
+                <div className="text-sm text-muted-foreground">
                   • Pre-built expert templates
                 </div>
-                <div className="text-sm text-muted-foreground-color">
+                <div className="text-sm text-muted-foreground">
                   • Instant plan generation
                 </div>
-                <div className="text-sm text-muted-foreground-color">
+                <div className="text-sm text-muted-foreground">
                   • Easy to customize later
                 </div>
               </div>
 
-              <div className="text-sm text-muted-foreground-color">
+              <div className="text-sm text-muted-foreground">
                 <span>⏱ 1-2 minutes</span>
               </div>
             </button>
@@ -839,7 +832,7 @@ export function QuestionnaireFlow({
           transition={{ delay: 0.3 }}
           className="text-center"
         >
-          <p className="text-sm text-muted-foreground-color mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Don't worry, you can always modify your plan later as your situation changes.
           </p>
           
@@ -878,7 +871,7 @@ export function QuestionnaireFlow({
           <h1 className="text-3xl font-bold text-foreground mb-3">
             Choose Your Profile
           </h1>
-          <p className="text-muted-foreground-color">
+          <p className="text-muted-foreground">
             Select the profile that best matches your current situation.
           </p>
         </motion.div>
@@ -921,7 +914,7 @@ export function QuestionnaireFlow({
                     {profile.name}
                   </h3>
                 </div>
-                <p className="text-sm text-muted-foreground-color mb-3">
+                <p className="text-sm text-muted-foreground mb-3">
                   {profile.description}
                 </p>               
               </button>
@@ -964,10 +957,10 @@ export function QuestionnaireFlow({
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-12"
       >
-        <h1 className="text-3xl font-bold text-foreground mb-3">
+        <h1 className="text-3xl font-light text-foreground mb-3">
           Tell us about your goal
         </h1>
-        <p className="text-muted-foreground-color">
+        <p className="text-muted-foreground">
           Fill out the details below to create your personalized financial plan.
         </p>
       </motion.div>
@@ -976,16 +969,18 @@ export function QuestionnaireFlow({
         <motion.div
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          className="mb-8 p-6 bg-card border border-red-200 dark:border-red-800 rounded-xl shadow-sm"
+          className="mb-8 p-6 bg-warning/5 rounded-2xl shadow-sm"
         >
           <div className="flex items-start gap-4">
-            <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <div className="w-5 h-5 bg-warning/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-warning text-xs font-medium">!</span>
+            </div>
             <div className="flex-1">
               <p className="text-foreground font-medium mb-1">
                 {generalError}
               </p>
               {Object.keys(errors).length > 0 && (
-                <p className="text-muted-foreground-color text-sm">
+                <p className="text-muted-foreground text-sm">
                   Check the highlighted fields below for specific errors.
                 </p>
               )}
@@ -1059,7 +1054,6 @@ export function QuestionnaireFlow({
         onNext={handleNext}
         onSubmit={handleSubmit}
         submitLabel="Create My Goal"
-        submitIcon={faRocket}
         isSubmitting={isLoading}
         hasValidationErrors={Object.keys(errors).length > 0 || !!generalError}
       />
@@ -1069,7 +1063,7 @@ export function QuestionnaireFlow({
         <h4 className="font-semibold text-foreground mb-4">
           Privacy Protected
         </h4>
-        <p className="text-sm text-muted-foreground-color mb-6 leading-relaxed">
+        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
           Your financial information is stored privately with end-to-end encryption. 
           No one can access your data, not even our developers. Your privacy are always our top priority.
         </p>
@@ -1085,13 +1079,15 @@ function GeneratingGoalView({ progress, error, onCancel }: any) {
   if (error) {
     return (
       <div className="max-w-2xl mx-auto text-center py-20">
-        <div className="w-16 h-16 mx-auto bg-card border border-red-200 dark:border-red-800 rounded-full flex items-center justify-center mb-8 shadow-sm">
-          <FontAwesomeIcon icon={faExclamationTriangle} className="w-8 h-8 text-warning" />
+        <div className="w-16 h-16 mx-auto bg-warning/10 rounded-full flex items-center justify-center mb-8 shadow-sm">
+          <div className="w-8 h-8 bg-warning/20 rounded-full flex items-center justify-center">
+            <span className="text-warning text-lg font-medium">!</span>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-4">
+        <h2 className="text-2xl font-light text-foreground mb-4">
           Goal Creation Failed
         </h2>
-        <p className="text-muted-foreground-color mb-8">{error}</p>
+        <p className="text-muted-foreground mb-8">{error}</p>
         <Button onClick={onCancel} variant="outline">Go Back</Button>
       </div>
     );
@@ -1109,7 +1105,7 @@ function GeneratingGoalView({ progress, error, onCancel }: any) {
       <h2 className="text-2xl font-bold text-foreground mb-4">
         Creating Your AI-Powered Goal
       </h2>
-      <p className="text-muted-foreground-color mb-8">
+      <p className="text-muted-foreground mb-8">
         Our AI is analyzing your responses and creating a personalized strategy...
       </p>
       <div className="w-full bg-subtle-background rounded-full h-3 mb-6 shadow-inner">
@@ -1120,7 +1116,7 @@ function GeneratingGoalView({ progress, error, onCancel }: any) {
           transition={{ duration: 0.5 }}
         />
       </div>
-      <p className="text-sm text-muted-foreground-color">
+      <p className="text-sm text-muted-foreground">
         {Math.round(progress)}% Complete
       </p>     
     </div>

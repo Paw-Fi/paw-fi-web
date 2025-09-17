@@ -1,33 +1,9 @@
 import { motion } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
-  faPiggyBank, 
-  faHome, 
-  faChartLine, 
-  faCoins, 
-  faBullseye,
-  faArrowRight,
-  faCreditCard,
-  faShield,
-  faMoneyBillTrendUp,
-  IconDefinition
-} from "@fortawesome/free-solid-svg-icons";
 import { GOAL_TYPE_CONFIGS, type GoalType } from "@/components/goal-tracker/types";
 
 interface GoalTypeSelectorProps {
   onSelect: (goalType: GoalType) => void;
 }
-
-const goalTypeIcons: Record<GoalType, IconDefinition> = {
-  retirement: faPiggyBank,
-  home_buying: faHome,
-  wealth: faChartLine,
-  investment: faCoins,
-  passive_income: faMoneyBillTrendUp,
-  custom: faBullseye,
-  debt_payoff: faCreditCard,
-  emergency_fund: faShield,
-};
 
 export function GoalTypeSelector({ onSelect }: GoalTypeSelectorProps) {
   const goalTypes = Object.values(GOAL_TYPE_CONFIGS);
@@ -39,11 +15,11 @@ export function GoalTypeSelector({ onSelect }: GoalTypeSelectorProps) {
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-12"
       >
-        <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">What are you saving for?</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400">Select a goal to get started.</p>
+        <h1 className="text-5xl font-light text-foreground mb-4">What are you saving for?</h1>
+        <p className="text-lg text-muted-foreground">Select a goal to get started.</p>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
         {goalTypes.map((goalType, index) => (
           <motion.div
             key={goalType.id}
@@ -51,20 +27,19 @@ export function GoalTypeSelector({ onSelect }: GoalTypeSelectorProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             onClick={() => onSelect(goalType.id as GoalType)}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl cursor-pointer transition-all duration-300 flex flex-col items-center text-center"
+            className="bg-card rounded-3xl p-8 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 flex flex-col items-center text-center group"
           >
-            <div className={`w-16 h-16 ${goalType.color} rounded-full flex items-center justify-center mb-4`}>
-              <FontAwesomeIcon 
-                icon={goalTypeIcons[goalType.id as keyof typeof goalTypeIcons]} 
-                className="w-8 h-8 text-white" 
-              />
+            <div className="w-20 h-20 bg-muted/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-200">
+              <div className="text-2xl font-light text-muted-foreground">
+                {goalType.name.charAt(0).toUpperCase()}
+              </div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{goalType.name}</h3>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{goalType.description}</p>
+            <h3 className="text-xl font-medium text-foreground mb-3">{goalType.name}</h3>
+            <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{goalType.description}</p>
             <div className="mt-auto">
-              <div className="flex items-center text-blue-600 dark:text-blue-400 font-medium">
+              <div className="flex items-center text-primary font-medium group-hover:translate-x-1 transition-transform duration-200">
                 <span>Get Started</span>
-                <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4 ml-2" />
+                <span className="ml-2 text-sm">→</span>
               </div>
             </div>
           </motion.div>

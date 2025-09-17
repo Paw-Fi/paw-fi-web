@@ -56,18 +56,18 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
       <div className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            <label className="block text-sm font-medium text-muted-foreground mb-4">
               Amount to Add
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl text-gray-500 dark:text-gray-400">
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl text-muted-foreground">
                 $
               </span>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full pl-10 pr-4 py-4 text-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
+                className="w-full pl-10 pr-4 py-4 text-xl bg-muted/50 border-0 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:bg-card text-foreground transition-all duration-200"
                 placeholder="0.00"
                 min="0"
                 step="0.01"
@@ -79,7 +79,7 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
 
           {/* Quick Amount Buttons */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            <label className="block text-sm font-medium text-muted-foreground mb-4">
               Quick Add
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -88,7 +88,7 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
                   key={quickAmount}
                   type="button"
                   onClick={() => handleQuickAmount(quickAmount)}
-                  className="p-3 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg font-medium transition-colors"
+                  className="p-4 bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary rounded-2xl font-medium transition-all duration-200 hover:scale-105"
                   disabled={isSubmitting}
                 >
                   ${quickAmount}
@@ -98,13 +98,13 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-muted-foreground mb-3">
               Note (Optional)
             </label>
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white resize-none"
+              className="w-full px-4 py-3 bg-muted/50 border-0 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:bg-card text-foreground resize-none transition-all duration-200"
               rows={3}
               placeholder="Add a note about this progress update..."
               disabled={isSubmitting}
@@ -112,7 +112,7 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
           </div>
 
           {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-sm">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-sm">
               {error}
             </div>
           )}
@@ -121,7 +121,7 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition-colors"
+              className="px-6 py-3 text-muted-foreground hover:text-foreground font-medium transition-all duration-200 hover:scale-105"
               disabled={isSubmitting}
             >
               Cancel
@@ -129,7 +129,7 @@ export function UpdateProgressModal({ isOpen, onClose, goal, onProgressUpdate }:
             <button
               type="submit"
               disabled={!amount || parseFloat(amount) <= 0 || isSubmitting}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 disabled:cursor-not-allowed"
+              className="px-8 py-3 bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground rounded-full font-medium flex items-center gap-2 transition-all duration-200 disabled:cursor-not-allowed hover:scale-105 shadow-sm hover:shadow-md"
             >
               {isSubmitting ? (
                 <FontAwesomeIcon icon={faClock} className="w-4 h-4 animate-spin" />

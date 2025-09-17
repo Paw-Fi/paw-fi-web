@@ -397,7 +397,7 @@ function GoalDetail() {
           ))}
         </div>
       )}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+      <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
         {/* Hero Header */}
         <div className="mb-12">
           {/* Header with Actions */}
@@ -411,7 +411,7 @@ function GoalDetail() {
                       type="text"
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      className="text-3xl font-semibold bg-transparent border-b text-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 min-h-[44px]"  
+                      className="text-3xl font-light bg-transparent border-b text-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 min-h-[44px]"  
                       placeholder="Enter goal title"
                       autoFocus
                       onKeyDown={(e) => {
@@ -422,7 +422,7 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <h1 
-                    className="text-3xl font-semibold text-foreground cursor-pointer hover:text-primary transition-colors group min-h-[44px] flex items-center"
+                    className="text-3xl font-light text-foreground cursor-pointer hover:text-primary transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingTitle}
                   >
                     {currentGoal.title}
@@ -441,7 +441,7 @@ function GoalDetail() {
                     <textarea
                       value={editedDescription}
                       onChange={(e) => setEditedDescription(e.target.value)}
-                      className="bg-transparent border-b text-muted-foreground-color focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 resize-none min-h-[44px]"
+                      className="bg-transparent border-b text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 resize-none min-h-[44px]"
                       placeholder="Describe your goal"
                       rows={2}
                       autoFocus
@@ -453,7 +453,7 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <p 
-                    className="text-muted-foreground-color max-w-3xl cursor-pointer hover:text-foreground transition-colors group min-h-[44px] flex items-center"
+                    className="text-muted-foreground max-w-3xl cursor-pointer hover:text-foreground transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingDescription}
                   >
                     {currentGoal.description || 'Working towards your financial independence goal'}
@@ -479,7 +479,7 @@ function GoalDetail() {
                     <button
                       onClick={saveInlineChanges}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-subtle-background hover:bg-subtle-background/80 text-success transition-all duration-200 disabled:opacity-50"
+                      className="min-w-[44px] min-h-[44px] p-3 rounded-2xl bg-subtle-background hover:bg-subtle-background/80 text-success transition-all duration-200 disabled:opacity-50"
                       title="Save changes"
                     >
                       <FontAwesomeIcon 
@@ -490,7 +490,7 @@ function GoalDetail() {
                     <button
                       onClick={cancelEditing}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-subtle-background hover:bg-subtle-background/80 text-destructive transition-all duration-200 disabled:opacity-50"
+                      className="min-w-[44px] min-h-[44px] p-3 rounded-2xl bg-subtle-background hover:bg-subtle-background/80 text-destructive transition-all duration-200 disabled:opacity-50"
                       title="Cancel editing"
                     >
                       <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
@@ -501,12 +501,12 @@ function GoalDetail() {
               
               <button
                 onClick={() => setShowGoalMenu(!showGoalMenu)}
-                className="min-w-[44px] min-h-[44px] p-3 rounded-xl hover:bg-subtle-background transition-all duration-200 group"
+                className="min-w-[44px] min-h-[44px] p-3 rounded-2xl hover:bg-subtle-background transition-all duration-200 group"
                 aria-label="Goal options"
               >
                 <FontAwesomeIcon 
                   icon={faEllipsisV} 
-                  className="w-5 h-5 text-muted-foreground-color group-hover:text-foreground" 
+                  className="w-5 h-5 text-muted-foreground group-hover:text-foreground" 
                 />
               </button>
           
@@ -518,7 +518,7 @@ function GoalDetail() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-card rounded-2xl shadow-lg border z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
+                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-card rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
                   >
                     <div className="py-3">
                       <button
@@ -528,12 +528,12 @@ function GoalDetail() {
                         }}
                         className="w-full text-left px-4 py-4 text-sm text-primary hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px]"
                       >
-                        <div className="w-8 h-8 bg-subtle-background rounded-lg flex items-center justify-center transition-colors">
+                        <div className="w-8 h-8 bg-subtle-background rounded-2xl flex items-center justify-center transition-colors">
                           <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <div className="font-medium">Take Tour</div>
-                          <div className="text-xs text-muted-foreground-color">Learn about goal features</div>
+                          <div className="text-xs text-muted-foreground">Learn about goal features</div>
                         </div>
                       </button>
                       
@@ -546,12 +546,12 @@ function GoalDetail() {
                         }}
                         className="w-full text-left px-4 py-4 text-sm text-destructive hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px]"
                       >
-                        <div className="w-8 h-8 bg-subtle-background rounded-lg flex items-center justify-center transition-colors">
+                        <div className="w-8 h-8 bg-subtle-background rounded-2xl flex items-center justify-center transition-colors">
                           <FontAwesomeIcon icon={faTrash} className="w-4 h-4 text-destructive" />
                         </div>
                         <div>
                           <div className="font-medium">Delete Goal</div>
-                          <div className="text-xs text-muted-foreground-color">Permanently remove goal</div>
+                          <div className="text-xs text-muted-foreground">Permanently remove goal</div>
                         </div>
                       </button>
                     </div>

@@ -381,26 +381,26 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
   const progressPercentage = orderedMilestones.length > 0 ? (completedCount / orderedMilestones.length) * 100 : 0;
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm">
+    <div className="bg-card rounded-3xl shadow-sm hover:shadow-md transition-all duration-200">
       {/* Header - Compact */}
-      <div className="p-4 border-b">
+      <div className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-subtle-background rounded-lg flex items-center justify-center">
-              <FontAwesomeIcon icon={faListCheck} className="w-4 h-4 text-primary" />
+            <div className="w-10 h-10 bg-subtle-background rounded-2xl flex items-center justify-center">
+              <FontAwesomeIcon icon={faListCheck} className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-sm">
+              <h3 className="font-medium text-foreground text-base">
                 Quick Actions ({completedCount}/{orderedMilestones.length})
               </h3>
-              <div className="flex items-center gap-2">
-                <div className="w-16 h-1.5 bg-subtle-background rounded-full overflow-hidden">
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${progressPercentage}%` }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground-color">
+                <span className="text-sm text-muted-foreground font-medium">
                   {progressPercentage.toFixed(0)}%
                 </span>
               </div>
@@ -415,9 +415,9 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
               }
               setShowCreateForm(!showCreateForm)
             }}
-            className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-medium flex items-center gap-1 transition-colors min-h-[32px] touch-manipulation"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 hover:scale-105 min-h-[40px] touch-manipulation"
           >
-            <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} className="w-3 h-3" />
+            <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} className="w-4 h-4" />
             {showCreateForm ? 'Cancel' : 'Add'}
           </button>
         </div>
@@ -430,31 +430,31 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-b border-gray-200 dark:border-gray-700"
+            className="overflow-hidden border-t"
           >
-            <form onSubmit={handleSubmit} className="p-4 space-y-3">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Title
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Due Date
                   </label>
                   <input
                     type="date"
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                     required
                   />
                 </div>
@@ -462,13 +462,13 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Type
                   </label>
                   <select
                     value={formData.milestone_type}
                     onChange={(e) => setFormData({ ...formData, milestone_type: e.target.value as MilestoneType })}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                   >
                     <option value="amount">Amount</option>
                     <option value="habit">Habit</option>
@@ -476,13 +476,13 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Priority
                   </label>
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value as MilestonePriority })}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -492,14 +492,14 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                 </div>
                 {formData.milestone_type === 'amount' && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Amount ($)
                     </label>
                     <input
                       type="number"
                       value={formData.target_amount || ''}
                       onChange={(e) => setFormData({ ...formData, target_amount: parseFloat(e.target.value) || undefined })}
-                      className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                      className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                       min="0"
                       step="0.01"
                     />
@@ -508,41 +508,41 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Description
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm resize-none"
-                  rows={2}
+                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none transition-all duration-200"
+                  rows={3}
                   required
                 />
               </div>
 
               {error && (
-                <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-xs">
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-sm">
                   {error}
                 </div>
               )}
 
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium"
+                  className="px-6 py-3 text-muted-foreground hover:text-foreground text-sm font-medium transition-colors duration-200"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium flex items-center gap-1"
+                  className="px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 hover:scale-105"
                 >
                   {isSubmitting ? (
-                    <FontAwesomeIcon icon={faClock} className="w-3 h-3 animate-spin" />
+                    <FontAwesomeIcon icon={faClock} className="w-4 h-4 animate-spin" />
                   ) : (
-                    <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+                    <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                   )}
                   {editingMilestone ? 'Update' : 'Create'}
                 </button>
@@ -553,60 +553,62 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
       </AnimatePresence>
 
       {/* Milestones List - Compact */}
-      <div className="p-4">
+      <div className="p-6">
         {orderedMilestones.length === 0 ? (
-          <div className="text-center py-8">
-            <FontAwesomeIcon icon={faListCheck} className="w-8 h-8 text-muted-foreground-color mb-3" />
-            <p className="text-muted-foreground-color text-sm">No milestones yet</p>
-            <p className="text-muted-foreground-color text-xs">Add your first milestone to get started</p>
+          <div className="text-center py-12">
+            <FontAwesomeIcon icon={faListCheck} className="w-12 h-12 text-muted-foreground mb-4" />
+            <p className="text-muted-foreground text-base font-medium">No milestones yet</p>
+            <p className="text-muted-foreground text-sm mt-1">Add your first milestone to get started</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {orderedMilestones.map((milestone) => {
               const isExpanded = expandedMilestones.has(milestone.id);
               return (
                 <div
                   key={milestone.id}
-                  className={`border rounded-lg p-3 transition-colors overflow-hidden ${
+                  className={`border rounded-2xl p-4 transition-all duration-200 overflow-hidden hover:shadow-sm ${
                     milestone.status === 'completed'
-                      ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
-                      : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-600'
+                      ? 'bg-success/5 border-success/20'
+                      : 'bg-muted/30 border-border'
                   }`}
                 >
                   {/* Mobile Layout - Stack vertically */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {/* Header Row */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         <Checkbox
                           checked={milestone.status === 'completed'}
                           onCheckedChange={() => toggleMilestoneComplete(milestone)}
-                          className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                          className="data-[state=checked]:bg-success data-[state=checked]:border-success w-5 h-5"
                         />
                         
-                        <div className="flex items-center gap-2">
-                          <FontAwesomeIcon 
-                            icon={getMilestoneIcon(milestone.milestone_type)} 
-                            className="w-3 h-3 text-purple-600 dark:text-purple-400" 
-                          />
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(milestone.priority)}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-subtle-background rounded-xl flex items-center justify-center">
+                            <FontAwesomeIcon 
+                              icon={getMilestoneIcon(milestone.milestone_type)} 
+                              className="w-4 h-4 text-primary" 
+                            />
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(milestone.priority)}`}>
                             {milestone.priority}
                           </span>
                         </div>
                       </div>
                       
                       {/* Action Buttons */}
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => startInlineEdit(milestone)}
-                          className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors touch-manipulation"
+                          className="p-2 text-muted-foreground hover:text-primary rounded-xl hover:bg-subtle-background transition-all duration-200 touch-manipulation"
                           title="Edit milestone"
                         >
                           <FontAwesomeIcon icon={faEdit} className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => toggleExpanded(milestone.id)}
-                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                          className="p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-subtle-background transition-all duration-200 touch-manipulation"
                           title={isExpanded ? "Collapse" : "Expand"}
                         >
                           <FontAwesomeIcon 
@@ -616,7 +618,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                         </button>
                         <button
                           onClick={() => deleteMilestone(milestone.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors touch-manipulation"
+                          className="p-2 text-muted-foreground hover:text-destructive rounded-xl hover:bg-destructive/10 transition-all duration-200 touch-manipulation"
                           title="Delete milestone"
                         >
                           <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
@@ -626,40 +628,40 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                     
                     {/* Title Row */}
                     <div>
-                      <h4 className={`font-medium text-base leading-tight break-words ${
+                      <h4 className={`font-medium text-lg leading-tight break-words ${
                         milestone.status === 'completed' 
-                          ? 'line-through text-gray-500 dark:text-gray-400' 
-                          : 'text-gray-900 dark:text-white'
+                          ? 'line-through text-muted-foreground' 
+                          : 'text-foreground'
                       }`}>
                         {milestone.title}
                       </h4>
                     </div>
                     
                     {/* Details Row */}
-                    <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded flex items-center gap-1">
+                    <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                      <span className="bg-muted px-3 py-1.5 rounded-full flex items-center gap-2">
                         <FontAwesomeIcon icon={faCalendarAlt} className="w-3 h-3" />
                         Due {new Date(milestone.due_date).toLocaleDateString()}
                       </span>
                       {milestone.target_amount && (
-                        <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded flex items-center gap-1">
+                        <span className="bg-success/10 text-success px-3 py-1.5 rounded-full flex items-center gap-2">
                           <FontAwesomeIcon icon={faDollarSign} className="w-3 h-3" />
                           ${milestone.target_amount.toLocaleString()}
                         </span>
                       )}
                       {milestone.milestone_type === 'habit' && milestone.frequency && (
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded flex items-center gap-1">
+                        <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full flex items-center gap-2">
                           <FontAwesomeIcon icon={faRepeat} className="w-3 h-3" />
                           {milestone.frequency}
                         </span>
                       )}
                       {milestone.progress_percentage > 0 && milestone.status !== 'completed' && (
-                        <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-1 rounded font-medium">
+                        <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full font-medium">
                           {milestone.progress_percentage.toFixed(0)}% done
                         </span>
                       )}
                       {milestone.is_ai_generated && (
-                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded flex items-center gap-1">
+                        <span className="bg-primary/10 text-primary px-3 py-1.5 rounded-full flex items-center gap-2">
                           <FontAwesomeIcon icon={faRobot} className="w-3 h-3" />
                           AI
                         </span>
@@ -673,7 +675,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="mt-3 overflow-hidden border-t border-gray-200 dark:border-gray-600 pt-3"
+                        className="mt-4 overflow-hidden border-t pt-4"
                       >
                         <form onSubmit={(e) => {
                           e.preventDefault();
@@ -681,26 +683,26 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                         }} className="space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              <label className="block text-sm font-medium text-foreground mb-2">
                                 Title
                               </label>
                               <input
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                 required
                               />
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              <label className="block text-sm font-medium text-foreground mb-2">
                                 Due Date
                               </label>
                               <input
                                 type="date"
                                 value={formData.due_date}
                                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                 required
                               />
                             </div>
@@ -708,13 +710,13 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                           
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              <label className="block text-sm font-medium text-foreground mb-2">
                                 Type
                               </label>
                               <select
                                 value={formData.milestone_type}
                                 onChange={(e) => setFormData({ ...formData, milestone_type: e.target.value as MilestoneType })}
-                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                               >
                                 <option value="amount">Amount</option>
                                 <option value="habit">Habit</option>
@@ -722,13 +724,13 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               </select>
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              <label className="block text-sm font-medium text-foreground mb-2">
                                 Priority
                               </label>
                               <select
                                 value={formData.priority}
                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value as MilestonePriority })}
-                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                               >
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>
@@ -738,14 +740,14 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                             </div>
                             {formData.milestone_type === 'amount' && (
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   Amount ($)
                                 </label>
                                 <input
                                   type="number"
                                   value={formData.target_amount || ''}
                                   onChange={(e) => setFormData({ ...formData, target_amount: parseFloat(e.target.value) || undefined })}
-                                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                   min="0"
                                   step="0.01"
                                 />
@@ -756,25 +758,25 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                           {formData.milestone_type === 'habit' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   Habit Description
                                 </label>
                                 <input
                                   type="text"
                                   value={formData.habit_description || ''}
                                   onChange={(e) => setFormData({ ...formData, habit_description: e.target.value })}
-                                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                   placeholder="e.g., Read for 30 minutes"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                   Frequency
                                 </label>
                                 <select
                                   value={formData.frequency || 'daily'}
                                   onChange={(e) => setFormData({ ...formData, frequency: e.target.value as MilestoneFrequency })}
-                                  className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                 >
                                   <option value="daily">Daily</option>
                                   <option value="weekly">Weekly</option>
@@ -785,41 +787,41 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                           )}
 
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label className="block text-sm font-medium text-foreground mb-2">
                               Description
                             </label>
                             <textarea
                               value={formData.description}
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm resize-none"
-                              rows={2}
+                              className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none transition-all duration-200"
+                              rows={3}
                               required
                             />
                           </div>
 
                           {error && (
-                            <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-xs">
+                            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-sm">
                               {error}
                             </div>
                           )}
 
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-3">
                             <button
                               type="button"
                               onClick={cancelInlineEdit}
-                              className="px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-xs font-medium"
+                              className="px-6 py-3 text-muted-foreground hover:text-foreground text-sm font-medium transition-colors duration-200"
                             >
                               Cancel
                             </button>
                             <button
                               type="submit"
                               disabled={isSubmitting}
-                              className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg text-xs font-medium flex items-center gap-1"
+                              className="px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 hover:scale-105"
                             >
                               {isSubmitting ? (
-                                <FontAwesomeIcon icon={faClock} className="w-3 h-3 animate-spin" />
+                                <FontAwesomeIcon icon={faClock} className="w-4 h-4 animate-spin" />
                               ) : (
-                                <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+                                <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                               )}
                               Save Changes
                             </button>
@@ -832,29 +834,29 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="mt-3 pl-8 overflow-hidden"
+                        className="mt-4 overflow-hidden"
                       >
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
                             {milestone.description}
                           </p>
                           
                           {/* Additional Details */}
-                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 space-y-2">
-                            <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="bg-muted/30 rounded-2xl p-4 space-y-3">
+                            <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <span className="text-gray-500 dark:text-gray-400 font-medium">Type:</span>
-                                <span className="ml-2 text-gray-900 dark:text-white capitalize">
+                                <span className="text-muted-foreground font-medium">Type:</span>
+                                <span className="ml-2 text-foreground capitalize">
                                   {milestone.milestone_type.replace('_', ' ')}
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-500 dark:text-gray-400 font-medium">Status:</span>
+                                <span className="text-muted-foreground font-medium">Status:</span>
                                 <span className={`ml-2 capitalize font-medium ${
-                                  milestone.status === 'completed' ? 'text-green-600 dark:text-green-400' :
-                                  milestone.status === 'overdue' ? 'text-red-600 dark:text-red-400' :
-                                  milestone.status === 'in_progress' ? 'text-blue-600 dark:text-blue-400' :
-                                  'text-gray-600 dark:text-gray-400'
+                                  milestone.status === 'completed' ? 'text-success' :
+                                  milestone.status === 'overdue' ? 'text-destructive' :
+                                  milestone.status === 'in_progress' ? 'text-primary' :
+                                  'text-muted-foreground'
                                 }`}>
                                   {milestone.status.replace('_', ' ')}
                                 </span>
@@ -862,8 +864,8 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               
                               {milestone.start_date && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Started:</span>
-                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                  <span className="text-muted-foreground font-medium">Started:</span>
+                                  <span className="ml-2 text-foreground">
                                     {new Date(milestone.start_date).toLocaleDateString()}
                                   </span>
                                 </div>
@@ -871,8 +873,8 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               
                               {milestone.completed_date && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Completed:</span>
-                                  <span className="ml-2 text-green-600 dark:text-green-400 font-medium">
+                                  <span className="text-muted-foreground font-medium">Completed:</span>
+                                  <span className="ml-2 text-success font-medium">
                                     {new Date(milestone.completed_date).toLocaleDateString()}
                                   </span>
                                 </div>
@@ -880,8 +882,8 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               
                               {milestone.milestone_type === 'habit' && milestone.habit_description && (
                                 <div className="col-span-2">
-                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Habit:</span>
-                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                  <span className="text-muted-foreground font-medium">Habit:</span>
+                                  <span className="ml-2 text-foreground">
                                     {milestone.habit_description}
                                   </span>
                                 </div>
@@ -889,8 +891,8 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               
                               {milestone.milestone_type === 'habit' && milestone.habit_target_value && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Target:</span>
-                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                  <span className="text-muted-foreground font-medium">Target:</span>
+                                  <span className="ml-2 text-foreground">
                                     ${milestone.habit_target_value} per {milestone.frequency}
                                   </span>
                                 </div>
@@ -898,11 +900,11 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               
                               {milestone.milestone_type === 'amount' && milestone.current_amount !== undefined && (
                                 <div>
-                                  <span className="text-gray-500 dark:text-gray-400 font-medium">Progress:</span>
-                                  <span className="ml-2 text-gray-900 dark:text-white">
+                                  <span className="text-muted-foreground font-medium">Progress:</span>
+                                  <span className="ml-2 text-foreground">
                                     ${milestone.current_amount.toLocaleString()}
                                     {milestone.target_amount && (
-                                      <span className="text-gray-500 dark:text-gray-400 ml-1">
+                                      <span className="text-muted-foreground ml-1">
                                         / ${milestone.target_amount.toLocaleString()}
                                       </span>
                                     )}
@@ -913,16 +915,16 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                             
                             {/* Progress Bar for amount milestones */}
                             {milestone.milestone_type === 'amount' && milestone.target_amount && milestone.progress_percentage > 0 && (
-                              <div className="mt-2">
-                                <div className="flex items-center justify-between text-xs mb-1">
-                                  <span className="text-gray-500 dark:text-gray-400">Progress</span>
-                                  <span className="text-gray-900 dark:text-white font-medium">
+                              <div className="mt-3">
+                                <div className="flex items-center justify-between text-sm mb-2">
+                                  <span className="text-muted-foreground">Progress</span>
+                                  <span className="text-foreground font-medium">
                                     {milestone.progress_percentage.toFixed(1)}%
                                   </span>
                                 </div>
-                                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                <div className="w-full bg-muted rounded-full h-2">
                                   <div 
-                                    className="bg-purple-500 h-1.5 rounded-full transition-all duration-300"
+                                    className="bg-primary h-2 rounded-full transition-all duration-300"
                                     style={{ width: `${Math.min(milestone.progress_percentage, 100)}%` }}
                                   />
                                 </div>

@@ -92,7 +92,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             className="relative"
           >
             <motion.div
-              className="bg-gradient-to-r from-primary to-purple-500 text-primary-foreground p-3 rounded-xl shadow-lg cursor-pointer w-full min-w-[200px] max-w-[280px] mx-auto lg:mx-0 lg:max-w-[240px]"
+              className="bg-card shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer w-full min-w-[200px] max-w-[280px] mx-auto lg:mx-0 lg:max-w-[240px] rounded-2xl p-4"
               onClick={handleToggle}
               whileHover={{ scale: 1.02, y: -1 }}
               whileTap={{ scale: 0.98 }}
@@ -102,20 +102,18 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
                 <div className="flex items-center">
                  
                   
-                    <FontAwesomeIcon icon={faLightbulb} className="size-3 mr-1 text-yellow-400" />
-                    <h3 className="font-semibold text-xs">Setup Guide 
-
-                    <span className="text-xs text-primary-foreground/80"> ({stats.completedSteps}/{stats.totalSteps})</span>
-
+                    <FontAwesomeIcon icon={faLightbulb} className="size-3 mr-2 text-amber-500" />
+                    <h3 className="font-medium text-sm text-foreground">Setup Guide 
+                    <span className="text-xs text-muted-foreground"> ({stats.completedSteps}/{stats.totalSteps})</span>
                     </h3>
                 </div>
-                <FontAwesomeIcon icon={faChevronUp} className="w-3 h-3 text-primary-foreground/70" />
+                <FontAwesomeIcon icon={faChevronUp} className="w-3 h-3 text-muted-foreground" />
               </div>
 
               {/* Mini progress bar */}
-              <div className="bg-primary-foreground/20 rounded-full h-1 mt-2">
+              <div className="bg-muted rounded-full h-2 mt-3">
                 <motion.div
-                  className="bg-primary-foreground rounded-full h-1"
+                  className="bg-primary rounded-full h-2"
                   initial={{ width: 0 }}
                   animate={{ width: `${stats.progressPercentage}%` }}
                   transition={{ duration: 0.5 }}
@@ -125,7 +123,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
               {/* Pulsing animation for incomplete steps */}
               {stats.completedSteps < stats.totalSteps && (
                 <motion.div
-                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-400 rounded-full"
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full"
                   animate={{
                     scale: [1, 1.2, 1],
                     opacity: [1, 0.7, 1],
@@ -147,29 +145,29 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ duration: 0.3 }}
-            className="bg-background rounded-xl shadow-xl border border-border w-full max-w-[340px] mx-auto lg:mx-0 lg:max-h-[65vh] sm:max-h-[480px] overflow-hidden"
+            className="bg-background rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 w-full max-w-[340px] mx-auto lg:mx-0 lg:max-h-[65vh] sm:max-h-[480px] overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-primary to-purple-500 text-primary-foreground p-3">
+            <div className="bg-card p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <FontAwesomeIcon icon={faGraduationCap} className="w-5 h-5 mr-2" />
+                  <FontAwesomeIcon icon={faGraduationCap} className="w-5 h-5 mr-3 text-primary" />
                   <div>
-                    <h3 className="font-semibold text-base">Your Financial Journey</h3>
-                    <p className="text-xs text-primary-foreground/80">Master your financial future</p>
+                    <h3 className="font-medium text-lg text-foreground">Your Financial Journey</h3>
+                    <p className="text-sm text-muted-foreground">Master your financial future</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={handleHide}
-                    className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                    className="text-muted-foreground hover:text-foreground transition-colors duration-200 p-1"
                     title="Hide guide"
                   >
                     <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
                   </button>
                   <button
                     onClick={handleToggle}
-                    className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                    className="text-muted-foreground hover:text-foreground transition-colors duration-200 p-1"
                   >
                     <FontAwesomeIcon icon={faChevronDown} className="w-4 h-4" />
                   </button>
@@ -177,14 +175,14 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
               </div>
 
               {/* Progress bar */}
-              <div className="mt-3">
-                <div className="flex justify-between text-xs mb-1">
-                  <span>Progress</span>
-                  <span>{stats.completedSteps}/{stats.totalSteps} completed</span>
+              <div className="mt-6">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Progress</span>
+                  <span className="text-foreground font-medium">{stats.completedSteps}/{stats.totalSteps} completed</span>
                 </div>
-                <div className="bg-primary-foreground/20 rounded-full h-1.5">
+                <div className="bg-muted rounded-full h-2">
                   <motion.div
-                    className="bg-primary-foreground rounded-full h-1.5"
+                    className="bg-primary rounded-full h-2"
                     initial={{ width: 0 }}
                     animate={{ width: `${stats.progressPercentage}%` }}
                     transition={{ duration: 0.5 }}
@@ -194,26 +192,27 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             </div>
 
             {/* Steps list */}
-            <div className="p-3 max-h-[300px] sm:max-h-[350px] overflow-y-auto">
-              <div className="space-y-2">
+            <div className="p-6 max-h-[300px] sm:max-h-[350px] overflow-y-auto">
+              <div className="space-y-3">
                 {steps.map((step) => (
                   <Link key={step.id} to={step.path} className="block">
                     <motion.div
                       className={classNames(
-                        "flex items-center p-2.5 rounded-lg border transition-all duration-200 cursor-pointer",
+                        "flex items-center p-4 rounded-2xl transition-all duration-200 cursor-pointer",
                         step.isCompleted
-                          ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300"
+                          ? "bg-green-50/50 dark:bg-green-950/30 text-green-800 dark:text-green-300 shadow-sm"
                           : step.isNextStep
-                          ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300 ring-1 ring-blue-100 dark:ring-blue-800"
-                          : "bg-muted/50 border-border text-muted-foreground hover:bg-muted/80"
+                          ? "bg-blue-50/50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300 shadow-sm ring-1 ring-blue-100 dark:ring-blue-800"
+                          : "bg-subtle-background text-muted-foreground hover:bg-muted/50 hover:shadow-sm"
                       )}
-                      whileHover={{ scale: 1.01 }}
+                      whileHover={{ scale: 1.01, x: 4 }}
                       whileTap={{ scale: 0.99 }}
+                      transition={{ duration: 0.2 }}
                     >
                       <div className="flex items-center flex-1">
                         <div
                           className={classNames(
-                            "w-8 h-8 rounded-full flex items-center justify-center mr-2.5",
+                            "w-10 h-10 rounded-full flex items-center justify-center mr-4",
                             step.isCompleted
                               ? "bg-green-500 text-white"
                               : step.isNextStep
@@ -222,21 +221,21 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
                           )}
                         >
                           {step.isCompleted ? (
-                            <FontAwesomeIcon icon={faCheck} className="w-3 h-3" />
+                            <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                           ) : (
-                            <FontAwesomeIcon icon={getStepIcon(step.id)} className="w-3 h-3" />
+                            <FontAwesomeIcon icon={getStepIcon(step.id)} className="w-4 h-4" />
                           )}
                         </div>
                         <div className="flex-1">
                           <h4
                             className={classNames(
                               "font-medium text-sm",
-                              step.isCompleted && "line-through"
+                              step.isCompleted && "line-through opacity-75"
                             )}
                           >
                             {step.title}
                           </h4>
-                          <p className="text-xs opacity-75 line-clamp-2">{step.description}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{step.description}</p>
                         </div>
                       </div>
                       {step.isNextStep && (
@@ -254,12 +253,12 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             </div>
 
             {/* Footer */}
-            <div className="bg-muted/50 p-3 border-t border-border">
+            <div className="bg-subtle-background p-6">
               <div className="text-center">
                 {stats.isCompleted ? (
-                  <span className="flex items-center justify-center text-green-600 dark:text-green-400 text-sm">
-                    <FontAwesomeIcon icon={faTrophy} className="w-4 h-4 mr-1" />
-                    Journey Complete! 🎉
+                  <span className="flex items-center justify-center text-green-600 dark:text-green-400 text-sm font-medium">
+                    <FontAwesomeIcon icon={faTrophy} className="w-4 h-4 mr-2" />
+                    Journey Complete!
                   </span>
                 ) : (
                   <span className="text-muted-foreground text-sm">Keep going! You're doing great!</span>

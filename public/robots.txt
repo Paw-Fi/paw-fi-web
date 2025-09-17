@@ -97,6 +97,42 @@ Allow: /guides/how-much-house-can-i-afford
 Allow: /guides/how-to-calculate-emergency-fund
 Allow: /guides/should-i-pay-off-debt-or-save-first
 
+# High-Value SEO Blog Content - High Priority Crawl
+Allow: /blogs/generative-engine-optimization-geo-guide
+Allow: /blogs/is-nvidia-still-a-buy-after-its-stratospheric-rise
+Allow: /blogs/how-much-do-i-need-to-retire-comfortably
+Allow: /blogs/how-much-should-i-have-in-my-emergency-fund
+Allow: /blogs/what-is-the-50-30-20-budget-rule
+Allow: /blogs/what-is-compound-interest-and-how-does-it-work
+Allow: /blogs/should-i-pay-off-my-mortgage-or-invest-the-money
+Allow: /blogs/how-can-i-calculate-my-debt-to-income-ratio
+Allow: /blogs/what-is-asset-allocation-and-how-do-i-choose-mine
+Allow: /blogs/how-much-house-can-i-afford-on-my-salary
+Allow: /blogs/what-is-dollar-cost-averaging-and-should-i-use-it
+Allow: /blogs/how-do-i-identify-my-risk-tolerance-for-investing
+Allow: /blogs/will-the-fed-finally-cut-interest-rates-this-year-what-it-means-for-your-wallet
+Allow: /blogs/is-bitcoin-about-to-explode-again-or-is-a-crypto-winter-coming
+Allow: /blogs/are-meme-stocks-making-a-comeback-what-you-need-to-know-before-jumping-in
+Allow: /blogs/is-the-global-supply-chain-finally-healing-or-are-new-shocks-coming
+Allow: /blogs/will-ai-make-your-job-obsolete-or-create-new-opportunities
+Allow: /blogs/is-the-housing-market-about-to-crash-or-is-it-a-buyers-market
+Allow: /blogs/are-emerging-markets-the-secret-to-portfolio-growth-in-2025
+Allow: /blogs/is-gold-still-a-safe-haven-in-these-turbulent-times
+Allow: /blogs/are-you-making-these-common-investing-mistakes-in-a-volatile-market
+Allow: /blogs/renting-vs-buying-home-analysis-2025
+Allow: /blogs/house-hacking-guide-live-for-less-build-wealth
+Allow: /blogs/determining-housing-affordability-comprehensive-guide
+Allow: /blogs/hidden-costs-of-homeownership-for-new-buyers
+Allow: /blogs/financial-independence-vs-traditional-retirement-pathways
+Allow: /blogs/index-funds-vs-etfs-beginner-investor-guide
+Allow: /blogs/investing-index-funds-2025-analysis-pros-cons
+Allow: /blogs/how-to-start-investing-with-1000-dollars
+Allow: /blogs/investing-for-beginners-first-90-day-action-plan
+Allow: /blogs/common-investing-mistakes-avoidance-strategies
+Allow: /blogs/investing-in-gold-2025-safe-haven-analysis
+Allow: /blogs/cryptocurrency-vs-gold-comparative-analysis-investment-hedge
+Allow: /blogs/real-estate-crowdfunding-investing-without-direct-ownership
+
 # Financial calculators - high SEO value
 Allow: /calculators/compound-calculator
 Allow: /calculators/mortgage-calculator

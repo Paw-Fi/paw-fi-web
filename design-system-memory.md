@@ -11,13 +11,15 @@
 - Use subtle shadows, background color changes, or spacing to delineate sections
 - When borders are necessary, use thin (1px), light colors with low opacity
 - Prefer `border-radius` for soft, modern edges over sharp rectangular boxes
+- **Large border radius (rounded-2xl, rounded-3xl)** for main containers and cards
 
 ### 2. Restrained Icon Usage
 - **Icons should enhance, not overwhelm** the interface
 - Use icons sparingly and purposefully
-- Prioritize system icons and simple, consistent iconography
+- Prioritize system icons and simple, consistent iconography (Lucide React preferred)
 - Avoid decorative icons that don't provide functional value
 - Consider text-only solutions where icons aren't essential
+- **Icon sizing**: h-12 w-12 for large feature icons, h-5 w-5 for inline icons
 
 ### 3. Strategic Spacing & Layout
 - **Use padding/margin as primary visual separators**
@@ -25,13 +27,17 @@
 - Follow consistent spacing scale (8px, 16px, 24px, 32px, 48px, 64px)
 - Use padding to create visual hierarchy instead of borders
 - Leverage grid systems and flexbox for clean alignment
+- **Large padding (p-8)** for main content areas
+- **Generous margins (mb-16, space-y-8)** between major sections
 
-### 4. Subtle Hover Effects
+### 4. Subtle Hover Effects & Animations
 - **Minimal hover interactions** - just enough to provide feedback
 - Avoid dramatic transformations, excessive scaling, or flashy animations
 - Prefer subtle opacity changes (0.8-0.9), gentle scale (1.02-1.05), or smooth color transitions
-- Use `transition-duration` of 150-300ms for smooth, not jarring effects
+- Use `transition-duration` of 200ms for smooth, not jarring effects
 - Focus on purposeful interactions rather than decorative animations
+- **Framer Motion integration**: Use subtle stagger animations with Apple-like easing curves
+- **Micro-interactions**: `whileHover={{ x: 4 }}` for list items, gentle scale for buttons
 
 ## Implementation Guidelines
 
@@ -73,13 +79,20 @@ mt-20, mb-20           /* 80px - page-level separation */
 - Prefer typography over decorative elements for content organization
 
 ### Component Design Patterns
-- **Cards**: `bg-card shadow-sm hover:shadow-md` instead of borders
-- **Buttons**: `transition-all duration-200 hover:shadow-sm` for subtle feedback
+- **Cards**: `bg-background rounded-3xl p-8 shadow-sm hover:shadow-md` - large rounded corners with generous padding
+- **Buttons**: `rounded-full` for primary actions, `transition-all duration-200` for subtle feedback
 - **Forms**: Focus on input styling with minimal chrome
 - **Navigation**: Clean, spacious layouts with clear active states
 - **Tables**: `hover:bg-subtle-background/50` for row interactions
 - **Badges**: Use `bg-primary text-primary-foreground` for highlights
-- **Stats/Metrics**: `bg-subtle-background` containers with `text-primary` values
+- **Stats/Metrics**: Colored background containers with semantic meaning:
+  - `bg-green-50/50 dark:bg-green-950/30` for positive metrics
+  - `bg-blue-50/50 dark:bg-blue-950/30` for neutral metrics
+  - `bg-purple-50/50 dark:bg-purple-950/30` for special metrics
+  - `bg-amber-50/50 dark:bg-amber-950/30` for warning metrics
+- **Typography**: `font-light` for large headings, `font-medium` for section titles
+- **Progress Bars**: `h-2` height with `rounded-full` styling
+- **Grid Layouts**: `grid-cols-1 lg:grid-cols-3 gap-8` for main dashboard layout
 
 ### Component Sourcing Strategy
 **Always prefer established component libraries over custom implementations:**
@@ -113,22 +126,26 @@ mt-20, mb-20           /* 80px - page-level separation */
 ## Modern Web Aesthetics
 
 ### Layout Principles
-- Embrace whitespace as a design element
-- Use asymmetrical layouts for visual interest
+- Embrace whitespace as a design element with generous spacing
+- **Large container approach**: Use `max-w-7xl mx-auto` for main content areas
 - Implement responsive design with mobile-first approach
 - Create clear content hierarchy through spacing and typography
+- **Grid-based layouts**: Primary content in 2/3 columns, sidebar in 1/3 column
+- **Consistent padding**: `px-0 sm:px-8 lg:px-8 py-8` for main containers
 
 ### Interactive Elements
-- Subtle feedback for user actions
-- Smooth, purposeful animations
+- Subtle feedback for user actions with 200ms transitions
+- **Framer Motion animations**: Stagger children with Apple-like easing `[0.25, 0.46, 0.45, 0.94]`
 - Clear focus states for accessibility
 - Consistent interaction patterns across the application
+- **Micro-interactions**: Gentle hover translations and scale effects
 
 ### Visual Consistency
-- Maintain consistent component styling
-- Use a unified color palette
-- Implement systematic approach to shadows and elevation
-- Ensure consistent iconography style and sizing
+- Maintain consistent component styling with shadcn/ui components
+- Use a unified color palette with semantic color backgrounds
+- **Elevation system**: `shadow-sm` default, `hover:shadow-md` on interaction
+- **Large rounded corners**: `rounded-2xl` and `rounded-3xl` throughout
+- Ensure consistent iconography style and sizing (Lucide React icons)
 
 ## Anti-Patterns to Avoid
 
@@ -167,31 +184,56 @@ mt-20, mb-20           /* 80px - page-level separation */
 
 ## Real-World Examples
 
-### Pricing Page Implementation
-**✅ Success Case Study**: Updated pricing page components demonstrate proper application of design principles:
+### Dashboard Implementation
+**✅ Success Case Study**: Main dashboard demonstrates proper application of design principles:
 
-**Before**: Heavy gradients, excessive shadows, hardcoded colors, visual noise
-```css
-/* ❌ Old approach */
-bg-gradient-to-r from-purple-600 via-pink-500 to-indigo-600
-shadow-lg border-primary scale-105
-text-gray-700 dark:text-gray-300
+**Layout Structure**:
+```tsx
+/* ✅ Dashboard approach */
+<div className="min-h-screen bg-background">
+  <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+      {/* Content cards */}
+    </div>
+  </div>
+</div>
 ```
 
-**After**: Clean, purposeful styling with Moneko color system
-```css
-/* ✅ New approach */
-bg-card shadow-sm hover:shadow-md
-text-foreground text-muted-foreground-color
-bg-subtle-background transition-all duration-200
+**Card Design Pattern**:
+```tsx
+/* ✅ Modern card styling */
+<div className="bg-background rounded-3xl p-8">
+  <div className="flex items-center justify-between mb-8">
+    <div>
+      <h2 className="text-2xl font-medium text-foreground mb-2">Section Title</h2>
+      <p className="text-muted-foreground">Description text</p>
+    </div>
+    <Button variant="outline" size="sm" asChild className="rounded-full">
+      <Link to="/path">Action</Link>
+    </Button>
+  </div>
+  {/* Card content */}
+</div>
+```
+
+**Metric Display Pattern**:
+```tsx
+/* ✅ Semantic color backgrounds for metrics */
+<div className="bg-green-50/50 dark:bg-green-950/30 rounded-2xl p-6 text-center">
+  <div className="text-3xl font-light text-foreground mb-2">
+    $1,234
+  </div>
+  <div className="text-sm text-muted-foreground">Monthly Income</div>
+</div>
 ```
 
 ### Component Modernization Patterns
-- **Cards**: Replaced heavy borders with `bg-card` and subtle shadows
-- **Typography**: Eliminated gradients, used semantic color classes
-- **Spacing**: Increased whitespace with consistent scale (gap-6, gap-8, mt-20)
-- **Interactions**: Subtle hover effects with 200ms transitions
-- **Colors**: 100% compliance with Moneko color system variables
+- **Cards**: Large rounded corners (`rounded-3xl`) with generous padding (`p-8`)
+- **Typography**: `font-light` for large numbers, `font-medium` for headings
+- **Spacing**: Consistent large gaps (`gap-8`, `mb-16`, `space-y-8`)
+- **Interactions**: Framer Motion with Apple-like easing and stagger animations
+- **Colors**: Semantic color backgrounds with alpha transparency for metrics
+- **Buttons**: `rounded-full` styling for primary actions
 
 ### Available Component Libraries
 **Leverage these registered component libraries in priority order:**
@@ -214,11 +256,55 @@ npx shadcn@latest add "https://magicui.design/r/number-ticker.json"
 
 **Component Adaptation Checklist**:
 - ✅ Replace hardcoded colors with Moneko color system
-- ✅ Adjust spacing to match design system scale
-- ✅ Apply 200ms transition timing
+- ✅ Adjust spacing to match design system scale (`p-8`, `gap-8`, `mb-16`)
+- ✅ Apply 200ms transition timing with subtle hover effects
+- ✅ Use large rounded corners (`rounded-2xl`, `rounded-3xl`)
+- ✅ Implement semantic color backgrounds for metrics and stats
+- ✅ Apply `font-light` for large headings, `font-medium` for section titles
+- ✅ Use `rounded-full` buttons for primary actions
+- ✅ Integrate Framer Motion with Apple-like easing curves
 - ✅ Ensure accessibility compliance
 - ✅ Test dark/light mode compatibility
 
+## Animation Guidelines
+
+### Framer Motion Integration
+**Use subtle, Apple-inspired animations throughout the interface:**
+
+```tsx
+/* ✅ Container animation with stagger */
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.4,
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+/* ✅ Item animation with Apple easing */
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94], // Apple-like easing
+    },
+  },
+};
+```
+
+### Micro-Interactions
+- **List items**: `whileHover={{ x: 4 }}` with `transition={{ duration: 0.2 }}`
+- **Cards**: `hover:shadow-md` with `transition-all duration-200`
+- **Buttons**: Subtle scale or shadow changes on hover
+- **Progress elements**: Smooth animated fills with delays
+
 ---
 
-**Remember**: Good design is as little design as possible. Focus on content, maintain consistency, and let functionality guide aesthetic decisions.
+**Remember**: Good design is as little design as possible. Focus on content, maintain consistency, and let functionality guide aesthetic decisions. The dashboard implementation serves as the gold standard for Moneko's design aesthetic.

@@ -4,18 +4,22 @@ import { Button } from "@/components/ui/button";
 
 export function GoalNotFound({ onBack }: { onBack: () => void }) {
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-gray-900 flex items-center justify-center">
-      <div className="max-w-md text-center px-6">
-        <div className="w-16 h-16 mx-auto bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center mb-6">
-          <FontAwesomeIcon icon={faFlag} className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="max-w-md text-center px-8">
+        <div className="w-20 h-20 mx-auto bg-amber-50 rounded-3xl flex items-center justify-center mb-8 shadow-sm">
+          <FontAwesomeIcon icon={faFlag} className="w-10 h-10 text-amber-600" />
         </div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-2xl font-light text-foreground mb-6">
           Goal Not Found
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-muted-foreground mb-8 leading-relaxed">
           The goal you're looking for doesn't exist or you don't have permission to view it.
         </p>
-        <Button onClick={onBack} variant="outline">
+        <Button 
+          onClick={onBack} 
+          variant="outline" 
+          className="rounded-full px-6 py-3 hover:scale-105 transition-all duration-200"
+        >
           <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4 mr-2" />
           Back to Goals
         </Button>

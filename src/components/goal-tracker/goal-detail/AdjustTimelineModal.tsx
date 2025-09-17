@@ -168,35 +168,35 @@ export function AdjustTimelineModal({ isOpen, onClose, goal, onOptimisticUpdate 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Adjust Goal Timeline">
       <div className="p-6">
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-muted-foreground mb-6">
           Current Target Date: {goal?.target_date ? format(parseISO(goal.target_date), 'MMMM dd, yyyy') : 'Not set'}
         </p>
         
         {/* Minimum date info */}
-        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/30 rounded-lg">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
+        <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+          <p className="text-sm text-foreground font-medium">
             <strong>Minimum required date:</strong> {format(minimumDate, 'MMMM dd, yyyy')}
           </p>
-          <p className="text-xs text-blue-600 dark:text-blue-300 mt-1">
+          <p className="text-sm text-muted-foreground mt-2">
             Based on your current monthly savings capacity of ${goal?.ai_questionnaire_data?.monthly_savings_capacity || 0}/month
           </p>
         </div>
 
         <div className="mb-6">
-          <label htmlFor="targetDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label htmlFor="targetDate" className="block text-sm font-medium text-foreground mb-3">
             New Target Date
           </label>
           
           {/* Alert message for dates before minimum */}
           {showMinDateAlert && (
-            <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg">
-              <div className="flex items-start gap-2">
-                <FontAwesomeIcon icon={faExclamationTriangle} className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+              <div className="flex items-start gap-3">
+                <FontAwesomeIcon icon={faExclamationTriangle} className="w-5 h-5 text-amber-500 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  <p className="text-sm font-medium text-foreground">
                     Timeline too aggressive
                   </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     This date requires ${calculateRequiredMonthlyAmount().toLocaleString()}/month, 
                     but your capacity is ${goal?.ai_questionnaire_data?.monthly_savings_capacity || 0}/month.
                   </p>
@@ -210,15 +210,15 @@ export function AdjustTimelineModal({ isOpen, onClose, goal, onOptimisticUpdate 
             id="targetDate"
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            className="w-full px-4 py-3 border rounded-2xl bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
             min={format(new Date(), 'yyyy-MM-dd')}
           />
         </div>
-        <div className="flex justify-end space-x-4">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose} disabled={isLoading} className="px-6 py-3 rounded-full">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading}>
+          <Button onClick={handleSubmit} disabled={isLoading} className="px-6 py-3 rounded-full hover:scale-105 transition-all duration-200">
             {isLoading ? (
               <>
                 <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-2" />

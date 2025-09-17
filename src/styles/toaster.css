@@ -1,0 +1,169 @@
+/* React Toastify Custom Styles - Moneko Theme */
+:root {
+    /* Override react-toastify CSS variables with Moneko colors */
+    --toastify-color-light: hsl(var(--background));
+    --toastify-color-dark: hsl(var(--card));
+    --toastify-color-info: hsl(var(--primary));
+    --toastify-color-success: var(--success);
+    --toastify-color-warning: var(--warning);
+    --toastify-color-error: var(--danger);
+    --toastify-color-transparent: rgba(255, 255, 255, 0.7);
+    
+    /* Icon colors */
+    --toastify-icon-color-info: hsl(var(--primary));
+    --toastify-icon-color-success: var(--success);
+    --toastify-icon-color-warning: var(--warning);
+    --toastify-icon-color-error: var(--danger);
+    
+    /* Toast container and sizing */
+    --toastify-container-width: fit-content;
+    --toastify-toast-width: 380px;
+    --toastify-toast-offset: 24px;
+    --toastify-toast-top: max(var(--toastify-toast-offset), env(safe-area-inset-top));
+    --toastify-toast-right: max(var(--toastify-toast-offset), env(safe-area-inset-right));
+    --toastify-toast-left: max(var(--toastify-toast-offset), env(safe-area-inset-left));
+    --toastify-toast-bottom: max(var(--toastify-toast-offset), env(safe-area-inset-bottom));
+    
+    /* Toast appearance */
+    --toastify-toast-background: hsl(var(--card));
+    --toastify-toast-padding: 20px;
+    --toastify-toast-min-height: 72px;
+    --toastify-toast-max-height: 800px;
+    --toastify-toast-bd-radius: 16px; /* Large border radius following Moneko design */
+    --toastify-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+    
+    /* Typography */
+    --toastify-font-family: var(--font-poppins);
+    --toastify-z-index: 9999;
+    
+    /* Text colors */
+    --toastify-text-color-light: hsl(var(--foreground));
+    --toastify-text-color-dark: hsl(var(--card-foreground));
+    --toastify-text-color-info: #ffffff;
+    --toastify-text-color-success: #ffffff;
+    --toastify-text-color-warning: #ffffff;
+    --toastify-text-color-error: #ffffff;
+    
+    /* Progress bar colors */
+    --toastify-color-progress-light: hsl(var(--primary));
+    --toastify-color-progress-dark: hsl(var(--primary));
+    --toastify-color-progress-info: hsl(var(--primary));
+    --toastify-color-progress-success: var(--success);
+    --toastify-color-progress-warning: var(--warning);
+    --toastify-color-progress-error: var(--danger);
+    --toastify-color-progress-bgo: 0.15;
+    
+    /* Spinner colors */
+    --toastify-spinner-color: hsl(var(--muted-foreground));
+    --toastify-spinner-color-empty-area: hsl(var(--muted));
+  }
+
+
+.dark {
+    /* Dark theme overrides for toastify */
+    --toastify-color-light: hsl(var(--card));
+    --toastify-color-dark: hsl(var(--background));
+    --toastify-toast-background: hsl(var(--card));
+    --toastify-text-color-light: hsl(var(--card-foreground));
+    --toastify-text-color-dark: hsl(var(--foreground));
+    --toastify-color-transparent: rgba(0, 0, 0, 0.7);
+    --toastify-toast-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Custom toast container styles */
+  .Toastify__toast-container {
+    font-family: var(--font-poppins);
+  }
+  
+  /* Custom toast styles following Moneko design principles */
+  .Toastify__toast {
+    border: 1px solid hsl(var(--border));
+    backdrop-filter: blur(8px);
+    font-family: var(--font-poppins);
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+  
+  .Toastify__toast--default {
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+  }
+  
+  /* Colored theme styles with proper contrast */
+  .Toastify__toast-theme--colored.Toastify__toast--info {
+    background: hsl(var(--primary));
+    color: white;
+  }
+  
+  .Toastify__toast-theme--colored.Toastify__toast--success {
+    background: var(--success);
+    color: white;
+  }
+  
+  .Toastify__toast-theme--colored.Toastify__toast--warning {
+    background: var(--warning);
+    color: white;
+  }
+  
+  .Toastify__toast-theme--colored.Toastify__toast--error {
+    background: var(--danger);
+    color: white;
+  }
+  
+  /* Progress bar styling */
+  .Toastify__progress-bar {
+    height: 3px;
+    border-radius: 2px;
+  }
+  
+  .Toastify__progress-bar-theme--light {
+    background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  }
+  
+  .Toastify__progress-bar-theme--dark {
+    background: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  }
+  
+  /* Close button styling - minimal and clean */
+  .Toastify__close-button {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    align-self: flex-start;
+    margin-top: 2px;
+  }
+  
+  .Toastify__close-button:hover,
+  .Toastify__close-button:focus {
+    opacity: 1;
+    color: hsl(var(--foreground));
+  }
+  
+  .Toastify__close-button > svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  /* Toast icon positioning */
+  .Toastify__toast-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  
+  /* Animation improvements for smoother transitions */
+  .Toastify__toast {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 480px) {
+    :root {
+      --toastify-toast-width: calc(100vw - 32px);
+      --toastify-toast-offset: 16px;
+    }
+  }
+  

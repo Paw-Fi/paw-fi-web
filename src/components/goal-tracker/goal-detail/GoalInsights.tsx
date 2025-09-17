@@ -55,37 +55,37 @@ export function GoalInsights({
   const insightTypeConfigs: Record<string, InsightTypeConfig> = {
     recommendation: {
       icon: faLightbulb,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-500/30',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
+      borderColor: 'border-primary/20',
       label: 'Recommendation'
     },
     warning: {
       icon: faExclamationTriangle,
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-      borderColor: 'border-red-200 dark:border-red-500/30',
+      color: 'text-destructive',
+      bgColor: 'bg-destructive/10',
+      borderColor: 'border-destructive/20',
       label: 'Warning'
     },
     opportunity: {
       icon: faStar,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
-      borderColor: 'border-emerald-200 dark:border-emerald-500/30',
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+      borderColor: 'border-success/20',
       label: 'Opportunity'
     },
     milestone: {
       icon: faBullseye,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      borderColor: 'border-purple-200 dark:border-purple-500/30',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
+      borderColor: 'border-primary/20',
       label: 'Milestone'
     },
     performance: {
       icon: faChartLine,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      borderColor: 'border-orange-200 dark:border-orange-500/30',
+      color: 'text-amber-500',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/20',
       label: 'Performance'
     }
   };
@@ -94,20 +94,20 @@ export function GoalInsights({
     switch (priority) {
       case 'high':
         return {
-          color: 'text-red-600 dark:text-red-400',
-          bgColor: 'bg-red-100 dark:bg-red-900/30',
+          color: 'text-destructive',
+          bgColor: 'bg-destructive/10',
           label: 'High Priority'
         };
       case 'medium':
         return {
-          color: 'text-amber-600 dark:text-amber-400',
-          bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+          color: 'text-amber-500',
+          bgColor: 'bg-amber-500/10',
           label: 'Medium Priority'
         };
       default:
         return {
-          color: 'text-gray-600 dark:text-gray-400',
-          bgColor: 'bg-gray-100 dark:bg-gray-700/30',
+          color: 'text-muted-foreground',
+          bgColor: 'bg-muted',
           label: 'Low Priority'
         };
     }
@@ -288,15 +288,15 @@ export function GoalInsights({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-gradient-to-br from-white via-white to-indigo-50/30 dark:from-gray-800 dark:via-gray-800 dark:to-indigo-900/20 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-sm p-8 text-center"
+        className="bg-card rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 p-8 text-center"
       >
-        <div className="w-16 h-16 mx-auto bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-6">
-          <FontAwesomeIcon icon={faMagicWandSparkles} className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+        <div className="w-16 h-16 mx-auto bg-primary/10 rounded-3xl flex items-center justify-center mb-6">
+          <FontAwesomeIcon icon={faMagicWandSparkles} className="w-8 h-8 text-primary" />
         </div>
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-xl font-medium text-foreground mb-2">
           Moneko Hasn't Shared Insights Yet
         </h3>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-muted-foreground mb-6">
           Let Moneko analyze your goal and provide personalized recommendations to help you succeed.
         </p>
         <motion.button
@@ -304,7 +304,7 @@ export function GoalInsights({
           disabled={isGeneratingNew}
           whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
           whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-semibold rounded-xl shadow-lg shadow-pink-500/25 transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200"
         >
           {isGeneratingNew ? (
             <motion.div
@@ -333,17 +333,17 @@ export function GoalInsights({
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-medium text-foreground">
               What Moneko Thinks
             </h3>
             {highPriorityCount > 0 && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-full text-xs font-medium">
+              <div className="flex items-center gap-1 px-3 py-1 bg-destructive/10 text-destructive rounded-full text-xs font-medium">
                 <FontAwesomeIcon icon={faExclamationTriangle} className="w-3 h-3" />
                 {highPriorityCount} urgent
               </div>
             )}
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Moneko's personalized insights for your goal journey
           </p>
         </div>
@@ -354,7 +354,7 @@ export function GoalInsights({
           disabled={isGeneratingNew}
           whileHover={!isGeneratingNew ? { scale: 1.05 } : {}}
           whileTap={!isGeneratingNew ? { scale: 0.95 } : {}}
-          className="flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-700 disabled:bg-gray-400 text-white font-medium rounded-lg shadow-lg shadow-pink-500/25 transition-colors text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200 text-sm"
         >
           {isGeneratingNew ? (
             <motion.div
@@ -375,13 +375,13 @@ export function GoalInsights({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg text-red-700 dark:text-red-400 text-sm"
+          className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-destructive text-sm"
         >
           <FontAwesomeIcon icon={faExclamationTriangle} className="w-4 h-4" />
           <span>{error}</span>
           <button 
             onClick={() => setError(null)}
-            className="ml-auto text-red-500 hover:text-red-700"
+            className="ml-auto text-destructive hover:text-destructive/80 transition-colors duration-200"
           >
             <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
           </button>
@@ -390,13 +390,13 @@ export function GoalInsights({
 
       {/* Insights Navigation and Display */}
       {filteredInsights.length > 0 && currentInsight && (
-        <div className="bg-gradient-to-br from-white via-white to-pink-50/30 dark:from-gray-800 dark:via-gray-800 dark:to-pink-900/20 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-sm overflow-hidden">
+        <div className="bg-card rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
           {/* Navigation Header */}
-          <div className="flex items-center justify-between p-4 bg-gray-50/80 dark:bg-gray-800/80 border-b border-gray-200/60 dark:border-gray-700/60">
+          <div className="flex items-center justify-between p-4 bg-muted/30 border-b">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <img src={monekoIcon} alt="Moneko" className="size-5" />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <span className="text-sm font-medium text-muted-foreground">
                   Insight {safeCurrentIndex + 1} of {filteredInsights.length}
                 </span>
               </div>
@@ -420,9 +420,9 @@ export function GoalInsights({
                 disabled={safeCurrentIndex === 0}
                 whileHover={safeCurrentIndex > 0 ? { scale: 1.1 } : {}}
                 whileTap={safeCurrentIndex > 0 ? { scale: 0.9 } : {}}
-                className="p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                className="p-2 rounded-xl bg-background border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-subtle-background transition-all duration-200"
               >
-                <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4 text-muted-foreground" />
               </motion.button>
               
               <motion.button
@@ -430,9 +430,9 @@ export function GoalInsights({
                 disabled={safeCurrentIndex >= filteredInsights.length - 1}
                 whileHover={safeCurrentIndex < filteredInsights.length - 1 ? { scale: 1.1 } : {}}
                 whileTap={safeCurrentIndex < filteredInsights.length - 1 ? { scale: 0.9 } : {}}
-                className="p-2 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                className="p-2 rounded-xl bg-background border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-subtle-background transition-all duration-200"
               >
-                <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 text-muted-foreground" />
               </motion.button>
             </div>
           </div>
@@ -459,7 +459,7 @@ export function GoalInsights({
 
           {/* Bottom Navigation Dots */}
           {filteredInsights.length > 1 && (
-            <div className="flex items-center justify-center gap-2 p-4 bg-gray-50/50 dark:bg-gray-800/50">
+            <div className="flex items-center justify-center gap-2 p-4 bg-muted/20">
               {filteredInsights.map((_, index) => (
                 <motion.button
                   key={index}
@@ -468,8 +468,8 @@ export function GoalInsights({
                   whileTap={{ scale: 0.8 }}
                   className={`w-3 h-3 rounded-full transition-colors ${
                     index === safeCurrentIndex
-                      ? 'bg-pink-600'
-                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                      ? 'bg-primary'
+                      : 'bg-muted hover:bg-muted-foreground/20'
                   }`}
                 />
               ))}
