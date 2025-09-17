@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ChatConversationDisplay, ConversationMessage } from "@/components/chat/chat-conversation-display";
 import { QuestionnaireFlow } from "@/components/goal-tracker/questionnaire/QuestionnaireFlow";
 import { GoalPresentationFlow } from "@/components/goal-tracker/goal-presentation";
-import { getQuestionnaireTemplate } from "@/data/questionnaire-templates";
+import { getQuestionnaireTemplate, type QuestionnaireTemplate } from "@/data/questionnaire-templates";
 import { supabase } from "@/lib/supabase";
 import type { 
   GoalType, 
@@ -500,57 +500,59 @@ Sound good?`,
     };
   }, []);
 
-  const questionnaireTemplate = selectedGoalType ? getQuestionnaireTemplate(selectedGoalType) : null;
+  
 
-  return (
-    <div className={`flex flex-col flex-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-xl sm:rounded-2xl shadow-xl dark:shadow-2xl dark:shadow-black/20 border border-slate-200/60 dark:border-slate-600/60 overflow-hidden ${className}`}>
-      {/* Compact Header - Progressive enhancement: show more on desktop, minimal on mobile */}
-      <div className="flex-shrink-0 border-b border-slate-200/60 dark:border-slate-600/60 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 gap-2 sm:gap-0">
-          {/* Main title row */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center justify-between w-full sm:w-auto"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-              <h1 className="text-base sm:text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-900 via-purple-800 to-indigo-900 dark:from-slate-100 dark:via-purple-200 dark:to-indigo-200 bg-clip-text text-transparent">
-                Welcome to <span className="text-purple-600 dark:text-purple-400">Moneko</span>
-              </h1>
-              
-              {/* Desktop subtitle - hidden on mobile for space efficiency */}
-              <p className="hidden md:block text-sm lg:text-base text-slate-600 dark:text-slate-300 font-medium">
-                Your AI Financial Coach
-              </p>
-            </div>
-             {/* Login Button - Mobile compact, desktop full */}
-             {!user && (
-              <Button
-                onClick={handleLogin}
-                variant="outline"
-                className="block lg:hidden text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 h-auto touch-manipulation ml-3 sm:ml-0"
-              >
-                <FontAwesomeIcon icon={faSignInAlt} className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
-                <span>Login</span>
-              </Button>
-            )}
-           
-          </motion.div>
-          
-          {/* Desktop-only feature highlights - completely hidden on mobile */}
-          <div className="hidden lg:flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400">
+const questionnaireTemplate = selectedGoalType ? getQuestionnaireTemplate(selectedGoalType) : null;
+
+return (
+  <div className={`flex flex-col flex-1 bg-card rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border overflow-hidden ${className}`}>
+    {/* Compact Header - Progressive enhancement: show more on desktop, minimal on mobile */}
+    <div className="flex-shrink-0 border-b bg-card">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 gap-2 sm:gap-0">
+        {/* Main title row */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center justify-between w-full sm:w-auto"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+            <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-foreground">
+              Welcome to <span className="text-primary">Moneko</span>
+            </h1>
+            
+            {/* Desktop subtitle - hidden on mobile for space efficiency */}
+            <p className="hidden md:block text-sm lg:text-base text-muted-foreground-color font-medium">
+              Your AI Financial Coach
+            </p>
+          </div>
            {/* Login Button - Mobile compact, desktop full */}
            {!user && (
-              <Button
-                onClick={handleLogin}
-                variant="outline"
-                className="text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 h-auto touch-manipulation ml-3 sm:ml-0"
-              >
-                <FontAwesomeIcon icon={faSignInAlt} className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
-                <span>Login</span>
-              </Button>
-            )}
-          </div>
+             <Button
+               onClick={handleLogin}
+               variant="outline"
+               className="block lg:hidden text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 h-auto touch-manipulation ml-3 sm:ml-0"
+             >
+               <FontAwesomeIcon icon={faSignInAlt} className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+               <span>Login</span>
+             </Button>
+           )}
+         
+        </motion.div>
+        
+        {/* Desktop-only feature highlights - completely hidden on mobile */}
+        <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground-color">
+          {/* Login Button - Mobile compact, desktop full */}
+          {!user && (
+            <Button
+              onClick={handleLogin}
+              variant="outline"
+              className="text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 h-auto touch-manipulation ml-3 sm:ml-0"
+            >
+              <FontAwesomeIcon icon={faSignInAlt} className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Login</span>
+            </Button>
+          )}
+        </div>
         </div>
       </div>
 
@@ -573,20 +575,20 @@ Sound good?`,
         />
       </div>
 
+
       {/* Questionnaire Modal - Mobile responsive */}
       <Modal
         isOpen={isQuestionnaireModalOpen}
         onClose={handleCloseModal}
         width="xwide"
         fullHeight={true}
-        disableOverlayClick
       >
         <div className="flex-1 h-full overflow-hidden">
           {selectedGoalType && questionnaireTemplate && (
             <div className="h-full flex-1 overflow-y-auto overscroll-contain p-3 sm:p-6">
               <QuestionnaireFlow
-                goalType={selectedGoalType}
-                template={questionnaireTemplate}
+                goalType={selectedGoalType as GoalType}
+                template={questionnaireTemplate as QuestionnaireTemplate}
                 onComplete={handleQuestionnaireComplete}
                 onCancel={handleCloseModal}
                 userId={user?.id || null}
@@ -602,13 +604,12 @@ Sound good?`,
         onClose={handleClosePresentationModal}
         width="xwide"
         fullHeight={true}
-        disableOverlayClick
       >
         <div className="h-full overflow-hidden">
           {goalData && (
-            <div className="h-full overflow-y-auto overscroll-contain">
+            <div id="goal-presentation-scroll" className="h-full overflow-y-auto overscroll-contain">
               <GoalPresentationFlow
-                goalData={goalData}
+                goalData={goalData as GoalCreationResult}
                 isLoggedIn={!!user}
                 onComplete={handlePresentationComplete}
                 onRegister={handleRegistrationPrompt}

@@ -133,7 +133,7 @@ export function FormQuestion({
                 className={`rounded-xl p-4 text-sm font-medium transition-all duration-200 border ${
                   value === option.value 
                     ? 'bg-primary text-white border-primary shadow-sm' 
-                    : 'bg-card text-foreground border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm'
+                    : 'bg-card text-foreground border hover:border-primary/50 hover:shadow-sm'
                 }`}
               >
                 {option.label}
@@ -165,7 +165,7 @@ export function FormQuestion({
                   className={`rounded-xl p-4 text-sm font-medium transition-all duration-200 border flex items-center gap-3 ${
                     isSelected 
                       ? 'bg-primary text-white border-primary shadow-sm' 
-                      : 'bg-card text-foreground border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm'
+                      : 'bg-card text-foreground border hover:border-primary/50 hover:shadow-sm'
                   }`}
                 >
                   <FontAwesomeIcon 
@@ -208,7 +208,7 @@ export function FormQuestion({
                 className={`w-12 h-12 rounded-xl text-sm font-semibold transition-all duration-200 border ${
                   value === rating 
                     ? 'bg-primary text-white border-primary shadow-sm' 
-                    : 'bg-card text-foreground border-gray-200 dark:border-gray-700 hover:border-primary/50 hover:shadow-sm'
+                    : 'bg-card text-foreground border hover:border-primary/50 hover:shadow-sm'
                 }`}
               >
                 {rating}

@@ -49,14 +49,14 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
   {
     return (
       <div className="my-2">
-        <div className="flex items-center justify-center p-3 sm:p-4 rounded-2xl border border-orange-300/50 bg-orange-50/80 dark:bg-orange-900/20 dark:border-orange-700/50">
+        <div className="flex items-center justify-center p-3 sm:p-4 rounded-2xl border bg-subtle-background">
           <div className="text-center">
-            <p className="text-orange-800 dark:text-orange-200 mb-2 text-sm sm:text-base">
+            <p className="text-muted-foreground-color mb-2 text-sm sm:text-base">
               Conversation limit reached!
             </p>
             <Link 
               to="/pricing"
-              className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg hover:from-purple-600 hover:to-indigo-700 transition-colors duration-200 touch-manipulation"
+              className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors duration-200 touch-manipulation"
             >
               Upgrade to Premium
             </Link>
@@ -79,7 +79,7 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={`Ask ${agentName} anything...`}
-            className={classNames("w-full h-full resize-none rounded-2xl border border-slate-300/50 bg-white/80 dark:bg-slate-800/80 dark:border-slate-700/50 px-3 sm:px-4 py-2 sm:py-2.5 pr-4 sm:pr-6 text-sm sm:text-base text-slate-800 dark:text-slate-100 shadow-inner focus:border-purple-500 focus:ring-2 focus:ring-purple-500/50 focus:outline-none transition-all duration-200 touch-manipulation",
+            className={classNames("w-full h-full resize-none rounded-2xl border bg-card px-3 sm:px-4 py-2 sm:py-2.5 pr-4 sm:pr-6 text-sm sm:text-base text-foreground shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus:outline-none transition-all duration-200 touch-manipulation",
               {
                 "cursor-not-allowed": isLoading,
                 "opacity-50": isLoading,
@@ -96,27 +96,15 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
             disabled={isLoading}
           />
         
-        </div>
-        {/* <motion.div whileTap={{ scale: 0.9 }}>
-          <Button
-            variant="primary"
-            disabled={isLoading}
-            onClick={onOpenVoiceModal}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 p-0 text-white shadow-lg shadow-purple-500/30 transition-all duration-300 ease-in-out hover:shadow-xl hover:shadow-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white/50 disabled:bg-slate-300 disabled:shadow-none dark:disabled:bg-slate-600"
-          >
-           <FontAwesomeIcon icon={faMagicWandSparkles} />
-          </Button>
-        </motion.div> */}
-        <motion.div whileTap={{ scale: 0.9 }}>
+       </div>
+        <motion.div whileTap={{ scale: 0.95 }}>
           <Button
             type="submit"
-            variant="primary"
+            size="icon"
             disabled={!message.trim() || isLoading}
-            className={classNames("flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br p-0 text-white shadow-lg shadow-purple-500/30 transition-all duration-200 ease-in-out hover:shadow-xl hover:shadow-purple-500/50 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-white/50 disabled:bg-slate-300 disabled:shadow-none dark:disabled:bg-slate-600 touch-manipulation",
+            className={classNames("flex shrink-0 items-center justify-center rounded-full shadow-sm hover:shadow-md transition-all duration-200 touch-manipulation",
             {
-              "from-purple-500 to-indigo-600": !isLoading,
-              "from-gray-200 to-gray-300": isLoading,
-
+              "opacity-50 cursor-not-allowed": isLoading
             }
             )}
           >

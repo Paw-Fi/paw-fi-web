@@ -1,17 +1,8 @@
 import { motion } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faBullseye, 
-  faCalendarAlt, 
-  faChartLine, 
-  faDollarSign,
-  faExclamationCircle,
-  faLightbulb,
-  faRocket,
-} from '@fortawesome/free-solid-svg-icons';
 import type { GoalCreationResult } from '@/components/goal-tracker/types';
 import { Markdown } from '@/components/ui/markdown';
 import MonekoAdvisorMessage from '@/components/ui/MonekoAdvisorMessage';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 interface GoalSummaryPageProps {
   goalData: GoalCreationResult;
@@ -37,48 +28,30 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
   
   const cards = [
     {
-      icon: faBullseye,
       title: 'Target Goal',
       value: `$${targetAmount.toLocaleString()}`,
-      subtitle: goal?.description?.slice(0, 100) + '...',
-      color: 'blue'
+      subtitle: goal?.description ? goal.description.slice(0, 100) + '...' : ''
     },
     {
-      icon: faCalendarAlt,
       title: 'Timeline',
       value: `${totalMonths} months`,
       subtitle: `Target date: ${targetDate.toLocaleDateString('en-US', { 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric' 
-      })}`,
-      color: 'purple'
+      })}`
     },
     {
-      icon: faChartLine,
       title: 'Current Progress',
       value: `${progressPercentage}%`,
-      subtitle: `$${currentAmount.toLocaleString()} of $${targetAmount.toLocaleString()}`,
-      color: 'green'
+      subtitle: `$${currentAmount.toLocaleString()} of $${targetAmount.toLocaleString()}`
     },
     {
-      icon: faDollarSign,
       title: 'Monthly Required',
       value: `$${monthlyRequired.toLocaleString()}`,
-      subtitle: `${confidenceLevel}% confidence level`,
-      color: 'orange'
+      subtitle: `${confidenceLevel}% confidence level`
     }
   ];
-  
-  const getColorClasses = (color: string) => {
-    const colors = {
-      blue: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400',
-      purple: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-600 dark:text-purple-400',
-      green: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-600 dark:text-green-400',
-      orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400'
-    };
-    return colors[color as keyof typeof colors] || colors.blue;
-  };
   
   const urgentMilestones = (goalData.milestones || [])
     .filter(m => m.priority === 'critical' || m.priority === 'high')
@@ -93,13 +66,10 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
         transition={{ delay: 0.1 }}
         className="text-center"
       >
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-6">
-          <FontAwesomeIcon icon={faRocket} className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+        <h1 className="text-3xl font-bold text-foreground mb-4">
           {goal?.title || 'Your Financial Goal'}
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+        <p className="text-lg text-muted-foreground-color max-w-2xl mx-auto">
           Here's your personalized financial plan created by our AI. Let's break down the key details of your journey to success.
         </p>
       </motion.div>
@@ -135,19 +105,22 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 + index * 0.1 }}
-            className={`p-6 rounded-xl border ${getColorClasses(card.color)} hover:shadow-lg transition-shadow duration-300`}
+            className="transition-all duration-200"
           >
-            <div className="flex items-center mb-4">
-              <div className={`w-10 h-10 rounded-lg bg-current bg-opacity-10 flex items-center justify-center mr-3`}>
-                <FontAwesomeIcon icon={card.icon} className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">{card.title}</h3>
-            </div>
-            <p className="text-2xl font-bold mb-2">{card.value}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{card.subtitle}</p>
-            {!isLoggedIn && index >= 2 && (
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Advanced metrics available after sign up</p>
-            )}
+            <Card className="border-0 shadow-sm hover:shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm text-muted-foreground-color">{card.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-2xl font-bold text-primary">{card.value}</div>
+                {card.subtitle && (
+                  <div className="text-sm text-muted-foreground-color mt-1">{card.subtitle}</div>
+                )}
+                {!isLoggedIn && index >= 2 && (
+                  <div className="text-xs text-primary mt-2 font-medium">Advanced metrics available after sign up</div>
+                )}
+              </CardContent>
+            </Card>
           </motion.div>
         ))}
       </motion.div>
@@ -157,50 +130,52 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700 relative"
-      >
-        <div className="flex items-center mb-4">
-          <FontAwesomeIcon icon={faLightbulb} className="w-6 h-6 text-yellow-500 mr-3" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Strategy</h2>
-        </div>
-        <Markdown 
-          content={goalData.strategy}
-          className={`prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg px-4 py-6 ${!isLoggedIn ? 'line-clamp-2' : ''}`}
-          components={{
-            // Add proper spacing for paragraphs and other elements
-            p: ({children}: {children: React.ReactNode}) => <p className="mb-4 leading-relaxed">{children}</p>,
-            h1: ({children}: {children: React.ReactNode}) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
-            h2: ({children}: {children: React.ReactNode}) => <h2 className="text-xl font-semibold mb-3 mt-5">{children}</h2>,
-            h3: ({children}: {children: React.ReactNode}) => <h3 className="text-lg font-medium mb-2 mt-4">{children}</h3>,
-            ul: ({children}: {children: React.ReactNode}) => <ul className="mb-4 pl-6 space-y-2">{children}</ul>,
-            ol: ({children}: {children: React.ReactNode}) => <ol className="mb-4 pl-6 space-y-2">{children}</ol>,
-            li: ({children}: {children: React.ReactNode}) => <li className="leading-relaxed">{children}</li>,
-            blockquote: ({children}: {children: React.ReactNode}) => <blockquote className="border-l-4 border-purple-300 dark:border-purple-600 pl-4 my-4 italic">{children}</blockquote>,
-            // Handle details/summary for collapsible sections
-            details: ({children}: {children: React.ReactNode}) => (
-              <details className="mb-4 border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
-                {children}
-              </details>
-            ),
-            summary: ({children}: {children: React.ReactNode}) => (
-              <summary className="cursor-pointer bg-gray-50 dark:bg-gray-700 px-4 py-3 font-medium hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                {children}
-              </summary>
-            ),
-            // Add spacing for other common elements
-            strong: ({children}: {children: React.ReactNode}) => <strong className="font-semibold text-gray-900 dark:text-white">{children}</strong>,
-            em: ({children}: {children: React.ReactNode}) => <em className="italic text-gray-700 dark:text-gray-300">{children}</em>,
-            code: ({children}: {children: React.ReactNode}) => <code className="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-sm font-mono">{children}</code>,
-            pre: ({children}: {children: React.ReactNode}) => <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto mb-4">{children}</pre>,
-          }}
-        />
-        {!isLoggedIn && (
-          <div className="px-4 pb-4 text-center">
-            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
-              Full strategy available after sign up
-            </span>
-          </div>
-        )}
+        >
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl text-foreground">Your Strategy</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Markdown 
+              content={goalData.strategy}
+              className={`prose mx-auto max-w-none dark:prose-invert lg:prose-lg ${!isLoggedIn ? 'line-clamp-2' : ''}`}
+              components={{
+                // Add proper spacing for paragraphs and other elements
+                p: ({children}: {children: React.ReactNode}) => <p className="mb-4 leading-relaxed text-foreground">{children}</p>,
+                h1: ({children}: {children: React.ReactNode}) => <h1 className="text-2xl font-bold mb-4 mt-6 text-foreground">{children}</h1>,
+                h2: ({children}: {children: React.ReactNode}) => <h2 className="text-xl font-semibold mb-3 mt-5 text-foreground">{children}</h2>,
+                h3: ({children}: {children: React.ReactNode}) => <h3 className="text-lg font-medium mb-2 mt-4 text-foreground">{children}</h3>,
+                ul: ({children}: {children: React.ReactNode}) => <ul className="mb-4 pl-6 space-y-2">{children}</ul>,
+                ol: ({children}: {children: React.ReactNode}) => <ol className="mb-4 pl-6 space-y-2">{children}</ol>,
+                li: ({children}: {children: React.ReactNode}) => <li className="leading-relaxed text-muted-foreground-color">{children}</li>,
+                blockquote: ({children}: {children: React.ReactNode}) => <blockquote className="border-l border pl-4 my-4 italic">{children}</blockquote>,
+                // Handle details/summary for collapsible sections
+                details: ({children}: {children: React.ReactNode}) => (
+                  <details className="mb-4 border rounded-lg overflow-hidden">
+                    {children}
+                  </details>
+                ),
+                summary: ({children}: {children: React.ReactNode}) => (
+                  <summary className="cursor-pointer bg-subtle-background px-4 py-3 font-medium hover:bg-subtle-background/80 transition-colors">
+                    {children}
+                  </summary>
+                ),
+                // Add spacing for other common elements
+                strong: ({children}: {children: React.ReactNode}) => <strong className="font-semibold text-foreground">{children}</strong>,
+                em: ({children}: {children: React.ReactNode}) => <em className="italic text-muted-foreground-color">{children}</em>,
+                code: ({children}: {children: React.ReactNode}) => <code className="bg-subtle-background px-2 py-1 rounded text-sm font-mono">{children}</code>,
+                pre: ({children}: {children: React.ReactNode}) => <pre className="bg-subtle-background p-4 rounded-lg overflow-x-auto mb-4">{children}</pre>,
+              }}
+            />
+            {!isLoggedIn && (
+              <div className="text-center">
+                <span className="text-sm text-primary font-medium bg-subtle-background px-3 py-1 rounded-full">
+                  Full strategy available after sign up
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
       
       {/* What Needs Attention */}
@@ -209,46 +184,43 @@ export function GoalSummaryPage({ goalData, isLoggedIn }: GoalSummaryPageProps) 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
-          className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-sm border border-gray-200 dark:border-gray-700 relative"
         >
-          <div className="flex items-center mb-6">
-            <FontAwesomeIcon icon={faExclamationCircle} className="w-6 h-6 text-red-500 mr-3" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">What Needs Your Attention</h2>
-          </div>
-          <div className="space-y-4">
-            {urgentMilestones.slice(0, isLoggedIn ? urgentMilestones.length : 2).map((milestone, index) => (
-              <div 
-                key={milestone.id || index}
-                className="flex items-start p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-              >
-                <div className={`
-                  w-2 h-2 rounded-full mt-2 mr-4 flex-shrink-0
-                  ${milestone.priority === 'critical' ? 'bg-red-500' : 'bg-orange-500'}
-                `} />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    {milestone.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    Due: {new Date(milestone.due_date || '').toLocaleDateString()}
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    {milestone.description}
-                  </p>
-                  {!isLoggedIn && index >= 1 && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">Detailed action plan available after sign up</p>
-                  )}
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl text-foreground">What Needs Your Attention</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {urgentMilestones.slice(0, isLoggedIn ? urgentMilestones.length : 2).map((milestone, index) => (
+                <div 
+                  key={milestone.id || index}
+                  className="flex items-start p-4 bg-subtle-background rounded-lg"
+                >
+                  <div className={`w-2 h-2 rounded-full mt-2 mr-4 flex-shrink-0 ${milestone.priority === 'critical' ? 'bg-warning' : 'bg-primary'}`} />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground mb-1">
+                      {milestone.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground-color mb-2">
+                      Due: {new Date(milestone.due_date || '').toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground-color">
+                      {milestone.description}
+                    </p>
+                    {!isLoggedIn && index >= 1 && (
+                      <p className="text-xs text-primary mt-2 font-medium">Detailed action plan available after sign up</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {!isLoggedIn && urgentMilestones.length > 2 && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
-                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
-                  +{urgentMilestones.length - 2} more priority action{urgentMilestones.length > 3 ? 's' : ''} available after sign up
-                </p>
-              </div>
-            )}
-          </div>
+              ))}
+              {!isLoggedIn && urgentMilestones.length > 2 && (
+                <div className="p-3 bg-subtle-background rounded-lg text-center">
+                  <p className="text-sm text-primary font-medium">
+                    +{urgentMilestones.length - 2} more priority action{urgentMilestones.length > 3 ? 's' : ''} available after sign up
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </motion.div>
       )}
     </div>

@@ -19,7 +19,7 @@ export function ChatSuggestions({
         <button
           key={`suggestion-${index}`}        
           onClick={() => onSuggestionClick(suggestion)}
-          className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium bg-white hover:bg-white text-slate-700 hover:text-slate-900 rounded-xl border border-slate-200/60 hover:border-slate-300/60 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500/50 dark:bg-slate-700/80 dark:hover:bg-slate-600/80 dark:text-slate-200 dark:hover:text-white dark:border-slate-600/60 dark:hover:border-slate-500/60 whitespace-nowrap touch-manipulation active:scale-95"
+          className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium bg-card text-foreground rounded-xl border hover:border-primary/50 shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 whitespace-nowrap touch-manipulation active:scale-95"
           disabled={isSendingMessage}
         >
           {suggestion}

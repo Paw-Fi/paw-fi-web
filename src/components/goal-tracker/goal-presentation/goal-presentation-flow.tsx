@@ -1,13 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { 
-  faArrowLeft, 
-  faArrowRight,
-  faRocket,
-  faUserPlus,
-  faChartLine 
-} from '@fortawesome/free-solid-svg-icons';
 import { Button } from '@/components/ui/button';
 import { GoalSummaryPage } from './goal-summary-page';
 import { KeyInsightsPage } from './key-insights-page';
@@ -25,11 +17,11 @@ interface GoalPresentationFlowProps {
 
 type PresentationPage = 'summary' | 'insights' | 'next-steps' | 'final';
 
-const FULL_PAGES: { id: PresentationPage; title: string; icon: any }[] = [
-  { id: 'summary', title: 'Your Plan', icon: faChartLine },
-  { id: 'insights', title: 'Key Insights', icon: faRocket },
-  { id: 'next-steps', title: 'Next Steps', icon: faArrowRight },
-  { id: 'final', title: 'Get Started', icon: faUserPlus }
+const FULL_PAGES: { id: PresentationPage; title: string }[] = [
+  { id: 'summary', title: 'Your Plan' },
+  { id: 'insights', title: 'Key Insights' },
+  { id: 'next-steps', title: 'Next Steps' },
+  { id: 'final', title: 'Get Started' }
 ];
 
 export function GoalPresentationFlow({ 
@@ -47,20 +39,25 @@ export function GoalPresentationFlow({
   const isOnTrackerPage=location.pathname.includes("/tracker")
   const PAGES=isOnTrackerPage?FULL_PAGES.slice(0,FULL_PAGES.length-1):FULL_PAGES
   
+  // Smoothly scroll the modal's scroll container (or window) to top on page changes
+  function scrollToTop() {
+    if (typeof window === 'undefined') return;
+    const container = document.getElementById('goal-presentation-scroll');
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  useEffect(() => {
+    scrollToTop();
+  }, [currentPage]);
+
   const handleNext = () => {
     if (canGoNext) {
       const nextPage = PAGES[currentPageIndex + 1].id;
       setCurrentPage(nextPage);
-      
-      // Scroll to top after 100ms delay
-      setTimeout(() => {
-        const modalScrollContainer = document.querySelector('.overflow-scroll');
-        if (modalScrollContainer) {
-          modalScrollContainer.scrollTo(0, 0);
-        } else {
-        window.scrollTo(0, 0);
-        }
-      }, 400);
     }
   };
   
@@ -68,16 +65,6 @@ export function GoalPresentationFlow({
     if (canGoBack) {
       const prevPage = PAGES[currentPageIndex - 1].id;
       setCurrentPage(prevPage);
-      
-      // Scroll to top after 100ms delay
-      setTimeout(() => {
-        const modalScrollContainer = document.querySelector('.overflow-scroll');
-        if (modalScrollContainer) {
-          modalScrollContainer.scrollTo(0, 0);
-        } else {
-          window.scrollTo(0, 0);
-        }
-      }, 100);
     }
   };
   
@@ -117,36 +104,29 @@ export function GoalPresentationFlow({
         <div className="mb-8">
           <div className="flex items-center justify-between">
             {PAGES.map((page, index) => (
-              <div 
-                key={page.id}
-                className={`flex items-center ${index < PAGES.length - 1 ? 'flex-1' : ''}`}
-              >
-                <div className={`
-                  flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300
-                  ${index <= currentPageIndex 
-                    ? 'bg-blue-500 border-blue-500 text-white' 
-                    : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-400'
-                  }
-                `}>
-                  <FontAwesomeIcon icon={page.icon} className="w-4 h-4" />
+              <div key={page.id} className={`flex items-center ${index < PAGES.length - 1 ? 'flex-1' : ''}`}>
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-full border transition-all duration-200
+                    ${index <= currentPageIndex
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card text-muted-foreground-color'}
+                  `}
+                >
+                  <span className="text-xs font-semibold">{index + 1}</span>
                 </div>
-                <span className={`
-                  ml-3 text-sm font-medium transition-colors duration-300
-                  ${index <= currentPageIndex 
-                    ? 'text-blue-600 dark:text-blue-400' 
-                    : 'text-gray-500 dark:text-gray-400'
-                  }
-                `}>
+                <span
+                  className={`ml-3 text-sm font-medium transition-colors duration-200
+                    ${index <= currentPageIndex ? 'text-foreground' : 'text-muted-foreground-color'}
+                  `}
+                >
                   {page.title}
                 </span>
                 {index < PAGES.length - 1 && (
-                  <div className={`
-                    flex-1 h-0.5 mx-4 transition-colors duration-300
-                    ${index < currentPageIndex 
-                      ? 'bg-blue-500' 
-                      : 'bg-gray-300 dark:bg-gray-600'
-                    }
-                  `} />
+                  <div
+                    className={`flex-1 h-0.5 mx-4 rounded-full transition-colors duration-200
+                      ${index < currentPageIndex ? 'bg-primary' : 'bg-foreground/10'}
+                    `}
+                  />
                 )}
               </div>
             ))}
@@ -171,41 +151,24 @@ export function GoalPresentationFlow({
         
         {/* Navigation */}
         <div className="flex justify-between items-center">
-          <Button
-            onClick={handleBack}
-            disabled={!canGoBack}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+          <Button onClick={handleBack} disabled={!canGoBack} variant="outline" className="flex items-center gap-2">
             Back
           </Button>
           
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-sm text-muted-foreground-color">
             {currentPageIndex + 1} of {PAGES.length}
           </div>
           
           {currentPageIndex !== PAGES.length - 1 ? (
-            <Button
-              onClick={handleNext}
-              disabled={!canGoNext}
-              variant="primary"
-              className="flex items-center gap-2"
-            >
+            <Button onClick={handleNext} disabled={!canGoNext} className="flex items-center gap-2">
               Next
-              <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4" />
             </Button>
-          ) : isOnTrackerPage?(
-            <Button
-            onClick={onComplete}
-            variant="primary"
-            className="flex items-center gap-2"
-          >
-            Finish
-            <FontAwesomeIcon icon={faArrowRight} className="w-4 h-4" />
-          </Button>
-          ):(
-            <div className="w-20" /> // Placeholder to maintain layout balance
+          ) : isOnTrackerPage ? (
+            <Button onClick={onComplete} className="flex items-center gap-2">
+              Finish
+            </Button>
+          ) : (
+            <div className="w-20" />
           )}
         </div>
     </div>

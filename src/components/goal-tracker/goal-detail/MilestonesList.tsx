@@ -381,26 +381,26 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
   const progressPercentage = orderedMilestones.length > 0 ? (completedCount / orderedMilestones.length) * 100 : 0;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="bg-card rounded-xl border shadow-sm">
       {/* Header - Compact */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-              <FontAwesomeIcon icon={faListCheck} className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <div className="w-8 h-8 bg-subtle-background rounded-lg flex items-center justify-center">
+              <FontAwesomeIcon icon={faListCheck} className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+              <h3 className="font-semibold text-foreground text-sm">
                 Quick Actions ({completedCount}/{orderedMilestones.length})
               </h3>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="w-16 h-1.5 bg-subtle-background rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                    className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{ width: `${progressPercentage}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-muted-foreground-color">
                   {progressPercentage.toFixed(0)}%
                 </span>
               </div>
@@ -415,7 +415,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
               }
               setShowCreateForm(!showCreateForm)
             }}
-            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors min-h-[32px] touch-manipulation"
+            className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-medium flex items-center gap-1 transition-colors min-h-[32px] touch-manipulation"
           >
             <FontAwesomeIcon icon={showCreateForm ? faTimes : faPlus} className="w-3 h-3" />
             {showCreateForm ? 'Cancel' : 'Add'}
@@ -556,9 +556,9 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
       <div className="p-4">
         {orderedMilestones.length === 0 ? (
           <div className="text-center py-8">
-            <FontAwesomeIcon icon={faListCheck} className="w-8 h-8 text-gray-400 mb-3" />
-            <p className="text-gray-500 dark:text-gray-400 text-sm">No milestones yet</p>
-            <p className="text-gray-400 dark:text-gray-500 text-xs">Add your first milestone to get started</p>
+            <FontAwesomeIcon icon={faListCheck} className="w-8 h-8 text-muted-foreground-color mb-3" />
+            <p className="text-muted-foreground-color text-sm">No milestones yet</p>
+            <p className="text-muted-foreground-color text-xs">Add your first milestone to get started</p>
           </div>
         ) : (
           <div className="space-y-3">

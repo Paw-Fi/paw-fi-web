@@ -70,7 +70,7 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className={`${transparentBackground ? '' : 'bg-subtle-background rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700'} ${className}`}
+      className={`${transparentBackground ? '' : 'bg-subtle-background rounded-xl p-6 shadow-sm border'} ${className}`}
     >
       <div className="flex items-start gap-4">
         {/* Moneko Avatar */}
@@ -86,10 +86,10 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
         
         {/* Message Content */}
         <div className="flex-1 min-w-0">
-          <div className="bg-card rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700 relative">
-            {/* Speech bubble tail */}
-            <div className="absolute left-0 top-4 w-0 h-0 border-r-8 border-gray-200 dark:border-gray-700  border-r-card border-t-4 border-b-4 border-t-transparent border-b-transparent -ml-2"></div>
-            
+          <div className="bg-card rounded-xl p-4 shadow-sm border relative">
+            {/* Speech bubble tail (token-friendly) */}
+            <div className="absolute -left-1.5 top-5 w-3 h-3 bg-card border rotate-45"></div>
+
             <div className="flex items-center gap-3 mb-3">
               <h4 className="font-semibold text-foreground">
                 Moneko

@@ -42,14 +42,15 @@ export function FormNavigation({
 }: FormNavigationProps) {
   return (
     <div className="flex items-center justify-between pt-8 mt-8">
-      <button
-        className="flex items-center rounded-xl bg-card border border-gray-200 dark:border-gray-700 px-6 py-3 font-medium text-foreground transition-all duration-200 hover:border-primary/50 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      <Button
+        variant="outline"
         onClick={onBack}
         disabled={!canGoBack}
+        className="rounded-xl px-6 py-3 font-medium hover:shadow-sm"
       >
         <FontAwesomeIcon icon={faChevronLeft} className="mr-2 w-4 h-4" />
         {backLabel}
-      </button>
+      </Button>
 
       {isLastStep ? (
         <Button 
@@ -57,7 +58,7 @@ export function FormNavigation({
           size="lg" 
           className={`px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
             hasValidationErrors 
-              ? 'bg-warning hover:bg-warning/90 text-white shadow-sm' 
+              ? 'bg-warning hover:bg-warning/90 text-primary-foreground shadow-sm' 
               : 'shadow-sm hover:shadow-md'
           }`}
           disabled={!isFormComplete || isSubmitting}
@@ -70,18 +71,16 @@ export function FormNavigation({
           {isSubmitting ? "Submitting..." : hasValidationErrors ? "Fix Errors" : submitLabel}
         </Button>
       ) : (
-        <button
-          className={`flex items-center rounded-xl px-8 py-3 font-semibold transition-all duration-200 ${
-            canGoNext 
-              ? "bg-primary text-white hover:shadow-md shadow-sm" 
-              : "cursor-not-allowed bg-subtle-background text-muted-foreground-color"
-          }`}
+        <Button
           onClick={onNext}
           disabled={!canGoNext}
+          className={`rounded-xl px-8 py-3 font-semibold transition-all duration-200 ${
+            canGoNext ? 'shadow-sm hover:shadow-md' : ''
+          }`}
         >
           {nextLabel}
           <FontAwesomeIcon icon={faChevronRight} className="ml-2 w-4 h-4" />
-        </button>
+        </Button>
       )}
     </div>
   );

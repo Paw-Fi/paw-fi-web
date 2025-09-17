@@ -125,9 +125,9 @@ const DebtRepeater: React.FC<{
   return (
     <div className="space-y-4">
       {debts.map((debt, index) => (
-        <div key={debt.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+        <div key={debt.id} className="border rounded-lg p-4 bg-subtle-background">
           <div className="flex justify-between items-center mb-3">
-            <h4 className="font-medium text-gray-800 dark:text-gray-200">Debt #{index + 1}</h4>
+            <h4 className="font-medium text-foreground">Debt #{index + 1}</h4>
             <Button
               variant="ghost"
               size="sm"
@@ -140,13 +140,13 @@ const DebtRepeater: React.FC<{
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground-color mb-1">
                 Debt Type
               </label>
               <select
                 value={debt.type}
                 onChange={(e) => updateDebt(debt.id, 'type', e.target.value)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                className="w-full rounded-lg border bg-card text-foreground px-3 py-2 text-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary"
               >
                 <option value="">Select type</option>
                 {debtTypes.map(type => (
@@ -158,23 +158,23 @@ const DebtRepeater: React.FC<{
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground-color mb-1">
                 Total Amount Owed
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground-color">$</span>
                 <input
                   type="number"
                   value={debt.amount === 0 ? "" : debt.amount}
                   onChange={(e) => updateDebt(debt.id, 'amount', e.target.value === "" ? 0 : Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 pl-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border bg-card text-foreground px-3 py-2 pl-8 text-sm outline-none transition-all focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
                   placeholder="e.g., 5000"
                 />
               </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-muted-foreground-color mb-1">
                 Interest Rate (APR %)
               </label>
               <div className="relative">
@@ -182,11 +182,11 @@ const DebtRepeater: React.FC<{
                   type="number"
                   value={debt.interestRate === 0 ? "" : debt.interestRate}
                   onChange={(e) => updateDebt(debt.id, 'interestRate', e.target.value === "" ? 0 : Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 pr-8 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  className="w-full rounded-lg border bg-card text-foreground px-3 py-2 pr-8 text-sm outline-none transition-all focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20"
                   placeholder="e.g., 5.5"
                   step="0.01"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground-color">%</span>
               </div>
             </div>
           </div>
@@ -196,14 +196,14 @@ const DebtRepeater: React.FC<{
       <Button
         variant="outline"
         onClick={addDebt}
-        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+        className="w-full border-2 border-dashed text-muted-foreground-color hover:border-primary/50 hover:text-foreground"
       >
         + Add Debt
       </Button>
       
       {debts.length === 0 && (
         <div className="text-center py-4">
-          <p className="text-gray-500 dark:text-gray-400">No debts added yet. Click "Add Debt" to get started.</p>
+          <p className="text-muted-foreground-color">No debts added yet. Click "Add Debt" to get started.</p>
         </div>
       )}
     </div>

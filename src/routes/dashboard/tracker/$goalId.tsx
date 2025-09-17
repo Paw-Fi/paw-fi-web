@@ -34,7 +34,7 @@ import { MilestonesList } from "@/components/goal-tracker/goal-detail/Milestones
 import { AdjustTimelineModal } from "@/components/goal-tracker/goal-detail/AdjustTimelineModal";
 import { GoalInsights } from "@/components/goal-tracker/goal-detail/GoalInsights";
 import { useState, useEffect, useOptimistic } from "react";
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '@/components/ui/markdown';
 import { useGoalTrackerWalkthrough } from '@/hooks/walkthrough/use-goal-tracker-walkthrough';
 import '@/styles/walkthrough.css';
 
@@ -371,7 +371,7 @@ function GoalDetail() {
   } as const;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 relative">
+    <div className="min-h-screen bg-background relative">
       {/* Full-page confetti overlay - only show when goal is completed */}
       {isGoalCompleted && (
         <div className="pointer-events-none fixed inset-0 z-10 overflow-hidden">
@@ -411,7 +411,7 @@ function GoalDetail() {
                       type="text"
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      className="text-3xl font-semibold bg-transparent border-b-2 border-blue-500 text-gray-900 dark:text-white focus:outline-none focus:border-blue-600 flex-1 pb-2 min-h-[44px]"  
+                      className="text-3xl font-semibold bg-transparent border-b text-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 min-h-[44px]"  
                       placeholder="Enter goal title"
                       autoFocus
                       onKeyDown={(e) => {
@@ -422,7 +422,7 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <h1 
-                    className="text-3xl font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group min-h-[44px] flex items-center"
+                    className="text-3xl font-semibold text-foreground cursor-pointer hover:text-primary transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingTitle}
                   >
                     {currentGoal.title}
@@ -441,7 +441,7 @@ function GoalDetail() {
                     <textarea
                       value={editedDescription}
                       onChange={(e) => setEditedDescription(e.target.value)}
-                      className="bg-transparent border-b-2 border-blue-500 text-gray-600 dark:text-gray-400 focus:outline-none focus:border-blue-600 flex-1 pb-2 resize-none min-h-[44px]"
+                      className="bg-transparent border-b text-muted-foreground-color focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 resize-none min-h-[44px]"
                       placeholder="Describe your goal"
                       rows={2}
                       autoFocus
@@ -453,7 +453,7 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <p 
-                    className="text-gray-600 dark:text-gray-400 max-w-3xl cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group min-h-[44px] flex items-center"
+                    className="text-muted-foreground-color max-w-3xl cursor-pointer hover:text-foreground transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingDescription}
                   >
                     {currentGoal.description || 'Working towards your financial independence goal'}
@@ -479,7 +479,7 @@ function GoalDetail() {
                     <button
                       onClick={saveInlineChanges}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-green-100 hover:bg-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 text-green-600 dark:text-green-400 transition-all duration-200 disabled:opacity-50"
+                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-subtle-background hover:bg-subtle-background/80 text-success transition-all duration-200 disabled:opacity-50"
                       title="Save changes"
                     >
                       <FontAwesomeIcon 
@@ -490,7 +490,7 @@ function GoalDetail() {
                     <button
                       onClick={cancelEditing}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-all duration-200 disabled:opacity-50"
+                      className="min-w-[44px] min-h-[44px] p-3 rounded-xl bg-subtle-background hover:bg-subtle-background/80 text-destructive transition-all duration-200 disabled:opacity-50"
                       title="Cancel editing"
                     >
                       <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
@@ -501,12 +501,12 @@ function GoalDetail() {
               
               <button
                 onClick={() => setShowGoalMenu(!showGoalMenu)}
-                className="min-w-[44px] min-h-[44px] p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 group"
+                className="min-w-[44px] min-h-[44px] p-3 rounded-xl hover:bg-subtle-background transition-all duration-200 group"
                 aria-label="Goal options"
               >
                 <FontAwesomeIcon 
                   icon={faEllipsisV} 
-                  className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" 
+                  className="w-5 h-5 text-muted-foreground-color group-hover:text-foreground" 
                 />
               </button>
           
@@ -518,7 +518,7 @@ function GoalDetail() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
+                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-card rounded-2xl shadow-lg border z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
                   >
                     <div className="py-3">
                       <button
@@ -526,32 +526,32 @@ function GoalDetail() {
                           startWalkthrough();
                           setShowGoalMenu(false);
                         }}
-                        className="w-full text-left px-4 py-4 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-3 transition-colors group min-h-[48px]"
+                        className="w-full text-left px-4 py-4 text-sm text-primary hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px]"
                       >
-                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                          <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <div className="w-8 h-8 bg-subtle-background rounded-lg flex items-center justify-center transition-colors">
+                          <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                           <div className="font-medium">Take Tour</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Learn about goal features</div>
+                          <div className="text-xs text-muted-foreground-color">Learn about goal features</div>
                         </div>
                       </button>
                       
-                      <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                      <div className="border-t my-2"></div>
                       
                       <button
                         onClick={() => {
                           setShowDeleteConfirm(true);
                           setShowGoalMenu(false);
                         }}
-                        className="w-full text-left px-4 py-4 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors group min-h-[48px]"
+                        className="w-full text-left px-4 py-4 text-sm text-destructive hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px]"
                       >
-                        <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
-                          <FontAwesomeIcon icon={faTrash} className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        <div className="w-8 h-8 bg-subtle-background rounded-lg flex items-center justify-center transition-colors">
+                          <FontAwesomeIcon icon={faTrash} className="w-4 h-4 text-destructive" />
                         </div>
                         <div>
                           <div className="font-medium">Delete Goal</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Permanently remove goal</div>
+                          <div className="text-xs text-muted-foreground-color">Permanently remove goal</div>
                         </div>
                       </button>
                     </div>
@@ -573,108 +573,84 @@ function GoalDetail() {
           <div className="mb-12">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:justify-between mb-8">
               <div data-tour="current-savings">
-                <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Current Saving</div>
+                <div className="text-sm font-medium text-muted-foreground-color mb-2">Current Saving</div>
                 <AnimatedNumber 
                   value={progressData.currentAmount} 
                   prefix="$" 
-                  className="text-4xl font-semibold text-gray-900 dark:text-white"
+                  className="text-4xl font-semibold text-foreground"
                   isAnimated={numbersAnimated}
                 />
-                <div className="text-gray-500 dark:text-gray-400 mt-2">
+                <div className="text-muted-foreground-color mt-2">
                   ${(progressData.targetAmount - progressData.currentAmount).toLocaleString()} to go
                 </div>
               </div>
               
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                 {!isGoalCompleted && (
-                  <button
-                    onClick={() => setShowUpdateProgressModal(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-2xl font-medium transition-all duration-200 hover:shadow-sm"
-                    data-tour="update-progress-btn"
-                  >
+                  <Button onClick={() => setShowUpdateProgressModal(true)} size="lg" data-tour="update-progress-btn">
                     Update Progress
-                  </button>
+                  </Button>
                 )}
                 
                 {isGoalCompleted && (
-                  <div className="flex items-center justify-center gap-2 px-6 py-3 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-2xl font-medium">
+                  <div className="flex items-center justify-center gap-2 px-6 py-3 bg-subtle-background text-success rounded-2xl font-medium">
                     <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                     Goal Completed!
                   </div>
                 )}
                 
-                <button 
-                  onClick={() => setShowTrackerModal(true)}
-                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-2xl font-medium transition-all duration-200 hover:shadow-sm"
-                  data-tour="goal-summary-btn"
-                >
-                 Goal Summary
-                </button>
+                <Button onClick={() => setShowTrackerModal(true)} variant="outline" size="lg" data-tour="goal-summary-btn">
+                  Goal Summary
+                </Button>
               </div>
             </div>
             
             {/* Enhanced Progress Bar */}
             <div className="relative" data-tour="progress-bar">
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+              <div className="w-full bg-subtle-background rounded-full h-3 overflow-hidden">
                 <motion.div
-                  className="bg-blue-500 h-3 rounded-full"
+                  className="bg-primary h-3 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progressData.progressPercentage}%` }}
                   transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
                 />
               </div>
-              <div className="flex justify-between mt-3 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex justify-between mt-3 text-sm text-muted-foreground-color">
                 <span>$0</span>
-                <span className="font-medium text-gray-900 dark:text-white">${progressData.targetAmount.toLocaleString()}</span>
+                <span className="font-medium text-foreground">${progressData.targetAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
             {/* Key Metrics */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6" data-tour="key-metrics">
-              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                    <FontAwesomeIcon icon={faCalendar} className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Start Date</div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
+                <div className="mb-1"></div>
+                <div className="text-xs font-medium text-muted-foreground-color mb-1">Start Date</div>
+                <div className="text-sm font-semibold text-foreground">
                   {currentGoal.start_date ? new Date(currentGoal.start_date).toLocaleDateString() : 'Not set'}
                 </div>
               </div>
               
-              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
-                    <FontAwesomeIcon icon={faBullseye} className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Target</div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
+                <div className="mb-1"></div>
+                <div className="text-xs font-medium text-muted-foreground-color mb-1">Target</div>
+                <div className="text-sm font-semibold text-foreground">
                   <AnimatedNumber value={progressData.targetAmount} prefix="$" isAnimated={numbersAnimated} />
                 </div>
               </div>
               
-              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
-                    <FontAwesomeIcon icon={faClock} className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Timeline</div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
+                <div className="mb-1"></div>
+                <div className="text-xs font-medium text-muted-foreground-color mb-1">Timeline</div>
+                <div className="text-sm font-semibold text-foreground">
                   {Math.floor(progressData.daysLeft / 365)}y {Math.floor((progressData.daysLeft % 365) / 30)}m
                 </div>
               </div>
               
-              <div className="text-center bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-2xl p-6">
-                <div className="flex items-center justify-center mb-3">
-                  <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                    <FontAwesomeIcon icon={faChartLine} className="w-5 h-5 text-white" />
-                  </div>
-                </div>
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Progress</div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
+                <div className="mb-1"></div>
+                <div className="text-xs font-medium text-muted-foreground-color mb-1">Progress</div>
+                <div className="text-sm font-semibold text-foreground">
                   <AnimatedNumber value={progressData.progressPercentage} suffix="%" isAnimated={numbersAnimated} />
                 </div>
               </div>
@@ -687,29 +663,21 @@ function GoalDetail() {
           <div className="mb-8">
             <nav className="flex flex-wrap gap-2" aria-label="Goal sections" data-tour="tab-navigation">
               {[
-                { id: "Quick Actions", label: "Quick Actions", icon: faFlag, tour: "quick-actions-tab" },
-                { id: 'Analytics', label: 'Analytics', icon: faChartLine, tour: "analytics-tab" },
-                { id: 'fine-tune', label: 'Fine-tune', icon: faSlidersH, tour: "fine-tune-tab" },
-                { id: 'activity', label: 'Activity', icon: faClock, tour: "activity-tab" },
+                { id: "Quick Actions", label: "Quick Actions", tour: "quick-actions-tab" },
+                { id: 'Analytics', label: 'Analytics', tour: "analytics-tab" },
+                { id: 'fine-tune', label: 'Fine-tune', tour: "fine-tune-tab" },
+                { id: 'activity', label: 'Activity', tour: "activity-tab" },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`group flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-2xl transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground-color hover:bg-subtle-background'
                   }`}
                   data-tour={tab.tour}
                 >
-                  <FontAwesomeIcon 
-                    icon={tab.icon} 
-                    className={`w-4 h-4 transition-colors ${
-                      activeTab === tab.id 
-                        ? 'text-blue-500 dark:text-blue-400' 
-                        : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300'
-                    }`} 
-                  />
                   <span className="hidden sm:inline">{tab.label}</span>
                   <span className="sm:hidden">{tab.id === 'Quick Actions' ? 'Actions' : tab.label}</span>
                 </button>
@@ -740,35 +708,27 @@ function GoalDetail() {
 
                   {/* AI Generated Strategy */}
                   {currentGoal.ai_generated_strategy && (
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg sm:rounded-xl lg:rounded-2xl p-4 sm:p-5 lg:p-6 mb-4 sm:mb-6 lg:mb-8 border border-purple-200 dark:border-purple-800">
-                      <div className="flex items-center gap-3 mb-3 sm:mb-4 lg:mb-6">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-purple-500 rounded-lg sm:rounded-xl flex items-center justify-center">
-                          <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                        </div>
-                        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white">Personalised Strategy</h3>
-                      </div>
-                      
-                      <div className="prose dark:prose-invert max-w-none">
-                        <ReactMarkdown 
-                          components={{
-                            h1: ({...props}) => <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4" {...props} />,
-                            h2: ({...props}) => <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3 mt-6" {...props} />,
-                            h3: ({...props}) => <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 mt-4" {...props} />,
-                            p: ({...props}) => <p className="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed" {...props} />,
-                            ul: ({...props}) => <ul className="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300" {...props} />,
-                            ol: ({...props}) => <ol className="list-decimal list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300" {...props} />,
-                            li: ({...props}) => <li className="text-gray-700 dark:text-gray-300" {...props} />,
-                            strong: ({...props}) => <strong className="font-semibold text-gray-900 dark:text-white" {...props} />,
-                            em: ({...props}) => <em className="italic text-gray-700 dark:text-gray-300" {...props} />,
-                            blockquote: ({...props}) => <blockquote className="border-l-4 border-purple-300 dark:border-purple-600 pl-4 italic text-gray-600 dark:text-gray-400 mb-4" {...props} />,
-                            table: ({...props}) => <table className="w-full border-collapse border border-gray-300 dark:border-gray-600 mb-4" {...props} />,
-                            th: ({...props}) => <th className="border border-gray-300 dark:border-gray-600 px-3 py-2 bg-gray-100 dark:bg-gray-800 font-semibold text-left" {...props} />,
-                            td: ({...props}) => <td className="border border-gray-300 dark:border-gray-600 px-3 py-2" {...props} />,
-                          }}
-                        >
-                          {currentGoal.ai_generated_strategy}
-                        </ReactMarkdown>
-                      </div>
+                    <div className="bg-card border rounded-xl p-6 mb-8 shadow-sm">
+                      <h3 className="text-xl font-bold text-foreground mb-4">Personalised Strategy</h3>
+                      <Markdown 
+                        content={currentGoal.ai_generated_strategy}
+                        className="prose mx-auto max-w-none dark:prose-invert lg:prose-lg"
+                        components={{
+                          h1: ({children}: any) => <h1 className="text-2xl font-bold text-foreground mb-4">{children}</h1>,
+                          h2: ({children}: any) => <h2 className="text-xl font-bold text-foreground mb-3 mt-6">{children}</h2>,
+                          h3: ({children}: any) => <h3 className="text-lg font-semibold text-foreground mb-2 mt-4">{children}</h3>,
+                          p: ({children}: any) => <p className="mb-4 text-muted-foreground-color leading-relaxed">{children}</p>,
+                          ul: ({children}: any) => <ul className="list-disc list-inside mb-4 space-y-2 text-muted-foreground-color">{children}</ul>,
+                          ol: ({children}: any) => <ol className="list-decimal list-inside mb-4 space-y-2 text-muted-foreground-color">{children}</ol>,
+                          li: ({children}: any) => <li className="text-muted-foreground-color">{children}</li>,
+                          strong: ({children}: any) => <strong className="font-semibold text-foreground">{children}</strong>,
+                          em: ({children}: any) => <em className="italic text-muted-foreground-color">{children}</em>,
+                          blockquote: ({children}: any) => <blockquote className="border-l border pl-4 italic text-muted-foreground-color mb-4">{children}</blockquote>,
+                          table: ({children}: any) => <table className="w-full border-collapse border mb-4">{children}</table>,
+                          th: ({children}: any) => <th className="border px-3 py-2 bg-subtle-background font-semibold text-left">{children}</th>,
+                          td: ({children}: any) => <td className="border px-3 py-2">{children}</td>,
+                        }}
+                      />
                     </div>
                   )}             
                 
@@ -804,14 +764,9 @@ function GoalDetail() {
                   transition={{ duration: 0.3 }}
                 >
                   <div className="space-y-4 sm:space-y-6">
-                    <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg sm:rounded-xl flex items-center justify-center">
-                        <FontAwesomeIcon icon={faMagicWandSparkles} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white">Savings Projection Chart</h3>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Fine-tune your goal parameters and see how they affect your projection</p>
-                      </div>
+                    <div className="mb-6">
+                      <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground">Savings Projection Chart</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground-color">Fine-tune your goal parameters and see how they affect your projection</p>
                     </div>
                     
                   
@@ -836,14 +791,9 @@ function GoalDetail() {
                   transition={{ duration: 0.3 }}
                 >
                   <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-                    <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center">
-                        <FontAwesomeIcon icon={faClock} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 dark:text-white">Activity & Progress History</h3>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Track your progress updates and goal modifications</p>
-                      </div>
+                    <div className="mb-6">
+                      <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground">Activity & Progress History</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground-color">Track your progress updates and goal modifications</p>
                     </div>                    
                 
                     
@@ -879,7 +829,7 @@ function GoalDetail() {
               {Array.from({ length: 20 }).map((_, i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+                  className="absolute w-2 h-2 bg-primary rounded-full opacity-60"
                   style={{
                     left: `${Math.random() * 100}%`,
                     top: `${Math.random() * 50}%`,
@@ -888,7 +838,7 @@ function GoalDetail() {
                     y: [0, -100, 100],
                     x: [(Math.random() - 0.5) * 100, (Math.random() - 0.5) * 200],
                     rotate: [0, 360],
-                    opacity: [1, 0.8, 0],
+                    opacity: [0.6, 0.4, 0],
                   }}
                   transition={{
                     duration: 3,
@@ -900,14 +850,14 @@ function GoalDetail() {
               ))}
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 text-center border border-green-200 dark:border-green-800">
+            <div className="bg-card rounded-xl sm:rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 text-center border shadow-sm">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.3 }}
                 className="mb-4 sm:mb-6"
               >
-                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-green-500 text-white rounded-full text-2xl sm:text-3xl lg:text-4xl xl:text-5xl mb-3 sm:mb-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-success text-white rounded-full text-2xl sm:text-3xl lg:text-4xl xl:text-5xl mb-3 sm:mb-4">
                   🎯
                 </div>
               </motion.div>
@@ -916,7 +866,7 @@ function GoalDetail() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+                className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-3 sm:mb-4">
               
                 🎉 Congratulations! 🎉
               </motion.h2>
@@ -925,10 +875,10 @@ function GoalDetail() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-sm sm:text-base lg:text-lg text-gray-700 dark:text-gray-300 mb-4 sm:mb-6 lg:mb-8">
+                className="text-sm sm:text-base lg:text-lg text-muted-foreground-color mb-4 sm:mb-6 lg:mb-8">
               
                 You've successfully achieved your "{currentGoal.title}" goal!<br className="hidden sm:block" />
-                <span className="sm:hidden"> </span>You've saved <span className="font-bold text-green-600 dark:text-green-400">${progressData.targetAmount.toLocaleString()}</span> and reached 100% of your target.
+                <span className="sm:hidden"> </span>You've saved <span className="font-bold text-success">${progressData.targetAmount.toLocaleString()}</span> and reached 100% of your target.
               </motion.p>
               
               <motion.div
@@ -937,28 +887,28 @@ function GoalDetail() {
                 transition={{ delay: 0.6 }}
                 className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8"
               >
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
+                <div className="bg-card border rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
                   <div className="text-xl sm:text-2xl mb-1 sm:mb-2">💰</div>
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-green-600 dark:text-green-400">
+                  <div className="text-base sm:text-lg lg:text-xl font-bold text-success">
                     ${progressData.targetAmount.toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Total Saved</div>
+                  <div className="text-xs text-muted-foreground-color">Total Saved</div>
                 </div>
                 
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
+                <div className="bg-card border rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
                   <div className="text-xl sm:text-2xl mb-1 sm:mb-2">📈</div>
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-blue-600 dark:text-blue-400">
+                  <div className="text-base sm:text-lg lg:text-xl font-bold text-primary">
                     100%
                   </div>
-                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Goal Achieved</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground-color">Goal Achieved</div>
                 </div>
                 
-                <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
+                <div className="bg-card border rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
                   <div className="text-xl sm:text-2xl mb-1 sm:mb-2">🏆</div>
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-purple-600 dark:text-purple-400">
+                  <div className="text-base sm:text-lg lg:text-xl font-bold text-primary">
                     Success!
                   </div>
-                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Mission Complete</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground-color">Mission Complete</div>
                 </div>
               </motion.div>
               
@@ -968,23 +918,15 @@ function GoalDetail() {
                 transition={{ delay: 0.7 }}
                 className="space-y-4"
               >
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">What's Next?</h3>
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-3 sm:mb-4">What's Next?</h3>
                 <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
-                  <button
-                    onClick={() => navigate({ to: '/dashboard/tracker' })}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation min-h-[48px] text-sm sm:text-base"
-                  >
-                    <FontAwesomeIcon icon={faBullseye} className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Button onClick={() => navigate({ to: '/dashboard/tracker' })} size="lg" className="min-h-[48px]">
                     Create New Goal
-                  </button>
+                  </Button>
                   
-                  <button
-                    onClick={() => navigate({ to: '/dashboard/tracker' })}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-200 shadow-lg hover:shadow-xl touch-manipulation min-h-[48px] text-sm sm:text-base"
-                  >
-                    <FontAwesomeIcon icon={faChartLine} className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Button onClick={() => navigate({ to: '/dashboard/tracker' })} variant="outline" size="lg" className="min-h-[48px]">
                     View All Goals
-                  </button>
+                  </Button>
                 </div>
               </motion.div>
             </div>
@@ -1048,14 +990,14 @@ function GoalDetail() {
       >
         <div className="p-4 sm:p-6">
           <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <FontAwesomeIcon icon={faTrash} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-600 dark:text-red-400" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-subtle-background rounded-full flex items-center justify-center">
+              <FontAwesomeIcon icon={faTrash} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-destructive" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground break-words">
                 Delete "{currentGoal.title}"?
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs sm:text-sm text-muted-foreground-color">
                 This action cannot be undone. All milestones and progress will be permanently deleted.
               </p>
             </div>
@@ -1070,7 +1012,7 @@ function GoalDetail() {
             </Button>
             <Button
               onClick={handleDeleteGoal}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              variant="destructive"
             >
               Delete Goal
             </Button>
@@ -1082,5 +1024,6 @@ function GoalDetail() {
     </div>
     </div>
   );
+
 }
 

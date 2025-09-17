@@ -4,7 +4,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { 
   faRocket,
   faExclamationTriangle,
-  faCheck,
   faChevronDown
 } from "@fortawesome/free-solid-svg-icons";
 import { Button } from "@/components/ui/button";
@@ -18,13 +17,13 @@ import { supabase } from "@/lib/supabase";
 import { useCookie } from "@/utils/use-cookie";
 import MonekoAdvisorMessage, { type AdvisorMessage } from "@/components/ui/MonekoAdvisorMessage";
 import { GoalAdvisorMessageGenerator } from "./goal-advisor-messages";
-import { PresetProfileSelector } from "@/components/financial-health/PresetProfileSelector";
 import type { 
   GoalType, 
   QuestionnaireTemplate, 
 } from "@/data/questionnaire-templates";
 import type { ComprehensiveFinancialProfile, CategoryInfo, FinancialProfileQuestion, QuestionCategory, GoalSpecificAnswers } from "@/types/financial-quiz-constants";
 import { categories as allCategories, getGoalSpecificQuestions } from "@/types/financial-quiz-constants";
+import { presetProfiles } from "@/types/preset-profiles";
 
 // Privacy Info Expandable Component
 const PrivacyInfoExpandable: React.FC = () => {
@@ -75,7 +74,7 @@ export function QuestionnaireFlow({
   template, 
   onComplete, 
   onCancel,
-  userId 
+  userId
 }: QuestionnaireFlowProps) {
   const [answers, setAnswers] = useState<Partial<ComprehensiveFinancialProfile>>({});
   const [goalSpecificAnswers, setGoalSpecificAnswers] = useState<GoalSpecificAnswers>({});
@@ -83,8 +82,13 @@ export function QuestionnaireFlow({
   const [generalError, setGeneralError] = useState<string>('');
   const [advisorMessage, setAdvisorMessage] = useState<AdvisorMessage | null>(null);
   const [showAdvisorMessage, setShowAdvisorMessage] = useState(false);
-  const [showPresetBanner, setShowPresetBanner] = useState(false);
-  const [appliedProfileName, setAppliedProfileName] = useState<string>('');
+  
+  // Setup flow state
+  const [currentStep, setCurrentStep] = useState<'setup-experience' | 'preset-profile' | 'questionnaire'>('setup-experience');
+  const [selectedSetupMode, setSelectedSetupMode] = useState<'customized' | 'faster' | null>('customized');
+  const [showConfirmationButton, setShowConfirmationButton] = useState(false);
+  const [selectedPresetProfile, setSelectedPresetProfile] = useState<string | null>(null);
+  const [showPresetConfirmation, setShowPresetConfirmation] = useState(false);
   
   // Cookie utilities for guest profile management
   const { getCookie, setCookie } = useCookie();
@@ -148,6 +152,97 @@ export function QuestionnaireFlow({
   }, [allQuestions, categories]);
 
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id || '');
+
+  // Handle setup experience selection
+  const handleSetupExperienceSelect = (mode: 'customized' | 'faster') => {
+    setSelectedSetupMode(mode);
+    setShowConfirmationButton(true);
+  };
+
+  // Handle confirmation after setup experience selection
+  const handleSetupConfirmation = () => {
+    if (selectedSetupMode === 'customized') {
+      setCurrentStep('questionnaire');
+    } else {
+      setCurrentStep('preset-profile');
+    }
+  };
+
+  // Handle preset profile selection (just select, don't create yet)
+  const handlePresetProfileSelect = (profileType: string) => {
+    setSelectedPresetProfile(profileType);
+    setShowPresetConfirmation(true);
+  };
+
+  // Handle preset profile confirmation and goal creation
+  const handlePresetProfileConfirm = async () => {
+    if (!selectedPresetProfile) return;
+    
+    // Clear any previous errors
+    setGeneralError('');
+    
+    // Generate minimal answers based on preset profile
+    const presetAnswers = generatePresetProfileAnswers(selectedPresetProfile);
+    
+    console.log('Creating goal with preset profile:', selectedPresetProfile);
+    console.log('Generated preset answers:', presetAnswers);
+    
+    try {
+      const requestParams = {
+        goalType,
+        questionnaireAnswers: presetAnswers,
+        userId: userId || null,
+        isPresetProfile: true,
+        presetProfileType: selectedPresetProfile
+      };
+
+      console.log('Calling createGoalWithAI with params:', requestParams);
+      
+      // Create the goal with preset profile - this will trigger the loading state
+      const result = await createGoalWithAI(requestParams);
+      
+      console.log('Goal creation result:', result);
+      
+      // Call onComplete to show the result
+      onComplete(result);
+    } catch (error) {
+      console.error('Failed to create goal with preset profile:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to create goal with preset profile. Please try again.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setGeneralError(errorMessage);
+    }
+  };
+
+  // Generate preset profile answers based on profile type
+  const generatePresetProfileAnswers = (profileType: string) => {
+    // Find the matching preset profile
+    const profile = presetProfiles.find(p => p.id === profileType);
+    
+    if (!profile) {
+      console.error('Preset profile not found:', profileType);
+      // Return a basic profile as fallback
+      return {
+        current_age: 30,
+        marital_status: 'single',
+        dependents: 0,
+        gross_monthly_income: 5000,
+        net_monthly_income: 4000,
+        income_stability: 'stable',
+        housing_cost: 1500,
+        investment_timeline: 'long',
+        risk_tolerance: 'moderate',
+        investment_experience: 'beginner',
+      };
+    }
+    
+    console.log('Using preset profile:', profile.name, profile.answers);
+    return profile.answers;
+  };
 
   const validate = useCallback(() => {
     const newErrors: Record<string, string> = {};
@@ -249,18 +344,6 @@ export function QuestionnaireFlow({
     }
   };
 
-  // Handle preset profile application
-  const handlePresetProfileSelect = useCallback((profileAnswers: Record<string, any>, profileName: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      ...profileAnswers,
-      // Preserve debt-details and multiple choice arrays structure
-      'debt-details': profileAnswers['debt-details'] || [],
-      'additional_income_sources': profileAnswers['additional_income_sources'] || [],
-    }));
-    setShowPresetBanner(true);
-    setAppliedProfileName(profileName);
-  }, []);
 
   // Auto-fill questionnaire with existing profile data
   useEffect(() => {
@@ -641,6 +724,239 @@ export function QuestionnaireFlow({
     );
   }
 
+  // Render Setup Experience Selection (Step 1)
+  if (currentStep === 'setup-experience') {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-3xl font-bold text-foreground mb-3">
+            Choose Your Setup Experience
+          </h1>
+          <p className="text-muted-foreground-color">
+            How would you like to create your financial plan? Choose the option that works best for you.
+          </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Customized Setup Option */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <button
+              onClick={() => handleSetupExperienceSelect('customized')}
+              className={`w-full bg-card hover:bg-subtle-background border rounded-xl p-6 text-left transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                selectedSetupMode === 'customized' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border hover:border-primary/50'
+              }`}
+            >
+              <div className="flex justify-end mb-4">
+                <span className="bg-primary text-white text-xs font-medium px-3 py-1 rounded-lg">
+                  Recommended
+                </span>
+              </div>
+
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Customized Setup
+              </h3>
+              <p className="text-sm text-muted-foreground-color mb-4 leading-relaxed">
+                Answer detailed questions to get a personalized financial plan tailored specifically to your situation and goals.
+              </p>
+
+              <div className="space-y-2 mb-4">
+                <div className="text-sm text-muted-foreground-color">
+                  • Fully personalized recommendations
+                </div>
+                <div className="text-sm text-muted-foreground-color">
+                  • Detailed financial analysis
+                </div>
+                <div className="text-sm text-muted-foreground-color">
+                  • Custom strategies & milestones
+                </div>
+              </div>
+
+              <div className="text-sm text-muted-foreground-color">
+                <span>⏱ 5-8 minutes</span>
+              </div>
+            </button>
+          </motion.div>
+
+          {/* Faster Setup Option */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <button
+              onClick={() => handleSetupExperienceSelect('faster')}
+              className={`w-full bg-card hover:bg-subtle-background border rounded-xl p-6 text-left transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                selectedSetupMode === 'faster' 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border hover:border-primary/50'
+              }`}
+            >
+              <div className="flex justify-end mb-4">
+                <span className="bg-success text-white text-xs font-medium px-3 py-1 rounded-lg">
+                  Express
+                </span>
+              </div>
+
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Faster Setup
+              </h3>
+              <p className="text-sm text-muted-foreground-color mb-4 leading-relaxed">
+                Choose from pre-built financial profiles and get started immediately with proven strategies tailored to common financial situations.
+              </p>
+
+              <div className="space-y-2 mb-4">
+                <div className="text-sm text-muted-foreground-color">
+                  • Pre-built expert templates
+                </div>
+                <div className="text-sm text-muted-foreground-color">
+                  • Instant plan generation
+                </div>
+                <div className="text-sm text-muted-foreground-color">
+                  • Easy to customize later
+                </div>
+              </div>
+
+              <div className="text-sm text-muted-foreground-color">
+                <span>⏱ 1-2 minutes</span>
+              </div>
+            </button>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-center"
+        >
+          <p className="text-sm text-muted-foreground-color mb-4">
+            Don't worry, you can always modify your plan later as your situation changes.
+          </p>
+          
+       
+           <div className="flex gap-2 justify-center">
+           <Button
+              onClick={onCancel}
+              variant="outline"
+              className="px-6 py-2"
+            >
+              Cancel
+            </Button>
+            <Button
+                onClick={handleSetupConfirmation}
+                disabled={!selectedSetupMode}
+                className="px-8 py-2"
+              >
+                Confirm
+              </Button>
+           </div>
+          
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Render Preset Profile Selection (Step 2 for faster setup)
+  if (currentStep === 'preset-profile') {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-3xl font-bold text-foreground mb-3">
+            Choose Your Profile
+          </h1>
+          <p className="text-muted-foreground-color">
+            Select the profile that best matches your current situation.
+          </p>
+        </motion.div>
+
+        {generalError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="mb-8 p-6 bg-card border border-red-200 dark:border-red-800 rounded-xl shadow-sm"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-5 h-5 text-warning flex-shrink-0 mt-0.5">⚠️</div>
+              <div className="flex-1">
+                <p className="text-foreground font-medium mb-1">
+                  {generalError}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {presetProfiles.map((profile, index) => (
+            <motion.div
+              key={profile.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <button
+                onClick={() => handlePresetProfileSelect(profile.id)}
+                className={`w-full bg-card hover:bg-subtle-background border rounded-xl p-4 text-left transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                  selectedPresetProfile === profile.id 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border hover:border-primary/50'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-base font-semibold text-foreground">
+                    {profile.name}
+                  </h3>
+                </div>
+                <p className="text-sm text-muted-foreground-color mb-3">
+                  {profile.description}
+                </p>               
+              </button>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-center"
+        >          
+            <div className="flex justify-center gap-4">
+              <Button
+                onClick={() => setCurrentStep('setup-experience')}
+                variant="outline"
+                className="px-6 py-2"
+              >
+                Back
+              </Button>
+              <Button
+                onClick={handlePresetProfileConfirm}
+                disabled={isLoading}
+                className="px-8 py-2"
+              >
+                {isLoading ? 'Creating Goal...' : `Create Goal`}
+              </Button>
+            </div>
+          
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       <motion.div 
@@ -677,7 +993,6 @@ export function QuestionnaireFlow({
           </div>
         </motion.div>
       )}
-
       {/* 1. CategoryProgress - Steps component */}
       <CategoryProgress
         categories={categories}
@@ -685,45 +1000,7 @@ export function QuestionnaireFlow({
         progress={progress}
       />
 
-      {/* 2. Preset Profile Selector - only show on first category */}
-      {activeCategory === categories[0]?.id && (
-        <div className="mb-6">
-          <PresetProfileSelector onProfileSelect={handlePresetProfileSelect} />
-        </div>
-      )}
-      
-      {/* Profile Applied Banner */}
-      {showPresetBanner && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 bg-card border border-green-200 dark:border-green-800 rounded-xl p-6 shadow-sm"
-        >
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-success rounded-full flex items-center justify-center">
-                <FontAwesomeIcon icon={faCheck} className="text-white text-sm" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-foreground mb-1">
-                "{appliedProfileName}" profile applied successfully!
-              </h4>
-              <p className="text-sm text-muted-foreground-color">
-                All questions have been auto-filled. You can still modify any answers as needed.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowPresetBanner(false)}
-              className="text-muted-foreground-color hover:text-foreground transition-colors duration-200 p-1"
-            >
-              ✕
-            </button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* 3. Main Form Component */}
+      {/* 2. Main Form Component */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeCategory}
@@ -772,7 +1049,7 @@ export function QuestionnaireFlow({
         </motion.div>
       </AnimatePresence>
 
-      {/* 4. Navigation Component */}
+      {/* 3. Navigation Component */}
       <FormNavigation
         canGoBack={canGoBack}
         canGoNext={canGoNext}
@@ -787,7 +1064,7 @@ export function QuestionnaireFlow({
         hasValidationErrors={Object.keys(errors).length > 0 || !!generalError}
       />
 
-      {/* 5. Privacy Notice Component (least important, at the bottom) */}
+      {/* 4. Privacy Notice Component (least important, at the bottom) */}
       <div className="mt-16 bg-subtle-background rounded-xl p-8">
         <h4 className="font-semibold text-foreground mb-4">
           Privacy Protected
