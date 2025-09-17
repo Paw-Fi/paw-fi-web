@@ -20,6 +20,7 @@ import { ActivityActions } from "@/utils/reward-actions-clone";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { useAuth } from "@/contexts/auth-context";
 import { Modal } from "../ui/modal";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import monekoIcon from "@assets/images/logo/moneko.png"
 
 interface AIIntroComponentProps {
@@ -74,6 +75,7 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isQuestionnaireModalOpen, setIsQuestionnaireModalOpen] = useState(false);
   const [isPresentationModalOpen, setIsPresentationModalOpen] = useState(false);
+  const [showRegistrationPrompt, setShowRegistrationPrompt] = useState(false);
   const [selectedGoalType, setSelectedGoalType] = useState<GoalType | null>(null);
   const [goalData, setGoalData] = useState<GoalCreationResult | null>(null);
   const [loadingDuration, setLoadingDuration] = useState(0);
@@ -452,15 +454,15 @@ Sound good?`,
     setIsQuestionnaireModalOpen(true);
   };
 
-  const handleQuestionnaireComplete = (result: GoalCreationResult) => {
-    // Store goal ID in cookie for guest users
-    if (!user && result.goal?.id) {
-      addGuestGoalId(result.goal.id);
-    }
-    
+  const handleGoalCreated = (result: GoalCreationResult) => {
     setGoalData(result);
     setIsQuestionnaireModalOpen(false);
-    setIsPresentationModalOpen(true);
+    // Show registration prompt first if user is not logged in
+    if (!user) {
+      setShowRegistrationPrompt(true);
+    } else {
+      setIsPresentationModalOpen(true);
+    }
   };
 
   const handlePresentationComplete = () => {
@@ -484,6 +486,23 @@ Sound good?`,
 
   const handleClosePresentationModal = () => {
     setIsPresentationModalOpen(false);
+    setGoalData(null);
+  };
+
+  const handleRegisterFromPrompt = () => {
+    setShowRegistrationPrompt(false);
+    setGoalData(null);
+    // Navigate to registration/login page
+    navigate({ to: '/register', search: { redirect: '/dashboard/tracker/' + goalData?.goal?.id } });
+  };
+
+  const handleSkipRegistration = () => {
+    setShowRegistrationPrompt(false);
+    setIsPresentationModalOpen(true);
+  };
+
+  const handleCloseRegistrationPrompt = () => {
+    setShowRegistrationPrompt(false);
     setGoalData(null);
   };
 
@@ -591,12 +610,99 @@ return (
               <QuestionnaireFlow
                 goalType={selectedGoalType as GoalType}
                 template={questionnaireTemplate as QuestionnaireTemplate}
-                onComplete={handleQuestionnaireComplete}
+                onComplete={handleGoalCreated}
                 onCancel={handleCloseModal}
                 userId={user?.id || null}
               />
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Registration Prompt Modal */}
+      <Modal
+        isOpen={showRegistrationPrompt}
+        onClose={handleCloseRegistrationPrompt}
+        width="wide"
+      >
+        <div className="p-6 sm:p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-center space-y-6"
+          >
+            {/* Header */}
+            <div className="space-y-4">
+              <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                <img src={monekoIcon} alt="Moneko" className="w-10 h-10" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  Your Financial Plan is Ready! 🎉
+                </h2>
+                <p className="text-muted-foreground-color">
+                  Create a free account to save your personalized plan and start tracking your progress.
+                </p>
+              </div>
+            </div>
+
+            {/* Benefits Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-8">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-4 text-center">
+                  <h3 className="font-semibold text-foreground mb-1">Track Progress</h3>
+                  <p className="text-sm text-muted-foreground-color">Monitor your savings and milestones</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-4 text-center">
+                  <h3 className="font-semibold text-foreground mb-1">Stay Motivated</h3>
+                  <p className="text-sm text-muted-foreground-color">Get reminders and celebrate wins</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+                <CardContent className="p-4 text-center">
+                  <h3 className="font-semibold text-foreground mb-1">AI Coaching</h3>
+                  <p className="text-sm text-muted-foreground-color">Get personalized financial advice</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="space-y-4">
+              <Button 
+                onClick={handleRegisterFromPrompt}
+                size="lg" 
+                className="w-full"
+              >
+                <FontAwesomeIcon icon={faUser} className="w-4 h-4 mr-2" />
+                Create Free Account
+              </Button>
+              
+              <Button 
+                onClick={handleLogin}
+                variant="outline" 
+                size="lg" 
+                className="w-full"
+              >
+                <FontAwesomeIcon icon={faSignInAlt} className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
+            </div>
+
+            {/* Skip Option - Minimal visibility */}
+            <div className="pt-4">
+              <button
+                onClick={handleSkipRegistration}
+                className="text-xs text-muted-foreground-color hover:text-foreground transition-colors duration-200 underline cursor-pointer"
+              >
+                I'll do it later
+              </button>
+            </div>
+          </motion.div>
         </div>
       </Modal>
 
