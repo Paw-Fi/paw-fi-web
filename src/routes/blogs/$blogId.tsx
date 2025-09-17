@@ -112,58 +112,299 @@ function BlogDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
-      {/* Enhanced Article Schema */}
+      {/* Enhanced Article Schema with Financial Expert Knowledge */}
       <StructuredData
         type="article"
         data={{
-          title: blog.title,
+          "@type": "Article",
+          "@id": `https://moneko.io/blogs/${blog.slug}`,
+          headline: blog.title,
           description: blog.excerpt,
           url: `https://moneko.io/blogs/${blog.slug}`,
+          mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": `https://moneko.io/blogs/${blog.slug}`
+          },
           datePublished: blog.publishedAt,
           dateModified: blog.publishedAt,
           author: {
+            "@type": "Person",
             name: blog.author.name,
             url: `https://moneko.io/team#${blog.author.id}`,
             jobTitle: blog.author.title,
             image: blog.author.avatar,
+            knowsAbout: [
+              "Personal Finance",
+              "Investment Strategy", 
+              "Financial Planning",
+              "Portfolio Management",
+              "Financial Education",
+              "Risk Assessment",
+              "Retirement Planning",
+              "Asset Allocation"
+            ],
+            hasCredential: blog.author.title.includes("CFA") ? "Chartered Financial Analyst" : 
+                           blog.author.title.includes("CFP") ? "Certified Financial Planner" : 
+                           "Financial Professional"
           },
-          image: blog.coverImage,
+          image: {
+            "@type": "ImageObject",
+            url: blog.coverImage,
+            width: 1200,
+            height: 675
+          },
           publisher: {
-            name: 'Moneko',
-            url: 'https://moneko.io',
-            logo: 'https://moneko.io/logo192.png',
+            "@type": "Organization",
+            name: "Moneko",
+            url: "https://moneko.io",
+            logo: {
+              "@type": "ImageObject",
+              url: "https://moneko.io/logo192.png",
+              width: 192,
+              height: 192
+            },
+            sameAs: [
+              "https://twitter.com/moneko_ai",
+              "https://linkedin.com/company/moneko",
+              "https://facebook.com/moneko"
+            ]
           },
           wordCount,
           timeRequired: `PT${blog.readTime}M`,
           educationalLevel: "Beginner",
           isAccessibleForFree: true,
+          inLanguage: "en-US",
+          keywords: blog.seo?.keywords || blog.tags.map(tag => tag.name).join(", "),
+          articleSection: "Financial Education",
+          genre: "Educational Content",
+          audience: {
+            "@type": "Audience",
+            audienceType: "Financial Learners"
+          },
+          teaches: blog.tags.map(tag => tag.name),
+          about: blog.tags.map(tag => ({
+            "@type": "Thing",
+            name: tag.name,
+            sameAs: `https://moneko.io/blogs?tag=${tag.slug}`
+          })),
           speakable: {
+            "@type": "SpeakableSpecification",
             cssSelector: ["h1", "h2", "h3", ".prose p"]
+          },
+          potentialAction: {
+            "@type": "ReadAction",
+            target: `https://moneko.io/blogs/${blog.slug}`
           }
         }}
       />
 
-      {/* Author Person Schema */}
+      {/* Enhanced Author Person Schema */}
       <StructuredData
         type="person"
         data={{
+          "@type": "Person",
+          "@id": `https://moneko.io/team#${blog.author.id}`,
           name: blog.author.name,
           jobTitle: blog.author.title,
           description: blog.author.bio,
           image: blog.author.avatar,
           url: `https://moneko.io/team#${blog.author.id}`,
           worksFor: {
-            name: 'Moneko',
-            url: 'https://moneko.io',
-            logo: 'https://moneko.io/logo192.png',
+            "@type": "Organization",
+            name: "Moneko",
+            url: "https://moneko.io",
+            logo: "https://moneko.io/logo192.png"
           },
           knowsAbout: [
             "Personal Finance",
             "Investment Strategy", 
             "Financial Planning",
             "Portfolio Management",
-            "Financial Education"
+            "Financial Education",
+            "Risk Assessment",
+            "Retirement Planning",
+            "Asset Allocation",
+            "Budgeting",
+            "Debt Management"
+          ],
+          expertise: blog.author.title,
+          hasCredential: blog.author.title.includes("CFA") ? "Chartered Financial Analyst" : 
+                         blog.author.title.includes("CFP") ? "Certified Financial Planner" : 
+                         "Financial Professional",
+          alumniOf: blog.author.title.includes("CFA") ? "CFA Institute" : undefined,
+          memberOf: {
+            "@type": "Organization",
+            name: "Financial Planning Association"
+          }
+        }}
+      />
+
+      {/* Organization Schema for Moneko */}
+      <StructuredData
+        type="organization"
+        data={{
+          "@type": "Organization",
+          "@id": "https://moneko.io/#organization",
+          name: "Moneko",
+          alternateName: "Moneko Financial Education Platform",
+          description: "AI-powered financial education and budgeting platform providing personalized financial learning, calculators, and expert guidance",
+          url: "https://moneko.io",
+          logo: {
+            "@type": "ImageObject",
+            url: "https://moneko.io/logo192.png",
+            width: 192,
+            height: 192
+          },
+          foundingDate: "2023",
+          founder: {
+            "@type": "Person",
+            name: "Moneko Team"
+          },
+          numberOfEmployees: "10-50",
+          industry: "Financial Technology",
+          knowsAbout: [
+            "Personal Finance Education",
+            "AI-Powered Financial Planning",
+            "Investment Education",
+            "Budgeting Tools",
+            "Financial Calculators",
+            "Retirement Planning",
+            "Emergency Fund Planning"
+          ],
+          offers: [
+            {
+              "@type": "Service",
+              name: "Financial Education Platform",
+              description: "Comprehensive financial education with AI-powered personalization"
+            },
+            {
+              "@type": "Service", 
+              name: "Financial Calculators",
+              description: "Interactive calculators for retirement, mortgage, investment planning"
+            }
+          ],
+          sameAs: [
+            "https://twitter.com/moneko_ai",
+            "https://linkedin.com/company/moneko",
+            "https://facebook.com/moneko"
+          ],
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "Customer Support",
+            email: "hello@moneko.io"
+          }
+        }}
+      />
+
+      {/* FAQ Schema for Common Financial Questions */}
+      <StructuredData
+        type="faqpage"
+        data={{
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: `What is ${blog.title.toLowerCase().replace(/[?]/g, '')}?`,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: blog.excerpt
+              }
+            },
+            {
+              "@type": "Question",
+              name: "How can Moneko help with financial planning?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Moneko provides AI-powered financial education, interactive calculators, and personalized guidance to help you achieve your financial goals through expert-validated content and tools."
+              }
+            },
+            {
+              "@type": "Question",
+              name: "Is this financial advice suitable for beginners?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes, all Moneko content is designed to be accessible for beginners while providing valuable insights for more experienced investors. Our expert authors break down complex topics into easy-to-understand concepts."
+              }
+            }
           ]
+        }}
+      />
+
+      {/* HowTo Schema for Financial Guides */}
+      {blog.title.toLowerCase().includes('how') && (
+        <StructuredData
+          type="howto"
+          data={{
+            "@type": "HowTo",
+            name: blog.title,
+            description: blog.excerpt,
+            image: blog.coverImage,
+            totalTime: `PT${blog.readTime}M`,
+            estimatedCost: {
+              "@type": "MonetaryAmount",
+              currency: "USD",
+              value: "0"
+            },
+            supply: [
+              {
+                "@type": "HowToSupply",
+                name: "Financial Calculator",
+                requiredQuantity: "1"
+              },
+              {
+                "@type": "HowToSupply", 
+                name: "Financial Information",
+                requiredQuantity: "1"
+              }
+            ],
+            tool: [
+              {
+                "@type": "HowToTool",
+                name: "Moneko Financial Calculators",
+                url: "https://moneko.io/calculators"
+              }
+            ],
+            step: [
+              {
+                "@type": "HowToStep",
+                text: "Read the comprehensive guide",
+                name: "Learn the Concepts"
+              },
+              {
+                "@type": "HowToStep", 
+                text: "Use Moneko's calculators to apply the concepts",
+                name: "Apply the Knowledge"
+              },
+              {
+                "@type": "HowToStep",
+                text: "Track your progress with Moneko's tools", 
+                name: "Monitor Results"
+              }
+            ]
+          }}
+        />
+      )}
+
+      {/* EducationalOrganization Schema */}
+      <StructuredData
+        type="educationalorganization"
+        data={{
+          "@type": "EducationalOrganization",
+          name: "Moneko Financial Education",
+          description: "Professional financial education platform with CFA and CFP certified instructors",
+          url: "https://moneko.io",
+          logo: "https://moneko.io/logo192.png",
+          hasCredential: ["CFA Institute Member", "CFP Board Member"],
+          educationalCredentialAwarded: "Financial Literacy Certificate",
+          offers: {
+            "@type": "EducationalOccupationalProgram",
+            name: "Personal Finance Mastery",
+            description: "Comprehensive financial education covering budgeting, investing, and retirement planning",
+            provider: {
+              "@type": "Organization",
+              name: "Moneko"
+            }
+          }
         }}
       />
 

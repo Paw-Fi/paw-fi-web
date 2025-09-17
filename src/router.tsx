@@ -75,11 +75,12 @@ export function createRouter() {
             'activities',
             'completed-lessons', // Add other specific query keys
             'user-profile',
-            'conversations'
+            'conversations',
+            'user-courses' // Add this key that's used in learning pages
           ].includes(primaryKey ?? '');
           
-          // Only invalidate if the query is stale AND user-specific
-          return isUserSpecific && (isStale || query.state.status === 'error');
+          // Only invalidate if the query is stale AND user-specific AND not currently loading
+          return isUserSpecific && (isStale || query.state.status === 'error') && query.state.status !== 'loading';
         },
         // Use refetchType 'active' to avoid refetching inactive queries
         refetchType: 'active',

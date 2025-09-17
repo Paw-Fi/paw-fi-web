@@ -27,6 +27,7 @@ import { GoogleTagManager } from '@/components/google-tag-manager'
 import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
 import { ThemeInitScript } from '@/components/theme/theme-init-script'
+import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -127,8 +128,8 @@ export const Route = createRootRouteWithContext<{
 
 // Component to sync auth with query cache - must be inside AuthProvider
 function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
-  // Temporarily disabled to isolate the auth context issue
-  // useAuthQuerySync();
+  // Re-enabled to fix Link navigation API fetching issue
+  useAuthQuerySync();
   return <>{children}</>;
 }
 

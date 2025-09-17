@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 // Import WebP images with PNG fallback
 import monekoImgWebp from "@/assets/images/home-showcase/moneko-ai.webp"
 import monekoImgPng from "@/assets/images/home-showcase/moneko-ai.png"
@@ -49,6 +50,7 @@ const features = [
 
 export function DashboardShowcase() {
   const [selectedFeature, setSelectedFeature] = useState(features[0]);
+  const { viewport, animation, staggerAnimation } = useMobileAnimation();
 
   return (
     <section className="relative z-10 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
@@ -57,20 +59,20 @@ export function DashboardShowcase() {
         <div className="mb-16 text-center">
           <motion.h2
             className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl font-lato"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={animation.transition}
+            viewport={viewport}
           >
             Your AI-Powered Financial Dashboard
           </motion.h2>
           
           <motion.p
             className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            viewport={{ once: true }}
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={{ ...animation.transition, delay: 0.1 }}
+            viewport={viewport}
           >
             Discover why 50,000+ users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
           </motion.p>
@@ -78,10 +80,10 @@ export function DashboardShowcase() {
 
         {/* Tab Navigation */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
+          initial={animation.initial}
+          whileInView={animation.animate}
+          transition={{ ...animation.transition, delay: 0.2 }}
+          viewport={viewport}
           className="mb-12"
         >
           <div className="flex flex-wrap justify-center gap-2 p-2 backdrop-blur-xl rounded-2xl border border-white/20">
@@ -103,10 +105,10 @@ export function DashboardShowcase() {
 
         {/* Dashboard Display */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
+          initial={animation.initial}
+          whileInView={animation.animate}
+          transition={{ ...animation.transition, delay: 0.3 }}
+          viewport={viewport}
           className="relative"
         >
           {/* Browser Frame */}

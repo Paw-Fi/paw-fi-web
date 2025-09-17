@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDeviceType } from "@/hooks/use-device-type";
+import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 import faqData from "@/data/home/home-faq.json";
 
 interface FAQItem {
@@ -12,7 +12,7 @@ interface FAQItem {
 const faqItems: FAQItem[] = faqData;
 
 export default function FAQSection() {
-  const { isMobile } = useDeviceType();
+  const { isMobile, viewport, animation } = useMobileAnimation();
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
 
   const toggleItem = (id: string) => {
@@ -30,60 +30,44 @@ export default function FAQSection() {
       <div className="mx-auto max-w-4xl w-full">
         {/* Section Header */}
         <div className="mb-12 text-center">
-          {isMobile ? (
-            <>
-              <div className="mb-4 text-sm font-medium text-primary">
-                Frequently Asked Questions
-              </div>
-              <h2 className="text-foreground mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
-                Common Questions
-              </h2>
-              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato">
-                Everything you need to know about getting started with Moneko
-              </p>
-            </>
-          ) : (
-            <>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-                className="mb-4 text-sm font-medium text-primary"
-              >
-                Frequently Asked Questions
-              </motion.div>
-              
-              <motion.h2
-                className="text-foreground mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                viewport={{ once: true }}
-              >
-                Common Questions
-              </motion.h2>
-              
-              <motion.p
-                className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-                Everything you need to know about getting started with Moneko
-              </motion.p>
-            </>
-          )}
+          <motion.div
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={animation.transition}
+            viewport={viewport}
+            className="mb-4 text-sm font-medium text-primary"
+          >
+            Frequently Asked Questions
+          </motion.div>
+          
+          <motion.h2
+            className="text-foreground mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={{ ...animation.transition, delay: 0.1 }}
+            viewport={viewport}
+          >
+            Common Questions
+          </motion.h2>
+          
+          <motion.p
+            className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato"
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={{ ...animation.transition, delay: 0.2 }}
+            viewport={viewport}
+          >
+            Everything you need to know about getting started with Moneko
+          </motion.p>
         </div>
 
         {/* FAQ Items */}
         <motion.div
           className="space-y-4"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
+          initial={animation.initial}
+          whileInView={animation.animate}
+          transition={{ ...animation.transition, delay: 0.3 }}
+          viewport={viewport}
         >
           {faqItems.map((item, index) => (
             <div 

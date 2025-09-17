@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
-import { useDeviceType } from "@/hooks/use-device-type";
+import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 import videoDemo from "../../../../public/Moneko-onboard .webm";
 
 interface VideoSectionProps {
@@ -15,7 +15,7 @@ interface VideoSectionProps {
 }
 
 export default function VideoSection({ data }: VideoSectionProps) {
-  const { isMobile } = useDeviceType();
+  const { isMobile, viewport, animation } = useMobileAnimation();
   const { videoSection } = data;
 
   return (
@@ -23,45 +23,32 @@ export default function VideoSection({ data }: VideoSectionProps) {
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          {isMobile ? (
-            <>
-              <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
-                {videoSection.title}
-              </h2>
-              <p className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed font-lato">
-                {videoSection.subtitle}
-              </p>
-            </>
-          ) : (
-            <>
-              <motion.h2
-                className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                {videoSection.title}
-              </motion.h2>
-              <motion.p
-                className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed font-lato"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                viewport={{ once: true }}
-              >
-                {videoSection.subtitle}
-              </motion.p>
-            </>
-          )}
+          <motion.h2
+            className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={animation.transition}
+            viewport={viewport}
+          >
+            {videoSection.title}
+          </motion.h2>
+          <motion.p
+            className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed font-lato"
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={{ ...animation.transition, delay: 0.1 }}
+            viewport={viewport}
+          >
+            {videoSection.subtitle}
+          </motion.p>
         </div>
 
         {/* Video Demo with Browser Frame */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
+          initial={animation.initial}
+          whileInView={animation.animate}
+          transition={{ ...animation.transition, delay: 0.2 }}
+          viewport={viewport}
           className="relative"
         >
           {/* Browser Frame - matching dashboard-showcase.tsx structure */}

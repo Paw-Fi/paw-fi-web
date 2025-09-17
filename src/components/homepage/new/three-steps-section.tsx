@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faApple, faDiscord, faGooglePlay } from "@fortawesome/free-brands-svg-icons";
-import { useDeviceType } from "@/hooks/use-device-type";
+import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 import { DISCORD_URL } from "@/routes";
 
 interface ThreeStepsSectionProps {
@@ -44,7 +44,7 @@ const stepsData = [
 ];
 
 export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
-  const { isMobile } = useDeviceType();
+  const { isMobile, viewport, animation, staggerAnimation } = useMobileAnimation();
   
   // Use dynamic steps if available, otherwise fall back to default
   const steps = data.howItWorks?.steps || stepsData;
@@ -54,52 +54,48 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          {isMobile ? (
-            <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
-              3 Steps to Put Your Money on Autopilot
-            </h2>
-          ) : (
-            <motion.h2
-              className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              3 Steps to Put Your Money on Autopilot
-            </motion.h2>
-          )}
+          <motion.h2
+            className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={animation.transition}
+            viewport={viewport}
+          >
+            3 Steps to Put Your Money on Autopilot
+          </motion.h2>
         </div>
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {steps.map((step, index) => (
-            <motion.div
-              key={index}
-              className="text-center p-6 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              
-              <h3 className="text-xl font-bold text-foreground mb-4 font-lato">
-                {step.title}
-              </h3>
-              <p className="text-muted-foreground leading-relaxed font-lato">
-                {step.description}
-              </p>
-            </motion.div>
-          ))}
+          {steps.map((step, index) => {
+            const staggerConfig = staggerAnimation(index);
+            return (
+              <motion.div
+                key={index}
+                className="text-center p-6 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20"
+                initial={staggerConfig.initial}
+                whileInView={staggerConfig.animate}
+                transition={staggerConfig.transition}
+                viewport={viewport}
+              >
+                <h3 className="text-xl font-bold text-foreground mb-4 font-lato">
+                  {step.title}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed font-lato">
+                  {step.description}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            viewport={{ once: true }}
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={{ ...animation.transition, delay: 0.4 }}
+            viewport={viewport}
           >
             <Button
               asChild
@@ -114,10 +110,10 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            viewport={{ once: true }}
+            initial={animation.initial}
+            whileInView={animation.animate}
+            transition={{ ...animation.transition, delay: 0.5 }}
+            viewport={viewport}
           >
             <Button
               asChild
@@ -134,10 +130,10 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
         {/* Trust indicator */}
         <motion.p
           className="text-center text-sm text-muted-foreground mt-6"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          viewport={{ once: true }}
+          initial={animation.initial}
+          whileInView={animation.animate}
+          transition={{ ...animation.transition, delay: 0.6 }}
+          viewport={viewport}
         >
           Join the movement of never settling
         </motion.p>
