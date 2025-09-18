@@ -50,7 +50,65 @@ export default defineConfig({
       },
     }),
     tanstackStart({
-      customViteReactPlugin: true
+      customViteReactPlugin: true,    
+      pages:[
+        {
+          path: '/',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/passive-income/business-cash-flow',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/passive-income/high-interest-portfolios',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/passive-income/time-to-wealth',
+          prerender:{enabled:true}
+        },      
+        {
+          path: '/pricing',
+          prerender:{enabled:true}
+        },  
+        {
+          path: '/login',
+          prerender:{enabled:true}
+        },  
+        {
+          path: '/register',
+          prerender:{enabled:true}
+        },  
+        {
+          path: '/calculators',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/early-access',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/onboarding',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/dashboard',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/dashboard/tracker',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/dashboard/learning',
+          prerender:{enabled:true}
+        },     
+        {
+          path: '/dashboard/portfolio',
+          prerender:{enabled:true}
+        }
+      ]
     }),
     react(),
     compression({
