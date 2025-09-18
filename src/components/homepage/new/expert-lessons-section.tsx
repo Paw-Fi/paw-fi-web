@@ -1,7 +1,5 @@
-import * as m from "framer-motion/m";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 // Import basic lessons data - handle potential large file
 const getBasicLessonsData = async () => {
   try {
@@ -45,7 +43,6 @@ const defaultLessons = [
 ];
 
 export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps) {
-  const { isMobile, viewport, animation, staggerAnimation } = useMobileAnimation();
   const lessons = defaultLessons;
 
   return (
@@ -53,40 +50,22 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <m.h2
-            className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={animation.transition}
-            viewport={viewport}
-          >
+          <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
             Dive Deeper with Expert-Led Lessons
-          </m.h2>
+          </h2>
           
-          <m.p
-            className="text-muted-foreground text-lg max-w-3xl mx-auto font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={{ ...animation.transition, delay: 0.1 }}
-            viewport={viewport}
-          >
+          <p className="text-muted-foreground text-lg max-w-3xl mx-auto font-lato">
             Clear, bite-sized lessons designed to turn financial jargon into practical steps. Whether you're just starting out or leveling up, Moneko helps you invest with confidence.
-          </m.p>
+          </p>
         </div>
 
         {/* Lessons Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {lessons.map((lesson, index) => {
-            const staggerConfig = staggerAnimation(index);
             return (
-              <m.div
+              <div
                 key={index}
                 className="group p-8 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300"
-                initial={staggerConfig.initial}
-                whileInView={staggerConfig.animate}
-                transition={staggerConfig.transition}
-                viewport={viewport}
-                whileHover={{ y: -5 }}
               >
                 {/* Content */}
                 <h3 className="text-xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors font-lato">
@@ -121,7 +100,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
                     </svg>
                   </Link>
                 )}
-              </m.div>
+              </div>
             );
           })}
         </div>

@@ -1,4 +1,3 @@
-import * as m from "framer-motion/m";
 import { AISearchInput } from "@/components/ui/ai-search-input";
 import { useDeviceType } from "@/hooks/use-device-type";
 import { Badge } from "@/components/ui/badge";
@@ -41,27 +40,17 @@ export default function HeroSection({ data }: HeroSectionProps) {
     <section className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl text-center w-full">
         {/* Early Access Pill Button */}
-        <m.div
-          className="mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.0 }}
-        >
+        <div className="mb-8">
           <Link to="/early-access">
             <Badge className="bg-primary  rounded-full hover:bg-primary/90 text-primary-foreground px-4 py-2 text-md font-medium inline-flex items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-105 dark:text-white">
               Early Access
               <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3" />
             </Badge>
           </Link>
-        </m.div>
+        </div>
 
         {/* Main Title */}
-        <m.h1
-          className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl mb-8 font-lato"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        >
+        <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl mb-8 font-lato">
           {titleWords.map((word, index) => (
             <span key={index}>
               {index === highlightIndex ? (
@@ -77,25 +66,15 @@ export default function HeroSection({ data }: HeroSectionProps) {
               {index < titleWords.length - 1 ? " " : ""}
             </span>
           ))}
-        </m.h1>
+        </h1>
 
         {/* Subtitle */}
-        <m.p
-          className="text-md text-muted-foreground leading-relaxed sm:text-lg md:text-xl mb-12 max-w-4xl mx-auto font-lato"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
+        <p className="text-md text-muted-foreground leading-relaxed sm:text-lg md:text-xl mb-12 max-w-4xl mx-auto font-lato">
           {hero.subtitle}
-        </m.p>
+        </p>
 
         {/* AI Search Input - White Card Container */}
-        <m.div
-          className="mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
+        <div className="mb-12">
           <div className="bg-white/90 dark:bg-black/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-4xl mx-auto">
             <AISearchInput
               placeholder={`Ask Moneko to build your personalized financial journey for you...`}
@@ -103,39 +82,24 @@ export default function HeroSection({ data }: HeroSectionProps) {
               variant="default"
             />
           </div>
-        </m.div>
+        </div>
 
         {/* Scroll to Explore Button */}
-        <m.div
-          className="flex flex-col items-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
+        <div className="flex flex-col items-center">
           <button
             onClick={scrollToExplore}
             className="group flex flex-col items-center gap-2 text-muted-foreground hover:text-primary transition-colors duration-300 cursor-pointer"
             aria-label="Scroll to explore more"
           >
             <span className="text-sm font-medium">Scroll to explore</span>
-            <m.div
-              animate={{ 
-                y: [0, 8, 0],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              className=" group-hover:border-primary"
-            >
+            <div className="group-hover:border-primary">
               <FontAwesomeIcon
                 icon={faChevronDown}
                 className="text-3xl"
               />
-            </m.div>
+            </div>
           </button>
-        </m.div>
+        </div>
 
       </div>
     </section>

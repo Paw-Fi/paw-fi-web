@@ -1,9 +1,6 @@
-import React, { useState } from "react";
-import * as m from "framer-motion/m";
-import { AnimatePresence } from "framer-motion";
+import  { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
-import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 // Import WebP images with PNG fallback
 import monekoImgWebp from "@/assets/images/home-showcase/moneko-ai.webp"
 import monekoImgPng from "@/assets/images/home-showcase/moneko-ai.png"
@@ -51,40 +48,27 @@ const features = [
 
 export function DashboardShowcase() {
   const [selectedFeature, setSelectedFeature] = useState(features[0]);
-  const { viewport, animation, staggerAnimation } = useMobileAnimation();
 
   return (
     <section className="relative z-10 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <m.h2
+          <h2
             className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={animation.transition}
-            viewport={viewport}
           >
             Your AI-Powered Financial Dashboard
-          </m.h2>
+          </h2>
           
-          <m.p
+          <p
             className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={{ ...animation.transition, delay: 0.1 }}
-            viewport={viewport}
           >
             Discover why 50,000+ users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
-          </m.p>
+          </p>
         </div>
 
         {/* Tab Navigation */}
-        <m.div
-          initial={animation.initial}
-          whileInView={animation.animate}
-          transition={{ ...animation.transition, delay: 0.2 }}
-          viewport={viewport}
+        <div
           className="mb-12"
         >
           <div className="flex flex-wrap justify-center gap-2 p-2 backdrop-blur-xl rounded-2xl border border-white/20">
@@ -102,14 +86,10 @@ export function DashboardShowcase() {
               </button>
             ))}
           </div>
-        </m.div>
+        </div>
 
         {/* Dashboard Display */}
-        <m.div
-          initial={animation.initial}
-          whileInView={animation.animate}
-          transition={{ ...animation.transition, delay: 0.3 }}
-          viewport={viewport}
+        <div
           className="relative"
         >
           {/* Browser Frame */}
@@ -133,34 +113,25 @@ export function DashboardShowcase() {
 
             {/* Dashboard Content */}
             <div className="relative">
-              <AnimatePresence mode="wait">
-                <m.div
-                  key={selectedFeature.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4 }}
-                  className="relative"
-                >
-                  <picture>
-                    <source srcSet={selectedFeature.imageWebp} type="image/webp" />
-                    <img
-                      src={selectedFeature.imagePng}
-                      alt={selectedFeature.title}
-                      className="w-full h-auto object-cover"
-                    />
-                  </picture>
-                </m.div>
-              </AnimatePresence>
+              <div
+                key={selectedFeature.id}
+                className="relative"
+              >
+                <picture>
+                  <source srcSet={selectedFeature.imageWebp} type="image/webp" />
+                  <img
+                    src={selectedFeature.imagePng}
+                    alt={selectedFeature.title}
+                    className="w-full h-auto object-cover"
+                  />
+                </picture>
+              </div>
             </div>
           </div>
 
           {/* Feature Description */}
-          <m.div
+          <div
             key={selectedFeature.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
             className="mt-8 text-center"
           >
             <h3 className="text-2xl font-bold text-foreground mb-4 font-lato">
@@ -178,8 +149,8 @@ export function DashboardShowcase() {
                 Try {selectedFeature.title}
               </Link>
             </Button>
-          </m.div>
-        </m.div>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -1,8 +1,6 @@
-import * as m from "framer-motion/m";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
-import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 import videoDemo from "../../../../public/Moneko-onboard .webm";
 
 interface VideoSectionProps {
@@ -15,7 +13,6 @@ interface VideoSectionProps {
 }
 
 export default function VideoSection({ data }: VideoSectionProps) {
-  const { isMobile, viewport, animation } = useMobileAnimation();
   const { videoSection } = data;
 
   return (
@@ -23,34 +20,16 @@ export default function VideoSection({ data }: VideoSectionProps) {
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <m.h2
-            className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={animation.transition}
-            viewport={viewport}
-          >
+          <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
             {videoSection.title}
-          </m.h2>
-          <m.p
-            className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={{ ...animation.transition, delay: 0.1 }}
-            viewport={viewport}
-          >
+          </h2>
+          <p className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed font-lato">
             {videoSection.subtitle}
-          </m.p>
+          </p>
         </div>
 
         {/* Video Demo with Browser Frame */}
-        <m.div
-          initial={animation.initial}
-          whileInView={animation.animate}
-          transition={{ ...animation.transition, delay: 0.2 }}
-          viewport={viewport}
-          className="relative"
-        >
+        <div className="relative">
           {/* Browser Frame - matching dashboard-showcase.tsx structure */}
           <div className="backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
             {/* Browser Header */}
@@ -131,7 +110,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
               </Dialog>
             </div>
           </div>
-        </m.div>
+        </div>
       </div>
     </section>
   );

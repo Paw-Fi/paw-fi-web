@@ -1,9 +1,7 @@
-import * as m from "framer-motion/m";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faApple, faDiscord, faGooglePlay } from "@fortawesome/free-brands-svg-icons";
-import { useMobileAnimation } from "@/hooks/use-mobile-animation";
+import {  faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { DISCORD_URL } from "@/routes";
 
 interface ThreeStepsSectionProps {
@@ -44,8 +42,6 @@ const stepsData = [
 ];
 
 export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
-  const { isMobile, viewport, animation, staggerAnimation } = useMobileAnimation();
-  
   // Use dynamic steps if available, otherwise fall back to default
   const steps = data.howItWorks?.steps || stepsData;
 
@@ -54,29 +50,18 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <m.h2
-            className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={animation.transition}
-            viewport={viewport}
-          >
+          <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
             3 Steps to Put Your Money on Autopilot
-          </m.h2>
+          </h2>
         </div>
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
           {steps.map((step, index) => {
-            const staggerConfig = staggerAnimation(index);
             return (
-              <m.div
+              <div
                 key={index}
                 className="text-center p-6 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20"
-                initial={staggerConfig.initial}
-                whileInView={staggerConfig.animate}
-                transition={staggerConfig.transition}
-                viewport={viewport}
               >
                 <h3 className="text-xl font-bold text-foreground mb-4 font-lato">
                   {step.title}
@@ -84,19 +69,14 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
                 <p className="text-muted-foreground leading-relaxed font-lato">
                   {step.description}
                 </p>
-              </m.div>
+              </div>
             );
           })}
         </div>
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <m.div
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={{ ...animation.transition, delay: 0.4 }}
-            viewport={viewport}
-          >
+          <div>
             <Button
               asChild
               size="lg"
@@ -107,14 +87,9 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
                 Join Discord
               </a>
             </Button>
-          </m.div>
+          </div>
 
-          <m.div
-            initial={animation.initial}
-            whileInView={animation.animate}
-            transition={{ ...animation.transition, delay: 0.5 }}
-            viewport={viewport}
-          >
+          <div>
             <Button
               asChild
               size="lg"
@@ -124,19 +99,13 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
                 Try Moneko for free
               </Link>
             </Button>
-          </m.div>
+          </div>
         </div>
 
         {/* Trust indicator */}
-        <m.p
-          className="text-center text-sm text-muted-foreground mt-6"
-          initial={animation.initial}
-          whileInView={animation.animate}
-          transition={{ ...animation.transition, delay: 0.6 }}
-          viewport={viewport}
-        >
+        <p className="text-center text-sm text-muted-foreground mt-6">
           Join the movement of never settling
-        </m.p>
+        </p>
       </div>
     </section>
   );

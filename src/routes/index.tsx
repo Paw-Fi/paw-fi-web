@@ -5,7 +5,6 @@ import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import AmbientHaloLazy from "@/components/ui/ambient-halo-lazy";
-import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { disableAnimationsOnMobile } from "@/utils/disable-framer-motion-mobile";
 import { useEffect } from "react";
@@ -37,7 +36,7 @@ export const Route = createFileRoute("/")({
     
     // Let Helmet handle the basic meta tags, we'll handle performance-critical preloads here
     return {
-      link: [
+      links: [
         { rel: "canonical", href: pageUrl },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

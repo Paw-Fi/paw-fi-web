@@ -1,12 +1,10 @@
 import React, { useState, useRef } from 'react';
-import * as m from 'framer-motion/m';
 import { useAnimation } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLightbulb, faPaperPlane, faLock } from '@fortawesome/free-solid-svg-icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 interface AISearchInputProps {
   placeholder?: string;
@@ -128,14 +126,14 @@ export function AISearchInput({
   };
 
   return (
-    <m.div
+    <div
       className={`${className}`}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
       viewport={{ once: true }}
     >
-      <m.div
+      <div
         animate={inputControls}
         initial={{
           scale: 1,
@@ -152,7 +150,7 @@ export function AISearchInput({
         }}
       >
         {/* Input field */}
-        <m.div className="relative z-10 flex-grow">
+        <div className="relative z-10 flex-grow">
           <Input
             type="text"
             value={chatQuery}
@@ -167,14 +165,14 @@ export function AISearchInput({
 
           {/* Loading indicator during transition */}
           {isAnimating && (
-            <m.div
+            <div
               className="pointer-events-none absolute inset-0 flex items-center px-4 sm:px-6"
               animate={placeholderControls}
               initial={{ opacity: 0 }}
             >
               <div className="flex items-center text-primary">
                 <span className="mr-1.5 sm:mr-2 font-medium text-sm sm:text-base">Creating your plan</span>
-                <m.div
+                <div
                   animate={{
                     rotate: 360,
                   }}
@@ -188,14 +186,14 @@ export function AISearchInput({
                     icon={faLightbulb}
                     className="h-3 w-3 sm:h-4 sm:w-4"
                   />
-                </m.div>
+                </div>
               </div>
-            </m.div>
+            </div>
           )}
-        </m.div>
+        </div>
 
         {/* Private indicator */}
-        <m.div
+        <div
           className="z-10 mr-2 sm:mr-3 flex-shrink-0"
           animate={iconControls}
         >
@@ -208,7 +206,7 @@ export function AISearchInput({
               Private
             </span>
           </div>
-        </m.div>
+        </div>
 
         {/* Send button */}
         <Button
@@ -225,15 +223,15 @@ export function AISearchInput({
           ref={sendButtonRef}
           asChild
         >
-          <m.button animate={iconControls}>
+          <mbutton animate={iconControls}>
             <FontAwesomeIcon icon={faPaperPlane} className="h-3 w-3 sm:h-4 sm:w-4" />
-          </m.button>
+          </mbutton>
         </Button>
-      </m.div>
+      </div>
 
       {/* Suggestion chips */}
       {showSuggestionPills && showSuggestions && (
-        <m.div
+        <div
           className="mx-auto mt-4 sm:mt-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -259,19 +257,19 @@ export function AISearchInput({
                 disabled={isTransitioning}
                 asChild
               >
-                <m.button
+                <mbutton
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
                   whileHover={{ scale: 1.02 }}
                 >
                   {suggestion}
-                </m.button>
+                </mbutton>
               </Button>
             ))}
           </div>
-        </m.div>
+        </div>
       )}
-    </m.div>
+    </div>
   );
 }
