@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import * as m from "framer-motion/m";
 import { useDeviceType } from "@/hooks/use-device-type";
 
 // Testimonials data from the mockup
@@ -28,7 +28,7 @@ export default function TestimonialsSection() {
               Hear What Our Customers Say
             </h2>
           ) : (
-            <motion.h2
+            <m.h2
               className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -36,14 +36,14 @@ export default function TestimonialsSection() {
               viewport={{ once: true }}
             >
               Hear What Our Customers Say
-            </motion.h2>
+            </m.h2>
           )}
         </div>
 
         {/* Testimonials Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {testimonialsData.map((testimonial, index) => (
-            <motion.div
+            <m.div
               key={index}
               className="p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg border border-border"
               initial={{ opacity: 0, y: 20 }}
@@ -72,12 +72,12 @@ export default function TestimonialsSection() {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           ))}
         </div>
 
         {/* Social Proof Metrics */}
-        <motion.div
+        <m.div
           className="mt-16 flex flex-wrap justify-center gap-8 text-center"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -100,7 +100,7 @@ export default function TestimonialsSection() {
             <div className="text-3xl font-bold text-primary mb-2">127%</div>
             <div className="text-sm text-muted-foreground">Better Returns</div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

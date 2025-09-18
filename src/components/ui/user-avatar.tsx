@@ -4,7 +4,7 @@ import { faCrown } from '@fortawesome/free-solid-svg-icons';
 import { useAvatar } from '@/hooks/use-avatar';
 import { useAuth } from '@/contexts/auth-context';
 import { useSubscription } from '@/hooks/use-subscription';
-import { motion } from 'framer-motion';
+import * as m from 'framer-motion/m';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
@@ -108,7 +108,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   if (onClick) {
     return (
-      <motion.div
+      <m.div
         className="cursor-pointer"
         onClick={onClick}
         whileHover={{ scale: 1.05 }}
@@ -120,7 +120,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         }}
       >
         {avatarContent}
-      </motion.div>
+      </m.div>
     );
   }
 

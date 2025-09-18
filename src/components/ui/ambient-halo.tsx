@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from 'framer-motion';
+import * as m from 'framer-motion/m';
 import { memo, useEffect, useState } from 'react';
 
 const animationVariants = {
@@ -68,7 +68,7 @@ const HaloLayer = memo(({
   hasInnerLayer?: boolean;
   isMobile?: boolean;
 }) => (
-  <motion.div
+  <m.div
     className="absolute inset-0"
     style={{ 
       willChange: isMobile ? 'auto' : 'transform, opacity', 
@@ -86,7 +86,7 @@ const HaloLayer = memo(({
         <div className={`absolute inset-8 ${size.replace(/\d+/g, (match) => String(Math.floor(parseInt(match) * 0.6)))} rounded-full blur-2xl bg-radial ${colors.replace(/to-[\w-]+/g, 'to-transparent')}`} />
       )}
     </div>
-  </motion.div>
+  </m.div>
 ));
 
 HaloLayer.displayName = 'HaloLayer';

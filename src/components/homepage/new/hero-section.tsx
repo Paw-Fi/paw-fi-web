@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import * as m from "framer-motion/m";
 import { AISearchInput } from "@/components/ui/ai-search-input";
 import { useDeviceType } from "@/hooks/use-device-type";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +41,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
     <section className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl text-center w-full">
         {/* Early Access Pill Button */}
-        <motion.div
+        <m.div
           className="mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -53,10 +53,10 @@ export default function HeroSection({ data }: HeroSectionProps) {
               <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3" />
             </Badge>
           </Link>
-        </motion.div>
+        </m.div>
 
         {/* Main Title */}
-        <motion.h1
+        <m.h1
           className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl mb-8 font-lato"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -77,20 +77,20 @@ export default function HeroSection({ data }: HeroSectionProps) {
               {index < titleWords.length - 1 ? " " : ""}
             </span>
           ))}
-        </motion.h1>
+        </m.h1>
 
         {/* Subtitle */}
-        <motion.p
+        <m.p
           className="text-md text-muted-foreground leading-relaxed sm:text-lg md:text-xl mb-12 max-w-4xl mx-auto font-lato"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           {hero.subtitle}
-        </motion.p>
+        </m.p>
 
         {/* AI Search Input - White Card Container */}
-        <motion.div
+        <m.div
           className="mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -103,10 +103,10 @@ export default function HeroSection({ data }: HeroSectionProps) {
               variant="default"
             />
           </div>
-        </motion.div>
+        </m.div>
 
         {/* Scroll to Explore Button */}
-        <motion.div
+        <m.div
           className="flex flex-col items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -118,7 +118,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
             aria-label="Scroll to explore more"
           >
             <span className="text-sm font-medium">Scroll to explore</span>
-            <motion.div
+            <m.div
               animate={{ 
                 y: [0, 8, 0],
               }}
@@ -133,9 +133,9 @@ export default function HeroSection({ data }: HeroSectionProps) {
                 icon={faChevronDown}
                 className="text-3xl"
               />
-            </motion.div>
+            </m.div>
           </button>
-        </motion.div>
+        </m.div>
 
       </div>
     </section>

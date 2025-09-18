@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import * as m from "framer-motion/m";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useMobileAnimation } from "@/hooks/use-mobile-animation";
@@ -53,7 +53,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <motion.h2
+          <m.h2
             className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -61,9 +61,9 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
             viewport={viewport}
           >
             Dive Deeper with Expert-Led Lessons
-          </motion.h2>
+          </m.h2>
           
-          <motion.p
+          <m.p
             className="text-muted-foreground text-lg max-w-3xl mx-auto font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -71,7 +71,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
             viewport={viewport}
           >
             Clear, bite-sized lessons designed to turn financial jargon into practical steps. Whether you're just starting out or leveling up, Moneko helps you invest with confidence.
-          </motion.p>
+          </m.p>
         </div>
 
         {/* Lessons Grid */}
@@ -79,7 +79,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
           {lessons.map((lesson, index) => {
             const staggerConfig = staggerAnimation(index);
             return (
-              <motion.div
+              <m.div
                 key={index}
                 className="group p-8 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300"
                 initial={staggerConfig.initial}
@@ -121,7 +121,7 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
                     </svg>
                   </Link>
                 )}
-              </motion.div>
+              </m.div>
             );
           })}
         </div>

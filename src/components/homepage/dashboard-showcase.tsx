@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import * as m from "framer-motion/m";
+import { AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useMobileAnimation } from "@/hooks/use-mobile-animation";
@@ -57,7 +58,7 @@ export function DashboardShowcase() {
       <div className="mx-auto max-w-6xl">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <motion.h2
+          <m.h2
             className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -65,9 +66,9 @@ export function DashboardShowcase() {
             viewport={viewport}
           >
             Your AI-Powered Financial Dashboard
-          </motion.h2>
+          </m.h2>
           
-          <motion.p
+          <m.p
             className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -75,11 +76,11 @@ export function DashboardShowcase() {
             viewport={viewport}
           >
             Discover why 50,000+ users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
-          </motion.p>
+          </m.p>
         </div>
 
         {/* Tab Navigation */}
-        <motion.div
+        <m.div
           initial={animation.initial}
           whileInView={animation.animate}
           transition={{ ...animation.transition, delay: 0.2 }}
@@ -101,10 +102,10 @@ export function DashboardShowcase() {
               </button>
             ))}
           </div>
-        </motion.div>
+        </m.div>
 
         {/* Dashboard Display */}
-        <motion.div
+        <m.div
           initial={animation.initial}
           whileInView={animation.animate}
           transition={{ ...animation.transition, delay: 0.3 }}
@@ -133,7 +134,7 @@ export function DashboardShowcase() {
             {/* Dashboard Content */}
             <div className="relative">
               <AnimatePresence mode="wait">
-                <motion.div
+                <m.div
                   key={selectedFeature.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -149,13 +150,13 @@ export function DashboardShowcase() {
                       className="w-full h-auto object-cover"
                     />
                   </picture>
-                </motion.div>
+                </m.div>
               </AnimatePresence>
             </div>
           </div>
 
           {/* Feature Description */}
-          <motion.div
+          <m.div
             key={selectedFeature.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -177,8 +178,8 @@ export function DashboardShowcase() {
                 Try {selectedFeature.title}
               </Link>
             </Button>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       </div>
     </section>
   );

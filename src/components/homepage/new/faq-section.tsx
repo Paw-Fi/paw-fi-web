@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import * as m from "framer-motion/m";
+import { AnimatePresence } from "framer-motion";
 import { useMobileAnimation } from "@/hooks/use-mobile-animation";
 import faqData from "@/data/home/home-faq.json";
 
@@ -30,7 +31,7 @@ export default function FAQSection() {
       <div className="mx-auto max-w-4xl w-full">
         {/* Section Header */}
         <div className="mb-12 text-center">
-          <motion.div
+          <m.div
             initial={animation.initial}
             whileInView={animation.animate}
             transition={animation.transition}
@@ -38,9 +39,9 @@ export default function FAQSection() {
             className="mb-4 text-sm font-medium text-primary"
           >
             Frequently Asked Questions
-          </motion.div>
+          </m.div>
           
-          <motion.h2
+          <m.h2
             className="text-foreground mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -48,9 +49,9 @@ export default function FAQSection() {
             viewport={viewport}
           >
             Common Questions
-          </motion.h2>
+          </m.h2>
           
-          <motion.p
+          <m.p
             className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -58,11 +59,11 @@ export default function FAQSection() {
             viewport={viewport}
           >
             Everything you need to know about getting started with Moneko
-          </motion.p>
+          </m.p>
         </div>
 
         {/* FAQ Items */}
-        <motion.div
+        <m.div
           className="space-y-4"
           initial={animation.initial}
           whileInView={animation.animate}
@@ -89,7 +90,7 @@ export default function FAQSection() {
               </div>
               <AnimatePresence>
                 {openItems.has(item.id) && (
-                  <motion.div
+                  <m.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
@@ -99,12 +100,12 @@ export default function FAQSection() {
                     <p className="text-muted-foreground leading-relaxed font-lato">
                       {item.answer}
                     </p>
-                  </motion.div>
+                  </m.div>
                 )}
               </AnimatePresence>
             </div>
           ))}
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

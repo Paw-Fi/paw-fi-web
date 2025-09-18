@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { motion, useAnimation } from 'framer-motion';
+import * as m from 'framer-motion/m';
+import { useAnimation } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLightbulb, faPaperPlane, faLock } from '@fortawesome/free-solid-svg-icons';
@@ -127,14 +128,14 @@ export function AISearchInput({
   };
 
   return (
-    <motion.div
+    <m.div
       className={`${className}`}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: 0.3 }}
       viewport={{ once: true }}
     >
-      <motion.div
+      <m.div
         animate={inputControls}
         initial={{
           scale: 1,
@@ -151,7 +152,7 @@ export function AISearchInput({
         }}
       >
         {/* Input field */}
-        <motion.div className="relative z-10 flex-grow">
+        <m.div className="relative z-10 flex-grow">
           <Input
             type="text"
             value={chatQuery}
@@ -166,14 +167,14 @@ export function AISearchInput({
 
           {/* Loading indicator during transition */}
           {isAnimating && (
-            <motion.div
+            <m.div
               className="pointer-events-none absolute inset-0 flex items-center px-4 sm:px-6"
               animate={placeholderControls}
               initial={{ opacity: 0 }}
             >
               <div className="flex items-center text-primary">
                 <span className="mr-1.5 sm:mr-2 font-medium text-sm sm:text-base">Creating your plan</span>
-                <motion.div
+                <m.div
                   animate={{
                     rotate: 360,
                   }}
@@ -187,14 +188,14 @@ export function AISearchInput({
                     icon={faLightbulb}
                     className="h-3 w-3 sm:h-4 sm:w-4"
                   />
-                </motion.div>
+                </m.div>
               </div>
-            </motion.div>
+            </m.div>
           )}
-        </motion.div>
+        </m.div>
 
         {/* Private indicator */}
-        <motion.div
+        <m.div
           className="z-10 mr-2 sm:mr-3 flex-shrink-0"
           animate={iconControls}
         >
@@ -207,7 +208,7 @@ export function AISearchInput({
               Private
             </span>
           </div>
-        </motion.div>
+        </m.div>
 
         {/* Send button */}
         <Button
@@ -224,15 +225,15 @@ export function AISearchInput({
           ref={sendButtonRef}
           asChild
         >
-          <motion.button animate={iconControls}>
+          <m.button animate={iconControls}>
             <FontAwesomeIcon icon={faPaperPlane} className="h-3 w-3 sm:h-4 sm:w-4" />
-          </motion.button>
+          </m.button>
         </Button>
-      </motion.div>
+      </m.div>
 
       {/* Suggestion chips */}
       {showSuggestionPills && showSuggestions && (
-        <motion.div
+        <m.div
           className="mx-auto mt-4 sm:mt-6"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -258,19 +259,19 @@ export function AISearchInput({
                 disabled={isTransitioning}
                 asChild
               >
-                <motion.button
+                <m.button
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
                   whileHover={{ scale: 1.02 }}
                 >
                   {suggestion}
-                </motion.button>
+                </m.button>
               </Button>
             ))}
           </div>
-        </motion.div>
+        </m.div>
       )}
-    </motion.div>
+    </m.div>
   );
 }

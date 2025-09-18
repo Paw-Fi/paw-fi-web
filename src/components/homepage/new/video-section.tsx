@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import * as m from "framer-motion/m";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
@@ -23,7 +23,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <motion.h2
+          <m.h2
             className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -31,8 +31,8 @@ export default function VideoSection({ data }: VideoSectionProps) {
             viewport={viewport}
           >
             {videoSection.title}
-          </motion.h2>
-          <motion.p
+          </m.h2>
+          <m.p
             className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -40,11 +40,11 @@ export default function VideoSection({ data }: VideoSectionProps) {
             viewport={viewport}
           >
             {videoSection.subtitle}
-          </motion.p>
+          </m.p>
         </div>
 
         {/* Video Demo with Browser Frame */}
-        <motion.div
+        <m.div
           initial={animation.initial}
           whileInView={animation.animate}
           transition={{ ...animation.transition, delay: 0.2 }}
@@ -131,7 +131,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
               </Dialog>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </div>
     </section>
   );

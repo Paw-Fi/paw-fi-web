@@ -2,9 +2,9 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
-import { Helmet } from "@dr.pogodin/react-helmet";
 import { HomeHeader } from "@/components/index/header";
-import AmbientHalo from "@/components/ui/ambient-halo";
+import { Helmet } from "@dr.pogodin/react-helmet";
+import AmbientHaloLazy from "@/components/ui/ambient-halo-lazy";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { disableAnimationsOnMobile } from "@/utils/disable-framer-motion-mobile";
@@ -20,8 +20,7 @@ import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
-import { MotionConfig } from "framer-motion";
-import { useDeviceType } from "@/hooks/use-device-type";
+import { LazyMotion, domAnimation } from "framer-motion";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -35,16 +34,9 @@ export const Route = createFileRoute("/")({
   staticData: () => ({}),
   head: () => {
     const pageUrl = getCanonicalUrl("/");
-    const meta = seo({
-      title: pageData.meta.title,
-      description: pageData.meta.description,
-      keywords: pageData.meta.keywords,
-      image: "https://moneko.io/og-img.png",
-      url: pageUrl,
-    });
-
+    
+    // Let Helmet handle the basic meta tags, we'll handle performance-critical preloads here
     return {
-      meta,
       link: [
         { rel: "canonical", href: pageUrl },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -56,8 +48,6 @@ export const Route = createFileRoute("/")({
 });
 
 export default function HomePage() {
-
-  const { isMobile } = useDeviceType();
 
   // Disable Framer Motion animations on mobile
   useEffect(() => {
@@ -74,8 +64,6 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen bg-background">
-        <MotionConfig reducedMotion={isMobile?"always":"never"}>
-
       <Helmet>
         <title>{pageData.meta.title}</title>
         <meta name="description" content={pageData.meta.description} />
@@ -84,7 +72,8 @@ export default function HomePage() {
         <meta name="robots" content="index, follow" />
       </Helmet>
 
-      <AmbientHalo />
+      <LazyMotion features={domAnimation} strict={true}>
+        <AmbientHaloLazy />
 
       {/* Header */}
       <nav className="border-border sticky top-0 z-50 border-b bg-white/10 backdrop-blur-md">
@@ -126,7 +115,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer />
-    </MotionConfig>
+        </LazyMotion>
     </div>
   );
 }

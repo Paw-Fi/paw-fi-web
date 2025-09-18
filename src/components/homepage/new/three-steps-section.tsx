@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import * as m from "framer-motion/m";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -54,7 +54,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <motion.h2
+          <m.h2
             className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato"
             initial={animation.initial}
             whileInView={animation.animate}
@@ -62,7 +62,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
             viewport={viewport}
           >
             3 Steps to Put Your Money on Autopilot
-          </motion.h2>
+          </m.h2>
         </div>
 
         {/* Steps Grid */}
@@ -70,7 +70,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
           {steps.map((step, index) => {
             const staggerConfig = staggerAnimation(index);
             return (
-              <motion.div
+              <m.div
                 key={index}
                 className="text-center p-6 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20"
                 initial={staggerConfig.initial}
@@ -84,14 +84,14 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
                 <p className="text-muted-foreground leading-relaxed font-lato">
                   {step.description}
                 </p>
-              </motion.div>
+              </m.div>
             );
           })}
         </div>
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <motion.div
+          <m.div
             initial={animation.initial}
             whileInView={animation.animate}
             transition={{ ...animation.transition, delay: 0.4 }}
@@ -107,9 +107,9 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
                 Join Discord
               </a>
             </Button>
-          </motion.div>
+          </m.div>
 
-          <motion.div
+          <m.div
             initial={animation.initial}
             whileInView={animation.animate}
             transition={{ ...animation.transition, delay: 0.5 }}
@@ -124,11 +124,11 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
                 Try Moneko for free
               </Link>
             </Button>
-          </motion.div>
+          </m.div>
         </div>
 
         {/* Trust indicator */}
-        <motion.p
+        <m.p
           className="text-center text-sm text-muted-foreground mt-6"
           initial={animation.initial}
           whileInView={animation.animate}
@@ -136,7 +136,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
           viewport={viewport}
         >
           Join the movement of never settling
-        </motion.p>
+        </m.p>
       </div>
     </section>
   );
