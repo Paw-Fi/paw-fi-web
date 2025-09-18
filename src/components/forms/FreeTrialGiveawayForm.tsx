@@ -2,12 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faArrowRight,
-  faCheckCircle,
-  faEnvelope,
-} from "@fortawesome/free-solid-svg-icons";
+import { ArrowRight, CheckCircle, Mail } from "lucide-react";
 import { type EarlyAccessClaim } from "@/lib/early-access";
 import { useRemainingSpots, useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
 import { CustomSelect } from "@/components/ui/custom-select";
@@ -204,15 +199,15 @@ export function FreeTrialGiveawayForm() {
   // Show loading state while checking claim status for authenticated users
   if (isAuthenticated && claimStatusLoading) {
     return (
-      <div className="rounded-3xl bg-white/20 p-12 backdrop-blur-2xl">
+      <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl">
         <div className="text-center">
           <div className="mb-6">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-300/30 dark:border-slate-600/30 mx-auto"></div>
           </div>
-          <h3 className="text-xl font-medium text-white mb-3">
+          <h3 className="text-xl font-medium text-slate-800 dark:text-slate-200 mb-3">
             Checking your status...
           </h3>
-          <p className="text-purple-200">
+          <p className="text-slate-600 dark:text-slate-400">
             Please wait while we verify your claim status.
           </p>
         </div>
@@ -223,27 +218,27 @@ export function FreeTrialGiveawayForm() {
   // Show sign-in prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="rounded-3xl bg-white/20 p-12 backdrop-blur-2xl">
+      <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl">
         <div className="text-center">
-          <h3 className="text-2xl font-bold text-white mb-6">
+          <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-6">
             Sign In Required
           </h3>
-          <p className="text-purple-200 mb-8 leading-relaxed">
+          <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
             Please sign in to claim your early access spot and join our exclusive community.
           </p>
           <div className="space-y-4">
             <motion.button
               onClick={() => navigate({ to: "/login", search: { redirect: "/early-access" } })}
-              className="w-full inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-base font-medium text-white transition-all duration-200 ease-in-out hover:opacity-90"
+              className="w-full inline-flex items-center justify-center rounded-xl bg-[#7458FF] hover:bg-[#836DFF] px-8 py-4 text-base font-medium text-white transition-all duration-200 ease-in-out"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
               Sign In
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+<ArrowRight className="ml-2 w-4 h-4" />
             </motion.button>
             <motion.button
               onClick={() => navigate({ to: "/register", search: { redirect: "/early-access" } })}
-              className="w-full inline-flex items-center justify-center rounded-xl bg-white/10 px-8 py-4 text-base font-medium text-white transition-all duration-200 ease-in-out hover:bg-white/20"
+              className="w-full inline-flex items-center justify-center rounded-xl border-2 border-[#7458FF] hover:bg-[#7458FF]/10 px-8 py-4 text-base font-medium text-[#7458FF] transition-all duration-200 ease-in-out"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
@@ -259,14 +254,14 @@ export function FreeTrialGiveawayForm() {
 
       <div id="freetrial-form" className={classNames("flex flex-col",
         {
-"rounded-3xl bg-white/20 p-12 backdrop-blur-2xl":!hasClaimed        }
+"rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl":!hasClaimed        }
       )}>
         <form
           onSubmit={handleSubmit}
         >
           {/* Form status messages */}
           {result.error && (
-            <div className="mb-6 rounded-2xl bg-red-100/20 p-4 text-red-200">
+            <div className="mb-6 rounded-2xl bg-red-100/20 dark:bg-red-900/20 p-4 text-red-600 dark:text-red-400">
               {result.error}
             </div>
           )}
@@ -279,9 +274,9 @@ export function FreeTrialGiveawayForm() {
                 <div>
                   <label
                     htmlFor="firstName"
-                    className="mb-2 block text-sm font-medium text-white text-start"
+                    className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start"
                   >
-                    Full Name <span className="text-pink-400">*</span>
+                    Full Name <span className="text-[#7458FF]">*</span>
                   </label>
                   <input
                     type="text"
@@ -291,10 +286,10 @@ export function FreeTrialGiveawayForm() {
                     onChange={handleInputChange}
                     required
                     disabled={isAuthenticated}
-                    className={`w-full rounded-xl p-4 outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-white/30 ${
+                    className={`w-full rounded-xl p-4 outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700 ${
                       isAuthenticated 
-                        ? 'bg-white/10 text-purple-200 cursor-not-allowed' 
-                        : 'bg-white/10 text-white placeholder-purple-300'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed' 
+                        : 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400'
                     }`}
                     placeholder={isAuthenticated ? "" : "your full name"}
                   />
@@ -302,9 +297,9 @@ export function FreeTrialGiveawayForm() {
                 <div>
                   <label
                     htmlFor="email"
-                    className="mb-2 block text-sm font-medium text-white text-start"
+                    className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start"
                   >
-                    Email Address <span className="text-pink-400">*</span>
+                    Email Address <span className="text-[#7458FF]">*</span>
                   </label>
                   <input
                     type="email"
@@ -314,10 +309,10 @@ export function FreeTrialGiveawayForm() {
                     onChange={handleInputChange}
                     required
                     disabled={isAuthenticated}
-                    className={`w-full rounded-xl p-4 outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-white/30 ${
+                    className={`w-full rounded-xl p-4 outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700 ${
                       isAuthenticated 
-                        ? 'bg-white/10 text-purple-200 cursor-not-allowed' 
-                        : 'bg-white/10 text-white placeholder-purple-300'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed' 
+                        : 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400'
                     }`}
                     placeholder={isAuthenticated ? "" : "you@example.com"}
                   />
@@ -326,7 +321,7 @@ export function FreeTrialGiveawayForm() {
 
               {/* Experience Level */}
               <div className="mb-6">
-                <label className="mb-2 block text-sm font-medium text-white text-start">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
                   What's your current level of investing experience?
                 </label>
                 <CustomSelect
@@ -334,7 +329,7 @@ export function FreeTrialGiveawayForm() {
                   value={formData.experienceLevel}
                   onChange={(value) => setFormData(prev => ({ ...prev, experienceLevel: value }))}
                   placeholder="Select your experience level"
-                  className="w-full rounded-xl bg-white/10 backdrop-blur-sm p-4 text-white focus:ring-2 focus:ring-white/30"
+                  className="w-full rounded-xl bg-white dark:bg-slate-900 backdrop-blur-sm p-4 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -364,7 +359,7 @@ export function FreeTrialGiveawayForm() {
 
               {/* Referral source */}
               <div className="mb-8">
-                <label className="mb-2 block text-sm font-medium text-white text-start">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
                   How did you hear about us?
                 </label>
                 <CustomSelect
@@ -372,7 +367,7 @@ export function FreeTrialGiveawayForm() {
                   value={formData.referralSource}
                   onChange={(value) => setFormData(prev => ({ ...prev, referralSource: value }))}
                   placeholder="Select how you found us"
-                  className="w-full rounded-xl bg-white/10 backdrop-blur-sm p-4 text-white focus:ring-2 focus:ring-white/30"
+                  className="w-full rounded-xl bg-white dark:bg-slate-900 backdrop-blur-sm p-4 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700"
                 />
               </div>
               </>}
@@ -382,7 +377,7 @@ export function FreeTrialGiveawayForm() {
                 <motion.button
                   type="submit"
                   disabled={claimMutation.isPending || hasClaimed}
-                  className="group inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 text-lg font-medium text-white transition-all duration-200 ease-in-out hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="group inline-flex w-full items-center justify-center rounded-xl bg-[#7458FF] hover:bg-[#836DFF] disabled:bg-gray-400 px-8 py-4 text-lg font-medium text-white transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:opacity-70"
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
@@ -394,12 +389,12 @@ export function FreeTrialGiveawayForm() {
                   ) : hasClaimed ? (
                     <>
                        Claimed Successfully
-                      <FontAwesomeIcon icon={faCheckCircle} className="ml-2" />
+<CheckCircle className="ml-2 w-5 h-5" />
                     </>
                   ) : (
                     <>
                       Claim Your Membership
-                      <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+        <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
                 </motion.button>
@@ -412,13 +407,13 @@ export function FreeTrialGiveawayForm() {
               transition={{ type: "spring", bounce: 0.3 }}
             >
               <div className="text-center">
-                <div className="rounded-2xl bg-green-400/20 p-6">
+                <div className="rounded-2xl bg-green-100/20 dark:bg-green-900/20 p-6 border border-green-200 dark:border-green-700">
                   <div className="flex items-center justify-center mb-3">
-                    <FontAwesomeIcon icon={faEnvelope} className="mr-3 text-green-300" />
-                    <span className="font-semibold text-green-200">Check Your Inbox</span>
+<Mail className="mr-3 text-green-600 dark:text-green-400 w-5 h-5" />
+                    <span className="font-semibold text-green-700 dark:text-green-300">Check Your Inbox</span>
                   </div>
-                  <p className="text-sm text-green-300 leading-relaxed">
-                    We've sent you the promo code in the email and can use it to checkout at the <Link to="/pricing" className="font-medium underline hover:text-green-200 transition-colors">pricing page</Link>.
+                  <p className="text-sm text-green-600 dark:text-green-400 leading-relaxed">
+                    We've sent you the promo code in the email and can use it to checkout at the <Link to="/pricing" className="font-medium underline hover:text-green-500 dark:hover:text-green-300 transition-colors">pricing page</Link>.
                   </p>
                 </div>
               </div>

@@ -16,7 +16,6 @@ import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
   default: mod.ToastContainer
 })))
-const ThemeSystemListener = lazy(() => import('../components/theme/theme-system-listener'))
 import { AuthProvider } from '@/contexts/auth-context'
 import { ChatProvider } from '@/contexts/chat-context'
 import { AIChatProvider } from '@/contexts/ai-chat-context'
@@ -26,7 +25,7 @@ import { HelmetProvider } from '@dr.pogodin/react-helmet'
 import { GoogleTagManager } from '@/components/google-tag-manager'
 import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
-import { ThemeInitScript } from '@/components/theme/theme-init-script'
+import { ThemeProvider } from '@/components/theme/theme-provider'
 import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
 
 export const Route = createRootRouteWithContext<{
@@ -143,10 +142,8 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Ensure theme is set before CSS loads to avoid FOUC and to switch shadcn tokens */}
-        <ThemeInitScript />
         <PerformanceHints />
         <MonekoCriticalResources />
         <HeadContent />
@@ -159,15 +156,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         
       <HelmetProvider>
         <ErrorBoundary>
-          <AuthProvider>
-            <AIChatProvider>
-              <ChatProvider>
-                <AuthSyncWrapper>
-                {/* Use ClientOnly wrapper to prevent hydration mismatches */}
-                <ClientOnly>
-                  <Suspense fallback={null}>
-                    {/* Listen for system theme changes and sync .dark when no explicit user override */}
-                    <ThemeSystemListener />
+          <ThemeProvider defaultTheme="system" storageKey="moneko-ui-theme">
+            <AuthProvider>
+              <AIChatProvider>
+                <ChatProvider>
+                  <AuthSyncWrapper>
+                  {/* Use ClientOnly wrapper to prevent hydration mismatches */}
+                  <ClientOnly>
+                    <Suspense fallback={null}>
                     <ToastContainer
                       position="top-right"
                       autoClose={5000}
@@ -186,10 +182,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 {/* <TanStackRouterDevtools position="bottom-right" />
                 <ReactQueryDevtools buttonPosition="bottom-left" /> */}
                 <Scripts />
-                </AuthSyncWrapper>
-              </ChatProvider>
-            </AIChatProvider>
-          </AuthProvider>
+                  </AuthSyncWrapper>
+                </ChatProvider>
+              </AIChatProvider>
+            </AuthProvider>
+          </ThemeProvider>
         </ErrorBoundary>
       </HelmetProvider>
       </body>

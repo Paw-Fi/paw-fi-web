@@ -29,3 +29,6 @@ export {
   SearchPrefix,
   EmailPrefix
 } from './moneko-input'
+
+// Background Beams with Collision for animated visual effects
+export { BackgroundBeamsWithCollision } from './background-beams-with-collision'
