@@ -7,6 +7,8 @@ import { HomeHeader } from "@/components/index/header";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
+import { disableAnimationsOnMobile } from "@/utils/disable-framer-motion-mobile";
+import { useEffect } from "react";
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
@@ -18,6 +20,8 @@ import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
+import { MotionConfig } from "framer-motion";
+import { useDeviceType } from "@/hooks/use-device-type";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -53,8 +57,25 @@ export const Route = createFileRoute("/")({
 
 export default function HomePage() {
 
+  const { isMobile } = useDeviceType();
+
+  // Disable Framer Motion animations on mobile
+  useEffect(() => {
+    disableAnimationsOnMobile();
+    
+    // Listen for window resize to handle orientation changes
+    const handleResize = () => {
+      disableAnimationsOnMobile();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="relative min-h-screen bg-background">
+        <MotionConfig reducedMotion={isMobile?"always":"never"}>
+
       <Helmet>
         <title>{pageData.meta.title}</title>
         <meta name="description" content={pageData.meta.description} />
@@ -105,6 +126,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer />
+    </MotionConfig>
     </div>
   );
 }

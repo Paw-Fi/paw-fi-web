@@ -9,7 +9,7 @@ export const MonekoIcon = () => {
       <img src={icon} alt="Moneko" className="size-7 sm:size-8 md:size-9" style={{ transform: "translateY(-1px)" }} />
       </div>
       <span className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-        Moneko
+        Moneko.
       </span>
     </Link>
   );
