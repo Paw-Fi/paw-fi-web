@@ -144,6 +144,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Critical theme script - must run before any CSS to prevent FOUC */}
+        <script dangerouslySetInnerHTML={{
+          __html: `(function(){try{var s='moneko-ui-theme',d=document.documentElement,l=localStorage.getItem(s),m=window.matchMedia('(prefers-color-scheme: dark)'),i=l?l==='dark':m.matches;d.classList.toggle('dark',i);d.style.colorScheme=i?'dark':'light';}catch(_){}})();`
+        }} />
         <PerformanceHints />
         <MonekoCriticalResources />
         <HeadContent />
