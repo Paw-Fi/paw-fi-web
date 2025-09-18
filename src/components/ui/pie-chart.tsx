@@ -21,8 +21,9 @@ interface TooltipItem {
 
 export function PieChart({ labels, data, title }: PieChartProps) {
   // Get CSS custom properties for consistent colors
-  const isDark = document.documentElement.classList.contains('dark');
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   const getChartColor = (colorName: string) => {
+    if (typeof document === 'undefined') return '';
     const customProp = isDark ? `--tw-color-dark-chart-${colorName}` : `--tw-color-chart-${colorName}`;
     return getComputedStyle(document.documentElement).getPropertyValue(customProp)?.trim() ||
            getComputedStyle(document.documentElement).getPropertyValue(`--tw-color-${isDark ? 'dark-' : ''}${colorName}`)?.trim();
@@ -47,9 +48,11 @@ export function PieChart({ labels, data, title }: PieChartProps) {
   };
 
   // Get consistent text colors
-  const foregroundColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
-                          getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
-                          (isDark ? '#F1F5F9' : '#1F2937');
+  const foregroundColor = typeof document !== 'undefined' 
+    ? (getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
+       getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
+       (isDark ? '#F1F5F9' : '#1F2937'))
+    : (isDark ? '#F1F5F9' : '#1F2937');
 
   const options = {
     responsive: true,

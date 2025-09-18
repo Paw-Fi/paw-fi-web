@@ -44,7 +44,7 @@ export const Route = createFileRoute("/blogs/$blogId")({
     
     const title = blog.seo?.metaTitle || blog.title;
     const description = blog.seo?.metaDescription || blog.excerpt;
-    const keywords = blog.seo?.keywords || blog.tags.map(tag => tag.name).join(", ");
+    const keywords = blog.seo?.keywords || blog.tags?.map(tag => tag.name).join(", ") || "";
     const imageUrl = blog.coverImage;
     const pageUrl = getCanonicalUrl(`/blogs/${blog.slug}`);
     
@@ -83,7 +83,7 @@ function BlogDetailPage() {
   
   // Find related blogs based on tags
   useEffect(() => {
-    const tagIds = blog.tags.map(tag => tag.id);
+    const tagIds = blog.tags?.map(tag => tag.id) || [];
     
     const related = blogs
       .filter(b => 
@@ -174,19 +174,19 @@ function BlogDetailPage() {
           educationalLevel: "Beginner",
           isAccessibleForFree: true,
           inLanguage: "en-US",
-          keywords: blog.seo?.keywords || blog.tags.map(tag => tag.name).join(", "),
+          keywords: blog.seo?.keywords || blog.tags?.map(tag => tag.name).join(", ") || "",
           articleSection: "Financial Education",
           genre: "Educational Content",
           audience: {
             "@type": "Audience",
             audienceType: "Financial Learners"
           },
-          teaches: blog.tags.map(tag => tag.name),
-          about: blog.tags.map(tag => ({
+          teaches: blog.tags?.map(tag => tag.name) || [],
+          about: blog.tags?.map(tag => ({
             "@type": "Thing",
             name: tag.name,
             sameAs: `https://moneko.io/blogs?tag=${tag.slug}`
-          })),
+          })) || [],
           speakable: {
             "@type": "SpeakableSpecification",
             cssSelector: ["h1", "h2", "h3", ".prose p"]
@@ -422,7 +422,7 @@ function BlogDetailPage() {
         </button>
 
         <div className="mb-8 flex flex-wrap gap-2">
-          {blog.tags.map(tag => (
+          {blog.tags?.map(tag => (
             <Link
               key={tag.id}
               to="/blogs"

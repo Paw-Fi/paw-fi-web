@@ -6,8 +6,6 @@ import { HomeHeader } from "@/components/index/header";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import AmbientHaloLazy from "@/components/ui/ambient-halo-lazy";
 import { getCanonicalUrl } from "@/utils/canonical";
-import { disableAnimationsOnMobile } from "@/utils/disable-framer-motion-mobile";
-import { useEffect } from "react";
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
@@ -19,7 +17,6 @@ import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
-import { LazyMotion, domAnimation } from "framer-motion";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -47,20 +44,6 @@ export const Route = createFileRoute("/")({
 });
 
 export default function HomePage() {
-
-  // Disable Framer Motion animations on mobile
-  useEffect(() => {
-    disableAnimationsOnMobile();
-    
-    // Listen for window resize to handle orientation changes
-    const handleResize = () => {
-      disableAnimationsOnMobile();
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   return (
     <div className="relative min-h-screen bg-background">
       <Helmet>
@@ -71,8 +54,7 @@ export default function HomePage() {
         <meta name="robots" content="index, follow" />
       </Helmet>
 
-      <LazyMotion features={domAnimation} strict={true}>
-        <AmbientHaloLazy />
+      <AmbientHaloLazy />
 
       {/* Header */}
       <nav className="border-border sticky top-0 z-50 border-b bg-white/10 backdrop-blur-md">
@@ -114,7 +96,6 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer />
-        </LazyMotion>
     </div>
   );
 }
