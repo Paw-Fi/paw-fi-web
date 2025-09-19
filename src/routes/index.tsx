@@ -4,7 +4,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
 import { Helmet } from "@dr.pogodin/react-helmet";
-import AmbientHaloLazy from "@/components/ui/ambient-halo-lazy";
 import { getCanonicalUrl } from "@/utils/canonical";
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
@@ -17,6 +16,7 @@ import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
+import AmbientHalo from "@/components/ui/ambient-halo";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -54,7 +54,7 @@ export default function HomePage() {
         <meta name="robots" content="index, follow" />
       </Helmet>
 
-      <AmbientHaloLazy />
+      <AmbientHalo />
 
       {/* Header */}
       <nav className="border-border sticky top-0 z-50 border-b bg-white/10 backdrop-blur-md">

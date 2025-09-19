@@ -1,4 +1,4 @@
-import AmbientHaloLazy from "@/components/ui/ambient-halo-lazy";
+import AmbientHalo from "@/components/ui/ambient-halo";
 import { disableAnimationsOnMobile } from "@/utils/disable-framer-motion-mobile";
 import { useEffect } from "react";
 
@@ -22,7 +22,7 @@ export const AmbientHaloLayout = ({ children }: AmbientHaloLayoutProps) => {
   
   return (
     <div className="relative h-full w-full flex-1 bg-background dark:bg-dark-background">
-      <AmbientHaloLazy />
+      <AmbientHalo />
       <div className="relative z-10 h-full w-full">
         {children}
       </div>
