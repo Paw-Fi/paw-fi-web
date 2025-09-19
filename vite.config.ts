@@ -47,6 +47,7 @@ export default defineConfig({
       },
     }),
     tanstackStart({
+      target: 'node-server',
       customViteReactPlugin: true,    
       pages:[
         {
