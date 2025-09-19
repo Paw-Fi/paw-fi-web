@@ -1,6 +1,5 @@
 import { AISearchInput } from "@/components/ui/ai-search-input";
 import { useDeviceType } from "@/hooks/use-device-type";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronDown } from "@fortawesome/free-solid-svg-icons";
@@ -39,13 +38,15 @@ export default function HeroSection({ data }: HeroSectionProps) {
   return (
     <section className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl text-center w-full">
-        {/* Early Access Pill Button */}
+        {/* Early Access Pill Button with Gradient */}
         <div className="mb-8">
           <Link to="/early-access">
-            <Badge className="bg-primary  rounded-full hover:bg-primary/90 text-primary-foreground px-4 py-2 text-md font-medium inline-flex items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-105 dark:text-white">
-              Early Access
-              <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3" />
-            </Badge>
+            <div className="relative group ">
+              <button className="relative bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full px-6 py-3 text-sm font-semibold inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
+                Early Access
+                <FontAwesomeIcon icon={faArrowRight} className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
           </Link>
         </div>
 
