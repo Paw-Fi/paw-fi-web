@@ -261,13 +261,13 @@ const CompoundCalculator = () => {
                 {
                   label: 'Contributions',
                   data: calculationResult.yearlyData.map(d => d.totalContributions),
-                  backgroundColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                  backgroundColor: (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) ? '#8B70FF' : '#7458FF',
                   stack: 'total',
                 },
                 {
                   label: 'Interest',
                   data: calculationResult.yearlyData.map(d => d.totalInterest),
-                  backgroundColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#16CDA2' : '#10B981',
+                  backgroundColor: (typeof document !== 'undefined' && document.documentElement.classList.contains('dark')) ? '#16CDA2' : '#10B981',
                   stack: 'total',
                 },
               ]}

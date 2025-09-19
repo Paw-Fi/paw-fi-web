@@ -45,15 +45,21 @@ export function LineChart({ labels, datasets, title }: LineChartProps) {
     })),
   };
 
-  // Get CSS custom properties for consistent colors
-  const isDark = document.documentElement.classList.contains('dark');
-  const foregroundColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
-                          getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
-                          (isDark ? '#F1F5F9' : '#1F2937');
-  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-muted-foreground')?.trim() ||
-                     (isDark ? '#9CA3AF' : '#6B7280');
-  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--tw-color-subtle-border')?.trim() ||
-                    (isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.5)');
+  // Get CSS custom properties for consistent colors (SSR safe)
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const foregroundColor = typeof document !== 'undefined' 
+    ? (getComputedStyle(document.documentElement).getPropertyValue('--tw-color-foreground')?.trim() || 
+       getComputedStyle(document.documentElement).getPropertyValue('--foreground')?.trim() ||
+       (isDark ? '#F1F5F9' : '#1F2937'))
+    : '#1F2937';
+  const mutedColor = typeof document !== 'undefined' 
+    ? (getComputedStyle(document.documentElement).getPropertyValue('--tw-color-muted-foreground')?.trim() ||
+       (isDark ? '#9CA3AF' : '#6B7280'))
+    : '#6B7280';
+  const gridColor = typeof document !== 'undefined' 
+    ? (getComputedStyle(document.documentElement).getPropertyValue('--tw-color-subtle-border')?.trim() ||
+       (isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(229, 231, 235, 0.5)'))
+    : 'rgba(229, 231, 235, 0.5)';
 
   const options = {
     responsive: true,

@@ -56,8 +56,8 @@ export default function HeroSection({ data }: HeroSectionProps) {
             <span key={index}>
               {index === highlightIndex ? (
                 <AuroraText
-                  colors={isMobile?["#A855F7"]: ["#4F46E5", "#A855F7"]}
-                  speed={1.5}
+                  colors={isMobile?["#5938ed"]: ["#4F46E5", "#A855F7"]}
+                  speed={0}
                 >
                   {word}
                 </AuroraText>
