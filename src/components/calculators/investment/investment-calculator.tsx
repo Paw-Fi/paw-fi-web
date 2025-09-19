@@ -364,10 +364,10 @@ export function InvestmentCalculatorSEOContent() {
 
         <h3>Related Calculators</h3>
         <ul>
-          <li><a href="/compound-interest-calculator">Compound Interest Calculator</a></li>
-          <li><a href="/auto-loan-calculator">Auto Loan Calculator</a></li>
-          <li><a href="/mortgage-calculator">Mortgage Calculator</a></li>
-          <li><a href="/retirement-calculator">Retirement Calculator</a></li>
+          <li><a href="/calculators/compound-calculator">Compound Interest Calculator</a></li>
+          <li><a href="/calculators/auto-loan-calculator">Auto Loan Calculator</a></li>
+          <li><a href="/calculators/mortgage-calculator">Mortgage Calculator</a></li>
+          <li><a href="/calculators/retirement-calculator">Retirement Calculator</a></li>
         </ul>
       </article>
     </section>
