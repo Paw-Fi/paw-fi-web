@@ -25,8 +25,10 @@ export function PieChart({ labels, data, title }: PieChartProps) {
   const getChartColor = (colorName: string) => {
     if (typeof document === 'undefined') return '';
     const customProp = isDark ? `--tw-color-dark-chart-${colorName}` : `--tw-color-chart-${colorName}`;
-    return getComputedStyle(document.documentElement).getPropertyValue(customProp)?.trim() ||
-           getComputedStyle(document.documentElement).getPropertyValue(`--tw-color-${isDark ? 'dark-' : ''}${colorName}`)?.trim();
+    return (typeof document !== 'undefined' 
+      ? (getComputedStyle(document.documentElement).getPropertyValue(customProp)?.trim() ||
+         getComputedStyle(document.documentElement).getPropertyValue(`--tw-color-${isDark ? 'dark-' : ''}${colorName}`)?.trim())
+      : '');
   };
 
   const chartData = {

@@ -88,7 +88,7 @@ function BlogDetailPage() {
     const related = blogs
       .filter(b => 
         b.id !== blog.id && 
-        b.tags.some(tag => tagIds.includes(tag.id))
+        b.tags?.some(tag => tagIds.includes(tag.id))
       )
       .slice(0, 3);
       
@@ -364,7 +364,7 @@ function BlogDetailPage() {
                 url: "https://moneko.io/calculators"
               }
             ],
-            step: [
+            steps: [
               {
                 "@type": "HowToStep",
                 text: "Read the comprehensive guide",
