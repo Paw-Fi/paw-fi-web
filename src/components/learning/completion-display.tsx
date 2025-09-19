@@ -62,12 +62,12 @@ export function CompletionDisplay({
   // Define animation variants
   const fadeInUp: Variants = {
     hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 15 } }
+    visible: { opacity: 1, y: 0, transition: { type: "spring" as any, stiffness: 400, damping: 15 } }
   };
   
   const fadeInScale: Variants = {
     hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 400, damping: 15 } }
+    visible: { opacity: 1, scale: 1, transition: { type: "spring" as any, stiffness: 400, damping: 15 } }
   };
   
   const bounceAnimation: Variants = {
@@ -139,7 +139,6 @@ export function CompletionDisplay({
   return (
     <Modal
       isOpen={isOpen}
-      disableOverlayClick
       onClose={onClose}
       contentClassName="modal-content mx-auto max-w-[90vw] lg:max-w-lg flex flex-col rounded-3xl bg-white p-8 text-center relative overflow-hidden"
     >

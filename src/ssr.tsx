@@ -3,7 +3,6 @@ import {
   createStartHandler,
   defaultStreamHandler,
 } from '@tanstack/react-start/server'
-import { getRouterManifest } from '@tanstack/react-start/router-manifest'
 import { HelmetProvider } from '@dr.pogodin/react-helmet'
 import { createElement } from 'react'
 
@@ -19,12 +18,8 @@ const customHandler = (innerHandler: any) => {
     const wrappedCreateRouter = () => {
       const router = createRouter()
       
-      // Enhance router with HelmetProvider wrapper
-      const originalRender = router.render
-      router.render = (opts: any) => {
-        return createElement(HelmetProvider, { context: helmetContext }, originalRender(opts))
-      }
-      
+      // Return the router without modifying render method
+      // HelmetProvider integration will be handled at the component level
       return router
     }
     
@@ -54,5 +49,4 @@ const customHandler = (innerHandler: any) => {
 
 export default createStartHandler({
   createRouter,
-  getRouterManifest,
 })(customHandler(defaultStreamHandler))

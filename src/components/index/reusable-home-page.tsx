@@ -354,9 +354,7 @@ export default function ReusableHomePage({
                     autoPlay
                     loop
                     playsInline
-                    loading="lazy"
                     preload="metadata"
-                    decoding="async"
                   />
 
                   {/* Text overlay container */}
@@ -407,7 +405,6 @@ export default function ReusableHomePage({
                   autoPlay
                   playsInline
                   preload="metadata"
-                  decoding="async"
                 />
               </div>
             </DialogContent>
@@ -668,7 +665,7 @@ export default function ReusableHomePage({
                 </li>
                 <li>
                   <Link
-                    to="/dashboard/learning/your-2025-guide-to-investing"
+                    to="/dashboard/learning"
                     className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                   >
                     Financial Planning Courses

@@ -282,10 +282,31 @@ function ChatProviderImpl({ children }: ChatProviderProps) {
   );
 }
 
+// Default context value for SSR/server rendering
+const defaultChatContextValue: ChatContextValue = {
+  conversations: {
+    [AI_ROLES.FINANCIAL_ADVISOR]: { ...initialConversationState },
+    [AI_ROLES.FINANCIAL_EDUCATOR]: { ...initialConversationState },
+    [AI_ROLES.GOAL_TRACKER]: { ...initialConversationState },
+  } as Record<AI_ROLE, ConversationState>,
+  loadInitialMessages: async () => {},
+  sendMessage: async () => ({ response: '', conversationId: null }),
+  addMessage: () => {},
+  clearConversation: () => {},
+  clearAllConversations: () => {},
+  isSendingMessage: () => false,
+  getMessages: () => [],
+  isConversationLoaded: () => false,
+};
+
 export function ChatProvider({ children }: ChatProviderProps) {
-  // Avoid invoking useAuth on the server to prevent hydration/SSR context issues
+  // Provide default context during SSR to prevent hook errors
   if (typeof window === 'undefined') {
-    return <>{children}</>;
+    return (
+      <ChatContext.Provider value={defaultChatContextValue}>
+        {children}
+      </ChatContext.Provider>
+    );
   }
   return <ChatProviderImpl>{children}</ChatProviderImpl>;
 }

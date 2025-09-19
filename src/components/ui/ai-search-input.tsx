@@ -128,18 +128,8 @@ export function AISearchInput({
   return (
     <div
       className={`${className}`}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.3 }}
-      viewport={{ once: true }}
     >
       <div
-        animate={inputControls}
-        initial={{
-          scale: 1,
-          y: 0,
-          opacity: 1,
-        }}
         className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl transition-all duration-500 ${
           isAnimating 
             ? "bg-muted" 
@@ -167,20 +157,11 @@ export function AISearchInput({
           {isAnimating && (
             <div
               className="pointer-events-none absolute inset-0 flex items-center px-4 sm:px-6"
-              animate={placeholderControls}
-              initial={{ opacity: 0 }}
             >
               <div className="flex items-center text-primary">
                 <span className="mr-1.5 sm:mr-2 font-medium text-sm sm:text-base">Creating your plan</span>
                 <div
-                  animate={{
-                    rotate: 360,
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 1,
-                    ease: "linear",
-                  }}
+                
                 >
                   <FontAwesomeIcon
                     icon={faLightbulb}
@@ -195,7 +176,6 @@ export function AISearchInput({
         {/* Private indicator */}
         <div
           className="z-10 mr-2 sm:mr-3 flex-shrink-0"
-          animate={iconControls}
         >
           <div className="flex items-center px-2 sm:px-3 py-1 bg-muted rounded-md sm:rounded-lg">
             <FontAwesomeIcon
@@ -223,9 +203,9 @@ export function AISearchInput({
           ref={sendButtonRef}
           asChild
         >
-          <mbutton animate={iconControls}>
+          <button>
             <FontAwesomeIcon icon={faPaperPlane} className="h-3 w-3 sm:h-4 sm:w-4" />
-          </mbutton>
+          </button>
         </Button>
       </div>
 
@@ -233,9 +213,6 @@ export function AISearchInput({
       {showSuggestionPills && showSuggestions && (
         <div
           className="mx-auto mt-4 sm:mt-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.19, 1, 0.22, 1] }}
         >
           <div className="mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
             <FontAwesomeIcon
@@ -257,14 +234,11 @@ export function AISearchInput({
                 disabled={isTransitioning}
                 asChild
               >
-                <mbutton
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
-                  whileHover={{ scale: 1.02 }}
+                <button
+                 
                 >
                   {suggestion}
-                </mbutton>
+                </button>
               </Button>
             ))}
           </div>

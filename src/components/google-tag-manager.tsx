@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 declare global {
   interface Window {
     dataLayer: any[];
-    gtag: (...args: any[]) => void;
+    gtag: (command: string, ...args: any[]) => void;
   }
 }
 
@@ -13,7 +13,7 @@ export function GoogleTagManager({ gtmId }: { gtmId: string }) {
     // Only run on client side
     if (typeof window === 'undefined') return;
     window.dataLayer = window.dataLayer || [];
-    function gtag(...args: any[]){window.dataLayer.push(args);}
+    function gtag(command: string, ...args: any[]){window.dataLayer.push([command, ...args]);}
     window.gtag = gtag;
     gtag('js', new Date());
   

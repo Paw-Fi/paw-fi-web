@@ -1,95 +1,13 @@
 import { GoalCreationResult } from "./types";
 
 export const MOCK_AI_RESPONSE: GoalCreationResult = {
-    "success": true,
     "goal": {
         "id": "148ac48f-5e60-4be2-a089-8f434a844c7a",
         "title": "Achieve Homeownership: Your $400,000 Dream Home in 5 Years!",
         "description": "Your goal is to purchase a $400,000 home with a 10% down payment within 5 years. This includes not only the down payment but also estimated closing costs and moving expenses, ensuring you are fully prepared for all upfront financial commitments.",
-        "goal_type": "home_buying",
-        "category": null,
         "target_amount": 55000,
-        "current_amount": 0,
-        "currency": "USD",
-        "start_date": "2025-07-31",
         "target_date": "2029-05-15",
-        "estimated_completion_date": null,
-        "ai_questionnaire_data": {
-            "current_savings": "10000",
-            "additional_costs": [
-                "moving_expenses"
-            ],
-            "desired_timeline": "5_years",
-            "target_home_price": "400000",
-            "down_payment_percentage": "10",
-            "monthly_savings_capacity": "1000"
-        },
-        "ai_generated_strategy": "Your comprehensive savings strategy will focus on consistent monthly contributions, leveraging your impressive savings capacity, and building a substantial financial buffer. We'll also integrate crucial financial health practices and timeline-specific actions to prepare you for a successful home purchase.",
-        "ai_generated_milestones": [
-            {
-                "type": "habit",
-                "title": "Establish Automated Savings",
-                "dueDate": "2024-06-01",
-                "priority": "critical",
-                "frequency": "monthly",
-                "aiRationale": "Automation is key to consistent savings. This ensures you prioritize your homeownership goal and build momentum without having to actively think about saving each month.",
-                "description": "Set up an automatic transfer of $1,000 from your checking account to a dedicated savings account each month, ideally right after your paycheque arrives.",
-                "habitDescription": "Automate transfer of $1,000 to home savings account.",
-                "habitTargetValue": 1000
-            },
-            {
-                "type": "amount",
-                "title": "Reach Down Payment Fund",
-                "dueDate": "2026-11-15",
-                "priority": "high",
-                "aiRationale": "Reaching the down payment milestone signifies significant progress towards your core goal and validates your savings plan. This amount is critical for securing your mortgage.",
-                "description": "Accumulate enough savings to cover your target 10% down payment of $40,000.",
-                "targetAmount": 40000
-            },
-            {
-                "type": "amount",
-                "title": "Total Target Savings Met",
-                "dueDate": "2028-02-15",
-                "priority": "high",
-                "aiRationale": "Hitting your total target amount means you've successfully saved enough for all projected upfront costs, providing a clear pathway to beginning your home search without financial strain.",
-                "description": "Achieve the full $55,000 target amount, covering down payment, closing costs, and moving expenses.",
-                "targetAmount": 55000
-            },
-            {
-                "type": "action",
-                "title": "Credit Score Optimization & Pre-Approval",
-                "dueDate": "2028-08-15",
-                "priority": "critical",
-                "aiRationale": "A strong credit score is vital for securing favorable mortgage rates. Pre-approval clarifies your borrowing power, makes you a more attractive buyer, and prepares you for the home-buying process.",
-                "description": "Actively monitor and optimize your credit score. Once your total savings target is within reach (approx. 6-12 months before your desired purchase), apply for mortgage pre-approval."
-            },
-            {
-                "type": "amount",
-                "title": "Build Post-Purchase Emergency Fund",
-                "dueDate": "2029-05-15",
-                "priority": "high",
-                "aiRationale": "Homeownership comes with unexpected expenses. A dedicated emergency fund provides a critical safety net for repairs, maintenance, or any unforeseen financial challenges, ensuring peace of mind after moving in.",
-                "description": "Utilize the surplus savings beyond your target $55,000 (projected to be an additional $15,000) to establish a robust emergency fund specifically for home-related surprises and general financial stability.",
-                "targetAmount": 70000
-            },
-            {
-                "type": "habit",
-                "title": "Annual Financial Health Check-in",
-                "dueDate": "2025-05-15",
-                "priority": "medium",
-                "frequency": "one-time",
-                "aiRationale": "Regular check-ins ensure your plan remains on track, allows for adjustments based on life changes or market conditions, and keeps you engaged with your financial progress.",
-                "description": "Review your budget, savings progress, and financial goals annually to make any necessary adjustments to your plan.",
-                "habitDescription": "Conduct a thorough review of budget, savings, and financial goals."
-            }
-        ],
-        "ai_insights": null,
-        "status": "active",
-        "progress_percentage": 0,
-        "is_on_track": true,
-        "created_at": "2025-07-31T09:48:25.581981+00:00",
-        "updated_at": "2025-07-31T09:48:25.581981+00:00",
-        "completed_at": null
+        "rationale": "Strategic homeownership plan with comprehensive cost coverage including down payment, closing costs, and emergency buffer for successful transition to homeownership."
     },
     "milestones": [
         {
@@ -267,11 +185,5 @@ export const MOCK_AI_RESPONSE: GoalCreationResult = {
         "monthlyRequired": 750,
         "projectedFinalAmount": 70000,
         "confidenceLevel": 0.95
-    },
-    "debug": {
-        "message": "Goal generated and stored successfully",
-        "timestamp": "2025-07-31T09:48:26.209Z",
-        "goalId": "148ac48f-5e60-4be2-a089-8f434a844c7a",
-        "milestonesCreated": 6
     }
 }

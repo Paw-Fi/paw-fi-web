@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Header } from '../index/header';
+import { HomeHeader } from '../index/header';
 
 interface PageLayoutProps {
   children: ReactNode;
@@ -8,7 +8,7 @@ interface PageLayoutProps {
 export const PageLayout = ({ children }: PageLayoutProps) => {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      <HomeHeader />
       <main className="py-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {children}

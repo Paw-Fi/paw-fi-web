@@ -40,9 +40,6 @@ export default defineConfig({
     // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
     TanStackRouterVite({
       autoCodeSplitting: true,
-      codesSplitGroupings: [
-        ['component', 'errorComponent', 'notFoundComponent', 'pendingComponent', 'loader']
-      ]
     }),
     VitePluginRadar({
       analytics: {

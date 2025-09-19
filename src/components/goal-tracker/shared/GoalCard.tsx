@@ -74,7 +74,7 @@ export function GoalCard({ goal, index = 0, onGoalUpdate }: GoalCardProps) {
 
   return (
     <Link
-      to={`/dashboard/tracker/${goal.id}`}
+      to={`/dashboard/tracker/${goal.id}` as any}
       className="block"
     >
       <motion.div

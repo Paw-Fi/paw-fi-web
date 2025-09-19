@@ -13,7 +13,7 @@ export function LessonNotFound() {
           Sorry, the lesson you're looking for doesn't exist.
         </p>
         <button
-          onClick={() => navigate({ to: "/learning" })}
+          onClick={() => navigate({ to: "/dashboard/learning" })}
           className="bg-primary w-full rounded-full px-6 py-3 font-medium text-white hover:bg-purple-700"
         >
           Back to Learning

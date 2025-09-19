@@ -297,7 +297,7 @@ export function EducationHubPreview() {
                             size="sm"
                             className="group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                           >
-                            <Link to={`/dashboard/learning/${course.id}`}>
+                            <Link to={"/dashboard/learning/$courseId" as any} params={{ courseId: course.id }}>
                               Start Course
                               <FontAwesomeIcon icon={faArrowRight} className="ml-2 h-3 w-3" />
                             </Link>
@@ -365,7 +365,7 @@ export function EducationHubPreview() {
                         size="sm" 
                         className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                       >
-                        <Link to={`/calculators/${calculator.id}`}>
+                        <Link to="/calculators">
                           Try Calculator
                         </Link>
                       </Button>

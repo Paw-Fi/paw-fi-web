@@ -33,3 +33,7 @@ package-lock.json
 src/routeTree.gen.ts
 
 public/sitemap.xml.backup
+
+.serena/
+
+.playwright-mcp/

@@ -60,7 +60,10 @@ class PerformanceMonitor {
       // First Input Delay
       const fidObserver = new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
-          this.metrics.fid = entry.processingStart - entry.startTime;
+          const eventEntry = entry as any;
+          if (eventEntry.processingStart) {
+            this.metrics.fid = eventEntry.processingStart - entry.startTime;
+          }
         }
       });
       fidObserver.observe({ entryTypes: ['first-input'] });
@@ -69,8 +72,9 @@ class PerformanceMonitor {
       // Cumulative Layout Shift
       const clsObserver = new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
-          if (!entry.hadRecentInput) {
-            this.metrics.cls = (this.metrics.cls || 0) + entry.value;
+          const layoutEntry = entry as any;
+          if (!layoutEntry.hadRecentInput && layoutEntry.value !== undefined) {
+            this.metrics.cls = (this.metrics.cls || 0) + layoutEntry.value;
           }
         }
       });

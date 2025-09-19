@@ -409,7 +409,7 @@ function QuestionsIndexComponent() {
                             transition={{ delay: questionIndex * 0.05 }}
                           >
                             <Link
-                              to={`/questions/${questionSlug}`}
+                              to="/questions/$questionSlug" params={{ questionSlug }}
                               className="block h-full"
                             >
                               <div className="h-full bg-background/90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
@@ -491,7 +491,7 @@ function QuestionsIndexComponent() {
               </p>
               <Link
                 to="/onboarding"
-                search={{}}
+                search={{ q: undefined }}
                 className="inline-flex items-center gap-3 px-8 py-4 bg-white text-purple-600 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
                 <FontAwesomeIcon icon={faUsers} className="h-5 w-5" />

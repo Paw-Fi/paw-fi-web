@@ -120,7 +120,7 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
       // For matching, compare with correct matches
       if (question.correct_answers && typeof answer === "object") {
         const userMatches = answer as Record<string, string>;
-        const correctMatches = question.correctMatches || question.correct_answers;
+        const correctMatches = question.correct_answers;
         
         // Normalize the data formats
         const correctEntries = Object.entries(correctMatches);
@@ -212,6 +212,10 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
       }
       
       // Check against single correct answer
+      if (!textInputQuestion.correctAnswer) {
+        return false;
+      }
+      
       const normalizedCorrectAnswer = isCaseSensitive 
         ? textInputQuestion.correctAnswer.trim() 
         : textInputQuestion.correctAnswer.trim().toLowerCase();
@@ -233,7 +237,7 @@ export function isCurrentQuestionAnswered(currentQuestion: LearningQuizQuestion,
   // For matrix rating questions, all items must be rated
   if (currentQuestion.type === "matrix-rating") {
     const matrixAnswer = answer as Record<string, string>;
-    return currentQuestion.items?.every((item) => !!matrixAnswer[item.id]);
+    return currentQuestion.items?.every((item) => !!matrixAnswer[item.id]) ?? false;
   }
 
   // For text input questions, check if there is text and it's not empty

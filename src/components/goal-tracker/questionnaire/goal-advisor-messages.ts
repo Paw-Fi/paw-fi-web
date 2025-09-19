@@ -315,15 +315,13 @@ export class GoalAdvisorMessageGenerator {
   private static getGoalTypeDisplayName(goalType: GoalType): string {
     const goalTypeNames: Record<GoalType, string> = {
       'retirement': 'retirement',
-      'home-buying': 'home buying',
-      'emergency-fund': 'emergency fund',
-      'debt-payoff': 'debt payoff',
-      'wealth-building': 'wealth building',
-      'education-fund': 'education fund',
-      'travel-fund': 'travel fund',
-      'business-startup': 'business startup',
-      'major-purchase': 'major purchase',
-      'healthcare-fund': 'healthcare fund'
+      'home_buying': 'home buying',
+      'wealth': 'wealth building',
+      'investment': 'investment',
+      'debt_payoff': 'debt payoff',
+      'emergency_fund': 'emergency fund',
+      'passive_income': 'passive income',
+      'custom': 'custom'
     };
     
     return goalTypeNames[goalType] || 'financial';

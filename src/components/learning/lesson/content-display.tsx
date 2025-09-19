@@ -36,7 +36,7 @@ function ContentDisplay({
       x: 0, 
       scale: 1, 
       transition: { 
-        type: "spring", 
+        type: "spring" as any, 
         stiffness: 400, 
         damping: 25,
         duration: 0.3 
@@ -48,7 +48,7 @@ function ContentDisplay({
       x: -100, 
       scale: 0.95, 
       transition: { 
-        type: "spring", 
+        type: "spring" as any, 
         stiffness: 400, 
         damping: 25,
         duration: 0.2 
@@ -132,7 +132,7 @@ function ContentDisplay({
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ 
-            type: "spring", 
+            type: "spring" as any, 
             stiffness: 400, 
             damping: 25, 
             delay: 0.2 

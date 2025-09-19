@@ -122,7 +122,7 @@ export function ResetPassword() {
             This password reset link is invalid or has expired. Please request a new password reset.
           </p>
           <Button
-            onClick={() => navigate({ to: '/login' })}
+            onClick={() => navigate({ to: '/login', search: { redirect: undefined } })}
             className="w-full"
           >
             Back to Login

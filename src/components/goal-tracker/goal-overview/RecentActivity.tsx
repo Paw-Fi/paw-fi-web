@@ -57,7 +57,7 @@ export function RecentActivity() {
           transition={{ delay: 0.5, duration: 0.3 }}
         >
           <Link 
-            to="/dashboard/timeline" 
+            to="/dashboard/tracker"
             className="group flex items-center justify-center gap-2 sm:gap-2.5 w-full py-2.5 sm:py-3 px-3 sm:px-4 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm hover:bg-white/60 dark:hover:bg-gray-800/60 active:bg-white/70 dark:active:bg-gray-800/70 text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 rounded-lg sm:rounded-xl font-medium transition-all duration-200 border border-gray-200/30 dark:border-gray-600/30 hover:border-blue-300/50 dark:hover:border-blue-400/50 touch-manipulation"
           >
             <span className="text-sm">View Full Timeline</span>

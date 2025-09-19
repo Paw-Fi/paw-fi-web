@@ -4,8 +4,8 @@ import { LineChart } from '../../../components/ui/line-chart';
 
 export function AutoLoanCalculator() {
   const [autoPrice, setAutoPrice] = useState<number | ''>(30000);
-  const [loanTermMonths, setLoanTermMonths] = useState<number>(60);
-  const [interestRate, setInterestRate] = useState<number>(5.0);
+  const [loanTermMonths, setLoanTermMonths] = useState<number | ''>(60);
+  const [interestRate, setInterestRate] = useState<number | ''>(5.0);
   const [cashIncentives, setCashIncentives] = useState<number | ''>(0);
   const [downPayment, setDownPayment] = useState<number | ''>(5000);
   const [tradeInValue, setTradeInValue] = useState<number | ''>(0);
@@ -68,12 +68,12 @@ export function AutoLoanCalculator() {
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="loanTermMonths">Loan Term</label>
-          <input id="loanTermMonths" type="number" min={1} value={loanTermMonths === '' ? '' : loanTermMonths} onChange={e => setLoanTermMonths(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
+          <input id="loanTermMonths" type="number" min={1} value={loanTermMonths === '' ? '' : loanTermMonths} onChange={e => setLoanTermMonths(e.target.value === '' ? '' as const : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
           <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">months</span>
         </div>
         <div>
           <label className="block text-sm font-medium mb-2 text-foreground dark:text-dark-foreground" htmlFor="interestRate">Interest Rate</label>
-          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
+          <input id="interestRate" type="number" min={0} step={0.01} value={interestRate === '' ? '' : interestRate} onChange={e => setInterestRate(e.target.value === '' ? '' as const : Number(e.target.value))} className="w-full rounded-lg border border-subtle-border dark:border-dark-subtle-border focus:ring-primary dark:focus:ring-dark-primary focus:border-primary dark:focus:border-dark-primary bg-input dark:bg-dark-input text-foreground dark:text-dark-foreground p-2" />
           <span className="text-xs text-muted-foreground dark:text-dark-muted-foreground">%</span>
         </div>
         <div>
@@ -159,8 +159,8 @@ export function AutoLoanCalculator() {
         {showAmortizationSchedule && (
           <AmortizationSchedule
             principal={loanAmount}
-            interestRate={interestRate}
-            months={loanTermMonths}
+            interestRate={typeof interestRate === 'number' ? interestRate : 0}
+            months={typeof loanTermMonths === 'number' ? loanTermMonths : 0}
             monthlyPayment={monthlyPayment}
           />
         )}

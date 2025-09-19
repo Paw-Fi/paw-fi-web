@@ -53,7 +53,7 @@ export const Footer = () => {
                </li>
                <li>
                  <Link
-                   to={`/dashboard/learning/${basicLessonsData.course_id}`}
+                   to="/dashboard/learning"
                    className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                  >
                    Financial Planning Courses

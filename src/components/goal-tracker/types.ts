@@ -5,18 +5,17 @@
 export type { 
   QuestionnaireTemplate,
   QuestionnaireData
-} from '@/data/questionnaire-templates';
+} from '../../data/questionnaire-templates';
 
 export type { 
   GoalTypeConfig 
-} from '@/data/goal-type-configs';
+} from '../../data/goal-type-configs';
 
 // Import the configurations for re-export
-export { GOAL_TYPE_CONFIGS } from '@/data/goal-type-configs';
+export { GOAL_TYPE_CONFIGS } from '../../data/goal-type-configs';
 
-// Define GoalType and QuestionnaireData locally to avoid circular imports
+// Define GoalType locally to avoid circular imports
 export type GoalType = 'retirement' | 'home_buying' | 'wealth' | 'investment' | 'debt_payoff' | 'emergency_fund' | 'passive_income' | 'custom';
-export type QuestionnaireData = Record<string, any>;
 
 // Additional types specific to the goal tracker components
 export interface CreateGoalRequest {

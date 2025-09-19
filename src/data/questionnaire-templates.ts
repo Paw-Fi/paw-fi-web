@@ -1,4 +1,4 @@
-import { goalsQuestionTemplate, type FinancialProfileQuestion } from "@/types/financial-quiz-constants";
+import { goalsQuestionTemplate, type FinancialProfileQuestion } from "../types/financial-quiz-constants";
 
 export interface QuestionnaireTemplate {
   id: string;
