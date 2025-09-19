@@ -147,8 +147,8 @@ export function SavingGoalsCalculator() {
               datasets={[{
                 label: 'Projected Savings',
                 data: result.schedule,
-                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
-                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.15)' : 'rgba(116,88,255,0.15)',
+                borderColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.15)' : 'rgba(116,88,255,0.15)',
                 fill: true,
               }]}
             />

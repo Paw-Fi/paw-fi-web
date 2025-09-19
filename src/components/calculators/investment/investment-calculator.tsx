@@ -158,8 +158,8 @@ function ReturnRateTab() {
               datasets={[{
                 label: 'Projected Balance',
                 data: schedule.map((s) => s.balance),
-                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
-                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
+                borderColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
                 fill: true,
               }]}
               title="Balance Growth Over Time"
@@ -237,8 +237,8 @@ function StartingAmountTab() {
               datasets={[{
                 label: 'Projected Balance',
                 data: schedule.map((s) => s.balance),
-                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
-                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
+                borderColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
                 fill: true,
               }]}
               title="Balance Growth Over Time"
@@ -318,8 +318,8 @@ function InvestmentLengthTab() {
               datasets={[{
                 label: 'Projected Balance',
                 data: schedule.map((s) => s.balance),
-                borderColor: document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
-                backgroundColor: document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
+                borderColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? '#8B70FF' : '#7458FF',
+                backgroundColor: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'rgba(139,112,255,0.1)' : 'rgba(116,88,255,0.1)',
                 fill: true,
               }]}
               title="Balance Growth Over Time"

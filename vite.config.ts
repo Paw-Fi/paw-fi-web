@@ -94,7 +94,7 @@ export default defineConfig({
           prerender:{enabled:true}
         },
         {
-          path: '/dashboard/tracker',
+          path: '/dashboard/tracker?filter=all&sort=due-date',
           prerender:{enabled:true}
         },
         {
