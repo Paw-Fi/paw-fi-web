@@ -7,6 +7,8 @@ runConfig:
   concurrency: 80
   cpu: 1
   memoryMiB: 512
+  timeoutSeconds: 300
+  startupTimeoutSeconds: 240
 
 # Ensure TanStack Start build output is preserved
 outputFiles:
@@ -21,6 +23,10 @@ env:
   # Server binding configuration for containers
   - variable: HOST
     value: "0.0.0.0"
+    availability: [RUNTIME]
+    
+  - variable: PORT
+    value: "8080"
     availability: [RUNTIME]
 
   # Application secrets
