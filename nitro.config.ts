@@ -1,18 +1,13 @@
 import { defineNitroConfig } from 'nitropack/config'
 
 export default defineNitroConfig({
-  // Ensure compatibility with Google Cloud Run
-  preset: 'node-server',
-  
-  // Configure server to listen on all interfaces and use PORT environment variable
+  // Configure server to use PORT environment variable (for Google Cloud Run)
   runtimeConfig: {
-    host: process.env.HOST || '0.0.0.0',
     port: process.env.PORT || 3000
   },
   
-  // Development server configuration
+  // Ensure the server listens on all interfaces (0.0.0.0) for cloud deployment
   devServer: {
-    host: '0.0.0.0',
-    port: 3000
+    host: '0.0.0.0'
   }
 })
