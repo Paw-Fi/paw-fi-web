@@ -1,57 +1,56 @@
-import { createMiddleware } from '@tanstack/react-start'
-import { setHeaders } from '@tanstack/react-start/server'
-
 /**
- * Security headers middleware for TanStack Start
- * Applies essential security headers to all server responses
+ * Security headers middleware for production deployment
  */
-export const securityHeadersMiddleware = createMiddleware({ type: 'function' }).server(
-  async ({ next }) => {
-    // Set security headers for all responses
-    setHeaders({
-      // X-Content-Type-Options: Prevent MIME type sniffing
-      'X-Content-Type-Options': 'nosniff',
-      
-      // X-Frame-Options: Prevent clickjacking
-      'X-Frame-Options': 'DENY',
-      
-      // X-XSS-Protection: Enable XSS filtering
-      'X-XSS-Protection': '1; mode=block',
-      
-      // Referrer-Policy: Control referrer information
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      
-      // Strict-Transport-Security: Force HTTPS (only in production)
-      ...(process.env.NODE_ENV === 'production' && {
-        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload'
-      }),
-      
-      // Content Security Policy: Prevent XSS and injection attacks
-      'Content-Security-Policy': [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: https: blob:",
-        "connect-src 'self' https://api.supabase.co https://www.google-analytics.com",
-        "frame-ancestors 'none'",
-        "base-uri 'self'",
-        "form-action 'self'"
-      ].join('; '),
-      
-      // Permissions-Policy: Control browser features
-      'Permissions-Policy': [
-        'camera=()',
-        'microphone=()',
-        'geolocation=()',
-        'interest-cohort=()'
-      ].join(', ')
-    })
-
-    // Continue to next middleware/handler
-    return next()
+export function securityHeadersMiddleware(request: Request): Response | null {
+  // Only apply security headers in production
+  if (process.env.NODE_ENV !== 'production') {
+    return null
   }
-)
+
+  const url = new URL(request.url)
+  const headers = new Headers()
+
+  // Strict-Transport-Security header
+  headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  
+  // Content Security Policy
+  headers.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https: blob:",
+    "connect-src 'self' https://api.supabase.co https://www.google-analytics.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; '))
+
+  // X-Content-Type-Options
+  headers.set('X-Content-Type-Options', 'nosniff')
+  
+  // X-Frame-Options
+  headers.set('X-Frame-Options', 'DENY')
+  
+  // X-XSS-Protection
+  headers.set('X-XSS-Protection', '1; mode=block')
+  
+  // Referrer-Policy
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  
+  // Permissions-Policy
+  headers.set('Permissions-Policy', [
+    'camera=()',
+    'microphone=()',
+    'geolocation=()',
+    'interest-cohort=()'
+  ].join(', '))
+
+  return new Response(null, {
+    status: 200,
+    headers
+  })
+}
 
 /**
  * Cache headers middleware for static assets

@@ -1,3 +1,11 @@
 # Custom build and start commands
 customBuildCommand: npm run build
 entryPoint: node .output/server/index.mjs
+
+# Resource configuration for Google Cloud Run
+runConfig:
+  cpu: 1000m        # 1 vCPU (1000 milliCPU)
+  memory: 512Mi     # 512 MiB memory
+  maxInstances: 10  # Reduced from default to stay within quota
+  minInstances: 0   # Scale to zero when not in use
+  concurrency: 100  # Requests per container instance
