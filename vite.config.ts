@@ -47,7 +47,11 @@ export default defineConfig({
       },
     }),
     tanstackStart({
-      customViteReactPlugin: true,    
+      target: 'node-server',
+      customViteReactPlugin: true,
+      sitemap: {
+        host: 'https://moneko.io'
+      },
       pages:[
         {
           path: '/',
