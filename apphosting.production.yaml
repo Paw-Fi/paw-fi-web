@@ -7,46 +7,38 @@ runConfig:
   concurrency: 80
   cpu: 1
   memoryMiB: 512
-
-# Override build and run scripts for TanStack Start
-scripts:
-  runCommand: node .output/server/index.mjs
-
-# Ensure TanStack Start build output is preserved
-outputFiles:
-  serverApp:
-    include: [.output, node_modules, package.json]
+  concurrency: 80
 
 env:
-  # Build optimization
+  # Production Supabase configuration
+  # Using secrets for secure environment variables
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=2048"
-
-  # Server binding configuration for containers
-  - variable: HOST
-    value: "0.0.0.0"
-    availability: [RUNTIME]
+    value: "--max-old-space-size=4096"
     
-  - variable: PORT
-    value: "8080"
-    availability: [RUNTIME]
-
   # Application secrets
   - variable: VITE_SUPABASE_URL
     secret: supabaseUrlSecretProd
-    availability: [BUILD, RUNTIME]
-    
+    availability:
+      - BUILD
+      - RUNTIME    
   - variable: VITE_SUPABASE_ANON_KEY
     secret: supabaseAnonKeySecretProd
-    availability: [BUILD, RUNTIME]
-
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: VITE_STRIPE_PUBLISHABLE_KEY
     secret: stripePK_PROD
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
 
   - variable: VITE_STRIPE_SECRET_KEY
     secret: stripeSK_PROD
-    availability: [BUILD, RUNTIME]
+    availability:
+      - BUILD
+      - RUNTIME
+
+runtime: nodejs20  # or nodejs20
 
 # Note: Secrets access granted on 2025-09-20:
 # ✔ firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
