@@ -5,6 +5,7 @@ import { routeTree } from './routeTree.gen'
 import { DefaultCatchBoundary } from './components/DefaultCatchBoundary'
 import { NotFound } from './components/NotFound'
 import { performanceMonitor } from './utils/performance-monitor'
+import { trackPageView } from './lib/analytics'
 
 // NOTE: Most of the integration code found here is experimental and will
 // definitely end up in a more streamlined API in the future. This is just
@@ -94,8 +95,12 @@ export function createRouter() {
       // Mark route load complete for performance tracking
       performanceMonitor?.markRouteEnd();
       
-      // Preload critical routes after navigation
+      // Track page view with Google Analytics
       const currentPath = router.state.location.pathname;
+      const pageTitle = document.title || 'Moneko';
+      trackPageView(pageTitle, currentPath);
+      
+      // Preload critical routes after navigation
       if (currentPath === '/dashboard') {
         // Preload commonly accessed dashboard routes
         router.preloadRoute({ to: '/dashboard/learning' });

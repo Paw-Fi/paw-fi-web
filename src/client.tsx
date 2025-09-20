@@ -5,6 +5,7 @@ import { createRouter } from './router'
 import { ReduxProvider } from './providers/ReduxProvider'
 import { Suspense, lazy } from 'react'
 import { performanceMonitor } from './utils/performance-monitor'
+import { initializeAnalytics } from './lib/analytics'
 
 // Optimized root component with performance enhancements
 function RootApp() {
@@ -48,6 +49,9 @@ try {
 
 // Preload critical resources after hydration
 if (typeof window !== 'undefined') {
+  // Initialize Firebase Analytics
+  initializeAnalytics();
+  
   // Preload critical routes
   setTimeout(() => {
     router.preloadRoute({ to: '/dashboard' });
