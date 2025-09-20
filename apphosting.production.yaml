@@ -18,7 +18,7 @@ outputFiles:
 env:
   # Build optimization
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=2048"
+    value: "--max-old-space-size=8192"
 
   # Server binding configuration for containers
   - variable: HOST
