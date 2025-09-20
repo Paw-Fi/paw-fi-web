@@ -9,6 +9,14 @@ runConfig:
   memoryMiB: 512
   timeoutSeconds: 300
   startupTimeoutSeconds: 240
+  startupProbe:
+    httpGet:
+      path: "/health"
+      port: 8080
+    initialDelaySeconds: 10
+    timeoutSeconds: 30
+    periodSeconds: 10
+    failureThreshold: 20
 
 # Ensure TanStack Start build output is preserved
 outputFiles:
@@ -18,7 +26,7 @@ outputFiles:
 env:
   # Build optimization
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=8192"
+    value: "--max-old-space-size=2048"
 
   # Server binding configuration for containers
   - variable: HOST
