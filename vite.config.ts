@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { VitePluginRadar } from 'vite-plugin-radar';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import  compression  from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -31,6 +31,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: '0.0.0.0', // Allow external connections for Docker/containers
   },
   plugins: [
     tailwindcss(),
@@ -38,7 +39,7 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
-    TanStackRouterVite({
+    tanstackRouter({
       autoCodeSplitting: true,
     }),
     VitePluginRadar({
