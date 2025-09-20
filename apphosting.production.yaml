@@ -8,6 +8,10 @@ runConfig:
   cpu: 1
   memoryMiB: 512
 
+# Override build and run scripts for TanStack Start
+scripts:
+  runCommand: node .output/server/index.mjs
+
 # Ensure TanStack Start build output is preserved
 outputFiles:
   serverApp:
