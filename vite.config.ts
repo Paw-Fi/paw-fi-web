@@ -82,30 +82,6 @@ export default defineConfig({
           prerender:{enabled:true}
         },
         {
-          path: '/calculators/compound-calculator',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/calculators/auto-loan-calculator',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/calculators/mortgage-calculator',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/calculators/retirement-calculator',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/calculators/investment-calculator',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/calculators/saving-goals-calculator',
-          prerender:{enabled:true}
-        },
-        {
           path: '/early-access',
           prerender:{enabled:true}
         },
