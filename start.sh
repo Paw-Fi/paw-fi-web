@@ -2,10 +2,6 @@
 
 # Debug script to understand the runtime environment
 echo "Current working directory: $(pwd)"
-echo "Environment variables:"
-echo "PORT=${PORT:-'not set'}"
-echo "NODE_ENV=${NODE_ENV:-'not set'}"
-
 echo "Directory contents:"
 ls -la
 
@@ -18,9 +14,6 @@ if [ -d ".output" ]; then
         ls -la .output/server/
         if [ -f ".output/server/index.mjs" ]; then
             echo "index.mjs exists, starting server..."
-            # Set PORT environment variable if not set (Google Cloud Run uses PORT env var)
-            export PORT=${PORT:-8080}
-            echo "Starting server on port $PORT"
             node .output/server/index.mjs
         else
             echo "ERROR: .output/server/index.mjs not found"
