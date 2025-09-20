@@ -1,18 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/health')({
-  component: () => null,
+  component: HealthComponent,
   loader: async () => {
-    // Simple health check - return 200 OK
-    return new Response(JSON.stringify({ 
+    // Simple health check data
+    return { 
       status: 'healthy', 
       timestamp: new Date().toISOString(),
       uptime: process.uptime()
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    }
   },
 })
+
+function HealthComponent() {
+  const data = Route.useLoaderData()
+  
+  return (
+    <div style={{ fontFamily: 'monospace', padding: '20px' }}>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
+    </div>
+  )
+}
