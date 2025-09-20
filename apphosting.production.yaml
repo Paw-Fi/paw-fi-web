@@ -44,8 +44,8 @@ env:
     secret: stripeSK_PROD
     availability: [BUILD, RUNTIME]
 
-# Note: Grant access to secrets using:
-# firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
-# firebase apphosting:secrets:grantaccess supabaseUrlSecretProd --backend prod-paw-fi-web  
-# firebase apphosting:secrets:grantaccess supabaseAnonKeySecretProd --backend prod-paw-fi-web
-# firebase apphosting:secrets:grantaccess stripePK_PROD --backend prod-paw-fi-web
+# Note: Secrets access granted on 2025-09-20:
+# ✔ firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
+# ✔ firebase apphosting:secrets:grantaccess supabaseUrlSecretProd --backend prod-paw-fi-web  
+# ✔ firebase apphosting:secrets:grantaccess supabaseAnonKeySecretProd --backend prod-paw-fi-web
+# ✔ firebase apphosting:secrets:grantaccess stripePK_PROD --backend prod-paw-fi-web
