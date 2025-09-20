@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { VitePluginRadar } from 'vite-plugin-radar';
 import react from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import  compression  from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -16,32 +16,18 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   build: {
     rollupOptions: {
-      treeshake: true, // Enable tree shaking to reduce bundle size and memory usage
-      output: {
-        // Optimize chunk splitting to reduce memory usage during build
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['@tanstack/react-router', '@tanstack/react-start'],
-          ui: ['@radix-ui/react-slot', '@radix-ui/react-toast'],
-        },
-        // Reduce chunk size limits to prevent memory issues
-        maxParallelFileOps: 2, // Limit parallel operations to reduce memory pressure
-      },
+      treeshake: false,
     },
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
-        // More aggressive compression to reduce bundle size
-        passes: 2,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
-      mangle: true,
     },
     cssMinify: true,
     target: 'es2020',
-    chunkSizeWarningLimit: 500, // Reduced from 1000 to encourage smaller chunks
+    chunkSizeWarningLimit: 1000,
   },
   server: {
     port: 3000,
@@ -52,8 +38,7 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
-    tanstackRouter({
-      target: 'react',
+    TanStackRouterVite({
       autoCodeSplitting: true,
     }),
     VitePluginRadar({
@@ -63,13 +48,24 @@ export default defineConfig({
     }),
     tanstackStart({
       target: 'node-server',
-      customViteReactPlugin: true,
-      // Reduced prerender list to critical pages only to reduce memory usage during build
+      customViteReactPlugin: true,    
       pages:[
         {
           path: '/',
           prerender:{enabled:true}
         },
+        {
+          path: '/passive-income/business-cash-flow',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/passive-income/high-interest-portfolios',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/passive-income/time-to-wealth',
+          prerender:{enabled:true}
+        },      
         {
           path: '/pricing',
           prerender:{enabled:true}
@@ -91,7 +87,47 @@ export default defineConfig({
           prerender:{enabled:true}
         },
         {
+          path: '/calculators/auto-loan-calculator',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/calculators/mortgage-calculator',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/calculators/retirement-calculator',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/calculators/investment-calculator',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/calculators/saving-goals-calculator',
+          prerender:{enabled:true}
+        },
+        {
           path: '/early-access',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/onboarding',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/dashboard',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/dashboard/tracker?filter=all&sort=due-date',
+          prerender:{enabled:true}
+        },
+        {
+          path: '/dashboard/learning',
+          prerender:{enabled:true}
+        },     
+        {
+          path: '/dashboard/portfolio',
           prerender:{enabled:true}
         }
       ]

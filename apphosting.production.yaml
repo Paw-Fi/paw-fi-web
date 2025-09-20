@@ -8,15 +8,10 @@ runConfig:
   cpu: 1                 # 1 CPU for F2-equivalent performance
   memoryMiB: 512         # 512MB memory for TanStack Start
 
-# Override build and run commands for TanStack Start
-scripts:
-  buildCommand: npm run build
-  runCommand: node .output/server/index.mjs
-
 env:
   # Optimized Node.js settings for F2 instances and build process
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=4096"  # Increased memory allocation for complex SSR build with prerendering
+    value: "--max-old-space-size=2048"  # Increased memory allocation for complex build
 
   - variable: VITE_SUPABASE_URL
     secret: supabaseUrlSecretProd
