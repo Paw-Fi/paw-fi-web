@@ -14,7 +14,7 @@ import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 import VideoSection from "@/components/homepage/new/video-section";
 import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
-import FAQSection from "@/components/homepage/new/faq-section";
+import { USFinancialFAQSection } from "@/components/homepage/us-financial-faq-section";
 import { Footer } from "@/components/homepage/footer";
 import AmbientHalo from "@/components/ui/ambient-halo";
 
@@ -89,9 +89,13 @@ export default function HomePage() {
         <ExpertLessonsSection data={pageData} />
       </section>
 
-      {/* FAQ Section */}
-      <section className="relative ">
-        <FAQSection />
+      {/* US Financial FAQ Section */}
+      <section className="relative">
+        <USFinancialFAQSection 
+          maxFAQs={8}
+          showCategoryFilter={true}
+          showStructuredData={true}
+        />
       </section>
 
       {/* Footer */}
