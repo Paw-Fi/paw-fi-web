@@ -153,10 +153,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <MonekoOrganizationData />
         <MonekoWebsiteData />
-        <GoogleTagManager gtmId="G-KBNN5QXD4G" />
       </head>
       
       <body className="h-screen">      
+        
+      {/* Google Analytics - must be in body with ClientOnly for react-ga4 */}
+      <ClientOnly>
+        <GoogleTagManager gtmId="G-KBNN5QXD4G" />
+      </ClientOnly>
         
       <HelmetProvider>
         <ErrorBoundary>

@@ -1,27 +1,19 @@
 // app/components/GoogleTagManager.jsx
-
-declare global {
-  interface Window {
-    dataLayer: any[];
-    gtag: (command: string, ...args: any[]) => void;
-  }
-}
+import { useEffect } from 'react';
+import ReactGA from 'react-ga4';
 
 export function GoogleTagManager({ gtmId }: { gtmId: string }) {
-  return (
-    <>
-      {/* Global site tag (gtag.js) - Google Analytics */}
-      <script async src={`https://www.googletagmanager.com/gtag/js?id=${gtmId}`}></script>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${gtmId}');
-          `,
-        }}
-      />
-    </>
-  );
+  useEffect(() => {
+    // Initialize Google Analytics
+    ReactGA.initialize(gtmId);
+    
+    // Send pageview with current path
+    ReactGA.send({ 
+      hitType: "pageview", 
+      page: window.location.pathname,
+      title: document.title 
+    });
+  }, [gtmId]);
+
+  return null; // No JSX needed - react-ga4 handles script injection
 }
