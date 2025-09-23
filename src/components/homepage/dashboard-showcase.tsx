@@ -63,7 +63,7 @@ export function DashboardShowcase() {
           <p
             className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato"
           >
-            Discover why 50,000+ users chose Moneko's AI finance coach to save $2.3M+ and achieve 127% better investment returns
+            Experience comprehensive financial management with AI-powered goal tracking, portfolio analytics, personalized education, and smart insights
           </p>
         </div>
 
