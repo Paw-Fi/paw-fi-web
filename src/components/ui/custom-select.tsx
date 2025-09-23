@@ -25,14 +25,23 @@ export function CustomSelect({
   className = "",
   disabled = false,
 }: CustomSelectProps) {
+  const defaultTriggerStyles = "w-full rounded-xl bg-white dark:bg-slate-900 backdrop-blur-sm text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:ring-2 focus:ring-[#7458FF]/30 transition-all duration-200";
+  
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={`w-full rounded-xl bg-white/10 backdrop-blur-sm p-4 text-white border-0 hover:bg-white/15 focus:ring-2 focus:ring-white/30 ${className}`}>
-        <SelectValue placeholder={placeholder} className="text-purple-300" />
+      <SelectTrigger className={`${defaultTriggerStyles} ${className}`}>
+        <SelectValue 
+          placeholder={placeholder} 
+          className="text-slate-500 dark:text-slate-400" 
+        />
       </SelectTrigger>
-      <SelectContent className="bg-white/10 backdrop-blur-xl border-0 rounded-xl">
+      <SelectContent className="bg-white dark:bg-slate-900 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50">
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} className="text-white hover:bg-white/10 focus:bg-white/10">
+          <SelectItem 
+            key={option.value} 
+            value={option.value} 
+            className="text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 cursor-pointer"
+          >
             {option.label}
           </SelectItem>
         ))}

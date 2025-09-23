@@ -7,6 +7,7 @@ import { type EarlyAccessClaim } from "@/lib/early-access";
 import { useRemainingSpots, useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
+import { Input } from "@/components/ui/input";
 import { useCookie } from "@/utils/use-cookie";
 import { useAuth } from "@/contexts/auth-context";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -110,7 +111,21 @@ export function FreeTrialGiveawayForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Handle full name input by splitting into firstName and lastName
+    if (name === 'fullName') {
+      const nameParts = value.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      setFormData((prev) => ({ 
+        ...prev, 
+        firstName: firstName,
+        lastName: lastName 
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleMultiSelectChange = (
@@ -273,24 +288,19 @@ export function FreeTrialGiveawayForm() {
               <div className="mb-6 grid grid-cols-2 gap-4">
                 <div>
                   <label
-                    htmlFor="firstName"
+                    htmlFor="fullName"
                     className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start"
                   >
                     Full Name <span className="text-[#7458FF]">*</span>
                   </label>
-                  <input
+                  <Input
                     type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
+                    id="fullName"
+                    name="fullName"
+                    value={`${formData.firstName} ${formData.lastName}`.trim()}
                     onChange={handleInputChange}
                     required
-                    disabled={isAuthenticated}
-                    className={`w-full rounded-xl p-4 outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700 ${
-                      isAuthenticated 
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed' 
-                        : 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400'
-                    }`}
+                    disabled={isAuthenticated}                   
                     placeholder={isAuthenticated ? "" : "your full name"}
                   />
                 </div>
@@ -301,19 +311,14 @@ export function FreeTrialGiveawayForm() {
                   >
                     Email Address <span className="text-[#7458FF]">*</span>
                   </label>
-                  <input
+                  <Input
                     type="email"
                     id="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    disabled={isAuthenticated}
-                    className={`w-full rounded-xl p-4 outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700 ${
-                      isAuthenticated 
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed' 
-                        : 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400'
-                    }`}
+                    disabled={isAuthenticated}                   
                     placeholder={isAuthenticated ? "" : "you@example.com"}
                   />
                 </div>
@@ -329,7 +334,6 @@ export function FreeTrialGiveawayForm() {
                   value={formData.experienceLevel}
                   onChange={(value) => setFormData(prev => ({ ...prev, experienceLevel: value }))}
                   placeholder="Select your experience level"
-                  className="w-full rounded-xl bg-white dark:bg-slate-900 backdrop-blur-sm p-4 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -341,7 +345,6 @@ export function FreeTrialGiveawayForm() {
                   onChange={(value) => handleMultiSelectChange(value, 'financialGoals')}
                   placeholder="Select your financial goals"
                   label="What are your top financial goals right now?"
-                  className="custom-form-field"
                 />
               </div>
 
@@ -353,7 +356,6 @@ export function FreeTrialGiveawayForm() {
                   onChange={(value) => handleMultiSelectChange(value, 'interestedFeatures')}
                   placeholder="Select features you're excited about"
                   label="Which Moneko features are you most excited about?"
-                  className="custom-form-field"
                 />
               </div>
 
@@ -367,7 +369,6 @@ export function FreeTrialGiveawayForm() {
                   value={formData.referralSource}
                   onChange={(value) => setFormData(prev => ({ ...prev, referralSource: value }))}
                   placeholder="Select how you found us"
-                  className="w-full rounded-xl bg-white dark:bg-slate-900 backdrop-blur-sm p-4 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700"
                 />
               </div>
               </>}
