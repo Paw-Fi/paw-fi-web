@@ -28,7 +28,6 @@ import { Badge } from "@/components/ui/badge";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import monekoIcon from "@/assets/images/logo/moneko.png"
 import monekoAnimate from "@/assets/images/logo/moneko-avatar.gif"
-import { useDeviceType } from "@/hooks/use-device-type";
 
 // AI Chat interface with animations
 const AIChat = () => {
@@ -126,7 +125,6 @@ const FeatureTag = ({ label }: { label: string }) => (
 // Dashboard Features Orbit with pill-style tags
 const TechStack = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const {isMobile} = useDeviceType();
   const motionSpeed = prefersReducedMotion ? 0.1 : 1; // Slow down if user prefers reduced motion
   return (
     <div className="relative h-full w-full bg-subtle-background overflow-hidden">
@@ -144,13 +142,13 @@ const TechStack = () => {
         </OrbitingCircles>
 
         {/* Outer Ring */}
-        <OrbitingCircles iconSize={16} radius={isMobile ? 120 : 130} duration={36} reverse path speed={motionSpeed}>
+        <OrbitingCircles iconSize={16} radius={120} duration={36} reverse path speed={motionSpeed}>
           <FeatureTag label="Goal Plan?" />
           <FeatureTag label="Budget tips?" />
         </OrbitingCircles>
 
          {/* Outer Ring */}
-         <OrbitingCircles iconSize={16} radius={isMobile ? 160 : 180} duration={40} reverse path speed={motionSpeed}>
+         <OrbitingCircles iconSize={16} radius={160} duration={40} reverse path speed={motionSpeed}>
           <FeatureTag label="Bad Debt?" />
           <FeatureTag label="Investment?" />
         </OrbitingCircles>
