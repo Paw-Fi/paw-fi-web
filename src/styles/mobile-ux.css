@@ -98,12 +98,6 @@ input, textarea, select {
     min-height: 56px; /* Larger touch area for user actions */
   }
   
-  /* Reduce animation complexity for better mobile performance */
-  *:not(.animate-pulse) {
-    animation-duration: 0.2s !important;
-    transition-duration: 0.2s !important;
-  }
-  
   /* Professional pulse animation for mobile loading states */
   .animate-pulse {
     animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;

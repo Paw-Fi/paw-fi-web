@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import monekoIcon from "@/assets/images/logo/moneko.png"
 import monekoAnimate from "@/assets/images/logo/moneko-avatar.gif"
+import { useDeviceType } from "@/hooks/use-device-type";
 
 // AI Chat interface with animations
 const AIChat = () => {
@@ -96,7 +97,7 @@ const AIChat = () => {
                 duration={20}
                 startOnView={false}
               >
-Based on your financial patterns and preferences, I recommend creating a budget that allocates 20% for savings, 50% for essential expenses like housing, food, and transportation, and 30% for discretionary spending, such as entertainment, hobbies, and personal goals              </TypingAnimation>
+Based on your financial patterns and preferences, I recommend creating a budget that allocates 20% for savings, 50% for essential expenses, and 30% for discretionary spending, such as entertainment, hobbies, and personal goals              </TypingAnimation>
             )}
           </div>
         </div>
@@ -125,11 +126,12 @@ const FeatureTag = ({ label }: { label: string }) => (
 // Dashboard Features Orbit with pill-style tags
 const TechStack = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const {isMobile} = useDeviceType();
   const motionSpeed = prefersReducedMotion ? 0.1 : 1; // Slow down if user prefers reduced motion
   return (
     <div className="relative h-full w-full bg-subtle-background overflow-hidden">
       {/* Full container for orbiting tags */}
-      <div className="absolute inset-0 flex items-center justify-center top-12">
+      <div className="absolute inset-0 flex items-center justify-center top-24 lg:top-12 scale-100 lg:scale-115">
         {/* Center Logo */}
         <div className="relative z-20 flex h-20 w-20 items-center justify-center rounded-full bg-primary shadow-lg ring-8 ring-primary/10">
           <img src={monekoAnimate} alt="Moneko" className="h-14 w-14 rounded-full" />
@@ -142,15 +144,15 @@ const TechStack = () => {
         </OrbitingCircles>
 
         {/* Outer Ring */}
-        <OrbitingCircles iconSize={16} radius={130} duration={36} reverse path speed={motionSpeed}>
-          <FeatureTag label="Bad Debt?" />
+        <OrbitingCircles iconSize={16} radius={isMobile ? 120 : 130} duration={36} reverse path speed={motionSpeed}>
+          <FeatureTag label="Goal Plan?" />
           <FeatureTag label="Budget tips?" />
         </OrbitingCircles>
 
          {/* Outer Ring */}
-         <OrbitingCircles iconSize={16} radius={190} duration={36} reverse path speed={motionSpeed}>
+         <OrbitingCircles iconSize={16} radius={isMobile ? 160 : 180} duration={40} reverse path speed={motionSpeed}>
           <FeatureTag label="Bad Debt?" />
-          <FeatureTag label="Budget tips?" />
+          <FeatureTag label="Investment?" />
         </OrbitingCircles>
       </div>
       <div className="pointer-events-none absolute bottom-20 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20"></div>
@@ -284,7 +286,7 @@ const FinancialHealth = () => {
         <div className="flex-1">
           <ChartContainer
             config={chartConfig}
-            className="mx-auto aspect-square h-60 w-96"
+            className="mx-auto aspect-square h-60 w-80 lg:w-96"
           >
             <RadarChart
               data={healthData}
