@@ -10,13 +10,14 @@ import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
 // Direct imports to avoid lazy loading issues
 import HeroSection from "@/components/homepage/new/hero-section";
-import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
+import { FeaturesBentoGrid } from "@/components/homepage/features-bento-grid";
 import VideoSection from "@/components/homepage/new/video-section";
 import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 import AmbientHalo from "@/components/ui/ambient-halo";
+import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -66,14 +67,21 @@ export default function HomePage() {
         <HeroSection data={pageData} />
       </section>
 
-      {/* Dashboard Showcase Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <DashboardShowcase />
+          {/* Video Section */}
+          <section className="relative bg-white/80 dark:bg-gray-900/80">
+        <VideoSection data={pageData} />
       </section>
 
-      {/* Video Section */}
+
+      {/* Features Bento Grid Section */}
       <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <VideoSection data={pageData} />
+        <FeaturesBentoGrid />
+      </section>
+
+  
+         {/* DashboardShowcase Section */}
+         <section className="relative bg-white/80 dark:bg-gray-900/80">
+        <DashboardShowcase />
       </section>
 
       {/* Three Steps Section */}
