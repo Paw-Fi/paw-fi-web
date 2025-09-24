@@ -1,3 +1,4 @@
 # Custom build and start commands
+runtime: nodejs22
 customBuildCommand: npm run build
 entryPoint: node .output/server/index.mjs

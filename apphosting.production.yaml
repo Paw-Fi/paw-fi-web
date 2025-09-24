@@ -38,7 +38,7 @@ env:
       - BUILD
       - RUNTIME
 
-runtime: nodejs20
+runtime: nodejs22
 
 # Build configuration with cleanup steps to resolve dependency conflicts
 buildConfig:
