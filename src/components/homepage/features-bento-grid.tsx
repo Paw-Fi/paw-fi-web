@@ -355,8 +355,8 @@ const features = [
   },
   {
     Icon: Zap,
-    name: "Dashboard Features Orbit", 
-    description: "See Goal Tracker, AI Learning, Portfolio & Insights at a glance",
+    name: "Ask Moneko AI Anything", 
+    description: "Get instant, helpful answers to beginner finance questions",
     href: "/dashboard",
     cta: "Explore Platform",
     component: <TechStack />,

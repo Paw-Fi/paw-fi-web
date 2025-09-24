@@ -47,7 +47,7 @@ const features = [
 ];
 
 export function DashboardShowcase() {
-  const [selectedFeature, setSelectedFeature] = useState(features[0]);
+  const [selectedFeature, setSelectedFeature] = useState(features[3]);
 
   return (
     <section className="relative z-10 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">

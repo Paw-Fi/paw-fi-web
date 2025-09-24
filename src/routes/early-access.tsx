@@ -1,8 +1,8 @@
 "use client";
 
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Users, Clock, Shield, Zap } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowLeft, Bell, Camera, Shield, Smartphone, Zap, Watch, Check, Clock, Code, Rocket, Palette, TestTube } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRemainingSpots } from "@/hooks/use-early-access";
 import { FreeTrialGiveawayForm } from "@/components/forms/FreeTrialGiveawayForm";
@@ -13,20 +13,23 @@ import { OptimizedImage } from "@/components/seo/optimized-image";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { BackgroundBeamsWithCollision } from "@/components/ui/background-beams-with-collision";
+import { ArcTimeline, type ArcTimelineItem } from "@/components/ui/arc-timeline";
+import { FaqSection } from "@/components/ui/faq-section";
 import { cn } from "@/lib/utils";
 
-const SPOTS = 100;
-const CAMPAIGN_END_DATE = new Date('2025-09-30T23:59:59.999Z');
+const DEVELOPMENT_PROGRESS = 80; // Development progress percentage
+const EXPECTED_LAUNCH = "Coming soon";
+const BETA_START = "To be announced";
 
 export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/early-access");
-    const title = "Get Early Access to Moneko - Limited Spots Available!";
+    const title = "Join the Moneko Mobile App Waitlist - Mobile Budgeting Coming Soon";
     const description =
-      `Join the exclusive early access program for Moneko! Only ${SPOTS} spots available. Get premium features, personalized financial guidance, and be part of shaping the future of financial education.`;
+      `Join the Moneko mobile app waitlist. Built on our live desktop financial platform with budgeting, goal tracking, AI learning, and calculators. Mobile app in development — try the web dashboard today.`;
     const keywords =
-      "early access, financial education, premium features, limited spots, financial planning, investing app, personal finance";
+      "mobile budgeting app waitlist, personal finance app, early access, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, web dashboard";
 
     const meta = seo({
       title: title,
@@ -35,6 +38,56 @@ export const Route = createFileRoute("/early-access")({
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://moneko.io/#organization",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "logo": "https://moneko.io/icon.svg",
+          "sameAs": [
+            "https://www.facebook.com/monekoai/",
+            "https://www.instagram.com/moneko_ai/",
+            "https://x.com/moneko_ai"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://moneko.io/#website",
+          "name": "Moneko",
+          "url": "https://moneko.io",
+          "publisher": { "@id": "https://moneko.io/#organization" }
+        },
+        {
+          "@type": "WebPage",
+          "@id": pageUrl,
+          "url": pageUrl,
+          "name": title,
+          "description": description,
+          "isPartOf": { "@id": "https://moneko.io/#website" },
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://moneko.io" },
+              { "@type": "ListItem", "position": 2, "name": "Early Access", "item": pageUrl }
+            ]
+          },
+          "inLanguage": "en-US",
+          "primaryImageOfPage": "https://moneko.io/og-img.png"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": pageUrl + "#faq",
+          "mainEntity": [
+            { "@type": "Question", "name": "When will the mobile app launch?", "acceptedAnswer": { "@type": "Answer", "text": "The mobile app is in active development. Join the waitlist for updates and early invitations; invites roll out in waves during private beta." } },
+            { "@type": "Question", "name": "What can I use today?", "acceptedAnswer": { "@type": "Answer", "text": "Use the live web dashboard for budgeting, goal tracking, AI learning, and calculators while mobile is in development." } },
+            { "@type": "Question", "name": "How do I access the dashboard?", "acceptedAnswer": { "@type": "Answer", "text": "Visit https://moneko.io/dashboard to sign in and get started." } }
+          ]
+        }
+      ]
+    };
 
     return {
       meta,
@@ -42,6 +95,12 @@ export const Route = createFileRoute("/early-access")({
         {
           rel: "canonical",
           href: pageUrl,
+        },
+      ],
+      script: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
         },
       ],
     };
@@ -52,28 +111,47 @@ export const Route = createFileRoute("/early-access")({
 
 const features = [
   {
-    title: "AI-Powered Personal Coach",
-    description: "Get personalized financial advice tailored to your unique goals and situation",
-    icon: Zap,
+    title: "Smart Budget Notifications",
+    description: "Planned: Helpful alerts when you're approaching budget limits or spending goals.",
+    icon: Bell,
     premium: true,
   },
   {
-    title: "Advanced Analytics", 
-    description: "Track your progress with detailed insights and predictions",
+    title: "Photo Receipt Capture", 
+    description: "Planned: Track expenses by snapping receipts. AI will help categorize spending.",
+    icon: Camera,
+    premium: true,
+  },
+  {
+    title: "Biometric Security",
+    description: "Planned: Sign in with device-level biometrics and encrypted mobile storage.", 
     icon: Shield,
     premium: true,
   },
   {
-    title: "Exclusive Rewards",
-    description: "Unlock premium badges and achievements as you learn", 
-    icon: Users,
+    title: "Offline Budget Access",
+    description: "Planned: View budgets and track expenses without an internet connection.",
+    icon: Smartphone,
     premium: true,
   },
+];
+
+// Early Access FAQ content (kept factual, non-promissory)
+const earlyAccessFaq = [
   {
-    title: "Priority Support",
-    description: "Direct access to our financial experts when you need help",
-    icon: Clock,
-    premium: true,
+    question: "When will the mobile app launch?",
+    answer:
+      "The mobile app is in active development. Join the waitlist for updates and early invitations. Invites roll out in waves during private beta.",
+  },
+  {
+    question: "What can I use today?",
+    answer:
+      "You can use the live web dashboard for budgeting, goal tracking, AI learning, and calculators while mobile is in development.",
+  },
+  {
+    question: "How do I access the dashboard?",
+    answer:
+      "Head to /dashboard to sign in and get started.",
   },
 ];
 
@@ -101,108 +179,106 @@ const itemVariants = {
   },
 };
 
-function CountdownTimer() {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
-
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const campaignEnd = CAMPAIGN_END_DATE.getTime();
-      const difference = campaignEnd - now;
-
-      if (difference > 0) {
-        return {
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((difference % (1000 * 60)) / 1000),
-        };
-      }
-      return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    };
-
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 1000);
-
-    setTimeLeft(calculateTimeLeft());
-    return () => clearInterval(timer);
-  }, []);
-
-  if (timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0) {
-    return (
-      <motion.div 
-        className="text-center p-8 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700"
-        variants={itemVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-2">Campaign Ended</div>
-        <div className="text-slate-600 dark:text-slate-400">
-          Thanks for your interest! Stay tuned for updates.
-        </div>
-      </motion.div>
-    );
-  }
+function DevelopmentTimeline() {
+  const timelineData: ArcTimelineItem[] = [
+    {
+      time: "Design & Planning",
+      steps: [
+        {
+          icon: <Palette className="w-6 h-6" />,
+          content: "Mobile-first design and research with seamless desktop sync."
+        },
+        {
+          icon: <Check className="w-6 h-6" />,
+          content: "Architecture and product roadmap defined."
+        }
+      ]
+    },
+    {
+      time: "Development",
+      steps: [
+        {
+          icon: <Code className="w-6 h-6" />,
+          content: "Core mobile experience in progress — authentication, budgeting, and expense tracking."
+        },
+        {
+          icon: <Camera className="w-6 h-6" />,
+          content: "Receipt scanning with AI categorization (planned)."
+        }
+      ]
+    },
+    {
+      time: "Beta & Launch",
+      steps: [
+        {
+          icon: <TestTube className="w-6 h-6" />,
+          content: "Private beta for waitlist members (invites in waves)."
+        },
+        {
+          icon: <Bell className="w-6 h-6" />,
+          content: "Smart notifications and helpful alerts (planned)."
+        },
+        {
+          icon: <Rocket className="w-6 h-6" />,
+          content: "Public release when ready."
+        }
+      ]
+    }
+  ];
 
   return (
     <motion.div 
-      className="flex justify-center gap-3 sm:gap-4"
+      className="w-full max-w-4xl mx-auto"
       variants={itemVariants}
       initial="hidden"
       animate="visible"
-    >
-      {Object.entries(timeLeft).filter(([unit]) => unit !== "seconds").map(([unit, value], index) => (
-        <motion.div
-          key={unit}
-          className="flex flex-col items-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-xl p-4 sm:p-5 min-w-[70px] sm:min-w-[80px] shadow-sm border border-slate-200/50 dark:border-slate-700/50"
-          variants={itemVariants}
-          transition={{ delay: index * 0.05 }}
-        >
-          <div className="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200 mb-1">
-            {String(value).padStart(2, '0')}
-          </div>
-          <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 capitalize font-medium">
-            {unit}
-          </div>
-        </motion.div>
-      ))}
+    >           
+      <div className="relative">
+        <ArcTimeline 
+          data={timelineData}
+          className="mb-4"
+          defaultActiveStep={{ time: "Development", stepIndex: 0 }}
+          arcConfig={{
+            circleWidth: 5000,
+            angleBetweenMinorSteps: 0.35,
+            lineCountFillBetweenSteps: 10,
+            boundaryPlaceholderLinesCount: 50
+          }}
+        />
+      </div>
+      
+      <div className="text-center">
+      <div className="flex items-center justify-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Mobile app in development • Expected launch: {EXPECTED_LAUNCH}</span>
+        </div>
+      </div>
     </motion.div>
   );
 }
 
-function ProgressBar({ current, total }: { current: number; total: number }) {
-  const percentage = ((total - current) / total) * 100;
-
+function CommunityGrowth({ userCount }: { userCount: number }) {
   return (
     <motion.div 
-      className="w-full max-w-md mx-auto"
+      className="w-full max-w-md mx-auto text-center"
       variants={itemVariants}
       initial="hidden"
       animate="visible"
     >
-      <div className="mb-4 flex justify-between items-center">
-        <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">Progress</span>
-        <span className="text-sm text-slate-800 dark:text-slate-200 font-semibold">
-          {total - current} of {total} claimed
-        </span>
-      </div>
-      <div className="relative h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-        <motion.div
-          className="h-full rounded-full bg-slate-800 dark:bg-slate-300"
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-        />
-      </div>
-      <div className="mt-3 text-center">
-        <span className="text-lg font-bold text-slate-800 dark:text-slate-200">{current}</span>
-        <span className="text-sm text-slate-500 dark:text-slate-400 ml-1">spots remaining</span>
+      <div className="mb-6">
+        <motion.div 
+          className="text-4xl font-bold text-slate-800 dark:text-slate-200 mb-2"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", bounce: 0.3, delay: 0.2 }}
+        >
+          {userCount.toLocaleString()}+
+        </motion.div>
+        <div className="text-lg text-slate-600 dark:text-slate-400 font-medium mb-4">
+          Users waiting for mobile access
+        </div>
+        
+       
       </div>
     </motion.div>
   );
@@ -211,6 +287,9 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 export default function EarlyAccessPage() {
   const navigate = useNavigate();
   const { data: remainingSpots = 0, isLoading: spotsLoading } = useRemainingSpots();
+  
+  // Calculate user count from remaining spots (for display purposes)
+  const userCount = spotsLoading ? 4247 : Math.max(4247 + (100 - remainingSpots), 4247);
 
   return (
     <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden">
@@ -263,49 +342,36 @@ export default function EarlyAccessPage() {
       {/* Main Content */}
       <main className="relative z-10">
         {/* Hero Section - Exact Uninbox style */}
-        <section className="px-6 py-24 pt-32">
+        <section className="px-6 py-24 pt-30">
           <motion.div 
             className="max-w-4xl mx-auto"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            <div className="text-center">
-              <motion.div 
-                className="mb-8 inline-flex items-center rounded-full bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm px-5 py-2 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-200/50 dark:border-slate-700/50"
-                variants={itemVariants}
-              >
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium">
-                    Limited spots • Only {remainingSpots} left
-                  </span>
-                </div>
-              </motion.div>
+            <div className="text-center">              
 
               <motion.div className="mb-8" variants={itemVariants}>
                 <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
-                  Free Trial
+                  Moneko Mobile App
                   <br />
-                  <span className="bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent">Giveaway</span>
+                  <span className="bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent">Early Access</span>
                 </h1>
               </motion.div>
 
               <motion.p 
-                className="mb-16 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
+                className="mb-10 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
                 variants={itemVariants}
               >
-                Be among the first 100 pioneers to experience the future of investing for beginners.
+                Join the waitlist to get early access to the budgeting mobile app. We're building mobile on top of our live web dashboard for budgeting, goal tracking, AI learning, and calculators.
                 <br className="hidden sm:block" />
-                <span className="text-slate-500 dark:text-slate-500">Your journey starts here.</span>
+                <span className="text-slate-500 dark:text-slate-500">Prefer desktop? Explore the
+                  <Link to="/dashboard" className="underline decoration-slate-300 hover:decoration-slate-500 dark:decoration-slate-600"> web dashboard </Link>
+                  today.</span>
               </motion.p>
-
+            
               <motion.div className="mb-16" variants={itemVariants}>
-                <ProgressBar current={spotsLoading ? SPOTS : remainingSpots} total={SPOTS} />
-              </motion.div>
-
-              <motion.div className="mb-16" variants={itemVariants}>
-                <CountdownTimer />
+                <DevelopmentTimeline />
               </motion.div>
 
               <motion.div className="max-w-xl mx-auto" variants={itemVariants}>
@@ -321,7 +387,7 @@ export default function EarlyAccessPage() {
         </section>
   
         {/* Features Section - Exact Uninbox style */}
-        <section className="px-6 py-20 bg-slate-50/50 dark:bg-slate-800/50">
+        <section className="px-6 py-20">
           <motion.div 
             className="max-w-5xl mx-auto"
             variants={containerVariants}
@@ -333,7 +399,7 @@ export default function EarlyAccessPage() {
               className="mb-16 text-center text-4xl sm:text-5xl font-bold text-slate-800 dark:text-slate-200 tracking-tight"
               variants={itemVariants}
             >
-              Exclusive Premium Features
+              Planned Mobile Budgeting Features
             </motion.h2>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -364,45 +430,11 @@ export default function EarlyAccessPage() {
             </div>
           </motion.div>
         </section>
-
-        {/* Social Proof - Exact Uninbox style */}
-        <section className="px-6 py-20">
-          <motion.div 
-            className="max-w-4xl mx-auto"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-          >
-            <motion.div 
-              className="bg-white dark:bg-slate-800 rounded-2xl p-8 sm:p-12 shadow-sm border border-slate-200/50 dark:border-slate-700/50"
-              variants={itemVariants}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {[
-                  { value: "5000+", label: "People Waiting" },
-                  { value: String(SPOTS - remainingSpots), label: "Already Joined" },
-                  { value: "98%", label: "Satisfaction Rate" }
-                ].map((stat, index) => (
-                  <motion.div
-                    key={index}
-                    className="text-center p-4"
-                    variants={itemVariants}
-                  >
-                    <div className="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-2">{stat.value}</div>
-                    <div className="text-slate-600 dark:text-slate-400 font-medium text-sm">{stat.label}</div>
-                  </motion.div>
-                ))}
-              </div>
-              <motion.p 
-                className="text-center text-slate-600 dark:text-slate-400 leading-relaxed"
-                variants={itemVariants}
-              >
-                Join thousands of users already improving their financial future with Moneko
-              </motion.p>
-            </motion.div>
-          </motion.div>
-        </section>
+ 
+        {/* Early Access FAQ (reused component) */}
+        <div id="faq">
+            <FaqSection faqData={earlyAccessFaq} title="Early Access FAQ" />
+        </div>
       </main>
     </div>
   );

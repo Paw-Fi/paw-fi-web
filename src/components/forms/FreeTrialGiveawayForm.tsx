@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle, Mail } from "lucide-react";
+import { ArrowRight, Check, CheckCircle, Mail } from "lucide-react";
 import { type EarlyAccessClaim } from "@/lib/early-access";
 import { useRemainingSpots, useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
 import { CustomSelect } from "@/components/ui/custom-select";
@@ -24,9 +24,10 @@ export function FreeTrialGiveawayForm() {
     firstName: "",
     lastName: "",
     referralSource: "",
-    experienceLevel: "",
-    financialGoals: [] as string[],
-    interestedFeatures: [] as string[],
+    budgetingMethod: "",
+    mobileAppPriorities: [] as string[],
+    interestedMobileFeatures: [] as string[],
+    devicePreference: "",
   });
   const [result, setResult] = useState<{ 
     success?: boolean; 
@@ -39,30 +40,30 @@ export function FreeTrialGiveawayForm() {
   const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
   const claimMutation = useClaimEarlyAccess();
 
-  const experienceOptions = [
-    { value: "never-invested", label: "I've never invested before" },
-    { value: "dabbled", label: "I've dabbled a little (e.g. ETFs, stocks)" },
-    { value: "active", label: "I actively manage my investments" },
-    { value: "robo-advisor", label: "I use a robo-advisor" },
-    { value: "other", label: "Other" },
+  const budgetingMethodOptions = [
+    { value: "manual-tracking", label: "Manual tracking (pen and paper)" },
+    { value: "spreadsheets", label: "Spreadsheets (Excel, Google Sheets)" },
+    { value: "other-apps", label: "Other budgeting apps" },
+    { value: "no-system", label: "No organized system currently" },
+    { value: "bank-tools", label: "Bank's budgeting tools" },
   ];
 
-  const financialGoalOptions = [
-    { id: "emergency-fund", label: "Save for an emergency fund" },
-    { id: "investing-retirement", label: "Start investing for retirement" },
-    { id: "budget-money", label: "Learn how to budget/manage money" },
-    { id: "pay-debt", label: "Pay off debt" },
-    { id: "build-wealth", label: "Build wealth long-term" },
-    { id: "other-goal", label: "Other" },
+  const mobileAppPriorities = [
+    { id: "quick-expense-tracking", label: "Quick expense entry on-the-go" },
+    { id: "budget-notifications", label: "Push notifications for budget alerts" },
+    { id: "goal-progress", label: "Real-time goal progress tracking" },
+    { id: "offline-access", label: "Offline budget access" },
+    { id: "receipt-scanning", label: "Photo receipt capture" },
+    { id: "biometric-security", label: "Secure biometric login" },
   ];
 
-  const featureOptions = [
-    { id: "ai-investing-chat", label: "AI-powered investing chat" },
-    { id: "personalized-lessons", label: "Personalized financial lessons" },
-    { id: "portfolio-tracker", label: "Portfolio tracker" },
-    { id: "goal-calculators", label: "Goal-based calculators" },
-    { id: "community-access", label: "Community access" },
-    { id: "advisor-support", label: "1-on-1 advisor support (coming soon)" },
+  const mobileFeatureOptions = [
+    { id: "push-notifications", label: "Smart push notifications" },
+    { id: "photo-receipts", label: "AI-powered receipt scanning" },
+    { id: "biometric-login", label: "Face ID / Touch ID login" },
+    { id: "watch-integration", label: "Apple Watch / Wear OS integration" },
+    { id: "offline-mode", label: "Full offline functionality" },
+    { id: "widget-support", label: "Home screen budget widgets" },
   ];
 
   const referralOptions = [
@@ -73,6 +74,12 @@ export function FreeTrialGiveawayForm() {
     { value: "youtube", label: "YouTube" },
     { value: "podcast", label: "Podcast" },
     { value: "other", label: "Other" },
+  ];
+
+  const deviceOptions = [
+    { value: "ios", label: "iOS (iPhone/iPad)" },
+    { value: "android", label: "Android" },
+    { value: "both", label: "Both iOS and Android" },
   ];
 
   useEffect(() => {
@@ -153,7 +160,7 @@ export function FreeTrialGiveawayForm() {
     if (!isAuthenticated || !user) {
       setResult({
         success: false,
-        error: 'Please sign in to claim your early access spot.'
+        error: 'Please sign in to join the mobile app waitlist.'
       });
       return;
     }
@@ -163,15 +170,16 @@ export function FreeTrialGiveawayForm() {
       firstName: formData.firstName || undefined,
       lastName: formData.lastName || undefined,
       referralSource: formData.referralSource || undefined,
-      experienceLevel: formData.experienceLevel || undefined,
-      financialGoals: formData.financialGoals.length > 0 ? formData.financialGoals : undefined,
-      interestedFeatures: formData.interestedFeatures.length > 0 ? formData.interestedFeatures : undefined,
+      experienceLevel: formData.budgetingMethod || undefined,
+      financialGoals: formData.mobileAppPriorities.length > 0 ? formData.mobileAppPriorities : undefined,
+      interestedFeatures: formData.interestedMobileFeatures.length > 0 ? formData.interestedMobileFeatures : undefined,
       userId: user.id, // Add user ID to the claim
       // For backward compatibility, combine all interests
       interests: [
-        formData.experienceLevel,
-        ...formData.financialGoals,
-        ...formData.interestedFeatures,
+        formData.budgetingMethod,
+        formData.devicePreference,
+        ...formData.mobileAppPriorities,
+        ...formData.interestedMobileFeatures,
       ].filter(Boolean),
     };
 
@@ -180,7 +188,7 @@ export function FreeTrialGiveawayForm() {
         if (response.success) {
           setResult({
             success: true,
-            message: "🎉 Congratulations! Your free trial membership has been claimed successfully. Check your email for next steps!"
+            message: "🎉 Welcome to the community! You've joined the mobile app waitlist. Check your email for development updates and launch notifications!"
           });
           
           // No need to set cookie anymore - database check will handle this
@@ -193,9 +201,10 @@ export function FreeTrialGiveawayForm() {
             firstName: "",
             lastName: "",
             referralSource: "",
-            experienceLevel: "",
-            financialGoals: [],
-            interestedFeatures: [],
+            budgetingMethod: "",
+            mobileAppPriorities: [],
+            interestedMobileFeatures: [],
+            devicePreference: "",
           });
         } else {
           setResult(response);
@@ -239,7 +248,7 @@ export function FreeTrialGiveawayForm() {
             Sign In Required
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-            Please sign in to claim your early access spot and join our exclusive community.
+            Please sign in to join our mobile app community and receive launch notifications.
           </p>
           <div className="space-y-4">
             <motion.button
@@ -324,38 +333,51 @@ export function FreeTrialGiveawayForm() {
                 </div>
               </div>
 
-              {/* Experience Level */}
+              {/* Budgeting Method */}
               <div className="mb-6">
                 <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
-                  What's your current level of investing experience?
+                  How do you currently manage your budget?
                 </label>
                 <CustomSelect
-                  options={experienceOptions}
-                  value={formData.experienceLevel}
-                  onChange={(value) => setFormData(prev => ({ ...prev, experienceLevel: value }))}
-                  placeholder="Select your experience level"
+                  options={budgetingMethodOptions}
+                  value={formData.budgetingMethod}
+                  onChange={(value) => setFormData(prev => ({ ...prev, budgetingMethod: value }))}
+                  placeholder="Select your current method"
                 />
               </div>
 
-              {/* Financial Goals */}
+              {/* Mobile App Priorities */}
               <div className="mb-6">
                 <MultiSelectDropdown
-                  options={financialGoalOptions}
-                  selectedValues={formData.financialGoals}
-                  onChange={(value) => handleMultiSelectChange(value, 'financialGoals')}
-                  placeholder="Select your financial goals"
-                  label="What are your top financial goals right now?"
+                  options={mobileAppPriorities}
+                  selectedValues={formData.mobileAppPriorities}
+                  onChange={(value) => handleMultiSelectChange(value, 'mobileAppPriorities')}
+                  placeholder="Select your mobile app priorities"
+                  label="What mobile budgeting features are most important to you?"
                 />
               </div>
 
-              {/* Interested Features */}
+              {/* Interested Mobile Features */}
               <div className="mb-6">
                 <MultiSelectDropdown
-                  options={featureOptions}
-                  selectedValues={formData.interestedFeatures}
-                  onChange={(value) => handleMultiSelectChange(value, 'interestedFeatures')}
-                  placeholder="Select features you're excited about"
-                  label="Which Moneko features are you most excited about?"
+                  options={mobileFeatureOptions}
+                  selectedValues={formData.interestedMobileFeatures}
+                  onChange={(value) => handleMultiSelectChange(value, 'interestedMobileFeatures')}
+                  placeholder="Select mobile features you want"
+                  label="Which mobile app features are you most excited about?"
+                />
+              </div>
+
+              {/* Device Preference */}
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
+                  Which device(s) will you primarily use?
+                </label>
+                <CustomSelect
+                  options={deviceOptions}
+                  value={formData.devicePreference}
+                  onChange={(value) => setFormData(prev => ({ ...prev, devicePreference: value }))}
+                  placeholder="Select your device preference"
                 />
               </div>
 
@@ -374,7 +396,7 @@ export function FreeTrialGiveawayForm() {
               </>}
 
               {/* Submit button */}
-              <div className="text-center">
+             { !hasClaimed&&<div className="text-center">
                 <motion.button
                   type="submit"
                   disabled={claimMutation.isPending || hasClaimed}
@@ -385,24 +407,24 @@ export function FreeTrialGiveawayForm() {
                   {claimMutation.isPending ? (
                     <>
                       <div className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Claiming...
+                      Joining...
                     </>
                   ) : hasClaimed ? (
                     <>
-                       Claimed Successfully
+                       Joined Waiting List
 <CheckCircle className="ml-2 w-5 h-5" />
                     </>
                   ) : (
                     <>
-                      Claim Your Membership
+                      Join Mobile Beta Waitlist
         <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
                 </motion.button>
-              </div>
+              </div>}
 
               {(result.success||hasClaimed)&&<motion.div
-              className="mt-6"
+              className=""
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", bounce: 0.3 }}
@@ -410,11 +432,11 @@ export function FreeTrialGiveawayForm() {
               <div className="text-center">
                 <div className="rounded-2xl bg-green-100/20 dark:bg-green-900/20 p-6 border border-green-200 dark:border-green-700">
                   <div className="flex items-center justify-center mb-3">
-<Mail className="mr-3 text-green-600 dark:text-green-400 w-5 h-5" />
-                    <span className="font-semibold text-green-700 dark:text-green-300">Check Your Inbox</span>
+<CheckCircle className="mr-3 text-green-600 dark:text-green-400 w-5 h-5" />
+                    <span className="font-semibold text-green-700 dark:text-green-300">Joined Waiting List</span>
                   </div>
                   <p className="text-sm text-green-600 dark:text-green-400 leading-relaxed">
-                    We've sent you the promo code in the email and can use it to checkout at the <Link to="/pricing" className="font-medium underline hover:text-green-500 dark:hover:text-green-300 transition-colors">pricing page</Link>.
+                    In the meantime, feel free to explore the <a href="/dashboard" className="underline decoration-slate-300 font-bold hover:decoration-slate-500 dark:decoration-slate-600">desktop version</a> and start managing your finances today
                   </p>
                 </div>
               </div>
