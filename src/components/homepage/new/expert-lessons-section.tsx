@@ -51,11 +51,11 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
         {/* Section Header */}
         <div className="mb-16 text-center">
           <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
-            Dive Deeper with Expert-Led Lessons
+            Level Up Your Budgeting Skills
           </h2>
           
           <p className="text-muted-foreground text-lg max-w-3xl mx-auto font-lato">
-            Clear, bite-sized lessons designed to turn financial jargon into practical steps. Whether you're just starting out or leveling up, Moneko helps you invest with confidence.
+            Clear, bite-sized lessons that turn budgeting concepts into practical steps. Start with the basics and build smart money habits at your pace.
           </p>
         </div>
 

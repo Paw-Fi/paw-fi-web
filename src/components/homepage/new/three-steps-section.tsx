@@ -51,7 +51,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
         {/* Section Header */}
         <div className="mb-16 text-center">
           <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
-            3 Steps to Put Your Money on Autopilot
+            3 Steps to Build Your Budget
           </h2>
         </div>
 

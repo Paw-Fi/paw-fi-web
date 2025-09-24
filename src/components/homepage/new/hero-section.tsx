@@ -32,7 +32,9 @@ export default function HeroSection({ data }: HeroSectionProps) {
   const highlightIndex = titleWords.findIndex(word => 
     word.toLowerCase().includes("portfolio") || 
     word.toLowerCase().includes("interest") ||
-    word.toLowerCase().includes("passive")
+    word.toLowerCase().includes("passive") ||
+    word.toLowerCase().includes("budget") ||
+    word.toLowerCase().includes("budgeting")
   );
 
   return (
@@ -79,7 +81,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
         <div className="mb-12">
           <div className="bg-white/90 dark:bg-black/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-4xl mx-auto">
             <AISearchInput
-              placeholder={`Ask Moneko to build your personalized financial journey for you...`}
+              placeholder={`Ask Moneko to build your monthly budget or suggest ways to save...`}
               suggestions={hero.chatSuggestions}
               variant="default"
             />

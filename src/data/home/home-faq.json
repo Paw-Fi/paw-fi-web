@@ -1,37 +1,37 @@
 [
-    {
-      "id": "what-is-moneko",
-      "question": "What makes Moneko different from other budgeting apps?",
-      "answer": "Moneko is the only AI personal finance coach trained by CFA and MBA-certified professionals. We combine intelligent budgeting with automated investing, personalized financial education, and goal tracking. Our users save an average of $15,000+ in their first year and achieve 127% better returns than traditional savings accounts."
-    },
-    {
-      "id": "ai-powered-learning",
-      "question": "How does the AI-powered learning work?",
-      "answer": "Our AI analyzes your financial goals and current knowledge to create a customized learning plan. You'll engage with interactive lessons, get instant answers from our AI chat, and practice with real-world scenarios, all tailored to your unique needs."
-    },
-    {
-      "id": "free-tier",
-      "question": "Is Moneko really free to use?",
-      "answer": "Yes! Our comprehensive free tier includes AI financial coaching, smart budgeting tools, investment tracking, goal setting, and 50+ financial education courses. Unlike other apps that limit features, you can save your first $1,000 completely free. Premium features unlock advanced portfolio management and priority support."
-    },
-    {
-      "id": "financial-tools",
-      "question": "What kind of financial tools does Moneko offer?",
-      "answer": "Moneko provides a suite of practical financial calculators to help you plan and manage your money effectively. These include tools for auto loans, compound interest, mortgage calculations, retirement planning, and setting savings goals."
-    },
-    {
-      "id": "security",
-      "question": "How secure is my financial data?",
-      "answer": "We use bank-level 256-bit encryption and are SOC 2 Type II certified. Your data is encrypted both in transit and at rest, and we never store your banking credentials."
-    },
-    {
-      "id": "ai-accuracy",
-      "question": "How accurate are the AI recommendations?",
-      "answer": "Our AI is trained by certified financial professionals (CFA, CSC, MBA) and has helped users achieve 127% better portfolio performance compared to traditional savings accounts."
-    },
-    {
-      "id": "getting-started",
-      "question": "How quickly can I get started saving money?",
-      "answer": "You can set up your Moneko account and create your first budget in under 3 minutes. Most users start saving money within their first week, and our AI coach helps you save your first $1,000 within 90 days. No credit card required to get started."
-    }
-  ]
+  {
+    "id": "what-is-moneko",
+    "question": "What is Moneko?",
+    "answer": "Moneko is an AI-guided budgeting and financial learning app. You can build a practical budget, set savings goals, and learn money basics with short, easy lessons."
+  },
+  {
+    "id": "how-it-works",
+    "question": "How does budgeting with Moneko work?",
+    "answer": "Start by listing income and expenses, set category limits and savings goals, then review AI tips to adjust over time. You can also use our calculators, like the Savings Goal Calculator, to plan monthly contributions."
+  },
+  {
+    "id": "free-tier",
+    "question": "Is Moneko free?",
+    "answer": "Yes. You can get started for free and explore budgeting features and calculators. Optional upgrades unlock more advanced tools and learning content."
+  },
+  {
+    "id": "tools",
+    "question": "What tools are available for budgeting?",
+    "answer": "Budget planner guidance, category tips, savings goal planning, and practical calculators (e.g., savings goals, mortgage, compound interest)."
+  },
+  {
+    "id": "security",
+    "question": "How is my data protected?",
+    "answer": "Authentication and row‑level security are provided by Supabase Auth + RLS. Your account data is protected with modern security practices, and the product is designed for educational use."
+  },
+  {
+    "id": "advice",
+    "question": "Is this financial advice?",
+    "answer": "No. Moneko is an educational tool. Insights and suggestions are for learning purposes and do not replace professional financial advice."
+  },
+  {
+    "id": "getting-started",
+    "question": "How do I get started?",
+    "answer": "Visit the Budgeting App page to create your first plan, or try the Savings Goal Calculator to set a target and monthly amount."
+  }
+]

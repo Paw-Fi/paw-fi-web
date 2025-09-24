@@ -230,7 +230,7 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
         
         const userName = webhook.record.first_name || 'Early Access Member'
         
-        // Base template function for consistent email styling
+        // Apple-inspired email template following Moneko design system
         const baseTemplate = (content: string) => `
 <!DOCTYPE html>
 <html>
@@ -240,49 +240,122 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
   <title>Moneko</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       line-height: 1.6;
-      color: #333;
+      color: #1F2937;
       max-width: 600px;
       margin: 0 auto;
-      padding: 20px;
-      background-color: #ffffff;
+      padding: 32px 24px;
+      background-color: #F9FAFB;
     }
     .header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 48px;
     }
     .logo {
-      max-width: 150px;
-      margin-bottom: 20px;
+      max-width: 120px;
+      margin-bottom: 32px;
     }
     .content {
-      background-color: #f9f9f9;
-      padding: 30px;
-      border-radius: 8px;
+      background-color: #FFFFFF;
+      padding: 48px 32px;
+      border-radius: 24px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    .highlight-card {
+      background-color: #F9FAFB;
+      padding: 32px;
+      border-radius: 16px;
+      text-align: center;
+      margin: 32px 0;
+    }
+    .feature-list {
+      background-color: #F9FAFB;
+      padding: 24px 32px;
+      border-radius: 16px;
+      margin: 32px 0;
     }
     .button {
       display: inline-block;
-      background: linear-gradient(to right, #6d28d9, #4f46e5);
-      color: white !important;
-      padding: 12px 24px;
+      background: #7458FF;
+      color: #FFFFFF !important;
+      padding: 16px 32px;
       text-decoration: none;
-      border-radius: 6px;
+      border-radius: 50px;
       font-weight: 500;
-      margin: 20px 0;
+      margin: 32px 0;
+      transition: all 200ms ease;
+    }
+    .button:hover {
+      background: #836DFF;
+      transform: translateY(-1px);
     }
     .footer {
-      margin-top: 30px;
+      margin-top: 48px;
       text-align: center;
       font-size: 14px;
-      color: #666;
+      color: #6B7280;
     }
-    h1 { color: #333; }
-    h2 { color: #333; }
-    h3 { color: #333; }
-    h4 { color: #333; }
-    p { color: #333; }
-    li { color: #333; }
+    h1 { 
+      color: #1F2937; 
+      font-size: 28px; 
+      font-weight: 600; 
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    h2 { 
+      color: #1F2937; 
+      font-size: 24px; 
+      font-weight: 500;
+      margin: 32px 0 16px 0;
+    }
+    h3 { 
+      color: #7458FF; 
+      font-size: 20px; 
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    h4 { 
+      color: #7458FF; 
+      font-size: 18px; 
+      font-weight: 500;
+      margin: 0 0 16px 0;
+    }
+    p { 
+      color: #1F2937; 
+      margin: 16px 0;
+      line-height: 1.7;
+    }
+    .muted { 
+      color: #6B7280; 
+    }
+    ul {
+      padding-left: 0;
+      margin: 24px 0;
+    }
+    li { 
+      color: #1F2937;
+      margin: 12px 0;
+      padding-left: 0;
+      list-style: none;
+      position: relative;
+    }
+    li:before {
+      content: "•";
+      color: #7458FF;
+      font-size: 20px;
+      position: absolute;
+      left: -20px;
+    }
+    strong {
+      color: #1F2937;
+      font-weight: 600;
+    }
+    .expectation-item {
+      display: block;
+      margin: 8px 0;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -294,89 +367,96 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
   </div>
   <div class="footer">
     <p>Moneko Inc., 123 Financial St., San Francisco, CA 94103</p>
-    <p>This email was sent to you because you joined our early access program.</p>
+    <p class="muted">This email was sent to you because you joined our mobile app waitlist.</p>
   </div>
 </body>
 </html>
 `
         
-        // Send early access welcome email with promo code using consistent template
+        // Send mobile app waitlist welcome email using design system
         const content = `
-          <h1>🎉 Welcome to Moneko Early Access!</h1>
+          <h1>Welcome to the Moneko Mobile App Waitlist!</h1>
           <p>Hi ${userName},</p>
-          <p>Congratulations! You've successfully claimed your spot in Moneko's exclusive early access program. You're now one of the first 100 users to experience the future of financial education.</p>
+          <p>Thanks for joining our mobile app waitlist! You're now on the list to get early access to Moneko's mobile budgeting app, currently in development.</p>
           
-          <div style="background: #f3f4f6; border: 3px solid #6d28d9; padding: 25px; border-radius: 12px; text-align: center; margin: 30px 0;">
-            <h3 style="color: #6d28d9; margin: 0 0 15px; font-size: 20px; font-weight: bold;">🎁 Your Exclusive Free Trial Code</h3>
-            <div style="background: transparent; border: 2px dashed #6d28d9; padding: 15px; border-radius: 8px; margin: 15px 0;">
-              <code style="color: #6d28d9; font-size: 28px; font-weight: bold; letter-spacing: 3px;">MONEKO25</code>
-            </div>
-            <p style="color: #333333; margin: 10px 0 0; font-size: 16px;">
-              Use this code at checkout to get your <a href="https://moneko.io/pricing" style="color: #6d28d9; text-decoration: none;"><strong style="color: #6d28d9;">FREE premium trial</strong></a>
-            </p>
+          <div class="highlight-card">
+            <h3>🚀 What to Expect</h3>
+            <span class="expectation-item">✨ Early beta invitations</span>
+            <span class="expectation-item">📧 Development updates</span>
+            <span class="expectation-item">🎯 First access when ready</span>
+            <p class="muted" style="margin-top: 24px;">We'll notify you as soon as mobile beta testing begins!</p>
           </div>
           
-          <h3>What's Next?</h3>
+          <h2>While You Wait - Try Our Live Web Dashboard!</h2>
+          <p>Don't wait for mobile! Moneko's full budgeting platform is already live and ready to use:</p>
           <ul>
-            <li>Visit our <a href="https://moneko.io/pricing" style="color: #6d28d9; text-decoration: none; font-weight: bold;">pricing page</a> to start your free trial</li>
-            <li>Enter code <strong>MONEKO25</strong> at checkout for instant free access</li>
-            <li>Explore premium features before they're available to the public</li>
-            <li>Share feedback to help shape Moneko's future</li>
+            <li><strong>Smart Budgeting</strong> - Create and track budgets with AI insights</li>
+            <li><strong>Goal Tracking</strong> - Set and monitor financial goals with progress tracking</li>
+            <li><strong>Learning Center</strong> - AI-powered financial education and courses</li>
+            <li><strong>Financial Calculators</strong> - Compound interest, mortgage, retirement planning</li>
+            <li><strong>Expense Analytics</strong> - Detailed spending insights and trends</li>
           </ul>
           
-          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; border-left: 4px solid #6d28d9; margin: 25px 0;">
-            <h4 style="margin: 0 0 10px; color: #6d28d9;">💎 Premium Features Included:</h4>
-            <ul style="margin: 0; padding-left: 20px;">
-              <li>AI-powered personal financial coach</li>
-              <li>Advanced analytics and insights</li>
-              <li>Exclusive financial courses</li>
-              <li>Priority customer support</li>
-              <li>Early access to new features</li>
+          <div class="feature-list">
+            <h4>Available Now on Desktop:</h4>
+            <ul>
+              <li>Complete budgeting and expense tracking</li>
+              <li>AI financial coaching and insights</li>
+              <li>Goal setting with smart recommendations</li>
+              <li>Interactive learning courses</li>
+              <li>Advanced financial calculators</li>
             </ul>
           </div>
           
-          <p style="text-align: center;">
-            <a href="https://moneko.io/pricing" style="display: inline-block; background: #6d28d9; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; border: none;">Start Your Free Trial Now →</a>
-          </p>
+          <div style="text-align: center;">
+            <a href="https://moneko.io/dashboard" class="button">Try the Web Dashboard Today →</a>
+          </div>
           
-          <p>Questions? Reply to this email or reach out to us at <a href="mailto:hello@moneko.io" style="color: #6d28d9;">hello@moneko.io</a></p>
+          <p>Questions about the mobile app or need help with the web dashboard? Reply to this email or reach out to us at <a href="mailto:hello@moneko.io" style="color: #7458FF; text-decoration: none;">hello@moneko.io</a></p>
           
-          <p><strong>Welcome to the future of financial education!</strong></p>
-          <p>The Moneko Team</p>
+          <p><strong>Thanks for being part of our journey!</strong></p>
+          <p class="muted">The Moneko Team</p>
         `
 
         const template = {
-          subject: '🎉 Welcome to Moneko Early Access - Exclusive Free Trial Inside!',
+          subject: '📱 Welcome to the Moneko Mobile App Waitlist!',
           html: baseTemplate(content),
           text: `
-🎉 Welcome to Moneko Early Access!
+📱 Welcome to the Moneko Mobile App Waitlist!
 
 Hi ${userName}!
 
-Congratulations! You've successfully claimed your spot in Moneko's exclusive early access program. You're now one of the first 100 users to experience the future of financial education.
+Thanks for joining our mobile app waitlist! You're now on the list to get early access to Moneko's mobile budgeting app, currently in development.
 
-🎁 Your Exclusive Free Trial Code: MONEKO25
+🚀 What to Expect:
+✨ Early beta invitations
+📧 Development updates  
+🎯 First access when ready
 
-Use this code at checkout to get your FREE premium trial.
+We'll notify you as soon as mobile beta testing begins!
 
-What's Next?
-• Visit our pricing page (https://moneko.io/pricing) to start your free trial
-• Enter code MONEKO25 at checkout for instant free access
-• Explore premium features before they're available to the public
-• Share feedback to help shape Moneko's future
+While You Wait - Try Our Live Web Dashboard!
 
-💎 Premium Features Included:
-• AI-powered personal financial coach
-• Advanced analytics and insights
-• Exclusive financial courses
-• Priority customer support
-• Early access to new features
+Don't wait for mobile! Moneko's full budgeting platform is already live and ready to use:
 
-Start Your Free Trial: https://moneko.io/pricing
+• Smart Budgeting - Create and track budgets with AI insights
+• Goal Tracking - Set and monitor financial goals with progress tracking
+• Learning Center - AI-powered financial education and courses
+• Financial Calculators - Compound interest, mortgage, retirement planning
+• Expense Analytics - Detailed spending insights and trends
 
-Questions? Reply to this email or reach out to us at hello@moneko.io
+📊 Available Now on Desktop:
+• Complete budgeting and expense tracking
+• AI financial coaching and insights
+• Goal setting with smart recommendations
+• Interactive learning courses
+• Advanced financial calculators
 
-Welcome to the future of financial education!
+Try the Web Dashboard: https://moneko.io/dashboard
+
+Questions about the mobile app or need help with the web dashboard? Reply to this email or reach out to us at hello@moneko.io
+
+Thanks for being part of our journey!
 The Moneko Team
           `
         }

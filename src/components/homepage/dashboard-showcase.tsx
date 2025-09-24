@@ -13,36 +13,32 @@ import learningImgPng from "@/assets/images/home-showcase/dashboard-learning.png
 
 const features = [
   {
-    id: "ai-coach",
-    title: "AI Financial Coach",
-    description: "Get personalized financial advice and insights powered by certified CFA professionals. Your AI coach learns your habits and provides tailored recommendations.",
-    imageWebp: monekoImgWebp,
-    imagePng: monekoImgPng,
-    stats: "95% accuracy rate"
-  },
-  {
-    id: "goal-tracking",
-    title: "Smart Goal Tracking",
-    description: "Set, monitor, and achieve your financial goals with intelligent progress tracking and automated milestone celebrations.",
+    id: "budget-planner",
+    title: "Budget Planner",
+    description: "Create a realistic monthly plan with clear categories and AI tips that help you adjust over time.",
     imageWebp: goalImgWebp,
     imagePng: goalImgPng,
-    stats: "Average $15K saved"
   },
   {
-    id: "portfolio",
-    title: "Portfolio Analytics",
-    description: "Track your investments with real-time performance insights, risk analysis, and automated rebalancing recommendations.",
+    id: "savings-goals",
+    title: "Savings Goals",
+    description: "Set target amounts and timeframes, then see how much to set aside each month to stay on track.",
+    imageWebp: monekoImgWebp,
+    imagePng: monekoImgPng,
+  },
+  {
+    id: "spending-overview",
+    title: "Spending Overview",
+    description: "Understand fixed vs variable costs and keep an eye on subscriptions with simple, visual summaries.",
     imageWebp: portfolioImgWebp,
     imagePng: portfolioImgPng,
-    stats: "127% better returns"
   },
   {
     id: "learning",
-    title: "Financial Education Hub",
-    description: "Learn from expert-led courses, interactive lessons, and personalized learning paths designed by certified professionals.",
+    title: "Budgeting Lessons",
+    description: "Short, practical lessons on budgeting basics, cutting spending leaks, and building money habits.",
     imageWebp: learningImgWebp,
     imagePng: learningImgPng,
-    stats: "50+ expert courses"
   }
 ];
 
@@ -57,13 +53,13 @@ export function DashboardShowcase() {
           <h2
             className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl font-lato"
           >
-            Your AI-Powered Financial Dashboard
+            Your AI Budgeting Dashboard
           </h2>
           
           <p
             className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato"
           >
-            Experience comprehensive financial management with AI-powered goal tracking, portfolio analytics, personalized education, and smart insights
+            Build a clear monthly plan, set savings goals, and learn practical budgeting skills with guided AI support.
           </p>
         </div>
 
@@ -106,9 +102,7 @@ export function DashboardShowcase() {
                   moneko.io/dashboard
                 </div>
               </div>
-              <div className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                {selectedFeature.stats}
-              </div>
+              <div />
             </div>
 
             {/* Dashboard Content */}

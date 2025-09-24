@@ -28,12 +28,7 @@ export function GoalTypeSelector({ onSelect }: GoalTypeSelectorProps) {
             transition={{ delay: index * 0.1 }}
             onClick={() => onSelect(goalType.id as GoalType)}
             className="bg-card rounded-3xl p-8 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 flex flex-col items-center text-center group"
-          >
-            <div className="w-20 h-20 bg-muted/20 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform duration-200">
-              <div className="text-2xl font-light text-muted-foreground">
-                {goalType.name.charAt(0).toUpperCase()}
-              </div>
-            </div>
+          >           
             <h3 className="text-xl font-medium text-foreground mb-3">{goalType.name}</h3>
             <p className="text-muted-foreground text-sm mb-6 leading-relaxed">{goalType.description}</p>
             <div className="mt-auto">

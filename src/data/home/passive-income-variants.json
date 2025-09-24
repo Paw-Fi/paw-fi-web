@@ -1,4 +1,75 @@
 {
+  "budgeting-tools": {
+    "meta": {
+      "title": "AI Budgeting App – Track Spending, Plan Budgets, and Reach Savings Goals | Moneko",
+      "description": "Build a realistic budget, track expenses, and stay on top of your money with AI guidance. Set savings goals, monitor categories, and learn smart money habits.",
+      "keywords": "budgeting app, budget planner, expense tracker, savings goals, AI budgeting, personal finance app"
+    },
+    "hero": {
+      "title": "Smart Spending, Smarter Savings",
+      "subtitle": "Track spending, set savings goals, and get AI-powered guidance that meets you where you are.",
+      "ctaText": "Start Your Budget",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "Help me create a monthly budget I can follow",
+        "How can I cut expenses without sacrificing too much?",
+        "What’s a realistic rent budget on my income?",
+        "How do I set and reach a savings goal?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Enter income and expenses",
+          "description": "Quickly list your income and common expense categories, or start from our templates."
+        },
+        {
+          "title": "Set categories and goals",
+          "description": "Define spending limits and savings targets that match your priorities."
+        },
+        {
+          "title": "Review insights and adjust",
+          "description": "Get AI tips to optimize your budget and make confident changes over time."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See How Simple Budgeting Can Be",
+      "subtitle": "Watch how to build a clear budget in minutes and get actionable insights you can use right away."
+    },
+    "features": [
+      {
+        "title": "Budget Planner",
+        "description": "Create a practical budget with AI suggestions for common categories and spending limits.",
+        "icon": "🧮",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Savings Goal Calculator",
+        "description": "Plan how much to set aside each month to hit your savings goals on time.",
+        "icon": "🏁",
+        "route": "/calculators/saving-goals-calculator"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Budgeting Basics",
+        "description": "Learn the essentials of building and maintaining a budget that fits your lifestyle.",
+        "icon": "📘"
+      },
+      {
+        "title": "Finding Spending Leaks",
+        "description": "Identify and reduce low‑value expenses without feeling deprived.",
+        "icon": "🕵️"
+      }
+    ],
+    "benefits": [
+      "Clear category breakdowns",
+      "Goal‑based planning",
+      "Actionable AI tips",
+      "Simple progress tracking"
+    ]
+  },
   "high-interest-portfolios": {
     "meta": {
       "title": "Build Your First Interest Portfolio - High-Yield Passive Income | Moneko",
@@ -9,7 +80,7 @@
       "title": "Build Your First Interest Portfolio",
       "subtitle": "Meet Moneko — your AI agent for high-interest portfolios and automated cash flow.",
       "ctaText": "Start Building Your Portfolio",
-      "ctaRoute": "/dashboard/income-builder",
+      "ctaRoute": "/dashboard/",
       "chatSuggestions": [
         "How do I start investing with $100?",
         "Where to put extra income to make it grow?",
@@ -42,7 +113,7 @@
         "title": "High-Interest Portfolio Builder",
         "description": "AI-powered portfolio suggestions focusing on high-yield dividend stocks, REITs, and bonds that generate consistent passive income.",
         "icon": "💰",
-        "route": "/dashboard/income-builder"
+        "route": "/dashboard/"
       },
       {
         "title": "Compound Interest Calculator",
@@ -80,7 +151,7 @@
       "title": "Business Cash Flow on Autopilot",
       "subtitle": "Late invoices, payroll, and taxes don't have to be a headache. Moneko helps small business owners organize revenue, stretch runway, and put idle cash to work.",
       "ctaText": "Optimize Your Cash Flow",
-      "ctaRoute": "/dashboard/business",
+      "ctaRoute": "/dashboard/",
       "chatSuggestions": [
         "How much runway does my business have?",
         "How do I split revenue between payroll, taxes, and savings?",
@@ -119,7 +190,7 @@
         "title": "Cash Flow Automation",
         "description": "Set up automated systems to allocate revenue between operations, taxes, and growth investments.",
         "icon": "⚡",
-        "route": "/dashboard/cash-flow"
+        "route": "/dashboard/"
       }
     ],
     "lessons": [
@@ -190,7 +261,7 @@
         "title": "Side Hustle Optimizer",
         "description": "Find the best side hustles for your schedule and skills, with income projections and time requirements.",
         "icon": "💪",
-        "route": "/dashboard/side-hustle"
+        "route": "/dashboard/"
       }
     ],
     "lessons": [

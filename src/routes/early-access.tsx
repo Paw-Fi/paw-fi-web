@@ -286,10 +286,7 @@ function CommunityGrowth({ userCount }: { userCount: number }) {
 
 export default function EarlyAccessPage() {
   const navigate = useNavigate();
-  const { data: remainingSpots = 0, isLoading: spotsLoading } = useRemainingSpots();
   
-  // Calculate user count from remaining spots (for display purposes)
-  const userCount = spotsLoading ? 4247 : Math.max(4247 + (100 - remainingSpots), 4247);
 
   return (
     <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden">

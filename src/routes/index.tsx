@@ -22,8 +22,8 @@ import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
-// For now, use the first variant (high-interest-portfolios)
-const contentVariant = "high-interest-portfolios";
+// Use budgeting-focused variant for homepage messaging
+const contentVariant = "budgeting-tools";
 const pageData = passiveIncomeVariants[contentVariant];
 
 export const Route = createFileRoute("/")({
@@ -45,6 +45,41 @@ export const Route = createFileRoute("/")({
 });
 
 export default function HomePage() {
+  const pageUrl = getCanonicalUrl("/");
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://moneko.io/#organization",
+        "name": "Moneko",
+        "url": "https://moneko.io",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://moneko.io/og-img.png",
+          "width": "1200",
+          "height": "630"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://moneko.io/#website",
+        "name": "Moneko",
+        "url": "https://moneko.io",
+        "publisher": { "@id": "https://moneko.io/#organization" }
+      },
+      {
+        "@type": "WebPage",
+        "@id": pageUrl,
+        "url": pageUrl,
+        "name": pageData.meta.title,
+        "description": pageData.meta.description,
+        "isPartOf": { "@id": "https://moneko.io/#website" },
+        "inLanguage": "en-US"
+      }
+    ]
+  };
+
   return (
     <div className="relative min-h-screen bg-background">
       <Helmet>
@@ -53,6 +88,7 @@ export default function HomePage() {
         <meta name="keywords" content={pageData.meta.keywords} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
+        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
       <AmbientHalo />
