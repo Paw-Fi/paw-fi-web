@@ -1,32 +1,3 @@
-# Firebase App Hosting configuration for TanStack Start Node.js server
-# This configures a Node.js server application, not static file hosting
-
-runConfig:
-  minInstances: 0
-  maxInstances: 3
-  concurrency: 80
-  cpu: 1
-  memoryMiB: 512
-
-runtime: nodejs20
-
-# Override build and run scripts to resolve dependency conflicts
-scripts:
-  buildCommand: |
-    echo "Cleaning up package-lock.json and node_modules..."
-    rm -f package-lock.json
-    rm -rf node_modules
-    echo "Installing dependencies with npm install..."
-    npm install
-    echo "Building application..."
-    npm run build
-  runCommand: node .output/server/index.mjs
-
-# Health check configuration using your /health route
-healthCheck:
-  path: "/health"
-  checkIntervalSec: 30
-  timeoutSec: 10
-  failureThreshold: 3
-  successThreshold: 1
-  initialDelaySec: 60
+# Custom build and start commands
+customBuildCommand: npm run build
+entryPoint: node .output/server/index.mjs

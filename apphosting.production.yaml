@@ -40,17 +40,21 @@ env:
 
 runtime: nodejs20
 
-# Override build and run scripts to resolve dependency conflicts
-scripts:
-  buildCommand: |
-    echo "Cleaning up package-lock.json and node_modules..."
-    rm -f package-lock.json
-    rm -rf node_modules
-    echo "Installing dependencies with npm install..."
-    npm install
-    echo "Building application..."
-    npm run build
-  runCommand: node .output/server/index.mjs
+# Build configuration with cleanup steps to resolve dependency conflicts
+buildConfig:
+  # Override default npm ci behavior to use npm install instead
+  install:
+    - name: "Clean up existing files"
+      run: |
+        echo "Cleaning up package-lock.json and node_modules..."
+        rm -f package-lock.json
+        rm -rf node_modules
+        echo "Cleanup complete"
+    - name: "Install dependencies with npm install"
+      run: "npm install"
+  build:
+    - name: "Build application"
+      run: "npm run build"
 
 # Health check configuration using your /health route
 healthCheck:
