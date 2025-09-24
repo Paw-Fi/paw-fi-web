@@ -1,10 +1,8 @@
 /// <reference types="vinxi/types/client" />
 import { hydrateRoot } from 'react-dom/client'
-import { StartClient } from '@tanstack/react-start'
-import { createRouter } from './router'
+import { StartClient } from '@tanstack/react-start/client'
 import { ReduxProvider } from './providers/ReduxProvider'
-import { Suspense, lazy } from 'react'
-import { performanceMonitor } from './utils/performance-monitor'
+import { Suspense } from 'react'
 import { initializeAnalytics } from './lib/analytics'
 
 // Optimized root component with performance enhancements
@@ -12,16 +10,14 @@ function RootApp() {
   return (
     <ReduxProvider>
       <Suspense fallback={<div className="min-h-screen bg-background" />}>
-        <StartClient router={router} />
+        <StartClient />
       </Suspense>
     </ReduxProvider>
   );
 }
 
-const router = createRouter()
-
 // React 19 hydration with concurrent features and error recovery
-const root = document.getElementById('root') || document
+const root = document
 
 // Enhanced hydration with error recovery
 try {
@@ -51,12 +47,6 @@ try {
 if (typeof window !== 'undefined') {
   // Initialize Firebase Analytics
   initializeAnalytics();
-  
-  // Preload critical routes
-  setTimeout(() => {
-    router.preloadRoute({ to: '/dashboard' });
-    router.preloadRoute({ to: '/calculators' });
-  }, 1000);
   
   // Enable service worker for caching only in production to avoid dev hydration issues
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {

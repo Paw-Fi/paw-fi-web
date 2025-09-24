@@ -2,10 +2,9 @@ import {
   HeadContent,
   Outlet,
   Scripts,
-  createRootRouteWithContext,
+  createRootRoute,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import type { QueryClient } from '@tanstack/react-query'
 import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { NotFound } from '@/components/NotFound'
 import appCss from '@/styles/main.css?url'
@@ -27,10 +26,9 @@ import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/stru
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-export const Route = createRootRouteWithContext<{
-  queryClient: QueryClient
-}>()({
+export const Route = createRootRoute({
   head: () => {
     // Default canonical URL for the root page
     const pageUrl = getCanonicalUrl('/');
@@ -125,11 +123,10 @@ export const Route = createRootRouteWithContext<{
   component: RootComponent,
 })
 
-// Component to sync auth with query cache - must be inside AuthProvider
-function AuthSyncWrapper({ children }: { children: React.ReactNode }) {
-  // Re-enabled to fix Link navigation API fetching issue
+// Client-only component to run auth/query sync effects without SSR
+function AuthSyncClientOnly() {
   useAuthQuerySync();
-  return <>{children}</>;
+  return null;
 }
 
 function RootComponent() {
@@ -141,6 +138,8 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // Create a per-render QueryClient. With SSR, this will be per-request.
+  const [queryClient] = React.useState(() => new QueryClient())
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -168,29 +167,35 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <AuthProvider>
               <AIChatProvider>
                 <ChatProvider>
-                  <AuthSyncWrapper>
+                  <QueryClientProvider client={queryClient}>
+                  {/* Run auth/query sync only on the client to avoid SSR requiring QueryClient */}
+                  <ClientOnly>
+                    <AuthSyncClientOnly />
+                  </ClientOnly>
+
                   {/* Use ClientOnly wrapper to prevent hydration mismatches */}
                   <ClientOnly>
                     <Suspense fallback={null}>
-                    <ToastContainer
-                      position="top-right"
-                      autoClose={5000}
-                      hideProgressBar={false}
-                      newestOnTop={false}
-                      closeOnClick
-                      rtl={false}
-                      pauseOnFocusLoss
-                      draggable
-                      pauseOnHover
-                      theme="light"
-                    />
-                  </Suspense>
-                </ClientOnly>
-               {children}
-                {/* <TanStackRouterDevtools position="bottom-right" />
-                <ReactQueryDevtools buttonPosition="bottom-left" /> */}
-                <Scripts />
-                  </AuthSyncWrapper>
+                      <ToastContainer
+                        position="top-right"
+                        autoClose={5000}
+                        hideProgressBar={false}
+                        newestOnTop={false}
+                        closeOnClick
+                        rtl={false}
+                        pauseOnFocusLoss
+                        draggable
+                        pauseOnHover
+                        theme="light"
+                      />
+                    </Suspense>
+                  </ClientOnly>
+
+                  {children}
+                  {/* <TanStackRouterDevtools position="bottom-right" /> */}
+                  {/* <ReactQueryDevtools buttonPosition="bottom-left" /> */}
+                  <Scripts />
+                  </QueryClientProvider>
                 </ChatProvider>
               </AIChatProvider>
             </AuthProvider>

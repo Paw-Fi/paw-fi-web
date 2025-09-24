@@ -4,9 +4,8 @@ import tsConfigPaths from 'vite-tsconfig-paths';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { VitePluginRadar } from 'vite-plugin-radar';
-import react from '@vitejs/plugin-react';
+import viteReact from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import  compression  from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -37,15 +36,6 @@ export default defineConfig({
     tailwindcss(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
-    }),
-    // TanStack Router with balanced code splitting - keep loaders in main bundle, split components
-    tanstackRouter({
-      autoCodeSplitting: true,
-    }),
-    VitePluginRadar({
-      analytics: {
-        id: 'G-KBNN5QXD4G',
-      },
     }),
     tanstackStart({
       target: 'node-server',
@@ -112,7 +102,13 @@ export default defineConfig({
         }
       ]
     }),
-    react(),
+    // React plugin must come after TanStack Start plugin
+    viteReact(),
+    VitePluginRadar({
+      analytics: {
+        id: 'G-KBNN5QXD4G',
+      },
+    }),
     compression({
       algorithm: 'gzip',
       ext: '.gz',
