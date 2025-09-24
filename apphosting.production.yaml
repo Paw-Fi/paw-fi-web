@@ -40,6 +40,20 @@ env:
 
 runtime: nodejs20
 
+# Build configuration with cleanup steps to resolve dependency conflicts
+buildConfig:
+  build:
+    - name: "Clean up existing files"
+      run: |
+        echo "Cleaning up package-lock.json and node_modules..."
+        rm -f package-lock.json
+        rm -rf node_modules
+        echo "Cleanup complete"
+    - name: "Install dependencies"
+      run: "npm install"
+    - name: "Build application"
+      run: "npm run build"
+
 # Health check configuration using your /health route
 healthCheck:
   path: "/health"
