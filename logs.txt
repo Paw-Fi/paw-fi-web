@@ -1,4 +1,4 @@
-starting build "df1cf305-c449-4f40-ad54-a7f282297ad2"
+starting build "6e15025b-f0a0-4218-9fa2-c63c0e6435cf"
 FETCHSOURCE
 hint: Using 'master' as the name for the initial branch. This default branch name
 hint: is subject to change. To configure the initial branch name to use in all
@@ -12,10 +12,10 @@ hint:
 hint: 	git branch -m <name>
 Initialized empty Git repository in /workspace/.git/
 From https://github.com/Paw-Fi/paw-fi-web
- * branch            7eaa2329de265f9c3cd2a1d8665c755d8c247ec4 -> FETCH_HEAD
-HEAD is now at 7eaa232 test6
+ * branch            c73c2ab8f0193ea43952cf466b289a6cc29f62fd -> FETCH_HEAD
+HEAD is now at c73c2ab Fix crossws version conflict for Firebase App Hosting deployment
 GitCommit:
-7eaa2329de265f9c3cd2a1d8665c755d8c247ec4
+c73c2ab8f0193ea43952cf466b289a6cc29f62fd
 BUILD
 Starting Step #0 - "ubuntu"
 Pulling image: ubuntu
@@ -39,16 +39,16 @@ base_20250817_18_04_RC00: Pulling from serverless-runtimes/utilities/preparer
 Digest: sha256:3b09b2f1585b2f4b5d41e674e5dd7ccb20941a0d6c5ea02c23a007c4b5213ada
 Status: Downloaded newer image for us-central1-docker.pkg.dev/serverless-runtimes/utilities/preparer:base_20250817_18_04_RC00
 us-central1-docker.pkg.dev/serverless-runtimes/utilities/preparer:base_20250817_18_04_RC00
-2025/09/25 14:11:45 FIREBASE_CONFIG has no availability specified, applying the default of 'BUILD' and 'RUNTIME'
-2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/supabaseUrlSecretProd/versions/latest to projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1 for the rest of the current build and run
-2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/supabaseAnonKeySecretProd/versions/latest to projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1 for the rest of the current build and run
-2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/stripePK_PROD/versions/latest to projects/1075784863194/secrets/stripePK_PROD/versions/1 for the rest of the current build and run
-2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/stripeSK_PROD/versions/latest to projects/1075784863194/secrets/stripeSK_PROD/versions/1 for the rest of the current build and run
-2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1 for the rest of the current build
-2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1 for the rest of the current build
-2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/stripePK_PROD/versions/1 for the rest of the current build
-2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/stripeSK_PROD/versions/1 for the rest of the current build
-2025/09/25 14:11:45 Final app hosting schema:
+2025/09/25 14:20:25 FIREBASE_CONFIG has no availability specified, applying the default of 'BUILD' and 'RUNTIME'
+2025/09/25 14:20:25 Pinned secret projects/paw-fi-3c4f7/secrets/supabaseUrlSecretProd/versions/latest to projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1 for the rest of the current build and run
+2025/09/25 14:20:25 Pinned secret projects/paw-fi-3c4f7/secrets/supabaseAnonKeySecretProd/versions/latest to projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1 for the rest of the current build and run
+2025/09/25 14:20:25 Pinned secret projects/paw-fi-3c4f7/secrets/stripePK_PROD/versions/latest to projects/1075784863194/secrets/stripePK_PROD/versions/1 for the rest of the current build and run
+2025/09/25 14:20:25 Pinned secret projects/paw-fi-3c4f7/secrets/stripeSK_PROD/versions/latest to projects/1075784863194/secrets/stripeSK_PROD/versions/1 for the rest of the current build and run
+2025/09/25 14:20:25 Accessed secret projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1 for the rest of the current build
+2025/09/25 14:20:25 Accessed secret projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1 for the rest of the current build
+2025/09/25 14:20:25 Accessed secret projects/1075784863194/secrets/stripePK_PROD/versions/1 for the rest of the current build
+2025/09/25 14:20:25 Accessed secret projects/1075784863194/secrets/stripeSK_PROD/versions/1 for the rest of the current build
+2025/09/25 14:20:25 Final app hosting schema:
 runConfig:
   cpu: 1
   memoryMiB: 512
@@ -104,7 +104,7 @@ outputFiles:
   serverApp:
     include:
     - .output
-2025/09/25 14:11:45 Final app hosting schema:
+2025/09/25 14:20:25 Final app hosting schema:
 runConfig:
   cpu: 1
   memoryMiB: 512
@@ -168,6 +168,7 @@ latest: Pulling from k8s-skaffold/pack
 396c31837116: Pulling fs layer
 9776b10d5c8c: Pulling fs layer
 52cb9ac3197f: Pulling fs layer
+9776b10d5c8c: Verifying Checksum
 9776b10d5c8c: Download complete
 396c31837116: Verifying Checksum
 396c31837116: Download complete
@@ -218,79 +219,73 @@ fe0a88c014e5: Waiting
 1a82443b3661: Waiting
 0e74178e0814: Waiting
 a547c70b78c4: Waiting
+18414af24074: Waiting
+8ee8d466b66e: Waiting
+9b7e58f82e1b: Waiting
+bfd3805f5f95: Waiting
+866bc12d8b61: Waiting
 08d92a24ddac: Waiting
 34273c98db50: Waiting
 e0482d6aff88: Waiting
 fd84c25ffec3: Waiting
 d0fddff05172: Waiting
 906754d1b2b9: Waiting
-18414af24074: Waiting
-8ee8d466b66e: Waiting
-9b7e58f82e1b: Waiting
 cb1153d4eea3: Waiting
-bfd3805f5f95: Waiting
-866bc12d8b61: Waiting
 5bee9d13c6e2: Waiting
 d0ab5e76ff31: Waiting
-4f4fb700ef54: Waiting
 26be9f471823: Waiting
 34ce8ba30961: Waiting
 e6178d2c0976: Waiting
+4f4fb700ef54: Waiting
+2a4a09bfccaf: Verifying Checksum
+2a4a09bfccaf: Download complete
+4845b6ba6baa: Download complete
 29ccc7c6fb60: Verifying Checksum
 29ccc7c6fb60: Download complete
-2a4a09bfccaf: Verifying Checksum
-4845b6ba6baa: Verifying Checksum
-4845b6ba6baa: Download complete
-2a4a09bfccaf: Pull complete
 64556131daf7: Verifying Checksum
 64556131daf7: Download complete
-fec73a9e8e03: Verifying Checksum
-fec73a9e8e03: Download complete
+2a4a09bfccaf: Pull complete
 6310d6b95f27: Verifying Checksum
 6310d6b95f27: Download complete
+fec73a9e8e03: Verifying Checksum
+fec73a9e8e03: Download complete
 29ccc7c6fb60: Pull complete
 fe0a88c014e5: Verifying Checksum
 fe0a88c014e5: Download complete
 0e74178e0814: Verifying Checksum
 0e74178e0814: Download complete
-4845b6ba6baa: Pull complete
 1a82443b3661: Verifying Checksum
 1a82443b3661: Download complete
+4845b6ba6baa: Pull complete
+a547c70b78c4: Verifying Checksum
+a547c70b78c4: Download complete
 18414af24074: Verifying Checksum
 18414af24074: Download complete
-64556131daf7: Pull complete
-8ee8d466b66e: Verifying Checksum
 8ee8d466b66e: Download complete
+64556131daf7: Pull complete
+866bc12d8b61: Verifying Checksum
+866bc12d8b61: Download complete
 9b7e58f82e1b: Verifying Checksum
 9b7e58f82e1b: Download complete
 bfd3805f5f95: Verifying Checksum
 bfd3805f5f95: Download complete
-6310d6b95f27: Pull complete
-866bc12d8b61: Verifying Checksum
-866bc12d8b61: Download complete
-a547c70b78c4: Verifying Checksum
-a547c70b78c4: Download complete
+34273c98db50: Download complete
+e0482d6aff88: Download complete
 08d92a24ddac: Verifying Checksum
 08d92a24ddac: Download complete
-34273c98db50: Verifying Checksum
-34273c98db50: Download complete
-e0482d6aff88: Verifying Checksum
-e0482d6aff88: Download complete
-fd84c25ffec3: Verifying Checksum
-fd84c25ffec3: Download complete
+6310d6b95f27: Pull complete
 d0fddff05172: Verifying Checksum
 d0fddff05172: Download complete
+fd84c25ffec3: Verifying Checksum
+fd84c25ffec3: Download complete
 906754d1b2b9: Verifying Checksum
 906754d1b2b9: Download complete
-fec73a9e8e03: Pull complete
+5bee9d13c6e2: Verifying Checksum
+5bee9d13c6e2: Download complete
 d0ab5e76ff31: Verifying Checksum
 d0ab5e76ff31: Download complete
 cb1153d4eea3: Verifying Checksum
 cb1153d4eea3: Download complete
-5bee9d13c6e2: Verifying Checksum
-5bee9d13c6e2: Download complete
-fe0a88c014e5: Pull complete
-34ce8ba30961: Verifying Checksum
 34ce8ba30961: Download complete
 26be9f471823: Verifying Checksum
 26be9f471823: Download complete
@@ -298,6 +293,8 @@ e6178d2c0976: Verifying Checksum
 e6178d2c0976: Download complete
 4f4fb700ef54: Verifying Checksum
 4f4fb700ef54: Download complete
+fec73a9e8e03: Pull complete
+fe0a88c014e5: Pull complete
 1a82443b3661: Pull complete
 0e74178e0814: Pull complete
 a547c70b78c4: Pull complete
@@ -328,12 +325,13 @@ e6fdc8487bfe: Already exists
 8069cfe92865: Verifying Checksum
 8069cfe92865: Download complete
 8069cfe92865: Pull complete
+6beb54c41d44: Verifying Checksum
 6beb54c41d44: Download complete
 6beb54c41d44: Pull complete
 Digest: sha256:19fb697ea2dd5ca925c41a1d46c74682b5809cf49538dce2dfadc5572e21341c
 Status: Downloaded newer image for us-central1-docker.pkg.dev/serverless-runtimes/google-22/run/base:public-image-next
 ===> ANALYZING
-Image with name "us-central1-docker.pkg.dev/paw-fi-3c4f7/firebaseapphosting-images/dev-pawfi-web:build-2025-09-25-013" not found
+Image with name "us-central1-docker.pkg.dev/paw-fi-3c4f7/firebaseapphosting-images/dev-pawfi-web:build-2025-09-25-014" not found
 ===> DETECTING
 target distro name/version labels not found, reading /etc/os-release file
 google.nodejs.runtime        1.0.0
@@ -347,7 +345,7 @@ Using exact version 22.18.0 for Node.js
 Adding image label google.runtime-version: nodejs22
 Using exact version 22.18.0 for Node.js
 Installing Node.js v22.18.0.
-2025/09/25 14:11:57 [DEBUG] GET https://dl.google.com/runtimes/ubuntu2204/nodejs/nodejs-22.18.0.tar.gz
+2025/09/25 14:20:39 [DEBUG] GET https://dl.google.com/runtimes/ubuntu2204/nodejs/nodejs-22.18.0.tar.gz
 === Node.js - Npm (google.nodejs.npm@1.1.0) ===
 ***** CACHE MISS: "npm_modules"
 Installing application dependencies.
@@ -362,7 +360,6 @@ npm error Missing: crossws@0.3.5 from lock file
 npm error Missing: crossws@0.3.5 from lock file
 npm error Missing: crossws@0.3.5 from lock file
 npm error Missing: crossws@0.3.5 from lock file
-npm error Missing: crossws@0.3.5 from lock file
 npm error
 npm error Clean install a project
 npm error
@@ -381,8 +378,8 @@ npm error
 npm error aliases: clean-install, ic, install-clean, isntall-clean
 npm error
 npm error Run "npm help ci" for more info
-npm error A complete log of this run can be found in: /www-data-home/.npm/_logs/2025-09-25T14_12_02_374Z-debug-0.log
-Done "npm ci --quiet --no-fund --no-audit (NODE_ENV=production)" (1.2952205s)
+npm error A complete log of this run can be found in: /www-data-home/.npm/_logs/2025-09-25T14_20_44_992Z-debug-0.log
+Done "npm ci --quiet --no-fund --no-audit (NODE_ENV=production)" (1.707189007s)
 --------------------------------------------------------------------------------
 failed to build: (error ID: 7fa33aaa):
 npm error code EUSAGE
@@ -394,7 +391,6 @@ npm error Missing: crossws@0.3.5 from lock file
 npm error Missing: crossws@0.3.5 from lock file
 npm error Missing: crossws@0.3.5 from lock file
 npm error Missing: crossws@0.3.5 from lock file
-npm error Missing: crossws@0.3.5 from lock file
 npm error
 npm error Clean install a project
 npm error
@@ -413,7 +409,7 @@ npm error
 npm error aliases: clean-install, ic, install-clean, isntall-clean
 npm error
 npm error Run "npm help ci" for more info
-npm error A complete log of this run can be found in: /www-data-home/.npm/_logs/2025-09-25T14_12_02_374Z-debug-0.log
+npm error A complete log of this run can be found in: /www-data-home/.npm/_logs/2025-09-25T14_20_44_992Z-debug-0.log
 ERROR: failed to build: exit status 1
 ERROR: failed to build: executing lifecycle: failed with status code: 51
 Finished Step #2 - "pack"
