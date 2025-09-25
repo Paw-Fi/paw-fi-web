@@ -3,4 +3,8 @@ runtime: nodejs22
 
 scripts:
   buildCommand: npm run build
-  runCommand: node .output/server/index.mjs
+  runCommand: npm run start
+
+outputFiles:
+  serverApp:
+    include: [.output]
