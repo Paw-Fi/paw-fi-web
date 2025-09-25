@@ -4,22 +4,16 @@ runtime: nodejs22
 env:
   - variable: NPM_CONFIG_REGISTRY
     value: https://registry.npmjs.org/
-    availability: [BUILD]
+    availability:
+      - BUILD
   - variable: NPM_CONFIG_ALWAYS_AUTH
     value: "false"
-    availability: [BUILD]
-  - variable: NPM_TOKEN
-    value: ""
-    availability: [BUILD]
-  - variable: NPM_CONFIG__AUTH
-    value: ""
-    availability: [BUILD]
+    availability:
+      - BUILD
   - variable: NPM_CONFIG_USERCONFIG
     value: "/workspace/.npmrc"
-    availability: [BUILD]
-  - variable: NODE_AUTH_TOKEN
-    value: ""
-    availability: [BUILD]
+    availability:
+      - BUILD
 
 scripts:
   # Let the buildpack install dependencies using npm ci with the existing lockfile
