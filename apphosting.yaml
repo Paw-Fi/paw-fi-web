@@ -1,4 +1,4 @@
-# Custom build and start commands
+# Custom build and start commands for Firebase App Hosting
 runtime: nodejs22
 customBuildCommand: npm run build
-entryPoint: node .output/server/index.mjs
+entryPoint: node /workspace/.output/server/index.mjs

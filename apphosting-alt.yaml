@@ -1,0 +1,20 @@
+# Alternative Firebase App Hosting configuration
+runtime: nodejs22
+
+# Build configuration
+customBuildCommand: |
+  npm ci
+  npm run build
+  ls -la .output/server/  # Debug: List build output
+
+# Start configuration with proper working directory
+entryPoint: |
+  cd /workspace
+  node .output/server/index.mjs
+
+# Environment setup
+env:
+  - variable: NODE_ENV
+    value: production
+  - variable: PORT
+    value: "8080"
