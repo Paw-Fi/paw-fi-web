@@ -17,6 +17,11 @@ env:
     availability:
       - BUILD
       - RUNTIME  
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME
     
   # Application secrets
   - variable: VITE_SUPABASE_URL
