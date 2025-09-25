@@ -375,7 +375,7 @@ const features = [
     Icon: Target,
     name: "Financial Health",
     description: "Monitor your overall financial wellness across multiple categories",
-    href: "/dashboard/health",
+    href: "/dashboard/portfolio",
     cta: "View Health",
     component: <FinancialHealth />,
     className: "lg:col-span-1 lg:row-span-1 h-[420px]",
