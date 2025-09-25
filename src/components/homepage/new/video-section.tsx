@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
-import videoDemo from "../../../../public/Moneko-onboard .webm";
+import videoDemo from "/public/Moneko-onboard .webm";
 
 interface VideoSectionProps {
   data: {

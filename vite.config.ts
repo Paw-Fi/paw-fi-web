@@ -38,69 +38,45 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     tanstackStart({
-      target: 'node-server',
-      customViteReactPlugin: true,
       sitemap: {
         host: 'https://moneko.io'
       },
-      pages:[
-        {
-          path: '/',
-          prerender:{enabled:true}
+      prerender: {
+        // Enable prerendering globally
+        enabled: true,
+        // Enable if you need pages to be at `/page/index.html` instead of `/page.html`
+        autoSubfolderIndex: false,
+        // How many prerender jobs to run at once
+        concurrency: 14,
+        // Whether to extract links from the HTML and prerender them also
+        crawlLinks: false,
+        // Filter function takes the page object and returns whether it should prerender
+        filter: ({ path }) => {
+          // Only prerender the specific paths you want to be static
+          // Dashboard paths should NOT be prerendered as they require user auth and dynamic data
+          const staticPaths = [
+            '/',
+            '/passive-income/business-cash-flow',
+            '/passive-income/high-interest-portfolios', 
+            '/passive-income/time-to-wealth',
+            '/pricing',
+            '/login',
+            '/register',
+            '/calculators',
+            '/early-access',
+            '/onboarding'
+          ]
+          return staticPaths.includes(path)
         },
-        {
-          path: '/passive-income/business-cash-flow',
-          prerender:{enabled:true}
+        // Number of times to retry a failed prerender job
+        retryCount: 2,
+        // Delay between retries in milliseconds
+        retryDelay: 1000,
+        // Callback when page is successfully rendered
+        onSuccess: ({ page }) => {
+          console.log(`✅ Prerendered: ${page.path}`)
         },
-        {
-          path: '/passive-income/high-interest-portfolios',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/passive-income/time-to-wealth',
-          prerender:{enabled:true}
-        },      
-        {
-          path: '/pricing',
-          prerender:{enabled:true}
-        },  
-        {
-          path: '/login',
-          prerender:{enabled:true}
-        },  
-        {
-          path: '/register',
-          prerender:{enabled:true}
-        },  
-        {
-          path: '/calculators',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/early-access',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/onboarding',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/dashboard',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/dashboard/tracker?filter=all&sort=due-date',
-          prerender:{enabled:true}
-        },
-        {
-          path: '/dashboard/learning',
-          prerender:{enabled:true}
-        },     
-        {
-          path: '/dashboard/portfolio',
-          prerender:{enabled:true}
-        }
-      ]
+      }
     }),
     // React plugin must come after TanStack Start plugin
     viteReact(),

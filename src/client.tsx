@@ -17,7 +17,7 @@ function RootApp() {
 }
 
 // React 19 hydration with concurrent features and error recovery
-const root = document
+const root = document.body
 
 // Enhanced hydration with error recovery
 try {
