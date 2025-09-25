@@ -1,0 +1,421 @@
+starting build "df1cf305-c449-4f40-ad54-a7f282297ad2"
+FETCHSOURCE
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint: 
+hint: 	git config --global init.defaultBranch <name>
+hint: 
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint: 
+hint: 	git branch -m <name>
+Initialized empty Git repository in /workspace/.git/
+From https://github.com/Paw-Fi/paw-fi-web
+ * branch            7eaa2329de265f9c3cd2a1d8665c755d8c247ec4 -> FETCH_HEAD
+HEAD is now at 7eaa232 test6
+GitCommit:
+7eaa2329de265f9c3cd2a1d8665c755d8c247ec4
+BUILD
+Starting Step #0 - "ubuntu"
+Pulling image: ubuntu
+Using default tag: latest
+latest: Pulling from library/ubuntu
+953cdd413371: Pulling fs layer
+953cdd413371: Verifying Checksum
+953cdd413371: Download complete
+953cdd413371: Pull complete
+Digest: sha256:353675e2a41babd526e2b837d7ec780c2a05bca0164f7ea5dbbd433d21d166fc
+Status: Downloaded newer image for ubuntu:latest
+docker.io/library/ubuntu:latest
+Finished Step #0 - "ubuntu"
+Starting Step #1 - "preparer"
+Pulling image: us-central1-docker.pkg.dev/serverless-runtimes/utilities/preparer:base_20250817_18_04_RC00
+base_20250817_18_04_RC00: Pulling from serverless-runtimes/utilities/preparer
+5fd97b0155af: Pulling fs layer
+5fd97b0155af: Verifying Checksum
+5fd97b0155af: Download complete
+5fd97b0155af: Pull complete
+Digest: sha256:3b09b2f1585b2f4b5d41e674e5dd7ccb20941a0d6c5ea02c23a007c4b5213ada
+Status: Downloaded newer image for us-central1-docker.pkg.dev/serverless-runtimes/utilities/preparer:base_20250817_18_04_RC00
+us-central1-docker.pkg.dev/serverless-runtimes/utilities/preparer:base_20250817_18_04_RC00
+2025/09/25 14:11:45 FIREBASE_CONFIG has no availability specified, applying the default of 'BUILD' and 'RUNTIME'
+2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/supabaseUrlSecretProd/versions/latest to projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1 for the rest of the current build and run
+2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/supabaseAnonKeySecretProd/versions/latest to projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1 for the rest of the current build and run
+2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/stripePK_PROD/versions/latest to projects/1075784863194/secrets/stripePK_PROD/versions/1 for the rest of the current build and run
+2025/09/25 14:11:45 Pinned secret projects/paw-fi-3c4f7/secrets/stripeSK_PROD/versions/latest to projects/1075784863194/secrets/stripeSK_PROD/versions/1 for the rest of the current build and run
+2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1 for the rest of the current build
+2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1 for the rest of the current build
+2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/stripePK_PROD/versions/1 for the rest of the current build
+2025/09/25 14:11:45 Accessed secret projects/1075784863194/secrets/stripeSK_PROD/versions/1 for the rest of the current build
+2025/09/25 14:11:45 Final app hosting schema:
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+  maxInstances: 3
+  minInstances: 0
+  vpcAccess: null
+  cpuAlwaysAllocated: null
+env:
+- variable: NODE_OPTIONS
+  value: --max-old-space-size=4096
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: NODE_ENV
+  value: production
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_SUPABASE_URL
+  secret: projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_SUPABASE_ANON_KEY
+  secret: projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_STRIPE_PUBLISHABLE_KEY
+  secret: projects/1075784863194/secrets/stripePK_PROD/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_STRIPE_SECRET_KEY
+  secret: projects/1075784863194/secrets/stripeSK_PROD/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: FIREBASE_CONFIG
+  value: '{"databaseURL":"","projectId":"paw-fi-3c4f7","storageBucket":"paw-fi-3c4f7.firebasestorage.app"}'
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: FIREBASE_WEBAPP_CONFIG
+  value: '{"apiKey":"AIzaSyBlMgs8Go1eSElacNxrlDRx_FrhLKGzh_g","appId":"1:1075784863194:web:650f6974eab887422ec4e3","authDomain":"paw-fi-3c4f7.firebaseapp.com","databaseURL":"","messagingSenderId":"1075784863194","projectId":"paw-fi-3c4f7","storageBucket":"paw-fi-3c4f7.firebasestorage.app"}'
+  availability:
+  - BUILD
+scripts:
+  runCommand: npm run start
+  buildCommand: npm install && npm run build
+outputFiles:
+  serverApp:
+    include:
+    - .output
+2025/09/25 14:11:45 Final app hosting schema:
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+  maxInstances: 3
+  minInstances: 0
+  vpcAccess: null
+  cpuAlwaysAllocated: null
+env:
+- variable: NODE_OPTIONS
+  value: --max-old-space-size=4096
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: NODE_ENV
+  value: production
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_SUPABASE_URL
+  secret: projects/1075784863194/secrets/supabaseUrlSecretProd/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_SUPABASE_ANON_KEY
+  secret: projects/1075784863194/secrets/supabaseAnonKeySecretProd/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_STRIPE_PUBLISHABLE_KEY
+  secret: projects/1075784863194/secrets/stripePK_PROD/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: VITE_STRIPE_SECRET_KEY
+  secret: projects/1075784863194/secrets/stripeSK_PROD/versions/1
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: FIREBASE_CONFIG
+  value: '{"databaseURL":"","projectId":"paw-fi-3c4f7","storageBucket":"paw-fi-3c4f7.firebasestorage.app"}'
+  availability:
+  - BUILD
+  - RUNTIME
+- variable: FIREBASE_WEBAPP_CONFIG
+  value: '{"apiKey":"AIzaSyBlMgs8Go1eSElacNxrlDRx_FrhLKGzh_g","appId":"1:1075784863194:web:650f6974eab887422ec4e3","authDomain":"paw-fi-3c4f7.firebaseapp.com","databaseURL":"","messagingSenderId":"1075784863194","projectId":"paw-fi-3c4f7","storageBucket":"paw-fi-3c4f7.firebasestorage.app"}'
+  availability:
+  - BUILD
+scripts:
+  runCommand: npm run start
+  buildCommand: npm install && npm run build
+outputFiles:
+  serverApp:
+    include:
+    - .output
+Finished Step #1 - "preparer"
+Starting Step #2 - "pack"
+Pulling image: gcr.io/k8s-skaffold/pack
+Using default tag: latest
+latest: Pulling from k8s-skaffold/pack
+396c31837116: Pulling fs layer
+9776b10d5c8c: Pulling fs layer
+52cb9ac3197f: Pulling fs layer
+9776b10d5c8c: Download complete
+396c31837116: Verifying Checksum
+396c31837116: Download complete
+52cb9ac3197f: Verifying Checksum
+52cb9ac3197f: Download complete
+396c31837116: Pull complete
+9776b10d5c8c: Pull complete
+52cb9ac3197f: Pull complete
+Digest: sha256:221c0c0d9a90f46f108bb888a1da9e99c82ff631e8b1c63b0223ea951752bd53
+Status: Downloaded newer image for gcr.io/k8s-skaffold/pack:latest
+gcr.io/k8s-skaffold/pack:latest
+nodejs_20250921_RC00: Pulling from serverless-runtimes/google-22-full/builder/nodejs
+e27d8d14a9d0: Already exists
+ecd1c5ef2d49: Already exists
+027b47bb399e: Already exists
+2a4a09bfccaf: Pulling fs layer
+29ccc7c6fb60: Pulling fs layer
+4845b6ba6baa: Pulling fs layer
+64556131daf7: Pulling fs layer
+6310d6b95f27: Pulling fs layer
+fec73a9e8e03: Pulling fs layer
+fe0a88c014e5: Pulling fs layer
+1a82443b3661: Pulling fs layer
+0e74178e0814: Pulling fs layer
+a547c70b78c4: Pulling fs layer
+18414af24074: Pulling fs layer
+8ee8d466b66e: Pulling fs layer
+9b7e58f82e1b: Pulling fs layer
+bfd3805f5f95: Pulling fs layer
+866bc12d8b61: Pulling fs layer
+08d92a24ddac: Pulling fs layer
+34273c98db50: Pulling fs layer
+e0482d6aff88: Pulling fs layer
+fd84c25ffec3: Pulling fs layer
+d0fddff05172: Pulling fs layer
+906754d1b2b9: Pulling fs layer
+cb1153d4eea3: Pulling fs layer
+5bee9d13c6e2: Pulling fs layer
+d0ab5e76ff31: Pulling fs layer
+26be9f471823: Pulling fs layer
+34ce8ba30961: Pulling fs layer
+e6178d2c0976: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+64556131daf7: Waiting
+6310d6b95f27: Waiting
+fec73a9e8e03: Waiting
+fe0a88c014e5: Waiting
+1a82443b3661: Waiting
+0e74178e0814: Waiting
+a547c70b78c4: Waiting
+08d92a24ddac: Waiting
+34273c98db50: Waiting
+e0482d6aff88: Waiting
+fd84c25ffec3: Waiting
+d0fddff05172: Waiting
+906754d1b2b9: Waiting
+18414af24074: Waiting
+8ee8d466b66e: Waiting
+9b7e58f82e1b: Waiting
+cb1153d4eea3: Waiting
+bfd3805f5f95: Waiting
+866bc12d8b61: Waiting
+5bee9d13c6e2: Waiting
+d0ab5e76ff31: Waiting
+4f4fb700ef54: Waiting
+26be9f471823: Waiting
+34ce8ba30961: Waiting
+e6178d2c0976: Waiting
+29ccc7c6fb60: Verifying Checksum
+29ccc7c6fb60: Download complete
+2a4a09bfccaf: Verifying Checksum
+4845b6ba6baa: Verifying Checksum
+4845b6ba6baa: Download complete
+2a4a09bfccaf: Pull complete
+64556131daf7: Verifying Checksum
+64556131daf7: Download complete
+fec73a9e8e03: Verifying Checksum
+fec73a9e8e03: Download complete
+6310d6b95f27: Verifying Checksum
+6310d6b95f27: Download complete
+29ccc7c6fb60: Pull complete
+fe0a88c014e5: Verifying Checksum
+fe0a88c014e5: Download complete
+0e74178e0814: Verifying Checksum
+0e74178e0814: Download complete
+4845b6ba6baa: Pull complete
+1a82443b3661: Verifying Checksum
+1a82443b3661: Download complete
+18414af24074: Verifying Checksum
+18414af24074: Download complete
+64556131daf7: Pull complete
+8ee8d466b66e: Verifying Checksum
+8ee8d466b66e: Download complete
+9b7e58f82e1b: Verifying Checksum
+9b7e58f82e1b: Download complete
+bfd3805f5f95: Verifying Checksum
+bfd3805f5f95: Download complete
+6310d6b95f27: Pull complete
+866bc12d8b61: Verifying Checksum
+866bc12d8b61: Download complete
+a547c70b78c4: Verifying Checksum
+a547c70b78c4: Download complete
+08d92a24ddac: Verifying Checksum
+08d92a24ddac: Download complete
+34273c98db50: Verifying Checksum
+34273c98db50: Download complete
+e0482d6aff88: Verifying Checksum
+e0482d6aff88: Download complete
+fd84c25ffec3: Verifying Checksum
+fd84c25ffec3: Download complete
+d0fddff05172: Verifying Checksum
+d0fddff05172: Download complete
+906754d1b2b9: Verifying Checksum
+906754d1b2b9: Download complete
+fec73a9e8e03: Pull complete
+d0ab5e76ff31: Verifying Checksum
+d0ab5e76ff31: Download complete
+cb1153d4eea3: Verifying Checksum
+cb1153d4eea3: Download complete
+5bee9d13c6e2: Verifying Checksum
+5bee9d13c6e2: Download complete
+fe0a88c014e5: Pull complete
+34ce8ba30961: Verifying Checksum
+34ce8ba30961: Download complete
+26be9f471823: Verifying Checksum
+26be9f471823: Download complete
+e6178d2c0976: Verifying Checksum
+e6178d2c0976: Download complete
+4f4fb700ef54: Verifying Checksum
+4f4fb700ef54: Download complete
+1a82443b3661: Pull complete
+0e74178e0814: Pull complete
+a547c70b78c4: Pull complete
+18414af24074: Pull complete
+8ee8d466b66e: Pull complete
+9b7e58f82e1b: Pull complete
+bfd3805f5f95: Pull complete
+866bc12d8b61: Pull complete
+08d92a24ddac: Pull complete
+34273c98db50: Pull complete
+e0482d6aff88: Pull complete
+fd84c25ffec3: Pull complete
+d0fddff05172: Pull complete
+906754d1b2b9: Pull complete
+cb1153d4eea3: Pull complete
+5bee9d13c6e2: Pull complete
+d0ab5e76ff31: Pull complete
+26be9f471823: Pull complete
+34ce8ba30961: Pull complete
+e6178d2c0976: Pull complete
+4f4fb700ef54: Pull complete
+Digest: sha256:9f73baec07273e032e204f7c0154e99768b00ed681dbcf9e282ba34cbb561280
+Status: Downloaded newer image for us-central1-docker.pkg.dev/serverless-runtimes/google-22-full/builder/nodejs:nodejs_20250921_RC00
+public-image-next: Pulling from serverless-runtimes/google-22/run/base
+e6fdc8487bfe: Already exists
+8069cfe92865: Pulling fs layer
+6beb54c41d44: Pulling fs layer
+8069cfe92865: Verifying Checksum
+8069cfe92865: Download complete
+8069cfe92865: Pull complete
+6beb54c41d44: Download complete
+6beb54c41d44: Pull complete
+Digest: sha256:19fb697ea2dd5ca925c41a1d46c74682b5809cf49538dce2dfadc5572e21341c
+Status: Downloaded newer image for us-central1-docker.pkg.dev/serverless-runtimes/google-22/run/base:public-image-next
+===> ANALYZING
+Image with name "us-central1-docker.pkg.dev/paw-fi-3c4f7/firebaseapphosting-images/dev-pawfi-web:build-2025-09-25-013" not found
+===> DETECTING
+target distro name/version labels not found, reading /etc/os-release file
+google.nodejs.runtime        1.0.0
+google.nodejs.npm            1.1.0
+google.nodejs.firebasebundle 0.0.1
+===> RESTORING
+===> BUILDING
+target distro name/version labels not found, reading /etc/os-release file
+=== Node.js - Runtime (google.nodejs.runtime@1.0.0) ===
+Using exact version 22.18.0 for Node.js
+Adding image label google.runtime-version: nodejs22
+Using exact version 22.18.0 for Node.js
+Installing Node.js v22.18.0.
+2025/09/25 14:11:57 [DEBUG] GET https://dl.google.com/runtimes/ubuntu2204/nodejs/nodejs-22.18.0.tar.gz
+=== Node.js - Npm (google.nodejs.npm@1.1.0) ===
+***** CACHE MISS: "npm_modules"
+Installing application dependencies.
+--------------------------------------------------------------------------------
+Running "npm ci --quiet --no-fund --no-audit (NODE_ENV=production)"
+npm error code EUSAGE
+npm error
+npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+npm error
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error
+npm error Clean install a project
+npm error
+npm error Usage:
+npm error npm ci
+npm error
+npm error Options:
+npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm error [--no-bin-links] [--no-fund] [--dry-run]
+npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm error A complete log of this run can be found in: /www-data-home/.npm/_logs/2025-09-25T14_12_02_374Z-debug-0.log
+Done "npm ci --quiet --no-fund --no-audit (NODE_ENV=production)" (1.2952205s)
+--------------------------------------------------------------------------------
+failed to build: (error ID: 7fa33aaa):
+npm error code EUSAGE
+npm error
+npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+npm error
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error Missing: crossws@0.3.5 from lock file
+npm error
+npm error Clean install a project
+npm error
+npm error Usage:
+npm error npm ci
+npm error
+npm error Options:
+npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm error [--no-bin-links] [--no-fund] [--dry-run]
+npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm error A complete log of this run can be found in: /www-data-home/.npm/_logs/2025-09-25T14_12_02_374Z-debug-0.log
+ERROR: failed to build: exit status 1
+ERROR: failed to build: executing lifecycle: failed with status code: 51
+Finished Step #2 - "pack"
+ERROR
+ERROR: build step 2 "gcr.io/k8s-skaffold/pack" failed: step exited with non-zero status: 1
