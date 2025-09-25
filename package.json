@@ -112,5 +112,8 @@
     "typescript": "^5.7.2",
     "vite-plugin-compression": "^0.5.1",
     "vite-tsconfig-paths": "^5.1.4"
+  },
+  "overrides": {
+    "crossws": "0.4.1"
   }
 }
