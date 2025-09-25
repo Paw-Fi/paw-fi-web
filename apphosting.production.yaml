@@ -40,22 +40,6 @@ env:
 
 runtime: nodejs22
 
-# Build configuration with cleanup steps to resolve dependency conflicts
-buildConfig:
-  # Override default npm ci behavior to use npm install instead
-  install:
-    - name: "Clean up existing files"
-      run: |
-        echo "Cleaning up package-lock.json and node_modules..."
-        rm -f package-lock.json
-        rm -rf node_modules
-        echo "Cleanup complete"
-    - name: "Install dependencies with npm install"
-      run: "npm install"
-  build:
-    - name: "Build application"
-      run: "npm run build"
-
 # Health check configuration using your /health route
 healthCheck:
   path: "/health"
