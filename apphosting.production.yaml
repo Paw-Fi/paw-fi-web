@@ -2,7 +2,7 @@
 # This configures a Node.js server application, not static file hosting
 
 runConfig:
-  minInstances: 0
+  minInstances: 1
   maxInstances: 3
   concurrency: 80
   cpu: 1
@@ -39,11 +39,20 @@ env:
       - BUILD
       - RUNTIME
 
-  - variable: VITE_STRIPE_SECRET_KEY
+  # IMPORTANT: Do not expose Stripe secret to the build/client. Use non-VITE prefix and RUNTIME only
+  - variable: STRIPE_SECRET_KEY
     secret: stripeSK_PROD
     availability:
-      - BUILD
       - RUNTIME
+
+# Ensure Cloud Build runs the build and the Nitro output is preserved for the backend server
+scripts:
+  buildCommand: npm run build
+  runCommand: npm run start
+
+outputFiles:
+  serverApp:
+    include: [.output]
 
 runtime: nodejs22
 
