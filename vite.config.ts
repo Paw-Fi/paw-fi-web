@@ -8,32 +8,14 @@ import viteReact from '@vitejs/plugin-react';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import  compression  from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
+import { nitroV2Plugin } from '@tanstack/nitro-v2-vite-plugin'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
-  build: {
-    rollupOptions: {
-      treeshake: false,
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      },
-    },
-    cssMinify: true,
-    target: 'es2020',
-    chunkSizeWarningLimit: 1000,
-  },
-  server: {
-    port: 3000,
-    host: '0.0.0.0', // Allow external connections for Docker/containers
-  },
+ 
   plugins: [
-    tailwindcss(),
     tsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
@@ -78,8 +60,9 @@ export default defineConfig({
         },
       }
     }),
-    // React plugin must come after TanStack Start plugin
+    nitroV2Plugin(),
     viteReact(),
+    tailwindcss(),
     VitePluginRadar({
       analytics: {
         id: 'G-KBNN5QXD4G',

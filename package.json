@@ -105,10 +105,12 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@tanstack/nitro-v2-vite-plugin": "^1.132.0",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.180.0",
+    "nitro": "npm:nitro-nightly@^3.0.0-20250925-181710-5191890e",
     "postcss": "^8.5.6",
     "typescript": "^5.9.2"
   }
