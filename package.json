@@ -10,7 +10,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:sitemap": "node scripts/update-sitemap.js",
-    "start": "node .output/server/index.mjs",
+    "start": "node dist/server/server.js",
     "typecheck": "tsc --noEmit",
     "deploy:functions:dev": "node scripts/deploy-functions.js dev",
     "deploy:functions:prod": "node scripts/deploy-functions.js prod"
