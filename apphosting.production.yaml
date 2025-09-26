@@ -7,7 +7,6 @@ runConfig:
   concurrency: 80
   cpu: 1
   memoryMiB: 512
-  concurrency: 80
 
 env:
   # Production Supabase configuration
@@ -47,15 +46,6 @@ env:
       - RUNTIME
 
 runtime: nodejs22
-
-# Health check configuration using your /health route
-healthCheck:
-  path: "/health"
-  checkIntervalSec: 30
-  timeoutSec: 10
-  failureThreshold: 3
-  successThreshold: 1
-  initialDelaySec: 60
 
 # Note: Secrets access granted on 2025-09-20:
 # ✔ firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
