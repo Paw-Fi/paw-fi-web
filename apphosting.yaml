@@ -2,7 +2,6 @@
 runtime: nodejs22
 
 scripts:
-  buildCommand: rm -f package-lock.json && npm install && npm run build
   runCommand: npm run start
 
 outputFiles:
