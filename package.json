@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:sitemap": "node scripts/update-sitemap.js",
     "start": "node .output/server/index.mjs",
+    "build:sitemap": "node scripts/update-sitemap.js",
     "typecheck": "tsc --noEmit",
     "deploy:functions:dev": "node scripts/deploy-functions.js dev",
     "deploy:functions:prod": "node scripts/deploy-functions.js prod"
@@ -52,10 +52,10 @@
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
-    "@tanstack/react-router": "^1.132.2",
+    "@tanstack/react-router": "^1.132.7",
     "@tanstack/react-router-devtools": "^1.132.7",
     "@tanstack/react-start": "^1.132.7",
-    "@tanstack/router-plugin": "^1.132.2",
+    "@tanstack/router-plugin": "^1.132.7",
     "@types/lodash": "^4.17.20",
     "@vitejs/plugin-react": "^5.0.3",
     "chart.js": "^4.5.0",
@@ -74,6 +74,7 @@
     "mermaid": "^11.12.0",
     "mini-svg-data-uri": "^1.4.4",
     "motion": "^12.23.22",
+    "nitro": "^0.0.0",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "react": "^19.1.1",
     "react-activity-calendar": "^2.7.14",
@@ -105,12 +106,11 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "@tanstack/nitro-v2-vite-plugin": "^1.132.0",
+    "@types/express": "^4.17.23",
     "@types/node": "^24.5.2",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.180.0",
-    "nitro": "npm:nitro-nightly@^3.0.0-20250925-181710-5191890e",
     "postcss": "^8.5.6",
     "typescript": "^5.9.2"
   }

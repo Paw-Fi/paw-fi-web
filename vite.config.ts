@@ -1,20 +1,20 @@
-// vite.config.ts
-import { defineConfig } from 'vite';
-import tsConfigPaths from 'vite-tsconfig-paths';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { VitePluginRadar } from 'vite-plugin-radar';
-import viteReact from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import tsConfigPaths from 'vite-tsconfig-paths'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import  compression  from 'vite-plugin-compression'
+import viteReact from '@vitejs/plugin-react'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { VitePluginRadar } from 'vite-plugin-radar'
+import compression from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
-import { nitroV2Plugin } from '@tanstack/nitro-v2-vite-plugin'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 export default defineConfig({
- 
+  server: {
+    port: 3000,
+  },
   plugins: [
     tsConfigPaths({
       projects: ['./tsconfig.json'],
@@ -60,7 +60,6 @@ export default defineConfig({
         },
       }
     }),
-    nitroV2Plugin(),
     viteReact(),
     tailwindcss(),
     VitePluginRadar({
@@ -92,4 +91,4 @@ export default defineConfig({
       '@styles': resolve(__dirname, './src/styles'),
     },
   },
-});
+})

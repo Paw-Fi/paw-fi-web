@@ -32,12 +32,21 @@ env:
       - BUILD
       - RUNTIME
 
-  - variable: VITE_STRIPE_SECRET_KEY
+  # IMPORTANT: Do not expose Stripe secret to the build/client. Use non-VITE prefix and RUNTIME only
+  - variable: STRIPE_SECRET_KEY
     secret: stripeSK_DEV  # Reference to a secret in Cloud Secret Manager
     availability:
-      - BUILD
       - RUNTIME
-      
-runtime: nodejs20  # or nodejs20
+
+# Ensure Cloud Build runs the build and the Nitro output is preserved
+scripts:
+  buildCommand: npm run build
+  runCommand: npm run start
+
+outputFiles:
+  serverApp:
+    include: [.output]
+
+runtime: nodejs22
 # Note: Need to grant access to the secrets to the app engine service account by using:
 # firebase apphosting:secrets:grantaccess stripeSK_PROD --backend prod-paw-fi-web
