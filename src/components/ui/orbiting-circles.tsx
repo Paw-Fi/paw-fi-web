@@ -1,17 +1,18 @@
-import { cn } from "@/lib/utils";
-import React from "react";
+import React from "react"
+
+import { cn } from "@/lib/utils"
 
 export interface OrbitingCirclesProps
   extends React.HTMLAttributes<HTMLDivElement> {
-  className?: string;
-  children?: React.ReactNode;
-  reverse?: boolean;
-  duration?: number;
-  delay?: number;
-  radius?: number;
-  path?: boolean;
-  iconSize?: number;
-  speed?: number;
+  className?: string
+  children?: React.ReactNode
+  reverse?: boolean
+  duration?: number
+  delay?: number
+  radius?: number
+  path?: boolean
+  iconSize?: number
+  speed?: number
 }
 
 export function OrbitingCircles({
@@ -23,10 +24,9 @@ export function OrbitingCircles({
   path = true,
   iconSize = 30,
   speed = 1,
-  delay = 0,
   ...props
 }: OrbitingCirclesProps) {
-  const calculatedDuration = duration / speed;
+  const calculatedDuration = duration / speed
   return (
     <>
       {path && (
@@ -45,33 +45,28 @@ export function OrbitingCircles({
         </svg>
       )}
       {React.Children.map(children, (child, index) => {
-        const angle = (360 / React.Children.count(children)) * index;
+        const angle = (360 / React.Children.count(children)) * index
         return (
           <div
-            style={{
-              // Numeric var, seconds handled by app.css: calc(var(--duration)*1s)
-              "--duration": String(calculatedDuration),
-              "--radius": radius,
-              "--angle": angle,
-              "--icon-size": `${iconSize}px`,
-              // Explicit animation to avoid any mobile/browser shorthand quirks
-              animationName: "orbit",
-              animationDuration: `${calculatedDuration}s`,
-              animationTimingFunction: "linear",
-              animationIterationCount: "infinite",
-              animationDelay: `${delay}s`,
-            } as React.CSSProperties}
+            style={
+              {
+                "--duration": calculatedDuration,
+                "--radius": radius,
+                "--angle": angle,
+                "--icon-size": `${iconSize}px`,
+              } as React.CSSProperties
+            }
             className={cn(
-              `absolute flex size-[var(--icon-size)] transform-gpu items-center justify-center rounded-full`,
+              `animate-orbit absolute flex size-[var(--icon-size)] transform-gpu items-center justify-center rounded-full`,
               { "[animation-direction:reverse]": reverse },
-              className,
+              className
             )}
             {...props}
           >
             {child}
           </div>
-        );
+        )
       })}
     </>
-  );
+  )
 }

@@ -125,7 +125,9 @@ const FeatureTag = ({ label }: { label: string }) => (
 // Dashboard Features Orbit with pill-style tags
 const TechStack = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const motionSpeed = prefersReducedMotion ? 0.1 : 1; // Slow down if user prefers reduced motion
+  // Use a more reasonable speed reduction or disable animation entirely
+  const motionSpeed = prefersReducedMotion ? 0 : 1; // 0 = no animation, 1 = normal speed
+  
   return (
     <div className="relative h-full w-full bg-subtle-background overflow-hidden">
       {/* Full container for orbiting tags */}
@@ -135,23 +137,28 @@ const TechStack = () => {
           <img src={monekoAnimate} alt="Moneko" className="h-14 w-14 rounded-full" />
         </div>
 
-        {/* Inner Ring */}
-        <OrbitingCircles iconSize={16} radius={90} duration={28} path speed={motionSpeed}>
-          <FeatureTag label="Emergency fund?" />
-          <FeatureTag label="Smart Saving?" />
-        </OrbitingCircles>
+        {/* Only render orbiting circles if animation is enabled */}
+        {motionSpeed > 0 && (
+          <>
+            {/* Inner Ring */}
+            <OrbitingCircles iconSize={16} radius={90} duration={27} path speed={motionSpeed}>
+              <FeatureTag label="Emergency fund?" />
+              <FeatureTag label="Smart Saving?" />
+            </OrbitingCircles>
 
-        {/* Outer Ring */}
-        <OrbitingCircles iconSize={16} radius={120} duration={36} reverse path speed={motionSpeed}>
-          <FeatureTag label="Goal Plan?" />
-          <FeatureTag label="Budget tips?" />
-        </OrbitingCircles>
+            {/* Outer Ring */}
+            <OrbitingCircles iconSize={16} radius={120} duration={32} reverse path speed={motionSpeed}>
+              <FeatureTag label="Goal Plan?" />
+              <FeatureTag label="Budget tips?" />
+            </OrbitingCircles>
 
-         {/* Outer Ring */}
-         <OrbitingCircles iconSize={16} radius={160} duration={40} reverse path speed={motionSpeed}>
-          <FeatureTag label="Bad Debt?" />
-          <FeatureTag label="Investment?" />
-        </OrbitingCircles>
+             {/* Outer Ring */}
+             <OrbitingCircles iconSize={16} radius={160} duration={21} reverse path speed={motionSpeed}>
+              <FeatureTag label="Bad Debt?" />
+              <FeatureTag label="Investment?" />
+            </OrbitingCircles>
+          </>
+        )}
       </div>
       <div className="pointer-events-none absolute bottom-20 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20"></div>
     </div>
