@@ -45,14 +45,15 @@ env:
     availability:
       - RUNTIME
 
-# Ensure Cloud Build runs the build and the Nitro output is preserved for the backend server
+# Override App Hosting framework detection to use our custom scripts
+# This opts out of TanStack Start framework adapter to use our custom Nitro build
 scripts:
   buildCommand: npm run build
   runCommand: npm run start
 
 outputFiles:
   serverApp:
-    include: [.output]
+    include: [.]
 
 runtime: nodejs22
 
