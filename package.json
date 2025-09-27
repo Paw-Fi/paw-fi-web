@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "NODE_OPTIONS='--max-old-space-size=8192' vite build",
-    "start": "node .output/server/index.mjs",
+    "start": "PORT=8080 node scripts/start-server.js",
     "build:sitemap": "node scripts/update-sitemap.js",
     "typecheck": "tsc --noEmit",
     "deploy:functions:dev": "node scripts/deploy-functions.js dev",
