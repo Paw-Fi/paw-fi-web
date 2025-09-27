@@ -1,10 +1,10 @@
 # Dev environment configuration
 runConfig:
-  minInstances: 0
-  maxInstances: 2
-  cpu: 1
-  memoryMiB: 512
-  concurrency: 80
+  minInstances: 1
+  maxInstances: 5
+  cpu: 2
+  memoryMiB: 1024
+  concurrency: 100
 
 env:
   # Production Supabase configuration

@@ -8,11 +8,11 @@ runConfig:
     - variable: HOST
       value: 0.0.0.0
       availability: RUNTIME
-  concurrency: 80
-  cpu: 1
-  memoryMiB: 512
-  minInstances: 0
-  maxInstances: 3
+  concurrency: 100
+  cpu: 2
+  memoryMiB: 1024
+  minInstances: 2
+  maxInstances: 10
 
 outputFiles:
   serverApp:
