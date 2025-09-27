@@ -1,6 +1,6 @@
 version: v1
 runConfig:
-  runCommand: npm run start
+  runCommand: node scripts/start-server.js
   environmentVariables:
     - variable: NODE_ENV
       value: production
