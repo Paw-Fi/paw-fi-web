@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "start": "node .output/server/index.mjs",
     "build:sitemap": "node scripts/update-sitemap.js",
     "typecheck": "tsc --noEmit",
@@ -74,7 +74,6 @@
     "mermaid": "^11.12.0",
     "mini-svg-data-uri": "^1.4.4",
     "motion": "^12.23.22",
-    "nitro": "^0.0.0",
     "prettier-plugin-tailwindcss": "^0.6.14",
     "react": "^19.1.1",
     "react-activity-calendar": "^2.7.14",
@@ -111,6 +110,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@types/three": "^0.180.0",
+    "nitro": "npm:nitro-nightly",
     "postcss": "^8.5.6",
     "typescript": "^5.9.2"
   }

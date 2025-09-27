@@ -12,7 +12,7 @@ env:
   # Production Supabase configuration
   # Using secrets for secure environment variables
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=4096"
+    value: "--max-old-space-size=8192"
     availability:
       - BUILD
       - RUNTIME  

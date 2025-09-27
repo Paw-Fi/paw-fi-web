@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 import { VitePluginRadar } from 'vite-plugin-radar'
 import compression from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
+import { nitro } from 'nitro/vite'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -20,18 +21,9 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     tanstackStart({
-      sitemap: {
-        host: 'https://moneko.io'
-      },
       prerender: {
         // Enable prerendering globally
         enabled: true,
-        // Enable if you need pages to be at `/page/index.html` instead of `/page.html`
-        autoSubfolderIndex: false,
-        // How many prerender jobs to run at once
-        concurrency: 14,
-        // Whether to extract links from the HTML and prerender them also
-        crawlLinks: false,
         // Filter function takes the page object and returns whether it should prerender
         filter: ({ path }) => {
           // Only prerender the specific paths you want to be static
@@ -50,16 +42,13 @@ export default defineConfig({
           ]
           return staticPaths.includes(path)
         },
-        // Number of times to retry a failed prerender job
-        retryCount: 2,
-        // Delay between retries in milliseconds
-        retryDelay: 1000,
         // Callback when page is successfully rendered
         onSuccess: ({ page }) => {
           console.log(`✅ Prerendered: ${page.path}`)
         },
       }
     }),
+    nitro(),
     viteReact(),
     tailwindcss(),
     VitePluginRadar({
