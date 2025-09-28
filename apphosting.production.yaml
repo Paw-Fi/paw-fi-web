@@ -2,11 +2,11 @@
 # This configures a Node.js server application, not static file hosting
 
 runConfig:
-  minInstances: 2
-  maxInstances: 10
-  concurrency: 100
-  cpu: 2
-  memoryMiB: 1024
+  minInstances: 1
+  maxInstances: 3
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
 
 env:
   # Production Supabase configuration
