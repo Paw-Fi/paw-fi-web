@@ -108,11 +108,23 @@ export function useAvatar() {
   });
 
   const hasAvatarQuery = useQuery({
+    // Deprecated: avoid second network call. We keep the hook for backward compatibility,
+    // but resolve from avatarQuery to prevent duplicate fetches to /users.
     queryKey: user ? AVATAR_QUERY_KEYS.hasAvatar(user.id) : [],
-    queryFn: fetchUserHasAvatar,
+    queryFn: async (): Promise<boolean> => {
+      // If no user, resolve false
+      if (!user) return false;
+      // If avatarQuery has data, derive hasAvatar
+      if (avatarQuery.data !== undefined) {
+        return !!avatarQuery.data && avatarQuery.data !== 'SKIPPED';
+      }
+      // Fallback single fetch only if avatarQuery hasn't run yet
+      return fetchUserHasAvatar();
+    },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    ...getCriticalQueryConfig(), // Critical for UI state - needs maximum retries
+    staleTime: 5 * 60 * 1000,
+    // Lower retries to avoid multi-fire noise in prod for a non-critical boolean
+    retry: 1,
   });
 
   const saveAvatar = async (

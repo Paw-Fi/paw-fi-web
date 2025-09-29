@@ -17,15 +17,17 @@ const RUNTIME_CACHE = [
   '/dashboard/portfolio', 
   '/dashboard/tracker',
 ];
-
 // Image cache patterns
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'];
 
 // API cache patterns
 const API_PATTERNS = [
-  /^https:\/\/.*\.supabase\.co\/rest\/v1\//,
-  /^https:\/\/.*\.supabase\.co\/functions\/v1\//,
+  /^https:\/\/.+\.supabase\.co\/rest\/v1\//,
+  /^https:\/\/.+\.supabase\.co\/functions\/v1\//,
 ];
+
+// Toggle to fully disable fetch interception (diagnostic/temporary)
+const INTERCEPT_FETCH = false;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -42,48 +44,39 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    Promise.all([
-      // Clean up old caches
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames
-            .filter((cacheName) => {
-              return cacheName !== STATIC_CACHE &&
-                     cacheName !== DYNAMIC_CACHE &&
-                     cacheName !== IMAGE_CACHE;
-            })
-            .map((cacheName) => {
-              console.log('🗑️ Deleting old cache:', cacheName);
-              return caches.delete(cacheName);
-            })
-        );
-      }),
-      // Take control of all pages
-      self.clients.claim()
-    ]).then(() => {
-      console.log('✅ Service worker activated');
-    })
-  );
+  event.waitUntil((async () => {
+    try {
+      // Clean up all caches to avoid any stale responses
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map((name) => caches.delete(name)));
+
+      // Unregister this service worker to fully disable it
+      const unregistered = await self.registration.unregister();
+      console.log('🧹 Service worker unregistered:', unregistered);
+
+      // Take control and reload all clients so they detach from SW immediately
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of clientList) {
+        try { client.navigate(client.url); } catch (e) {}
+      }
+    } catch (e) {
+      console.error('Error during SW deactivate/unregister:', e);
+    }
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
+  if (!INTERCEPT_FETCH) {
+    // Do not intercept any fetches
+    return;
+  }
   const request = event.request;
   const url = new URL(request.url);
-  
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
+  // Skip non-GET or non-http
+  if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
     return;
   }
-  
-  // Skip chrome-extension and other non-http requests
-  if (!url.protocol.startsWith('http')) {
-    return;
-  }
-
-  event.respondWith(
-    handleRequest(request)
-  );
+  event.respondWith(handleRequest(request));
 });
 
 async function handleRequest(request) {

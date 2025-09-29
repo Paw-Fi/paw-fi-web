@@ -76,11 +76,18 @@ export function FreeTrialGiveawayForm() {
     { value: "other", label: "Other" },
   ];
 
-  const deviceOptions = [
-    { value: "ios", label: "iOS (iPhone/iPad)" },
-    { value: "android", label: "Android" },
-    { value: "both", label: "Both iOS and Android" },
-  ];
+  // Helper to auto-detect device type from the browser
+  function detectDeviceType(): "ios" | "android" | "desktop" {
+    if (typeof window === "undefined") return "desktop";
+    const ua = navigator.userAgent || (navigator as any).vendor || (window as any).opera || "";
+    const isAndroid = /android/i.test(ua);
+    const isIOS = /iPad|iPhone|iPod/.test(ua) ||
+      // iPadOS 13+ reports MacIntel with touch points
+      ((navigator.platform === "MacIntel" || (navigator as any).userAgentData?.platform === "macOS") && (navigator as any).maxTouchPoints > 1);
+    if (isIOS) return "ios";
+    if (isAndroid) return "android";
+    return "desktop";
+  }
 
   useEffect(() => {
     // Auto-fill form with user data when authenticated
@@ -98,6 +105,12 @@ export function FreeTrialGiveawayForm() {
       }));
     }
   }, [isAuthenticated, user]);
+
+  // Auto-detect device preference (no UI)
+  useEffect(() => {
+    const detected = detectDeviceType();
+    setFormData(prev => ({ ...prev, devicePreference: detected }));
+  }, []);
 
   // Separate useEffect for claim status checking
   useEffect(() => {
@@ -165,6 +178,7 @@ export function FreeTrialGiveawayForm() {
       return;
     }
 
+    const detectedDevice = formData.devicePreference || detectDeviceType();
     const claim: EarlyAccessClaim = {
       email: formData.email,
       firstName: formData.firstName || undefined,
@@ -177,7 +191,7 @@ export function FreeTrialGiveawayForm() {
       // For backward compatibility, combine all interests
       interests: [
         formData.budgetingMethod,
-        formData.devicePreference,
+        detectedDevice,
         ...formData.mobileAppPriorities,
         ...formData.interestedMobileFeatures,
       ].filter(Boolean),
@@ -368,18 +382,7 @@ export function FreeTrialGiveawayForm() {
                 />
               </div>
 
-              {/* Device Preference */}
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300 text-start">
-                  Which device(s) will you primarily use?
-                </label>
-                <CustomSelect
-                  options={deviceOptions}
-                  value={formData.devicePreference}
-                  onChange={(value) => setFormData(prev => ({ ...prev, devicePreference: value }))}
-                  placeholder="Select your device preference"
-                />
-              </div>
+              {/* Device Preference: removed UI. Device is auto-detected and sent to backend. */}
 
               {/* Referral source */}
               <div className="mb-8">
