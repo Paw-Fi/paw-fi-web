@@ -27,6 +27,7 @@ import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/crit
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReduxProvider } from '@/providers/ReduxProvider'
 
 export const Route = createRootRoute({
   head: () => {
@@ -164,10 +165,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <HelmetProvider>
         <ErrorBoundary>
           <ThemeProvider defaultTheme="system" storageKey="moneko-ui-theme">
-            <AuthProvider>
-              <AIChatProvider>
-                <ChatProvider>
-                  <QueryClientProvider client={queryClient}>
+            <ReduxProvider>
+              <AuthProvider>
+                <AIChatProvider>
+                  <ChatProvider>
+                    <QueryClientProvider client={queryClient}>
                   {/* Run auth/query sync only on the client to avoid SSR requiring QueryClient */}
                   <ClientOnly>
                     <AuthSyncClientOnly />
@@ -191,14 +193,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                     </Suspense>
                   </ClientOnly>
 
-                  {children}
-                  {/* <TanStackRouterDevtools position="bottom-right" /> */}
-                  {/* <ReactQueryDevtools buttonPosition="bottom-left" /> */}
-                  <Scripts />
-                  </QueryClientProvider>
-                </ChatProvider>
-              </AIChatProvider>
-            </AuthProvider>
+                    {children}
+                    {/* <TanStackRouterDevtools position="bottom-right" /> */}
+                    {/* <ReactQueryDevtools buttonPosition="bottom-left" /> */}
+                    <Scripts />
+                    </QueryClientProvider>
+                  </ChatProvider>
+                </AIChatProvider>
+              </AuthProvider>
+            </ReduxProvider>
           </ThemeProvider>
         </ErrorBoundary>
       </HelmetProvider>
