@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/auth-context';
 import * as domtoimage from 'dom-to-image';
+import { getCriticalQueryConfig, getStandardQueryConfig, retryOperation } from '@/lib/query-config';
 
 // Query keys for TanStack Query
 const AVATAR_QUERY_KEYS = {
@@ -17,22 +18,10 @@ const AVATAR_QUERY_KEYS = {
 // };
 
 
-// Retry utility
-const retryOperation = async <T>(
-  operation: () => Promise<T>,
-  maxRetries: number = 3,
-  delay: number = 1000
-): Promise<T> => {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await operation();
-    } catch (error) {
-      if (i === maxRetries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-    }
-  }
-  throw new Error('Max retries exceeded');
-};
+// Image compression utility (no longer needed as we handle it inline)
+// const compressImage = (canvas: HTMLCanvasElement, quality: number = 0.8): string => {
+//   return canvas.toDataURL('image/jpeg', quality);
+// };
 
 export function useAvatar() {
   const [isUploading, setIsUploading] = useState(false);
@@ -101,12 +90,13 @@ export function useAvatar() {
     return !!data?.avatar_url && data.avatar_url !== 'SKIPPED';
   };
 
-  // TanStack Query hooks
+  // TanStack Query hooks with production-optimized retry configuration
   const avatarQuery = useQuery({
     queryKey: user ? AVATAR_QUERY_KEYS.avatar(user.id) : [],
     queryFn: fetchUserAvatar,
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    ...getCriticalQueryConfig(), // Critical query - needs maximum retries
   });
 
   const customizationQuery = useQuery({
@@ -114,6 +104,7 @@ export function useAvatar() {
     queryFn: fetchAvatarCustomization,
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    ...getStandardQueryConfig(), // Standard query
   });
 
   const hasAvatarQuery = useQuery({
@@ -121,6 +112,7 @@ export function useAvatar() {
     queryFn: fetchUserHasAvatar,
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    ...getCriticalQueryConfig(), // Critical for UI state - needs maximum retries
   });
 
   const saveAvatar = async (

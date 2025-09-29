@@ -3,10 +3,10 @@
  * Provides intelligent caching for SSR performance optimization
  */
 
-const CACHE_NAME = 'moneko-v1.0.0';
-const STATIC_CACHE = 'moneko-static-v1.0.0';
-const DYNAMIC_CACHE = 'moneko-dynamic-v1.0.0';
-const IMAGE_CACHE = 'moneko-images-v1.0.0';
+const CACHE_NAME = 'moneko-v1.0.1';
+const STATIC_CACHE = 'moneko-static-v1.0.1';
+const DYNAMIC_CACHE = 'moneko-dynamic-v1.0.1';
+const IMAGE_CACHE = 'moneko-images-v1.0.1';
 
 // Critical resources to cache immediately (HTML pages should NOT be pre-cached to avoid SSR mismatches)
 const CRITICAL_RESOURCES = [];
@@ -180,51 +180,9 @@ async function handleImageRequest(request) {
 
 // Handle API requests with network-first and short cache
 async function handleAPIRequest(request) {
-  const url = new URL(request.url);
-  
-  // Don't cache mutations
-  if (request.method !== 'GET') {
-    return fetch(request);
-  }
-  
-  try {
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      // Only cache GET requests for specific endpoints
-      if (url.pathname.includes('/courses') || 
-          url.pathname.includes('/lessons') ||
-          url.pathname.includes('/user')) {
-        const cache = await caches.open(DYNAMIC_CACHE);
-        
-        // Add cache headers
-        const responseWithHeaders = new Response(networkResponse.body, {
-          status: networkResponse.status,
-          statusText: networkResponse.statusText,
-          headers: {
-            ...Object.fromEntries(networkResponse.headers.entries()),
-            'sw-cache-timestamp': Date.now().toString()
-          }
-        });
-        
-        cache.put(request, responseWithHeaders.clone());
-      }
-    }
-    
-    return networkResponse;
-    
-  } catch (error) {
-    // Network failed, try cache (max 5 minutes old for API)
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      const cacheTimestamp = cachedResponse.headers.get('sw-cache-timestamp');
-      if (cacheTimestamp && Date.now() - parseInt(cacheTimestamp) < 300000) {
-        return cachedResponse;
-      }
-    }
-    
-    throw error;
-  }
+  // Bypass SW for API requests to avoid body stream issues and duplicate fetches
+  // This ensures Supabase REST and Edge Function calls are not cached or modified
+  return fetch(request);
 }
 
 // Handle static assets with cache-first strategy
