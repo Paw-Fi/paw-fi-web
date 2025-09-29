@@ -15,6 +15,7 @@ const features = [
   {
     id: "budget-planner",
     title: "Budget Planner",
+    routeLink: "/tracker",
     description: "Create a realistic monthly plan with clear categories and AI tips that help you adjust over time.",
     imageWebp: goalImgWebp,
     imagePng: goalImgPng,
@@ -22,6 +23,7 @@ const features = [
   {
     id: "savings-goals",
     title: "Savings Goals",
+    routeLink: "/tracker",
     description: "Set target amounts and timeframes, then see how much to set aside each month to stay on track.",
     imageWebp: monekoImgWebp,
     imagePng: monekoImgPng,
@@ -29,6 +31,7 @@ const features = [
   {
     id: "spending-overview",
     title: "Spending Overview",
+    routeLink: "/portfolio",
     description: "Understand fixed vs variable costs and keep an eye on subscriptions with simple, visual summaries.",
     imageWebp: portfolioImgWebp,
     imagePng: portfolioImgPng,
@@ -36,6 +39,7 @@ const features = [
   {
     id: "learning",
     title: "Budgeting Lessons",
+    routeLink: "/learning",
     description: "Short, practical lessons on budgeting basics, cutting spending leaks, and building money habits.",
     imageWebp: learningImgWebp,
     imagePng: learningImgPng,
@@ -99,7 +103,7 @@ export function DashboardShowcase() {
               </div>
               <div className="flex-1 mx-6">
                 <div className="rounded-lg px-4 py-2 text-sm text-muted-foreground border border-white/20">
-                  moneko.io/dashboard
+                  moneko.io{selectedFeature.routeLink}
                 </div>
               </div>
               <div />

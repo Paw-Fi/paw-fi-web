@@ -44,9 +44,7 @@ export default function VideoSection({ data }: VideoSectionProps) {
                   moneko.io/demo
                 </div>
               </div>
-              <div className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
-                Live Demo
-              </div>
+             
             </div>
 
             {/* Video Content */}

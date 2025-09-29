@@ -22,6 +22,7 @@ import phone1 from "@assets/images/early-access/Mobile-Screen1.png"
 import phone2 from "@assets/images/early-access/Mobile-Screen2.png"
 import phone3 from "@assets/images/early-access/Mobile-Screen3.png"
 import phone4 from "@assets/images/early-access/Mobile-Screen4.png"
+import { MonekoIcon } from "@/components/shared/moneko-icon";
 
 const DEVELOPMENT_PROGRESS = 80; // Development progress percentage
 const EXPECTED_LAUNCH = "Coming soon";
@@ -324,17 +325,7 @@ export default function EarlyAccessPage() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-           <Link to="/">
-           <motion.div 
-              className="flex items-center space-x-2"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <OptimizedImage src={icon} alt="Moneko" className="size-7 rounded-lg" />
-              <span className="text-lg font-semibold text-slate-800 dark:text-slate-200">Moneko</span>
-            </motion.div>
-           </Link>
+          <MonekoIcon />
             <motion.button
               onClick={() => navigate({ to: "/" })}
               className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200 px-3 py-2 rounded-md hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
@@ -374,7 +365,7 @@ export default function EarlyAccessPage() {
                 className="mb-10 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
                 variants={itemVariants}
               >
-                Your AI budgeting assistant — anytime, anywhere. Join the waitlist or try the web dashboard.
+                Your AI budgeting assistant — anytime, anywhere. Join the waitlist or try the <a className="underline font-semibold" href="/dashboard" target="_blank">web dashboard</a>.
                 
               </motion.p>
             
