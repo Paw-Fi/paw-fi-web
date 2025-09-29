@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { getEdgeFunctionQueryConfig } from '@/lib/query-config';
 
 interface CompletedLesson {
   id: string;
@@ -42,5 +43,6 @@ export const useCompletedLessons = (userId: string | undefined) => {
     gcTime: 5 * 60 * 1000, // 5 minutes
     // Refetch only when data is stale (more efficient than 'always')
     refetchOnMount: true, // Default behavior - only refetch if stale
+    ...getEdgeFunctionQueryConfig(), // Optimized for Edge Function cold starts
   });
 };

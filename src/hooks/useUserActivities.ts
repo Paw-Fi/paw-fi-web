@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/auth-context';
 import { useEffect } from 'react';
 import { ActivityAction } from '@/utils/reward-actions-clone';
+import { getEdgeFunctionQueryConfig } from '@/lib/query-config';
 
 // Import shared types from the activity logger
 import type { ActivityRecord, ActivityData } from '../../supabase/functions/shared/activity-logger.ts';
@@ -90,7 +91,7 @@ export function useUserActivities() {
     enabled: !!user,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
-    retry: 3, // Retry failed requests 3 times for network resilience
+    ...getEdgeFunctionQueryConfig(), // Optimized for Edge Function cold starts
   });
 
   // Set up real-time subscription
