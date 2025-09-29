@@ -58,8 +58,10 @@ export function Carousel({
   function updateScrollability() {
     const el = scrollRef.current;
     if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 0);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+    // Determine nearest centered item and enable/disable arrows accordingly
+    const idx = getCurrentIndex();
+    setCanScrollLeft(idx > 0);
+    setCanScrollRight(idx < items.length - 1);
   }
 
   function handleScroll() {
@@ -81,6 +83,54 @@ export function Carousel({
     const itemWidth = firstItem.offsetWidth;
     const spacer = Math.max(0, (containerWidth - itemWidth) / 2);
     setSideSpacer(spacer);
+  }
+
+  function getItemElements() {
+    const el = scrollRef.current;
+    if (!el) return [] as HTMLElement[];
+    return Array.from(el.querySelectorAll('[data-carousel-item="true"]')) as HTMLElement[];
+  }
+
+  function getCurrentIndex() {
+    const el = scrollRef.current;
+    if (!el) return 0;
+    const itemsEls = getItemElements();
+    if (itemsEls.length === 0) return 0;
+    const containerCenter = el.scrollLeft + el.clientWidth / 2;
+    let nearestIdx = 0;
+    let nearestDist = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < itemsEls.length; i++) {
+      const it = itemsEls[i];
+      const itemCenter = it.offsetLeft + it.offsetWidth / 2;
+      const dist = Math.abs(itemCenter - containerCenter);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIdx = i;
+      }
+    }
+    return nearestIdx;
+  }
+
+  function scrollToIndex(targetIdx: number) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const itemsEls = getItemElements();
+    const idx = Math.max(0, Math.min(targetIdx, itemsEls.length - 1));
+    const target = itemsEls[idx];
+    if (!target) return;
+    // Compute left so that the target item is centered in the container
+    const targetLeft = target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2;
+    el.scrollTo({ left: targetLeft, behavior: "smooth" });
+  }
+
+  function scrollPrev() {
+    const idx = getCurrentIndex();
+    scrollToIndex(idx - 1);
+  }
+
+  function scrollNext() {
+    const idx = getCurrentIndex();
+    scrollToIndex(idx + 1);
   }
 
   return (
@@ -124,7 +174,7 @@ export function Carousel({
             type="button"
             aria-label="Scroll left"
             className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition disabled:opacity-40 dark:bg-gray-800 dark:text-gray-300"
-            onClick={() => scrollByAmount(-320)}
+            onClick={scrollPrev}
             disabled={!canScrollLeft}
           >
             <IconArrowNarrowLeft className="h-6 w-6" />
@@ -133,7 +183,7 @@ export function Carousel({
             type="button"
             aria-label="Scroll right"
             className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-sm transition disabled:opacity-40 dark:bg-gray-800 dark:text-gray-300"
-            onClick={() => scrollByAmount(320)}
+            onClick={scrollNext}
             disabled={!canScrollRight}
           >
             <IconArrowNarrowRight className="h-6 w-6" />
