@@ -39,12 +39,12 @@ const getEnvVariable = (key: string): string => {
   }
   
   // Hardcoded fallbacks as absolute last resort
-  // These should match the values in your apphosting.dev.yaml
+  // These should match the values in your production environment
   if (key === 'VITE_SUPABASE_URL') {
-    return 'https://qbuynyxyemigtnvdujts.supabase.co';
+    return 'https://pbopcsmrcykdzbilpilf.supabase.co';
   }
   if (key === 'VITE_SUPABASE_ANON_KEY') {
-    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc5MTcyODIsImV4cCI6MjA2MzQ5MzI4Mn0.tUdmoZ-oqagNvXlnNMym8FkZEUVDWRLMrqmuxuPTw6A';
+    return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQxODczMzAsImV4cCI6MjA1OTc2MzMzMH0.oPnodbMGz5seQf-pHIP8gtanD62d-mhRjvhRhPDYPzA';
   }
   
   return '';
