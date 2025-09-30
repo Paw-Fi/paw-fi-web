@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { AuroraText } from "@/components/magicui/aurora-text";
 import { BorderBeam } from '@/components/ui/border-beam';
+import { Highlighter } from "@/components/ui/highlighter";
 
 interface HeroSectionProps {
   data: {
@@ -31,10 +32,23 @@ export default function HeroSection({ data }: HeroSectionProps) {
 
   const titleWords = hero.title.split(" ");
   const highlightIndex = titleWords.findIndex(word => 
-    word.toLowerCase().includes("portfolio") || 
+    word.toLowerCase().includes("smarter") || 
     word.toLowerCase().includes("interest") ||
     word.toLowerCase().includes("passive") ||
     word.toLowerCase().includes("budget") ||
+    word.toLowerCase().includes("cashflow") ||
+    word.toLowerCase().includes("autopilot") ||
+    word.toLowerCase().includes("simplified") ||
+    word.toLowerCase().includes("net worth") ||
+    word.toLowerCase().includes("financial") ||
+    word.toLowerCase().includes("Emergency") ||
+    word.toLowerCase().includes("financial") ||
+    word.toLowerCase().includes("real wealth") ||
+    word.toLowerCase().includes("financial") ||
+    word.toLowerCase().includes("retirement") ||
+    word.toLowerCase().includes("debt-free") ||
+    word.toLowerCase().includes("investment") ||
+    word.toLowerCase().includes("passive income") ||
     word.toLowerCase().includes("budgeting")
   );
 
@@ -58,13 +72,16 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {titleWords.map((word, index) => (
             <span key={index}>
               {index === highlightIndex ? (
-                <AuroraText
-                  colors={isMobile ? ["#5938ed"] : ["#4F46E5", "#A855F7"]}
-                  darkColors={isMobile ? ["#7c3aed"] : ["#818cf8", "#c084fc"]}
-                  speed={1}
-                >
-                  {word}
-                </AuroraText>
+                // <AuroraText
+                //   colors={isMobile ? ["#5938ed"] : ["#4F46E5", "#A855F7"]}
+                //   darkColors={isMobile ? ["#7c3aed"] : ["#818cf8", "#c084fc"]}
+                //   speed={1}
+                // >
+                //   {word}
+                // </AuroraText>
+                <Highlighter action="underline" color="#FF9800" animationDuration={1000} strokeWidth={2}>
+              {word}
+              </Highlighter>
               ) : (
                 word
               )}
