@@ -78,7 +78,7 @@ export function DashboardShowcase() {
                 onClick={() => setSelectedFeature(feature)}
                 className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
                   selectedFeature.id === feature.id
-                    ? 'bg-primary text-primary-foreground shadow-lg'
+                    ? 'bg-primary text-primary-foreground shadow-lg dark:text-white'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >

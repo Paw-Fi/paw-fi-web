@@ -82,7 +82,7 @@ export function EmptyStatePrompt({
             size="lg"
             className="group relative overflow-hidden bg-primary hover:bg-primary/90 text-primary-foreground shadow-xl hover:scale-105 hover:shadow-2xl transition-all duration-300"
           >
-            <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-300 group-hover:opacity-10"></span>
+            <span className="absolute inset-0 bg-white dark:bg-white opacity-0 transition-opacity duration-300 group-hover:opacity-10"></span>
             <svg
               className="mr-3 h-6 w-6 transition-transform duration-300 group-hover:rotate-12"
               fill="none"

@@ -10,15 +10,15 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-white shadow-sm hover:shadow-md hover:bg-primary/90",
+          "bg-moneko-primary text-white shadow-sm hover:shadow-md hover:bg-moneko-primary/90",
         destructive:
-          "bg-warning text-white shadow-sm hover:shadow-md hover:bg-warning/90",
+          "bg-danger text-white shadow-sm hover:shadow-md hover:bg-danger/90",
         outline:
-          "border bg-card text-foreground shadow-sm hover:border-primary/50 hover:shadow-sm",
+          "border border-subtle-border bg-card-bg text-moneko-foreground shadow-sm hover:border-moneko-primary/50 hover:shadow-sm",
         secondary:
-          "bg-subtle-background text-foreground shadow-sm hover:shadow-sm hover:bg-subtle-background/80",
-        ghost: "text-foreground hover:bg-subtle-background/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-subtle-background text-moneko-foreground shadow-sm hover:shadow-sm hover:bg-subtle-background/80",
+        ghost: "text-moneko-foreground hover:bg-subtle-background/50",
+        link: "text-moneko-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 px-4 py-2",

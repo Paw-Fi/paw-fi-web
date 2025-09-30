@@ -62,7 +62,7 @@ export function MonekoAvatar({
       {showOnlineStatus && (
         <div 
           className={cn(
-            "absolute bottom-0 right-0 block rounded-full bg-green-500 ring-2 ring-background",
+            "absolute bottom-0 right-0 block rounded-full bg-green-500 dark:bg-green-400 ring-2 ring-background dark:ring-background",
             // Size the status indicator based on avatar size
             typeof size === 'string' ? {
               'xs': 'h-2 w-2',

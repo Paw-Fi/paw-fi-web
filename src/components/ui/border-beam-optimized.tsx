@@ -55,7 +55,7 @@ interface BorderBeamProps {
   disableOnMobile?: boolean;
 }
 
-export const BorderBeam = ({
+export const BorderBeamOptimized = ({
   className,
   size = 50,
   delay = 0,
@@ -72,7 +72,7 @@ export const BorderBeam = ({
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Detect mobile/touch devices using media query
+    // Detect mobile devices using media query
     const mediaQuery = window.matchMedia('(hover: none) and (pointer: coarse)');
     setIsMobile(mediaQuery.matches);
 
@@ -81,7 +81,7 @@ export const BorderBeam = ({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // On mobile, show static gradient border instead of animation
+  // Disable animation on mobile for better scroll performance
   if (disableOnMobile && isMobile) {
     return (
       <div
@@ -90,7 +90,7 @@ export const BorderBeam = ({
           {
             "--border-beam-width": `${borderWidth}px`,
             border: `${borderWidth}px solid transparent`,
-            backgroundImage: `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 50%, ${colorFrom} 100%)`,
+            backgroundImage: `linear-gradient(90deg, ${colorFrom} 0%, ${colorTo} 100%)`,
             backgroundOrigin: "border-box",
             backgroundClip: "padding-box, border-box",
           } as React.CSSProperties
@@ -101,10 +101,11 @@ export const BorderBeam = ({
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 rounded-[inherit] border-transparent [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)] border-(length:--border-beam-width)"
+      className="pointer-events-none absolute inset-0 rounded-[inherit] border-transparent [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]"
       style={
         {
           "--border-beam-width": `${borderWidth}px`,
+          border: `${borderWidth}px solid transparent`,
         } as React.CSSProperties
       }
     >
@@ -112,7 +113,7 @@ export const BorderBeam = ({
         className={cn(
           "absolute aspect-square",
           "bg-gradient-to-l from-[var(--color-from)] via-[var(--color-to)] to-transparent",
-          // Hardware acceleration hints for better performance
+          // Hardware acceleration for better mobile performance
           "will-change-[offset-distance]",
           className,
         )}

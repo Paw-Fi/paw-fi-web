@@ -217,31 +217,31 @@ export function FinancialTooltip({
 
       {isVisible && (
         <div className={`absolute z-50 ${positionClasses[position]} w-80 max-w-sm`}>
-          <div className="bg-gray-800 text-white text-sm rounded-lg p-4 shadow-lg border border-gray-700">
+          <div className="bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 text-sm rounded-lg p-4 shadow-lg border border-gray-700 dark:border-gray-300">
             {/* Arrow */}
             <div className={`absolute w-0 h-0 border-4 ${arrowClasses[position]}`}></div>
             
             {/* Term Title */}
-            <div className="font-semibold text-blue-300 mb-2 capitalize">
+            <div className="font-semibold text-blue-300 dark:text-blue-600 mb-2 capitalize">
               {term}
             </div>
-            
+
             {/* Definition */}
             <div className="mb-3 leading-relaxed">
               {glossaryEntry.definition}
             </div>
-            
+
             {/* Example */}
             {glossaryEntry.example && (
-              <div className="mb-3 text-gray-300">
-                <span className="font-medium text-green-300">Example: </span>
+              <div className="mb-3 text-gray-300 dark:text-gray-700">
+                <span className="font-medium text-green-300 dark:text-green-600">Example: </span>
                 {glossaryEntry.example}
               </div>
             )}
-            
+
             {/* Sources */}
             {glossaryEntry.sources && (
-              <div className="text-xs text-gray-400 border-t border-gray-600 pt-2">
+              <div className="text-xs text-gray-400 dark:text-gray-600 border-t border-gray-600 dark:border-gray-400 pt-2">
                 <span className="font-medium">Sources: </span>
                 {glossaryEntry.sources.join(', ')}
               </div>

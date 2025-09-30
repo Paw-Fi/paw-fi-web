@@ -79,7 +79,7 @@ export function MultiSelectDropdown({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full rounded-xl bg-white px-4 py-1.5 dark:bg-slate-900 text-left outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-877[#7458FF]/30 border border-slate-200 dark:border-slate-700 flex items-center justify-between ${
+        className={`w-full rounded-xl bg-white dark:bg-slate-900 px-4 py-1.5 text-left outline-none backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:ring-[#7458FF]/30 border border-slate-200 dark:border-slate-700 flex items-center justify-between ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-slate-300 dark:hover:border-slate-600'
         }`}
       >

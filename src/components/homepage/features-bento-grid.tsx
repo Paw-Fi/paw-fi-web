@@ -160,7 +160,7 @@ const TechStack = () => {
           </>
         )}
       </div>
-      <div className="pointer-events-none absolute bottom-20 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20"></div>
+      <div className="pointer-events-none absolute bottom-20 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20 dark:from-neutral-900"></div>
     </div>
   );
 };

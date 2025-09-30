@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/* Map Tailwind's dark: variant to the .dark class toggled by ThemeInitScript */
-@custom-variant dark (&:where(.dark, .dark *));
+@import "@radix-ui/themes/styles.css";
 
 /* Moneko color variables (light theme) */
 :root {
@@ -107,8 +105,10 @@
   --placeholder-line-color: #e2e8f0;
 }
 
-.dark {
-  /* shadcn/ui dark theme - consistent HSL format */
+/* System preference dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* shadcn/ui dark theme - consistent HSL format */
   --background: 224 71% 4%;
   --foreground: 210 20% 98%;
   --card: 224 71% 4%;
@@ -143,23 +143,23 @@
   --danger-light: #2B0A0A;
   --overlay: rgba(0, 0, 0, 0.9);
 
-  /* Dark halo colors */
+  /* Dark halo colors - override the same variables */
   --halo-bg: #0A0E1A;
-  --dark-halo-purple: rgba(100, 75, 200, 0.4);
-  --dark-halo-purple-mid: rgba(90, 65, 180, 0.35);
-  --dark-halo-purple-outer: rgba(110, 85, 210, 0.25);
+  --halo-purple: rgba(100, 75, 200, 0.4);
+  --halo-purple-mid: rgba(90, 65, 180, 0.35);
+  --halo-purple-outer: rgba(110, 85, 210, 0.25);
 
-  --dark-halo-pink: rgba(180, 140, 185, 0.35);
-  --dark-halo-pink-mid: rgba(170, 130, 175, 0.3);
-  --dark-halo-pink-outer: rgba(190, 150, 195, 0.2);
+  --halo-pink: rgba(180, 140, 185, 0.35);
+  --halo-pink-mid: rgba(170, 130, 175, 0.3);
+  --halo-pink-outer: rgba(190, 150, 195, 0.2);
 
-  --dark-halo-blue: rgba(70, 120, 180, 0.4);
-  --dark-halo-blue-mid: rgba(60, 110, 170, 0.35);
-  --dark-halo-blue-outer: rgba(80, 130, 190, 0.3);
+  --halo-blue: rgba(70, 120, 180, 0.4);
+  --halo-blue-mid: rgba(60, 110, 170, 0.35);
+  --halo-blue-outer: rgba(80, 130, 190, 0.3);
 
-  --dark-halo-light-blue: rgba(90, 140, 160, 0.35);
-  --dark-halo-light-blue-mid: rgba(80, 130, 150, 0.3);
-  --dark-halo-light-blue-outer: rgba(100, 150, 170, 0.25);
+  --halo-light-blue: rgba(90, 140, 160, 0.35);
+  --halo-light-blue-mid: rgba(80, 130, 150, 0.3);
+  --halo-light-blue-outer: rgba(100, 150, 170, 0.25);
 
   /* Dark accent colors */
   --accent-pink: #F472B6;
@@ -201,6 +201,7 @@
   --time-inactive-color: #9ca3af;
   --description-color: #cbd5e1;
   --placeholder-line-color: #374151;
+  }
 }
 
 /* Expose variables to Tailwind as theme tokens */
@@ -285,21 +286,6 @@
   --color-markdown-button: var(--markdown-button);
   --color-markdown-button-text: var(--markdown-button-text);
   --color-markdown-button-border: var(--markdown-button-border);
-
-  /* Dark halo colors (separate tokens) */
-  --color-dark-halo-bg: var(--dark-halo-bg);
-  --color-dark-halo-purple: var(--dark-halo-purple);
-  --color-dark-halo-purple-mid: var(--dark-halo-purple-mid);
-  --color-dark-halo-purple-outer: var(--dark-halo-purple-outer);
-  --color-dark-halo-pink: var(--dark-halo-pink);
-  --color-dark-halo-pink-mid: var(--dark-halo-pink-mid);
-  --color-dark-halo-pink-outer: var(--dark-halo-pink-outer);
-  --color-dark-halo-blue: var(--dark-halo-blue);
-  --color-dark-halo-blue-mid: var(--dark-halo-blue-mid);
-  --color-dark-halo-blue-outer: var(--dark-halo-blue-outer);
-  --color-dark-halo-light-blue: var(--dark-halo-light-blue);
-  --color-dark-halo-light-blue-mid: var(--dark-halo-light-blue-mid);
-  --color-dark-halo-light-blue-outer: var(--dark-halo-light-blue-outer);
 
   /* Font families */
   --font-family-poppins: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;

@@ -3,9 +3,9 @@ import { useDeviceType } from "@/hooks/use-device-type";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import { AuroraText } from "@/components/magicui/aurora-text";
 import { BorderBeam } from '@/components/ui/border-beam';
 import { Highlighter } from "@/components/ui/highlighter";
+import { cn } from "@/lib/utils";
 
 interface HeroSectionProps {
   data: {
@@ -31,8 +31,8 @@ export default function HeroSection({ data }: HeroSectionProps) {
   };
 
   const titleWords = hero.title.split(" ");
-  const highlightIndex = titleWords.findIndex(word => 
-    word.toLowerCase().includes("smarter") || 
+  const highlightIndex = titleWords.findIndex(word =>
+    word.toLowerCase().includes("smarter") ||
     word.toLowerCase().includes("interest") ||
     word.toLowerCase().includes("passive") ||
     word.toLowerCase().includes("budget") ||
@@ -42,9 +42,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
     word.toLowerCase().includes("net worth") ||
     word.toLowerCase().includes("financial") ||
     word.toLowerCase().includes("Emergency") ||
-    word.toLowerCase().includes("financial") ||
     word.toLowerCase().includes("real wealth") ||
-    word.toLowerCase().includes("financial") ||
     word.toLowerCase().includes("retirement") ||
     word.toLowerCase().includes("debt-free") ||
     word.toLowerCase().includes("investment") ||
@@ -72,13 +70,6 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {titleWords.map((word, index) => (
             <span key={index}>
               {index === highlightIndex ? (
-                // <AuroraText
-                //   colors={isMobile ? ["#5938ed"] : ["#4F46E5", "#A855F7"]}
-                //   darkColors={isMobile ? ["#7c3aed"] : ["#818cf8", "#c084fc"]}
-                //   speed={1}
-                // >
-                //   {word}
-                // </AuroraText>
                 <Highlighter action="underline" color="#FF9800" animationDuration={1000} strokeWidth={2}>
               {word}
               </Highlighter>
@@ -95,16 +86,22 @@ export default function HeroSection({ data }: HeroSectionProps) {
           {hero.subtitle}
         </p>
 
-        {/* AI Search Input - White Card Container */}
+        {/* AI Search Input - White Card Container - Optimized for mobile */}
         <div className="mb-12 ">
-        
-          <div className="bg-white/90 relative dark:bg-black/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-4xl mx-auto">
+
+          <div className={cn(
+            "bg-white/90 relative dark:bg-black/90 rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-4xl mx-auto",
+            // Reduce backdrop-blur on mobile for better performance
+            isMobile ? "backdrop-blur-sm" : "backdrop-blur-xl",
+            // Add GPU acceleration hint
+            "transform-gpu will-change-auto"
+          )}>
             <AISearchInput
               placeholder={`Ask Moneko to build your monthly budget or suggest ways to save...`}
               suggestions={hero.chatSuggestions}
               variant="default"
             />
-            <BorderBeam duration={10} size={200} borderWidth={2} />
+            <BorderBeam duration={10} size={200} borderWidth={2} disableOnMobile={true} />
           </div>
         </div>
 

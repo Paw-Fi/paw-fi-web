@@ -133,7 +133,7 @@ export function AISearchInput({
         className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl transition-all duration-500 ${
           isAnimating 
             ? "bg-muted" 
-            : "bg-background shadow-sm hover:shadow-md"
+            : "bg-background shadow-sm hover:shadow-md dark:bg-black dark:border"
         }`}
         style={{
           opacity: animationComplete ? 0 : 1,

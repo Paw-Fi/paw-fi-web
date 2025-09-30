@@ -24,7 +24,7 @@ import { HelmetProvider } from '@dr.pogodin/react-helmet'
 import { GoogleTagManager } from '@/components/google-tag-manager'
 import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
-import { ThemeProvider } from '@/components/theme/theme-provider'
+import { Theme as RadixTheme } from '@radix-ui/themes'
 import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReduxProvider } from '@/providers/ReduxProvider'
@@ -148,10 +148,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Critical theme script - must run before any CSS to prevent FOUC */}
-        <script dangerouslySetInnerHTML={{
-          __html: `(function(){try{var s='moneko-ui-theme',d=document.documentElement,l=localStorage.getItem(s),m=window.matchMedia('(prefers-color-scheme: dark)'),i=l?l==='dark':m.matches;d.classList.toggle('dark',i);d.style.colorScheme=i?'dark':'light';}catch(_){}})();`
-        }} />
         <PerformanceHints />
         <MonekoCriticalResources />
         <HeadContent />
@@ -168,7 +164,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         
       <HelmetProvider>
         <ErrorBoundary>
-          <ThemeProvider defaultTheme="system" storageKey="moneko-ui-theme">
+          <RadixTheme
+            accentColor="purple"
+            grayColor="slate"
+            panelBackground="solid"
+            radius="medium"
+            scaling="100%"
+          >
             <ReduxProvider>
               <AuthProvider>
                 <AIChatProvider>
@@ -205,8 +207,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   </ChatProvider>
                 </AIChatProvider>
               </AuthProvider>
-            </ReduxProvider>
-          </ThemeProvider>
+              </ReduxProvider>
+          </RadixTheme>
         </ErrorBoundary>
       </HelmetProvider>
       </body>

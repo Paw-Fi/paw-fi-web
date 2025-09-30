@@ -95,7 +95,7 @@ export function ShadcnSignInForm({
         <Card className="w-full">
           {hideHeader ? null : (
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl text-center">Sign in</CardTitle>
+              <CardTitle className="text-2xl text-center text-moneko-foreground">Sign in</CardTitle>
               <CardDescription className="text-center">
                 Enter your email and password to access your account
               </CardDescription>
@@ -113,7 +113,7 @@ export function ShadcnSignInForm({
                 <Separator />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
+                <span className="bg-moneko-background px-2 text-muted-foreground">
                   Or continue with
                 </span>
               </div>
@@ -214,7 +214,7 @@ export function ShadcnSignInForm({
         <div className="space-y-4">
           {!hideHeader && (
             <div className="space-y-1 text-center">
-              <h2 className="text-2xl font-semibold">Sign in</h2>
+              <h2 className="text-2xl font-semibold text-moneko-foreground">Sign in</h2>
               <p className="text-sm text-muted-foreground">Enter your email and password to access your account</p>
             </div>
           )}
@@ -230,7 +230,7 @@ export function ShadcnSignInForm({
               <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-moneko-background px-2 text-muted-foreground">
                 Or continue with
               </span>
             </div>

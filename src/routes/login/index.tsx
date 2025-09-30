@@ -129,7 +129,7 @@ export function Login() {
         ]}
       />
 
-      <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-background">
+      <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-moneko-background">
         {/* Left: Form side */}
         <div className="relative flex flex-col">
           {/* Top bar */}
@@ -150,7 +150,7 @@ export function Login() {
 
               {/* Heading */}
               <div className="mb-8">
-                <h1 className="text-3xl font-semibold tracking-tight">Login to your account</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-moneko-foreground">Login to your account</h1>
                 <p className="text-muted-foreground mt-1">Access your personalized financial education and AI coaching dashboard.</p>
               </div>
 
@@ -176,7 +176,7 @@ export function Login() {
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Reset your password</DialogTitle>
+                    <DialogTitle className="text-moneko-foreground">Reset your password</DialogTitle>
                     <DialogDescription>
                       Enter your email and we will send you a password reset link.
                     </DialogDescription>
@@ -195,7 +195,7 @@ export function Login() {
                   )}
 
                   <div className="space-y-3">
-                    <label htmlFor="resetEmail" className="text-sm font-medium">Email</label>
+                    <label htmlFor="resetEmail" className="text-sm font-medium text-moneko-foreground">Email</label>
                     <Input
                       id="resetEmail"
                       type="email"
@@ -234,9 +234,9 @@ export function Login() {
         />
         
         {/* GEO-Enhanced Value Proposition Overlay */}
-        <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/60 backdrop-blur-sm rounded-lg text-white">
-          <h3 className="font-semibold mb-2">Join 50,000+ Users Building Wealth</h3>
-          <ul className="text-sm space-y-1 opacity-90">
+        <div className="absolute bottom-6 left-6 right-6 p-4 bg-overlay/80 backdrop-blur-sm rounded-lg text-white dark:text-moneko-foreground">
+          <h3 className="font-semibold mb-2 text-white dark:text-moneko-foreground">Join 50,000+ Users Building Wealth</h3>
+          <ul className="text-sm space-y-1 opacity-90 text-white dark:text-moneko-foreground">
             <li>• AI-powered personalized financial coaching</li>
             <li>• Expert-designed investment education courses</li>
             <li>• Real-time portfolio tracking and analysis</li>

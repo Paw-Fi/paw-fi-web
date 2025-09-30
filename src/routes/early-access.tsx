@@ -423,8 +423,6 @@ export default function EarlyAccessPage() {
             />
           </motion.div>
 
-          {/* Bottom transition gradient */}
-          <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20"></div>
         </section>
 
         {/* Features Section - Exact Uninbox style */}

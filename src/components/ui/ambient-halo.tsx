@@ -115,49 +115,49 @@ HaloLayer.displayName = 'HaloLayer';
  */
 const AmbientHalo = memo(() => {
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-halo-bg dark:bg-dark-halo-bg">
+    <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-halo-bg">
       <HaloLayer
         variants={{ default: animationVariants.purple }}
         transition={transitionConfigs.purple}
         position="top-1/2 left-1/2"
         size="w-[900px] h-[900px]"
-        colors="from-halo-purple via-halo-purple-mid to-halo-purple-outer dark:from-dark-halo-purple dark:via-dark-halo-purple-mid dark:to-dark-halo-purple-outer"
+        colors="from-halo-purple via-halo-purple-mid to-halo-purple-outer"
         zIndex={0}
       />
-      
+
       <HaloLayer
         variants={{ default: animationVariants.pink }}
         transition={transitionConfigs.pink}
         position="top-1/3 left-2/3"
         size="w-[750px] h-[750px]"
-        colors="from-halo-pink via-halo-pink-mid to-halo-pink-outer dark:from-dark-halo-pink dark:via-dark-halo-pink-mid dark:to-dark-halo-pink-outer"
+        colors="from-halo-pink via-halo-pink-mid to-halo-pink-outer"
         zIndex={0}
       />
-      
+
       <HaloLayer
         variants={{ default: animationVariants.blue }}
         transition={transitionConfigs.blue}
         position="top-1/3 left-2/3"
         size="w-[700px] h-[700px]"
-        colors="from-halo-blue via-halo-blue-mid to-halo-blue-outer dark:from-dark-halo-blue dark:via-dark-halo-blue-mid dark:to-dark-halo-blue-outer"
+        colors="from-halo-blue via-halo-blue-mid to-halo-blue-outer"
         zIndex={1}
       />
-      
+
       <HaloLayer
         variants={{ default: animationVariants.lightBlue }}
         transition={transitionConfigs.lightBlue}
         position="top-2/3 left-1/4"
         size="w-[750px] h-[750px]"
-        colors="from-halo-light-blue via-halo-light-blue-mid to-halo-light-blue-outer dark:from-dark-halo-light-blue dark:via-dark-halo-light-blue-mid dark:to-dark-halo-light-blue-outer"
+        colors="from-halo-light-blue via-halo-light-blue-mid to-halo-light-blue-outer"
         zIndex={2}
       />
-      
+
       <HaloLayer
         variants={{ default: animationVariants.accent }}
         transition={transitionConfigs.accent}
         position="top-3/4 left-3/4"
         size="w-[600px] h-[600px]"
-        colors="from-halo-purple via-halo-pink to-halo-purple-outer dark:from-dark-halo-purple dark:via-dark-halo-pink dark:to-dark-halo-purple-outer"
+        colors="from-halo-purple via-halo-pink to-halo-purple-outer"
         zIndex={0}
         hasInnerLayer={false}
       />

@@ -113,7 +113,7 @@ export function Register() {
         ]}
       />
 
-      <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-background">
+      <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-moneko-background">
         {/* Left: Form side */}
         <div className="relative flex flex-col">
           {/* Top bar */}
@@ -132,7 +132,7 @@ export function Register() {
 
               {/* Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-semibold tracking-tight">Start Your Financial Journey</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-moneko-foreground">Start Your Financial Journey</h1>
                 <p className="text-muted-foreground mt-1">Create your free account to access personalized financial education, AI coaching, and wealth-building tools.</p>
               </div>
             {/* Sign Up Form */}
@@ -162,8 +162,8 @@ export function Register() {
         </div>
       </div>
 
-      {/* Right: Image side */}
-      <div className="hidden lg:block relative overflow-hidden rounded-3xl m-4 ml-0">
+        {/* Right: Image side */}
+        <div className="hidden lg:block relative overflow-hidden rounded-3xl m-4 ml-0">
         <OptimizedImage
           src={authBgPng}
           webpSrc={authBg}
@@ -176,30 +176,30 @@ export function Register() {
         />
         
         {/* GEO-Enhanced Success Stories & Benefits */}
-        <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/60 backdrop-blur-sm rounded-lg text-white">
-          <h3 className="font-semibold mb-3">What You'll Get (100% Free)</h3>
+        <div className="absolute bottom-6 left-6 right-6 p-4 bg-overlay/80 backdrop-blur-sm rounded-lg text-white dark:text-moneko-foreground">
+          <h3 className="font-semibold mb-3 text-white dark:text-moneko-foreground">What You'll Get (100% Free)</h3>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="font-medium">✓ AI Financial Coach</p>
-              <p className="opacity-90 text-xs">Personalized guidance</p>
+              <p className="font-medium text-white dark:text-moneko-foreground">✓ AI Financial Coach</p>
+              <p className="opacity-90 text-xs text-white dark:text-moneko-foreground">Personalized guidance</p>
             </div>
             <div>
-              <p className="font-medium">✓ Expert Courses</p>
-              <p className="opacity-90 text-xs">CFA-designed curriculum</p>
+              <p className="font-medium text-white dark:text-moneko-foreground">✓ Expert Courses</p>
+              <p className="opacity-90 text-xs text-white dark:text-moneko-foreground">CFA-designed curriculum</p>
             </div>
             <div>
-              <p className="font-medium">✓ Smart Calculators</p>
-              <p className="opacity-90 text-xs">Investment & retirement</p>
+              <p className="font-medium text-white dark:text-moneko-foreground">✓ Smart Calculators</p>
+              <p className="opacity-90 text-xs text-white dark:text-moneko-foreground">Investment & retirement</p>
             </div>
             <div>
-              <p className="font-medium">✓ Progress Tracking</p>
-              <p className="opacity-90 text-xs">Monitor your wealth</p>
+              <p className="font-medium text-white dark:text-moneko-foreground">✓ Progress Tracking</p>
+              <p className="opacity-90 text-xs text-white dark:text-moneko-foreground">Monitor your wealth</p>
             </div>
           </div>
-          <p className="text-xs mt-3 opacity-75">Join 50,000+ users building financial confidence</p>
+          <p className="text-xs mt-3 opacity-75 text-white dark:text-moneko-foreground">Join 50,000+ users building financial confidence</p>
+        </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
