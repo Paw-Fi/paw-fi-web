@@ -246,6 +246,90 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://moneko.io/blogs/ultimate-guide-to-calculating-tracking-growing-net-worth</loc>
+    <lastmod>2025-09-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/how-to-calculate-net-worth-for-beginners</loc>
+    <lastmod>2025-09-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/best-net-worth-trackers</loc>
+    <lastmod>2025-09-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/how-to-track-complex-assets-crypto-real-estate</loc>
+    <lastmod>2025-09-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/what-should-my-net-worth-be-by-age</loc>
+    <lastmod>2025-09-25</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/collaborative-budgeting-complete-guide-for-couples-partners</loc>
+    <lastmod>2025-09-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/best-budgeting-apps-for-couples-2025</loc>
+    <lastmod>2025-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/how-to-create-a-family-budget</loc>
+    <lastmod>2025-09-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/how-to-stop-fighting-about-money-with-partner</loc>
+    <lastmod>2025-09-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/moneko-vs-ynab-for-couples</loc>
+    <lastmod>2025-09-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/hysa-vs-cd-best-place-for-savings-2025</loc>
+    <lastmod>2025-09-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/how-to-build-an-emergency-fund</loc>
+    <lastmod>2025-09-18</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/dollar-cost-averaging-dca-explained</loc>
+    <lastmod>2025-09-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/blogs/what-is-fire-financial-independence-retire-early</loc>
+    <lastmod>2025-09-16</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://moneko.io/team</loc>
     <lastmod>2025-09-08</lastmod>
     <changefreq>yearly</changefreq>
@@ -264,178 +348,115 @@
     <priority>0.8</priority>
   </url>
   
-  <!-- Passive Income Variants - Complete 26 Variant Portfolio -->
-  
-  <!-- Dynamic Landing Page Variants - High Priority SEO -->
+  <!-- Content Variant Landing Pages - HomePage with different content focuses -->
   <url>
-    <loc>https://moneko.io/passive-income/business-cash-flow</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://moneko.io/passive-income/time-to-wealth</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  
-  <!-- Original 5 Variants -->
-  <url>
-    <loc>https://moneko.io/passive-income/high-interest-portfolios</loc>
-    <lastmod>2025-09-14</lastmod>
+    <loc>https://moneko.io/budgeting-app/high-interest-portfolios</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/goal-tracker-focus</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/business-cash-flow</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/compound-interest-focus</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/time-to-wealth</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/financial-learning-focus</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/net-worth-tracker</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/automated-portfolios</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  
-  <!-- Time-to-Wealth Revolutionary Positioning (6 New Variants) -->
-  <url>
-    <loc>https://moneko.io/passive-income/time-to-wealth-converter</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://moneko.io/passive-income/zero-to-wealth-pathway</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://moneko.io/passive-income/time-value-optimizer</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://moneko.io/passive-income/broke-to-building</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://moneko.io/passive-income/hourly-wealth-maximizer</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  
-  <!-- Comprehensive Financial Targeting Variants (15 Additional) -->
-  <url>
-    <loc>https://moneko.io/passive-income/side-hustle-income</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/budgeting-for-couples</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/debt-payoff-budgeting</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/hysa-vs-cd</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/emergency-fund-builder</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/financial-calculators</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/paycheck-to-paycheck-relief</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/collaborative-finance-platform</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/mint-alternative-budgeting</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/net-worth-calculation</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/financial-anxiety-relief</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/emergency-fund-calculator</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/beginner-financial-literacy</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/wealth-building-strategies</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/gig-economy-finances</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/retirement-planning</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/low-income-budgeting</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/debt-payoff-strategies</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/credit-building-focus</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/investment-portfolio-basics</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/micro-investing-focus</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/financial-independence-guide</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/retirement-low-income</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/small-business-cash-flow</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/single-parent-finances</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/index-fund-investing</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://moneko.io/passive-income/student-money-management</loc>
-    <lastmod>2025-09-12</lastmod>
+    <loc>https://moneko.io/budgeting-app/dividend-investing-strategy</loc>
+    <lastmod>2025-09-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://moneko.io/passive-income/small-business-budgeting</loc>
-    <lastmod>2025-09-12</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
+  </url>  <url>
     <loc>https://moneko.io/dashboard/income-builder</loc>
     <lastmod>2025-09-10</lastmod>
     <changefreq>weekly</changefreq>

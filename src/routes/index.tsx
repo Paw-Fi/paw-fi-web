@@ -23,7 +23,7 @@ import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 // Use budgeting-focused variant for homepage messaging
-const contentVariant = "budgeting-tools";
+const contentVariant = "main";
 const pageData = passiveIncomeVariants[contentVariant];
 
 export const Route = createFileRoute("/")({

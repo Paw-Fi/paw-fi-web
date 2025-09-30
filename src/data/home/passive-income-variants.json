@@ -1,5 +1,5 @@
 {
-  "budgeting-tools": {
+  "main": {
     "meta": {
       "title": "AI Budgeting App – Track Spending, Plan Budgets, and Reach Savings Goals | Moneko",
       "description": "Build a realistic budget, track expenses, and stay on top of your money with AI guidance. Set savings goals, monitor categories, and learn smart money habits.",
@@ -281,6 +281,1222 @@
       "Build wealth from zero",
       "Optimize hourly value",
       "Track time investment ROI"
+    ]
+  },
+  "net-worth-tracker": {
+    "meta": {
+      "title": "Net Worth Tracker & Calculator – Track Your Wealth Growth | Moneko",
+      "description": "Get a clear picture of your financial health with Moneko's net worth tracker. Connect all your accounts, track assets and liabilities automatically, and see your net worth grow.",
+      "keywords": "net worth tracker, how to calculate net worth, net worth calculation, personal capital alternative, empower alternative, net worth calculator"
+    },
+    "hero": {
+      "title": "Your Complete Net Worth, All in One Place",
+      "subtitle": "Connect your accounts to automatically track your assets, liabilities, and see your financial progress over time.",
+      "ctaText": "Track Your Net Worth",
+      "ctaRoute": "/dashboard/net-worth-tracker",
+      "chatSuggestions": [
+        "What is my net worth?",
+        "How do I calculate my net worth?",
+        "What should my net worth be at my age?",
+        "How can I increase my net worth?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Connect Your Accounts",
+          "description": "Securely link your banks, investments, and loans for a complete financial picture."
+        },
+        {
+          "title": "Categorize Your Assets & Liabilities",
+          "description": "Moneko automatically organizes everything from stocks and real estate to mortgages and credit card debt."
+        },
+        {
+          "title": "Track Your Growth Over Time",
+          "description": "Visualize your net worth progress with clear charts and insights to stay motivated and on track."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See Your Full Financial Picture in Seconds",
+      "subtitle": "Watch how Moneko's net worth tracker simplifies wealth management and helps you make smarter financial decisions."
+    },
+    "features": [
+      {
+        "title": "Automated Net Worth Tracker",
+        "description": "Connect all your financial accounts for a real-time, automated view of your total net worth. No more spreadsheets.",
+        "icon": "📊",
+        "route": "/dashboard/net-worth-tracker"
+      },
+      {
+        "title": "Net Worth Calculator",
+        "description": "Use our free calculator to get a quick snapshot of your net worth by manually entering your assets and liabilities.",
+        "icon": "🧮",
+        "route": "/calculators/net-worth-calculator"
+      },
+      {
+        "title": "Track All Your Assets",
+        "description": "From cash and stocks to crypto and real estate, Moneko provides a comprehensive platform to monitor all your investments.",
+        "icon": "🏠",
+        "route": "/dashboard/net-worth-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Net Worth 101",
+        "description": "Learn the basics of calculating your net worth and why it’s the most important number in personal finance.",
+        "icon": "📘"
+      },
+      {
+        "title": "Growing Your Net Worth",
+        "description": "Discover actionable strategies for increasing your assets and reducing your liabilities to build long-term wealth.",
+        "icon": "📈"
+      }
+    ],
+    "benefits": [
+      "Holistic financial overview",
+      "Automated tracking",
+      "Secure account linking",
+      "Progress visualization"
+    ]
+  },
+  "budgeting-for-couples": {
+    "meta": {
+      "title": "Budgeting App for Couples – Shared Finances & Goals | Moneko",
+      "description": "Stop fighting about money. Moneko is the budgeting app designed for couples to manage shared expenses, set joint savings goals, and track your financial journey together.",
+      "keywords": "budgeting apps for couples, shared finances app, collaborative budgeting solutions, ynab for couples, how to manage finances with a partner, joint budget app"
+    },
+    "hero": {
+      "title": "Finally, Budgeting Together",
+      "subtitle": "Moneko helps you and your partner manage shared expenses, set joint goals, and build your wealth as a team. No more money stress.",
+      "ctaText": "Create Your Shared Budget",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "What's the best way for us to budget together?",
+        "How can we stop arguing about money?",
+        "How do we set up a shared budget?",
+        "What's a good alternative to YNAB for couples?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Link Your Accounts",
+          "description": "Each partner can securely connect their personal and joint accounts to see everything in one place."
+        },
+        {
+          "title": "Set Shared Goals",
+          "description": "Create joint budgets for household expenses, vacations, or a down payment. Track your progress together."
+        },
+        {
+          "title": "Manage Expenses Seamlessly",
+          "description": "See who paid for what, split bills, and understand your combined spending habits with clear, simple visuals."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See How Couples Can Master Their Money",
+      "subtitle": "Watch how Moneko simplifies shared finances, from daily spending to long-term wealth planning for partners."
+    },
+    "features": [
+      {
+        "title": "Collaborative Budgeting",
+        "description": "Create a shared budget that you and your partner can both access and contribute to in real-time.",
+        "icon": "🧑‍🤝‍🧑",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Joint Savings Goals",
+        "description": "Set and track your shared financial goals, whether you're saving for a house, a vacation, or retirement.",
+        "icon": "🎯",
+        "route": "/dashboard/goals"
+      },
+      {
+        "title": "Integrated Net Worth Tracking",
+        "description": "Go beyond budgeting. Track your combined net worth to see how your teamwork is building long-term wealth.",
+        "icon": "🚀",
+        "route": "/dashboard/net-worth-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Talking About Money",
+        "description": "Learn how to have productive, stress-free conversations about finances with your partner.",
+        "icon": "💬"
+      },
+      {
+        "title": "Shared Budgeting Methods",
+        "description": "Explore popular budgeting systems like the 50/30/20 rule or zero-based budgeting, adapted for couples.",
+        "icon": "➗"
+      }
+    ],
+    "benefits": [
+      "Financial transparency for partners",
+      "Achieve goals faster together",
+      "Reduce money-related arguments",
+      "Combined net worth view"
+    ]
+  },
+  "hysa-vs-cd": {
+    "meta": {
+      "title": "HYSA vs CD: Which High-Yield Savings Option is Right for You? (2025 Guide) | Moneko",
+      "description": "Compare High-Yield Savings Accounts (HYSA) vs Certificates of Deposit (CD). Learn interest rates, liquidity differences, and which option maximizes your returns in 2025.",
+      "keywords": "hysa vs cd, high yield savings account, certificate of deposit, cd vs savings account, best savings rates 2025, where to save money, hysa interest rates"
+    },
+    "hero": {
+      "title": "HYSA vs CD: Which Saves You More?",
+      "subtitle": "Understand the key differences between High-Yield Savings Accounts and CDs, and discover which option fits your financial goals and timeline.",
+      "ctaText": "Compare Your Options",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "What's the difference between a HYSA and a CD?",
+        "Which has higher interest rates, HYSA or CD?",
+        "Can I withdraw money from a CD early?",
+        "Should I use a HYSA or CD for my emergency fund?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Assess Your Goals",
+          "description": "Determine whether you need flexible access to your money (HYSA) or can lock it in for higher returns (CD)."
+        },
+        {
+          "title": "Compare Interest Rates",
+          "description": "See current HYSA and CD rates to understand which option offers the best return for your timeline."
+        },
+        {
+          "title": "Make Your Choice",
+          "description": "Get AI-powered recommendations on the optimal savings strategy for your specific financial situation."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "HYSA vs CD: The Complete Breakdown",
+      "subtitle": "Watch our expert comparison to understand which savings vehicle will help you reach your goals faster."
+    },
+    "features": [
+      {
+        "title": "Savings Rate Comparison Tool",
+        "description": "Compare real-time interest rates from top HYSAs and CDs to find the best returns for your money.",
+        "icon": "💹",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Emergency Fund Optimizer",
+        "description": "Get personalized recommendations on how to split your emergency fund between liquid HYSAs and higher-yield CDs.",
+        "icon": "🛡️",
+        "route": "/dashboard/"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Understanding CD Terms",
+        "description": "Learn about CD laddering strategies, term lengths, and how to maximize returns without sacrificing liquidity.",
+        "icon": "📚"
+      },
+      {
+        "title": "HYSA Best Practices",
+        "description": "Discover how to find the best high-yield savings accounts and avoid hidden fees that eat into your returns.",
+        "icon": "🎯"
+      }
+    ],
+    "benefits": [
+      "Compare rates in real-time",
+      "Personalized recommendations",
+      "Understand liquidity tradeoffs",
+      "Optimize emergency fund strategy"
+    ]
+  },
+  "financial-calculators": {
+    "meta": {
+      "title": "Free Financial Calculators for Wealth Building | Moneko",
+      "description": "Access a suite of free financial calculators from Moneko. Plan for retirement, calculate your net worth, set savings goals, and make smarter financial decisions.",
+      "keywords": "financial calculators, net worth calculator, savings goal calculator, compound interest calculator, retirement calculator, emergency fund calculator"
+    },
+    "hero": {
+      "title": "Answers to Your Financial Questions",
+      "subtitle": "Our free suite of financial calculators helps you plan, save, and invest with confidence. Get the numbers you need to reach your goals.",
+      "ctaText": "Explore Calculators",
+      "ctaRoute": "/calculators",
+      "chatSuggestions": [
+        "How much do I need to save for retirement?",
+        "What is my current net worth?",
+        "How long will it take to reach my savings goal?",
+        "How does compound interest work?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Choose Your Calculator",
+          "description": "Select the tool that matches your question, from net worth to emergency savings."
+        },
+        {
+          "title": "Enter Your Information",
+          "description": "Input a few key numbers to get an instant, personalized calculation."
+        },
+        {
+          "title": "Get Your Answer & Plan",
+          "description": "Understand your results and get actionable next steps to improve your financial health."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Plan Your Future with Clarity",
+      "subtitle": "See how our interactive tools can turn complex financial goals into a simple, actionable plan."
+    },
+    "features": [
+      {
+        "title": "Net Worth Calculator",
+        "description": "Calculate your complete financial snapshot by tallying up your assets and liabilities.",
+        "icon": "📊",
+        "route": "/calculators/net-worth-calculator"
+      },
+      {
+        "title": "Savings Goal Calculator",
+        "description": "Determine how much you need to save each month to reach your financial goals on time.",
+        "icon": "🏁",
+        "route": "/calculators/saving-goals-calculator"
+      },
+      {
+        "title": "Compound Interest Calculator",
+        "description": "Visualize how your investments can grow over time with the power of compound interest.",
+        "icon": "📈",
+        "route": "/calculators/compound-calculator"
+      },
+      {
+        "title": "Emergency Fund Calculator",
+        "description": "Figure out the ideal size of your safety net based on 3-6 months of your essential living expenses.",
+        "icon": "🆘",
+        "route": "/calculators/emergency-fund-calculator"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Understanding Net Worth",
+        "description": "Learn why net worth is the key indicator of financial health and how to improve yours.",
+        "icon": "📘"
+      },
+      {
+        "title": "The Power of Compounding",
+        "description": "Discover the magic of compound interest and why starting to invest early is so critical.",
+        "icon": "✨"
+      }
+    ],
+    "benefits": [
+      "Free and easy to use",
+      "Instant financial insights",
+      "Plan for specific goals",
+      "Make data-driven decisions"
+    ]
+  },
+  "collaborative-finance-platform": {
+    "meta": {
+      "title": "Collaborative Finance Platform for Couples & Families – Shared Money Management | Moneko",
+      "description": "The only collaborative finance platform that combines budgeting, net worth tracking, and goal planning for couples and families. Manage shared finances transparently with AI guidance.",
+      "keywords": "collaborative budgeting solutions, finance app for couples, shared money management, family budgeting platform, joint financial planning, transparent finances for partners"
+    },
+    "hero": {
+      "title": "Collaborative Finance, Simplified",
+      "subtitle": "The only platform designed for couples and families to budget together, track shared net worth, and build wealth as a team—with complete transparency.",
+      "ctaText": "Start Managing Together",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How do we start budgeting together as a couple?",
+        "What's the best collaborative budgeting app?",
+        "How can we track our combined net worth?",
+        "How do we set shared financial goals?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Invite Your Partner",
+          "description": "Securely share your financial dashboard with your partner or family members for complete transparency."
+        },
+        {
+          "title": "Link All Accounts",
+          "description": "Connect individual and joint accounts to get a comprehensive view of your household finances in one place."
+        },
+        {
+          "title": "Budget & Build Together",
+          "description": "Create shared budgets, set joint savings goals, and track your combined net worth as you build wealth as a team."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See How Collaboration Changes Everything",
+      "subtitle": "Watch how Moneko helps couples and families eliminate money stress through transparent, collaborative financial management."
+    },
+    "features": [
+      {
+        "title": "Real-Time Shared Dashboard",
+        "description": "Both partners see the same financial picture instantly—no more surprises or miscommunication about money.",
+        "icon": "👥",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Combined Net Worth Tracking",
+        "description": "Track your household's total net worth, including all assets and liabilities from both partners, in one comprehensive view.",
+        "icon": "💎",
+        "route": "/dashboard/net-worth-tracker"
+      },
+      {
+        "title": "Permission-Based Sharing",
+        "description": "Control exactly what financial information you share—from full transparency to selective account visibility.",
+        "icon": "🔐",
+        "route": "/dashboard/settings"
+      },
+      {
+        "title": "Joint Goal Tracking",
+        "description": "Set shared financial goals like saving for a house, vacation, or retirement, and watch your progress together.",
+        "icon": "🎯",
+        "route": "/dashboard/goals"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Financial Transparency 101",
+        "description": "Learn why financial transparency is the foundation of healthy relationships and how to start the conversation.",
+        "icon": "💬"
+      },
+      {
+        "title": "Collaborative Budgeting Systems",
+        "description": "Master different approaches to shared budgeting, from proportional contributions to 50/50 splits.",
+        "icon": "⚖️"
+      },
+      {
+        "title": "Combining Finances Strategically",
+        "description": "Understand when to combine finances, when to keep them separate, and how to find the right balance for your relationship.",
+        "icon": "🤝"
+      }
+    ],
+    "benefits": [
+      "Complete financial transparency",
+      "Eliminate money arguments",
+      "Build wealth faster together",
+      "Secure permission-based sharing"
+    ]
+  },
+  "net-worth-calculation": {
+    "meta": {
+      "title": "How to Calculate Net Worth: The Complete Guide (2025) | Moneko",
+      "description": "Learn exactly how to calculate your net worth step-by-step. Understand the net worth equation, what assets and liabilities to include, and how to track your financial progress.",
+      "keywords": "how to calculate net worth, net worth calculation, net worth equation, estimating net worth, calculate your net worth, personal net worth formula"
+    },
+    "hero": {
+      "title": "Master Your Net Worth Calculation",
+      "subtitle": "Calculating your net worth is simple: Assets - Liabilities = Net Worth. Learn exactly what to include, how to track it, and why it's the #1 indicator of financial health.",
+      "ctaText": "Calculate Your Net Worth",
+      "ctaRoute": "/calculators/net-worth-calculator",
+      "chatSuggestions": [
+        "How do I calculate my net worth?",
+        "What assets should I include in my net worth?",
+        "Do I include my car in my net worth calculation?",
+        "What's a good net worth for my age?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "List All Assets",
+          "description": "Add up everything you own: cash, investments, retirement accounts, real estate, vehicles, and other valuable property."
+        },
+        {
+          "title": "Total All Liabilities",
+          "description": "Calculate everything you owe: mortgages, student loans, credit card debt, car loans, and personal loans."
+        },
+        {
+          "title": "Calculate the Difference",
+          "description": "Subtract your total liabilities from your total assets. The result is your net worth—the true measure of your financial health."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Net Worth Calculation Made Simple",
+      "subtitle": "Watch our step-by-step guide to calculating your net worth accurately and understanding what the number really means."
+    },
+    "features": [
+      {
+        "title": "Instant Net Worth Calculator",
+        "description": "Enter your assets and liabilities to get your net worth in seconds, with detailed breakdowns by category.",
+        "icon": "🧮",
+        "route": "/calculators/net-worth-calculator"
+      },
+      {
+        "title": "Automated Net Worth Tracking",
+        "description": "Link your accounts to automatically calculate and track your net worth over time—no manual updates needed.",
+        "icon": "📊",
+        "route": "/dashboard/net-worth-tracker"
+      },
+      {
+        "title": "Net Worth Benchmarking",
+        "description": "Compare your net worth to age and income benchmarks to understand where you stand and set realistic goals.",
+        "icon": "📈",
+        "route": "/dashboard/net-worth-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The Net Worth Equation Explained",
+        "description": "Deep dive into the simple but powerful formula that determines your true financial position.",
+        "icon": "➗"
+      },
+      {
+        "title": "Assets to Include (and Exclude)",
+        "description": "Learn which assets truly count toward your net worth and common mistakes people make when calculating.",
+        "icon": "✅"
+      },
+      {
+        "title": "Growing Your Net Worth Over Time",
+        "description": "Proven strategies for increasing assets and decreasing liabilities to systematically build wealth.",
+        "icon": "📈"
+      }
+    ],
+    "benefits": [
+      "Simple 3-step calculation",
+      "Comprehensive asset tracking",
+      "Automated updates",
+      "Age-based benchmarking"
+    ]
+  },
+  "emergency-fund-calculator": {
+    "meta": {
+      "title": "Emergency Fund Calculator: How Much Do You Really Need? (2025) | Moneko",
+      "description": "Calculate your ideal emergency fund size in 30 seconds. Learn the 3-6 month rule, factor in your specific expenses, and build a safety net that protects your financial future.",
+      "keywords": "emergency fund calculator, how much emergency fund do I need, 3 month emergency fund, 6 month emergency fund, emergency savings calculator, financial safety net"
+    },
+    "hero": {
+      "title": "Build the Right Emergency Fund",
+      "subtitle": "Calculate exactly how much you need in your emergency fund based on your monthly expenses, job stability, and risk tolerance.",
+      "ctaText": "Calculate My Emergency Fund",
+      "ctaRoute": "/calculators/emergency-fund-calculator",
+      "chatSuggestions": [
+        "How much should I have in my emergency fund?",
+        "Is 3 months or 6 months of expenses better?",
+        "Where should I keep my emergency fund?",
+        "How do I calculate my monthly essential expenses?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Calculate Monthly Essentials",
+          "description": "Add up only your essential monthly expenses: rent/mortgage, utilities, food, insurance, and minimum debt payments."
+        },
+        {
+          "title": "Determine Your Multiplier",
+          "description": "Choose 3-6 months based on job stability, income variability, and dependents. Freelancers and single-income households need more."
+        },
+        {
+          "title": "Set Your Savings Goal",
+          "description": "Get your target emergency fund amount and a personalized savings plan to reach it within your timeline."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Emergency Fund Essentials",
+      "subtitle": "Learn why an emergency fund is your financial foundation and how to build one that actually protects you."
+    },
+    "features": [
+      {
+        "title": "Personalized Emergency Fund Calculator",
+        "description": "Calculate your ideal emergency fund size based on your specific expenses, income stability, and household situation.",
+        "icon": "🆘",
+        "route": "/calculators/emergency-fund-calculator"
+      },
+      {
+        "title": "HYSA for Emergency Funds",
+        "description": "Compare the best high-yield savings accounts for emergency funds—earn interest while maintaining instant access.",
+        "icon": "🏦",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Automated Emergency Savings",
+        "description": "Set up automatic transfers to build your emergency fund effortlessly, with progress tracking and milestone alerts.",
+        "icon": "⚡",
+        "route": "/dashboard/goals"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The 3-6 Month Rule",
+        "description": "Understand why 3-6 months of expenses is the gold standard and how to determine the right amount for your situation.",
+        "icon": "📏"
+      },
+      {
+        "title": "Where to Keep Emergency Funds",
+        "description": "Learn the best places to store your emergency money for maximum safety, liquidity, and modest returns.",
+        "icon": "🏦"
+      },
+      {
+        "title": "Building Your Fund Fast",
+        "description": "Proven strategies to accumulate your emergency fund quickly, even on a tight budget.",
+        "icon": "🚀"
+      }
+    ],
+    "benefits": [
+      "Personalized to your situation",
+      "Factor in job stability",
+      "Automatic savings plans",
+      "Track progress to your goal"
+    ]
+  },
+  "wealth-building-strategies": {
+    "meta": {
+      "title": "7 Proven Wealth Building Strategies for Beginners (2025) | Moneko",
+      "description": "Start building real wealth with these 7 actionable strategies. From emergency funds to index investing and passive income, learn the exact steps to grow your net worth.",
+      "keywords": "wealth building strategies, how to build wealth, grow your net worth, passive income strategies, index fund investing, compound interest wealth, financial independence"
+    },
+    "hero": {
+      "title": "Build Real Wealth, Step by Step",
+      "subtitle": "Stop guessing. Follow our proven 7-step wealth building framework used by thousands to grow their net worth from zero to six figures.",
+      "ctaText": "Start Building Wealth",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How do I start building wealth with no money?",
+        "What's the fastest way to grow my net worth?",
+        "Should I pay off debt or invest first?",
+        "How much should I save vs invest?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Build Your Foundation",
+          "description": "Establish an emergency fund and eliminate high-interest debt before focusing on wealth accumulation."
+        },
+        {
+          "title": "Automate Your Wealth",
+          "description": "Set up automatic savings and investment contributions that grow your net worth on autopilot."
+        },
+        {
+          "title": "Optimize & Scale",
+          "description": "Maximize tax-advantaged accounts, add passive income streams, and systematically increase your savings rate."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "The Wealth Building Blueprint",
+      "subtitle": "Watch our complete guide to building sustainable wealth, from financial foundations to advanced optimization strategies."
+    },
+    "features": [
+      {
+        "title": "Wealth Building Roadmap",
+        "description": "Get a personalized step-by-step plan based on your current financial situation, income, and goals.",
+        "icon": "🗺️",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Automated Wealth Systems",
+        "description": "Set up automatic transfers, investments, and contributions that build wealth while you focus on earning more.",
+        "icon": "🤖",
+        "route": "/dashboard/automation"
+      },
+      {
+        "title": "Net Worth Growth Tracker",
+        "description": "Visualize your wealth building progress with monthly net worth tracking and milestone celebrations.",
+        "icon": "📊",
+        "route": "/dashboard/net-worth-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The Wealth Building Hierarchy",
+        "description": "Learn the exact order of financial priorities: emergency fund, debt payoff, retirement, taxable investing, and more.",
+        "icon": "🏗️"
+      },
+      {
+        "title": "The Power of Compound Interest",
+        "description": "Understand how starting early with small amounts can create massive wealth over decades through compounding.",
+        "icon": "💎"
+      },
+      {
+        "title": "Passive Income Foundations",
+        "description": "Explore realistic passive income strategies: dividend investing, real estate, and digital assets.",
+        "icon": "💰"
+      }
+    ],
+    "benefits": [
+      "Clear step-by-step roadmap",
+      "Automated wealth systems",
+      "Track your net worth growth",
+      "Proven strategies that work"
+    ]
+  },
+  "retirement-planning": {
+    "meta": {
+      "title": "Retirement Planning Calculator & Guide: How Much Do You Need? (2025) | Moneko",
+      "description": "Calculate exactly how much you need to retire comfortably. Factor in Social Security, inflation, and investment returns to build a realistic retirement plan.",
+      "keywords": "retirement planning calculator, how much to retire, retirement savings calculator, retirement planning guide, fire retirement calculator, early retirement planning, 4% rule"
+    },
+    "hero": {
+      "title": "Plan Your Retirement with Confidence",
+      "subtitle": "Calculate your retirement number, understand the 4% rule, and build a personalized plan to retire on your terms—whether that's at 65 or 45.",
+      "ctaText": "Calculate My Retirement Number",
+      "ctaRoute": "/calculators/retirement-calculator",
+      "chatSuggestions": [
+        "How much money do I need to retire?",
+        "What's the 4% rule for retirement?",
+        "Can I retire at 55 with $1 million?",
+        "How much should I save for retirement each month?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Define Your Retirement Lifestyle",
+          "description": "Estimate your annual retirement expenses based on your desired lifestyle and location."
+        },
+        {
+          "title": "Calculate Your Number",
+          "description": "Use the 4% rule and factor in Social Security to determine your total retirement savings target."
+        },
+        {
+          "title": "Build Your Plan",
+          "description": "Get a personalized monthly savings target and investment strategy to reach your retirement goal on schedule."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Retirement Planning Demystified",
+      "subtitle": "Watch our comprehensive guide to retirement planning, from calculating your number to choosing the right accounts."
+    },
+    "features": [
+      {
+        "title": "Advanced Retirement Calculator",
+        "description": "Calculate your retirement needs with precision, factoring in inflation, Social Security, pensions, and investment returns.",
+        "icon": "🧮",
+        "route": "/calculators/retirement-calculator"
+      },
+      {
+        "title": "FIRE Calculator",
+        "description": "Plan for Financial Independence, Retire Early (FIRE) with our specialized calculator for early retirement scenarios.",
+        "icon": "🔥",
+        "route": "/calculators/fire-calculator"
+      },
+      {
+        "title": "Retirement Progress Tracker",
+        "description": "Track your progress toward your retirement goal with visual milestones and projected retirement age updates.",
+        "icon": "🎯",
+        "route": "/dashboard/retirement"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The 4% Rule Explained",
+        "description": "Learn the safe withdrawal rate that has sustained retirees through decades of market cycles.",
+        "icon": "📐"
+      },
+      {
+        "title": "Retirement Account Strategies",
+        "description": "Master the tax advantages of 401(k)s, IRAs, Roth accounts, and HSAs for maximum retirement savings.",
+        "icon": "🏦"
+      },
+      {
+        "title": "Early Retirement Roadmap",
+        "description": "Discover the strategies and sacrifices required to achieve FIRE and retire decades early.",
+        "icon": "🚀"
+      }
+    ],
+    "benefits": [
+      "Accurate retirement projections",
+      "Factor in inflation & taxes",
+      "FIRE planning tools",
+      "Track progress to freedom"
+    ]
+  },
+  "debt-payoff-strategies": {
+    "meta": {
+      "title": "Debt Payoff Calculator & Strategies: Avalanche vs Snowball (2025) | Moneko",
+      "description": "Compare debt avalanche vs snowball methods. Calculate your debt-free date, save thousands in interest, and get a personalized payoff plan that actually works.",
+      "keywords": "debt payoff calculator, debt avalanche vs snowball, debt payoff strategies, pay off debt fast, debt free calculator, credit card debt payoff, debt elimination"
+    },
+    "hero": {
+      "title": "Become Debt-Free, Faster",
+      "subtitle": "Compare proven debt payoff strategies, calculate your debt-free date, and get a personalized plan to eliminate debt and free up cash flow.",
+      "ctaText": "Calculate My Debt Payoff Plan",
+      "ctaRoute": "/calculators/debt-payoff-calculator",
+      "chatSuggestions": [
+        "What's the fastest way to pay off debt?",
+        "Debt avalanche vs snowball—which is better?",
+        "How long will it take me to be debt-free?",
+        "Should I pay off debt or save first?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "List All Your Debts",
+          "description": "Enter each debt with its balance, interest rate, and minimum payment for a complete picture."
+        },
+        {
+          "title": "Choose Your Strategy",
+          "description": "Compare debt avalanche (highest interest first) vs snowball (smallest balance first) to see which saves more and motivates you."
+        },
+        {
+          "title": "Execute Your Plan",
+          "description": "Get month-by-month payment instructions, track payoffs, and celebrate each debt eliminated."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Master Debt Elimination",
+      "subtitle": "Watch our expert comparison of debt payoff strategies and learn which method will help you become debt-free fastest."
+    },
+    "features": [
+      {
+        "title": "Debt Payoff Calculator",
+        "description": "Calculate your debt-free date and compare avalanche vs snowball methods with precise interest savings projections.",
+        "icon": "🧮",
+        "route": "/calculators/debt-payoff-calculator"
+      },
+      {
+        "title": "Debt Payoff Tracker",
+        "description": "Visualize your debt elimination progress with satisfaction-inducing charts and milestone celebrations.",
+        "icon": "📉",
+        "route": "/dashboard/debt-tracker"
+      },
+      {
+        "title": "Interest Savings Calculator",
+        "description": "See exactly how much interest you'll save by increasing payments or using different payoff strategies.",
+        "icon": "💰",
+        "route": "/calculators/debt-payoff-calculator"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Avalanche vs Snowball Method",
+        "description": "Understand the math and psychology behind both debt payoff strategies to choose the right one for you.",
+        "icon": "❄️"
+      },
+      {
+        "title": "Debt Consolidation Strategies",
+        "description": "Learn when debt consolidation makes sense and how to evaluate balance transfer and personal loan options.",
+        "icon": "🔄"
+      },
+      {
+        "title": "Avoiding Debt Relapse",
+        "description": "Master the habits and systems that keep you debt-free once you've achieved financial freedom.",
+        "icon": "🛡️"
+      }
+    ],
+    "benefits": [
+      "Compare payoff methods",
+      "Calculate debt-free date",
+      "Track elimination progress",
+      "Save thousands in interest"
+    ]
+  },
+  "investment-portfolio-basics": {
+    "meta": {
+      "title": "Investment Portfolio Basics: Beginner's Guide to Building Your First Portfolio (2025) | Moneko",
+      "description": "Learn how to build your first investment portfolio. Understand asset allocation, index funds, diversification, and portfolio rebalancing with actionable steps for beginners.",
+      "keywords": "beginner investment portfolio, how to start investing, portfolio allocation, index fund investing, diversification strategy, investment basics, portfolio building"
+    },
+    "hero": {
+      "title": "Build Your First Investment Portfolio",
+      "subtitle": "Learn the fundamentals of portfolio construction, from asset allocation to index fund selection, and start investing with confidence.",
+      "ctaText": "Start Building Your Portfolio",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How do I start investing as a beginner?",
+        "What should my asset allocation be?",
+        "What's the difference between stocks and bonds?",
+        "How much money do I need to start investing?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Learn the Basics",
+          "description": "Understand key investment concepts: stocks, bonds, asset allocation, and the power of diversification."
+        },
+        {
+          "title": "Choose Your Allocation",
+          "description": "Determine your risk tolerance and select an appropriate mix of stocks and bonds based on your age and goals."
+        },
+        {
+          "title": "Build & Maintain",
+          "description": "Select low-cost index funds, automate your contributions, and rebalance periodically to stay on track."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Portfolio Building 101",
+      "subtitle": "Watch our comprehensive guide to building a diversified investment portfolio from scratch, even with limited capital."
+    },
+    "features": [
+      {
+        "title": "Portfolio Allocation Tool",
+        "description": "Get personalized asset allocation recommendations based on your age, risk tolerance, and investment timeline.",
+        "icon": "📊",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Index Fund Selector",
+        "description": "Find the best low-cost index funds for your portfolio with comparisons of expense ratios and historical performance.",
+        "icon": "🔍",
+        "route": "/dashboard/fund-selector"
+      },
+      {
+        "title": "Rebalancing Assistant",
+        "description": "Get notifications when your portfolio drifts from target allocation and automated rebalancing recommendations.",
+        "icon": "⚖️",
+        "route": "/dashboard/"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Stocks vs Bonds Explained",
+        "description": "Understand the fundamental difference between equity and fixed-income investments and how each fits in your portfolio.",
+        "icon": "📈"
+      },
+      {
+        "title": "The Case for Index Funds",
+        "description": "Learn why index funds beat actively managed funds 90% of the time and how to choose the right ones.",
+        "icon": "🎯"
+      },
+      {
+        "title": "Asset Allocation by Age",
+        "description": "Discover the optimal stock/bond mix for your age and how to adjust it as you approach retirement.",
+        "icon": "📅"
+      }
+    ],
+    "benefits": [
+      "Simple portfolio strategies",
+      "Low-cost index fund focus",
+      "Age-appropriate allocation",
+      "Automated rebalancing"
+    ]
+  },
+  "financial-independence-guide": {
+    "meta": {
+      "title": "Financial Independence Guide: How to Achieve FIRE (2025) | Moneko",
+      "description": "Complete guide to Financial Independence, Retire Early (FIRE). Learn the savings rates, investment strategies, and lifestyle optimizations required to retire decades early.",
+      "keywords": "financial independence, FIRE movement, early retirement, financial independence retire early, coast FIRE, lean FIRE, fat FIRE, FI calculator"
+    },
+    "hero": {
+      "title": "Achieve Financial Independence",
+      "subtitle": "Master the FIRE movement and learn exactly what it takes to retire early—from aggressive savings to portfolio optimization and lifestyle design.",
+      "ctaText": "Calculate My FI Number",
+      "ctaRoute": "/calculators/fire-calculator",
+      "chatSuggestions": [
+        "What is the FIRE movement?",
+        "How much do I need to retire early?",
+        "What's the difference between lean and fat FIRE?",
+        "Can I really retire in my 40s?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Calculate Your FI Number",
+          "description": "Determine how much you need to achieve financial independence using the 4% rule and your desired annual spending."
+        },
+        {
+          "title": "Maximize Your Savings Rate",
+          "description": "Learn strategies to save 50-70% of your income through expense optimization and income growth."
+        },
+        {
+          "title": "Build Your FI Portfolio",
+          "description": "Invest aggressively in low-cost index funds and optimize your asset allocation for maximum growth."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "The Complete FIRE Blueprint",
+      "subtitle": "Watch our in-depth guide to achieving financial independence and retiring decades ahead of schedule."
+    },
+    "features": [
+      {
+        "title": "FIRE Calculator",
+        "description": "Calculate your financial independence number and see your projected early retirement date based on current savings rate.",
+        "icon": "🔥",
+        "route": "/calculators/fire-calculator"
+      },
+      {
+        "title": "Savings Rate Optimizer",
+        "description": "Track your savings rate and get personalized recommendations to increase it without sacrificing quality of life.",
+        "icon": "💪",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "FI Progress Tracker",
+        "description": "Visualize your journey to financial independence with milestone tracking and FI percentage calculations.",
+        "icon": "🎯",
+        "route": "/dashboard/fi-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "FIRE Variants Explained",
+        "description": "Understand Lean FIRE, Fat FIRE, Coast FIRE, and Barista FIRE to find the right path for you.",
+        "icon": "🔥"
+      },
+      {
+        "title": "The 4% Rule for FIRE",
+        "description": "Learn the safe withdrawal rate that enables early retirement and how to adjust it for longer timelines.",
+        "icon": "📐"
+      },
+      {
+        "title": "Lifestyle Optimization",
+        "description": "Discover strategies to reduce expenses without deprivation and optimize your path to financial independence.",
+        "icon": "⚡"
+      }
+    ],
+    "benefits": [
+      "Calculate your FI number",
+      "Track savings rate progress",
+      "Multiple FIRE pathways",
+      "Retire decades early"
+    ]
+  },
+  "small-business-cash-flow": {
+    "meta": {
+      "title": "Small Business Cash Flow Management: Extend Runway & Optimize Operations (2025) | Moneko",
+      "description": "Master small business cash flow management. Calculate your runway, automate revenue allocation, optimize idle cash, and ensure your business survives and thrives.",
+      "keywords": "small business cash flow, business runway calculator, cash flow management, business financial planning, revenue allocation, idle cash investing, payroll management"
+    },
+    "hero": {
+      "title": "Master Your Business Cash Flow",
+      "subtitle": "Stop stressing about payroll, taxes, and late invoices. Learn to manage business cash flow like a pro and extend your runway automatically.",
+      "ctaText": "Calculate My Business Runway",
+      "ctaRoute": "/calculators/business-runway",
+      "chatSuggestions": [
+        "How do I calculate my business runway?",
+        "Where should I keep business cash reserves?",
+        "How do I handle late-paying clients?",
+        "Should I pay myself or reinvest in the business?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Calculate Your Runway",
+          "description": "Determine how many months your business can operate with current cash and fixed expenses."
+        },
+        {
+          "title": "Automate Revenue Allocation",
+          "description": "Set up systems to automatically split revenue between operations, taxes, owner pay, and growth investments."
+        },
+        {
+          "title": "Optimize Idle Cash",
+          "description": "Put business cash reserves to work in high-yield accounts while maintaining liquidity for operations."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Business Cash Flow Automation",
+      "subtitle": "Watch how successful entrepreneurs manage business finances, extend runway, and sleep better at night."
+    },
+    "features": [
+      {
+        "title": "Business Runway Calculator",
+        "description": "Calculate how long your business can survive on current cash and identify opportunities to extend your runway.",
+        "icon": "🛬",
+        "route": "/calculators/business-runway"
+      },
+      {
+        "title": "Profit First System",
+        "description": "Implement the Profit First method to automatically allocate revenue to multiple accounts for different business purposes.",
+        "icon": "💼",
+        "route": "/dashboard/business"
+      },
+      {
+        "title": "Business Cash Optimizer",
+        "description": "Maximize returns on idle business cash while maintaining necessary liquidity for operations and emergencies.",
+        "icon": "💰",
+        "route": "/dashboard/business"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The Profit First Method",
+        "description": "Learn Mike Michalowicz's revolutionary cash management system that ensures profitability from day one.",
+        "icon": "📘"
+      },
+      {
+        "title": "Business Runway Management",
+        "description": "Master strategies to extend your business runway and survive client payment delays or revenue gaps.",
+        "icon": "📊"
+      },
+      {
+        "title": "Tax Planning for Business",
+        "description": "Understand quarterly taxes, estimated payments, and how to set aside the right amount automatically.",
+        "icon": "🧾"
+      }
+    ],
+    "benefits": [
+      "Calculate business runway",
+      "Automated revenue allocation",
+      "Optimize idle business cash",
+      "Simplified tax preparation"
+    ]
+  },
+  "index-fund-investing": {
+    "meta": {
+      "title": "Index Fund Investing Guide: How to Build Wealth Passively (2025) | Moneko",
+      "description": "Complete guide to index fund investing. Learn why index funds beat active management, how to choose the best funds, and build a simple portfolio that outperforms.",
+      "keywords": "index fund investing, best index funds, passive investing, vanguard index funds, s&p 500 index fund, total market index fund, index fund strategy"
+    },
+    "hero": {
+      "title": "Master Index Fund Investing",
+      "subtitle": "Build wealth the simple way. Learn why index funds are the investor's secret weapon and how to construct a portfolio that beats 90% of professionals.",
+      "ctaText": "Start Index Fund Investing",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "What is an index fund?",
+        "Which index fund should I buy first?",
+        "Why do index funds beat active funds?",
+        "How much should I invest in index funds?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Understand the Basics",
+          "description": "Learn what index funds are, why they outperform, and the power of low fees compounded over decades."
+        },
+        {
+          "title": "Choose Your Funds",
+          "description": "Select the best index funds for your goals—total market, S&P 500, international, bonds, and more."
+        },
+        {
+          "title": "Invest Consistently",
+          "description": "Set up automatic investments, dollar-cost average, and let compound interest do the heavy lifting."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Why Index Funds Win",
+      "subtitle": "Watch our deep dive into why legendary investors like Warren Buffett recommend index funds for the average investor."
+    },
+    "features": [
+      {
+        "title": "Index Fund Screener",
+        "description": "Compare expense ratios, historical returns, and holdings of popular index funds to find the best options.",
+        "icon": "🔍",
+        "route": "/dashboard/fund-screener"
+      },
+      {
+        "title": "Three-Fund Portfolio Builder",
+        "description": "Build the simple, powerful three-fund portfolio with the perfect mix of US stocks, international stocks, and bonds.",
+        "icon": "📊",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Dollar-Cost Averaging Planner",
+        "description": "Set up automatic monthly investments to smooth out market volatility and build wealth consistently.",
+        "icon": "📅",
+        "route": "/dashboard/"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The Case Against Active Management",
+        "description": "Understand why 90% of actively managed funds underperform index funds over 15+ year periods.",
+        "icon": "📉"
+      },
+      {
+        "title": "Expense Ratios Matter",
+        "description": "Learn how a 1% difference in fees can cost you hundreds of thousands over a lifetime of investing.",
+        "icon": "💸"
+      },
+      {
+        "title": "The Three-Fund Portfolio",
+        "description": "Master the Bogleheads' simple three-fund strategy that provides complete global diversification.",
+        "icon": "🌍"
+      }
+    ],
+    "benefits": [
+      "Simple, proven strategy",
+      "Beats 90% of professionals",
+      "Ultra-low fees",
+      "Set-it-and-forget-it investing"
+    ]
+  },
+  "dividend-investing-strategy": {
+    "meta": {
+      "title": "Dividend Investing Strategy: Build Passive Income from Stocks (2025) | Moneko",
+      "description": "Learn dividend investing strategies to generate passive income. Understand dividend yield, growth vs income stocks, DRIP plans, and build a dividend portfolio.",
+      "keywords": "dividend investing, dividend stocks, passive income stocks, dividend yield, dividend growth investing, DRIP strategy, dividend portfolio"
+    },
+    "hero": {
+      "title": "Build Passive Income with Dividends",
+      "subtitle": "Generate consistent cash flow from dividend-paying stocks. Learn how to build a dividend portfolio that pays you every quarter.",
+      "ctaText": "Start Dividend Investing",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "What are dividend stocks?",
+        "How do I start dividend investing?",
+        "What's a good dividend yield?",
+        "Should I reinvest dividends or take the cash?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Learn Dividend Basics",
+          "description": "Understand dividend yield, payout ratios, dividend aristocrats, and the difference between growth and income strategies."
+        },
+        {
+          "title": "Build Your Portfolio",
+          "description": "Select a diversified mix of dividend-paying stocks, REITs, and dividend-focused ETFs for consistent income."
+        },
+        {
+          "title": "Optimize & Compound",
+          "description": "Implement a DRIP strategy to reinvest dividends automatically and accelerate your wealth compounding."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Dividend Investing Masterclass",
+      "subtitle": "Watch our comprehensive guide to building a dividend portfolio that generates reliable passive income."
+    },
+    "features": [
+      {
+        "title": "Dividend Stock Screener",
+        "description": "Find high-quality dividend stocks with sustainable yields, strong payout ratios, and dividend growth history.",
+        "icon": "🔍",
+        "route": "/dashboard/dividend-screener"
+      },
+      {
+        "title": "Dividend Income Tracker",
+        "description": "Track your quarterly dividend payments, visualize income growth, and project future passive income.",
+        "icon": "💵",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "DRIP Calculator",
+        "description": "See the power of dividend reinvestment over decades and calculate your projected portfolio value.",
+        "icon": "🔄",
+        "route": "/calculators/drip-calculator"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Dividend Yield vs Dividend Growth",
+        "description": "Understand the trade-off between high-yield income stocks and lower-yield dividend growth stocks.",
+        "icon": "📊"
+      },
+      {
+        "title": "The Dividend Aristocrats",
+        "description": "Learn about companies that have increased dividends for 25+ consecutive years and why they're special.",
+        "icon": "👑"
+      },
+      {
+        "title": "Tax-Efficient Dividend Investing",
+        "description": "Master the tax implications of dividend income and strategies to minimize your tax burden.",
+        "icon": "🧾"
+      }
+    ],
+    "benefits": [
+      "Consistent passive income",
+      "Quarterly cash flow",
+      "Dividend growth over time",
+      "Lower portfolio volatility"
     ]
   }
 }
