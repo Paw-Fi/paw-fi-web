@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { AuroraText } from "@/components/magicui/aurora-text";
+import { BorderBeam } from '@/components/ui/border-beam';
 
 interface HeroSectionProps {
   data: {
@@ -78,13 +79,15 @@ export default function HeroSection({ data }: HeroSectionProps) {
         </p>
 
         {/* AI Search Input - White Card Container */}
-        <div className="mb-12">
-          <div className="bg-white/90 dark:bg-black/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-4xl mx-auto">
+        <div className="mb-12 ">
+        
+          <div className="bg-white/90 relative dark:bg-black/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-6 sm:p-8 max-w-4xl mx-auto">
             <AISearchInput
               placeholder={`Ask Moneko to build your monthly budget or suggest ways to save...`}
               suggestions={hero.chatSuggestions}
               variant="default"
             />
+            <BorderBeam duration={10} size={200} borderWidth={2} />
           </div>
         </div>
 

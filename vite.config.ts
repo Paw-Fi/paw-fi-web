@@ -24,10 +24,16 @@ export default defineConfig({
       prerender: {
         // Enable prerendering globally
         enabled: true,
+        
+        // CRITICAL: Disable crawlLinks to prevent automatic link discovery
+        // When crawlLinks is false, ONLY the paths specified in the filter will be prerendered
+        // When crawlLinks is true, it will extract links from HTML and prerender them too
+        crawlLinks: false,
+        
         // Filter function takes the page object and returns whether it should prerender
         filter: ({ path }) => {
           // Only prerender the specific paths you want to be static
-          // Dashboard paths should NOT be prerendered as they require user auth and dynamic data
+          // All other paths (dashboard, blogs, etc.) will remain dynamic SSR routes
           const staticPaths = [
             '/',
             '/passive-income/business-cash-flow',
@@ -42,6 +48,7 @@ export default defineConfig({
           ]
           return staticPaths.includes(path)
         },
+        
         // Callback when page is successfully rendered
         onSuccess: ({ page }) => {
           console.log(`✅ Prerendered: ${page.path}`)

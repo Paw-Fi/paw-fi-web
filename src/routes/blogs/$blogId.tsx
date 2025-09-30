@@ -76,11 +76,6 @@ function BlogDetailPage() {
   // Calculate word count for schema
   const wordCount = blog.content.trim().split(/\s+/).length;
   
-  // Scroll to top when the page loads
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-  
   // Find related blogs based on tags
   useEffect(() => {
     const tagIds = blog.tags?.map(tag => tag.id) || [];
@@ -414,7 +409,7 @@ function BlogDetailPage() {
         transition={{ duration: 0.5 }}
       >
         <button
-          onClick={() => navigate({ to: "/blogs", resetScroll: false })}
+          onClick={() => navigate({ to: "/blogs" })}
           className="mb-8 flex items-center gap-2 text-primary dark:text-dark-primary transition-colors hover:text-secondary dark:hover:text-dark-secondary"
         >
           <FontAwesomeIcon icon={faArrowLeft} className="h-4 w-4" aria-hidden="true" />
@@ -653,6 +648,7 @@ function BlogDetailPage() {
                 <Link
                   to="/blogs/$blogId"
                   params={{ blogId: relatedBlog.slug }}
+                  resetScroll={true}
                   className="group block h-full overflow-hidden rounded-xl bg-white shadow-md transition-all hover:shadow-lg dark:bg-gray-800"
                 >
                   <div className="aspect-video overflow-hidden">

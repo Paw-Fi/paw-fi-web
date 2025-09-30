@@ -4,6 +4,7 @@ import { routeTree } from './routeTree.gen'
 export function getRouter() {
   const router = createRouter({
     routeTree,
+    // Enable built-in scroll restoration for proper navigation behavior
     scrollRestoration: true,
   })
 

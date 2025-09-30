@@ -26,8 +26,9 @@ import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/stru
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
 import { ThemeProvider } from '@/components/theme/theme-provider'
 import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { ReduxProvider } from '@/providers/ReduxProvider'
+import { getQueryClient } from '@/lib/query-client'
 
 export const Route = createRootRoute({
   head: () => {
@@ -139,8 +140,11 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  // Create a per-render QueryClient. With SSR, this will be per-request.
-  const [queryClient] = React.useState(() => new QueryClient())
+  // Get the properly configured QueryClient with SSR support
+  // Server: creates a new client for each request (prevents data leakage)
+  // Browser: reuses the same client instance (maintains cache across navigations)
+  const queryClient = getQueryClient()
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -155,7 +159,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <MonekoWebsiteData />
       </head>
       
-      <body className="h-screen">      
+      <body className="min-h-screen">      
         
       {/* Google Analytics - must be in body with ClientOnly for react-ga4 */}
       <ClientOnly>

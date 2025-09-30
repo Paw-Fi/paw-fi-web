@@ -27,6 +27,7 @@ export function BlogCard({ blog, index }: BlogCardProps) {
       <Link
         to="/blogs/$blogId"
         params={{ blogId: blog.slug }}
+        resetScroll={true}
         className="group block overflow-hidden"
       >
         <div className="relative overflow-hidden" style={{ aspectRatio: blog.isExtraFeatured ? '21/9' : blog.featured ? '16/9' : '4/3' }}>
