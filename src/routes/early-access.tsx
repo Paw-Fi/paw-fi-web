@@ -1,21 +1,15 @@
 "use client";
 
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import React, { useEffect, useState } from "react";
-import { ArrowLeft, Bell, Camera, Shield, Smartphone, Zap, Watch, Check, Clock, Code, Rocket, Palette, TestTube } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Bell, Camera, Shield, Smartphone, Check, Code, Rocket, Palette, TestTube } from "lucide-react";
 import { motion } from "framer-motion";
-import { useRemainingSpots } from "@/hooks/use-early-access";
 import { FreeTrialGiveawayForm } from "@/components/forms/FreeTrialGiveawayForm";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
-import icon from "@/assets/images/icon.svg"
-import { OptimizedImage } from "@/components/seo/optimized-image";
 import { DotPattern } from "@/components/ui/dot-pattern";
-import { BorderBeam } from "@/components/ui/border-beam";
 import { BackgroundBeamsWithCollision } from "@/components/ui/background-beams-with-collision";
 import { ArcTimeline, type ArcTimelineItem } from "@/components/ui/arc-timeline";
 import { FaqSection } from "@/components/ui/faq-section";
-import { Iphone } from "@/components/ui/iphone";
 import { Carousel } from "@/components/ui/apple-cards-carousel";
 import { cn } from "@/lib/utils";
 import phone1 from "@assets/images/early-access/Mobile-Screen1.png"
@@ -24,9 +18,7 @@ import phone3 from "@assets/images/early-access/Mobile-Screen3.png"
 import phone4 from "@assets/images/early-access/Mobile-Screen4.png"
 import { MonekoIcon } from "@/components/shared/moneko-icon";
 
-const DEVELOPMENT_PROGRESS = 80; // Development progress percentage
 const EXPECTED_LAUNCH = "Coming soon";
-const BETA_START = "To be announced";
 
 export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,
