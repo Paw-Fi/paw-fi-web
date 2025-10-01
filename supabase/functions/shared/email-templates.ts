@@ -590,19 +590,14 @@ export const paymentActionRequiredTemplate = (data: {
 export const paymentMethodUpdatedTemplate = (data: {
   name: string;
   paymentMethodType: string;
-  last4?: string;
-  brand?: string;
+  paymentMethodDetails?: string;
   dashboardUrl: string;
 }) => {
-  const methodDetails = data.brand && data.last4
-    ? `${data.brand} ending in ${data.last4}`
-    : data.paymentMethodType;
-
   const content = `
     <h1>Payment Method Updated</h1>
     <p>Hi ${data.name},</p>
     <p>Your payment method has been successfully updated.</p>
-    <p><strong>New Payment Method:</strong> ${methodDetails}</p>
+    <p><strong>New Payment Method:</strong> ${data.paymentMethodDetails || data.paymentMethodType}</p>
     <p>This payment method will be used for all future charges on your account.</p>
     <p>
       <a href="${data.dashboardUrl}" class="button">View Payment Methods</a>
@@ -615,5 +610,44 @@ export const paymentMethodUpdatedTemplate = (data: {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
     subject: 'Payment Method Updated Successfully',
+  };
+};
+
+// Invoice payment succeeded template (payment receipt with invoice PDF)
+export const invoicePaymentSucceededTemplate = (data: {
+  name: string;
+  planName: string;
+  amount: string;
+  currency: string;
+  invoiceNumber: string;
+  paymentDate: string;
+  invoiceUrl: string;
+  invoicePdfUrl?: string;
+  dashboardUrl: string;
+}) => {
+  const content = `
+    <h1>Payment Received - Thank You!</h1>
+    <p>Hi ${data.name},</p>
+    <p>We've successfully received your payment for ${data.planName}. Thank you for your continued subscription!</p>
+    <p><strong>Invoice Number:</strong> ${data.invoiceNumber}</p>
+    <p><strong>Amount Paid:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
+    <p><strong>Payment Date:</strong> ${data.paymentDate}</p>
+    <p>
+      <a href="${data.invoiceUrl}" class="button">View Invoice</a>
+    </p>
+    ${data.invoicePdfUrl ? `<p>You can also <a href="${data.invoicePdfUrl}">download your receipt (PDF)</a> for your records.</p>` : ''}
+    <p>This receipt confirms your payment has been processed successfully. Your subscription remains active and you continue to have full access to all premium features.</p>
+    <p>
+      <a href="${data.dashboardUrl}">Manage Your Subscription</a>
+    </p>
+    <p>If you have any questions about this payment or your subscription, please don't hesitate to contact our support team.</p>
+    <p>Thank you for being a valued member!</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: `Payment Receipt - Invoice ${data.invoiceNumber}`,
   };
 };

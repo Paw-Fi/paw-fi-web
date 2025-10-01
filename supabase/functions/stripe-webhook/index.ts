@@ -12,7 +12,8 @@ import {
   invoiceFinalizedTemplate,
   invoiceUpcomingTemplate,
   paymentActionRequiredTemplate,
-  paymentMethodUpdatedTemplate
+  paymentMethodUpdatedTemplate,
+  invoicePaymentSucceededTemplate
 } from '../shared/email-templates.ts'
 import { validateEnvironment } from '../shared/env-validation.ts'
 import { isWebhookEventProcessed, markWebhookEventProcessed } from '../shared/idempotency.ts'
@@ -218,6 +219,13 @@ serve(async (req) => {
   }
 })
 
+// Helper function to safely extract product ID from price object
+// Handles both string and expanded object formats
+function getProductIdFromPrice(price: any): string | null {
+  if (!price?.product) return null;
+  return typeof price.product === 'string' ? price.product : price.product?.id || null;
+}
+
 // Handler for subscription created or updated events
 // Helper function to get user by Stripe customer ID
 async function getUserByCustomerId(customerId: string) {
@@ -320,8 +328,10 @@ async function handleSubscriptionUpdated(
       }
 
       // Send email notification
-      // Get plan name from subscription
-      const productId = subscription.items?.data[0]?.price?.product
+      // Get plan name from subscription - use safe extraction
+      const productId = subscription.items?.data?.length > 0
+        ? getProductIdFromPrice(subscription.items.data[0]?.price)
+        : null
       const planName = await getPlanNameFromProductId(productId)
       
       const emailTemplate = subscriptionCanceledTemplate({
@@ -414,8 +424,10 @@ async function handleSubscriptionUpdated(
     
     console.log('Subscription updated successfully for user:', userId)
     
-    // Prepare email notification
-    const productId = subscription.items?.data[0]?.price?.product
+    // Prepare email notification - use safe extraction
+    const productId = subscription.items?.data?.length > 0
+      ? getProductIdFromPrice(subscription.items.data[0]?.price)
+      : null
     const planName = await getPlanNameFromProductId(productId)
     // Reuse itemPeriodEnd from line 289 instead of redeclaring
     const endDate = itemPeriodEnd && !isNaN(itemPeriodEnd)
@@ -547,11 +559,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, even
       
       // Send cancellation email if we have user info
       if (user) {
-        let planId = null;
-        if (subscription.items?.data?.length > 0) {
-          const product = subscription.items.data[0].price.product;
-          planId = typeof product === 'string' ? product : product?.id;
-        }
+        // Use safe extraction for product ID
+        const planId = subscription.items?.data?.length > 0
+          ? getProductIdFromPrice(subscription.items.data[0]?.price)
+          : null;
         
         const planName = await getPlanNameFromProductId(planId);
         const name = user.full_name || '';
@@ -591,6 +602,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, even
 }
 
 // Handler for successful invoice payments
+// CRITICAL: Send invoice receipt email with PDF to customer
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: string) {
   try {
     console.log('Processing successful payment for invoice:', invoice.id)
@@ -606,6 +618,60 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
       
       // Update subscription in our database
       await handleSubscriptionUpdated(subscription, eventId)
+      
+      // SEND INVOICE RECEIPT EMAIL WITH PDF
+      // Get customer ID safely
+      const customerId = typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer?.id
+      
+      if (!customerId) {
+        console.error('No customer ID in invoice:', invoice.id)
+        return
+      }
+      
+      // Get user details
+      const user = await getUserByCustomerId(customerId)
+      
+      if (!user) {
+        console.error('No user found for customer:', customerId)
+        return
+      }
+      
+      // Get plan name from invoice line items - use safe extraction
+      const productId = invoice.lines?.data?.length > 0
+        ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+        : null
+      const planName = await getPlanNameFromProductId(productId)
+      
+      // Format payment date
+      const paymentDate = invoice.status_transitions?.paid_at && !isNaN(invoice.status_transitions.paid_at)
+        ? new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }).format(new Date(invoice.status_transitions.paid_at * 1000))
+        : new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+      
+      // Prepare invoice receipt email with PDF
+      const emailTemplate = invoicePaymentSucceededTemplate({
+        name: user.full_name || '',
+        planName,
+        amount: (invoice.amount_paid / 100).toFixed(2),
+        currency: invoice.currency.toUpperCase(),
+        invoiceNumber: invoice.number || invoice.id,
+        paymentDate,
+        invoiceUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/membership`,
+        invoicePdfUrl: invoice.invoice_pdf || undefined,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+      })
+      
+      await sendUserEmail(user.email, user.full_name || '', emailTemplate)
+      console.log(`Invoice receipt email sent to ${user.email} with PDF link`)
     }
   } catch (error) {
     console.error('Error in handleInvoicePaymentSucceeded:', {
@@ -673,13 +739,11 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
         .single()
         
       if (userData) {
-        // Get plan details
+        // Get plan details - use safe extraction
         let planName = 'Premium'
         const subscription = await stripe.subscriptions.retrieve(subscriptionId)
         if (subscription.items?.data?.length > 0) {
-          const productId = typeof subscription.items.data[0].price.product === 'string'
-            ? subscription.items.data[0].price.product
-            : subscription.items.data[0].price.product?.id
+          const productId = getProductIdFromPrice(subscription.items.data[0]?.price)
           planName = await getPlanNameFromProductId(productId)
         }
         
@@ -740,12 +804,19 @@ async function handleInvoicePaymentActionRequired(invoice: Stripe.Invoice) {
 
     const name = userData.full_name || 'there'
     
+    // Get plan name from invoice - use safe extraction
+    const productId = invoice.lines?.data?.length > 0
+      ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+      : null
+    const planName = await getPlanNameFromProductId(productId)
+    
     // Send 3DS authentication required email
     console.log(`Payment requires authentication for ${userData.email}`)
     console.log(`Invoice hosted page: ${invoice.hosted_invoice_url}`)
     
     const emailTemplate = paymentActionRequiredTemplate({
       name,
+      planName,
       amount: (invoice.amount_due / 100).toFixed(2),
       currency: invoice.currency.toUpperCase(),
       authenticationUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/membership?tab=payment`,
@@ -786,12 +857,10 @@ async function handleSubscriptionTrialEnding(subscription: Stripe.Subscription) 
       return
     }
     
-    // Get plan details
+    // Get plan details - use safe extraction
     let planName = 'Premium'
     if (subscription.items?.data?.length > 0) {
-      const productId = typeof subscription.items.data[0].price.product === 'string'
-        ? subscription.items.data[0].price.product
-        : subscription.items.data[0].price.product?.id
+      const productId = getProductIdFromPrice(subscription.items.data[0]?.price)
       planName = await getPlanNameFromProductId(productId)
     }
     
@@ -956,8 +1025,10 @@ async function handleInvoiceFinalized(invoice: Stripe.Invoice) {
 
     const name = userData.full_name || 'there'
     
-    // Get plan name from subscription
-    const productId = invoice.lines?.data[0]?.price?.product
+    // Get plan name from subscription - use safe extraction
+    const productId = invoice.lines?.data?.length > 0
+      ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+      : null
     const planName = await getPlanNameFromProductId(productId)
     
     const emailTemplate = invoiceFinalizedTemplate({
@@ -1027,8 +1098,10 @@ async function handleInvoiceUpcoming(invoice: Stripe.Invoice) {
 
     const name = userData.full_name || 'there'
     
-    // Get plan name from subscription
-    const productId = invoice.lines?.data[0]?.price?.product
+    // Get plan name from subscription - use safe extraction
+    const productId = invoice.lines?.data?.length > 0
+      ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+      : null
     const planName = await getPlanNameFromProductId(productId)
     
     const emailTemplate = invoiceUpcomingTemplate({
