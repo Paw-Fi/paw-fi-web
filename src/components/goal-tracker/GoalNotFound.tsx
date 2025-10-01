@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function GoalNotFound({ onBack }: { onBack: () => void }) {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="min-h-screen bg-moneko-background flex items-center justify-center">
       <div className="max-w-md text-center px-8">
         <div className="w-20 h-20 mx-auto bg-amber-50 rounded-3xl flex items-center justify-center mb-8 shadow-sm">
           <FontAwesomeIcon icon={faFlag} className="w-10 h-10 text-amber-600" />

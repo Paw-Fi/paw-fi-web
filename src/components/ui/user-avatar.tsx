@@ -65,13 +65,13 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       {/* Premium Border Container */}
       <div className={cn(
         "relative rounded-full p-0.5",
-        isActive && showPremiumBorder && "bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-lg shadow-amber-500/30 dark:shadow-amber-400/20"
+        isActive && showPremiumBorder && "bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 shadow-lg shadow-amber-500/30"
       )}>
         {/* Avatar Container using shadcn Avatar */}
         <Avatar className={cn(
           sizeClasses[size],
-          isActive && showPremiumBorder ? 'shadow-md dark:shadow-lg' : 'shadow-sm dark:shadow-md',
-          "ring-2 ring-background dark:ring-background"
+          isActive && showPremiumBorder ? 'shadow-md' : 'shadow-sm',
+          "ring-2 ring-background"
         )}>
           {isAvatarLoading ? (
             // Loading skeleton
@@ -83,7 +83,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
                 alt={user.user_metadata?.full_name || 'User Avatar'}
                 onError={() => setImgError(true)}
               />
-              <AvatarFallback className="bg-gradient-to-br from-moneko-primary to-moneko-secondary text-white font-semibold dark:from-moneko-primary dark:to-moneko-secondary">
+              <AvatarFallback className="bg-gradient-to-br from-moneko-primary to-moneko-secondary text-white font-semibold">
                 {userInitials}
               </AvatarFallback>
             </>
@@ -94,12 +94,12 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
       {/* Premium Crown Icon */}
       {isActive && showPremiumCrown && (
         <div className={cn(
-          "absolute flex items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-md dark:shadow-amber-400/30 ring-2 ring-background dark:ring-background",
+          "absolute flex items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 shadow-md ring-2 ring-background",
           crownSizeClasses[size]
         )}>
           <FontAwesomeIcon 
             icon={faCrown} 
-            className={cn("text-amber-600 dark:text-amber-400", crownIconSizeClasses[size])} 
+            className={cn("text-amber-600", crownIconSizeClasses[size])} 
           />
         </div>
       )}

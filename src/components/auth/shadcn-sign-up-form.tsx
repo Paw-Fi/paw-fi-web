@@ -86,6 +86,8 @@ export function ShadcnSignUpForm({
   const [verificationSent, setVerificationSent] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState("")
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [lastResendTime, setLastResendTime] = useState<number | null>(null)
   
   const { signUp, isLoading } = useAuth()
   const { checkUserHasAvatar } = useAvatar()
@@ -201,18 +203,61 @@ export function ShadcnSignUpForm({
   }
 
   const handleResendVerification = async () => {
+    // Check cooldown period (60 seconds between resends)
+    const now = Date.now()
+    if (lastResendTime && now - lastResendTime < 60000) {
+      const remainingSeconds = Math.ceil((60000 - (now - lastResendTime)) / 1000)
+      setError(`Please wait ${remainingSeconds} seconds before requesting another code.`)
+      return
+    }
+    
     setError(null)
     
     try {
-      const values = signUpForm.getValues()
-      const result = await signUp(values.email, values.password, { full_name: values.fullName }, redirectUrl)
-      if (result.success) {
-        setError(null)
-        setOtpValue("")
-        otpForm.reset()
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: registeredEmail,
+      })
+      
+      if (error) {
+        throw error
       }
+      
+      // Success - clear the OTP field and update state
+      setOtpValue("")
+      otpForm.reset()
+      setError(null)
+      setLastResendTime(Date.now())
+      
+      // Start 60-second cooldown timer
+      setResendCooldown(60)
+      const interval = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+      
+      console.log("Verification email resent successfully")
     } catch (error: any) {
-      setError(error.message || "Failed to resend verification email")
+      console.error("Resend verification error:", error)
+      
+      let errorMessage = "Failed to resend verification email"
+      
+      if (error.message) {
+        if (error.message.includes("rate limit") || error.message.includes("email_send_rate_limit")) {
+          errorMessage = "You've reached the email limit. Please wait 5-10 minutes before trying again, or contact support if this persists."
+        } else if (error.message.includes("Email rate limit exceeded")) {
+          errorMessage = "Email service is temporarily rate-limited. Please wait a few minutes and try again."
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      setError(errorMessage)
     }
   }
 
@@ -302,9 +347,9 @@ export function ShadcnSignUpForm({
                     variant="link"
                     className="p-0 h-auto font-normal"
                     onClick={handleResendVerification}
-                    disabled={isLoading}
+                    disabled={isLoading || resendCooldown > 0}
                   >
-                    resend verification email
+                    {resendCooldown > 0 ? `resend in ${resendCooldown}s` : "resend verification email"}
                   </Button>
                 </div>
                 <div>
@@ -396,9 +441,9 @@ export function ShadcnSignUpForm({
                   variant="link"
                   className="p-0 h-auto font-normal"
                   onClick={handleResendVerification}
-                  disabled={isLoading}
+                  disabled={isLoading || resendCooldown > 0}
                 >
-                  resend verification email
+                  {resendCooldown > 0 ? `resend in ${resendCooldown}s` : "resend verification email"}
                 </Button>
               </div>
               <div>

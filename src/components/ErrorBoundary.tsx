@@ -60,7 +60,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       }
 
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="min-h-screen bg-moneko-background flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-card rounded-3xl p-8 text-center border border-border/50">
             <div className="w-16 h-16 mx-auto mb-6 bg-destructive/10 rounded-3xl flex items-center justify-center">
               <svg 
@@ -131,7 +131,7 @@ export function ErrorFallback({
   retry: () => void 
 }) {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-moneko-background flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-card rounded-3xl p-8 text-center border border-border/50">
         <div className="w-16 h-16 mx-auto mb-6 bg-destructive/10 rounded-3xl flex items-center justify-center">
           <svg 

@@ -102,7 +102,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
                 <div className="flex items-center">
                  
                   
-                    <FontAwesomeIcon icon={faLightbulb} className="size-3 mr-2 text-amber-500" />
+                    <FontAwesomeIcon icon={faLightbulb} className="size-3 mr-2 text-[var(--guide-warning-icon)]" />
                     <h3 className="font-medium text-sm text-foreground">Setup Guide 
                     <span className="text-xs text-muted-foreground"> ({stats.completedSteps}/{stats.totalSteps})</span>
                     </h3>
@@ -123,7 +123,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
               {/* Pulsing animation for incomplete steps */}
               {stats.completedSteps < stats.totalSteps && (
                 <motion.div
-                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full"
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[var(--guide-warning-icon)] rounded-full"
                   animate={{
                     scale: [1, 1.2, 1],
                     opacity: [1, 0.7, 1],
@@ -145,7 +145,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             transition={{ duration: 0.3 }}
-            className="bg-background rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 w-full max-w-[340px] mx-auto lg:mx-0 lg:max-h-[65vh] sm:max-h-[480px] overflow-hidden"
+            className="bg-moneko-background rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 w-full max-w-[340px] mx-auto lg:mx-0 lg:max-h-[65vh] sm:max-h-[480px] overflow-hidden"
           >
             {/* Header */}
             <div className="bg-card p-6">
@@ -200,9 +200,9 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
                       className={classNames(
                         "flex items-center p-4 rounded-2xl transition-all duration-200 cursor-pointer",
                         step.isCompleted
-                          ? "bg-green-50/50 dark:bg-green-950/30 text-green-800 dark:text-green-300 shadow-sm"
+                          ? "bg-[var(--guide-completed-bg)] text-[var(--guide-completed-text)] shadow-sm"
                           : step.isNextStep
-                          ? "bg-blue-50/50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300 shadow-sm ring-1 ring-blue-100 dark:ring-blue-800"
+                          ? "bg-[var(--guide-next-bg)] text-[var(--guide-next-text)] shadow-sm ring-1 ring-[var(--guide-next-ring)]"
                           : "bg-subtle-background text-muted-foreground hover:bg-muted/50 hover:shadow-sm"
                       )}
                       whileHover={{ scale: 1.01, x: 4 }}
@@ -214,9 +214,9 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
                           className={classNames(
                             "w-10 h-10 rounded-full flex items-center justify-center mr-4",
                             step.isCompleted
-                              ? "bg-green-500 text-white"
+                              ? "bg-[var(--guide-completed-icon)] text-white"
                               : step.isNextStep
-                              ? "bg-blue-500 text-white"
+                              ? "bg-[var(--guide-next-icon)] text-white"
                               : "bg-muted text-muted-foreground"
                           )}
                         >
@@ -256,7 +256,7 @@ export const FloatingGuideWindow: React.FC<FloatingGuideWindowProps> = ({ classN
             <div className="bg-subtle-background p-6">
               <div className="text-center">
                 {stats.isCompleted ? (
-                  <span className="flex items-center justify-center text-green-600 dark:text-green-400 text-sm font-medium">
+                  <span className="flex items-center justify-center text-[var(--guide-success-icon)] text-sm font-medium">
                     <FontAwesomeIcon icon={faTrophy} className="w-4 h-4 mr-2" />
                     Journey Complete!
                   </span>

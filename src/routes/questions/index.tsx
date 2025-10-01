@@ -339,7 +339,7 @@ function QuestionsIndexComponent() {
                 placeholder="Search financial questions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-background/90 backdrop-blur-sm border border-border/50 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                className="w-full pl-12 pr-4 py-4 bg-moneko-background/90 backdrop-blur-sm border border-border/50 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
               />
             </div>
           </motion.div>
@@ -412,7 +412,7 @@ function QuestionsIndexComponent() {
                               to="/questions/$questionSlug" params={{ questionSlug }}
                               className="block h-full"
                             >
-                              <div className="h-full bg-background/90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
+                              <div className="h-full bg-moneko-background/90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-border/50 hover:shadow-xl hover:scale-105 transition-all duration-300 group">
                                 {/* Urgency Badge */}
                                 <div className="flex justify-between items-start mb-4">
                                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getUrgencyColor(questionData.urgency)}`}>

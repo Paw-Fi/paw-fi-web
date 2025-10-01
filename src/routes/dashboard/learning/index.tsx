@@ -444,7 +444,7 @@ export function UnifiedLearningPage() {
 
   return (
     <motion.div 
-      className="min-h-screen bg-background"
+      className="min-h-screen"
       variants={pageVariants}
       initial="initial"
       animate="animate"
@@ -479,7 +479,7 @@ export function UnifiedLearningPage() {
             </button>
             <button
               onClick={() => openChat('educator')}
-              className="border border-border bg-background px-8 py-4 rounded-full font-medium text-lg hover:bg-muted/50 transition-colors duration-200"
+              className="border border-border bg-card text-card-foreground px-8 py-4 rounded-full font-medium text-lg hover:bg-muted/50 transition-colors duration-200"
             >
               Create AI Course
             </button>
@@ -533,7 +533,7 @@ export function UnifiedLearningPage() {
                 className={`
                   flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200
                   ${activeTab === tab.id 
-                    ? 'bg-background text-foreground shadow-sm' 
+                    ? 'bg-card text-foreground shadow-sm' 
                     : 'text-muted-foreground hover:text-foreground'
                   }
                 `}
@@ -593,7 +593,7 @@ export function UnifiedLearningPage() {
                       to={`/dashboard/learning/${course.course_id}`}
                       className="block h-full"
                     >
-                      <div className="h-full bg-background rounded-3xl hover:bg-muted/20 transition-colors duration-200 overflow-hidden group p-8">
+                      <div className="h-full bg-card rounded-3xl hover:bg-muted/20 transition-colors duration-200 overflow-hidden group p-8">
                         {/* Course Header */}
                         <div className="mb-6">
                           <div className="flex items-center gap-3 mb-4">
@@ -715,7 +715,7 @@ export function UnifiedLearningPage() {
                     <div className="h-full bg-muted/20 rounded-3xl hover:bg-muted/30 transition-colors duration-200 border-2 border-dashed border-muted hover:border-purple-400/50 flex items-center justify-center p-8">
                       <div className="text-center">
                         <motion.div 
-                          className="w-16 h-16 mx-auto mb-6 bg-background rounded-2xl flex items-center justify-center"
+                          className="w-16 h-16 mx-auto mb-6 bg-card rounded-2xl flex items-center justify-center"
                           whileHover={{ scale: 1.05 }}
                           transition={{ duration: 0.2 }}
                         >

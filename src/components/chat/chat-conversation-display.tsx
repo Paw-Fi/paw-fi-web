@@ -668,7 +668,7 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
      <Modal
        isOpen={showSignupPrompt}
        onClose={() => setShowSignupPrompt(false)}
-       contentClassName="relative flex flex-col items-center justify-center p-8 bg-background rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
+       contentClassName="relative flex flex-col items-center justify-center p-8 bg-card rounded-2xl border border-primary/30 shadow-2xl w-[90vw] max-w-md mx-auto pointer-events-auto"
      >
        <div className="flex flex-col items-center w-full">
          <div className="mb-4 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary/80 to-primary/50 rounded-full shadow-lg">

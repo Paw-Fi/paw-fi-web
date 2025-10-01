@@ -51,7 +51,7 @@ export function CleanMetricsPanel({
 
   return (
     <motion.div 
-      className={`bg-background rounded-3xl p-8 ${className}`}
+      className={`bg-card rounded-3xl p-8 ${className}`}
       variants={containerVariants}
       initial="initial"
       animate="animate"

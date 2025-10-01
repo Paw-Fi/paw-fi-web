@@ -292,7 +292,7 @@ export function UserSettings() {
   };
 
   return (
-    <div className="bg-background dark:bg-dark-background text-foreground dark:text-dark-foreground min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="bg-moneko-background text-foreground dark:text-dark-foreground min-h-screen p-4 sm:p-6 lg:p-8">
     <div className="w-full max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-dark-foreground">Settings</h1>     
       

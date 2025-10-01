@@ -34,7 +34,7 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
       animate="visible"
       className="relative pl-8"
     >
-      <div className="absolute left-0 top-1 w-4 h-4 bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-full z-10" />
+      <div className="absolute left-0 top-1 w-4 h-4 bg-card border-2 border-blue-500 rounded-full z-10" />
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 text-white rounded-lg shadow-lg">
           <FontAwesomeIcon 
@@ -44,30 +44,30 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
         </div>
         <div className="flex-grow">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+            <h3 className="font-semibold text-foreground">
               {details.title}
             </h3>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-muted-foreground">
               {timeAgo}
             </span>
           </div>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
+          <p className="text-card-foreground mt-1">
             {details.description}
           </p>
           {activity.goalTitle && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              Goal: <span className="font-medium text-gray-700 dark:text-gray-300">{activity.goalTitle}</span>
+            <p className="text-sm text-muted-foreground mt-2">
+              Goal: <span className="font-medium text-foreground">{activity.goalTitle}</span>
             </p>
           )}
           {activity.metadata?.newProgressPercentage !== undefined && (
             <div className="mt-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</span>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-foreground">Progress</span>
+                <span className="text-sm font-medium text-foreground">
                   {activity.metadata.newProgressPercentage.toFixed(1)}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="w-full bg-muted rounded-full h-2">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${activity.metadata.newProgressPercentage}%` }}

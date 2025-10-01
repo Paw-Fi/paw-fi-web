@@ -442,7 +442,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                    className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                     required
                   />
                 </div>
@@ -454,7 +454,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                     type="date"
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                    className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                     required
                   />
                 </div>
@@ -468,7 +468,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                   <select
                     value={formData.milestone_type}
                     onChange={(e) => setFormData({ ...formData, milestone_type: e.target.value as MilestoneType })}
-                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                    className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                   >
                     <option value="amount">Amount</option>
                     <option value="habit">Habit</option>
@@ -482,7 +482,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                   <select
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value as MilestonePriority })}
-                    className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                    className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -499,7 +499,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                       type="number"
                       value={formData.target_amount || ''}
                       onChange={(e) => setFormData({ ...formData, target_amount: parseFloat(e.target.value) || undefined })}
-                      className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                      className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                       min="0"
                       step="0.01"
                     />
@@ -514,7 +514,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none transition-all duration-200"
+                  className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none transition-all duration-200"
                   rows={3}
                   required
                 />
@@ -690,7 +690,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                 required
                               />
                             </div>
@@ -702,7 +702,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                                 type="date"
                                 value={formData.due_date}
                                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                 required
                               />
                             </div>
@@ -716,7 +716,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               <select
                                 value={formData.milestone_type}
                                 onChange={(e) => setFormData({ ...formData, milestone_type: e.target.value as MilestoneType })}
-                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                               >
                                 <option value="amount">Amount</option>
                                 <option value="habit">Habit</option>
@@ -730,7 +730,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                               <select
                                 value={formData.priority}
                                 onChange={(e) => setFormData({ ...formData, priority: e.target.value as MilestonePriority })}
-                                className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                               >
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>
@@ -747,7 +747,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                                   type="number"
                                   value={formData.target_amount || ''}
                                   onChange={(e) => setFormData({ ...formData, target_amount: parseFloat(e.target.value) || undefined })}
-                                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                  className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                   min="0"
                                   step="0.01"
                                 />
@@ -765,7 +765,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                                   type="text"
                                   value={formData.habit_description || ''}
                                   onChange={(e) => setFormData({ ...formData, habit_description: e.target.value })}
-                                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                  className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                   placeholder="e.g., Read for 30 minutes"
                                 />
                               </div>
@@ -776,7 +776,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                                 <select
                                   value={formData.frequency || 'daily'}
                                   onChange={(e) => setFormData({ ...formData, frequency: e.target.value as MilestoneFrequency })}
-                                  className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
+                                  className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all duration-200"
                                 >
                                   <option value="daily">Daily</option>
                                   <option value="weekly">Weekly</option>
@@ -793,7 +793,7 @@ export function MilestonesList({ milestones, goalId, onMilestoneUpdate, onOptimi
                             <textarea
                               value={formData.description}
                               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                              className="w-full px-4 py-3 bg-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none transition-all duration-200"
+                              className="w-full px-4 py-3 bg-moneko-background border rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none transition-all duration-200"
                               rows={3}
                               required
                             />

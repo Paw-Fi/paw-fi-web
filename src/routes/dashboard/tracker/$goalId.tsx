@@ -371,7 +371,7 @@ function GoalDetail() {
   } as const;
 
   return (
-    <div className="min-h-screen bg-background relative">
+    <div className="min-h-screen bg-moneko-background relative">
       {/* Full-page confetti overlay - only show when goal is completed */}
       {isGoalCompleted && (
         <div className="pointer-events-none fixed inset-0 z-10 overflow-hidden">

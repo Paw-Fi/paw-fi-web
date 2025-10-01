@@ -83,7 +83,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <div className="h-full rounded-2xl border border-border bg-background/70 shadow-sm">
+        <div className="h-full rounded-2xl border border-border bg-moneko-background shadow-sm">
           <div className="flex flex-col items-center py-6 space-y-4">
             {CHAT_AGENTS_DATA.map((agent, index) => (
               <motion.div

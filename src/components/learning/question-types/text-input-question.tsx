@@ -85,17 +85,17 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
     <div className="w-full space-y-4">
       <div className="relative">
         {question.prefix && (
-          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-500">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-[var(--question-text-secondary)]">
             {question.prefix}
           </div>
         )}
-        
+
         <input
           type="text"
           className={`w-full py-3 px-4 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors
             ${question.prefix ? 'pl-8' : ''}
             ${question.suffix ? 'pr-8' : ''}
-            ${error ? 'border-red-500 bg-red-50' : 'border-gray-300 bg-white'}`}
+            ${error ? 'border-[var(--quiz-error-border)] bg-[var(--quiz-error-bg)]' : 'border-[var(--question-border)] bg-[var(--question-bg)]'}`}
           placeholder={question.placeholder || ''}
           value={inputValue}
           onChange={handleChange}
@@ -103,18 +103,18 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
           aria-invalid={!!error}
           aria-describedby={error ? `${question.question_id}-error` : undefined}
         />
-        
+
         {question.suffix && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-500">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-[var(--question-text-secondary)]">
             {question.suffix}
           </div>
         )}
       </div>
-      
+
       {error && (
-        <p 
-          id={`${question.question_id}-error`} 
-          className="text-sm text-red-600"
+        <p
+          id={`${question.question_id}-error`}
+          className="text-sm text-[var(--quiz-error-text)]"
           aria-live="polite"
         >
           {error}

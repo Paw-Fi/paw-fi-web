@@ -87,7 +87,7 @@ export function IconSelector({
       </Button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-md bg-background shadow-lg border border-border">
+        <div className="absolute z-50 mt-1 w-full rounded-md bg-moneko-background shadow-lg border border-border">
           <div className="p-2 border-b border-border">
               <Input
                 prefix={<FontAwesomeIcon icon={faSearch} className=""/>}

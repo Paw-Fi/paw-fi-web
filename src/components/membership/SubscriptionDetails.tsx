@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, XCircle, Calendar, Clock, CreditCard, AlertCircle, Crown, Shield } from "lucide-react";
+import { CheckCircle2, XCircle, Calendar, Clock, CreditCard, AlertCircle, Crown, Shield, User } from "lucide-react";
 
 interface SubscriptionDetailsProps {
   subscription: {
@@ -71,7 +71,11 @@ export function SubscriptionDetails({
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Current Plan</p>
                 <div className="flex items-center space-x-2">
-                  <Crown className="h-4 w-4 text-primary" />
+                  {subscription?.plan && subscription.plan !== "free" ? (
+                    <Crown className="h-4 w-4 text-primary" />
+                  ) : (
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  )}
                   <span className="text-lg font-semibold capitalize text-foreground">
                     {subscription?.plan || "Free"}
                   </span>

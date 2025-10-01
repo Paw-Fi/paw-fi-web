@@ -174,7 +174,7 @@ export function OtpInput({
             // Active/filled state styling
             digit
               ? "border-primary bg-primary/5 text-primary"
-              : "border-border bg-background",
+              : "border-border bg-moneko-background",
             // Focus state
             activeIndex === index && !disabled
               ? "ring-2 ring-primary border-primary"

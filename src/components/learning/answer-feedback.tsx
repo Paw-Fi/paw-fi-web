@@ -24,15 +24,15 @@ export function AnswerFeedback({
   // Show correct feedback only when answer is correct and explanation should be shown
   if (isCorrect === true && showExplanation) {
     return (
-      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 transition-all duration-300 ease-in-out animate-fadeIn">
+      <div className="mt-4 p-4 bg-quiz-success-bg border border-quiz-success-border rounded-lg text-quiz-success-text transition-all duration-300 ease-in-out animate-fadeIn">
         <div className="flex items-center mb-2">
-          <svg className="w-6 h-6 mr-2 text-green-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-6 h-6 mr-2 text-quiz-success-icon animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <span className="font-semibold text-lg">Correct!</span>
         </div>
-        <div className="bg-white p-3 rounded-md shadow-sm">
-          <p className="whitespace-pre-line text-gray-800">{explanation}</p>
+        <div className="bg-question-bg p-3 rounded-md shadow-sm">
+          <p className="whitespace-pre-line text-question-text">{explanation}</p>
         </div>
       </div>
     );
@@ -41,9 +41,9 @@ export function AnswerFeedback({
   // Show incorrect feedback only when answer is explicitly false
   if (isCorrect === false) {
     return (
-      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 transition-all duration-300 ease-in-out animate-fadeIn">
+      <div className="mt-4 p-4 bg-quiz-error-bg border border-quiz-error-border rounded-lg text-quiz-error-text transition-all duration-300 ease-in-out animate-fadeIn">
         <div className="flex items-center mb-2">
-          <svg className="w-6 h-6 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-6 h-6 mr-2 text-quiz-error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
           <span className="font-semibold text-lg">
@@ -54,7 +54,7 @@ export function AnswerFeedback({
             )}
           </span>
         </div>
-        <p className="text-gray-700">{incorrect_explanation ?? "Take a moment to review your answer and try again."}</p>
+        <p className="text-quiz-error-text">{incorrect_explanation ?? "Take a moment to review your answer and try again."}</p>
       </div>
     );
   }

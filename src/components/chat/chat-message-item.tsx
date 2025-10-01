@@ -88,7 +88,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
 
   const MessageBubble = ({ children }: { children: React.ReactNode }) => (
     <div
-      className={`relative max-w-[85%] sm:max-w-[75%] md:max-w-[70%] lg:max-w-[65%] xl:max-w-[60%] rounded-2xl px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+      className={`relative max-w-[85%] sm:max-w-[75%] w-full md:max-w-[70%] lg:max-w-[65%] xl:max-w-[60%] rounded-2xl px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
         isUser
           ? "bg-primary text-primary-foreground rounded-br-md ml-auto"
           : "bg-card text-foreground rounded-bl-md border shadow-sm"

@@ -322,7 +322,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       
       {/* Temporary fix: Render course card directly if found */}
       {courseCardData && (
-        <div className="my-3">
+        <div className="my-3 w-full">
           <CourseCard
             title={courseCardData.title || ""}
             icon={courseCardData.icon || "📚"}

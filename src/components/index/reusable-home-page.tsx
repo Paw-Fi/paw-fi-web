@@ -380,7 +380,7 @@ export default function ReusableHomePage({
 
                   {/* Play button overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-all duration-300 group-hover:opacity-100 group-active:opacity-100">
-                    <div className="bg-background flex h-12 w-12 items-center justify-center rounded-full shadow-lg sm:h-14 sm:w-14 md:h-16 md:w-16">
+                    <div className="bg-moneko-background flex h-12 w-12 items-center justify-center rounded-full shadow-lg sm:h-14 sm:w-14 md:h-16 md:w-16">
                       <FontAwesomeIcon
                         icon={faPlay}
                         className="text-primary ml-0.5 text-sm sm:ml-1 sm:text-base md:text-lg"
@@ -605,7 +605,7 @@ export default function ReusableHomePage({
             {variant.benefits.map((benefit, index) => (
               <motion.div
                 key={index}
-                className="bg-background p-6 rounded-lg border border-border"
+                className="bg-moneko-background p-6 rounded-lg border border-border"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}

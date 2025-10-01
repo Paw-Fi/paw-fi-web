@@ -89,7 +89,7 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
   // Check if we have the required data to render
   if (!items.length || !matchOptions.length) {
     return (
-      <div className="p-4 rounded-lg border border-red-300 bg-red-50 text-red-700">
+      <div className="p-4 rounded-lg border border-[var(--quiz-error-border)] bg-[var(--quiz-error-bg)] text-[var(--quiz-error-text)]">
         <p className="font-medium">Error: Match question is missing required data.</p>
         <p className="text-sm mt-1">The question needs both items and matching options.</p>
       </div>
@@ -101,39 +101,39 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left column - Items */}
         <div>
-          <h3 className="font-medium mb-3">Items</h3>
+          <h3 className="font-medium mb-3 text-[var(--question-text)]">Items</h3>
           <div className="space-y-3">
             {items.map((item: Item) => {
               const matchedItem = getMatchForItem(item.id);
-              
+
               return (
-                <div 
+                <div
                   key={item.id}
                   onClick={() => !matchedItem && handleItemClick(item.id)}
                   className={classnames(
                     'p-4 rounded-lg border transition-all',
                     {
-                      'border-primary bg-purple-50 cursor-default': matchedItem,
-                      'border-gray-200 hover:border-gray-300 cursor-pointer': !matchedItem,
-                      'border-purple-400 bg-purple-100': selectedItemId === item.id
+                      'border-[var(--quiz-selected-border)] bg-[var(--quiz-selected-bg)] cursor-default': matchedItem,
+                      'border-[var(--question-border)] hover:border-[var(--question-hover-border)] cursor-pointer': !matchedItem,
+                      'border-[var(--quiz-selected-border)] bg-[var(--quiz-selected-bg)]': selectedItemId === item.id
                     }
                   )}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{item.content}</span>
-                    
+                    <span className="font-medium text-[var(--question-text)]">{item.content}</span>
+
                     {matchedItem ? (
                       <div className="flex items-center">
-                        <div className="text-gray-500 mr-2">→</div>
-                        <div className="bg-purple-100 text-purple-800 text-sm py-1 px-2 rounded">
+                        <div className="text-[var(--question-text-secondary)] mr-2">→</div>
+                        <div className="bg-[var(--quiz-selected-bg)] text-[var(--quiz-selected-text)] text-sm py-1 px-2 rounded">
                           {matchedItem.content}
                         </div>
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             clearMatch(item.id);
                           }}
-                          className="ml-2 text-gray-400 hover:text-red-500"
+                          className="ml-2 text-[var(--question-text-secondary)] hover:text-[var(--quiz-error-icon)]"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -154,26 +154,26 @@ function MatchQuestion({ question, onAnswer, value }: MatchQuestionProps) {
         
         {/* Right column - Match items */}
         <div>
-          <h3 className="font-medium mb-3">Matches</h3>
+          <h3 className="font-medium mb-3 text-[var(--question-text)]">Matches</h3>
           <div className="space-y-3">
             {matchOptions.map((matchItem: Item) => {
               const isMatched = isMatchItemMatched(matchItem.id);
-              
+
               return (
-                <div 
+                <div
                   key={matchItem.id}
                   onClick={() => selectedItemId && !isMatched && handleItemClick(matchItem.id)}
                   className={classnames(
                     'p-4 rounded-lg border transition-all',
                     {
-                      'border-primary bg-purple-50 opacity-60 cursor-default': isMatched,
-                      'border-gray-200 hover:border-gray-300 cursor-pointer': !isMatched && selectedItemId,
-                      'border-gray-200 cursor-default': !isMatched && !selectedItemId,
-                      'border-purple-400 bg-purple-100': selectedItemId && !isMatched
+                      'border-[var(--quiz-selected-border)] bg-[var(--quiz-selected-bg)] opacity-60 cursor-default': isMatched,
+                      'border-[var(--question-border)] hover:border-[var(--question-hover-border)] cursor-pointer': !isMatched && selectedItemId,
+                      'border-[var(--question-border)] cursor-default': !isMatched && !selectedItemId,
+                      'border-[var(--quiz-selected-border)] bg-[var(--quiz-selected-bg)]': selectedItemId && !isMatched
                     }
                   )}
                 >
-                  <span className="font-medium">{matchItem.content}</span>
+                  <span className="font-medium text-[var(--question-text)]">{matchItem.content}</span>
                 </div>
               );
             })}

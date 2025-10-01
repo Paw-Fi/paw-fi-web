@@ -75,6 +75,67 @@
   --muted-foreground-color: #6B7280;
   --subtle-border: #E5E7EB;
   --subtle-background: #F9FAFB;
+  --section-bg: #FFFFFF;
+  --section-shadow: rgba(0, 0, 0, 0.1);
+
+  /* Guide/Status colors */
+  --guide-completed-bg: rgba(240, 253, 244, 0.5);
+  --guide-completed-text: #166534;
+  --guide-completed-icon: #22C55E;
+  --guide-next-bg: rgba(239, 246, 255, 0.5);
+  --guide-next-text: #1e40af;
+  --guide-next-icon: #3B82F6;
+  --guide-next-ring: #dbeafe;
+  --guide-warning-icon: #F59E0B;
+  --guide-success-icon: #10B981;
+
+  /* Lesson content colors */
+  --lesson-title-text: #1F2937;
+  --lesson-title-border: #F3F4F6;
+  --lesson-content-text: #374151;
+  --lesson-keypoint-text: #4B5563;
+  --lesson-progress-bg: #F3F4F6;
+  --lesson-progress-text: #111827;
+
+  /* Quiz/Question colors */
+  --question-border: #E5E7EB;
+  --question-bg: #FFFFFF;
+  --question-text: #374151;
+  --question-text-secondary: #6B7280;
+  --question-hover-border: #D1D5DB;
+
+  /* Success/Correct states */
+  --quiz-success-bg: #F0FDF4;
+  --quiz-success-text: #166534;
+  --quiz-success-border: #86EFAC;
+  --quiz-success-icon: #22C55E;
+
+  /* Error/Incorrect states */
+  --quiz-error-bg: #FEF2F2;
+  --quiz-error-text: #991B1B;
+  --quiz-error-border: #FCA5A5;
+  --quiz-error-icon: #EF4444;
+
+  /* Neutral/Unselected states */
+  --quiz-neutral-bg: #F9FAFB;
+  --quiz-neutral-border: #E5E7EB;
+  --quiz-neutral-text: #6B7280;
+
+  /* Interactive states */
+  --quiz-selected-bg: #EEF2FF;
+  --quiz-selected-border: #7458FF;
+  --quiz-selected-text: #1F2937;
+
+  /* Dragging states */
+  --quiz-dragging-bg: #F3F4F6;
+  --quiz-dragging-border: #9CA3AF;
+  --quiz-dragging-shadow: rgba(0, 0, 0, 0.1);
+
+  /* Completion celebration */
+  --completion-confetti-1: #7458FF;
+  --completion-confetti-2: #22C55E;
+  --completion-confetti-3: #3B82F6;
+  --completion-confetti-4: #F59E0B;
 
   /* Table-specific colors */
   --table-header: #F3F4F6;
@@ -173,6 +234,67 @@
   --muted-foreground-color: #9CA3AF;
   --subtle-border: #374151;
   --subtle-background: #1F2937;
+  --section-bg: #1F2937;
+  --section-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Dark guide/status colors */
+  --guide-completed-bg: rgba(6, 78, 59, 0.3);
+  --guide-completed-text: #86EFAC;
+  --guide-completed-icon: #22C55E;
+  --guide-next-bg: rgba(30, 58, 138, 0.3);
+  --guide-next-text: #93C5FD;
+  --guide-next-icon: #3B82F6;
+  --guide-next-ring: #1e3a8a;
+  --guide-warning-icon: #FCD34D;
+  --guide-success-icon: #34D399;
+
+  /* Dark lesson content colors */
+  --lesson-title-text: #FFFFFF;
+  --lesson-title-border: #374151;
+  --lesson-content-text: #F3F4F6;
+  --lesson-keypoint-text: #F9FAFB;
+  --lesson-progress-bg: #374151;
+  --lesson-progress-text: #FFFFFF;
+
+  /* Dark Quiz/Question colors */
+  --question-border: #4B5563;
+  --question-bg: #1F2937;
+  --question-text: #F3F4F6;
+  --question-text-secondary: #D1D5DB;
+  --question-hover-border: #6B7280;
+
+  /* Dark Success/Correct states */
+  --quiz-success-bg: rgba(6, 78, 59, 0.3);
+  --quiz-success-text: #86EFAC;
+  --quiz-success-border: #22C55E;
+  --quiz-success-icon: #34D399;
+
+  /* Dark Error/Incorrect states */
+  --quiz-error-bg: rgba(127, 29, 29, 0.3);
+  --quiz-error-text: #FCA5A5;
+  --quiz-error-border: #EF4444;
+  --quiz-error-icon: #F87171;
+
+  /* Dark Neutral/Unselected states */
+  --quiz-neutral-bg: #111827;
+  --quiz-neutral-border: #4B5563;
+  --quiz-neutral-text: #D1D5DB;
+
+  /* Dark Interactive states */
+  --quiz-selected-bg: rgba(116, 88, 255, 0.2);
+  --quiz-selected-border: #8B70FF;
+  --quiz-selected-text: #FFFFFF;
+
+  /* Dark Dragging states */
+  --quiz-dragging-bg: #374151;
+  --quiz-dragging-border: #6B7280;
+  --quiz-dragging-shadow: rgba(0, 0, 0, 0.5);
+
+  /* Dark Completion celebration */
+  --completion-confetti-1: #8B70FF;
+  --completion-confetti-2: #34D399;
+  --completion-confetti-3: #60A5FA;
+  --completion-confetti-4: #FBBF24;
 
   /* Dark table colors */
   --table-header: #374151;
@@ -268,6 +390,7 @@
   --color-muted-foreground-color: var(--muted-foreground-color);
   --color-subtle-border: var(--subtle-border);
   --color-subtle-background: var(--subtle-background);
+  --color-section-bg: var(--section-bg);
 
   /* Table colors */
   --color-table-header: var(--table-header);
@@ -286,6 +409,69 @@
   --color-markdown-button: var(--markdown-button);
   --color-markdown-button-text: var(--markdown-button-text);
   --color-markdown-button-border: var(--markdown-button-border);
+
+  /* Section colors */
+  --color-section-bg: var(--section-bg);
+  --color-section-shadow: var(--section-shadow);
+
+  /* Guide colors */
+  --color-guide-completed-bg: var(--guide-completed-bg);
+  --color-guide-completed-text: var(--guide-completed-text);
+  --color-guide-completed-icon: var(--guide-completed-icon);
+  --color-guide-next-bg: var(--guide-next-bg);
+  --color-guide-next-text: var(--guide-next-text);
+  --color-guide-next-icon: var(--guide-next-icon);
+  --color-guide-next-ring: var(--guide-next-ring);
+  --color-guide-warning-icon: var(--guide-warning-icon);
+  --color-guide-success-icon: var(--guide-success-icon);
+
+  /* Lesson colors */
+  --color-lesson-title-text: var(--lesson-title-text);
+  --color-lesson-title-border: var(--lesson-title-border);
+  --color-lesson-content-text: var(--lesson-content-text);
+  --color-lesson-keypoint-text: var(--lesson-keypoint-text);
+  --color-lesson-progress-bg: var(--lesson-progress-bg);
+  --color-lesson-progress-text: var(--lesson-progress-text);
+
+  /* Question colors */
+  --color-question-border: var(--question-border);
+  --color-question-bg: var(--question-bg);
+  --color-question-text: var(--question-text);
+  --color-question-text-secondary: var(--question-text-secondary);
+  --color-question-hover-border: var(--question-hover-border);
+
+  /* Quiz success states */
+  --color-quiz-success-bg: var(--quiz-success-bg);
+  --color-quiz-success-text: var(--quiz-success-text);
+  --color-quiz-success-border: var(--quiz-success-border);
+  --color-quiz-success-icon: var(--quiz-success-icon);
+
+  /* Quiz error states */
+  --color-quiz-error-bg: var(--quiz-error-bg);
+  --color-quiz-error-text: var(--quiz-error-text);
+  --color-quiz-error-border: var(--quiz-error-border);
+  --color-quiz-error-icon: var(--quiz-error-icon);
+
+  /* Quiz neutral states */
+  --color-quiz-neutral-bg: var(--quiz-neutral-bg);
+  --color-quiz-neutral-border: var(--quiz-neutral-border);
+  --color-quiz-neutral-text: var(--quiz-neutral-text);
+
+  /* Quiz selected states */
+  --color-quiz-selected-bg: var(--quiz-selected-bg);
+  --color-quiz-selected-border: var(--quiz-selected-border);
+  --color-quiz-selected-text: var(--quiz-selected-text);
+
+  /* Quiz dragging states */
+  --color-quiz-dragging-bg: var(--quiz-dragging-bg);
+  --color-quiz-dragging-border: var(--quiz-dragging-border);
+  --color-quiz-dragging-shadow: var(--quiz-dragging-shadow);
+
+  /* Completion confetti */
+  --color-completion-confetti-1: var(--completion-confetti-1);
+  --color-completion-confetti-2: var(--completion-confetti-2);
+  --color-completion-confetti-3: var(--completion-confetti-3);
+  --color-completion-confetti-4: var(--completion-confetti-4);
 
   /* Font families */
   --font-family-poppins: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -308,7 +494,7 @@
 
   html,
   body {
-    @apply text-foreground bg-background;
+    @apply text-foreground bg-moneko-background;
   }
 
   .using-mouse * {
@@ -342,6 +528,19 @@
 
   .animate-spotlight {
     animation: spotlight 2s ease 0.75s 1 forwards;
+  }
+}
+
+/* Prose/Markdown content styles for lesson content */
+@layer components {
+  .prose {
+    --tw-prose-body: var(--lesson-content-text);
+    --tw-prose-headings: var(--lesson-title-text);
+    --tw-prose-links: var(--moneko-primary);
+    --tw-prose-bold: var(--lesson-title-text);
+    --tw-prose-code: var(--lesson-title-text);
+    --tw-prose-quotes: var(--lesson-keypoint-text);
+    --tw-prose-bullets: var(--moneko-primary);
   }
 }
 
@@ -462,7 +661,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-moneko-background text-foreground;
     font-family: var(--font-poppins);
   }
 }

@@ -1,11 +1,10 @@
 import { faClipboardQuestion, faLightbulb, faArrowLeft, faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
+import { Markdown } from "@/components/ui/markdown";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import quizCompletedImage from "@/assets/images/lessons/quiz-completed.jpeg";
 import { LessonCardTitle } from "./lesson-card-title";
-import remarkGfm from 'remark-gfm'; // Import the GFM plugin
 import { Button } from "@components/ui/button";
 
 export // Content display component for flashcard-style content
@@ -62,8 +61,8 @@ function ContentDisplay({
   };
 
   return (
-    <motion.div 
-      className="flex min-h-[550px] flex-col rounded-3xl bg-white p-8 shadow-md"
+    <motion.div
+      className="flex min-h-[550px] flex-col rounded-3xl bg-moneko-background p-8 shadow-md"
       initial="hidden"
       animate="visible"
       exit="exit"
@@ -86,7 +85,7 @@ function ContentDisplay({
             {/* Question title this content relates to */}
             {content.title && (
               <h2
-                className={`mb-6 border-b border-gray-100 pb-3 text-xl font-semibold text-gray-800 ${isQuizTransition ? "text-3xl" : ""}`}
+                className={`mb-6 border-b border-[var(--lesson-title-border)] pb-3 text-xl font-semibold text-[var(--lesson-title-text)] ${isQuizTransition ? "text-3xl" : ""}`}
               >
                 {content.title}
               </h2>
@@ -94,11 +93,9 @@ function ContentDisplay({
 
             {/* Content blocks */}
             <div className="space-y-4">
-              {!isQuizTransition &&
-                content.content&&        <article className="prose prose-purple mx-auto max-w-none dark:prose-invert lg:prose-lg">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} >{content.content}</ReactMarkdown>
-              </article>
-              }
+              {!isQuizTransition && content.content && (
+                <Markdown content={content.content} />
+              )}
             </div>
 
             {/* Key points box - only show for regular content, not quiz transition */}
@@ -116,7 +113,7 @@ function ContentDisplay({
                   <ul className="list-inside list-disc space-y-2">
                     {/* Extract key points from content blocks or use predefined ones */}
                    {content.key_points.map((point, index) => (
-                    <li key={`keypoint-${point.substring(0, 5)}-${index}`} className="text-gray-700">{point}</li>
+                    <li key={`keypoint-${point.substring(0, 5)}-${index}`} className="text-[var(--lesson-keypoint-text)]">{point}</li>
                    ))}
                   </ul>
                 </div>
@@ -138,10 +135,10 @@ function ContentDisplay({
             delay: 0.2 
           }}>
           <div className="mb-4 text-center">
-            <h3 className="mb-2 text-xl font-medium text-gray-800">
+            <h3 className="mb-2 text-xl font-medium text-[var(--lesson-title-text)]">
               You've completed the learning section!
             </h3>
-            <p className="text-gray-600">
+            <p className="text-[var(--lesson-content-text)]">
               Now it's time to test your understanding with a short quiz.
             </p>
           </div>

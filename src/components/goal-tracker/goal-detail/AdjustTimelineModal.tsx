@@ -210,7 +210,7 @@ export function AdjustTimelineModal({ isOpen, onClose, goal, onOptimisticUpdate 
             id="targetDate"
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
-            className="w-full px-4 py-3 border rounded-2xl bg-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+            className="w-full px-4 py-3 border rounded-2xl bg-moneko-background text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
             min={format(new Date(), 'yyyy-MM-dd')}
           />
         </div>

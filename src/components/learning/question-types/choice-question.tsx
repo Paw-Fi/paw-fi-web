@@ -74,8 +74,8 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
             className={classnames(
               "cursor-pointer rounded-lg border p-4 transition-all",
               {
-                "border-primary bg-purple-50": isOptionSelected(option.id),
-                "border-gray-200 hover:border-gray-300": !isOptionSelected(
+                "border-[var(--quiz-selected-border)] bg-[var(--quiz-selected-bg)]": isOptionSelected(option.id),
+                "border-[var(--question-border)] hover:border-[var(--question-hover-border)]": !isOptionSelected(
                   option.id,
                 ),
               },
@@ -90,7 +90,7 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
                       {
                         "border-primary bg-primary text-white":
                           isOptionSelected(option.id),
-                        "border-gray-300": !isOptionSelected(option.id),
+                        "border-[var(--question-border)]": !isOptionSelected(option.id),
                       },
                     )}
                   >
@@ -118,7 +118,7 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
                       "flex h-5 w-5 items-center justify-center rounded-full border",
                       {
                         "border-primary": isOptionSelected(option.id),
-                        "border-gray-300": !isOptionSelected(option.id),
+                        "border-[var(--question-border)]": !isOptionSelected(option.id),
                       },
                     )}
                   >
@@ -129,11 +129,11 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
                 )}
               </div>
               <div className="flex flex-col">
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-[var(--question-text)]">
                   {option.content}
                 </span>
                 {option.description && (
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-[var(--question-text-secondary)]">
                     {option.description}
                   </span>
                 )}

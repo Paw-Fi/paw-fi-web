@@ -79,7 +79,7 @@ mt-20, mb-20           /* 80px - page-level separation */
 - Prefer typography over decorative elements for content organization
 
 ### Component Design Patterns
-- **Cards**: `bg-background rounded-3xl p-8 shadow-sm hover:shadow-md` - large rounded corners with generous padding
+- **Cards**: `bg-moneko-background rounded-3xl p-8 shadow-sm hover:shadow-md` - large rounded corners with generous padding
 - **Buttons**: `rounded-full` for primary actions, `transition-all duration-200` for subtle feedback
 - **Forms**: Focus on input styling with minimal chrome
 - **Navigation**: Clean, spacious layouts with clear active states
@@ -190,7 +190,7 @@ mt-20, mb-20           /* 80px - page-level separation */
 **Layout Structure**:
 ```tsx
 /* ✅ Dashboard approach */
-<div className="min-h-screen bg-background">
+<div className="min-h-screen bg-moneko-background">
   <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
       {/* Content cards */}
@@ -202,7 +202,7 @@ mt-20, mb-20           /* 80px - page-level separation */
 **Card Design Pattern**:
 ```tsx
 /* ✅ Modern card styling */
-<div className="bg-background rounded-3xl p-8">
+<div className="bg-moneko-background rounded-3xl p-8">
   <div className="flex items-center justify-between mb-8">
     <div>
       <h2 className="text-2xl font-medium text-foreground mb-2">Section Title</h2>

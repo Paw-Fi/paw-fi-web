@@ -68,8 +68,8 @@ function SortableItem({ item, isActive = false }: SortableItemProps) {
       {...attributes}
       {...listeners}
       className={classnames("mb-3 rounded-lg border p-4 will-change-transform", {
-        "border-primary bg-background z-10 shadow-md": isDragging || isActive,
-        "hover:border-primary cursor-grab border-gray-200":
+        "border-[var(--quiz-dragging-border)] bg-[var(--quiz-dragging-bg)] z-10 shadow-md": isDragging || isActive,
+        "hover:border-primary cursor-grab border-[var(--question-border)]":
           !isDragging && !isActive,
       })}
     >
@@ -93,7 +93,7 @@ function SortableItem({ item, isActive = false }: SortableItemProps) {
             <path d="M18 16H16V18H18V16Z" fill="currentColor" />
           </svg>
         </div>
-        <span className="font-medium text-gray-900">{item.content}</span>
+        <span className="font-medium text-[var(--question-text)]">{item.content}</span>
       </div>
     </div>
   );

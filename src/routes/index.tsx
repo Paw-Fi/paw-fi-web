@@ -81,7 +81,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
         <title>{pageData.meta.title}</title>
         <meta name="description" content={pageData.meta.description} />

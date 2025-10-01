@@ -259,7 +259,7 @@ The markdown renderer (`/components/ui/markdown-renderer.tsx`) provides comprehe
 
 ```jsx
 // Background colors with dark mode
-<div className="bg-background dark:bg-dark-background text-foreground dark:text-dark-foreground">
+<div className="bg-moneko-background dark:bg-dark-background text-foreground dark:text-dark-foreground">
   Main content area
 </div>
 
@@ -362,7 +362,7 @@ Add the new color to the appropriate table above with:
 ### 1. Use Semantic Names with Dark Variants
 ```jsx
 // ✅ Good - semantic with dark variants
-<div className="bg-background dark:bg-dark-background text-foreground dark:text-dark-foreground">
+<div className="bg-moneko-background dark:bg-dark-background text-foreground dark:text-dark-foreground">
   Content
 </div>
 

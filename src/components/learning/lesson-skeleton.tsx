@@ -1,6 +1,6 @@
 export function LessonSkeleton() {
   return (
-    <div className="bg-background flex flex-1 flex-col px-4 py-8 lg:flex-row animate-pulse min-h-[60vh] mt-24">      <div className="mb-4 lg:mb-0 flex flex-1 flex-col lg:mr-4">
+    <div className="bg-moneko-background flex flex-1 flex-col px-4 py-8 lg:flex-row animate-pulse min-h-[60vh] mt-24">      <div className="mb-4 lg:mb-0 flex flex-1 flex-col lg:mr-4">
       
         {/* Question area skeleton */}
         <div className="space-y-6 ">

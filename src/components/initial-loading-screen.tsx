@@ -7,7 +7,7 @@ import React from 'react';
  */
 export const InitialLoadingScreen: React.FC = () => {
   return (
-    <div className="fixed inset-0 bg-background flex items-center justify-center z-[9999] transition-opacity duration-500 ease-out">
+    <div className="fixed inset-0 bg-moneko-background flex items-center justify-center z-[9999] transition-opacity duration-500 ease-out">
       <div className="flex flex-col items-center justify-center text-center">
         {/* Moneko Logo using brand colors */}
         <div className="financial-glass w-16 h-16 sm:w-20 sm:h-20 rounded-full mb-6 flex items-center justify-center relative overflow-hidden">

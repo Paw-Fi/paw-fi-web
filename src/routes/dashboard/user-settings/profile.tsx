@@ -857,7 +857,7 @@ function FinancialProfileSettings() {
     <div className="space-y-8">  
 
       {/* Personal Information */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Personal Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
@@ -902,7 +902,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Income Details */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Income Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -1006,7 +1006,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Monthly Expenses */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Monthly Expenses</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -1134,7 +1134,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Assets & Savings */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Assets & Savings</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -1246,7 +1246,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Debts & Liabilities */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Debts & Liabilities</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -1403,7 +1403,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Financial Goals */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Financial Goals</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -1493,7 +1493,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Risk Profile & Investment */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Risk Profile & Investment</h3>
         
         <div className="mb-6">
@@ -1578,7 +1578,7 @@ function FinancialProfileSettings() {
       </div>
 
       {/* Financial Behavior */}
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
+      <div className="bg-card shadow-lg rounded-lg p-6">
         <h3 className="text-xl font-semibold mb-4 text-primary">Financial Behavior</h3>
         
         <div className="mb-6">
@@ -1635,11 +1635,11 @@ function FinancialProfileSettings() {
   );
 
   return (
-    <div className="bg-background dark:bg-dark-background text-foreground dark:text-dark-foreground min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="bg-moneko-background text-foreground min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-foreground dark:text-dark-foreground">
+            <h1 className="text-3xl font-bold text-foreground">
               Financial Profile
             </h1>
             <p className="text-muted-foreground mt-1">

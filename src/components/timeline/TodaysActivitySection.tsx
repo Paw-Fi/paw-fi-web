@@ -53,7 +53,7 @@ export function TodaysActivitySection({ activities }: TodaysActivitySectionProps
       variants={sectionVariants}
       initial="initial"
       animate="animate"
-      className="mb-16 p-8 bg-background rounded-3xl"
+      className="mb-16 p-8 bg-card rounded-3xl"
     >
       {/* Clean Header */}
       <motion.div className="flex items-center gap-4 mb-8" variants={itemVariants}>
@@ -141,7 +141,7 @@ export function TodaysActivitySection({ activities }: TodaysActivitySectionProps
             </Link>
             <Link 
               to="/dashboard/learning" 
-              className="flex items-center gap-3 px-8 py-4 border border-border bg-background hover:bg-muted/50 text-foreground font-medium rounded-full transition-colors duration-200"
+              className="flex items-center gap-3 px-8 py-4 border border-border bg-card hover:bg-muted/50 text-foreground font-medium rounded-full transition-colors duration-200"
             >
               <BookOpen className="w-5 h-5" />
               Start Learning

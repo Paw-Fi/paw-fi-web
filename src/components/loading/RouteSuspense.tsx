@@ -19,7 +19,7 @@ export function RouteSuspense({
   const { markStart, markEnd } = useRoutePerformance();
 
   const defaultFallback = (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="min-h-screen bg-moneko-background flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   );
@@ -44,7 +44,7 @@ export function RouteSuspense({
  */
 export function DashboardSkeleton() {
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-moneko-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header skeleton */}
         <div className="mb-8">
@@ -55,7 +55,7 @@ export function DashboardSkeleton() {
         {/* Metrics grid skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-background rounded-3xl p-8">
+            <div key={i} className="bg-moneko-background rounded-3xl p-8">
               <div className="w-12 h-12 bg-muted/20 rounded-2xl mb-4 animate-pulse" />
               <div className="h-6 bg-muted/20 rounded-xl w-24 mb-2 animate-pulse" />
               <div className="h-8 bg-muted/20 rounded-xl w-32 animate-pulse" />
@@ -65,7 +65,7 @@ export function DashboardSkeleton() {
         
         {/* Content sections skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-background rounded-3xl p-8">
+          <div className="bg-moneko-background rounded-3xl p-8">
             <div className="h-6 bg-muted/20 rounded-xl w-48 mb-6 animate-pulse" />
             <div className="space-y-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -73,7 +73,7 @@ export function DashboardSkeleton() {
               ))}
             </div>
           </div>
-          <div className="bg-background rounded-3xl p-8">
+          <div className="bg-moneko-background rounded-3xl p-8">
             <div className="h-6 bg-muted/20 rounded-xl w-40 mb-6 animate-pulse" />
             <div className="h-64 bg-muted/20 rounded-2xl animate-pulse" />
           </div>
@@ -88,7 +88,7 @@ export function DashboardSkeleton() {
  */
 export function LearningSkeleton() {
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-moneko-background p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header skeleton */}
         <div className="mb-8">
@@ -99,7 +99,7 @@ export function LearningSkeleton() {
         {/* Course grid skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-background rounded-3xl p-8">
+            <div key={i} className="bg-moneko-background rounded-3xl p-8">
               <div className="w-16 h-16 bg-muted/20 rounded-3xl mb-6 animate-pulse" />
               <div className="h-6 bg-muted/20 rounded-xl w-full mb-3 animate-pulse" />
               <div className="h-4 bg-muted/20 rounded-lg w-3/4 mb-4 animate-pulse" />
@@ -120,7 +120,7 @@ export function LearningSkeleton() {
  */
 export function CalculatorSkeleton() {
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-moneko-background p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header skeleton */}
         <div className="text-center mb-8">
@@ -131,7 +131,7 @@ export function CalculatorSkeleton() {
         {/* Calculator grid skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-background rounded-3xl p-8 text-center">
+            <div key={i} className="bg-moneko-background rounded-3xl p-8 text-center">
               <div className="w-16 h-16 bg-muted/20 rounded-3xl mx-auto mb-6 animate-pulse" />
               <div className="h-6 bg-muted/20 rounded-xl w-full mb-3 animate-pulse" />
               <div className="h-4 bg-muted/20 rounded-lg w-3/4 mx-auto mb-6 animate-pulse" />

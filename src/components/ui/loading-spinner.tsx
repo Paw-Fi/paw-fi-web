@@ -29,7 +29,7 @@ export function LoadingSpinner({ size = 'lg', className = '' }: LoadingSpinnerPr
 
 export function FullPageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex items-center justify-center min-h-screen bg-moneko-background">
       <div className="text-center space-y-4">
         <LoadingSpinner size="lg" className="mx-auto" />
         <p className="text-muted-foreground">Loading...</p>

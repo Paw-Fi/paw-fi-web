@@ -45,7 +45,7 @@ function SortableChecklistItem({ item, index, onItemChange, onRemoveItem }: Sort
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center space-x-2 bg-background p-2 rounded-md shadow-sm border">
+    <div ref={setNodeRef} style={style} className="flex items-center space-x-2 bg-moneko-background p-2 rounded-md shadow-sm border">
       <button {...attributes} {...listeners} className="cursor-grab p-2 text-gray-500 hover:text-gray-700">
         <FontAwesomeIcon icon={faGripVertical} />
       </button>

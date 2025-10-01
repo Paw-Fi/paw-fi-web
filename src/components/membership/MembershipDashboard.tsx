@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Crown, Calendar, RefreshCw, ArrowRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Crown, Calendar, RefreshCw, ArrowRight, AlertCircle, CheckCircle2, User } from "lucide-react";
 
 
 export function MembershipDashboard() {
@@ -33,14 +33,14 @@ export function MembershipDashboard() {
   if (isLoading) {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center">
-        <motion.div 
+        <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-600" />
-          <p className="mt-4 text-sm font-medium text-slate-600">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--question-text-secondary)]" />
+          <p className="mt-4 text-sm font-medium text-[var(--question-text-secondary)]">
             Loading your membership details...
           </p>
         </motion.div>
@@ -51,17 +51,17 @@ export function MembershipDashboard() {
   if (error) {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center px-4 py-6">
-        <motion.div 
+        <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <AlertCircle className="mx-auto h-8 w-8 text-red-500" />
-          <h3 className="mt-4 text-lg font-semibold text-slate-900">
+          <AlertCircle className="mx-auto h-8 w-8 text-[var(--quiz-error-icon)]" />
+          <h3 className="mt-4 text-lg font-semibold text-[var(--question-text)]">
             Unable to load membership details
           </h3>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="mt-2 text-sm text-[var(--question-text-secondary)]">
             Please try again later or contact our support team.
           </p>
         </motion.div>
@@ -103,10 +103,10 @@ export function MembershipDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--lesson-title-text)] sm:text-4xl">
             Membership
           </h1>
-          <p className="mt-2 text-lg leading-6 text-slate-600">
+          <p className="mt-2 text-lg leading-6 text-[var(--lesson-content-text)]">
             Manage your subscription and unlock premium features
           </p>
         </motion.div>
@@ -119,12 +119,16 @@ export function MembershipDashboard() {
         transition={{ delay: 0.2 }}
         className="mb-8"
       >
-        <Card className="border-0 bg-gradient-to-br from-background/50 to-card/80 shadow-sm backdrop-blur-sm dark:from-card/50 dark:to-background/80">
+        <Card className="border-1 border-[var(--question-border)] bg-[var(--section-bg)] shadow-sm">
           <CardContent className="p-6 sm:p-8">
             <div className="flex flex-col items-start justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
               <div className="flex items-center space-x-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-primary">
-                  <Crown className="h-6 w-6 text-primary-foreground" />
+                  {subscription?.plan && subscription.plan !== "free" ? (
+                    <Crown className="h-6 w-6 text-primary-foreground" />
+                  ) : (
+                    <User className="h-6 w-6 text-primary-foreground" />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center space-x-3">

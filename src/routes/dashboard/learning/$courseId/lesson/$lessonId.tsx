@@ -444,9 +444,9 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
     (currentItemIndex / flashcardItems.length) * 100;
 
   return (
-    <div className="min-h-screen bg-background dark:bg-dark-background">
+    <div className="min-h-screen bg-moneko-background dark:bg-dark-background">
       {/* Sticky progress bar with step indicators */}
-      <div className=" sticky lg:hidden top-0 z-10 bg-background/95 dark:bg-dark-background/95 backdrop-blur-sm border-b border-border">
+      <div className=" sticky lg:hidden top-0 z-10 bg-moneko-background/95 dark:bg-dark-background/95 backdrop-blur-sm border-b border-border">
         <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-2">
@@ -527,7 +527,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   }
                 }}
                 style={{ transformStyle: "preserve-3d" }}>
-            <div className="rounded-2xl sm:rounded-3xl bg-background p-4 sm:p-6 md:p-8 shadow-lg border border-border/50">
+            <div className="rounded-2xl sm:rounded-3xl bg-moneko-background p-4 sm:p-6 md:p-8 shadow-lg border border-border/50">
               {/* Render the appropriate question component based on type */}
               <div>
               <LessonCardTitle

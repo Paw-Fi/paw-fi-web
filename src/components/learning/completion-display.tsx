@@ -115,8 +115,13 @@ export function CompletionDisplay({
     }
   }, [isOpen, controls]);
   
-  // Generate confetti colors
-  const confettiColors = ["#7458FF", "#9181FF", "#16CDA2", "#FFD166", "#FF6B6B"];
+  // Generate confetti colors - use CSS variables
+  const confettiColors = [
+    getComputedStyle(document.documentElement).getPropertyValue('--completion-confetti-1').trim() || "#7458FF",
+    getComputedStyle(document.documentElement).getPropertyValue('--completion-confetti-2').trim() || "#16CDA2",
+    getComputedStyle(document.documentElement).getPropertyValue('--completion-confetti-3').trim() || "#3B82F6",
+    getComputedStyle(document.documentElement).getPropertyValue('--completion-confetti-4').trim() || "#F59E0B"
+  ];
   
   // Generate confetti pieces
   const confettiPieces = Array.from({ length: 50 }).map((_, i) => {
@@ -140,7 +145,7 @@ export function CompletionDisplay({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      contentClassName="modal-content mx-auto max-w-[90vw] lg:max-w-lg flex flex-col rounded-3xl bg-white p-8 text-center relative overflow-hidden"
+      contentClassName="modal-content mx-auto max-w-[90vw] lg:max-w-lg flex flex-col rounded-3xl bg-[var(--question-bg)] p-8 text-center relative overflow-hidden"
     >
       {/* Animated confetti particles - only show for success */}
       {isSuccess && (
@@ -165,22 +170,22 @@ export function CompletionDisplay({
               custom={confetti.id}
             />
           ))}
-          <div className="absolute top-[10%] left-[15%] h-5 w-2 rotate-[-30deg] rounded-sm bg-purple-400"></div>
-          <div className="absolute top-[15%] left-[20%] h-4 w-4 rotate-12 rounded-sm bg-purple-500"></div>
-          <div className="absolute right-[10%] bottom-[15%] h-6 w-2 rotate-45 bg-purple-300"></div>
-          <div className="absolute top-[80%] right-[15%] h-4 w-4 rotate-12 rounded-full bg-purple-400"></div>
+          <div className="absolute top-[10%] left-[15%] h-5 w-2 rotate-[-30deg] rounded-sm" style={{backgroundColor: 'var(--completion-confetti-1)'}}></div>
+          <div className="absolute top-[15%] left-[20%] h-4 w-4 rotate-12 rounded-sm" style={{backgroundColor: 'var(--completion-confetti-1)'}}></div>
+          <div className="absolute right-[10%] bottom-[15%] h-6 w-2 rotate-45" style={{backgroundColor: 'var(--completion-confetti-1)'}}></div>
+          <div className="absolute top-[80%] right-[15%] h-4 w-4 rotate-12 rounded-full" style={{backgroundColor: 'var(--completion-confetti-1)'}}></div>
 
           {/* Green particles */}
-          <div className="absolute bottom-[30%] left-[10%] h-5 w-5 rounded-full bg-green-400"></div>
-          <div className="absolute right-[20%] bottom-[45%] h-3 w-6 rotate-[-15deg] bg-teal-400"></div>
+          <div className="absolute bottom-[30%] left-[10%] h-5 w-5 rounded-full" style={{backgroundColor: 'var(--completion-confetti-2)'}}></div>
+          <div className="absolute right-[20%] bottom-[45%] h-3 w-6 rotate-[-15deg]" style={{backgroundColor: 'var(--completion-confetti-2)'}}></div>
 
-          {/* Red/orange particles */}
-          <div className="absolute top-[30%] right-[5%] h-4 w-3 rotate-12 rounded-sm bg-red-300"></div>
-          <div className="absolute top-[45%] left-[10%] h-3 w-3 rotate-12 rounded-full bg-orange-300"></div>
+          {/* Blue particles */}
+          <div className="absolute top-[30%] right-[5%] h-4 w-3 rotate-12 rounded-sm" style={{backgroundColor: 'var(--completion-confetti-3)'}}></div>
+          <div className="absolute top-[45%] left-[10%] h-3 w-3 rotate-12 rounded-full" style={{backgroundColor: 'var(--completion-confetti-3)'}}></div>
 
           {/* Yellow particles */}
-          <div className="absolute bottom-[10%] left-[30%] h-4 w-4 rotate-45 rounded-sm bg-yellow-300"></div>
-          <div className="absolute top-[60%] right-[40%] h-2 w-5 rotate-[-20deg] bg-yellow-400"></div>
+          <div className="absolute bottom-[10%] left-[30%] h-4 w-4 rotate-45 rounded-sm" style={{backgroundColor: 'var(--completion-confetti-4)'}}></div>
+          <div className="absolute top-[60%] right-[40%] h-2 w-5 rotate-[-20deg]" style={{backgroundColor: 'var(--completion-confetti-4)'}}></div>
         </div>
       )}
 
@@ -193,9 +198,9 @@ export function CompletionDisplay({
           variants={fadeInScale}
         >
           {isSuccess ? (
-            <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
+            <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--quiz-success-bg)]">
               <svg
-                className="h-10 w-10 text-green-500"
+                className="h-10 w-10 text-[var(--quiz-success-icon)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -211,9 +216,9 @@ export function CompletionDisplay({
               </svg>
             </div>
           ) : (
-            <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+            <div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--quiz-neutral-bg)]">
               <svg
-                className="h-10 w-10 text-blue-500"
+                className="h-10 w-10 text-[var(--completion-confetti-3)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

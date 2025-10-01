@@ -431,7 +431,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   
     return (
       <motion.main 
-        className="min-h-screen bg-background" 
+        className="min-h-screen " 
         role="main" 
         aria-label="Goals Dashboard"
         variants={pageVariants}
@@ -447,7 +447,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         </a>
   
         {/* Clean Header with Apple-inspired minimal design */}
-        <div className="bg-background">
+        <div className="">
           <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6" data-tour="page-header">
               <div className="min-w-0">
@@ -563,7 +563,7 @@ const SpotlightCard = memo(function SpotlightCard({
   return (
     <Link to={`/dashboard/tracker/${goal.id}`} params={{ goalId: goal.id }}>
       <motion.div 
-        className="bg-background rounded-3xl p-8 cursor-pointer transition-all duration-200 hover:shadow-md shadow-sm"
+        className="bg-moneko-background rounded-3xl p-8 cursor-pointer transition-all duration-200 hover:shadow-md shadow-sm"
         whileHover={{ y: -1 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >                
@@ -660,7 +660,7 @@ const CommandCenter = memo(function CommandCenter({
 }) {
   return (
     <motion.section 
-      className="bg-background rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+      className="bg-moneko-background rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.2 }}

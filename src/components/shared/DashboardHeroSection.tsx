@@ -109,7 +109,7 @@ export function DashboardHeroSection({
                             onClick={action.onClick}
                             className={`flex items-center gap-3 px-8 py-4 rounded-full font-medium text-lg transition-all duration-200 ${
                               action.variant === 'secondary'
-                                ? 'border border-border bg-background hover:bg-muted/50'
+                                ? 'border border-border bg-card hover:bg-muted/50'
                                 : 'bg-primary text-primary-foreground hover:opacity-90'
                             }`}
                           >

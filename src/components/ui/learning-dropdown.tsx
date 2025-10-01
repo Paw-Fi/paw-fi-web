@@ -21,7 +21,7 @@ export function LearningDropdown({ groups }: any) {
       </button>
 
       {/* Dropdown panel, show/hide based on group-hover/focus-within state */}
-      <div className="pointer-events-none w-[50rem] absolute -left-24 top-full z-50 max-w-3xl rounded-2xl bg-background opacity-0 shadow-xl ring-1 ring-border transition-all duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus:outline-none">
+      <div className="pointer-events-none w-[50rem] absolute -left-24 top-full z-50 max-w-3xl rounded-2xl bg-moneko-background opacity-0 shadow-xl ring-1 ring-border transition-all duration-200 ease-out group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus:outline-none">
         <nav
           className="py-1"
           role="navigation"

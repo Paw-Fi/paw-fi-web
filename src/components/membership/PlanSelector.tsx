@@ -87,7 +87,7 @@ export function PlanSelector({
             onClick={() => setBillingInterval("monthly")}
             className={`relative rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
               billingInterval === "monthly"
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-moneko-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -98,7 +98,7 @@ export function PlanSelector({
             onClick={() => setBillingInterval("yearly")}
             className={`relative rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
               billingInterval === "yearly"
-                ? "bg-background text-foreground shadow-sm"
+                ? "bg-moneko-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -155,7 +155,7 @@ export function PlanSelector({
 
                   <CardHeader className="pb-4 pt-8">
                     <div className="flex items-center space-x-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background shadow-sm">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-moneko-background shadow-sm">
                         {getPlanIcon(plan.id)}
                       </div>
                       <div>

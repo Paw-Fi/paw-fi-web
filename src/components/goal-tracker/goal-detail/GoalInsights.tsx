@@ -420,7 +420,7 @@ export function GoalInsights({
                 disabled={safeCurrentIndex === 0}
                 whileHover={safeCurrentIndex > 0 ? { scale: 1.1 } : {}}
                 whileTap={safeCurrentIndex > 0 ? { scale: 0.9 } : {}}
-                className="p-2 rounded-xl bg-background border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-subtle-background transition-all duration-200"
+                className="p-2 rounded-xl bg-moneko-background border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-subtle-background transition-all duration-200"
               >
                 <FontAwesomeIcon icon={faChevronLeft} className="w-4 h-4 text-muted-foreground" />
               </motion.button>
@@ -430,7 +430,7 @@ export function GoalInsights({
                 disabled={safeCurrentIndex >= filteredInsights.length - 1}
                 whileHover={safeCurrentIndex < filteredInsights.length - 1 ? { scale: 1.1 } : {}}
                 whileTap={safeCurrentIndex < filteredInsights.length - 1 ? { scale: 0.9 } : {}}
-                className="p-2 rounded-xl bg-background border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-subtle-background transition-all duration-200"
+                className="p-2 rounded-xl bg-moneko-background border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-subtle-background transition-all duration-200"
               >
                 <FontAwesomeIcon icon={faChevronRight} className="w-4 h-4 text-muted-foreground" />
               </motion.button>

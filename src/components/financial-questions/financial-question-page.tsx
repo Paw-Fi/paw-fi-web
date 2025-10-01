@@ -81,7 +81,7 @@ export function FinancialQuestionPage({
         <div className="relative max-w-7xl mx-auto text-center">
           {/* Category Badge */}
           <motion.div 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full text-sm font-medium text-muted-foreground mb-6"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-moneko-background/80 backdrop-blur-sm border border-border/50 rounded-full text-sm font-medium text-muted-foreground mb-6"
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -138,7 +138,7 @@ export function FinancialQuestionPage({
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Problem - GEO Optimized with semantic markup */}
             <motion.div 
-              className="problem bg-background/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/50"
+              className="problem bg-moneko-background/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/50"
               initial={{ x: -50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
@@ -216,7 +216,7 @@ export function FinancialQuestionPage({
             </p>
             
             {/* Key Benefits Summary for AI parsing */}
-            <div className="mt-6 p-4 bg-background/80 rounded-lg border border-border/50 max-w-3xl mx-auto">
+            <div className="mt-6 p-4 bg-moneko-background/80 rounded-lg border border-border/50 max-w-3xl mx-auto">
               <p className="text-sm font-semibold text-muted-foreground mb-2">Key Benefits:</p>
               <p className="text-foreground text-base">
                 {questionData.content.benefits.slice(0, 3).join(", ").toLowerCase()}, and more personalized solutions.
@@ -228,7 +228,7 @@ export function FinancialQuestionPage({
             {questionData.content.benefits.map((benefit, index) => (
               <motion.div
                 key={index}
-                className="benefit-item bg-background rounded-xl p-6 shadow-lg border border-border/50 hover:shadow-xl transition-all duration-300"
+                className="benefit-item bg-moneko-background rounded-xl p-6 shadow-lg border border-border/50 hover:shadow-xl transition-all duration-300"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.9 + index * 0.1 }}

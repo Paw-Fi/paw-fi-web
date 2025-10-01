@@ -266,7 +266,7 @@ export default function ModernCourseDetailPage() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-background dark:from-dark-background via-white dark:via-gray-900 to-background dark:to-dark-background"
+      className="min-h-screen"
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -394,7 +394,7 @@ export default function ModernCourseDetailPage() {
                         flex items-center gap-2 px-6 py-3 rounded-xl font-medium border-2 transition-all duration-300
                         ${savedCourse
                           ? 'bg-muted border-border text-foreground'
-                          : 'bg-background border-border text-foreground hover:border-border/80'
+                          : 'bg-card border-border text-foreground hover:border-border/80'
                         }
                       `}
                     >
@@ -404,7 +404,7 @@ export default function ModernCourseDetailPage() {
 
                     <button 
                       onClick={() => setShowShareModal(true)}
-                      className="flex items-center gap-2 px-6 py-3 bg-background border-2 border-border text-foreground rounded-xl font-medium hover:border-border/80 transition-all duration-300"
+                      className="flex items-center gap-2 px-6 py-3 bg-card border-2 border-border text-foreground rounded-xl font-medium hover:border-border/80 transition-all duration-300"
                     >
                       <FontAwesomeIcon icon={faShareNodes} className="h-5 w-5" />
                       <span>Share</span>
@@ -420,7 +420,7 @@ export default function ModernCourseDetailPage() {
                 transition={{ delay: 0.2 }}
                 className="lg:col-span-1"
               >
-                <div className="bg-background/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-border">
+                <div className="bg-card/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-border">
                   <h3 className="text-lg font-bold text-foreground mb-4">Your Progress</h3>
 
                   {/* Progress Ring */}
@@ -552,7 +552,7 @@ export default function ModernCourseDetailPage() {
                         className={`
                           block w-full text-left relative overflow-hidden rounded-2xl transition-all duration-300
                           ${isUnlocked
-                            ? 'bg-background shadow-lg hover:shadow-xl cursor-pointer'
+                            ? 'bg-card shadow-lg hover:shadow-xl cursor-pointer'
                             : 'bg-muted/50 cursor-not-allowed opacity-75'
                           }
                           ${isNext ? 'ring-2 ring-purple-500 dark:ring-purple-400 ring-offset-2 dark:ring-offset-gray-900' : ''}
@@ -699,7 +699,7 @@ export default function ModernCourseDetailPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-background rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              className="bg-card rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -844,13 +844,13 @@ export default function ModernCourseDetailPage() {
                     navigator.clipboard.writeText(message);
                     toast.success('Discord message copied to clipboard!');
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors mt-3"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors mt-3"
                 >
                   <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
                     <FontAwesomeIcon icon={faDiscord} className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-gray-900">Discord</div>
+                    <div className="font-medium text-foreground">Discord</div>
                     <div className="text-sm text-muted-foreground">Copy formatted message</div>
                   </div>
                 </button>

@@ -696,7 +696,7 @@ function DashboardHome() {
   return (
     <>
       <motion.div
-        className="min-h-screen bg-background"
+        className="min-h-screen bg-moneko-background"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -732,7 +732,7 @@ function DashboardHome() {
               {/* Level and Streak Info - Clean Design */}
               <div className="flex space-x-4">
                 {currentLevelReward && (
-                  <div className="bg-muted/30 rounded-2xl p-6 text-center">
+                  <div className="bg-muted/30 dark:bg-slate-800/30 rounded-2xl p-6 text-center">
                     <div className="text-2xl font-semibold text-foreground mb-1">Level {levelInfo.level}</div>
                     <div className="text-sm text-muted-foreground">{currentLevelReward.title}</div>
                   </div>
@@ -750,7 +750,7 @@ function DashboardHome() {
 
           {/* XP Progress Bar - Clean Apple Design */}
           <motion.div variants={itemVariants} className="mb-16">
-            <div className="bg-background rounded-3xl p-8">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-medium text-foreground mb-2">
@@ -800,7 +800,7 @@ function DashboardHome() {
               
               {/* Financial Overview Card - Clean Apple Design */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-background rounded-3xl p-8 mb-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 mb-8">
                     <div className="flex items-center justify-between mb-8">
                       <div>
                         <h2 className="text-2xl font-medium text-foreground mb-2">Financial Overview</h2>
@@ -857,7 +857,7 @@ function DashboardHome() {
                           )}
 
                           {/* Profile Completion - Clean */}
-                          <div className="bg-muted/20 rounded-2xl p-6">
+                          <div className="bg-muted/20 dark:bg-slate-800/20 rounded-2xl p-6">
                             <div className="flex items-center justify-between mb-4">
                               <h4 className="text-lg font-medium">Profile Completion</h4>
                               <span className="text-sm font-medium text-primary">
@@ -889,7 +889,7 @@ function DashboardHome() {
 
               {/* Learning Progress Card - Clean Apple Design */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-background rounded-3xl p-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
                     <div className="flex items-center justify-between mb-8">
                       <div>
                         <h2 className="text-2xl font-medium text-foreground mb-2">Learning Progress</h2>
@@ -933,7 +933,7 @@ function DashboardHome() {
 
                           {/* Next Lesson - Clean */}
                           {learningInsights.nextLesson && (
-                            <div className="bg-muted/20 rounded-2xl p-6">
+                            <div className="bg-muted/20 dark:bg-slate-800/20 rounded-2xl p-6">
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
                                   <h4 className="text-lg font-medium mb-3">Continue Learning</h4>
@@ -981,7 +981,7 @@ function DashboardHome() {
               
               {/* AI Assistant Card - Clean Apple Design */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-background rounded-3xl p-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
                     <div className="mb-8">
                       <h2 className="text-2xl font-medium text-foreground mb-2">Moneko AI</h2>
                       <p className="text-muted-foreground">Your personal financial advisor</p>
@@ -1037,7 +1037,7 @@ function DashboardHome() {
 
               {/* Quick Tools Card - Clean Apple Design */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-background rounded-3xl p-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
                     <div className="flex items-center justify-between mb-8">
                       <div>
                         <h2 className="text-2xl font-medium text-foreground mb-2">Quick Tools</h2>
@@ -1055,7 +1055,7 @@ function DashboardHome() {
                         return (
                           <motion.div key={calculator.title} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
                             <Link to={calculator.path}>
-                              <div className="bg-muted/10 hover:bg-muted/20 transition-colors duration-200 rounded-2xl p-4">
+                              <div className="bg-muted/10 dark:bg-slate-800/10 hover:bg-muted/20 dark:hover:bg-slate-700/20 transition-colors duration-200 rounded-2xl p-4">
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <div className="text-sm font-medium mb-1">
@@ -1076,13 +1076,13 @@ function DashboardHome() {
 
               {/* Essential Lessons Card - Clean Apple Design */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-background rounded-3xl p-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
                     <div className="mb-8">
                       <h2 className="text-2xl font-medium text-foreground mb-2">Essential Lessons</h2>
                       <p className="text-muted-foreground">Foundation knowledge</p>
                     </div>
 
-                    <div className="bg-muted/20 rounded-2xl p-6">
+                    <div className="bg-muted/20 dark:bg-slate-800/20 rounded-2xl p-6">
                       <h4 className="text-lg font-medium mb-3">Your 2025 Guide to Investing</h4>
                       <p className="text-muted-foreground text-sm mb-6 leading-relaxed">Master investment fundamentals with 20+ comprehensive lessons</p>
                       <div className="flex items-center justify-between">
@@ -1244,7 +1244,7 @@ function DashboardHome() {
                                   </div>
                                   
                                   {/* Reward Display */}
-                                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-background/50 border border-border/30">
+                                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-border/30 dark:border-slate-700/30">
                                     <motion.div 
                                       className="p-3 rounded-xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30"
                                       whileHover={{ rotate: [0, -5, 5, 0] }}

@@ -1,6 +1,6 @@
 export function GoalDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-moneko-background">
       {/* Header Skeleton */}
       <div className="bg-card/95 border-b">
         <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-4">

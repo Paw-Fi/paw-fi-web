@@ -17,7 +17,7 @@ export function CourseCard({ title, description, icon, lessonCount, className, o
   return (
     <Card
       className={cn(
-        "transition-all duration-300 hover:shadow-lg",
+        "transition-all duration-300 hover:shadow-lg w-full",
         isEmbedded 
           ? "border-border/50 bg-muted/50 hover:bg-muted/70" 
           : "shadow-md hover:shadow-lg",
