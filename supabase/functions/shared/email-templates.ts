@@ -98,7 +98,7 @@ export const subscriptionUpdatedTemplate = (data: {
   planName: string;
   endDate: string;
   dashboardUrl: string;
-  changeType: 'upgrade' | 'downgrade' | 'renewal';
+  changeType: 'upgrade' | 'downgrade' | 'renewal' | 'interval_changed';
 }) => {
   let title, message;
   
@@ -108,6 +108,9 @@ export const subscriptionUpdatedTemplate = (data: {
   } else if (data.changeType === 'downgrade') {
     title = 'Your subscription has been changed';
     message = `Your subscription has been changed to our ${data.planName} plan.`;
+  } else if (data.changeType === 'interval_changed') {
+    title = 'Your billing cycle has been updated';
+    message = `Your ${data.planName} subscription billing cycle has been updated.`;
   } else {
     title = 'Your subscription has been renewed!';
     message = `Your ${data.planName} subscription has been successfully renewed.`;

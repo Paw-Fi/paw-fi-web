@@ -313,11 +313,15 @@ async function handleSubscriptionUpdated(
       }
 
       // Send email notification
+      // Get plan name from subscription
+      const productId = subscription.items?.data[0]?.price?.product
+      const planName = await getPlanNameFromProductId(productId)
+      
       const emailTemplate = subscriptionCanceledTemplate({
         name: user.full_name || '',
-        reason: status === 'incomplete_expired'
-          ? 'Your trial ended without a payment method being added.'
-          : 'Your subscription payments failed after multiple retry attempts.',
+        planName,
+        endDate: null,
+        immediateCancel: true,
         dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
       })
 
@@ -432,8 +436,21 @@ async function handleSubscriptionUpdated(
       
       await sendUserEmail(user.email, name, emailTemplate)
       console.log(`Welcome email sent to ${user.email}`)
-    } else if (previousPlan && previousPlan !== finalPlan) {
-      // Send update email for plan changes
+    } else if (cancelAtPeriodEnd && previousSub?.status === 'active') {
+      // User scheduled cancellation - send cancellation confirmation
+      // but tell them they have access until period end
+      const emailTemplate = subscriptionCanceledTemplate({
+        name,
+        planName,
+        endDate, // Show when access will end
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        immediateCancel: false, // They keep access until period end
+      })
+      
+      await sendUserEmail(user.email, name, emailTemplate)
+      console.log(`Scheduled cancellation email sent to ${user.email}`)
+    } else if (previousPlan && (previousPlan !== finalPlan || previousInterval !== finalInterval)) {
+      // Send update email for plan changes or billing interval changes
       const changeType = getChangeType(
         previousPlan, 
         finalPlan,
@@ -532,27 +549,24 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, even
         const planName = await getPlanNameFromProductId(planId);
         const name = user.full_name || '';
         
-        // Get current_period_end from subscription items
-        const currentPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
-        
-        // Check if immediate cancellation or end of period
-        const endDate = !currentPeriodEnd ||
-                        isNaN(currentPeriodEnd) ||
-                        subscription.canceled_at === currentPeriodEnd
-          ? null // Immediate cancellation
-          : new Intl.DateTimeFormat('en-US', { 
+        // subscription.deleted means the subscription has already ended
+        // Access is revoked immediately when this event fires
+        // Show when it ended using ended_at timestamp
+        const endedAt = subscription.ended_at;
+        const endDate = endedAt && !isNaN(endedAt)
+          ? new Intl.DateTimeFormat('en-US', { 
               year: 'numeric', 
               month: 'long', 
               day: 'numeric' 
-            }).format(new Date(currentPeriodEnd * 1000));
+            }).format(new Date(endedAt * 1000))
+          : null;
         
         const emailTemplate = subscriptionCanceledTemplate({
           name,
           planName,
           endDate,
           dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
-          immediateCancel: !endDate,
-          reason: 'Your subscription has been cancelled.'
+          immediateCancel: true, // subscription.deleted always means immediate end
         });
         
         await sendUserEmail(user.email, name, emailTemplate);
@@ -991,6 +1005,16 @@ async function handleSubscriptionPendingUpdateApplied(
     const plan = (subscription.metadata?.plan || 'plus') as PlanType
     const billingInterval = (subscription.metadata?.billing_interval || 'monthly') as BillingInterval
 
+    // Get previous plan for change type detection
+    const { data: previousSub } = await supabase
+      .from('subscriptions')
+      .select('plan, billing_interval')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const previousPlan = previousSub?.plan as PlanType | null
+    const previousInterval = previousSub?.billing_interval as BillingInterval | null
+
     // Clear pending fields - the scheduled change has been applied
     await supabase
       .from('subscriptions')
@@ -1009,6 +1033,12 @@ async function handleSubscriptionPendingUpdateApplied(
 
     // Send email notification
     const itemPeriodEnd = subscription.items?.data?.[0]?.current_period_end
+    
+    // Determine the actual change type
+    const changeType = previousPlan 
+      ? getChangeType(previousPlan, plan, previousInterval || undefined, billingInterval)
+      : 'renewal'
+    
     const emailTemplate = subscriptionUpdatedTemplate({
       name: user.full_name || '',
       planName: plan.charAt(0).toUpperCase() + plan.slice(1),
@@ -1020,7 +1050,7 @@ async function handleSubscriptionPendingUpdateApplied(
           }).format(new Date(itemPeriodEnd * 1000))
         : 'N/A',
       dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
-      changeType: 'downgraded',
+      changeType,
     })
 
     await sendUserEmail(user.email, user.full_name || '', emailTemplate)

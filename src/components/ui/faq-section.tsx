@@ -23,21 +23,15 @@ export function FaqSection({ faqData, title = "Frequently Asked Questions" }: Fa
   return (
     <section className="py-16 sm:py-20 md:py-24">
       <div className="mx-auto max-w-4xl">
-        <motion.h2 
+        <h2 
           className="text-center text-2xl sm:text-3xl font-bold text-foreground mb-12 sm:mb-16"
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
+      
         >
           {title}
-        </motion.h2>
+        </h2>
         
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
+        <div
+        
         >
           <Accordion 
             type="single" 
@@ -57,7 +51,7 @@ export function FaqSection({ faqData, title = "Frequently Asked Questions" }: Fa
               </AccordionItem>
             ))}
           </Accordion>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -52,7 +52,7 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
   };
 
   return (
-    <motion.section
+    <section
       className="mt-20 space-y-16"
       variants={prefersReducedMotion ? undefined : staggerVariants}
       initial={prefersReducedMotion ? undefined : "hidden"}
@@ -60,7 +60,7 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
       viewport={{ once: true }}
     >
       {/* Trust Stats */}
-      <motion.div 
+      <div 
         className="grid grid-cols-2 gap-6 md:grid-cols-4"
         variants={prefersReducedMotion ? undefined : cardVariants}
       >
@@ -77,10 +77,10 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
             </div>
           </div>
         ))}
-      </motion.div>
+      </div>
 
       {/* Testimonials */}
-      <motion.div
+      <div
         variants={prefersReducedMotion ? undefined : cardVariants}
       >
         <h3 className="mb-12 text-center text-2xl font-bold text-foreground">
@@ -88,7 +88,7 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
         </h3>
         <div className="grid gap-8 md:grid-cols-3">
           {testimonials.map((testimonial, index) => (
-            <motion.div
+            <div
               key={index}
               className="rounded-xl bg-card p-8 shadow-sm transition-all duration-200 hover:shadow-md"
               variants={prefersReducedMotion ? undefined : cardVariants}
@@ -122,13 +122,13 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
                   {testimonial.plan} User
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </motion.div>
+      </div>
 
       {/* Security & Trust Badges */}
-      <motion.div
+      <div
         className="rounded-xl bg-subtle-background p-8 text-center"
         variants={prefersReducedMotion ? undefined : cardVariants}
       >
@@ -153,7 +153,7 @@ export function SocialProofSection({ prefersReducedMotion }: SocialProofSectionP
             <span>30-Day Money Back</span>
           </div>
         </div>
-      </motion.div>
-    </motion.section>
+      </div>
+    </section>
   );
 }

@@ -326,34 +326,27 @@ function PricingPage() {
       />
 
       <HomeHeader />
-      <motion.div
-        initial={prefersReducedMotion ? undefined : "hidden"} // Use undefined for props if variants are undefined
-        animate={prefersReducedMotion ? undefined : "visible"}
-        exit={prefersReducedMotion ? undefined : "exit"}
-        variants={prefersReducedMotion ? undefined : pageVariants}
+      <div      
         className="container mx-auto min-h-screen px-4 py-12 md:py-20"
       >
      
 
-        <motion.header
+        <header
           className="mb-16 text-center md:mb-20"
         >
-          <motion.h1
+          <h1
             className="mb-6 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl"
-            variants={prefersReducedMotion ? undefined : cardVariants}
           >
             Master Your Money with Expert Financial Education
-          </motion.h1>
-          <motion.p
+          </h1>
+          <p
             className="mx-auto max-w-2xl text-lg text-muted-foreground-color md:text-xl"
-            variants={prefersReducedMotion ? undefined : cardVariants}
           >
             From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor. Created by certified financial experts.
-          </motion.p>
+          </p>
 
-          <motion.div
+          <div
             className="mt-10 flex justify-center"
-            variants={prefersReducedMotion ? undefined : cardVariants} // Animate with other header elements
           >
             <Switch
               labelLeft="Monthly"
@@ -362,20 +355,18 @@ function PricingPage() {
               initialToggled={isAnnual}
               srText="Toggle billing period"
             />
-          </motion.div>
+          </div>
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
           </span>
-        </motion.header>
+        </header>
 
-        <motion.div
+        <div
           className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3"
-          variants={prefersReducedMotion ? undefined : gridVariants}
         >
           {pricingTiers.map((tier) => (
-            <motion.div
+            <div
               key={tier.title}
-              variants={prefersReducedMotion ? undefined : cardVariants}
               className="relative"
             >
               {tier.badgeText && (
@@ -491,9 +482,9 @@ function PricingPage() {
                   )}
                 </CardFooter>
               </Card>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
         <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
 
@@ -501,9 +492,8 @@ function PricingPage() {
 
         <FaqSection faqData={faqData} />
 
-        <motion.div
+        <div
           className="mt-20 md:mt-24"
-          variants={prefersReducedMotion ? undefined : cardVariants}
         >
           <Card className="text-center bg-subtle-background">
             <CardHeader className="pb-4">
@@ -525,8 +515,8 @@ function PricingPage() {
               </Button>
             </CardContent>
           </Card>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="p-8 shadow-xl">

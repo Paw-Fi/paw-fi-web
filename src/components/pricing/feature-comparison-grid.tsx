@@ -79,12 +79,8 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
   };
 
   return (
-    <motion.div
-      className="mt-20 overflow-hidden rounded-xl bg-card shadow-sm"
-      variants={prefersReducedMotion ? undefined : gridVariants}
-      initial={prefersReducedMotion ? undefined : "hidden"}
-      whileInView={prefersReducedMotion ? undefined : "visible"}
-      viewport={{ once: true }}
+    <div
+      className="mt-20 overflow-hidden rounded-xl bg-card shadow-sm"    
     >
       <div className="bg-subtle-background px-8 py-6">
         <h3 className="text-xl font-bold text-foreground">Feature Comparison</h3>
@@ -110,9 +106,8 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
           </thead>
           <tbody>
             {features.map((feature, index) => (
-              <motion.tr
-                key={feature.key}
-                variants={prefersReducedMotion ? undefined : rowVariants}
+              <tr
+                key={feature.key}               
                 className="hover:bg-subtle-background/50 transition-colors duration-150"
               >
                 <td className="px-8 py-4">
@@ -158,11 +153,11 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
                     </td>
                   );
                 })}
-              </motion.tr>
+              </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </motion.div>
+    </div>
   );
 }
