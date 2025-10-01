@@ -27,7 +27,14 @@ export function MembershipDashboard() {
     cancelSubscription,
     resumeSubscription,
     changePlan,
-    isMutating
+    previewPlanChange,
+    isPreviewLoading,
+    previewData,
+    previewError,
+    mutationError,
+    resetPreview,
+    isMutating,
+    isActive
   } = useSubscription(user?.id);
 
   if (isLoading) {
@@ -218,9 +225,12 @@ export function MembershipDashboard() {
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <SubscriptionDetails 
-                    subscription={subscription} 
-                    features={features} 
+                  <SubscriptionDetails
+                    subscription={subscription}
+                    features={features}
+                    onCancelSubscription={cancelSubscription}
+                    isCanceling={isMutating}
+                    isActive={isActive}
                   />
                 </motion.div>
               </TabsContent>
@@ -249,8 +259,15 @@ export function MembershipDashboard() {
                 >
                   <PlanSelector 
                     currentPlan={subscription?.plan || "free"} 
+                    currentBillingInterval={subscription?.billing_interval || "monthly"}
                     onChangePlan={changePlan}
+                    onPreviewPlanChange={previewPlanChange}
                     isLoading={isMutating}
+                    isPreviewLoading={isPreviewLoading}
+                    previewData={previewData}
+                    previewError={previewError}
+                    mutationError={mutationError}
+                    resetPreview={resetPreview}
                   />
                 </motion.div>
               </TabsContent>

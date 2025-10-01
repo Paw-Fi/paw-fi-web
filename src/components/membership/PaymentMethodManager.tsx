@@ -119,14 +119,14 @@ export function PaymentMethodManager({
                 Payment Methods
               </CardTitle>
               
-              <Button
+              {/* <Button
                 onClick={handleOpenPortal}
                 variant="outline"
                 size="sm"
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Billing Portal
-              </Button>
+              </Button> */}
             </div>
           </CardHeader>
           
@@ -184,7 +184,7 @@ export function PaymentMethodManager({
                           </p>
                         </div>
                       </div>
-                      
+{/*                       
                       <Button
                         onClick={() => detachPaymentMethod(method.id)}
                         disabled={isMutating}
@@ -197,7 +197,7 @@ export function PaymentMethodManager({
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
-                      </Button>
+                      </Button> */}
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -213,7 +213,7 @@ export function PaymentMethodManager({
             <Separator />
 
             {/* Add New Card Section */}
-            <AnimatePresence>
+            {/* <AnimatePresence>
               {!isAddingCard ? (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -295,7 +295,7 @@ export function PaymentMethodManager({
                   </form>
                 </motion.div>
               )}
-            </AnimatePresence>
+            </AnimatePresence> */}
           </CardContent>
         </Card>
       </motion.div>

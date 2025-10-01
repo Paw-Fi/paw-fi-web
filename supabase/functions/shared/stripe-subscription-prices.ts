@@ -1,14 +1,143 @@
-export const SUBSCRIPTION_PRICES = {
-    free: null, // Map of plan types to Stripe price IDs
-  // IMPORTANT: Replace these placeholder IDs with your actual Stripe price IDs from your Stripe Dashboard
-  // You can find these under Products > [Your Product] > Pricing
-  // They will look like: price_1NcJX4KL6JzIj83kMgLtXyzB
+/**
+ * Stripe Subscription Price Configuration - Production Ready
+ * 
+ * Maps plan types and billing intervals to Stripe Price IDs
+ * Uses environment variables for proper configuration management
+ * 
+ * IMPORTANT: Ensure all environment variables are set:
+ * - STRIPE_MONTHLY_PLUS_PLAN_ID
+ * - STRIPE_YEARLY_PLUS_PLAN_ID
+ * - STRIPE_MONTHLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
+ * - STRIPE_YEARLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
+ */
+
+import { PlanType, BillingInterval } from './subscription-constants.ts';
+
+interface PriceConfig {
+  monthly: string;
+  yearly: string;
+}
+
+interface SubscriptionPrices {
+  free: null;
+  plus: PriceConfig;
+  // premium: PriceConfig; // DISABLED - Not yet available
+}
+
+/**
+ * Get subscription prices from environment variables
+ * This ensures type safety and validation
+ */
+export function getSubscriptionPrices(): SubscriptionPrices {
+  return {
+    free: null,
     plus: {
-      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID"), // REPLACE: Your Plus plan monthly price ID from Stripe Dashboard
-      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID"),   // REPLACE: Your Plus plan yearly price ID from Stripe Dashboard
+      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") || '',
+      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") || '',
     },
-    premium: {
-      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID"), // REPLACE: Your Premium plan monthly price ID from Stripe Dashboard
-      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID"),   // REPLACE: Your Premium plan yearly price ID from Stripe Dashboard
-    },
+    // Premium disabled until proper price IDs are configured
+    // premium: {
+    //   monthly: Deno.env.get("STRIPE_MONTHLY_PREMIUM_PLAN_ID") || '',
+    //   yearly: Deno.env.get("STRIPE_YEARLY_PREMIUM_PLAN_ID") || '',
+    // },
+  };
+}
+
+/**
+ * Legacy export for backward compatibility
+ * Prefer using getPriceId() for better type safety
+ */
+export const SUBSCRIPTION_PRICES = getSubscriptionPrices();
+
+/**
+ * Get price ID for a specific plan and billing interval
+ * Validates inputs and returns the appropriate price ID
+ * 
+ * @throws Error if plan or interval is invalid, or price ID is not configured
+ */
+export function getPriceId(plan: PlanType, interval: BillingInterval): string {
+  if (plan === 'free') {
+    throw new Error('Free plan does not have a price ID');
   }
+  
+  const prices = getSubscriptionPrices();
+  const priceId = prices[plan]?.[interval];
+  
+  if (!priceId) {
+    throw new Error(
+      `Price ID not configured for plan "${plan}" with interval "${interval}". ` +
+      `Please set the environment variable STRIPE_${interval.toUpperCase()}_${plan.toUpperCase()}_PLAN_ID`
+    );
+  }
+  
+  // Validate price ID format
+  if (!priceId.startsWith('price_')) {
+    throw new Error(
+      `Invalid price ID format: ${priceId}. ` +
+      `Stripe price IDs should start with 'price_'`
+    );
+  }
+  
+  return priceId;
+}
+
+/**
+ * Validate that a price ID exists and is properly configured
+ */
+export function validatePriceId(priceId: string): boolean {
+  if (!priceId || priceId.trim() === '') {
+    return false;
+  }
+  
+  if (!priceId.startsWith('price_')) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Get all configured price IDs
+ * Useful for validation and testing
+ */
+export function getAllPriceIds(): string[] {
+  const prices = getSubscriptionPrices();
+  return [
+    prices.plus.monthly,
+    prices.plus.yearly,
+    // Premium disabled
+    // prices.premium.monthly,
+    // prices.premium.yearly,
+  ].filter(id => id && id.trim() !== '');
+}
+
+/**
+ * Check if all required price IDs are configured
+ */
+export function areAllPriceIdsConfigured(): boolean {
+  const requiredCount = 2; // 1 plan (plus) * 2 intervals (monthly, yearly)
+  return getAllPriceIds().length === requiredCount;
+}
+
+/**
+ * Get plan and interval from a price ID
+ * Returns null if price ID is not found
+ */
+export function getPlanFromPriceId(priceId: string): { plan: PlanType; interval: BillingInterval } | null {
+  const prices = getSubscriptionPrices();
+  
+  for (const [plan, intervals] of Object.entries(prices)) {
+    if (plan === 'free') continue;
+    
+    for (const [interval, id] of Object.entries(intervals as PriceConfig)) {
+      if (id === priceId) {
+        return { 
+          plan: plan as PlanType, 
+          interval: interval as BillingInterval 
+        };
+      }
+    }
+  }
+  
+  return null;
+}

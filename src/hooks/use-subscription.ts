@@ -70,28 +70,104 @@ const fetchSubscription = async (userId: string | undefined): Promise<Subscripti
   return data as SubscriptionData;
 };
 
+// Mutation function for previewing subscription change
+const previewSubscriptionChange = async ({ 
+  userId, 
+  newPlan, 
+  newBillingInterval 
+}: { 
+  userId: string; 
+  newPlan: string; 
+  newBillingInterval: string 
+}) => {
+  try {
+    const response = await supabase.functions.invoke('preview-subscription-change', {
+      method: 'POST',
+      body: { userId, newPlan, newBillingInterval }
+    });
+
+    const { data, error } = response;
+
+    // If there's a network/request error
+    if (error) {
+      // Try to get the error message from context or data
+      let errorMessage = 'Failed to preview subscription change. Please try again.';
+      
+      // The actual error message might be in the data even when there's an error
+      if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = data.error as string;
+      } else if (error.message && !error.message.includes('Edge Function returned')) {
+        errorMessage = error.message;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Check if the response itself contains an error field
+    if (data && typeof data === 'object' && 'error' in data) {
+      throw new Error(data.error as string);
+    }
+
+    return data;
+  } catch (err) {
+    // Re-throw if it's already our custom error
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error('Failed to preview subscription change. Please try again.');
+  }
+};
+
 // Mutation function for updating subscription
 const updateSubscription = async ({ 
   userId, 
   action, 
   plan, 
-  billingInterval 
+  billingInterval,
+  prorationDate
 }: { 
   userId: string; 
   action: string; 
   plan?: string; 
-  billingInterval?: string 
+  billingInterval?: string;
+  prorationDate?: number;
 }) => {
-  const { data, error } = await supabase.functions.invoke('update-subscription', {
-    method: 'POST',
-    body: { userId, action, plan, billingInterval }
-  });
+  try {
+    const response = await supabase.functions.invoke('update-subscription', {
+      method: 'POST',
+      body: { userId, action, plan, billingInterval, prorationDate }
+    });
 
-  if (error) {
-    throw new Error(`Failed to update subscription: ${error.message}`);
+    const { data, error } = response;
+
+    // If there's a network/request error
+    if (error) {
+      // Try to get the error message from context or data
+      let errorMessage = 'Failed to update subscription. Please try again.';
+      
+      // The actual error message might be in the data even when there's an error
+      if (data && typeof data === 'object' && 'error' in data) {
+        errorMessage = data.error as string;
+      } else if (error.message && !error.message.includes('Edge Function returned')) {
+        errorMessage = error.message;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Check if the response itself contains an error field
+    if (data && typeof data === 'object' && 'error' in data) {
+      throw new Error(data.error as string);
+    }
+
+    return data;
+  } catch (err) {
+    // Re-throw if it's already our custom error
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error('Failed to update subscription. Please try again.');
   }
-
-  return data;
 };
 
 export function useSubscription(userId: string | undefined) {
@@ -110,13 +186,36 @@ export function useSubscription(userId: string | undefined) {
     refetchOnMount: true, // Refetch when component mounts
   });
 
+  // Preview subscription change mutation
+  const { 
+    mutate: mutatePreview, 
+    isPending: isPreviewLoading,
+    data: previewData,
+    reset: resetPreview,
+    error: previewError
+  } = useMutation({
+    mutationFn: previewSubscriptionChange,
+    onError: (error: Error) => {
+      console.error('Preview error:', error);
+      // Error will be handled in the component
+    }
+  });
+
   // Update subscription mutation
-  const { mutate: mutateSubscription, isPending: isMutating } = useMutation({
+  const { 
+    mutate: mutateSubscription, 
+    isPending: isMutating,
+    error: mutationError
+  } = useMutation({
     mutationFn: updateSubscription,
     onSuccess: () => {
       // Invalidate and refetch subscription data after successful update
       queryClient.invalidateQueries({ queryKey: ['subscription', userId] });
     },
+    onError: (error: Error) => {
+      console.error('Subscription update error:', error);
+      // Error will be handled in the component
+    }
   });
 
   // Helper functions for subscription actions
@@ -144,13 +243,23 @@ export function useSubscription(userId: string | undefined) {
     });
   };
 
-  const changePlan = async (plan: string, billingInterval: string) => {
+  const changePlan = async (plan: string, billingInterval: string, prorationDate?: number) => {
     if (!userId) return;
     return mutateSubscription({
       userId,
       action: "change_plan",
       plan,
       billingInterval,
+      prorationDate,
+    });
+  };
+
+  const previewPlanChange = async (newPlan: string, newBillingInterval: string) => {
+    if (!userId) return;
+    return mutatePreview({
+      userId,
+      newPlan,
+      newBillingInterval,
     });
   };
   
@@ -159,7 +268,7 @@ export function useSubscription(userId: string | undefined) {
 
 
   // Check if user has an active subscription
-  const isActive = subscriptionData && (subscriptionData.status === "active" || subscriptionData.status === "trialing");
+  const isActive = subscriptionData && (subscriptionData.plan !== "free");
   
   // Check if user's subscription is expired
   const isExpired = subscriptionData && subscriptionData.status === "canceled";
@@ -177,6 +286,12 @@ export function useSubscription(userId: string | undefined) {
     cancelImmediately,
     resumeSubscription,
     changePlan,
+    previewPlanChange,
+    isPreviewLoading,
+    previewData,
+    previewError,
+    mutationError,
+    resetPreview,
     isActive,
     isExpired,
   };

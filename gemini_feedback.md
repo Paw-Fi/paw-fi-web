@@ -30,82 +30,26 @@
 Overall, this is an excellent set of changes that significantly improves the SEO implementation, page performance, and content strategy of the website. The refactoring to a centralized `StructuredData` component is a major improvement for code quality and maintainability. The addition of rich content and detailed schemas to the calculat...
 Flushing log events to Clearcut.
 Data collection is disabled.
-I've reviewed the changes. Overall, this is a fantastic set of updates that introduces a major theming refactor and improves UI consistency. However, there is a critical memory leak in the sign-up form that needs to be addressed.
+Excellent, I have reviewed the provided changes. Here is my feedback.
 
-Here is my feedback:
+### Code Review
 
-### Critical Issues (Must Fix)
+Overall, this is an excellent and critical set of updates that significantly enhances the security and functionality of the subscription management system. The changes demonstrate a strong understanding of both security principles and Stripe's best practices.
 
-*   **Memory Leak in Sign-up Form Cooldown Timer**
+#### Critical Issues (Fixes)
 
-    In `src/components/auth/shadcn-sign-up-form.tsx`, the `setInterval` for the resend verification cooldown is created within the `handleResendVerification` event handler. If the user navigates away from the component before the timer finishes, the interval will never be cleared. This will cause a memory leak, as the timer will continue to run in the background.
+*   **Authentication Overhaul:** The most critical improvement is the introduction of the `authenticateUser` function in the `create-checkout-session`, `preview-subscription-change`, and `update-subscription` functions. Previously, these endpoints trusted the `userId` sent in the request body, which is a major security vulnerability (Insecure Direct Object Reference - IDOR). An attacker could have potentially managed other users' subscriptions. By validating the JWT and using the authenticated user ID, you have correctly eliminated this vulnerability. This is a crucial and well-executed security fix.
 
-    **File:** `src/components/auth/shadcn-sign-up-form.tsx`
+#### Warnings
 
-    **To fix this**, you should manage the interval's lifecycle with a `useEffect` hook. This ensures the interval is properly cleaned up when the component unmounts.
+There are no warnings to report. The changes are of high quality.
 
-    Here's an example of how to implement the fix:
+#### Suggestions (Excellent Improvements)
 
-    ```tsx
-    // src/components/auth/shadcn-sign-up-form.tsx
-    
-    // ... imports and component definition
-    import React, { useState, useEffect } from "react";
-    
-    export function ShadcnSignUpForm({
-      // ... props
-    }) {
-      // ... existing state
-      const [resendCooldown, setResendCooldown] = useState(0)
-      const [lastResendTime, setLastResendTime] = useState<number | null>(null)
-    
-      // Add this useEffect to manage the timer lifecycle
-      useEffect(() => {
-        if (resendCooldown <= 0) {
-          return;
-        }
-    
-        const interval = setInterval(() => {
-          setResendCooldown((prev) => prev - 1);
-        }, 1000);
-    
-        // Cleanup function to clear interval on unmount or when cooldown is 0
-        return () => clearInterval(interval);
-      }, [resendCooldown]);
-    
-      // ...
-    
-      const handleResendVerification = async () => {
-        // ... (cooldown check logic)
-        
-        try {
-          // ... (resend logic)
-          
-          // On success:
-          setLastResendTime(Date.now());
-          setResendCooldown(60); // Trigger the useEffect timer
-          
-          // REMOVE the setInterval logic from here
-          
-        } catch (error: any) {
-          // ... (error handling)
-        }
-      }
-    
-      // ... rest of the component
-    }
-    ```
+*   **Stripe Best Practices for Downgrades:** The refactoring in `update-subscription/index.ts` to use **Stripe Subscription Schedules** for downgrades is a significant architectural improvement. Instead of applying prorations immediately, scheduling the change for the end of the billing period is the correct and user-friendly approach. Tracking the pending change in the local database (`pending_plan`, `pending_interval`) is also excellent, as it allows the application UI to accurately reflect the subscription's future state.
 
-### Suggestions (Consider Improving)
+*   **Improved Webhook Robustness:** In `stripe-webhook/index.ts`, the new handlers for `incomplete_expired` and `unpaid` statuses are a great addition. Automatically downgrading users to the "free" plan upon payment failure is a robust way to handle subscription lifecycle events gracefully, preventing users from being stuck in an invalid state. The addition of handlers for `customer.subscription.pending_update_applied` and `customer.subscription.pending_update_expired` perfectly complements the new downgrade-scheduling logic.
 
-*   **Continue Theming Refactor**
+*   **Code Consistency:** Disabling the `premium` plan consistently across `stripe-subscription-prices.ts` and `subscription-constants.ts` is good practice. It prevents errors and makes it clear which products are currently active.
 
-    The global replacement of `bg-background` with `bg-moneko-background` and the introduction of new CSS variables for component-specific themes (like the guide and lesson components) is an excellent improvement for maintainability.
-
-    Consider applying this pattern to other components that may still be using conditional `dark:` utility classes. Centralizing theme logic in `src/styles/app.css` will make the design system more robust and easier to manage.
-
-*   **Verify Dark Mode UI**
-
-    In `src/components/ui/user-avatar.tsx` and `src/routes/dashboard/user-settings/profile.tsx`, several `dark:` utility classes were removed. While this may be intentional as part of the move to CSS variables, it would be prudent to double-check these components in dark mode to ensure they still render as expected.
-
-This is a very strong set of changes. Once the memory leak is addressed, this will be a great contribution to the codebase.
+This is a high-impact set of changes that addresses critical security concerns and implements a best-in-class subscription management flow. Fantastic work.

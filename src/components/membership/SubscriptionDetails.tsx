@@ -1,9 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, XCircle, Calendar, Clock, CreditCard, AlertCircle, Crown, Shield, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, XCircle, Calendar, Clock, CreditCard, AlertCircle, Crown, Shield, User, Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SubscriptionDetailsProps {
   subscription: {
@@ -24,12 +36,28 @@ interface SubscriptionDetailsProps {
     included: boolean;
     limit_value: number | null;
   }>;
+  onCancelSubscription?: () => void;
+  isCanceling?: boolean;
+  isActive?: boolean;
 }
 
 export function SubscriptionDetails({
   subscription,
   features,
+  onCancelSubscription,
+  isCanceling = false,
+  isActive = false,
 }: SubscriptionDetailsProps) {
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+
+  // Debug logging
+  console.log('SubscriptionDetails Debug:', {
+    status: subscription?.status,
+    cancel_at_period_end: subscription?.cancel_at_period_end,
+    onCancelSubscription: !!onCancelSubscription,
+    shouldShowButton: (subscription?.status === "active" || subscription?.status === "trialing") && !subscription?.cancel_at_period_end && !!onCancelSubscription
+  });
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "text-green-600 dark:text-green-400";
@@ -187,11 +215,79 @@ export function SubscriptionDetails({
                     </div>
                   </div>
                 </div>
+
+                {/* Cancel Subscription Button - Only show if active/trialing and not already scheduled for cancellation */}
+                {isActive&& (
+                  <>
+                    <Separator className="my-6" />
+                    <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/20 dark:bg-red-950/10">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-red-900 dark:text-red-400">
+                          Cancel Subscription
+                        </h4>
+                        <p className="mt-1 text-xs text-red-700 dark:text-red-500">
+                          Your subscription will remain active until the end of the current billing period
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowCancelDialog(true)}
+                        disabled={isCanceling}
+                        className="ml-4"
+                      >
+                        {isCanceling ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Canceling...
+                          </>
+                        ) : (
+                          "Cancel Plan"
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel your subscription? You'll continue to have access to premium features until{" "}
+              <strong>
+                {subscription?.current_period_end
+                  ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
+                  : "the end of your billing period"}
+              </strong>
+              . After that, you'll be downgraded to the free plan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowCancelDialog(false);
+                onCancelSubscription?.();
+                toast.success("Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.");
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Yes, Cancel Subscription
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Features */}
       {features && features.length > 0 && (

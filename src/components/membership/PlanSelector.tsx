@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import  { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlanOption, getPlanOptions } from "@/data/pricing-plans";
 import { toast } from "react-toastify";
@@ -7,38 +7,149 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, Loader2, ArrowRight, Sparkles, Star, Crown, Zap } from "lucide-react";
+import { PlanChangeConfirmationDialog } from "./PlanChangeConfirmationDialog";
+import { useNavigate } from "@tanstack/react-router";
 
 interface PlanSelectorProps {
   currentPlan: string;
-  onChangePlan: (plan: string, billingInterval: string) => void;
+  currentBillingInterval?: string; // Add current billing interval
+  onChangePlan: (plan: string, billingInterval: string, prorationDate?: number) => void;
+  onPreviewPlanChange: (plan: string, billingInterval: string) => void;
   isLoading: boolean;
+  isPreviewLoading: boolean;
+  previewData: any;
+  previewError: Error | null;
+  mutationError: Error | null;
+  resetPreview: () => void;
 }
 
 // Using PlanOption interface from shared pricing-plans.ts
 
 export function PlanSelector({
   currentPlan,
+  currentBillingInterval = "monthly",
   onChangePlan,
+  onPreviewPlanChange,
   isLoading,
+  isPreviewLoading,
+  previewData,
+  previewError,
+  mutationError,
+  resetPreview,
 }: PlanSelectorProps) {
+  const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
+    (currentBillingInterval as "monthly" | "yearly") || "monthly"
+  );
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Get plan options from shared data module
   const plans: PlanOption[] = getPlanOptions();
-
-  const handleSelectPlan = (planId: string) => {
-    if(planId !== "premium")
-    {
-      setSelectedPlan(planId);
-    }
+  
+  // Helper function to get plan level for comparison
+  const getPlanLevel = (plan: string): number => {
+    const levels: Record<string, number> = {
+      free: 0,
+      plus: 1,
+      premium: 2,
+    };
+    return levels[plan.toLowerCase()] || 0;
   };
 
-  const handleChangePlan = () => {
-    toast.error("Please contact support to change your plan");
-    // if (selectedPlan) {
-    //   onChangePlan(selectedPlan, billingInterval);
-    // }
+  // Handle preview errors
+  useEffect(() => {
+    if (previewError) {
+      toast.error(previewError.message || "Failed to preview plan change. Please try again.");
+      resetPreview();
+      setShowConfirmDialog(false);
+    }
+  }, [previewError, resetPreview]);
+
+  // Handle mutation errors
+  useEffect(() => {
+    if (mutationError) {
+      toast.error(mutationError.message || "Failed to update subscription. Please try again.");
+      setShowConfirmDialog(false);
+    }
+  }, [mutationError]);
+
+  // Show confirmation dialog when preview data is ready
+  useEffect(() => {
+    if (previewData && !previewError && !showConfirmDialog) {
+      setShowConfirmDialog(true);
+    }
+  }, [previewData, previewError, showConfirmDialog]);
+
+  const handleSelectPlan = (planId: string) => {
+    // Premium is coming soon
+    if(planId === "premium") {
+      toast.info("Premium plan is coming soon! Join the waitlist at hello@moneko.io");
+      return;
+    }
+    
+    // Can't select free plan - must cancel subscription instead
+    if(planId === "free") {
+      if (currentPlan === "free") {
+        toast.info("You are already on the free plan");
+        return;
+      }
+      // Downgrade to free requires cancellation
+      toast.info("To downgrade to free, please cancel your subscription from the Overview tab");
+      return;
+    }
+    
+    // Check if already on this plan with this billing interval
+    if (planId === currentPlan && billingInterval === currentBillingInterval) {
+      toast.info("You are already on this plan with this billing interval");
+      return;
+    }
+    
+    // Determine if this is an upgrade or downgrade
+    const currentLevel = getPlanLevel(currentPlan);
+    const newLevel = getPlanLevel(planId);
+    
+    // UPGRADE: Redirect to checkout page (same flow as pricing page)
+    if (newLevel > currentLevel) {
+      // Navigate to checkout page with plan details
+      navigate({
+        to: "/checkout",
+        search: {
+          plan: planId,
+          billing: billingInterval,
+          trial: "false", // No trial for upgrades
+        },
+      });
+      return;
+    }
+    
+    // DOWNGRADE or BILLING INTERVAL CHANGE: Show preview dialog
+    setSelectedPlan(planId);
+  };
+
+  const handleChangePlan = async () => {
+    if (!selectedPlan) return;
+
+    // Preview the change
+    onPreviewPlanChange(selectedPlan, billingInterval);
+  };
+
+  const handleConfirmChange = () => {
+    if (!selectedPlan || !previewData) return;
+
+    // Use the proration date from preview for consistent calculation
+    onChangePlan(selectedPlan, billingInterval, previewData.prorationDate);
+    setShowConfirmDialog(false);
+    resetPreview();
+    setSelectedPlan(null);
+    
+    // Show success message
+    toast.success("Your subscription will be updated shortly!");
+  };
+
+  const handleCancelChange = () => {
+    setShowConfirmDialog(false);
+    resetPreview();
   };
 
   // Calculate savings percentage for yearly billing
@@ -74,6 +185,15 @@ export function PlanSelector({
 
   return (
     <div className="space-y-8">
+      {/* Confirmation Dialog */}
+      <PlanChangeConfirmationDialog
+        open={showConfirmDialog}
+        onOpenChange={handleCancelChange}
+        preview={previewData}
+        isLoading={isLoading}
+        onConfirm={handleConfirmChange}
+      />
+
       {/* Billing Interval Toggle */}
       <motion.div 
         className="flex justify-center"
@@ -112,6 +232,37 @@ export function PlanSelector({
         </div>
       </motion.div>
 
+      {/* Action Button - Moved to top for better UX */}
+      {selectedPlan && selectedPlan !== currentPlan && (
+        <motion.div 
+          className="flex justify-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Button
+            onClick={handleChangePlan}
+            disabled={isLoading || isPreviewLoading}
+            size="lg"
+            className="bg-gradient-to-r from-primary/90 to-primary px-8 py-3 text-base font-semibold hover:from-primary hover:to-primary/90 shadow-lg"
+          >
+            {isLoading || isPreviewLoading ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                {isPreviewLoading ? 'Calculating...' : 'Processing...'}
+              </>
+            ) : (
+              <>
+                {currentPlan === "free" || !currentPlan
+                  ? `Upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
+                  : "Review Change"}
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </>
+            )}
+          </Button>
+        </motion.div>
+      )}
+
       {/* Plan Cards */}
       <motion.div 
         className="grid grid-cols-1 gap-6 lg:grid-cols-3"
@@ -147,17 +298,13 @@ export function PlanSelector({
                   {plan.popular && (
                     <div className="absolute -top-px left-1/2 -translate-x-1/2">
                       <Badge className="rounded-b-lg rounded-t-none bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1 text-white">
-                        <Star className="mr-1 h-3 w-3" />
                         Most Popular
                       </Badge>
                     </div>
                   )}
 
                   <CardHeader className="pb-4 pt-8">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-moneko-background shadow-sm">
-                        {getPlanIcon(plan.id)}
-                      </div>
+                    <div className="flex items-center space-x-3">                      
                       <div>
                         <CardTitle className="text-xl text-foreground">
                           {plan.name}
@@ -219,19 +366,25 @@ export function PlanSelector({
                             handleSelectPlan(plan.id);
                           }}
                           disabled={plan.id === "premium"}
-                          className={`w-full ${
-                            isSelected
-                              ? "bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90"
-                              : "bg-foreground hover:bg-foreground/90 text-background"
-                          }`}
+                          variant={isSelected ? "default" : "secondary"}
+                          className="w-full"
                         >
-                          {isSelected ? (
+                          {plan.id === "premium" ? (
+                            "Coming Soon"
+                          ) : isSelected ? (
                             <>
                               <CheckCircle2 className="mr-2 h-4 w-4" />
                               Selected
                             </>
+                          ) : getPlanLevel(plan.id) > getPlanLevel(currentPlan) ? (
+                            <>
+                              Upgrade to {plan.name}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                          ) : plan.id === "free" ? (
+                            "Cancel Subscription"
                           ) : (
-                            plan.id === "premium" ? "Coming Soon" : "Select Plan"
+                            "Change Plan"
                           )}
                         </Button>
                       )}
@@ -243,37 +396,6 @@ export function PlanSelector({
           })}
         </AnimatePresence>
       </motion.div>
-
-      {/* Action Button */}
-      {selectedPlan && selectedPlan !== currentPlan && (
-        <motion.div 
-          className="flex justify-center pt-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Button
-            onClick={handleChangePlan}
-            disabled={isLoading}
-            size="lg"
-            className="bg-gradient-to-r from-primary/90 to-primary px-8 py-3 text-base font-semibold hover:from-primary hover:to-primary/90"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                {currentPlan === "free" || !currentPlan
-                  ? `Upgrade to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}`
-                  : "Change Plan"}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </>
-            )}
-          </Button>
-        </motion.div>
-      )}
     </div>
   );
 }
