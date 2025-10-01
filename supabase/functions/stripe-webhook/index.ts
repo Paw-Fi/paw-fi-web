@@ -8,7 +8,11 @@ import {
   subscriptionUpdatedTemplate,
   subscriptionCanceledTemplate,
   paymentFailedTemplate,
-  trialEndingTemplate
+  trialEndingTemplate,
+  invoiceFinalizedTemplate,
+  invoiceUpcomingTemplate,
+  paymentActionRequiredTemplate,
+  paymentMethodUpdatedTemplate
 } from '../shared/email-templates.ts'
 import { validateEnvironment } from '../shared/env-validation.ts'
 import { isWebhookEventProcessed, markWebhookEventProcessed } from '../shared/idempotency.ts'
@@ -134,6 +138,9 @@ serve(async (req) => {
           break
         case 'invoice.payment_failed':
           await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+          break
+        case 'invoice.payment_action_required':
+          await handleInvoicePaymentActionRequired(event.data.object as Stripe.Invoice)
           break
         case 'invoice.finalized':
           await handleInvoiceFinalized(event.data.object as Stripe.Invoice)
@@ -698,6 +705,66 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   }
 }
 
+// Handler for invoice payment action required (3DS authentication)
+async function handleInvoicePaymentActionRequired(invoice: Stripe.Invoice) {
+  try {
+    console.log('Processing payment action required for invoice:', invoice.id)
+    
+    const customerId = typeof invoice.customer === 'string'
+      ? invoice.customer
+      : invoice.customer?.id
+    
+    if (!customerId) {
+      console.error('No customer ID in invoice:', invoice.id)
+      return
+    }
+    
+    const user = await getUserByCustomerId(customerId)
+    
+    if (!user) {
+      console.error('No user found for customer:', customerId)
+      return
+    }
+    
+    // Get user data for personalized email
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData) {
+      console.error('Could not fetch user data for payment action required email')
+      return
+    }
+
+    const name = userData.full_name || 'there'
+    
+    // Send 3DS authentication required email
+    console.log(`Payment requires authentication for ${userData.email}`)
+    console.log(`Invoice hosted page: ${invoice.hosted_invoice_url}`)
+    
+    const emailTemplate = paymentActionRequiredTemplate({
+      name,
+      amount: (invoice.amount_due / 100).toFixed(2),
+      currency: invoice.currency.toUpperCase(),
+      authenticationUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/membership?tab=payment`,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+    })
+
+    await sendUserEmail(userData.email, name, emailTemplate)
+    console.log(`Payment action required email sent to ${userData.email}`)
+    
+  } catch (error) {
+    console.error('Error in handleInvoicePaymentActionRequired:', {
+      invoiceId: invoice.id,
+      error: error.message,
+      stack: error.stack,
+    })
+    throw error
+  }
+}
+
 // Handler for trial ending notification
 async function handleSubscriptionTrialEnding(subscription: Stripe.Subscription) {
   try {
@@ -875,13 +942,37 @@ async function handleInvoiceFinalized(invoice: Stripe.Invoice) {
       return
     }
     
-    // Send invoice copy email with PDF link
-    console.log(`Invoice ${invoice.id} finalized for ${user.email}`)
-    console.log(`Invoice PDF: ${invoice.invoice_pdf}`)
-    console.log(`Hosted invoice: ${invoice.hosted_invoice_url}`)
+    // Get user data for personalized email
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData) {
+      console.error('Could not fetch user data for invoice email')
+      return
+    }
+
+    const name = userData.full_name || 'there'
     
-    // TODO: Send invoice email with PDF link
-    // This would use a specific invoice email template
+    // Get plan name from subscription
+    const productId = invoice.lines?.data[0]?.price?.product
+    const planName = await getPlanNameFromProductId(productId)
+    
+    const emailTemplate = invoiceFinalizedTemplate({
+      name,
+      planName,
+      amount: (invoice.amount_due / 100).toFixed(2),
+      currency: invoice.currency.toUpperCase(),
+      invoiceUrl: invoice.hosted_invoice_url || '#',
+      invoicePdfUrl: invoice.invoice_pdf || undefined,
+      dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toLocaleDateString() : undefined,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+    })
+
+    await sendUserEmail(userData.email, name, emailTemplate)
+    console.log(`Invoice finalized email sent to ${userData.email}`)
     
   } catch (error) {
     console.error('Error in handleInvoiceFinalized:', {
@@ -919,12 +1010,44 @@ async function handleInvoiceUpcoming(invoice: Stripe.Invoice) {
     const now = new Date()
     const daysUntil = Math.ceil((chargeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     
-    // Send renewal reminder email
     console.log(`Upcoming invoice for ${user.email}, charging in ${daysUntil} days`)
     console.log(`Amount: ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency.toUpperCase()}`)
     
-    // TODO: Send renewal reminder email
-    // This would use a specific renewal reminder email template
+    // Get user data for personalized email
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData) {
+      console.error('Could not fetch user data for renewal reminder email')
+      return
+    }
+
+    const name = userData.full_name || 'there'
+    
+    // Get plan name from subscription
+    const productId = invoice.lines?.data[0]?.price?.product
+    const planName = await getPlanNameFromProductId(productId)
+    
+    const emailTemplate = invoiceUpcomingTemplate({
+      name,
+      planName,
+      amount: (invoice.amount_due / 100).toFixed(2),
+      currency: invoice.currency.toUpperCase(),
+      chargeDate: chargeDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      daysUntil: daysUntil,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+      updatePaymentUrl: `${DASHBOARD_URL}/dashboard/membership?tab=payment`,
+    })
+
+    await sendUserEmail(userData.email, name, emailTemplate)
+    console.log(`Renewal reminder email sent to ${userData.email}`)
     
   } catch (error) {
     console.error('Error in handleInvoiceUpcoming:', {
@@ -963,8 +1086,40 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
       console.log(`Card: ${paymentMethod.card.brand} ending in ${paymentMethod.card.last4}`)
     }
     
-    // TODO: Send payment method updated confirmation email
-    // This would use a specific payment method confirmation email template
+    // Get user data for personalized email
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (!userData) {
+      console.error('Could not fetch user data for payment method confirmation email')
+      return
+    }
+
+    const name = userData.full_name || 'there'
+    
+    // Build payment method details
+    let paymentMethodType = 'Payment method'
+    let paymentMethodDetails = ''
+    
+    if (paymentMethod.card) {
+      paymentMethodType = 'Card'
+      paymentMethodDetails = `${paymentMethod.card.brand.charAt(0).toUpperCase() + paymentMethod.card.brand.slice(1)} ending in ${paymentMethod.card.last4}`
+    } else if (paymentMethod.type) {
+      paymentMethodType = paymentMethod.type.charAt(0).toUpperCase() + paymentMethod.type.slice(1)
+    }
+    
+    const emailTemplate = paymentMethodUpdatedTemplate({
+      name,
+      paymentMethodType,
+      paymentMethodDetails,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+    })
+
+    await sendUserEmail(userData.email, name, emailTemplate)
+    console.log(`Payment method confirmation email sent to ${userData.email}`)
     
   } catch (error) {
     console.error('Error in handlePaymentMethodAttached:', {

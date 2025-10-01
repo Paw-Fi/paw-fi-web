@@ -10,6 +10,10 @@ export interface GuidanceScenario {
   conditions: GuidanceCondition[];
   cooldownHours?: number;
   maxShowCount?: number;
+  actionButton?: {
+    text: string;
+    link: string;
+  };
 }
 
 export interface GuidanceCondition {
@@ -35,6 +39,7 @@ export interface UserGuidanceState {
       courseId: string;
       completedAt: number;
     };
+    isEligibleForTrial?: boolean; // True if user has never had a subscription
   };
   preferences: {
     guidanceEnabled: boolean;
@@ -569,6 +574,24 @@ const GUIDANCE_SCENARIOS: GuidanceScenario[] = [
     ],
     cooldownHours: 2160, // Monthly
     maxShowCount: 1
+  },
+
+  // === FREE TRIAL PROMOTION ===
+  {
+    id: 'free_trial_promotion_early_users',
+    route: '/dashboard/{path}',
+    agentId: 'advisor',
+    message: '🌟 Try Premium Free for 30 Days! This exclusive offer is available to our early users. Experience AI-powered coaching, advanced analytics, unlimited goal tracking, and priority support. No credit card required. Ready to unlock your full financial potential?',
+    priority: 'high',
+    conditions: [
+      { type: 'user_action', value: 'eligible_for_trial' }
+    ],
+    cooldownHours: 168, // 7 days
+    maxShowCount: 5,
+    actionButton: {
+      text: 'Claim Your Free Trial Now',
+      link: '/pricing#pricing-tiers'
+    }
   }
 ];
 
@@ -577,7 +600,7 @@ class DashboardGuidanceMonitor {
   private currentRoute: string = '';
   private routeParams: Record<string, string> = {};
   private userState: UserGuidanceState;
-  private onShowTooltip?: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => void;
+  private onShowTooltip?: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom', actionButton?: { text: string; link: string }) => void;
   private onHideTooltip?: (agentId: AI_ID) => void;
   private pageStartTime: number = Date.now();
   private checkInterval: NodeJS.Timeout | null = null;
@@ -596,7 +619,7 @@ class DashboardGuidanceMonitor {
 
   // Initialize the monitor with callbacks
   initialize(callbacks: {
-    onShowTooltip: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => void;
+    onShowTooltip: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom', actionButton?: { text: string; link: string }) => void;
     onHideTooltip: (agentId: AI_ID) => void;
   }) {
     this.onShowTooltip = callbacks.onShowTooltip;
@@ -661,6 +684,14 @@ class DashboardGuidanceMonitor {
         break;
     }
     this.saveUserState();
+  }
+
+  // Set trial eligibility based on subscription status
+  setTrialEligibility(isEligible: boolean) {
+    this.userState.userJourney.isEligibleForTrial = isEligible;
+    this.saveUserState();
+    // Re-evaluate scenarios after eligibility changes
+    this.evaluateScenarios();
   }
 
   // Update user preferences
@@ -912,6 +943,13 @@ class DashboardGuidanceMonitor {
         const recentCompletion = Date.now() - recentLesson.completedAt;
         return recentCompletion < (5 * 60 * 1000); // Within last 5 minutes
         
+      case 'eligible_for_trial':
+        // User is eligible for trial only if they have NEVER had a subscription before
+        // If a row exists in the subscriptions table (even with null stripe_subscription_id),
+        // it means they've already used their trial, so they're not eligible
+        // This value is set by the component using setTrialEligibility()
+        return this.userState.userJourney.isEligibleForTrial === true;
+        
       default:
         return false;
     }
@@ -971,8 +1009,8 @@ class DashboardGuidanceMonitor {
     };
     this.saveUserState();
 
-    // Show the tooltip
-    this.onShowTooltip(scenario.agentId, scenario.message, 'left');
+    // Show the tooltip with optional action button
+    this.onShowTooltip(scenario.agentId, scenario.message, 'left', scenario.actionButton);
   }
 
   private startPeriodicCheck() {

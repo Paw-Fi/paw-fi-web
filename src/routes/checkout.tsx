@@ -22,7 +22,7 @@ type CheckoutSearchParams = {
   promo?: string; // Promo code
   status?: string; // Payment status: success, failed, canceled
   session_id?: string; // Stripe session ID for status verification
-  trial?: string; // Whether this is a trial subscription
+  // NOTE: Trial eligibility is determined by backend based on subscription history
 };
 
 // Add the route to FileRoutesByPath for TypeScript
@@ -50,7 +50,7 @@ function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false });
-  const { plan = "plus", billing = "monthly", promo, status, session_id, trial } = searchParams;
+  const { plan = "plus", billing = "monthly", promo, status, session_id } = searchParams;
   
   // Debug log to see what we're receiving
   console.log('Checkout page search params:', searchParams);
@@ -181,8 +181,7 @@ function CheckoutPage() {
             cancelUrl: `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
             // Pass the user ID to the server
             userId: user.id,
-            // Pass the trial parameter
-            isTrial: trial === "true",
+            // NOTE: Trial eligibility is determined by backend based on subscription history
           },
         });
         
@@ -354,18 +353,10 @@ function CheckoutPage() {
                 Complete Your Purchase
               </CardTitle>
               <CardDescription className="text-lg">
-                {trial === "true" 
-                  ? `You're starting a 30-day free trial of the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
-                  : `You're subscribing to the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan`
-                }
+                You're subscribing to the {plan.charAt(0).toUpperCase() + plan.slice(1)} plan
               </CardDescription>
               
               <div className="flex flex-wrap items-center justify-center gap-2">
-                {trial === "true" && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
-                    🎉 30-day free trial - no credit card required
-                  </Badge>
-                )}
                 {promo && (
                   <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                     ✓ Promo code "{promo}" applied

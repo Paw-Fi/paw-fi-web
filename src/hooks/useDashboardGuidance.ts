@@ -24,11 +24,11 @@ export const useDashboardGuidance = (options: UseDashboardGuidanceOptions = {}) 
     if (!enabled || typeof window === 'undefined') return;
 
     // Initialize the monitor with tooltip callbacks
-    const showTooltip = (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => {
+    const showTooltip = (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom', actionButton?: { text: string; link: string }) => {
       if (sidebarRef?.current) {
         // Small delay to ensure component is ready
         setTimeout(() => {
-          sidebarRef.current?.showTooltip(agentId, message, place);
+          sidebarRef.current?.showTooltip(agentId, message, place, actionButton);
         }, 500);
       }
     };
@@ -95,6 +95,12 @@ export const useDashboardGuidance = (options: UseDashboardGuidanceOptions = {}) 
     trackUserAction: (action: string, data?: any) => {
       if (enabled && typeof window !== 'undefined') {
         dashboardGuidanceMonitor.trackUserAction(action, data);
+      }
+    },
+    
+    setTrialEligibility: (isEligible: boolean) => {
+      if (typeof window !== 'undefined') {
+        dashboardGuidanceMonitor.setTrialEligibility(isEligible);
       }
     },
     

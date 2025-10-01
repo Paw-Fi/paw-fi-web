@@ -37,7 +37,7 @@ const env = validateEnvironment()
 
 // Initialize Stripe with validated configuration
 const stripe = new Stripe(env.stripeSecretKey, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -79,8 +79,9 @@ serve(async (req) => {
     // Use authenticated userId - this is the ONLY safe userId
     const userId = authResult.userId!
 
-    // Parse the request body (plan, billingInterval, successUrl, cancelUrl, isTrial only)
-    const { plan, billingInterval, successUrl, cancelUrl, isTrial = false } = await req.json()
+    // Parse the request body (plan, billingInterval, successUrl, cancelUrl only)
+    // NOTE: isTrial is determined by backend based on subscription history (security)
+    const { plan, billingInterval, successUrl, cancelUrl } = await req.json()
 
     // Validate plan
     if (!plan || !isValidPlan(plan)) {
@@ -127,7 +128,24 @@ serve(async (req) => {
       })
     }
 
-    console.log('Creating checkout session:', { userId, plan, billingInterval, priceId, isTrial })
+    console.log('Creating checkout session:', { userId, plan, billingInterval, priceId })
+    
+    // SECURITY: Check trial eligibility based on subscription history
+    // A user is eligible for trial ONLY if no subscription row exists at all
+    // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle()
+    
+    // Simple and secure: Only new users (no row) get trials
+    const isEligibleForTrial = !existingSub
+    
+    console.log('Trial eligibility check:', {
+      hasExistingRow: !!existingSub,
+      isEligible: isEligibleForTrial
+    })
     
     // Get user details from auth.users (basic info)
     const { data: userData, error: userError } = await supabase
@@ -243,12 +261,23 @@ serve(async (req) => {
         },
       }
       
-      // Trial configuration - Allow trials without credit card for testing
-      // When payment_method_collection is 'if_required', no credit card is needed during trial
-      if (isTrial) {
-        sessionConfig.payment_method_collection = 'if_required' // Don't require payment method for trials
-        sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // Allow subscription to be created without payment
+      // Trial configuration - Determined by backend based on subscription history
+      // Only eligible users (new users who never subscribed) get trials WITHOUT payment method
+      if (isEligibleForTrial) {
+        console.log('User is eligible for trial - configuring trial period WITHOUT payment method required')
+        sessionConfig.payment_method_collection = 'if_required' // Don't require payment method for first-time trials
+        sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // Checkout Sessions require 'allow_incomplete' (not 'default_incomplete')
         sessionConfig.subscription_data!.trial_period_days = TRIAL_PERIOD_DAYS
+        // Configure what happens when trial ends without payment method
+        sessionConfig.subscription_data!.trial_settings = {
+          end_behavior: {
+            missing_payment_method: 'pause' // Pause subscription if no payment method when trial ends
+          }
+        }
+      } else {
+        console.log('User is NOT eligible for trial - require payment immediately')
+        sessionConfig.payment_method_collection = 'always' // Always require payment method
+        sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // CRITICAL: Checkout Sessions require 'allow_incomplete' for proper 3DS/failed payment handling
       }
       
       // Create checkout session with retry

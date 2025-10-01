@@ -473,3 +473,147 @@ export const courseCompletionTemplate = (data: {
     subject: `🎉 Course Completed: ${data.courseName}`,
   };
 };
+
+// Invoice finalized template (invoice ready for payment or viewing)
+export const invoiceFinalizedTemplate = (data: {
+  name: string;
+  planName: string;
+  amount: string;
+  currency: string;
+  invoiceUrl: string;
+  invoicePdfUrl?: string;
+  dueDate?: string;
+  dashboardUrl: string;
+}) => {
+  const content = `
+    <h1>Your Invoice is Ready</h1>
+    <p>Hi ${data.name},</p>
+    <p>Your invoice for ${data.planName} subscription is now ready.</p>
+    <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
+    ${data.dueDate ? `<p><strong>Due Date:</strong> ${data.dueDate}</p>` : ''}
+    <p>
+      <a href="${data.invoiceUrl}" class="button">View Invoice</a>
+    </p>
+    ${data.invoicePdfUrl ? `<p>You can also <a href="${data.invoicePdfUrl}">download the PDF version</a>.</p>` : ''}
+    <p>If you have automatic payments enabled, your payment method will be charged automatically.</p>
+    <p>If you have any questions about this invoice, please don't hesitate to contact our support team.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: `Invoice Ready: ${data.planName} Subscription`,
+  };
+};
+
+// Invoice upcoming template (renewal reminder)
+export const invoiceUpcomingTemplate = (data: {
+  name: string;
+  planName: string;
+  amount: string;
+  currency: string;
+  chargeDate: string;
+  daysUntil: number;
+  dashboardUrl: string;
+  updatePaymentUrl?: string;
+}) => {
+  const urgencyMessage = data.daysUntil <= 3
+    ? `Your subscription will renew in ${data.daysUntil} ${data.daysUntil === 1 ? 'day' : 'days'}!`
+    : `Your subscription will renew soon.`;
+
+  const content = `
+    <h1>Upcoming Subscription Renewal</h1>
+    <p>Hi ${data.name},</p>
+    <p>${urgencyMessage}</p>
+    <p><strong>Plan:</strong> ${data.planName}</p>
+    <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
+    <p><strong>Charge Date:</strong> ${data.chargeDate}</p>
+    <p>Your payment method on file will be charged automatically on this date.</p>
+    ${data.updatePaymentUrl ? `
+    <p>If you need to update your payment method, please do so before the charge date:</p>
+    <p>
+      <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
+    </p>
+    ` : ''}
+    <p>
+      <a href="${data.dashboardUrl}" class="button">Manage Subscription</a>
+    </p>
+    <p>If you want to make changes to your subscription or cancel, please do so before the renewal date.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: `Upcoming Renewal: ${data.planName} - ${data.chargeDate}`,
+  };
+};
+
+// Payment action required template (3DS authentication needed)
+export const paymentActionRequiredTemplate = (data: {
+  name: string;
+  planName: string;
+  amount: string;
+  currency: string;
+  authenticationUrl: string;
+  expiryHours?: number;
+  dashboardUrl: string;
+}) => {
+  const expiryText = data.expiryHours
+    ? ` Please complete authentication within ${data.expiryHours} hours to avoid subscription interruption.`
+    : '';
+
+  const content = `
+    <h1>Action Required: Authenticate Your Payment</h1>
+    <p>Hi ${data.name},</p>
+    <p>We need you to authenticate your payment for the ${data.planName} subscription.</p>
+    <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
+    <p>Your bank requires additional verification (3D Secure) to complete this payment.</p>
+    <p>
+      <a href="${data.authenticationUrl}" class="button">Authenticate Payment</a>
+    </p>
+    <p>${expiryText}</p>
+    <p>This is a security measure to protect you from unauthorized transactions. The authentication process is quick and secure.</p>
+    <p>If you don't recognize this charge, please <a href="${data.dashboardUrl}">review your subscription</a> immediately.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: `Action Required: Authenticate Your Payment - ${data.planName}`,
+  };
+};
+
+// Payment method updated confirmation template
+export const paymentMethodUpdatedTemplate = (data: {
+  name: string;
+  paymentMethodType: string;
+  last4?: string;
+  brand?: string;
+  dashboardUrl: string;
+}) => {
+  const methodDetails = data.brand && data.last4
+    ? `${data.brand} ending in ${data.last4}`
+    : data.paymentMethodType;
+
+  const content = `
+    <h1>Payment Method Updated</h1>
+    <p>Hi ${data.name},</p>
+    <p>Your payment method has been successfully updated.</p>
+    <p><strong>New Payment Method:</strong> ${methodDetails}</p>
+    <p>This payment method will be used for all future charges on your account.</p>
+    <p>
+      <a href="${data.dashboardUrl}" class="button">View Payment Methods</a>
+    </p>
+    <p>If you didn't make this change, please <a href="${data.dashboardUrl}">review your account</a> immediately and contact our support team.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: 'Payment Method Updated Successfully',
+  };
+};

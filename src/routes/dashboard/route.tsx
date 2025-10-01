@@ -278,7 +278,7 @@ export function Dashboard() {
   const rightSidebarRef = useRef<RightSidebarRef>(null);
 
   // Initialize dashboard guidance system
-  const { trackUserAction, updatePreferences, hideAllTooltips, resetGuidanceState, getGuidanceStats } = useDashboardGuidance({
+  const { trackUserAction, setTrialEligibility, updatePreferences, hideAllTooltips, resetGuidanceState, getGuidanceStats } = useDashboardGuidance({
     enabled: true,
     frequencyLevel: 'medium',
     sidebarRef: rightSidebarRef
@@ -286,7 +286,19 @@ export function Dashboard() {
 
   const { user, signOut, isLoading } = useAuth();
 
-  const { isActive,isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+  const { subscription, isActive, isLoading: isSubscriptionLoading } = useSubscription(user?.id);
+
+  // Set trial eligibility based on subscription status
+  // User is eligible only if they have NEVER had a subscription (no row exists)
+  useEffect(() => {
+    if (!isSubscriptionLoading && user) {
+      // If subscription is null, it means no row exists in subscriptions table
+      // This means the user has never tried the trial before
+      const isEligible = subscription === null;
+      console.log('🎯 Setting trial eligibility:', { isEligible, subscription, user: !!user });
+      setTrialEligibility(isEligible);
+    }
+  }, [subscription, isSubscriptionLoading, user, setTrialEligibility]);
   const { markCalculatorsVisited } = useLocalProgress();
   const { getCookie, setCookie } = useCookie();
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('moneko-guide-hidden') === 'true');

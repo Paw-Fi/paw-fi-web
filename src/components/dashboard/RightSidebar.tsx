@@ -25,7 +25,7 @@ interface RightSidebarProps {
 }
 
 export interface RightSidebarRef {
-  showTooltip: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom') => void;
+  showTooltip: (agentId: AI_ID, message: string, place?: 'left' | 'right' | 'top' | 'bottom', actionButton?: { text: string; link: string }) => void;
   hideTooltip: (agentId: AI_ID) => void;
   hideAllTooltips: () => void;
 }
@@ -53,6 +53,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
   const [activeBubble, setActiveBubble] = useState<{
     agentId: AI_ID;
     message: string;
+    actionButton?: { text: string; link: string };
   } | null>(null);
 
   const hideGuidance = () => {
@@ -61,8 +62,8 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
-    showTooltip: (agentId: AI_ID, message: string, place: 'left' | 'right' | 'top' | 'bottom' = 'left') => {
-      setActiveBubble({ agentId, message });
+    showTooltip: (agentId: AI_ID, message: string, place: 'left' | 'right' | 'top' | 'bottom' = 'left', actionButton?: { text: string; link: string }) => {
+      setActiveBubble({ agentId, message, actionButton });
     },
     hideTooltip: (agentId: AI_ID) => {
       // Only hide if it's the same agent
@@ -144,7 +145,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
           message={activeBubble.message}
           isVisible={!!activeBubble}
           onClose={hideGuidance}
-          onClick={() => {
+          onClick={activeBubble.actionButton ? undefined : () => {
             openChat(activeBubble.agentId);
             hideGuidance();
           }}
@@ -153,6 +154,7 @@ export const RightSidebar = forwardRef<RightSidebarRef, RightSidebarProps>(({ cl
             right: '80px'
           }}
           autoHideDelay={15000} // 15 seconds
+          actionButton={activeBubble.actionButton}
         />
       )}
     </>

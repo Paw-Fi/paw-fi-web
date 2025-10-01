@@ -224,7 +224,7 @@ function PricingPage() {
     );
   };
 
-  const handleSubscribe = async (plan: string, isTrial: boolean = false) => {
+  const handleSubscribe = async (plan: string) => {
     try {
       // If user already has an active subscription, don't create another checkout session
       if (hasActiveSub) {
@@ -259,13 +259,13 @@ function PricingPage() {
 
       const billingInterval = isAnnual ? "yearly" : "monthly";
       
-      console.log('Pricing page - Creating checkout with:', { plan, billingInterval, isTrial });
+      console.log('Pricing page - Creating checkout with:', { plan, billingInterval });
 
       // Redirect to checkout page with plan and billing interval
-      // The checkout page will handle creating the Stripe session
+      // The backend will automatically determine trial eligibility based on subscription history
       navigate({
         to: "/checkout",
-        search: { plan, billing: billingInterval, trial: isTrial ? "true" : "false" },
+        search: { plan, billing: billingInterval },
       });
 
       setIsLoading(false);
@@ -339,6 +339,7 @@ function PricingPage() {
 
         <div
           className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3"
+          id="pricing-tiers"
         >
           {pricingTiers.map((tier) => (
             <div
@@ -442,10 +443,9 @@ function PricingPage() {
 
                       // Map plan id based on tier title
                       const planParam = lowerTitle === "plus" ? "plus" : "premium";
-                      const isTrial = lowerTitle === "plus" && tier.actionText.toLowerCase().includes("free trial");
 
-                      // Proceed to checkout flow with proper params
-                      handleSubscribe(planParam, isTrial);
+                      // Proceed to checkout flow
+                      handleSubscribe(planParam);
                     }}
                   >
                     {tier.actionText}

@@ -6,6 +6,7 @@ import { AI_ID } from '@/contexts/ai-chat-context';
 import monekoAvatar from '@/assets/images/logo/moneko-avatar.gif';
 import finniAvatar from '@/assets/images/logo/finni-avatar.gif';
 import { Button } from './button';
+import { Link } from '@tanstack/react-router';
 
 interface FloatingGuidanceBubbleProps {
   agentId: AI_ID;
@@ -21,6 +22,7 @@ interface FloatingGuidanceBubbleProps {
   };
   autoHideDelay?: number; // Auto-hide after X milliseconds (0 = no auto-hide)
   isMobile?: boolean; // Flag to enable mobile positioning
+  actionButton?: { text: string; link: string }; // Custom action button
 }
 
 export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
@@ -31,7 +33,8 @@ export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
   onClick,
   position = { bottom: '100px', right: '20px' },
   autoHideDelay = 10000, // 10 seconds default
-  isMobile = false
+  isMobile = false,
+  actionButton
 }) => {
   const [isTypewriterComplete, setIsTypewriterComplete] = useState(false);
   const [shouldAutoHide, setShouldAutoHide] = useState(false);
@@ -196,24 +199,33 @@ export const FloatingGuidanceBubble: React.FC<FloatingGuidanceBubbleProps> = ({
                     />
                   </div>
 
-                  {/* Click to chat hint */}
-                  {isTypewriterComplete && onClick && (
+                  {/* Action button or click to chat hint */}
+                  {isTypewriterComplete && (
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5, duration: 0.3 }}
                       className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700"
                     >
-                      <div 
-                        className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onClick();
-                        }}
-                      >
-                        <MessageCircle className="h-3 w-3" />
-                        <span>Click to chat with {agentInfo.name}</span>
-                      </div>
+                      {actionButton ? (
+                        <Link to={actionButton.link} onClick={onClose}>
+                          <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                            <MessageCircle className="h-3 w-3" />
+                            <span>{actionButton.text}</span>
+                          </div>
+                        </Link>
+                      ) : onClick ? (
+                        <div 
+                          className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onClick();
+                          }}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                          <span>Click to chat with {agentInfo.name}</span>
+                        </div>
+                      ) : null}
                     </motion.div>
                   )}
                 </div>

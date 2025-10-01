@@ -125,37 +125,16 @@ serve(async (req) => {
           })
         }
         
-        // If no active subscription, create a checkout session for a new subscription
+        // If no active subscription, user should go through pricing/checkout flow
+        // This ensures proper trial eligibility checking and payment collection
         if (!subscription || subscription.status !== 'active' || currentPlan === 'free') {
           const origin = req.headers.get('origin') || 'https://moneko.io'
-          const successUrl = `${origin}/payment-status?status=success&session_id={CHECKOUT_SESSION_ID}`
-          const cancelUrl = `${origin}/payment-status?status=canceled`
-
-          // Get the price ID based on plan and billing interval
-          const priceId = SUBSCRIPTION_PRICES[plan][billingInterval]
-
-          if (!priceId) {
-            return new Response(JSON.stringify({ error: 'Invalid plan or billing interval' }), {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            })
-          }
-
-          // Create a checkout session
-          const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [{ price: priceId, quantity: 1 }],
-            mode: 'subscription',
-            success_url: successUrl,
-            cancel_url: cancelUrl,
-            client_reference_id: userId,
-            allow_promotion_codes: true,
-            metadata: { plan },
-          })
-
+          const checkoutUrl = `${origin}/checkout?plan=${plan}&billing=${billingInterval}`
+          
           return new Response(JSON.stringify({
-            action: 'redirect',
-            url: session.url,
+            action: 'redirect_to_checkout',
+            url: checkoutUrl,
+            message: 'Please complete checkout to subscribe to this plan',
           }), {
             status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
