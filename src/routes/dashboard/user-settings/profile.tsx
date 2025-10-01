@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/auth-context';
@@ -61,6 +61,7 @@ function FinancialProfileSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const hasChangesTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load existing financial profile
   useEffect(() => {
@@ -141,7 +142,14 @@ function FinancialProfileSettings() {
 
   const handleInputChange = useCallback((field: keyof ComprehensiveFinancialProfile, value: any) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
+    
+    // Debounce setHasChanges to avoid excessive re-renders
+    if (hasChangesTimeoutRef.current) {
+      clearTimeout(hasChangesTimeoutRef.current);
+    }
+    hasChangesTimeoutRef.current = setTimeout(() => {
+      setHasChanges(true);
+    }, 100);
   }, []);
 
   const handleMultipleChoice = useCallback((field: keyof ComprehensiveFinancialProfile, value: string) => {
@@ -173,7 +181,16 @@ function FinancialProfileSettings() {
   const handleSaveProfile = async () => {
     if (!user || !hasChanges) return;
 
+    // Optimistic UI updates - show success immediately
     setIsSaving(true);
+    setHasChanges(false);
+    setIsEditMode(false);
+    toast.success('Financial profile updated successfully!');
+    
+    // Store original state for rollback if needed
+    const previousHasChanges = hasChanges;
+    const previousIsEditMode = isEditMode;
+
     try {
       // Call the financial-health-profile edge function to update profile and regenerate calculations
       console.log('Calling financial-health-profile edge function for profile update...');
@@ -300,10 +317,6 @@ function FinancialProfileSettings() {
           console.warn('Dashboard update failed, but profile was saved:', dashboardError);
           // Don't throw here - profile save was successful
         }
-
-        setHasChanges(false);
-        setIsEditMode(false);
-        toast.success('Financial profile updated successfully! Dashboard widgets have been refreshed.');
         
         // Invalidate queries to refresh dashboard and other components
         queryClient.invalidateQueries({ 
@@ -320,6 +333,11 @@ function FinancialProfileSettings() {
       }
     } catch (error) {
       console.error('Error saving financial profile:', error);
+      
+      // Rollback optimistic updates on error
+      setHasChanges(previousHasChanges);
+      setIsEditMode(previousIsEditMode);
+      
       toast.error('Failed to save financial profile. Please try again.');
     } finally {
       setIsSaving(false);
@@ -853,7 +871,7 @@ function FinancialProfileSettings() {
   };
 
   // Edit Mode Component (Current form layout but improved)
-  const EditMode = () => (
+  const EditMode = useMemo(() => (
     <div className="space-y-8">  
 
       {/* Personal Information */}
@@ -1632,7 +1650,7 @@ function FinancialProfileSettings() {
       </div>
 
     </div>
-  );
+  ), [profileData, handleInputChange, handleNumberInputChange, handleMultipleChoice]);
 
   return (
     <div className="bg-moneko-background text-foreground min-h-screen p-4 sm:p-6 lg:p-8">
@@ -1745,7 +1763,7 @@ function FinancialProfileSettings() {
           </div>
         )}
 
-        {isEditMode ? <EditMode /> : <ViewMode />}
+        {isEditMode ? EditMode : <ViewMode />}
       </div>
     </div>
   );
