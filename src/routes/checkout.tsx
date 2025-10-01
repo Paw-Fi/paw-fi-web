@@ -49,7 +49,13 @@ export const Route = createFileRoute("/checkout")({
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
-  const { plan = "plus", billing = "yearly", promo, status, session_id, trial } = useSearch({ strict: false });
+  const searchParams = useSearch({ strict: false });
+  const { plan = "plus", billing = "monthly", promo, status, session_id, trial } = searchParams;
+  
+  // Debug log to see what we're receiving
+  console.log('Checkout page search params:', searchParams);
+  console.log('Billing interval:', billing);
+  
   const { user } = useAuth();
   const { isActive: hasActiveSub } = useSubscription(user?.id);
   const [isLoading, setIsLoading] = useState(true);
@@ -145,9 +151,11 @@ function CheckoutPage() {
         setIsLoading(true);
         setPaymentStatus("processing");
 
-        // @ts-ignore - Stripe is loaded via script tag
-        const stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-        console.log("Stripe loaded:",import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+        // @ts-ignore - Stripe is loaded via script tag and window.Stripe is available
+        const stripeKey = (import.meta as any).env?.VITE_STRIPE_PUBLISHABLE_KEY as string;
+        // @ts-ignore
+        const stripe = window.Stripe(stripeKey);
+        console.log("Stripe loaded with key:", stripeKey ? "✓" : "✗")
 
         // Check if user is logged in
         if (!user || !user.id) {
@@ -160,6 +168,8 @@ function CheckoutPage() {
         const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
         
         // Create a payment session on the server
+        console.log('Creating Stripe session with billing interval:', billing);
+        
         const { data, error } = await supabase.functions.invoke("create-checkout-session", {
           method: "POST",
           body: {
@@ -175,6 +185,8 @@ function CheckoutPage() {
             isTrial: trial === "true",
           },
         });
+        
+        console.log('Stripe session created with response:', { data, error });
 
         if (error) {
           console.error("Supabase function error:", error);

@@ -258,35 +258,11 @@ function PricingPage() {
       }
 
       const billingInterval = isAnnual ? "yearly" : "monthly";
-
-      // Create success and cancel URLs for the checkout session
-      const origin = window.location.origin;
-      const successUrl = `${origin}/payment-status?status=success&session_id={CHECKOUT_SESSION_ID}`;
-      const cancelUrl = `${origin}/payment-status?status=canceled`;
-
-      // Call the create-checkout-session function
-      const { error } = await supabase.functions.invoke(
-        "create-checkout-session",
-        {
-          body: {
-            plan,
-            billingInterval,
-            userId,
-            successUrl,
-            cancelUrl,
-            isTrial,
-          },
-        },
-      );
-
-      if (error) {
-        console.error("Error creating checkout session:", error);
-        toast.error("Failed to create checkout session. Please try again.");
-        setIsLoading(false);
-        return;
-      }
+      
+      console.log('Pricing page - Creating checkout with:', { plan, billingInterval, isTrial });
 
       // Redirect to checkout page with plan and billing interval
+      // The checkout page will handle creating the Stripe session
       navigate({
         to: "/checkout",
         search: { plan, billing: billingInterval, trial: isTrial ? "true" : "false" },
