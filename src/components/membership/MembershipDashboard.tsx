@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Crown, Calendar, RefreshCw, ArrowRight, AlertCircle, CheckCircle2, User } from "lucide-react";
+import { Loader2, Crown, Calendar, RefreshCw, ArrowRight, AlertCircle, CheckCircle2, User, CreditCard } from "lucide-react";
 
 
 export function MembershipDashboard() {
@@ -242,11 +242,21 @@ export function MembershipDashboard() {
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <PaymentMethodManager 
-                    paymentMethod={paymentMethod} 
-                    customerId={subscription?.stripe_customer_id} 
-                    userId={user?.id}
-                  />
+                  {subscription && subscription.stripe_customer_id && user?.id ? (
+                    <PaymentMethodManager
+                      paymentMethod={paymentMethod}
+                      customerId={subscription.stripe_customer_id}
+                      userId={user.id}
+                    />
+                  ) : (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <CreditCard className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <p className="text-sm font-medium text-muted-foreground">No active subscription</p>
+                        <p className="text-sm text-muted-foreground/70 mt-1">Subscribe to a plan to manage payment methods</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </motion.div>
               </TabsContent>
               
@@ -279,7 +289,17 @@ export function MembershipDashboard() {
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <InvoiceHistory invoices={invoices || []} />
+                  {subscription ? (
+                    <InvoiceHistory invoices={invoices || []} />
+                  ) : (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <Calendar className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                        <p className="text-sm font-medium text-muted-foreground">No billing history</p>
+                        <p className="text-sm text-muted-foreground/70 mt-1">Subscribe to a plan to view invoices</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </motion.div>
               </TabsContent>
             </AnimatePresence>

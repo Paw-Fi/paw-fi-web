@@ -69,39 +69,69 @@ export function useManagePaymentMethod(userId: string | undefined) {
 
   // Helper functions for payment method actions
   const createSetupIntent = async () => {
-    if (!userId) return { client_secret: null };
-    const result = await mutate({
-      userId,
-      action: "create_setup_intent",
+    if (!userId) throw new Error("User ID is required");
+    
+    const { data, error } = await supabase.functions.invoke('manage-payment-method', {
+      method: 'POST',
+      body: { userId, action: 'create_setup_intent' }
     });
-    return result;
+    
+    if (error) {
+      throw new Error(`Failed to create setup intent: ${error.message}`);
+    }
+    
+    return data;
   };
 
   const updateDefaultPaymentMethod = async (paymentMethodId: string) => {
-    if (!userId) return;
-    return mutate({
-      userId,
-      action: "update_default_payment_method",
-      paymentMethodId,
+    if (!userId) throw new Error("User ID is required");
+    
+    const { data, error } = await supabase.functions.invoke('manage-payment-method', {
+      method: 'POST',
+      body: { userId, action: 'update_default_payment_method', paymentMethodId }
     });
+    
+    if (error) {
+      throw new Error(`Failed to update payment method: ${error.message}`);
+    }
+    
+    // Invalidate and refetch payment methods after successful update
+    queryClient.invalidateQueries({ queryKey: ['paymentMethods', userId] });
+    
+    return data;
   };
 
   const detachPaymentMethod = async (paymentMethodId: string) => {
-    if (!userId) return;
-    return mutate({
-      userId,
-      action: "detach_payment_method",
-      paymentMethodId,
+    if (!userId) throw new Error("User ID is required");
+    
+    const { data, error } = await supabase.functions.invoke('manage-payment-method', {
+      method: 'POST',
+      body: { userId, action: 'detach_payment_method', paymentMethodId }
     });
+    
+    if (error) {
+      throw new Error(`Failed to detach payment method: ${error.message}`);
+    }
+    
+    // Invalidate and refetch payment methods after successful removal
+    queryClient.invalidateQueries({ queryKey: ['paymentMethods', userId] });
+    
+    return data;
   };
 
   const createPortalSession = async () => {
-    if (!userId) return { url: null };
-    const result = await mutate({
-      userId,
-      action: "create_portal_session",
+    if (!userId) throw new Error("User ID is required");
+    
+    const { data, error } = await supabase.functions.invoke('manage-payment-method', {
+      method: 'POST',
+      body: { userId, action: 'create_portal_session' }
     });
-    return result;
+    
+    if (error) {
+      throw new Error(`Failed to create portal session: ${error.message}`);
+    }
+    
+    return data;
   };
 
   return {

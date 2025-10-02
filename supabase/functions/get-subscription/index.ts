@@ -5,7 +5,7 @@ import { corsHeaders } from '../shared/cors.ts'
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -40,8 +40,6 @@ serve(async (req) => {
       })
     }
 
-    console.log('Fetching subscription for user ID:', userId)
-    
     // First, directly check if there's a subscription in the subscriptions table
     const { data: directSubscription, error: directError } = await supabase
       .from('subscriptions')
@@ -50,24 +48,12 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
-    
-    console.log('Direct subscription query result:', { 
-      found: directSubscription ? true : false,
-      error: directError,
-      data: directSubscription
-    })
-    
+
     // Then try the RPC function
     const { data: subscription, error: subscriptionError } = await supabase.rpc(
       'get_user_subscription',
       { p_user_id: userId }
     )
-    
-    console.log('RPC function result:', { 
-      found: subscription ? true : false,
-      error: subscriptionError,
-      data: subscription
-    })
 
     if (subscriptionError) {
       console.error('Error getting subscription:', subscriptionError)
@@ -78,9 +64,10 @@ serve(async (req) => {
     }
     
     // If the RPC function returns no data but we found a subscription directly, use that instead
-    let finalSubscription = subscription;
+    // IMPORTANT: RPC functions return arrays, so we need to extract the first element
+    let finalSubscription = Array.isArray(subscription) ? subscription[0] : subscription;
+
     if (!finalSubscription && directSubscription) {
-      console.log('Using direct subscription data instead of RPC result')
       // Map the direct subscription to match the expected format
       finalSubscription = {
         id: directSubscription.id,
@@ -124,34 +111,17 @@ serve(async (req) => {
       console.error('Error getting features:', featuresError)
     }
 
-    // Get additional details from Stripe if subscription exists
+    // Get additional details from Stripe if customer ID exists
     let paymentMethod: any = null
     let invoices: any[] = []
 
-    if (finalSubscription.stripe_subscription_id && finalSubscription.stripe_customer_id) {
+    // We only need customer ID to fetch invoices - subscription ID is optional
+    if (finalSubscription.stripe_customer_id) {
       try {
-        // Get the Stripe subscription
-        const stripeSubscription = await stripe.subscriptions.retrieve(
-          finalSubscription.stripe_subscription_id,
-          { expand: ['default_payment_method'] }
-        )
-
-        // Extract payment method details if available
-        if (stripeSubscription.default_payment_method) {
-          const pm = stripeSubscription.default_payment_method
-          paymentMethod = pm.card ? {
-            id: pm.id,
-            brand: pm.card.brand,
-            last4: pm.card.last4,
-            exp_month: pm.card.exp_month,
-            exp_year: pm.card.exp_year,
-          } : null
-        }
-        
-        // Get recent invoices
+        // Get all invoices for the customer (only customer ID needed)
         const invoiceList = await stripe.invoices.list({
           customer: finalSubscription.stripe_customer_id,
-          limit: 5,
+          limit: 20,
         })
 
         invoices = invoiceList.data.map(invoice => ({
@@ -163,6 +133,26 @@ serve(async (req) => {
           hosted_invoice_url: invoice.hosted_invoice_url,
           pdf: invoice.invoice_pdf,
         }))
+
+        // Optionally fetch subscription and payment method if subscription ID exists
+        if (finalSubscription.stripe_subscription_id) {
+          const stripeSubscription = await stripe.subscriptions.retrieve(
+            finalSubscription.stripe_subscription_id,
+            { expand: ['default_payment_method'] }
+          )
+
+          // Extract payment method details if available
+          if (stripeSubscription.default_payment_method) {
+            const pm = stripeSubscription.default_payment_method
+            paymentMethod = pm.card ? {
+              id: pm.id,
+              brand: pm.card.brand,
+              last4: pm.card.last4,
+              exp_month: pm.card.exp_month,
+              exp_year: pm.card.exp_year,
+            } : null
+          }
+        }
       } catch (error) {
         console.error('Error fetching Stripe details:', error)
         // Continue with the data we have from the database

@@ -24,9 +24,9 @@ import { getPlanFromPriceId } from '../shared/stripe-subscription-prices.ts'
 // Webhook function REQUIRES webhook secret
 const env = validateEnvironment({ requireWebhookSecret: true })
 
-// Initialize Stripe with validated configuration
+// Initialize Stripe with validated configuration - using latest API version
 const stripe = new Stripe(env.stripeSecretKey, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -151,6 +151,12 @@ serve(async (req) => {
           break
         case 'payment_method.attached':
           await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod)
+          break
+        case 'setup_intent.succeeded':
+          await handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent)
+          break
+        case 'setup_intent.setup_failed':
+          await handleSetupIntentFailed(event.data.object as Stripe.SetupIntent)
           break
         case 'customer.subscription.pending_update_applied':
           await handleSubscriptionPendingUpdateApplied(event.data.object as Stripe.Subscription, event.id)
@@ -1336,6 +1342,128 @@ async function handleSubscriptionPendingUpdateExpired(
   } catch (error) {
     console.error('Error in handleSubscriptionPendingUpdateExpired:', {
       subscriptionId: subscription.id,
+      error: error.message,
+      stack: error.stack,
+    })
+    throw error
+  }
+}
+
+// Handler for setup_intent.succeeded (payment method successfully added)
+async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
+  try {
+    console.log('Processing setup intent succeeded:', setupIntent.id)
+
+    const customerId = typeof setupIntent.customer === 'string'
+      ? setupIntent.customer
+      : setupIntent.customer?.id
+
+    if (!customerId) {
+      console.error('No customer ID in setup intent:', setupIntent.id)
+      return
+    }
+
+    const user = await getUserByCustomerId(customerId)
+
+    if (!user) {
+      console.error('No user found for customer:', customerId)
+      return
+    }
+
+    // Get the payment method that was attached
+    const paymentMethodId = typeof setupIntent.payment_method === 'string'
+      ? setupIntent.payment_method
+      : setupIntent.payment_method?.id
+
+    if (!paymentMethodId) {
+      console.error('No payment method in setup intent:', setupIntent.id)
+      return
+    }
+
+    // Retrieve payment method details
+    const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId)
+
+    console.log(`Payment method ${paymentMethodId} successfully set up for ${user.email}`)
+
+    // Check if this is the first payment method for the customer
+    const paymentMethods = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: 'card',
+    })
+
+    // If this is the first payment method, set it as default automatically
+    if (paymentMethods.data.length === 1) {
+      await stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      })
+
+      // Also update subscription if exists
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('stripe_subscription_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (subscription?.stripe_subscription_id) {
+        await stripe.subscriptions.update(
+          subscription.stripe_subscription_id,
+          { default_payment_method: paymentMethodId }
+        )
+      }
+
+      console.log(`Set ${paymentMethodId} as default payment method for customer ${customerId}`)
+    }
+
+    // Log successful setup in our database (optional)
+    console.log(`Setup intent ${setupIntent.id} completed successfully for user ${user.id}`)
+
+  } catch (error) {
+    console.error('Error in handleSetupIntentSucceeded:', {
+      setupIntentId: setupIntent.id,
+      error: error.message,
+      stack: error.stack,
+    })
+    throw error
+  }
+}
+
+// Handler for setup_intent.setup_failed (payment method failed to be added)
+async function handleSetupIntentFailed(setupIntent: Stripe.SetupIntent) {
+  try {
+    console.log('Processing setup intent failed:', setupIntent.id)
+
+    const customerId = typeof setupIntent.customer === 'string'
+      ? setupIntent.customer
+      : setupIntent.customer?.id
+
+    if (!customerId) {
+      console.error('No customer ID in setup intent:', setupIntent.id)
+      return
+    }
+
+    const user = await getUserByCustomerId(customerId)
+
+    if (!user) {
+      console.error('No user found for customer:', customerId)
+      return
+    }
+
+    // Log the failure reason
+    const lastSetupError = setupIntent.last_setup_error
+    console.error(`Setup intent failed for ${user.email}:`, {
+      code: lastSetupError?.code,
+      message: lastSetupError?.message,
+      type: lastSetupError?.type,
+    })
+
+    // Optionally send email notification to user about the failure
+    // (Not implementing here to avoid spam, but could be useful)
+
+  } catch (error) {
+    console.error('Error in handleSetupIntentFailed:', {
+      setupIntentId: setupIntent.id,
       error: error.message,
       stack: error.stack,
     })

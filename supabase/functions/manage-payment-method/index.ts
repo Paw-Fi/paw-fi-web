@@ -3,9 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
 import { corsHeaders } from '../shared/cors.ts'
 
-// Initialize Stripe with your secret key
+// Initialize Stripe with your secret key - using latest API version
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -15,6 +15,8 @@ const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 serve(async (req) => {
+  let requestBody: any = null;
+  
   try {
     // Handle CORS preflight OPTIONS request
     if (req.method === 'OPTIONS') {
@@ -29,8 +31,9 @@ serve(async (req) => {
       })
     }
 
-    // Parse the request body
-    const { userId, action } = await req.json()
+    // Parse the request body ONCE
+    requestBody = await req.json()
+    const { userId, action, paymentMethodId } = requestBody
 
     if (!userId || !action) {
       return new Response(JSON.stringify({ error: 'User ID and action are required' }), {
@@ -66,15 +69,28 @@ serve(async (req) => {
     // Handle different payment method actions
     switch (action) {
       case 'create_setup_intent': {
-        // Create a SetupIntent for updating payment method
+        // Create a SetupIntent for collecting payment method
+        // This is the Stripe-recommended way to collect payment methods for future use
+        // Per Stripe best practices (API 2025-07-30): use automatic_payment_methods
         const setupIntent = await stripe.setupIntents.create({
           customer: subscription.stripe_customer_id,
-          payment_method_types: ['card'],
-          usage: 'off_session',
+          // Modern approach: automatic_payment_methods replaces deprecated payment_method_types
+          automatic_payment_methods: {
+            enabled: true,
+            allow_redirects: 'never', // Prevent redirect-based methods for simpler UX
+          },
+          usage: 'off_session', // Allows charging the payment method when customer is not present
+          metadata: {
+            user_id: userId,
+            purpose: 'payment_method_setup',
+            created_at: new Date().toISOString(),
+          },
+          description: `Payment method setup for user ${userId}`,
         })
 
         return new Response(JSON.stringify({
           client_secret: setupIntent.client_secret,
+          setup_intent_id: setupIntent.id,
         }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -83,18 +99,44 @@ serve(async (req) => {
 
       case 'list_payment_methods': {
         // List all payment methods for the customer
+        // Per Stripe best practices: filter by customer to avoid security issues
         const paymentMethods = await stripe.paymentMethods.list({
           customer: subscription.stripe_customer_id,
           type: 'card',
+          limit: 100, // Increased limit to handle users with many cards
         })
 
-        const formattedPaymentMethods = paymentMethods.data.map(pm => ({
-          id: pm.id,
-          brand: pm.card?.brand,
-          last4: pm.card?.last4,
-          exp_month: pm.card?.exp_month,
-          exp_year: pm.card?.exp_year,
-        }))
+        // Get the default payment method from customer or subscription
+        const customer = await stripe.customers.retrieve(subscription.stripe_customer_id) as Stripe.Customer
+        const defaultPaymentMethodId = (customer.invoice_settings?.default_payment_method as string) ||
+                                       (subscription.stripe_subscription_id ?
+                                         ((await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)).default_payment_method as string)
+                                         : null)
+
+        // Filter out invalid/expired payment methods and format
+        const now = new Date()
+        const currentYear = now.getFullYear()
+        const currentMonth = now.getMonth() + 1 // JS months are 0-indexed
+
+        const formattedPaymentMethods = paymentMethods.data
+          .filter(pm => {
+            // Filter out expired cards
+            if (!pm.card) return false
+            const expYear = pm.card.exp_year
+            const expMonth = pm.card.exp_month
+
+            // Card is expired if exp_year < current year, or same year but exp_month < current month
+            const isExpired = expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)
+            return !isExpired
+          })
+          .map(pm => ({
+            id: pm.id,
+            brand: pm.card?.brand,
+            last4: pm.card?.last4,
+            exp_month: pm.card?.exp_month,
+            exp_year: pm.card?.exp_year,
+            is_default: pm.id === defaultPaymentMethodId,
+          }))
 
         return new Response(JSON.stringify({
           payment_methods: formattedPaymentMethods,
@@ -105,8 +147,6 @@ serve(async (req) => {
       }
 
       case 'update_default_payment_method': {
-        const { paymentMethodId } = await req.json()
-
         if (!paymentMethodId) {
           return new Response(JSON.stringify({ error: 'Payment method ID is required' }), {
             status: 400,
@@ -114,11 +154,57 @@ serve(async (req) => {
           })
         }
 
-        // Update the default payment method on the subscription
-        await stripe.subscriptions.update(
-          subscription.stripe_subscription_id,
-          { default_payment_method: paymentMethodId }
-        )
+        // SECURITY: Verify payment method belongs to customer via listing (more secure than retrieve)
+        // This prevents potential security issues with direct retrieve
+        const customerPaymentMethods = await stripe.paymentMethods.list({
+          customer: subscription.stripe_customer_id,
+          type: 'card',
+        })
+
+        const paymentMethodExists = customerPaymentMethods.data.some(pm => pm.id === paymentMethodId)
+
+        if (!paymentMethodExists) {
+          return new Response(JSON.stringify({
+            error: 'Payment method not found or does not belong to this customer'
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Verify payment method is not expired
+        const paymentMethod = customerPaymentMethods.data.find(pm => pm.id === paymentMethodId)
+        if (paymentMethod?.card) {
+          const now = new Date()
+          const expYear = paymentMethod.card.exp_year
+          const expMonth = paymentMethod.card.exp_month
+          const isExpired = expYear < now.getFullYear() ||
+                           (expYear === now.getFullYear() && expMonth < (now.getMonth() + 1))
+
+          if (isExpired) {
+            return new Response(JSON.stringify({
+              error: 'Cannot set an expired card as default payment method'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+        }
+
+        // Update the default payment method on the customer (for future invoices)
+        await stripe.customers.update(subscription.stripe_customer_id, {
+          invoice_settings: {
+            default_payment_method: paymentMethodId,
+          },
+        })
+
+        // If there's an active subscription, also update it
+        if (subscription.stripe_subscription_id) {
+          await stripe.subscriptions.update(
+            subscription.stripe_subscription_id,
+            { default_payment_method: paymentMethodId }
+          )
+        }
 
         return new Response(JSON.stringify({
           success: true,
@@ -130,13 +216,65 @@ serve(async (req) => {
       }
 
       case 'detach_payment_method': {
-        const { paymentMethodId } = await req.json()
-
         if (!paymentMethodId) {
           return new Response(JSON.stringify({ error: 'Payment method ID is required' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })
+        }
+
+        // SECURITY: Verify payment method belongs to customer via listing
+        const customerPaymentMethods = await stripe.paymentMethods.list({
+          customer: subscription.stripe_customer_id,
+          type: 'card',
+        })
+
+        const paymentMethod = customerPaymentMethods.data.find(pm => pm.id === paymentMethodId)
+
+        if (!paymentMethod) {
+          return new Response(JSON.stringify({
+            error: 'Payment method not found or does not belong to this customer'
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Check if this is the default payment method and there's an active subscription
+        const customer = await stripe.customers.retrieve(subscription.stripe_customer_id) as Stripe.Customer
+        const isDefault = (customer.invoice_settings?.default_payment_method as string) === paymentMethodId
+
+        // CRITICAL: Cannot remove default payment method if subscription is active
+        if (isDefault && subscription.stripe_subscription_id) {
+          // Check subscription status to ensure it's actually active
+          const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
+
+          if (['active', 'trialing', 'past_due'].includes(stripeSubscription.status)) {
+            return new Response(JSON.stringify({
+              error: 'Cannot remove default payment method while subscription is active. Please add another payment method first.'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            })
+          }
+        }
+
+        // Additional safety: Ensure customer has at least one other payment method if subscription is active
+        if (subscription.stripe_subscription_id) {
+          const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
+
+          if (['active', 'trialing', 'past_due'].includes(stripeSubscription.status)) {
+            const remainingPaymentMethods = customerPaymentMethods.data.filter(pm => pm.id !== paymentMethodId)
+
+            if (remainingPaymentMethods.length === 0) {
+              return new Response(JSON.stringify({
+                error: 'Cannot remove your last payment method while subscription is active. Please add another payment method first.'
+              }), {
+                status: 400,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              })
+            }
+          }
         }
 
         // Detach the payment method from the customer
@@ -153,6 +291,7 @@ serve(async (req) => {
 
       case 'create_portal_session': {
         // Create a billing portal session for the customer
+        // This allows customers to manage their subscription, payment methods, and billing history
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: subscription.stripe_customer_id,
           return_url: `${req.headers.get('origin') || 'https://moneko.io'}/dashboard/membership`,
@@ -173,9 +312,22 @@ serve(async (req) => {
         })
     }
   } catch (error) {
-    console.error('Error in manage-payment-method:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
+    console.error('Error in manage-payment-method:', {
+      error: error.message,
+      stack: error.stack,
+      action: requestBody?.action,
+      userId: requestBody?.userId,
+    })
+    
+    // Return more specific error messages for better debugging
+    const errorMessage = error.message || 'Internal server error'
+    const statusCode = error.statusCode || 500
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      details: error.type || 'unknown_error'
+    }), {
+      status: statusCode,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

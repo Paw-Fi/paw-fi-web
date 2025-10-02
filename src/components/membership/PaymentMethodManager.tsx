@@ -9,8 +9,8 @@ import { CreditCard, Plus, Trash2, ExternalLink, Loader2, AlertCircle, CheckCirc
 
 interface PaymentMethodManagerProps {
   paymentMethod: any;
-  customerId: string;
-  userId: string;
+  customerId: string; // Required: Stripe customer ID from active subscription
+  userId: string; // Required: User ID for payment method operations
 }
 
 export function PaymentMethodManager({
@@ -20,10 +20,13 @@ export function PaymentMethodManager({
 }: PaymentMethodManagerProps) {
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [cardElement, setCardElement] = useState<any>(null);
+  const [stripeElements, setStripeElements] = useState<any>(null);
+  const [stripeInstance, setStripeInstance] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { 
+  const [setupIntentSecret, setSetupIntentSecret] = useState<string | null>(null);
+
+  const {
     paymentMethods,
     isLoading: isLoadingMethods,
     error: methodsError,
@@ -34,56 +37,147 @@ export function PaymentMethodManager({
     isMutating
   } = useManagePaymentMethod(userId);
 
+  // Cleanup function for Stripe Elements
+  React.useEffect(() => {
+    return () => {
+      if (cardElement) {
+        cardElement.unmount();
+      }
+    };
+  }, [cardElement]);
+
   const handleAddCard = async () => {
     setIsAddingCard(true);
     setError(null);
-    
+
     try {
-      // Load Stripe.js dynamically
+      // Validate Stripe publishable key exists
+      const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+      if (!publishableKey) {
+        throw new Error('Stripe publishable key is not configured');
+      }
+
+      // Load Stripe.js dynamically and store the instance
       const { loadStripe } = await import('@stripe/stripe-js');
-      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-      
+      const stripe = await loadStripe(publishableKey);
+
       if (!stripe) {
-        throw new Error('Failed to load Stripe.js');
+        throw new Error('Failed to load Stripe.js. Please check your internet connection.');
       }
-      
+
+      // Store the Stripe instance for later use
+      setStripeInstance(stripe);
+
       // Create a setup intent
-      const { client_secret } = await createSetupIntent();
-      
+      const { client_secret, setup_intent_id } = await createSetupIntent();
+
       if (!client_secret) {
-        throw new Error('Failed to create setup intent');
+        throw new Error('Failed to create setup intent. Please try again.');
       }
-      
-      // Create Elements instance
-      const elements = stripe.elements();
-      
-      // Create card element
-      const cardElement = elements.create('card');
-      cardElement.mount('#card-element');
-      setCardElement(cardElement);
-      
-      // Handle form submission
-      const form = document.getElementById('payment-form');
-      form?.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        setIsLoading(true);
-        
-        const { error, setupIntent } = await stripe.confirmCardSetup(client_secret, {
-          payment_method: {
-            card: cardElement,
+
+      setSetupIntentSecret(client_secret);
+
+      // Create Elements instance with styling
+      const elements = stripe.elements({
+        appearance: {
+          theme: 'stripe',
+          variables: {
+            colorPrimary: '#7458FF',
           },
-        });
-        
-        if (error) {
-          setError(error.message || 'An error occurred');
-          setIsLoading(false);
+        },
+      });
+
+      setStripeElements(elements);
+
+      // Create card element with enhanced configuration
+      const card = elements.create('card', {
+        style: {
+          base: {
+            fontSize: '16px',
+            color: '#424770',
+            '::placeholder': {
+              color: '#aab7c4',
+            },
+          },
+          invalid: {
+            color: '#9e2146',
+          },
+        },
+        hidePostalCode: false,
+      });
+
+      // Add event listeners for real-time validation
+      card.on('change', (event) => {
+        if (event.error) {
+          setError(event.error.message);
         } else {
-          // Refresh payment methods
-          window.location.reload();
+          setError(null);
         }
       });
+
+      card.mount('#card-element');
+      setCardElement(card);
+
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      console.error('Error setting up payment method:', err);
+      setError(err.message || 'An error occurred while setting up payment method');
+      setIsAddingCard(false);
+    }
+  };
+
+  const handleSubmitPaymentMethod = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!cardElement || !setupIntentSecret || !stripeInstance) {
+      setError('Payment form is not properly initialized');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Use the SAME Stripe instance that was used to create the Element
+      const { error, setupIntent } = await stripeInstance.confirmCardSetup(setupIntentSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            // Add billing details if needed
+          },
+        },
+      });
+
+      if (error) {
+        // Handle specific error types
+        if (error.type === 'card_error' || error.type === 'validation_error') {
+          setError(error.message || 'Your card was declined. Please try a different card.');
+        } else {
+          setError('An unexpected error occurred. Please try again.');
+        }
+        setIsLoading(false);
+      } else if (setupIntent && setupIntent.status === 'succeeded') {
+        // Payment method successfully attached
+        // Clean up and refresh
+        if (cardElement) {
+          cardElement.clear();
+          cardElement.unmount();
+          setCardElement(null);
+        }
+        setIsAddingCard(false);
+        setIsLoading(false);
+        setSetupIntentSecret(null);
+        setStripeInstance(null);
+
+        // Trigger a refetch of payment methods
+        window.location.reload();
+      } else {
+        setError('Payment method setup did not complete. Please try again.');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Error confirming card setup:', err);
+      setError(err.message || 'An unexpected error occurred');
+      setIsLoading(false);
     }
   };
   
@@ -184,20 +278,22 @@ export function PaymentMethodManager({
                           </p>
                         </div>
                       </div>
-{/*                       
-                      <Button
-                        onClick={() => detachPaymentMethod(method.id)}
-                        disabled={isMutating}
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/20 dark:hover:text-red-300"
-                      >
-                        {isMutating ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button> */}
+                      
+                      {!method.is_default && (
+                        <Button
+                          onClick={() => detachPaymentMethod(method.id)}
+                          disabled={isMutating}
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/20 dark:hover:text-red-300"
+                        >
+                          {isMutating ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -213,7 +309,7 @@ export function PaymentMethodManager({
             <Separator />
 
             {/* Add New Card Section */}
-            {/* <AnimatePresence>
+            <AnimatePresence>
               {!isAddingCard ? (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -243,7 +339,7 @@ export function PaymentMethodManager({
                     </h4>
                   </div>
                   
-                  <form id="payment-form" className="space-y-4">
+                  <form id="payment-form" onSubmit={handleSubmitPaymentMethod} className="space-y-4">
                     <div className="rounded-lg border bg-card p-4 shadow-sm">
                       <div id="card-element" className="h-6"></div>
                     </div>
@@ -284,6 +380,8 @@ export function PaymentMethodManager({
                         onClick={() => {
                           setIsAddingCard(false);
                           setError(null);
+                          setSetupIntentSecret(null);
+                          setStripeInstance(null);
                           if (cardElement) {
                             cardElement.destroy();
                           }
@@ -295,7 +393,7 @@ export function PaymentMethodManager({
                   </form>
                 </motion.div>
               )}
-            </AnimatePresence> */}
+            </AnimatePresence>
           </CardContent>
         </Card>
       </motion.div>
