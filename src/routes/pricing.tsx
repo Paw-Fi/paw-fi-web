@@ -276,8 +276,15 @@ function PricingPage() {
     }
   };
 
+  // Safari iOS streaming fix: Safari buffers HTML until ~650B gzipped
+  // Adding invisible padding triggers streaming: https://github.com/remix-run/remix/issues/5804
+  const safariStreamingPadding = '\u200b'.repeat(200);
+
   return (
     <AmbientHaloLayout>
+      {/* Safari iOS streaming fix - invisible padding */}
+      <div style={{ width: 0, height: 0, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: safariStreamingPadding }} />
+
       {/* GEO-Optimized FAQ Schema for Pricing */}
       <StructuredData
         type="faq"

@@ -3,8 +3,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
-import { Helmet } from "@dr.pogodin/react-helmet";
 import { getCanonicalUrl } from "@/utils/canonical";
+import { seo } from "@/utils/seo";
+import { Helmet } from "@dr.pogodin/react-helmet";
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
@@ -31,9 +32,16 @@ export const Route = createFileRoute("/")({
   staticData: () => ({}),
   head: () => {
     const pageUrl = getCanonicalUrl("/");
-    
-    // Let Helmet handle the basic meta tags, we'll handle performance-critical preloads here
+    const meta = seo({
+      title: pageData.meta.title,
+      description: pageData.meta.description,
+      keywords: pageData.meta.keywords,
+      image: "https://moneko.io/og-img.png",
+      url: pageUrl,
+    });
+
     return {
+      meta,
       links: [
         { rel: "canonical", href: pageUrl },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -80,6 +88,10 @@ export default function HomePage() {
     ]
   };
 
+  // Safari iOS streaming fix: Safari buffers HTML until ~650B gzipped
+  // Adding invisible padding triggers streaming: https://github.com/remix-run/remix/issues/5804
+  const safariStreamingPadding = '\u200b'.repeat(200);
+
   return (
     <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
@@ -90,6 +102,9 @@ export default function HomePage() {
         <meta name="robots" content="index, follow" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
+
+      {/* Safari iOS streaming fix - invisible padding */}
+      <div style={{ width: 0, height: 0, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: safariStreamingPadding }} />
 
       <AmbientHalo />
 

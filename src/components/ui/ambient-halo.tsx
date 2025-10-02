@@ -67,7 +67,7 @@ const HaloLayer = memo(({
   hasInnerLayer?: boolean;
 }) => (
   <>
-    {/* Static version for mobile - no animation, no blur for better iOS performance */}
+    {/* Static version for mobile - no animation */}
     <div
       className="absolute inset-0 md:hidden"
       style={{
@@ -77,9 +77,9 @@ const HaloLayer = memo(({
       }}
     >
       <div className={`absolute ${position} transform -translate-x-1/2 -translate-y-1/2`}>
-        <div className={`${size} rounded-full bg-radial ${colors} opacity-40`} />
+        <div className={`${size} rounded-full blur-3xl bg-radial ${colors}`} />
         {hasInnerLayer && (
-          <div className={`absolute inset-8 ${size.replace(/\d+/g, (match) => String(Math.floor(parseInt(match) * 0.6)))} rounded-full bg-radial ${colors.replace(/to-[\w-]+/g, 'to-transparent')} opacity-30`} />
+          <div className={`absolute inset-8 ${size.replace(/\d+/g, (match) => String(Math.floor(parseInt(match) * 0.6)))} rounded-full blur-2xl bg-radial ${colors.replace(/to-[\w-]+/g, 'to-transparent')}`} />
         )}
       </div>
     </div>
