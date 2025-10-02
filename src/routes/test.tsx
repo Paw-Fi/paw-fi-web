@@ -30,7 +30,7 @@ export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 const contentVariant = "main";
 const pageData = passiveIncomeVariants[contentVariant];
 
-export const Route = createFileRoute("/test-home-beams")({
+export const Route = createFileRoute("/test")({
   component: TestHomeBeamsPage,
   staticData: () => ({}),
   head: () => {

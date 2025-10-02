@@ -439,8 +439,10 @@ async function handleSubscriptionUpdated(
       : 'N/A'
     
     // Determine if this is a new subscription or an update
-    const isNew = subscription.status === 'active' && 
-                 subscription.created === subscription.start_date
+    // A subscription is "new" if:
+    // 1. It's active OR trialing (new subscriptions can start with either status) AND
+    // 2. There was no previous subscription record (previousSub is null)
+    const isNew = (subscription.status === 'active' || subscription.status === 'trialing') && !previousSub
     
     const name = user.full_name || ''
     
