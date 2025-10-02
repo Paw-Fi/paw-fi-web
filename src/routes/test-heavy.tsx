@@ -2,15 +2,15 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import AmbientHalo from "@/components/ui/ambient-halo";
-import HomeHeader from "@/components/homepage/home-header";
-import HeroSection from "@/components/homepage/hero-section";
-import FeaturesBentoGrid from "@/components/homepage/features-bento-grid";
-import VideoSection from "@/components/homepage/video-section";
-import ThreeStepsSection from "@/components/homepage/three-steps-section";
-import ExpertLessonsSection from "@/components/homepage/expert-lessons-section";
-import FAQSection from "@/components/homepage/faq-section";
-import Footer from "@/components/footer";
-import DashboardShowcase from "@/components/homepage/dashboard-showcase";
+import { HomeHeader } from "@/components/index/header";
+import HeroSection from "@/components/homepage/new/hero-section";
+import { FeaturesBentoGrid } from "@/components/homepage/features-bento-grid";
+import VideoSection from "@/components/homepage/new/video-section";
+import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
+import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
+import FAQSection from "@/components/homepage/new/faq-section";
+import { Footer } from "@/components/homepage/footer";
+import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
 
 export const Route = createFileRoute("/test-heavy")({
   component: TestHeavy,
