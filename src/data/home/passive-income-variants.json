@@ -1,20 +1,20 @@
 {
   "main": {
     "meta": {
-      "title": "AI Budgeting App – Track Spending, Plan Budgets, and Reach Savings Goals | Moneko",
-      "description": "Build a realistic budget, track expenses, and stay on top of your money with AI guidance. Set savings goals, monitor categories, and learn smart money habits.",
-      "keywords": "budgeting app, budget planner, expense tracker, savings goals, AI budgeting, personal finance app"
+      "title": "Moneko | The AI Personal Finance Coach & Budgeting App",
+      "description": "Take control of your finances with Moneko, the AI-powered budgeting app. Track spending, get personalized coaching, and achieve your financial goals with expert guidance.",
+      "keywords": "moneko, moneko app, moneko finance, AI budgeting app, personal finance coach, budget planner, expense tracker, savings goals, financial education, money management"
     },
     "hero": {
-      "title": "Smart Spending, Smarter Savings",
-      "subtitle": "Track spending, set savings goals, and get AI-powered guidance that meets you where you are.",
-      "ctaText": "Start Your Budget",
+      "title": "Smart Spending, Smarter Saving",
+      "subtitle": "Take control of your finances with Moneko's AI-powered budgeting app. Track spending, set savings goals, and get personalized guidance that meets you where you are.",
+      "ctaText": "Start with Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
+        "How does Moneko help me budget better?",
         "Help me create a monthly budget I can follow",
-        "How can I cut expenses without sacrificing too much?",
-        "What’s a realistic rent budget on my income?",
-        "How do I set and reach a savings goal?"
+        "What makes Moneko different from other budget apps?",
+        "How do I set and reach a savings goal with Moneko?"
       ]
     },
     "howItWorks": {
@@ -34,19 +34,19 @@
       ]
     },
     "videoSection": {
-      "title": "See How Simple Budgeting Can Be",
-      "subtitle": "Watch how to build a clear budget in minutes and get actionable insights you can use right away."
+      "title": "See How Moneko Simplifies Budgeting",
+      "subtitle": "Watch how Moneko helps you build a clear budget in minutes and get actionable insights you can use right away."
     },
     "features": [
       {
         "title": "Budget Planner",
-        "description": "Create a practical budget with AI suggestions for common categories and spending limits.",
+        "description": "Create a practical budget with Moneko's AI suggestions for common categories and spending limits.",
         "icon": "🧮",
         "route": "/dashboard/"
       },
       {
         "title": "Savings Goal Calculator",
-        "description": "Plan how much to set aside each month to hit your savings goals on time.",
+        "description": "Use Moneko's savings calculator to plan how much to set aside each month to hit your goals on time.",
         "icon": "🏁",
         "route": "/calculators/saving-goals-calculator"
       }
@@ -64,9 +64,9 @@
       }
     ],
     "benefits": [
-      "Clear category breakdowns",
-      "Goal‑based planning",
-      "Actionable AI tips",
+      "Moneko's clear category breakdowns",
+      "Goal-based planning with AI",
+      "Actionable tips from Moneko",
       "Simple progress tracking"
     ]
   },

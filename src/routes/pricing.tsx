@@ -29,10 +29,10 @@ export const Route = createFileRoute("/pricing")({
   head: () => {
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
-      title: "Pricing Plans - Free AI Finance Coach | Moneko",
-      description: "Start free with AI finance coach. Affordable plans for advanced budgeting, investment guidance & financial education.",
+      title: "Moneko Pricing Plans | Free AI Personal Finance Coach & Budgeting App",
+      description: "Start free with Moneko's AI-powered finance coach. Choose from flexible plans designed for every budget: Free Starter, Plus Money Mover, or Premium Invest & Thrive. No credit card required to start.",
       keywords:
-        "personal finance app pricing, AI finance coach plans, budgeting app subscription, financial education pricing, investment tools cost, financial planning app",
+        "moneko pricing, moneko plans, moneko subscription, personal finance app pricing, AI finance coach plans, budgeting app subscription, financial education pricing, investment tools cost, moneko cost, moneko free",
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
@@ -41,9 +41,9 @@ export const Route = createFileRoute("/pricing")({
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Product",
-      name: "Moneko Subscription Plans",
+      name: "Moneko - AI Personal Finance Coach & Budgeting App",
       description:
-        "Expert-designed financial education subscription plans created by CFA charterholder Sabina Shao, offering AI-powered coaching, investment guidance, and personalized budgeting tools.",
+        "Moneko is an expert-designed financial education app created by CFA charterholder Sabina Shao, offering AI-powered coaching, investment guidance, and personalized budgeting tools.",
       image: "https://moneko.io/og-img.png",
       brand: {
         "@type": "Brand",
@@ -63,11 +63,11 @@ export const Route = createFileRoute("/pricing")({
       },
       offers: {
         "@type": "OfferCatalog",
-        name: "Moneko Subscription Plans",
+        name: "Moneko - AI Personal Finance Coach & Budgeting App",
         itemListElement: [
           {
             "@type": "Offer",
-            name: "Free Plan - Starter Pack",
+            name: "Moneko Free Plan - Starter Pack",
             price: "0",
             priceCurrency: "USD",
             description:
@@ -78,7 +78,7 @@ export const Route = createFileRoute("/pricing")({
           },
           {
             "@type": "Offer",
-            name: "Plus Plan - Money Mover",
+            name: "Moneko Plus Plan - Money Mover",
             priceSpecification: [
               {
                 "@type": "PriceSpecification",
@@ -100,7 +100,7 @@ export const Route = createFileRoute("/pricing")({
           },
           {
             "@type": "Offer",
-            name: "Premium Plan - Invest & Thrive",
+            name: "Moneko Premium Plan - Invest & Thrive",
             priceSpecification: [
               {
                 "@type": "PriceSpecification",

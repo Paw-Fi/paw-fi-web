@@ -137,7 +137,7 @@ export const Footer = () => {
                </li>
                <li>
                  <a
-                   href="https://www.instagram.com/moneko_ai/"
+                   href="https://www.instagram.com/moneko_ai"
                    target="_blank"
                    rel="noopener noreferrer"
                    className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
@@ -197,7 +197,7 @@ export const Footer = () => {
                <FontAwesomeIcon icon={faX} className="h-4 w-4 sm:h-5 sm:w-5" />
              </a>
              <a
-               href="https://www.instagram.com/moneko_ai/"
+               href="https://www.instagram.com/moneko_ai"
                target="_blank"
                rel="noopener noreferrer"
                aria-label="Moneko on Instagram"

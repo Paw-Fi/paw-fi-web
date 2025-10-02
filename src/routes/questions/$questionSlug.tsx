@@ -110,8 +110,8 @@ export const Route = createFileRoute('/questions/$questionSlug')({
             "AI Technology Specialists"
           ],
           "sameAs": [
-            "https://twitter.com/moneko_io",
-            "https://linkedin.com/company/moneko",
+            "https://x.com/moneko_ai",
+            "https://linkedin.com/company/moneko-ai",
             "https://facebook.com/monekoai",
             "https://instagram.com/moneko_ai"
           ],

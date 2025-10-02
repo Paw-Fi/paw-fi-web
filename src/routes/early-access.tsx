@@ -24,11 +24,11 @@ export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/early-access");
-    const title = "Join the Moneko Mobile App Waitlist - Mobile Budgeting Coming Soon";
+    const title = "Join the Moneko Mobile App Waitlist | AI Budgeting App Coming Soon";
     const description =
-      `Join the Moneko mobile app waitlist. Built on our live desktop financial platform with budgeting, goal tracking, AI learning, and calculators. Mobile app in development — try the web dashboard today.`;
+      `Join the Moneko mobile app waitlist and be first to experience AI-powered budgeting on your phone. Built on Moneko's proven desktop platform with smart budgeting, goal tracking, AI learning, and financial calculators. Try the web dashboard today while we perfect the mobile experience.`;
     const keywords =
-      "mobile budgeting app waitlist, personal finance app, early access, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, web dashboard";
+      "moneko mobile app, moneko waitlist, moneko early access, mobile budgeting app waitlist, personal finance app, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, moneko dashboard";
 
     const meta = seo({
       title: title,
@@ -44,11 +44,13 @@ export const Route = createFileRoute("/early-access")({
           "@type": "Organization",
           "@id": "https://moneko.io/#organization",
           "name": "Moneko",
+          "alternateName": "Moneko App",
           "url": "https://moneko.io",
           "logo": "https://moneko.io/icon.svg",
+          "description": "AI-powered personal finance coach and budgeting app",
           "sameAs": [
             "https://www.facebook.com/monekoai/",
-            "https://www.instagram.com/moneko_ai/",
+            "https://www.instagram.com/moneko_ai",
             "https://x.com/moneko_ai"
           ]
         },
@@ -56,7 +58,9 @@ export const Route = createFileRoute("/early-access")({
           "@type": "WebSite",
           "@id": "https://moneko.io/#website",
           "name": "Moneko",
+          "alternateName": "Moneko - AI Personal Finance Coach",
           "url": "https://moneko.io",
+          "description": "The official website of Moneko, your AI personal finance coach and budgeting app",
           "publisher": { "@id": "https://moneko.io/#organization" }
         },
         {
@@ -70,19 +74,31 @@ export const Route = createFileRoute("/early-access")({
             "@type": "BreadcrumbList",
             "itemListElement": [
               { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://moneko.io" },
-              { "@type": "ListItem", "position": 2, "name": "Early Access", "item": pageUrl }
+              { "@type": "ListItem", "position": 2, "name": "Moneko Early Access", "item": pageUrl }
             ]
           },
           "inLanguage": "en-US",
           "primaryImageOfPage": "https://moneko.io/og-img.png"
         },
         {
+          "@type": "SoftwareApplication",
+          "name": "Moneko Mobile App",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "iOS, Android",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "Moneko's AI-powered mobile budgeting and personal finance app - coming soon"
+        },
+        {
           "@type": "FAQPage",
           "@id": pageUrl + "#faq",
           "mainEntity": [
-            { "@type": "Question", "name": "When will the mobile app launch?", "acceptedAnswer": { "@type": "Answer", "text": "The mobile app is in active development. Join the waitlist for updates and early invitations; invites roll out in waves during private beta." } },
-            { "@type": "Question", "name": "What can I use today?", "acceptedAnswer": { "@type": "Answer", "text": "Use the live web dashboard for budgeting, goal tracking, AI learning, and calculators while mobile is in development." } },
-            { "@type": "Question", "name": "How do I access the dashboard?", "acceptedAnswer": { "@type": "Answer", "text": "Visit https://moneko.io/dashboard to sign in and get started." } }
+            { "@type": "Question", "name": "When will the Moneko mobile app launch?", "acceptedAnswer": { "@type": "Answer", "text": "The Moneko mobile app is in active development. Join the waitlist for updates and early invitations; invites roll out in waves during private beta." } },
+            { "@type": "Question", "name": "What can I use in Moneko today?", "acceptedAnswer": { "@type": "Answer", "text": "Use Moneko's live web dashboard for budgeting, goal tracking, AI learning, and calculators while mobile is in development." } },
+            { "@type": "Question", "name": "How do I access the Moneko dashboard?", "acceptedAnswer": { "@type": "Answer", "text": "Visit https://moneko.io/dashboard to sign in and get started with Moneko's web platform." } }
           ]
         }
       ]

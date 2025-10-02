@@ -17,9 +17,9 @@ import { HomeHeader } from "@/components/index/header";
 export const Route = createFileRoute("/blogs/")({
   component: BlogsPage,
   head: () => {
-    const title = "Financial Education Blog | Moneko";
-    const description = "Explore expert insights on personal finance, investing, budgeting, and more. Stay informed with the latest financial education articles from Moneko.";
-    const keywords = "financial blog, money management, investing tips, personal finance, financial literacy, Moneko blog";
+    const title = "Moneko Financial Education Blog | Expert Personal Finance Insights";
+    const description = "Explore expert insights on personal finance, investing, budgeting, and more from Moneko's financial education blog. Stay informed with the latest money management strategies, AI-powered budgeting tips, and wealth-building advice.";
+    const keywords = "moneko blog, financial education blog, money management tips, investing tips, personal finance advice, financial literacy, budgeting strategies, wealth building, moneko insights";
     const imageUrl = "https://moneko.io/og-img.png";
     const pageUrl = getCanonicalUrl("/blogs");
 
@@ -35,24 +35,37 @@ export const Route = createFileRoute("/blogs/")({
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
-      "headline": "Financial Education Blog | Moneko",
+      "headline": "Moneko Financial Education Blog - Expert Personal Finance Insights",
       "description": description,
       "url": pageUrl,
       "publisher": {
         "@type": "Organization",
         "name": "Moneko",
+        "alternateName": "Moneko App",
         "logo": {
           "@type": "ImageObject",
-          "url": "https://moneko.io/favicon.ico"
-        }
+          "url": "https://moneko.io/og-img.png"
+        },
+        "sameAs": [
+          "https://www.facebook.com/monekoapp",
+          "https://twitter.com/monekoapp",
+          "https://www.linkedin.com/company/moneko",
+          "https://www.instagram.com/monekoapp"
+        ]
       },
       "mainEntity": {
         "@type": "ItemList",
         "itemListElement": blogs.slice(0, 10).map((blog, index) => ({
           "@type": "ListItem",
           "position": index + 1,
-          "url": `https://moneko.io/blogs/${blog.slug}`
+          "url": `https://moneko.io/blogs/${blog.slug}`,
+          "name": blog.title
         }))
+      },
+      "about": {
+        "@type": "Thing",
+        "name": "Personal Finance Education",
+        "description": "Financial literacy, budgeting, investing, and money management"
       }
     };
 
@@ -141,10 +154,10 @@ function BlogsPage() {
       >
         <h1 className="mb-4 bg-gradient-to-r from-primary via-accent-pink to-accent-indigo dark:from-dark-primary dark:via-dark-accent-pink dark:to-dark-accent-indigo bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
         >
-          Financial Education Blog
+          Moneko Financial Education Blog
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-gray-600 dark:text-gray-300">
-          Expert insights and practical advice to help you navigate your financial journey with confidence.
+          Expert insights and practical advice from Moneko to help you navigate your financial journey with confidence and master your money.
         </p>
       </motion.div>
 

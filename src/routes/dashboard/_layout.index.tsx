@@ -76,7 +76,7 @@ export const Route = createFileRoute("/dashboard/_layout/")({
           "logo": "https://moneko.io/icon.svg",
           "sameAs": [
             "https://www.facebook.com/monekoai/",
-            "https://www.instagram.com/moneko_ai/",
+            "https://www.instagram.com/moneko_ai",
             "https://x.com/moneko_ai"
           ]
         },

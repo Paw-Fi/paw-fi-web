@@ -106,8 +106,8 @@ export const Route = createFileRoute('/dashboard/user-settings/')({
             "availableLanguage": "English"
           },
           "sameAs": [
-            "https://twitter.com/moneko_io",
-            "https://linkedin.com/company/moneko"
+            "https://x.com/moneko_ai",
+            "https://linkedin.com/company/moneko-ai"
           ]
         },
         {

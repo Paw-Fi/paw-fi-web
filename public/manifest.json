@@ -1,7 +1,7 @@
 {
   "short_name": "Moneko",
-  "name": "Moneko - Personal Finance Education",
-  "description": "Learn personal finance with comprehensive budgeting tools, calculators, and educational resources",
+  "name": "Moneko - AI Personal Finance Coach & Budgeting App",
+  "description": "Take control of your finances with Moneko, the AI-powered budgeting app. Track spending, get personalized coaching, and achieve your financial goals.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -28,5 +28,5 @@
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en-US",
-  "categories": ["finance", "education", "productivity"]
+  "categories": ["finance", "education", "productivity", "budgeting"]
 }

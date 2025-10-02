@@ -61,8 +61,8 @@ export const Route = createFileRoute("/dashboard/learning/")({
               "yearsOfExperience": "10+"
             },
             "sameAs": [
-              "https://twitter.com/moneko_io",
-              "https://linkedin.com/company/moneko"
+              "https://x.com/moneko_ai",
+              "https://linkedin.com/company/moneko-ai"
             ]
           },
           "courseMode": ["online", "self-paced", "ai-personalized"],
@@ -143,8 +143,8 @@ export const Route = createFileRoute("/dashboard/learning/")({
             "availableLanguage": "English"
           },
           "sameAs": [
-            "https://twitter.com/moneko_io",
-            "https://linkedin.com/company/moneko"
+            "https://x.com/moneko_ai",
+            "https://linkedin.com/company/moneko-ai"
           ]
         },
         {

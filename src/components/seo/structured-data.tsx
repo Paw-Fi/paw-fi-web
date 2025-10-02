@@ -274,7 +274,7 @@ export function MonekoOrganizationData() {
         description: 'Personal finance education and budgeting tools platform',
         sameAs: [
           'https://twitter.com/moneko',
-          'https://linkedin.com/company/moneko',
+          'https://linkedin.com/company/moneko-ai',
         ],
       }}
     />

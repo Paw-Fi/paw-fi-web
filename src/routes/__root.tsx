@@ -46,8 +46,8 @@ export const Route = createRootRoute({
       },
       ...seo({
         title:
-          'Moneko | Personal Finance Education & Budgeting Tools',
-        description: `Learn personal finance with Moneko's comprehensive budgeting tools, calculators, and educational resources. Master money management with our expert-designed financial planning platform.`,
+          'Moneko | The AI Personal Finance Coach & Budgeting App',
+        description: `Take control of your finances with Moneko, the AI-powered budgeting app. Track spending, get personalized coaching, and achieve your financial goals with expert guidance and educational resources.`,
       }),
     ],
     links: [

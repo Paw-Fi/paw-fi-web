@@ -158,8 +158,8 @@ function BlogDetailPage() {
               height: 192
             },
             sameAs: [
-              "https://twitter.com/moneko_ai",
-              "https://linkedin.com/company/moneko",
+              "https://x.com/moneko_ai",
+              "https://linkedin.com/company/moneko-ai",
               "https://facebook.com/moneko"
             ]
           },
@@ -278,8 +278,8 @@ function BlogDetailPage() {
             }
           ],
           sameAs: [
-            "https://twitter.com/moneko_ai",
-            "https://linkedin.com/company/moneko",
+            "https://x.com/moneko_ai",
+            "https://linkedin.com/company/moneko-ai",
             "https://facebook.com/moneko"
           ],
           contactPoint: {

@@ -40,9 +40,9 @@ validateSearch: (search: Record<string, unknown>) => {
       "url": "https://moneko.io",
       "logo": "https://moneko.io/logo192.png",
       "sameAs": [
-        "https://linkedin.com/company/moneko",
-        "https://twitter.com/monekoapp",
-        "https://facebook.com/monekoapp"
+        "https://linkedin.com/company/moneko-ai",
+        "https://x.com/moneko_ai",
+        "https://facebook.com/moneko-ai"
       ],
       "founder": {
         "@type": "Person",

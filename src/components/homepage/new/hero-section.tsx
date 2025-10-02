@@ -41,7 +41,8 @@ export default function HeroSection({ data }: HeroSectionProps) {
     word.toLowerCase().includes("simplified") ||
     word.toLowerCase().includes("net worth") ||
     word.toLowerCase().includes("financial") ||
-    word.toLowerCase().includes("Emergency") ||
+    word.toLowerCase().includes("coach") ||
+    word.toLowerCase().includes("emergency") ||
     word.toLowerCase().includes("real wealth") ||
     word.toLowerCase().includes("retirement") ||
     word.toLowerCase().includes("debt-free") ||

@@ -71,9 +71,9 @@ export const Route = createFileRoute("/budgeting-app/$slug")({
           ],
           sameAs: [
             "https://www.facebook.com/monekoai/",
-            "https://www.instagram.com/moneko_ai/",
+            "https://www.instagram.com/moneko_ai",
             "https://x.com/moneko_ai",
-            "https://www.linkedin.com/company/moneko"
+            "https://www.linkedin.com/company/moneko-ai"
           ],
           contactPoint: {
             "@type": "ContactPoint",
@@ -449,9 +449,9 @@ function BudgetingApp() {
           ],
           sameAs: [
             "https://www.facebook.com/monekoai/",
-            "https://www.instagram.com/moneko_ai/",
+            "https://www.instagram.com/moneko_ai",
             "https://x.com/moneko_ai",
-            "https://www.linkedin.com/company/moneko"
+            "https://www.linkedin.com/company/moneko-ai"
           ],
           contactPoint: {
             "@type": "ContactPoint",

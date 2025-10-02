@@ -38,7 +38,7 @@ export const Route = createFileRoute("/team")({
           "sameAs": [
             "https://www.facebook.com/monekoai/",
             "https://x.com/moneko_ai",
-            "https://www.instagram.com/moneko_ai/"
+            "https://www.instagram.com/moneko_ai"
           ]
         },
         {
