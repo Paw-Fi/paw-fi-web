@@ -6,6 +6,7 @@ import { HomeHeader } from "@/components/index/header";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { Helmet } from "@dr.pogodin/react-helmet";
+import { motion } from "framer-motion";
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
@@ -88,10 +89,6 @@ export default function HomePage() {
     ]
   };
 
-  // Safari iOS streaming fix: Safari buffers HTML until ~650B gzipped
-  // Adding invisible padding triggers streaming: https://github.com/remix-run/remix/issues/5804
-  const safariStreamingPadding = '\u200b'.repeat(200);
-
   return (
     <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
@@ -103,9 +100,6 @@ export default function HomePage() {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      {/* Safari iOS streaming fix - invisible padding */}
-      <div style={{ width: 0, height: 0, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: safariStreamingPadding }} />
-
       <AmbientHalo />
 
       {/* Header */}
@@ -114,44 +108,84 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section - Transparent background with halo */}
-      <section className="relative">
+      <motion.section
+        className="relative"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <HeroSection data={pageData} />
-      </section>
+      </motion.section>
 
-          {/* Video Section */}
-          <section className="relative bg-white/80 dark:bg-gray-900/80">
+      {/* Video Section */}
+      <motion.section
+        className="relative bg-white/80 dark:bg-gray-900/80"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <VideoSection data={pageData} />
-      </section>
-
+      </motion.section>
 
       {/* Features Bento Grid Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
+      <motion.section
+        className="relative bg-white/80 dark:bg-gray-900/80"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <FeaturesBentoGrid />
-      </section>
+      </motion.section>
 
-  
-         {/* DashboardShowcase Section */}
-         <section className="relative bg-white/80 dark:bg-gray-900/80">
+      {/* DashboardShowcase Section */}
+      <motion.section
+        className="relative bg-white/80 dark:bg-gray-900/80"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <DashboardShowcase />
-      </section>
+      </motion.section>
 
       {/* Three Steps Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
+      <motion.section
+        className="relative bg-white/80 dark:bg-gray-900/80"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <ThreeStepsSection data={pageData} />
-      </section>
+      </motion.section>
 
       {/* Testimonials Section */}
       {/* <TestimonialsSection /> */}
 
       {/* Expert-Led Lessons Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
+      <motion.section
+        className="relative bg-white/80 dark:bg-gray-900/80"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <ExpertLessonsSection data={pageData} />
-      </section>
+      </motion.section>
 
       {/* FAQ Section */}
-      <section className="relative ">
+      <motion.section
+        className="relative"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
+      >
         <FAQSection />
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <Footer />

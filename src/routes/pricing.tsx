@@ -276,15 +276,8 @@ function PricingPage() {
     }
   };
 
-  // Safari iOS streaming fix: Safari buffers HTML until ~650B gzipped
-  // Adding invisible padding triggers streaming: https://github.com/remix-run/remix/issues/5804
-  const safariStreamingPadding = '\u200b'.repeat(200);
-
   return (
     <AmbientHaloLayout>
-      {/* Safari iOS streaming fix - invisible padding */}
-      <div style={{ width: 0, height: 0, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: safariStreamingPadding }} />
-
       {/* GEO-Optimized FAQ Schema for Pricing */}
       <StructuredData
         type="faq"
@@ -309,13 +302,21 @@ function PricingPage() {
       />
 
       <HomeHeader />
-      <div      
+      <motion.div
         className="container mx-auto min-h-screen px-4 py-12 md:py-20"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6 }}
       >
-     
 
-        <header
+
+        <motion.header
           className="mb-16 text-center md:mb-20"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
         >
           <h1
             className="mb-6 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl"
@@ -342,11 +343,15 @@ function PricingPage() {
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
           </span>
-        </header>
+        </motion.header>
 
-        <div
+        <motion.div
           className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3"
           id="pricing-tiers"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
         >
           {pricingTiers.map((tier) => (
             <div
@@ -467,16 +472,41 @@ function PricingPage() {
               </Card>
             </div>
           ))}
-        </div>
+        </motion.div>
 
-        <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
+        </motion.div>
 
-        <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
+        </motion.div>
 
-        <FaqSection faqData={faqData} />
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <FaqSection faqData={faqData} />
+        </motion.div>
 
-        <div
+        <motion.div
           className="mt-20 md:mt-24"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, margin: "-50px" }}
+          transition={{ duration: 0.6 }}
         >
           <Card className="text-center bg-subtle-background">
             <CardHeader className="pb-4">
@@ -498,8 +528,8 @@ function PricingPage() {
               </Button>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <Card className="p-8 shadow-xl">
