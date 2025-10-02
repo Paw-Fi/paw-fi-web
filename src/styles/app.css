@@ -63,6 +63,15 @@
   --halo-light-blue-mid: rgba(205, 225, 245, 0.75);
   --halo-light-blue-outer: rgba(220, 240, 252, 0.55);
 
+  /* Gradient Animation Colors - Light Mode */
+  --gradient-bg: linear-gradient(40deg, rgb(240, 235, 255), rgb(250, 245, 255));
+  --gradient-first-color: var(--halo-purple);
+  --gradient-second-color-rgba: rgba(243, 221, 247, 0.8);
+  --gradient-third-color-rgba: rgba(162, 212, 244, 0.8);
+  --gradient-fourth-color-rgba: rgba(215, 236, 250, 0.8);
+  --gradient-fifth-color-rgba: rgba(195, 180, 235, 0.8);
+  --gradient-pointer-color-rgba: rgba(207, 195, 245, 0.8);
+
   /* Accent colors */
   --accent-pink: #EC4899;
   --accent-indigo: #6366F1;
@@ -76,6 +85,7 @@
   --subtle-border: #E5E7EB;
   --subtle-background: #F9FAFB;
   --section-bg: #FFFFFF;
+  --section-bg-light: rgba(255, 255, 255, 0.8);
   --section-shadow: rgba(0, 0, 0, 0.1);
 
   /* Guide/Status colors */
@@ -222,6 +232,15 @@
   --halo-light-blue-mid: rgba(80, 130, 150, 0.3);
   --halo-light-blue-outer: rgba(100, 150, 170, 0.25);
 
+  /* Gradient Animation Colors - Dark Mode */
+  --gradient-bg: linear-gradient(40deg, rgb(20, 15, 35), rgb(30, 25, 45));
+  --gradient-first-color: var(--halo-purple);
+  --gradient-second-color-rgba: rgba(180, 140, 185, 0.35);
+  --gradient-third-color-rgba: rgba(70, 120, 180, 0.4);
+  --gradient-fourth-color-rgba: rgba(90, 140, 160, 0.35);
+  --gradient-fifth-color-rgba: rgba(90, 65, 180, 0.35);
+  --gradient-pointer-color-rgba: rgba(100, 75, 200, 0.4);
+
   /* Dark accent colors */
   --accent-pink: #F472B6;
   --accent-indigo: #818CF8;
@@ -235,6 +254,7 @@
   --subtle-border: #374151;
   --subtle-background: #1F2937;
   --section-bg: #1F2937;
+  --section-bg-light: oklch(21% .034 264.665);
   --section-shadow: rgba(0, 0, 0, 0.3);
 
   /* Dark guide/status colors */
@@ -412,6 +432,7 @@
 
   /* Section colors */
   --color-section-bg: var(--section-bg);
+  --color-section-bg-light: var(--section-bg-light);
   --color-section-shadow: var(--section-shadow);
 
   /* Guide colors */
@@ -640,6 +661,44 @@
   100% {
     transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px)) rotate(calc((var(--angle) * -1deg) - 360deg));
     }
+  }
+  --animate-first: moveVertical 30s ease infinite;
+  --animate-second: moveInCircle 20s reverse infinite;
+  --animate-third: moveInCircle 40s linear infinite;
+  --animate-fourth: moveHorizontal 40s ease infinite;
+  --animate-fifth: moveInCircle 20s ease infinite;
+  @keyframes moveHorizontal {
+  0% {
+    transform: translateX(-50%) translateY(-10%);
+    }
+  50% {
+    transform: translateX(50%) translateY(10%);
+    }
+  100% {
+    transform: translateX(-50%) translateY(-10%);
+    }
+  }
+  @keyframes moveInCircle {
+  0% {
+    transform: rotate(0deg);
+    }
+  50% {
+    transform: rotate(180deg);
+    }
+  100% {
+    transform: rotate(360deg);
+    }
+  }
+  @keyframes moveVertical {
+  0% {
+    transform: translateY(-50%);
+    }
+  50% {
+    transform: translateY(50%);
+    }
+  100% {
+    transform: translateY(-50%);
+    }
   }}
 
 /* Font utility classes */
@@ -663,5 +722,14 @@
   body {
     @apply bg-moneko-background text-foreground;
     font-family: var(--font-poppins);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }

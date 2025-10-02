@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import { motion, Variants } from "framer-motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 // Import basic lessons data - handle potential large file
 const getBasicLessonsData = async () => {
   try {
@@ -44,12 +46,41 @@ const defaultLessons = [
 
 export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps) {
   const lessons = defaultLessons;
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.15,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0 : 0.6,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
+    <motion.section 
+      className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      variants={containerVariants}
+    >
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
-        <div className="mb-16 text-center">
+        <motion.div className="mb-16 text-center" variants={itemVariants}>
           <h2 className="text-foreground mb-6 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
             Level Up Your Budgeting Skills
           </h2>
@@ -57,15 +88,16 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
           <p className="text-muted-foreground text-lg max-w-3xl mx-auto font-lato">
             Clear, bite-sized lessons that turn budgeting concepts into practical steps. Start with the basics and build smart money habits at your pace.
           </p>
-        </div>
+        </motion.div>
 
         {/* Lessons Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {lessons.map((lesson, index) => {
             return (
-              <div
+              <motion.div
                 key={index}
                 className="group p-8 rounded-2xl backdrop-blur-xl shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300"
+                variants={itemVariants}
               >
                 {/* Content */}
                 <h3 className="text-xl font-bold text-foreground mb-4 group-hover:text-primary transition-colors font-lato">
@@ -100,11 +132,11 @@ export default function ExpertLessonsSection({ data }: ExpertLessonsSectionProps
                     </svg>
                   </Link>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

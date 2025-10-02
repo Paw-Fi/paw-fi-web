@@ -54,6 +54,7 @@ export const Route = createFileRoute("/")({
 
 export default function HomePage() {
   const pageUrl = getCanonicalUrl("/");
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -88,10 +89,6 @@ export default function HomePage() {
     ]
   };
 
-  // Safari iOS streaming fix: Safari buffers HTML until ~650B gzipped
-  // Adding invisible padding triggers streaming: https://github.com/remix-run/remix/issues/5804
-  const safariStreamingPadding = '\u200b'.repeat(200);
-
   return (
     <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
@@ -102,9 +99,6 @@ export default function HomePage() {
         <meta name="robots" content="index, follow" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
-
-      {/* Safari iOS streaming fix - invisible padding */}
-      <div style={{ width: 0, height: 0, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: safariStreamingPadding }} />
 
       <AmbientHalo />
 
@@ -118,25 +112,23 @@ export default function HomePage() {
         <HeroSection data={pageData} />
       </section>
 
-          {/* Video Section */}
-          <section className="relative bg-white/80 dark:bg-gray-900/80">
+      {/* Video Section */}
+      <section className="relative bg-section-bg-light">
         <VideoSection data={pageData} />
       </section>
 
-
       {/* Features Bento Grid Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
+      <section className="relative bg-section-bg-light">
         <FeaturesBentoGrid />
       </section>
 
-  
-         {/* DashboardShowcase Section */}
-         <section className="relative bg-white/80 dark:bg-gray-900/80">
+      {/* DashboardShowcase Section */}
+      <section className="relative bg-section-bg-light">
         <DashboardShowcase />
       </section>
 
       {/* Three Steps Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
+      <section className="relative bg-section-bg-light">
         <ThreeStepsSection data={pageData} />
       </section>
 
@@ -144,12 +136,12 @@ export default function HomePage() {
       {/* <TestimonialsSection /> */}
 
       {/* Expert-Led Lessons Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
+      <section className="relative bg-section-bg-light">
         <ExpertLessonsSection data={pageData} />
       </section>
 
       {/* FAQ Section */}
-      <section className="relative ">
+      <section className="relative">
         <FAQSection />
       </section>
 

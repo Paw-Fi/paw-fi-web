@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { motion, Variants } from "framer-motion";
+import { Variants, motion } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { Switch } from "@/components/ui/switch";
@@ -276,15 +276,32 @@ function PricingPage() {
     }
   };
 
-  // Safari iOS streaming fix: Safari buffers HTML until ~650B gzipped
-  // Adding invisible padding triggers streaming: https://github.com/remix-run/remix/issues/5804
-  const safariStreamingPadding = '\u200b'.repeat(200);
+  // Animation variants similar to early-access page
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.1,
+        delayChildren: prefersReducedMotion ? 0 : 0.1,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0 : 0.5,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
 
   return (
     <AmbientHaloLayout>
-      {/* Safari iOS streaming fix - invisible padding */}
-      <div style={{ width: 0, height: 0, overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: safariStreamingPadding }} />
-
       {/* GEO-Optimized FAQ Schema for Pricing */}
       <StructuredData
         type="faq"
@@ -309,27 +326,29 @@ function PricingPage() {
       />
 
       <HomeHeader />
-      <div      
-        className="container mx-auto min-h-screen px-4 py-12 md:py-20"
-      >
-     
-
-        <header
+      <div className="container mx-auto min-h-screen px-4 py-12 md:py-20">
+        <motion.header 
           className="mb-16 text-center md:mb-20"
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
         >
-          <h1
+          <motion.h1
             className="mb-6 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl"
+            variants={itemVariants}
           >
             Master Your Money with Expert Financial Education
-          </h1>
-          <p
+          </motion.h1>
+          <motion.p
             className="mx-auto max-w-2xl text-lg text-muted-foreground-color md:text-xl"
+            variants={itemVariants}
           >
             From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor. Created by certified financial experts.
-          </p>
+          </motion.p>
 
-          <div
+          <motion.div
             className="mt-10 flex justify-center"
+            variants={itemVariants}
           >
             <Switch
               labelLeft="Monthly"
@@ -338,20 +357,26 @@ function PricingPage() {
               initialToggled={isAnnual}
               srText="Toggle billing period"
             />
-          </div>
+          </motion.div>
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
           </span>
-        </header>
+        </motion.header>
 
-        <div
-          className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3"
+        <motion.div 
+          className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3" 
           id="pricing-tiers"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={containerVariants}
         >
           {pricingTiers.map((tier) => (
-            <div
+            <motion.div
               key={tier.title}
               className="relative"
+              variants={itemVariants}
+              whileHover={prefersReducedMotion ? {} : { y: -8, transition: { duration: 0.2 } }}
             >
               {tier.badgeText && (
                 <Badge 
@@ -465,18 +490,43 @@ function PricingPage() {
                   )}
                 </CardFooter>
               </Card>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
-        <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={containerVariants}
+        >
+          <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
+        </motion.div>
 
-        <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={containerVariants}
+        >
+          <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
+        </motion.div>
 
-        <FaqSection faqData={faqData} />
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={containerVariants}
+        >
+          <FaqSection faqData={faqData} />
+        </motion.div>
 
-        <div
+        <motion.div 
           className="mt-20 md:mt-24"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={itemVariants}
         >
           <Card className="text-center bg-subtle-background">
             <CardHeader className="pb-4">
@@ -498,7 +548,7 @@ function PricingPage() {
               </Button>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
