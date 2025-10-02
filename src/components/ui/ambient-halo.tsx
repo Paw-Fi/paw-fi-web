@@ -49,14 +49,14 @@ const transitionConfigs = {
   accent: { duration: 16, repeat: Infinity, repeatType: "mirror" as const, ease: "easeInOut", delay: 2.5 }
 };
 
-const HaloLayer = memo(({ 
-  variants, 
-  transition, 
-  position, 
-  size, 
-  colors, 
+const HaloLayer = memo(({
+  variants,
+  transition,
+  position,
+  size,
+  colors,
   zIndex = 0,
-  hasInnerLayer = true 
+  hasInnerLayer = true
 }: {
   variants: any;
   transition: any;
@@ -67,28 +67,11 @@ const HaloLayer = memo(({
   hasInnerLayer?: boolean;
 }) => (
   <>
-    {/* Static version for mobile - no animation */}
-    <div
-      className="absolute inset-0 md:hidden"
-      style={{
-        zIndex,
-        transform: 'translate3d(0, 0, 0)', // Force hardware acceleration
-        backfaceVisibility: 'hidden' // Prevent flicker
-      }}
-    >
-      <div className={`absolute ${position} transform -translate-x-1/2 -translate-y-1/2`}>
-        <div className={`${size} rounded-full blur-3xl bg-radial ${colors}`} />
-        {hasInnerLayer && (
-          <div className={`absolute inset-8 ${size.replace(/\d+/g, (match) => String(Math.floor(parseInt(match) * 0.6)))} rounded-full blur-2xl bg-radial ${colors.replace(/to-[\w-]+/g, 'to-transparent')}`} />
-        )}
-      </div>
-    </div>
-
-    {/* Animated version for desktop */}
+    {/* Animated version for all devices - animations keep GPU acceleration active */}
     <motion.div
-      className="absolute inset-0 hidden md:block"
-      style={{ 
-        willChange: 'transform, opacity', 
+      className="absolute inset-0"
+      style={{
+        willChange: 'transform, opacity',
         zIndex,
         transform: 'translate3d(0, 0, 0)', // Force hardware acceleration
         backfaceVisibility: 'hidden' // Prevent flicker
