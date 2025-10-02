@@ -9,7 +9,7 @@ import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-secti
 import HeroSection from "@/components/homepage/new/hero-section";
 import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import VideoSection from "@/components/homepage/new/video-section";
-import { FAQSection } from "@/components/pricing/faq-section";
+import FAQSection from "@/components/homepage/new/faq-section";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";

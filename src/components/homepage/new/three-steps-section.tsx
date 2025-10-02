@@ -72,7 +72,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
 
   return (
     <motion.section 
-      className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8"
+      className="relative z-10 flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-100px" }}
