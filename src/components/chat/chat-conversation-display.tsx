@@ -506,9 +506,9 @@ export const ChatConversationDisplay: React.FC<ChatConversationDisplayProps> = (
           )}
 
       {/* Messages Area - Maximum height utilization with proper scrolling */}
-      <div 
-        id="messages" 
-        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 scroll-smooth ${messagesClassName}`}
+      <div
+        id="messages"
+        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-6 scroll-smooth scrollbar-hide ${messagesClassName}`}
         ref={chatContainerRef}
       >
         {/* Backend Processing Skeleton - Mobile responsive */}

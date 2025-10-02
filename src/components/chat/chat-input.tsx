@@ -67,7 +67,7 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
   }
 
   return (
-    <div className="my-2">
+    <div className="my-0 sm:my-2">
       <form onSubmit={handleFormSubmit} className={classNames("flex items-end gap-2 sm:gap-3",
         {
           "cursor-not-allowed": isLoading,
@@ -79,7 +79,7 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={`Ask ${agentName} anything...`}
-            className={classNames("w-full h-full resize-none rounded-2xl border bg-card px-3 sm:px-4 py-2 sm:py-2.5 pr-4 sm:pr-6 text-sm sm:text-base text-foreground shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus:outline-none transition-all duration-200 touch-manipulation",
+            className={classNames("w-full h-full resize-none rounded-2xl border bg-card px-3 sm:px-4 py-2.5 sm:py-2.5 pr-4 sm:pr-6 text-mobile-base sm:text-base text-foreground shadow-inner focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary focus:outline-none transition-all duration-200 touch-manipulation",
               {
                 "cursor-not-allowed": isLoading,
                 "opacity-50": isLoading,
@@ -95,14 +95,14 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
             }}
             disabled={isLoading}
           />
-        
+
        </div>
         <motion.div whileTap={{ scale: 0.95 }}>
           <Button
             type="submit"
             size="icon"
             disabled={!message.trim() || isLoading}
-            className={classNames("flex shrink-0 items-center justify-center rounded-full shadow-sm hover:shadow-md transition-all duration-200 touch-manipulation",
+            className={classNames("flex shrink-0 items-center justify-center rounded-full shadow-sm hover:shadow-md transition-all duration-200 touch-manipulation h-10 w-10 sm:h-10 sm:w-10",
             {
               "opacity-50 cursor-not-allowed": isLoading
             }
@@ -112,7 +112,7 @@ export function ChatInput({ onSendMessage, isLoading, isMaxedOut,agentName, auto
           </Button>
         </motion.div>
       </form>
-      
+
     </div>
   );
 }

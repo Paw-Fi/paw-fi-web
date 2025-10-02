@@ -77,32 +77,32 @@ input, textarea, select {
   input, textarea, select {
     font-size: 16px;
   }
-  
+
   /* Improve modal and dialog positioning */
   .modal, .dialog {
     max-height: 90vh;
     margin: 5vh auto;
   }
-  
+
   /* Better spacing for mobile */
   .mobile-spacing {
     padding: 0.75rem;
   }
-  
+
   /* Dashboard-specific mobile optimizations */
   .dashboard-nav-item {
     min-height: 52px; /* Optimal touch target for navigation */
   }
-  
+
   .dashboard-user-menu {
     min-height: 56px; /* Larger touch area for user actions */
   }
-  
+
   /* Professional pulse animation for mobile loading states */
   .animate-pulse {
     animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
   }
-  
+
   /* Improve text readability on small screens */
   body, .mobile-text-optimize {
     -webkit-text-size-adjust: 100%;
@@ -110,12 +110,22 @@ input, textarea, select {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Optimize mobile scrolling performance */
   .mobile-scroll {
     -webkit-overflow-scrolling: touch;
     transform: translateZ(0);
     will-change: scroll-position;
+  }
+
+  /* Hide all scrollbars on mobile for cleaner UX */
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
   }
 }
 

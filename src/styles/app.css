@@ -168,12 +168,18 @@
   /* Arc Timeline colors */
   --step-line-active-color: #7458FF;
   --step-line-inactive-color: #cbd5e1;
-  --icon-active-color: #7458FF; 
+  --icon-active-color: #7458FF;
   --icon-inactive-color: #94a3b8;
   --time-active-color: #1e293b;
   --time-inactive-color: #64748b;
   --description-color: #475569;
   --placeholder-line-color: #e2e8f0;
+
+  /* Mobile-specific typography */
+  --text-mobile-xs: 0.6875rem;      /* 11px - Timestamps, tiny text */
+  --text-mobile-sm: 0.8125rem;      /* 13px - Captions, small text */
+  --text-mobile-base: 0.9375rem;    /* 15px - Body text, inputs (prevents iOS zoom) */
+  --text-mobile-lg: 1.125rem;       /* 18px - Headings */
 }
 
 /* System preference dark mode */
@@ -499,6 +505,12 @@
   --font-family-lato: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-family-hepta-slab: 'Hepta Slab', Georgia, Times, serif;
 
+  /* Mobile typography sizes */
+  --font-size-mobile-xs: var(--text-mobile-xs);
+  --font-size-mobile-sm: var(--text-mobile-sm);
+  --font-size-mobile-base: var(--text-mobile-base);
+  --font-size-mobile-lg: var(--text-mobile-lg);
+
   /* Accordion animations */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -712,6 +724,25 @@
 
 .font-hepta-slab {
   font-family: var(--font-hepta-slab) !important;
+}
+
+/* Mobile-specific font size utility classes */
+@media (max-width: 640px) {
+  .text-mobile-xs {
+    font-size: var(--text-mobile-xs);
+  }
+
+  .text-mobile-sm {
+    font-size: var(--text-mobile-sm);
+  }
+
+  .text-mobile-base {
+    font-size: var(--text-mobile-base);
+  }
+
+  .text-mobile-lg {
+    font-size: var(--text-mobile-lg);
+  }
 }
 
 @layer base {

@@ -88,13 +88,13 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
 
   const MessageBubble = ({ children }: { children: React.ReactNode }) => (
     <div
-      className={`relative max-w-[85%] sm:max-w-[75%] w-full md:max-w-[70%] lg:max-w-[65%] xl:max-w-[60%] rounded-2xl px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+      className={`relative max-w-[90%] sm:max-w-[75%] w-full md:max-w-[70%] lg:max-w-[65%] xl:max-w-[60%] rounded-2xl px-3 sm:px-4 md:px-5 py-2.5 sm:py-3 md:py-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
         isUser
           ? "bg-primary text-primary-foreground rounded-br-md ml-auto"
           : "bg-card text-foreground rounded-bl-md border shadow-sm"
       }`}>
       {children}
-      <div className={`mt-1.5 sm:mt-2 text-xs ${isUser ? "text-right text-primary-foreground/80" : "text-left text-muted-foreground-color"}`}>
+      <div className={`mt-1.5 sm:mt-2 text-mobile-xs sm:text-xs ${isUser ? "text-right text-primary-foreground/80" : "text-left text-muted-foreground-color"}`}>
         {(formatTimeProp || defaultFormatTime)(message.timestamp)}
         {message.metadata?.isStreaming && !isUser && (
           <span className="ml-1.5 sm:ml-2 inline-flex items-center">
@@ -120,7 +120,7 @@ const ChatMessageItemComponent: React.FC<ChatMessageItemProps> = ({
   ), [message.content, isUser, onOpenQuizModal, onGoalTemplateClick, onSendMessage, disableMsgParse]);
 
   return (
-    <div className={`flex items-end gap-2 sm:gap-3 md:gap-4 w-full ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex items-end gap-2 sm:gap-3 md:gap-4 w-full text-mobile-base sm:text-base ${isUser ? "justify-end" : "justify-start"}`}>
       {!isUser && <Avatar />}
       <MessageBubble>{renderMessageContent}</MessageBubble>
       {isUser && <Avatar />}

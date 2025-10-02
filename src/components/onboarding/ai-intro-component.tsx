@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faSignInAlt } from "@fortawesome/free-solid-svg-icons";
@@ -524,40 +524,40 @@ Sound good?`,
 const questionnaireTemplate = selectedGoalType ? getQuestionnaireTemplate(selectedGoalType) : null;
 
 return (
-  <div className={`flex flex-col flex-1 bg-card rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border overflow-hidden ${className}`}>
+  <div className={`flex flex-col flex-1 bg-card rounded-none sm:rounded-2xl shadow-none sm:shadow-sm hover:shadow-md transition-all duration-200 border-0 sm:border overflow-hidden ${className}`}>
     {/* Compact Header - Progressive enhancement: show more on desktop, minimal on mobile */}
     <div className="flex-shrink-0 border-b bg-card">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 gap-2 sm:gap-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-4 py-3 sm:py-3 gap-2 sm:gap-0">
         {/* Main title row */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center justify-between w-full sm:w-auto"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-            <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-foreground">
+          <Link to="/" className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+            <h1 className="text-mobile-lg sm:text-xl lg:text-2xl font-bold text-foreground">
               Welcome to <span className="text-primary">Moneko</span>
             </h1>
-            
+
             {/* Desktop subtitle - hidden on mobile for space efficiency */}
             <p className="hidden md:block text-sm lg:text-base text-muted-foreground-color font-medium">
               Your AI Financial Coach
             </p>
-          </div>
+          </Link>
            {/* Login Button - Mobile compact, desktop full */}
            {!user && (
              <Button
                onClick={handleLogin}
                variant="outline"
-               className="block lg:hidden text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 h-auto touch-manipulation ml-3 sm:ml-0"
+               className="block lg:hidden text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 h-auto touch-manipulation ml-3 sm:ml-0"
              >
                <FontAwesomeIcon icon={faSignInAlt} className="mr-1.5 h-3 w-3 sm:h-4 sm:w-4" />
                <span>Login</span>
              </Button>
            )}
-         
+
         </motion.div>
-        
+
         {/* Desktop-only feature highlights - completely hidden on mobile */}
         <div className="hidden lg:flex items-center gap-4 text-xs text-muted-foreground-color">
           {/* Login Button - Mobile compact, desktop full */}
@@ -592,7 +592,7 @@ return (
           welcomeSubtitle="I'll help you create a personalized plan step by step."
           onGoalTemplateClick={handleGoalTemplateClick}
           disableMsgParse={true}
-          className="flex-1 min-h-0 h-full text-sm sm:text-base"
+          className="flex-1 min-h-0 h-full"
         />
       </div>
 
