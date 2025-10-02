@@ -10,6 +10,7 @@ Allow: /budgeting-app/
 Allow: /blogs/
 Allow: /courses/
 Allow: /guides/
+Allow: /help
 Allow: /about
 Allow: /contact
 Allow: /pricing
@@ -165,6 +166,7 @@ Crawl-delay: 2
 User-agent: ChatGPT-User
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
@@ -173,6 +175,7 @@ Crawl-delay: 1
 User-agent: OpenAI-ChatGPT
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
@@ -181,6 +184,7 @@ Crawl-delay: 1
 User-agent: Claude-Web
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
@@ -189,16 +193,19 @@ Crawl-delay: 1
 User-agent: Anthropic-AI
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Crawl-delay: 1
 
 User-agent: Google-Extended
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Crawl-delay: 1
 
 User-agent: Perplexity
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
@@ -207,16 +214,19 @@ Crawl-delay: 1
 User-agent: PerplexityBot
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Crawl-delay: 1
 
 User-agent: You.com
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Crawl-delay: 1
 
 User-agent: YouBot
 Allow: /
 Allow: /llm.txt
+Allow: /help
 Crawl-delay: 1
 
 # Gemini and Bard
