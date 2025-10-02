@@ -87,6 +87,7 @@
   --subtle-border: #E5E7EB;
   --subtle-background: #F9FAFB;
   --section-bg: #FFFFFF;
+  --section-bg-light: rgba(255, 255, 255, 0.8);
   --section-shadow: rgba(0, 0, 0, 0.1);
 
   /* Guide/Status colors */
@@ -255,6 +256,7 @@
   --subtle-border: #374151;
   --subtle-background: #1F2937;
   --section-bg: #1F2937;
+  --section-bg-light: oklch(21% .034 264.665);
   --section-shadow: rgba(0, 0, 0, 0.3);
 
   /* Dark guide/status colors */
@@ -432,6 +434,7 @@
 
   /* Section colors */
   --color-section-bg: var(--section-bg);
+  --color-section-bg-light: var(--section-bg-light);
   --color-section-shadow: var(--section-shadow);
 
   /* Guide colors */

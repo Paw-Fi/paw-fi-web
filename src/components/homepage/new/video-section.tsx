@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
 import videoDemo from "/public/Moneko-onboard .webm";
+import { motion, Variants } from "framer-motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 interface VideoSectionProps {
   data: {
@@ -14,9 +16,28 @@ interface VideoSectionProps {
 
 export default function VideoSection({ data }: VideoSectionProps) {
   const { videoSection } = data;
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const sectionVariants: Variants = {
+    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0 : 0.6,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
+    <motion.section 
+      className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      variants={sectionVariants}
+    >
       <div className="mx-auto max-w-6xl w-full">
         {/* Section Header */}
         <div className="mb-16 text-center">
@@ -110,6 +131,6 @@ export default function VideoSection({ data }: VideoSectionProps) {
           </div>
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

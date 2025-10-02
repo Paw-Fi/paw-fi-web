@@ -1,5 +1,7 @@
 import { useState } from "react";
 import faqData from "@/data/home/home-faq.json";
+import { motion, Variants } from "framer-motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 interface FAQItem {
   id: string;
@@ -11,6 +13,29 @@ const faqItems: FAQItem[] = faqData;
 
 export default function FAQSection() {
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.1,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: prefersReducedMotion ? 0 : 0.5,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    },
+  };
 
   const toggleItem = (id: string) => {
     const newOpenItems = new Set(openItems);
@@ -23,10 +48,16 @@ export default function FAQSection() {
   };
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
+    <motion.section 
+      className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8"
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-100px" }}
+      variants={containerVariants}
+    >
       <div className="mx-auto max-w-4xl w-full">
         {/* Section Header */}
-        <div className="mb-12 text-center">
+        <motion.div className="mb-12 text-center" variants={itemVariants}>
           <div className="mb-4 text-sm font-medium text-primary">
             Frequently Asked Questions
           </div>
@@ -38,15 +69,16 @@ export default function FAQSection() {
           <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato">
             Everything you need to know about getting started with Moneko
           </p>
-        </div>
+        </motion.div>
 
         {/* FAQ Items */}
         <div className="space-y-4">
           {faqItems.map((item, index) => (
-            <div 
+            <motion.div 
               key={item.id}
               className="backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer p-6 border border-white/20"
               onClick={() => toggleItem(item.id)}
+              variants={itemVariants}
             >
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold text-foreground text-lg leading-tight flex-1 font-lato">
@@ -69,10 +101,10 @@ export default function FAQSection() {
                   </div>
                 )}
               </>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
-    </section>
+    </motion.section>
   );
 }

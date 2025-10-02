@@ -6,7 +6,6 @@ import { HomeHeader } from "@/components/index/header";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { Helmet } from "@dr.pogodin/react-helmet";
-import { motion } from "framer-motion";
 // Dynamic content system
 import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
@@ -55,6 +54,7 @@ export const Route = createFileRoute("/")({
 
 export default function HomePage() {
   const pageUrl = getCanonicalUrl("/");
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -108,84 +108,42 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section - Transparent background with halo */}
-      <motion.section
-        className="relative"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative">
         <HeroSection data={pageData} />
-      </motion.section>
+      </section>
 
       {/* Video Section */}
-      <motion.section
-        className="relative bg-white/80 dark:bg-gray-900/80"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative bg-section-bg-light">
         <VideoSection data={pageData} />
-      </motion.section>
+      </section>
 
       {/* Features Bento Grid Section */}
-      <motion.section
-        className="relative bg-white/80 dark:bg-gray-900/80"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative bg-section-bg-light">
         <FeaturesBentoGrid />
-      </motion.section>
+      </section>
 
       {/* DashboardShowcase Section */}
-      <motion.section
-        className="relative bg-white/80 dark:bg-gray-900/80"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative bg-section-bg-light">
         <DashboardShowcase />
-      </motion.section>
+      </section>
 
       {/* Three Steps Section */}
-      <motion.section
-        className="relative bg-white/80 dark:bg-gray-900/80"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative bg-section-bg-light">
         <ThreeStepsSection data={pageData} />
-      </motion.section>
+      </section>
 
       {/* Testimonials Section */}
       {/* <TestimonialsSection /> */}
 
       {/* Expert-Led Lessons Section */}
-      <motion.section
-        className="relative bg-white/80 dark:bg-gray-900/80"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative bg-section-bg-light">
         <ExpertLessonsSection data={pageData} />
-      </motion.section>
+      </section>
 
       {/* FAQ Section */}
-      <motion.section
-        className="relative"
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-50px" }}
-        transition={{ duration: 0.6 }}
-      >
+      <section className="relative">
         <FAQSection />
-      </motion.section>
+      </section>
 
       {/* Footer */}
       <Footer />

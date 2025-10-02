@@ -788,33 +788,28 @@ function BudgetingApp() {
       </section>
 
           {/* Video Section */}
-          <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <VideoSection data={pageData} />
+    <section className="relative bg-section-bg-light">        <VideoSection data={pageData} />
       </section>
 
 
       {/* Features Bento Grid Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <FeaturesBentoGrid />
+<section className="relative bg-section-bg-light">        <FeaturesBentoGrid />
       </section>
 
   
          {/* DashboardShowcase Section */}
-         <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <DashboardShowcase />
+   <section className="relative bg-section-bg-light">        <DashboardShowcase />
       </section>
 
       {/* Three Steps Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <ThreeStepsSection data={pageData} />
+<section className="relative bg-section-bg-light">        <ThreeStepsSection data={pageData} />
       </section>
 
       {/* Testimonials Section */}
       {/* <TestimonialsSection /> */}
 
       {/* Expert-Led Lessons Section */}
-      <section className="relative bg-white/80 dark:bg-gray-900/80">
-        <ExpertLessonsSection data={pageData} />
+<section className="relative bg-section-bg-light">        <ExpertLessonsSection data={pageData} />
       </section>
 
       {/* FAQ Section */}
