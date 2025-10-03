@@ -4,6 +4,7 @@ import {
   createFileRoute,
   Link,
   useLocation,
+  useNavigate,
 } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
@@ -45,6 +46,7 @@ import { useGoals } from "@/hooks/goal-tracker";
 import { logUserActivity } from "@/utils/activity-logger-clone";
 import { ActivityActions } from "@/utils/reward-actions-clone";
 import { OptimizedImage } from "@/components/seo/optimized-image";
+import { useFinancialHealthProfile } from "@/hooks/use-financial-health-profile";
 import { FinancialAdvisorChatInterface } from "@/components/chat/financial-advisor-chat-interface";
 import { FinancialEducatorChatInterface } from "@/components/chat/financial-educator-chat-interface";
 import { ExpandableFAB } from "@/components/ui/expandable-fab";
@@ -304,7 +306,9 @@ export function Dashboard() {
   const [isGuideHidden, setIsGuideHidden] = useState(getCookie('moneko-guide-hidden') === 'true');
   const [hasCheckedGuestGoals, setHasCheckedGuestGoals] = useState(false);
   const [hasCheckedGuestProfiles, setHasCheckedGuestProfiles] = useState(false);
-  const {refetch}=useGoals(user?.id)
+  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
+  const { goals, isLoading: isGoalsLoading, refetch } = useGoals(user?.id);
+  const { profile, hasProfile, isLoading: isProfileLoading } = useFinancialHealthProfile(user?.id)
   const showGuide = () => {
     setCookie('moneko-guide-hidden', 'false', { days: 365 });
     setIsGuideHidden(false);
@@ -351,14 +355,16 @@ export function Dashboard() {
           .from('financial_goals')
           .update({ user_id: userId })
           .eq('id', goalId)
-          .is('user_id', null);
+          .is('user_id', null)
+          .select()
+          .single();
+
         console.log("data",goalData)
         if (updateError) {
           console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
           return;
         }
-        refetch();
-        
+
         // Track goal creation for guidance system
         trackUserAction('goal_created', { goalId: goalData.id, goalTitle: goalData.title });
         
@@ -389,9 +395,12 @@ export function Dashboard() {
       
       // Clear guest goal IDs after successful migration
       clearGuestGoalIds();
-      setHasCheckedGuestGoals(true);
+
+      // Refetch goals once after all migrations complete
+      refetch();
+
       console.log(`Completed migration of ${guestGoalIds.length} guest goals with activity logging`);
-      
+
     } catch (error) {
       console.error('Failed to migrate guest goals:', error);
     }
@@ -458,20 +467,70 @@ export function Dashboard() {
 
   // Handle guest goal and profile migration on login
   useEffect(() => {
-    if (user?.id && !hasCheckedGuestGoals) {
-      console.log('User logged in, checking for guest goals to migrate...');
-      const guestGoalIds = getGuestGoalIds();
-      console.log('Found guest goal IDs:', guestGoalIds);
-      migrateGuestGoals(user.id);
-    }
-    if (user?.id && !hasCheckedGuestProfiles) {
-      console.log('User logged in, checking for guest profiles to migrate...');
-      const guestProfileIds = getGuestProfileIds();
-      console.log('Found guest profile IDs:', guestProfileIds);
-      migrateGuestProfiles(user.id);
-    }
+    const runMigrations = async () => {
+      if (user?.id && !hasCheckedGuestGoals) {
+        console.log('User logged in, checking for guest goals to migrate...');
+        const guestGoalIds = getGuestGoalIds();
+        console.log('Found guest goal IDs:', guestGoalIds);
+        await migrateGuestGoals(user.id);
+        // Always set the flag after migration attempt, even if no goals to migrate
+        setHasCheckedGuestGoals(true);
+      }
+      if (user?.id && !hasCheckedGuestProfiles) {
+        console.log('User logged in, checking for guest profiles to migrate...');
+        const guestProfileIds = getGuestProfileIds();
+        console.log('Found guest profile IDs:', guestProfileIds);
+        await migrateGuestProfiles(user.id);
+        setHasCheckedGuestProfiles(true);
+      }
+    };
+
+    runMigrations();
   }, [user]);
 
+  // Redirect to onboarding if user hasn't completed it
+  // Only redirect if:
+  // 1. User is logged in
+  // 2. User has no goals created AND no complete financial profile
+  // 3. No guest goal/profile cookies exist (user hasn't completed onboarding as guest)
+  // 4. Goals and profile have finished loading
+  // 5. Guest goal and profile migrations have completed (prevent race condition)
+  // 6. We haven't already checked
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Wait for both migrations to complete before checking onboarding status
+    // This prevents redirecting users while their guest data is being migrated
+    if (user && !isGoalsLoading && !isProfileLoading && hasCheckedGuestGoals && hasCheckedGuestProfiles && !hasCheckedOnboarding) {
+      const guestGoalIds = getGuestGoalIds();
+      const guestProfileIds = getGuestProfileIds();
+      const hasGoals = goals && goals.length > 0;
+      const hasPendingGuestGoals = guestGoalIds.length > 0;
+      const hasPendingGuestProfiles = guestProfileIds.length > 0;
+
+      console.log('🎯 Onboarding check:', {
+        hasUser: !!user,
+        hasGoals,
+        hasProfile,
+        hasPendingGuestGoals,
+        hasPendingGuestProfiles,
+        goalsCount: goals?.length,
+        profileComplete: hasProfile,
+        guestGoalIds,
+        guestProfileIds,
+        migrationsComplete: { goals: hasCheckedGuestGoals, profiles: hasCheckedGuestProfiles }
+      });
+
+      // Redirect to onboarding only if user has never created any goals OR complete profile
+      // and has no pending guest goals/profiles to migrate
+      if (!hasGoals && !hasProfile && !hasPendingGuestGoals && !hasPendingGuestProfiles) {
+        console.log('🚀 Redirecting to onboarding - user needs to complete setup');
+        navigate({ to: '/onboarding' });
+      }
+
+      setHasCheckedOnboarding(true);
+    }
+  }, [user, goals, profile, hasProfile, isGoalsLoading, isProfileLoading, hasCheckedGuestGoals, hasCheckedGuestProfiles, hasCheckedOnboarding, navigate]);
 
   // Helper function to check if a route is active
   const isRouteActive = (path: string) => {

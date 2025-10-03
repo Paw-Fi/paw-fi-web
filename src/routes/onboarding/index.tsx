@@ -125,11 +125,11 @@ function RouteComponent() {
   const { profile } = useFinancialHealthProfile(user?.id);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (user&&profile) {
-      navigate({ to: '/dashboard' });
-    }
-  }, [user, navigate,profile]);
+  // Don't auto-redirect logged-in users from onboarding
+  // They might have been sent here because they don't have any goals yet
+  // Let them complete the onboarding flow normally
+  // The dashboard will handle the reverse check (redirecting to onboarding if no goals)
+  // This allows for bidirectional flow: dashboard -> onboarding (if no goals) and onboarding -> dashboard (after goal creation)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/20 dark:from-slate-950 dark:via-slate-900/95 dark:to-indigo-950/30">

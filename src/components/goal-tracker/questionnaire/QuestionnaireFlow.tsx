@@ -100,7 +100,19 @@ export function QuestionnaireFlow({
     const updatedProfileIds = [...existingProfileIds, profileId];
     setCookie('moneko-guest-profiles', JSON.stringify(updatedProfileIds), { days: 365 });
   };
-  
+
+  // Guest goal management functions
+  const getGuestGoalIds = (): string[] => {
+    const goalIds = getCookie('moneko-guest-goals');
+    return goalIds ? JSON.parse(goalIds) : [];
+  };
+
+  const addGuestGoalId = (goalId: string) => {
+    const existingGoalIds = getGuestGoalIds();
+    const updatedGoalIds = [...existingGoalIds, goalId];
+    setCookie('moneko-guest-goals', JSON.stringify(updatedGoalIds), { days: 365 });
+  };
+
   const { 
     createGoalWithAI, 
     isLoading, 
@@ -506,7 +518,13 @@ export function QuestionnaireFlow({
 
       // Create the goal first
       const result = await createGoalWithAI(requestParams);
-      
+
+      // Save goal ID to cookie if user is not logged in (for migration after login)
+      if (!userId && result?.goal?.id) {
+        console.log('Saving guest goal ID to cookie for future migration:', result.goal.id);
+        addGuestGoalId(result.goal.id);
+      }
+
       // Show result modal immediately after goal creation
       onComplete(result);
       

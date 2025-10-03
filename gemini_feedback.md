@@ -34,12 +34,49 @@ Excellent, I've reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-Overall, this is an excellent set of changes that significantly improves the responsiveness and mobile user experience of the Goal Tracker page. The systematic adjustments to padding, typography, and component sizing across different breakpoints are thorough and well-implemented. The code remains clean and readable.
+Overall, this is an excellent set of changes that correctly addresses several race conditions and improves performance. The introduction of `async/await` within the `useEffect` hooks ensures that asynchronous operations complete before dependent logic is executed, which is critical for application stability and correctness.
 
 #### Suggestions (Consider Improving)
 
-*   **Mobile Accessibility:** The addition of `min-h-[44px]` and `touch-manipulation` to buttons and other interactive elements is a fantastic enhancement. It ensures that tap targets are sufficiently large on touch devices, which is a crucial aspect of mobile usability and accessibility. This is a great pattern to enforce across the application.
+There are no critical issues or warnings to report. The changes are well-implemented. Here are a few minor suggestions for further refinement:
 
-*   **Consistent Skeleton Loaders:** The modifications to the `GoalsLoadingSkeleton` to better match the new responsive layout are a great touch. This ensures a smoother visual transition from the loading state to the fully rendered content, preventing jarring layout shifts for the user.
+*   **Remove Debugging Logs:** The `console.log` statements in `dashboard/route.tsx` were likely useful for debugging but should be removed before deploying to production to keep the browser console clean.
 
-There are no critical issues or warnings to report. This is a high-quality contribution that directly improves the user experience on a wide range of devices. Great work.
+    *File: `src/routes/dashboard/route.tsx`*
+    ```diff
+    -       .single();
+    -
+    -     console.log("data",goalData)
+    -     if (updateError) {
+    -       console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
+    ```
+    ```diff
+    -       const hasPendingGuestProfiles = guestProfileIds.length > 0;
+    - 
+    -       console.log('🎯 Onboarding check:', {
+    -         hasUser: !!user,
+    -         hasGoals,
+    -         hasProfile,
+    -         hasPendingGuestGoals,
+    -         hasPendingGuestProfiles,
+    -         goalsCount: goals?.length,
+    -         profileComplete: hasProfile,
+    -         guestGoalIds,
+    -         guestProfileIds,
+    -         migrationsComplete: { goals: hasCheckedGuestGoals, profiles: hasCheckedGuestProfiles }
+    -       });
+    - 
+    -       // Redirect to onboarding only if user has never created any goals OR complete profile
+    ```
+
+*   **Error Handling in Migration:** In `migrateGuestGoals`, if an individual goal update fails, the error is logged, but the process continues. This is a reasonable approach. However, you might consider adding a counter for failed migrations and logging a summary message at the end. This could be helpful for debugging if a user reports that some, but not all, of their guest goals were migrated.
+
+### Analysis of Changes
+
+*   **Correct Asynchronous Operations:** The primary improvement across both `ai-intro-component.tsx` and `dashboard/route.tsx` is wrapping the logic within `useEffect` hooks in `async` functions. Awaiting the migration functions (`updateGuestGoals`, `migrateGuestGoals`, `migrateGuestProfiles`) before setting state flags (`setHasUpdatedGuestGoals`, `setHasCheckedGuestGoals`) is a critical fix that prevents race conditions.
+
+*   **Race Condition Fix for Onboarding:** The most important change is in `/routes/dashboard/route.tsx`. By adding `hasCheckedGuestGoals` and `hasCheckedGuestProfiles` to the dependency array and the conditional check of the onboarding `useEffect`, you have fixed a critical bug. Previously, the component could redirect a user to onboarding *before* their guest goals were migrated, incorrectly assuming they were a new user with no goals. This change ensures the migration process completes first, leading to a correct user experience.
+
+*   **Performance Optimization:** Moving `refetch()` outside the `for...of` loop in `migrateGuestGoals` is a significant performance improvement. This avoids redundant data fetching on every iteration and ensures the UI is updated only once after all migrations are complete.
+
+This is a high-quality contribution that dramatically improves the robustness of the guest-to-user data migration flow. Great work.

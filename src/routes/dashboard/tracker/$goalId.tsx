@@ -587,7 +587,7 @@ function GoalDetail() {
               
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 {!isGoalCompleted && (
-                  <Button onClick={() => setShowUpdateProgressModal(true)} size="lg" data-tour="update-progress-btn" className="min-h-[48px] text-mobile-sm sm:text-base w-full sm:w-auto">
+                  <Button onClick={() => setShowUpdateProgressModal(true)} size="lg" data-tour="update-progress-btn" className="min-h-[48px] !text-white text-mobile-sm sm:text-base w-full sm:w-auto">
                     Update Progress
                   </Button>
                 )}

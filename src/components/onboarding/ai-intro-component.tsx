@@ -161,10 +161,14 @@ export function AIIntroComponent({ className = "", initialMessage }: AIIntroComp
   
   // Handle guest goal migration on login
   useEffect(() => {
-    if (user?.id && !hasUpdatedGuestGoals) {
-      updateGuestGoals(user.id);
-      setHasUpdatedGuestGoals(true);
-    }
+    const runMigration = async () => {
+      if (user?.id && !hasUpdatedGuestGoals) {
+        await updateGuestGoals(user.id);
+        setHasUpdatedGuestGoals(true);
+      }
+    };
+
+    runMigration();
   }, [user?.id, hasUpdatedGuestGoals, updateGuestGoals]);
 
   // Initialize with welcome message or process initial message if provided
