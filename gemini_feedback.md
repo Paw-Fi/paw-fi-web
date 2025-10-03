@@ -34,49 +34,50 @@ Excellent, I've reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-Overall, this is an excellent set of changes that correctly addresses several race conditions and improves performance. The introduction of `async/await` within the `useEffect` hooks ensures that asynchronous operations complete before dependent logic is executed, which is critical for application stability and correctness.
+Overall, this is a fantastic refactoring effort. You've taken complex, monolithic widgets and broken them down into smaller, more focused, and maintainable components. This significantly improves readability, separation of concerns, and the overall architecture. The UI refresh, incorporating a consistent design system and animations, is a major visual and UX improvement.
 
 #### Suggestions (Consider Improving)
 
-There are no critical issues or warnings to report. The changes are well-implemented. Here are a few minor suggestions for further refinement:
+*   **Data Calculation Duplication:** In `FinancialHealthScorecardWidget`, the parent component calculates `calculatedData` using `useMemo`. However, the new `FinancialScoreBreakdown` and `AdvancedAnalyticsPanel` components are passed the raw `data.quizAnswers`. It's highly likely that these components perform the same or similar calculations internally. To avoid this redundant computation, you should pass the `calculationResult` to both components. This ensures the calculation is performed only once, making the code more efficient and ensuring data consistency.
 
-*   **Remove Debugging Logs:** The `console.log` statements in `dashboard/route.tsx` were likely useful for debugging but should be removed before deploying to production to keep the browser console clean.
-
-    *File: `src/routes/dashboard/route.tsx`*
+    *File: `src/components/profile/widgets/FinancialWidgets.tsx`*
     ```diff
-    -       .single();
-    -
-    -     console.log("data",goalData)
-    -     if (updateError) {
-    -       console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
+    -        <FinancialScoreBreakdown quizAnswers={data.quizAnswers} />
+    +        <FinancialScoreBreakdown calculationResult={calculatedData} />
+    ...
+    -            <AdvancedAnalyticsPanel
+    -              quizAnswers={data.quizAnswers}
+    -              calculationResult={calculatedData}
+    -            />
+    +            <AdvancedAnalyticsPanel calculationResult={calculatedData} />
     ```
+    *(Note: This assumes `FinancialScoreBreakdown` and `AdvancedAnalyticsPanel` are updated to accept a `calculationResult` prop instead of `quizAnswers`)*
+
+*   **Redundant Conditional Check:** The loading check in `FinancialHealthScorecardWidget` can be simplified. Since `calculatedData` is derived directly from `data.quizAnswers`, the `!calculatedData` check is sufficient. If `data.quizAnswers` is falsy, `calculatedData` will be `null`, and the condition will be met.
+
+    *File: `src/components/profile/widgets/FinancialWidgets.tsx`*
     ```diff
-    -       const hasPendingGuestProfiles = guestProfileIds.length > 0;
-    - 
-    -       console.log('🎯 Onboarding check:', {
-    -         hasUser: !!user,
-    -         hasGoals,
-    -         hasProfile,
-    -         hasPendingGuestGoals,
-    -         hasPendingGuestProfiles,
-    -         goalsCount: goals?.length,
-    -         profileComplete: hasProfile,
-    -         guestGoalIds,
-    -         guestProfileIds,
-    -         migrationsComplete: { goals: hasCheckedGuestGoals, profiles: hasCheckedGuestProfiles }
-    -       });
-    - 
-    -       // Redirect to onboarding only if user has never created any goals OR complete profile
+    -  if (!calculatedData || !data?.quizAnswers) {
+    +  if (!calculatedData) {
+         return (
+           <Widget widget={widget} controls={widget.controls}>
+             <div className="p-6 text-center">
     ```
 
-*   **Error Handling in Migration:** In `migrateGuestGoals`, if an individual goal update fails, the error is logged, but the process continues. This is a reasonable approach. However, you might consider adding a counter for failed migrations and logging a summary message at the end. This could be helpful for debugging if a user reports that some, but not all, of their guest goals were migrated.
+*   **Removal of Mock/Default Values:** The `RetirementReadinessWidget` has been updated to remove hardcoded fallback values for `annualSavings` and `expectedReturn`, setting them to `0` instead. This is a great change to ensure the UI reflects the true state of the user's data and avoids presenting potentially misleading information.
+
+    *File: `src/components/profile/widgets/FinancialWidgets.tsx`*
+    ```diff
+    -    const annualSavings = currentScenario.annualContribution || 3000; // Default from mockup
+    -    const expectedReturn = currentScenario.expectedReturn || 6.5; // Default from mockup
+    +    const annualSavings = currentScenario.annualContribution || 0;
+    +    const expectedReturn = currentScenario.expectedReturn || 0;
+    ```
 
 ### Analysis of Changes
 
-*   **Correct Asynchronous Operations:** The primary improvement across both `ai-intro-component.tsx` and `dashboard/route.tsx` is wrapping the logic within `useEffect` hooks in `async` functions. Awaiting the migration functions (`updateGuestGoals`, `migrateGuestGoals`, `migrateGuestProfiles`) before setting state flags (`setHasUpdatedGuestGoals`, `setHasCheckedGuestGoals`) is a critical fix that prevents race conditions.
+*   **Componentization:** The decomposition of `FinancialHealthScorecardWidget` into `FinancialScoreBreakdown`, `AdvancedAnalyticsPanel`, and `InvestmentEntryCTA` is the highlight of this change. It follows best practices for building scalable and maintainable React applications.
+*   **Improved UX:** The addition of a collapsible "Advanced Analytics" panel is a smart UX decision. It provides depth for interested users without overwhelming the primary view. The use of `framer-motion` for animations in multiple widgets adds a layer of polish that enhances the user experience.
+*   **Design System Alignment:** The transition from hardcoded colors (e.g., `bg-red-50`, `text-slate-700`) to a semantic, theme-based system (e.g., `bg-subtle-background`, `text-foreground`) in all modified files is an excellent improvement. It makes the codebase more consistent and easier to maintain, especially when handling themes like light/dark mode. The updates to the base `Widget.tsx` component solidify this new, modern design direction.
 
-*   **Race Condition Fix for Onboarding:** The most important change is in `/routes/dashboard/route.tsx`. By adding `hasCheckedGuestGoals` and `hasCheckedGuestProfiles` to the dependency array and the conditional check of the onboarding `useEffect`, you have fixed a critical bug. Previously, the component could redirect a user to onboarding *before* their guest goals were migrated, incorrectly assuming they were a new user with no goals. This change ensures the migration process completes first, leading to a correct user experience.
-
-*   **Performance Optimization:** Moving `refetch()` outside the `for...of` loop in `migrateGuestGoals` is a significant performance improvement. This avoids redundant data fetching on every iteration and ensures the UI is updated only once after all migrations are complete.
-
-This is a high-quality contribution that dramatically improves the robustness of the guest-to-user data migration flow. Great work.
+There are no critical issues or warnings to report. This is a high-quality contribution that dramatically improves the structure, maintainability, and user experience of the code. Great work.

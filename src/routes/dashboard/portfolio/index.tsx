@@ -523,8 +523,8 @@ function Profile() {
             </button>
           </div>
         ) : (
-          <div className="flex px-4 sm:px-6 py-6">
-            <main className="mx-auto flex w-full flex-col gap-4 sm:gap-6">
+          <div className="flex px-0 sm:px-6 lg:px-8 py-6">
+            <main className="mx-auto flex w-full flex-col gap-6 sm:gap-8">
               {/* Header with user info and controls */}
               {status === "loading" ? (
                 <></>

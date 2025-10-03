@@ -158,12 +158,12 @@ const ProgressBar = ({ value, max, status }: { value: number; max: number; statu
   
   return (
     <div className="w-full">
-      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
+      <div className="flex justify-between text-mobile-xs sm:text-xs text-slate-500 dark:text-slate-400 mb-1">
         <span>{progressText}: {value}%</span>
         <span>Target: {max}%</span>
       </div>
       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-        <div 
+        <div
           className={`h-2 rounded-full transition-all duration-300 ${barColor}`}
           style={{ width: `${percentage}%` }}
         />
@@ -195,21 +195,21 @@ export function MetricCard({ widget }: MetricCardProps) {
   
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 sm:p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
         {/* Status Badge */}
-        <div className="mb-4">
-          <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${statusIndicator.bgColor} ${statusIndicator.color}`}>
+        <div className="mb-3 sm:mb-4">
+          <div className={`inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full text-mobile-sm sm:text-sm font-medium ${statusIndicator.bgColor} ${statusIndicator.color}`}>
             <span className="capitalize">{analysis.status.replace('-', ' ')}</span>
           </div>
         </div>
 
         {/* Main Value Display */}
-        <div className="mb-6">
-          <div className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+        <div className="mb-4 sm:mb-6">
+          <div className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
             {metricItem?.value}
           </div>
           {savingAmount > 0 && (
-            <div className="text-sm text-emerald-600 dark:text-emerald-400 mb-2">
+            <div className="text-mobile-sm sm:text-sm text-emerald-600 dark:text-emerald-400 mb-2">
               💚 Saving ${savingAmount} per month
             </div>
           )}
@@ -217,10 +217,10 @@ export function MetricCard({ widget }: MetricCardProps) {
 
         {/* Progress Bar (for percentage-based metrics) */}
         {numericValue > 0 && metricItem?.value?.toString().includes('%') && (
-          <div className="mb-4">
-            <ProgressBar 
-              value={numericValue} 
-              max={analysis.type === 'Savings Rate' ? 20 : analysis.type === 'Debt Ratio' ? 36 : 100} 
+          <div className="mb-3 sm:mb-4">
+            <ProgressBar
+              value={numericValue}
+              max={analysis.type === 'Savings Rate' ? 20 : analysis.type === 'Debt Ratio' ? 36 : 100}
               status={analysis.status}
             />
           </div>
@@ -228,7 +228,7 @@ export function MetricCard({ widget }: MetricCardProps) {
 
         {/* Description Section */}
         <div className="mt-auto">
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-mobile-sm sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             {analysis.guidance}
           </p>
         </div>

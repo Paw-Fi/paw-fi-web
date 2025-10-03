@@ -19,28 +19,28 @@ interface WidgetProps {
 // Sorted list of icon names for the dropdown
 export const iconOptions = Object.keys(iconMap).sort();
 
-export function Widget({ widget, children, className = '', controls,isBeta }: WidgetProps) {
-
+export function Widget({ widget, children, className = '', controls, isBeta }: WidgetProps) {
   // Safely handle the icon - ensure it exists in our map or use default
   const icon = widget.icon && iconMap[widget.icon as keyof typeof iconMap] ? iconMap[widget.icon as keyof typeof iconMap] : faChartBar;
 
   return (
-    <div 
-      className={`     
+    <div
+      className={`
         h-full flex flex-col
+     
         ${widget.column_span === 2 ? 'col-span-2' : 'col-span-1'}
         ${className}
-      `}    
-    >      
-      {/* Widget header */}
-      <div className="pb-4 flex items-center flex-shrink-0">
-        <div className="flex items-center space-x-3 min-w-0 flex-grow"> 
-          <h3 className="font-bold text-lg text-slate-700 dark:text-slate-200 truncate" title={widget.title}>
+      `}
+    >
+      {/* Widget header - modern design with generous spacing */}
+      <div className="mb-4 sm:mb-6 flex items-center flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-grow">
+          <h3 className="text-lg sm:text-xl font-medium text-foreground truncate" title={widget.title}>
             {widget.title || 'Financial Widget'}
           </h3>
-          {isBeta && <BetaPill/>}
+          {isBeta && <BetaPill />}
         </div>
-        
+
         {/* Controls from EditableWidget will be inserted here */}
         {controls && (
           <div className="flex items-center ml-auto">
@@ -48,7 +48,7 @@ export function Widget({ widget, children, className = '', controls,isBeta }: Wi
           </div>
         )}
       </div>
-      
+
       {/* Widget content - flex-grow allows it to fill available space */}
       <div className={`flex-grow ${className.includes('overflow-hidden') ? 'relative' : ''}`}>
         {children}

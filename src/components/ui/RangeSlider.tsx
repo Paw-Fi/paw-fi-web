@@ -81,7 +81,7 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
               className="w-32"
             />
           ) : (
-            <span className="w-32 font-medium">{displayValue}</span>
+            <span className="w-32 font-medium text-moneko-foreground">{displayValue}</span>
           )}
         </div>
       </div>
@@ -128,7 +128,7 @@ const RangeSlider: React.FC<RangeSliderProps> = ({
             className="w-24"
           />
         ) : (
-          <span className="w-24 font-medium">{displayValue}</span>
+          <span className="w-24 font-medium text-foreground">{displayValue}</span>
         )}
       </div>
     </div>

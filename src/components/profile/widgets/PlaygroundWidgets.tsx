@@ -574,7 +574,7 @@ export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) 
       const twoPercentOfIncome = getDollarAmount(2); // 2% of monthly income
       const annualSavingsIncrease = twoPercentOfIncome * 12;
       return (
-        <span>
+        <span className="text-foreground">
           By shifting just <span className="text-primary font-bold">2%</span> from 'Fun' to 'Savings,' you'd add an extra{' '}
           <span className="text-primary font-bold">${Math.round(annualSavingsIncrease)}</span> to your annual savings!
         </span>
@@ -584,7 +584,7 @@ export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) 
       const targetSavingsAmount = getDollarAmount(20);
       const annualIncrease = (targetSavingsAmount - savingsAmount) * 12;
       return (
-        <span>
+        <span className="text-foreground">
           Increasing your savings rate to <span className="text-primary font-bold">20%</span> would add{' '}
           <span className="text-primary font-bold">${Math.round(annualIncrease)}</span> to your annual savings!
         </span>
@@ -593,7 +593,7 @@ export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) 
       // Congratulate them on their good savings rate
       const annualSavings = savingsAmount * 12;
       return (
-        <span>
+        <span className="text-foreground">
           Great job! You're saving <span className="text-primary font-bold">{budget.savings}%</span> of your income - that's{' '}
           <span className="text-primary font-bold">${Math.round(annualSavings)}</span> annually!
         </span>

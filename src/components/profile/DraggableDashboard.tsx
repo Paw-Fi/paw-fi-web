@@ -251,7 +251,7 @@ export function DraggableDashboard({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
          { <SortableContext items={currentWidgets.map(w => w.id)} strategy={rectSortingStrategy}>
             {currentWidgets.map((widget) => (
              (
@@ -296,7 +296,7 @@ export function DraggableDashboard({
         <DragOverlay dropAnimation={null}>
           {activeId && activeWidget && draggedNodeRect ? (
             <div 
-              className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl transform scale-105 cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'col-span-1 md:col-span-2' : 'col-span-1'} ${`row-span-${activeWidget.row_span || 1}`}`}
+              className={` cursor-grabbing h-full ${activeWidget.column_span === 2 ? 'col-span-1 md:col-span-2' : 'col-span-1'} ${`row-span-${activeWidget.row_span || 1}`}`}
               style={{
                 width: draggedNodeRect.width,
                 height: draggedNodeRect.height,

@@ -45,6 +45,10 @@ import {
 import { Widget } from "./Widget";
 import { motion, Variants } from "framer-motion";
 import { ComprehensiveFinancialProfile } from "@/types/financial-quiz-constants";
+import { FinancialScoreBreakdown } from "@/components/financial-health/FinancialScoreBreakdown";
+import { AdvancedAnalyticsPanel } from "@/components/financial-health/AdvancedAnalyticsPanel";
+import { InvestmentEntryCTA } from "@/components/financial-health/InvestmentEntryCTA";
+import { Button } from "@/components/ui/button";
 
 // --- STYLING & HELPER FUNCTIONS ---
 
@@ -241,6 +245,7 @@ const MetricDisplay = ({ icon, metric, title }: { icon: any, metric: MetricStatu
 
 export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialHealthScorecardWidget; }) {
   const { data } = widget;
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const calculatedData = useMemo(() => {
     if (data?.quizAnswers) {
@@ -249,7 +254,7 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
     return null;
   }, [data]);
 
-  if (!calculatedData) {
+  if (!calculatedData || !data?.quizAnswers) {
     return (
       <Widget widget={widget} controls={widget.controls}>
         <div className="p-6 text-center">
@@ -260,60 +265,41 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
     );
   }
 
-  const { overallScore, budget, emergencyFund, savingsRate, debtToIncome } = calculatedData;
-  const overallStatusStyles = getFinancialStatusStyles(overallScore.status);
-  const radius = 45;
-  const circumference = 2 * Math.PI * radius;
-
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <motion.div className="flex flex-col space-y-6" variants={cardVariants} initial="hidden" animate="visible">
-        <motion.div variants={itemVariants} className="flex flex-col items-center text-center sm:flex-row sm:text-left sm:space-x-6">
-          <div className="relative h-24 w-24 shrink-0">
-            <svg className="h-full w-full" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="8" className="text-slate-200 dark:text-slate-700" stroke="currentColor" />
-              <motion.circle
-                cx="50" cy="50" r={radius} fill="none" strokeWidth="8" strokeLinecap="round"
-                stroke={getStatusColorValue(overallScore.status)}
-                strokeDasharray={circumference}
-                custom={overallScore.value}
-                variants={{ hidden: { strokeDashoffset: circumference }, visible: (custom) => ({ strokeDashoffset: circumference * (1 - custom / 100), transition: { duration: 1.2, ease: [0.33, 1, 0.68, 1] } }) }}
-                style={{ transform: "rotate(-90deg)", transformOrigin: "50% 50%" }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-2xl font-bold ${overallStatusStyles.textColor}`}>{Math.round(overallScore.value)}</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">/ 100</span>
-            </div>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Your Financial Health is {overallScore.status}</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{overallScore.description}</p>
-          </div>
-        </motion.div>
+      <div className="space-y-6">
+        {/* Financial Score Breakdown with real calculations */}
+        <FinancialScoreBreakdown quizAnswers={data.quizAnswers} />
 
-        <motion.div variants={itemVariants} className="space-y-4">
-          <div>
-            <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-2">Budget Breakdown (50/30/20 Rule)</h4>
-            <div className={`p-4 rounded-xl border ${getFinancialStatusStyles(budget.status === 'Balanced' ? 'Excellent' : 'Fair').bgColor} ${getFinancialStatusStyles(budget.status === 'Balanced' ? 'Excellent' : 'Fair').borderColor}`}>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">{budget.description}</p>
-                <div className="w-full flex rounded-full h-3 bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                    <div className="bg-sky-500" style={{ width: `${budget.needs.percentage}%` }} title={`Needs: ${budget.needs.percentage.toFixed(0)}%`}></div>
-                    <div className="bg-amber-500" style={{ width: `${budget.wants.percentage}%` }} title={`Wants: ${budget.wants.percentage.toFixed(0)}%`}></div>
-                    <div className="bg-emerald-500" style={{ width: `${budget.savings.percentage}%` }} title={`Savings: ${budget.savings.percentage.toFixed(0)}%`}></div>
-                </div>
-                <div className="flex justify-between text-xs mt-1.5 text-slate-500 dark:text-slate-400">
-                    <span><span className="h-2 w-2 inline-block rounded-full bg-sky-500 mr-1.5"></span>Needs</span>
-                    <span><span className="h-2 w-2 inline-block rounded-full bg-amber-500 mr-1.5"></span>Wants</span>
-                    <span><span className="h-2 w-2 inline-block rounded-full bg-emerald-500 mr-1.5"></span>Savings</span>
-                </div>
-            </div>
-          </div>
-          <MetricDisplay icon={faPiggyBank} metric={savingsRate} title="Savings Rate" />
-          <MetricDisplay icon={faShieldAlt} metric={emergencyFund} title="Emergency Fund" />
-          <MetricDisplay icon={faCreditCard} metric={debtToIncome} title="Debt to Income" />
-        </motion.div>
-      </motion.div>
+        {/* Investment Entry CTA */}
+        <InvestmentEntryCTA />
+
+        {/* Advanced Analytics Toggle */}
+        <div className="flex justify-center">
+          <Button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            variant="outline"
+            className="rounded-full"
+          >
+            {showAdvanced ? 'Hide' : 'View'} Advanced Analytics
+          </Button>
+        </div>
+
+        {/* Advanced Analytics Panel (collapsible) */}
+        {showAdvanced && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            <AdvancedAnalyticsPanel
+              quizAnswers={data.quizAnswers}
+              calculationResult={calculatedData}
+            />
+          </motion.div>
+        )}
+      </div>
     </Widget>
   );
 }
@@ -321,13 +307,13 @@ export function FinancialHealthScorecardWidget({ widget }: { widget: IFinancialH
 
 // --- OTHER WIDGETS (Restored and Unchanged) ---
 
-export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget; }) {
+export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget }) {
   const { data: actionsData, maxDisplayItems, filterByPriority } = widget;
   const actionsToDisplay = useMemo(() => {
     if (!actionsData || !Array.isArray(actionsData)) return [];
     let filteredActions = [...actionsData].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     if (filterByPriority) {
-      filteredActions = filteredActions.filter(action => action.priority === filterByPriority);
+      filteredActions = filteredActions.filter((action) => action.priority === filterByPriority);
     }
     if (maxDisplayItems && maxDisplayItems > 0) {
       return filteredActions.slice(0, maxDisplayItems);
@@ -338,80 +324,106 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
   if (!actionsToDisplay || actionsToDisplay.length === 0) {
     return (
       <Widget widget={widget} controls={widget.controls}>
-        <div className="flex h-full flex-col items-center justify-center p-6 text-center">
-          <FontAwesomeIcon icon={faCircleCheck} className="mb-4 text-4xl text-emerald-500 dark:text-emerald-400" />
-          <h4 className="mb-1 text-lg font-semibold text-slate-700 dark:text-slate-200">All Caught Up!</h4>
-          <p className="text-sm text-slate-500 dark:text-slate-400">No pending actions for you.</p>
+        <div className="flex h-full flex-col items-center justify-center text-center">
+          <FontAwesomeIcon
+            icon={faCircleCheck}
+            className="mb-3 sm:mb-4 text-3xl sm:text-4xl text-emerald-500 dark:text-emerald-400"
+          />
+          <h4 className="mb-1 text-mobile-base sm:text-lg font-medium text-foreground">All Caught Up!</h4>
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">No pending actions for you.</p>
         </div>
       </Widget>
     );
   }
-  // Helper function to get priority styling based on mockup design
+
+  // Helper function using Moneko color system
   const getPriorityStyles = (priority?: string) => {
     switch (priority?.toLowerCase()) {
       case 'high':
         return {
-          bgColor: 'bg-red-50 dark:bg-red-900/20',
-          borderColor: 'border-red-200 dark:border-red-800',
-          textColor: 'text-red-600 dark:text-red-400',
-          labelBg: 'bg-red-100 dark:bg-red-900/40',
-          labelText: 'text-red-700 dark:text-red-300'
+          bgColor: 'bg-orange-50/50 dark:bg-orange-950/30',
+          textColor: 'text-orange-600 dark:text-orange-400',
+          badgeBg: 'bg-orange-100 dark:bg-orange-900/40',
+          badgeText: 'text-orange-700 dark:text-orange-300',
         };
       case 'medium':
         return {
-          bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-          borderColor: 'border-yellow-200 dark:border-yellow-800',
-          textColor: 'text-yellow-600 dark:text-yellow-400',
-          labelBg: 'bg-yellow-100 dark:bg-yellow-900/40',
-          labelText: 'text-yellow-700 dark:text-yellow-300'
+          bgColor: 'bg-amber-50/50 dark:bg-amber-950/30',
+          textColor: 'text-amber-600 dark:text-amber-400',
+          badgeBg: 'bg-amber-100 dark:bg-amber-900/40',
+          badgeText: 'text-amber-700 dark:text-amber-300',
         };
       case 'low':
         return {
-          bgColor: 'bg-green-50 dark:bg-green-900/20',
-          borderColor: 'border-green-200 dark:border-green-800',
-          textColor: 'text-green-600 dark:text-green-400',
-          labelBg: 'bg-green-100 dark:bg-green-900/40',
-          labelText: 'text-green-700 dark:text-green-300'
+          bgColor: 'bg-emerald-50/50 dark:bg-emerald-950/30',
+          textColor: 'text-emerald-600 dark:text-emerald-400',
+          badgeBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+          badgeText: 'text-emerald-700 dark:text-emerald-300',
         };
       default:
         return {
-          bgColor: 'bg-slate-50 dark:bg-slate-800/50',
-          borderColor: 'border-slate-200 dark:border-slate-700',
-          textColor: 'text-slate-600 dark:text-slate-400',
-          labelBg: 'bg-slate-100 dark:bg-slate-800',
-          labelText: 'text-slate-700 dark:text-slate-300'
+          bgColor: 'bg-subtle-background/50',
+          textColor: 'text-muted-foreground-color',
+          badgeBg: 'bg-subtle-background',
+          badgeText: 'text-muted-foreground-color',
         };
     }
   };
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full">
-        <div className="space-y-3">
-          {actionsToDisplay.map((action) => {
+      <div className="h-full flex flex-col">
+        <motion.div
+          className="space-y-3 sm:space-y-4 flex-1"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.08,
+                delayChildren: 0.1,
+              },
+            },
+          }}
+          initial="hidden"
+          animate="visible"
+        >
+          {actionsToDisplay.map((action, index) => {
             const styles = getPriorityStyles(action.priority);
             return (
-              <div 
-                key={action.id} 
-                className={`p-4 rounded-lg border ${styles.bgColor} ${styles.borderColor}`}
+              <motion.div
+                key={action.id}
+                className={`${styles.bgColor} rounded-2xl p-4 sm:p-6 transition-all duration-200 hover:shadow-sm touch-manipulation`}
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      duration: 0.4,
+                      ease: [0.25, 0.46, 0.45, 0.94] as const,
+                    },
+                  },
+                }}
+                whileHover={{ x: 4 }}
               >
-                <div className="flex items-start gap-3">
-                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles.labelBg} ${styles.labelText}`}>
-                    {action.priority ? `${action.priority.charAt(0).toUpperCase() + action.priority.slice(1)} Priority` : 'Priority'}
+                <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-mobile-xs sm:text-xs font-medium ${styles.badgeBg} ${styles.badgeText}`}>
+                    {action.priority
+                      ? `${action.priority.charAt(0).toUpperCase() + action.priority.slice(1)} Priority`
+                      : 'Priority'}
                   </div>
                 </div>
-                <div className="mt-2">
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-1">
-                    {action.title}
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                <div>
+                  <p className="text-mobile-sm sm:text-sm font-medium text-foreground mb-2">{action.title}</p>
+                  <p className="text-mobile-sm sm:text-sm text-muted-foreground-color leading-relaxed">
                     {action.message}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </Widget>
   );
@@ -419,204 +431,754 @@ export function NextBestActionWidget({ widget }: { widget: INextBestActionWidget
 
 export function DebtVisualizerWidget({ widget }: { widget: IDebtVisualizerWidget; }) {
   const { data, strategy, title } = widget;
+
+  // No debt - celebration state
   if (!data || data.length === 0) {
     return (
       <Widget widget={widget} controls={widget.controls}>
-        <div className="flex h-full min-h-[200px] flex-col items-center justify-center p-6 text-center">
-          <FontAwesomeIcon icon={faCircleCheck} className="mb-4 text-4xl text-emerald-500 dark:text-emerald-400" />
-          <h4 className="mb-1 text-lg font-semibold text-emerald-600 dark:text-emerald-400">Congratulations - You're Debt Free!</h4>
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
+          <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-full p-4 sm:p-6 mb-3 sm:mb-4">
+            <FontAwesomeIcon icon={faCircleCheck} className="text-3xl sm:text-4xl text-emerald-500 dark:text-emerald-400" />
+          </div>
+          <h4 className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">Congratulations - You're Debt Free!</h4>
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">You have no outstanding debts.</p>
         </div>
       </Widget>
     );
   }
-  const sortedDebts = [...data].sort((a, b) => strategy === "snowball" ? (a.currentBalance || 0) - (b.currentBalance || 0) : (b.interestRate || 0) - (a.interestRate || 0));
+
+  // Calculate real debt metrics - NO MOCK DATA
+  const sortedDebts = [...data].sort((a, b) =>
+    strategy === "snowball"
+      ? (a.currentBalance || 0) - (b.currentBalance || 0)
+      : (b.interestRate || 0) - (a.interestRate || 0)
+  );
   const totalCurrentBalance = data.reduce((sum, debt) => sum + (debt.currentBalance || 0), 0);
   const totalOriginalBalance = data.reduce((sum, debt) => sum + (debt.originalBalance || 0), 0);
   const totalPaid = totalOriginalBalance - totalCurrentBalance;
-  const overallProgressPercentage = totalOriginalBalance > 0 ? Math.max(0, Math.min(100, (totalPaid / totalOriginalBalance) * 100)) : 0;
+  const overallProgressPercentage = totalOriginalBalance > 0
+    ? Math.max(0, Math.min(100, (totalPaid / totalOriginalBalance) * 100))
+    : 0;
   const strategyIcon = strategy === "snowball" ? faSnowflake : faFire;
   const strategyName = strategy === "snowball" ? "Snowball" : "Avalanche";
 
+  // Determine status based on progress
+  const getDebtStatus = (progress: number) => {
+    if (progress >= 75) return {
+      status: 'Almost There!',
+      bgClass: 'bg-emerald-50/50 dark:bg-emerald-950/30',
+      textClass: 'text-emerald-600 dark:text-emerald-400',
+      progressClass: 'text-emerald-500 dark:text-emerald-400',
+    };
+    if (progress >= 50) return {
+      status: 'Great Progress',
+      bgClass: 'bg-sky-50/50 dark:bg-sky-950/30',
+      textClass: 'text-sky-600 dark:text-sky-400',
+      progressClass: 'text-sky-500 dark:text-sky-400',
+    };
+    if (progress >= 25) return {
+      status: 'Making Progress',
+      bgClass: 'bg-amber-50/50 dark:bg-amber-950/30',
+      textClass: 'text-amber-600 dark:text-amber-400',
+      progressClass: 'text-amber-500 dark:text-amber-400',
+    };
+    return {
+      status: 'Getting Started',
+      bgClass: 'bg-orange-50/50 dark:bg-orange-950/30',
+      textClass: 'text-orange-600 dark:text-orange-400',
+      progressClass: 'text-orange-500 dark:text-orange-400',
+    };
+  };
+
+  const statusInfo = getDebtStatus(overallProgressPercentage);
+
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-4">
-        <h3 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">{title || 'Path to Debt Freedom'}</h3>
-        <p className="text-slate-700 dark:text-slate-300">Total Debt: ${totalCurrentBalance.toLocaleString()}</p>
-        <p className="text-slate-700 dark:text-slate-300">Progress: {overallProgressPercentage.toFixed(1)}%</p>
-        <p className="text-slate-700 dark:text-slate-300">Strategy: {strategyName}</p>
-        {/* Full implementation of the debt visualizer would go here */}
+      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
+        {/* Strategy Badge */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="bg-subtle-background/50 rounded-full p-2 sm:p-3">
+            <FontAwesomeIcon icon={strategyIcon} className="text-lg sm:text-xl text-primary" />
+          </div>
+          <div>
+            <div className="text-mobile-xs sm:text-sm text-muted-foreground-color">Payoff Strategy</div>
+            <div className="text-mobile-sm sm:text-base font-medium text-foreground">{strategyName}</div>
+          </div>
+        </div>
+
+        {/* Overall Progress */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-mobile-sm sm:text-sm font-medium text-foreground">Overall Progress</div>
+            <div className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-mobile-xs sm:text-xs font-medium ${statusInfo.bgClass} ${statusInfo.textClass}`}>
+              {statusInfo.status}
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="h-2 bg-subtle-background rounded-full overflow-hidden">
+              <motion.div
+                className={`h-full rounded-full ${statusInfo.progressClass}`}
+                style={{ backgroundColor: 'currentColor' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${overallProgressPercentage}%` }}
+                transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: 0.2 }}
+              />
+            </div>
+            <div className="flex justify-between text-mobile-xs sm:text-xs text-muted-foreground-color">
+              <span>{overallProgressPercentage.toFixed(1)}% paid off</span>
+              <span className="text-right">{totalPaid.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })} of {totalOriginalBalance.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}</span>
+            </div>
+          </div>
+
+          {/* Total Debt Remaining */}
+          <div className="pt-4 border-t border-subtle-background">
+            <div className="text-sm text-muted-foreground-color mb-1">Remaining Balance</div>
+            <div className="text-3xl font-light text-foreground">
+              {totalCurrentBalance.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+            </div>
+          </div>
+        </div>
+
+        {/* Debt List - Prioritized by Strategy */}
+        <div className="space-y-3 flex-1">
+          <div className="text-sm font-medium text-foreground mb-2">
+            Payoff Priority ({strategy === "snowball" ? 'Smallest First' : 'Highest Interest First'})
+          </div>
+          <motion.div
+            className="space-y-3"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.08,
+                  delayChildren: 0.1,
+                },
+              },
+            }}
+            initial="hidden"
+            animate="visible"
+          >
+            {sortedDebts.slice(0, 5).map((debt, index) => {
+              const debtProgress = debt.originalBalance > 0
+                ? ((debt.originalBalance - debt.currentBalance) / debt.originalBalance) * 100
+                : 0;
+              const isPriority = index === 0;
+
+              return (
+                <motion.div
+                  key={debt.id}
+                  className={`rounded-2xl p-4 transition-all duration-200 ${
+                    isPriority
+                      ? 'bg-primary/5 ring-1 ring-primary/20'
+                      : 'bg-subtle-background/50'
+                  }`}
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.4,
+                        ease: [0.25, 0.46, 0.45, 0.94] as const,
+                      },
+                    },
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-sm font-medium text-foreground truncate">
+                          {debt.name}
+                        </div>
+                        {isPriority && (
+                          <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary text-primary-foreground shrink-0">
+                            Focus
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground-color">
+                        {debt.interestRate?.toFixed(2)}% APR
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-light text-foreground">
+                        {debt.currentBalance.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                      </div>
+                      <div className="text-xs text-muted-foreground-color">
+                        {debtProgress.toFixed(0)}% paid
+                      </div>
+                    </div>
+                  </div>
+                  <div className="h-1 bg-subtle-background rounded-full overflow-hidden">
+                    <motion.div
+                      className="h-full bg-primary rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${debtProgress}%` }}
+                      transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: 0.3 + index * 0.1 }}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+          {sortedDebts.length > 5 && (
+            <div className="text-xs text-center text-muted-foreground-color pt-2">
+              +{sortedDebts.length - 5} more {sortedDebts.length - 5 === 1 ? 'debt' : 'debts'}
+            </div>
+          )}
+        </div>
       </div>
     </Widget>
   );
 }
 
-export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadinessWidget; }) {
-    const { data: retirementData } = widget;
-    const [selectedScenarioId, setSelectedScenarioId] = useState(retirementData.currentScenarioId);
-    const currentScenario = useMemo(() => retirementData.scenarios.find(s => s.id === selectedScenarioId), [retirementData.scenarios, selectedScenarioId]);
+export function RetirementReadinessWidget({ widget }: { widget: IRetirementReadinessWidget }) {
+  const { data: retirementData } = widget;
+  const [selectedScenarioId, setSelectedScenarioId] = useState(retirementData.currentScenarioId);
+  const currentScenario = useMemo(
+    () => retirementData.scenarios.find((s) => s.id === selectedScenarioId),
+    [retirementData.scenarios, selectedScenarioId]
+  );
 
-    if (!currentScenario) {
-        return (
-            <Widget widget={widget} controls={widget.controls}>
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex items-center justify-center">
-                    <p className="text-slate-600 dark:text-slate-400">Scenario not found.</p>
-                </div>
-            </Widget>
-        );
-    }
-
-    // Extract data from current scenario
-    const projectedAmount = currentScenario.projectionAmount || 0;
-    const targetAmount = currentScenario.targetAmount || projectedAmount * 2; // Fallback if no target
-    const currentSavings = currentScenario.currentAmount || 0;
-    const annualSavings = currentScenario.annualContribution || 3000; // Default from mockup
-    const expectedReturn = currentScenario.expectedReturn || 6.5; // Default from mockup
-    const targetAge = currentScenario.targetAge || 65;
-    const currentAge = currentScenario.currentAge || 30;
-    const yearsToRetirement = targetAge - currentAge;
-    
-    // Calculate progress percentage
-    const progressPercentage = targetAmount > 0 ? Math.min((projectedAmount / targetAmount) * 100, 100) : 0;
-    
-    // Determine status based on progress
-    const getRetirementStatus = (progress: number) => {
-        if (progress >= 90) return { status: 'On Track', color: 'green', textClass: 'text-green-600 dark:text-green-400', bgClass: 'bg-green-50 dark:bg-green-900/20' };
-        if (progress >= 70) return { status: 'Good Progress', color: 'blue', textClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-50 dark:bg-blue-900/20' };
-        if (progress >= 40) return { status: 'Needs Attention', color: 'orange', textClass: 'text-orange-600 dark:text-orange-400', bgClass: 'bg-orange-50 dark:bg-orange-900/20' };
-        return { status: 'At Risk', color: 'red', textClass: 'text-red-600 dark:text-red-400', bgClass: 'bg-red-50 dark:bg-red-900/20' };
-    };
-
-    const statusInfo = getRetirementStatus(progressPercentage);
-
+  if (!currentScenario) {
     return (
-        <Widget widget={widget} controls={widget.controls}>
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-700 h-full flex flex-col">
-                {/* Status Badge */}
-                <div className="mb-4">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${statusInfo.textClass} ${statusInfo.bgClass}`}>
-                        <span>{statusInfo.status}</span>
-                    </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mb-6">
-                    <div className="mb-2">
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-2">
-                            <div 
-                                className={`h-2 rounded-full transition-all duration-300 ${
-                                    statusInfo.color === 'green' ? 'bg-green-500 dark:bg-green-400' :
-                                    statusInfo.color === 'blue' ? 'bg-blue-500 dark:bg-blue-400' :
-                                    statusInfo.color === 'orange' ? 'bg-orange-500 dark:bg-orange-400' :
-                                    'bg-red-500 dark:bg-red-400'
-                                }`}
-                                style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                            />
-                        </div>
-                        <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                            <span>{progressPercentage.toFixed(0)}%</span>
-                        </div>
-                    </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
-                        You're on track to meet your retirement goal based on your current savings, timeline, and expected portfolio growth.
-                    </p>
-                </div>
-
-                {/* Detailed Information Section */}
-                <div className="mt-auto">
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
-                        <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-3">Will You Reach Your Goal?</h4>
-                        
-                        <div className="flex items-center gap-4 mb-4">
-                            {/* Circular Progress Indicator */}
-                            <div className="relative w-12 h-12 flex-shrink-0">
-                                <svg className="w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
-                                    <circle
-                                        cx="24"
-                                        cy="24"
-                                        r="20"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        fill="none"
-                                        className="text-slate-200 dark:text-slate-700"
-                                    />
-                                    <circle
-                                        cx="24"
-                                        cy="24"
-                                        r="20"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                        fill="none"
-                                        strokeDasharray={`${(progressPercentage / 100) * 125.6} 125.6`}
-                                        className={
-                                            statusInfo.color === 'green' ? 'text-green-500 dark:text-green-400' :
-                                            statusInfo.color === 'blue' ? 'text-blue-500 dark:text-blue-400' :
-                                            statusInfo.color === 'orange' ? 'text-orange-500 dark:text-orange-400' :
-                                            'text-red-500 dark:text-red-400'
-                                        }
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                                        {Math.round(progressPercentage)}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <h5 className={`font-bold ${statusInfo.textClass}`}>{statusInfo.status}</h5>
-                                <p className="text-xs text-slate-600 dark:text-slate-400">
-                                    Projected: ${projectedAmount.toLocaleString()} by Age {targetAge}
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                            <p>Assumes {expectedReturn}% return annually</p>
-                            <p>Based on your current savings: ${annualSavings.toLocaleString()}/yr</p>
-                            {yearsToRetirement > 0 && (
-                                <p>{yearsToRetirement} years until retirement</p>
-                            )}
-                            {currentSavings > 0 && (
-                                <p>Current balance: ${currentSavings.toLocaleString()}</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Widget>
+      <Widget widget={widget} controls={widget.controls}>
+        <div className="flex items-center justify-center h-full">
+          <p className="text-muted-foreground-color">Scenario not found.</p>
+        </div>
+      </Widget>
     );
+  }
+
+  // Extract REAL data from current scenario - NO MOCK VALUES
+  const projectedAmount = currentScenario.projectionAmount || 0;
+  const targetAmount = currentScenario.targetAmount || projectedAmount * 2;
+  const currentSavings = currentScenario.currentAmount || 0;
+  const annualSavings = currentScenario.annualContribution || 0;
+  const expectedReturn = currentScenario.expectedReturn || 0;
+  const targetAge = currentScenario.targetAge || 65;
+  const currentAge = currentScenario.currentAge || 30;
+  const yearsToRetirement = targetAge - currentAge;
+
+  // Calculate progress percentage
+  const progressPercentage =
+    targetAmount > 0 ? Math.min((projectedAmount / targetAmount) * 100, 100) : 0;
+
+  // Determine status based on progress - using Moneko color system
+  const getRetirementStatus = (progress: number) => {
+    if (progress >= 90)
+      return {
+        status: 'On Track',
+        bgClass: 'bg-emerald-50/50 dark:bg-emerald-950/30',
+        textClass: 'text-emerald-600 dark:text-emerald-400',
+        ringClass: 'text-emerald-500 dark:text-emerald-400',
+      };
+    if (progress >= 70)
+      return {
+        status: 'Good Progress',
+        bgClass: 'bg-sky-50/50 dark:bg-sky-950/30',
+        textClass: 'text-sky-600 dark:text-sky-400',
+        ringClass: 'text-sky-500 dark:text-sky-400',
+      };
+    if (progress >= 40)
+      return {
+        status: 'Needs Attention',
+        bgClass: 'bg-amber-50/50 dark:bg-amber-950/30',
+        textClass: 'text-amber-600 dark:text-amber-400',
+        ringClass: 'text-amber-500 dark:text-amber-400',
+      };
+    return {
+      status: 'At Risk',
+      bgClass: 'bg-orange-50/50 dark:bg-orange-950/30',
+      textClass: 'text-orange-600 dark:text-orange-400',
+      ringClass: 'text-orange-500 dark:text-orange-400',
+    };
+  };
+
+  const statusInfo = getRetirementStatus(progressPercentage);
+
+  return (
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
+        {/* Status Badge with modern styling */}
+        <div className={`inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-mobile-sm sm:text-sm font-medium ${statusInfo.textClass} ${statusInfo.bgClass} self-start`}>
+          <span>{statusInfo.status}</span>
+        </div>
+
+        {/* Circular Progress with large number */}
+        <div className="flex items-center gap-4 sm:gap-6">
+          <div className="relative h-20 w-20 sm:h-24 sm:w-24 shrink-0">
+            <svg className="h-full w-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                strokeWidth="8"
+                className="text-subtle-background"
+                stroke="currentColor"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                strokeWidth="8"
+                strokeLinecap="round"
+                className={statusInfo.ringClass}
+                stroke="currentColor"
+                strokeDasharray={`${(progressPercentage / 100) * 282.7} 282.7`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-xl sm:text-2xl font-light text-foreground">
+                {Math.round(progressPercentage)}
+              </span>
+              <span className="text-mobile-xs sm:text-xs font-medium text-muted-foreground-color">%</span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h4 className={`text-mobile-base sm:text-lg font-medium ${statusInfo.textClass} mb-1`}>
+              {statusInfo.status}
+            </h4>
+            <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
+              Projected: {projectedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })} by age {targetAge}
+            </p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-mobile-sm sm:text-sm">
+            <span className="text-muted-foreground-color">Retirement readiness</span>
+            <span className="text-foreground font-medium">{progressPercentage.toFixed(0)}%</span>
+          </div>
+          <div className="h-2 bg-subtle-background rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full rounded-full ${statusInfo.ringClass}`}
+              style={{ width: `${Math.min(progressPercentage, 100)}%`, backgroundColor: 'currentColor' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(progressPercentage, 100)}%` }}
+              transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] }}
+            />
+          </div>
+        </div>
+
+        {/* Details card with modern styling */}
+        <div className="mt-auto bg-subtle-background/50 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
+          <h4 className="text-mobile-sm sm:text-base font-medium text-foreground">Projection Details</h4>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div>
+              <div className="text-mobile-xs sm:text-sm text-muted-foreground-color mb-1">Current Balance</div>
+              <div className="text-mobile-base sm:text-lg font-light text-foreground">
+                {currentSavings.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground-color mb-1">Target Amount</div>
+              <div className="text-lg font-light text-foreground">
+                {targetAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground-color mb-1">Annual Savings</div>
+              <div className="text-lg font-light text-foreground">
+                {annualSavings.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground-color mb-1">Expected Return</div>
+              <div className="text-lg font-light text-foreground">{expectedReturn.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          {yearsToRetirement > 0 && (
+            <div className="pt-4 border-t border-subtle-background">
+              <p className="text-sm text-muted-foreground-color">
+                {yearsToRetirement} years until retirement at age {targetAge}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </Widget>
+  );
 }
 
 export function EnhancedSavingsGoalsWidget({ widget }: { widget: IEnhancedSavingsGoalsWidget; }) {
-    const { data } = widget;
-    const { items } = data;
+  const { data } = widget;
+  const { items } = data;
+
+  // Empty state - NO MOCK DATA
+  if (!items || items.length === 0) {
     return (
-        <Widget widget={widget} controls={widget.controls}>
-            <div className="p-4">
-                <h3 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Savings Goals</h3>
-                {items.map(item => (
-                    <div key={item.id} className="mb-2">
-                        <p className="text-slate-700 dark:text-slate-300">{item.name}: ${item.savedAmount.toLocaleString()} / ${item.targetAmount.toLocaleString()}</p>
-                    </div>
-                ))}
-            </div>
-        </Widget>
+      <Widget widget={widget} controls={widget.controls}>
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
+          <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-full p-4 sm:p-6 mb-3 sm:mb-4">
+            <FontAwesomeIcon icon={faPiggyBank} className="text-3xl sm:text-4xl text-sky-500 dark:text-sky-400" />
+          </div>
+          <h4 className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">No Savings Goals Yet</h4>
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color mb-4">Start setting goals to track your savings progress.</p>
+        </div>
+      </Widget>
     );
+  }
+
+  // Calculate overall progress - NO MOCK DATA
+  const totalSaved = items.reduce((sum, item) => sum + (item.savedAmount || 0), 0);
+  const totalTarget = items.reduce((sum, item) => sum + (item.targetAmount || 0), 0);
+  const overallProgress = totalTarget > 0 ? (totalSaved / totalTarget) * 100 : 0;
+
+  return (
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
+        {/* Overall Summary */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-mobile-xs sm:text-sm text-muted-foreground-color mb-1">Total Saved</div>
+              <div className="text-2xl sm:text-3xl font-light text-foreground">
+                {totalSaved.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+              </div>
+            </div>
+            <div className="text-right min-w-0">
+              <div className="text-mobile-xs sm:text-sm text-muted-foreground-color mb-1">Target</div>
+              <div className="text-mobile-base sm:text-lg font-light text-foreground">
+                {totalTarget.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="h-2 bg-subtle-background rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(overallProgress, 100)}%` }}
+                transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: 0.2 }}
+              />
+            </div>
+            <div className="flex justify-between text-mobile-xs sm:text-xs text-muted-foreground-color">
+              <span>{overallProgress.toFixed(1)}% of goals achieved</span>
+              <span>{items.length} {items.length === 1 ? 'goal' : 'goals'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Individual Goals List */}
+        <div className="space-y-2 sm:space-y-3 flex-1">
+          <div className="text-mobile-sm sm:text-sm font-medium text-foreground mb-2">Your Savings Goals</div>
+          <motion.div
+            className="space-y-3"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.08,
+                  delayChildren: 0.1,
+                },
+              },
+            }}
+            initial="hidden"
+            animate="visible"
+          >
+            {items.map((item, index) => {
+              const progress = item.targetAmount > 0
+                ? (item.savedAmount / item.targetAmount) * 100
+                : 0;
+              const isComplete = progress >= 100;
+              const remaining = item.targetAmount - item.savedAmount;
+
+              // Status coloring
+              const getGoalStatus = (prog: number) => {
+                if (prog >= 100) return {
+                  bgClass: 'bg-emerald-50/50 dark:bg-emerald-950/30',
+                  progressClass: 'bg-emerald-500 dark:bg-emerald-400',
+                };
+                if (prog >= 75) return {
+                  bgClass: 'bg-sky-50/50 dark:bg-sky-950/30',
+                  progressClass: 'bg-sky-500 dark:bg-sky-400',
+                };
+                if (prog >= 50) return {
+                  bgClass: 'bg-amber-50/50 dark:bg-amber-950/30',
+                  progressClass: 'bg-amber-500 dark:bg-amber-400',
+                };
+                return {
+                  bgClass: 'bg-subtle-background/50',
+                  progressClass: 'bg-primary',
+                };
+              };
+
+              const statusInfo = getGoalStatus(progress);
+
+              return (
+                <motion.div
+                  key={item.id}
+                  className={`rounded-2xl p-4 transition-all duration-200 ${statusInfo.bgClass}`}
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.4,
+                        ease: [0.25, 0.46, 0.45, 0.94] as const,
+                      },
+                    },
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-sm font-medium text-foreground truncate">
+                          {item.name}
+                        </div>
+                        {isComplete && (
+                          <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500 dark:bg-emerald-400 text-white shrink-0">
+                            <FontAwesomeIcon icon={faCircleCheck} className="mr-1" />
+                            Complete
+                          </div>
+                        )}
+                      </div>
+                      {item.targetDate && (
+                        <div className="text-xs text-muted-foreground-color">
+                          Target: {new Date(item.targetDate).toLocaleDateString('en-US', {
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-light text-foreground">
+                        {item.savedAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                      </div>
+                      <div className="text-xs text-muted-foreground-color">
+                        of {item.targetAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="h-1.5 bg-subtle-background rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full rounded-full ${statusInfo.progressClass}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(progress, 100)}%` }}
+                        transition={{
+                          duration: 1,
+                          ease: [0.25, 0.46, 0.45, 0.94] as const,
+                          delay: 0.3 + index * 0.1
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground-color">
+                      <span>{progress.toFixed(0)}%</span>
+                      {!isComplete && remaining > 0 && (
+                        <span>
+                          {remaining.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })} to go
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </div>
+    </Widget>
+  );
 }
 
 export function InsuranceCoverageWidget({ widget }: { widget: IInsuranceCoverageWidget; }) {
-    const { data } = widget;
-    const { items } = data;
+  const { data } = widget;
+  const { items } = data;
+
+  // Empty state - NO MOCK DATA
+  if (!items || items.length === 0) {
     return (
-        <Widget widget={widget} controls={widget.controls}>
-            <div className="p-4">
-                <h3 className="font-semibold mb-2 text-slate-800 dark:text-slate-200">Insurance Coverage</h3>
-                {items.map(item => (
-                    <div key={item.id} className="mb-2">
-                        <p className="text-slate-700 dark:text-slate-300">{item.policyName} ({item.type})</p>
-                    </div>
-                ))}
-            </div>
-        </Widget>
+      <Widget widget={widget} controls={widget.controls}>
+        <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
+          <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-full p-4 sm:p-6 mb-3 sm:mb-4">
+            <FontAwesomeIcon icon={faShieldAlt} className="text-3xl sm:text-4xl text-amber-500 dark:text-amber-400" />
+          </div>
+          <h4 className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">No Insurance Coverage Tracked</h4>
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color mb-4">Add your insurance policies to track your coverage.</p>
+        </div>
+      </Widget>
     );
+  }
+
+  // Group by insurance type and calculate coverage - NO MOCK DATA
+  const groupedByType = items.reduce((acc, item) => {
+    const type = item.type || 'Other';
+    if (!acc[type]) {
+      acc[type] = [];
+    }
+    acc[type].push(item);
+    return acc;
+  }, {} as Record<string, typeof items>);
+
+  const totalCoverage = items.reduce((sum, item) => sum + (item.coverageAmount || 0), 0);
+  const totalPremium = items.reduce((sum, item) => sum + (item.monthlyPremium || 0), 0);
+
+  // Icon mapping for insurance types
+  const getInsuranceIcon = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('health')) return faShieldAlt;
+    if (lowerType.includes('life')) return faHandshake;
+    if (lowerType.includes('auto') || lowerType.includes('car')) return faCreditCard;
+    if (lowerType.includes('home') || lowerType.includes('property')) return faWallet;
+    return faShieldAlt;
+  };
+
+  // Color mapping for insurance types
+  const getInsuranceColors = (type: string) => {
+    const lowerType = type.toLowerCase();
+    if (lowerType.includes('health')) return {
+      bgClass: 'bg-emerald-50/50 dark:bg-emerald-950/30',
+      iconClass: 'text-emerald-500 dark:text-emerald-400',
+    };
+    if (lowerType.includes('life')) return {
+      bgClass: 'bg-sky-50/50 dark:bg-sky-950/30',
+      iconClass: 'text-sky-500 dark:text-sky-400',
+    };
+    if (lowerType.includes('auto') || lowerType.includes('car')) return {
+      bgClass: 'bg-purple-50/50 dark:bg-purple-950/30',
+      iconClass: 'text-purple-500 dark:text-purple-400',
+    };
+    if (lowerType.includes('home') || lowerType.includes('property')) return {
+      bgClass: 'bg-amber-50/50 dark:bg-amber-950/30',
+      iconClass: 'text-amber-500 dark:text-amber-400',
+    };
+    return {
+      bgClass: 'bg-subtle-background/50',
+      iconClass: 'text-muted-foreground-color',
+    };
+  };
+
+  return (
+    <Widget widget={widget} controls={widget.controls}>
+      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
+        {/* Overall Summary */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="bg-subtle-background/50 rounded-2xl p-3 sm:p-4">
+            <div className="text-mobile-xs sm:text-sm text-muted-foreground-color mb-1">Total Coverage</div>
+            <div className="text-lg sm:text-2xl font-light text-foreground">
+              {totalCoverage.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+            </div>
+          </div>
+          <div className="bg-subtle-background/50 rounded-2xl p-3 sm:p-4">
+            <div className="text-mobile-xs sm:text-sm text-muted-foreground-color mb-1">Monthly Premium</div>
+            <div className="text-lg sm:text-2xl font-light text-foreground">
+              {totalPremium.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+            </div>
+          </div>
+        </div>
+
+        {/* Insurance Policies by Type */}
+        <div className="space-y-2 sm:space-y-3 flex-1">
+          <div className="text-mobile-sm sm:text-sm font-medium text-foreground mb-2">
+            {items.length} {items.length === 1 ? 'Policy' : 'Policies'}
+          </div>
+          <motion.div
+            className="space-y-3"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.08,
+                  delayChildren: 0.1,
+                },
+              },
+            }}
+            initial="hidden"
+            animate="visible"
+          >
+            {Object.entries(groupedByType).map(([type, policies], typeIndex) => {
+              const typeColors = getInsuranceColors(type);
+              const typeIcon = getInsuranceIcon(type);
+              const typeCoverage = policies.reduce((sum, p) => sum + (p.coverageAmount || 0), 0);
+              const typePremium = policies.reduce((sum, p) => sum + (p.monthlyPremium || 0), 0);
+
+              return (
+                <motion.div
+                  key={type}
+                  variants={{
+                    hidden: { opacity: 0, y: 12 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.4,
+                        ease: [0.25, 0.46, 0.45, 0.94] as const,
+                      },
+                    },
+                  }}
+                >
+                  <div className={`rounded-2xl p-4 transition-all duration-200 ${typeColors.bgClass}`}>
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="bg-white/60 dark:bg-black/20 rounded-full p-2.5 shrink-0">
+                        <FontAwesomeIcon icon={typeIcon} className={`text-lg ${typeColors.iconClass}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground mb-1">
+                          {type} Insurance
+                        </div>
+                        <div className="text-xs text-muted-foreground-color">
+                          {policies.length} {policies.length === 1 ? 'policy' : 'policies'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Type Summary */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <div className="text-xs text-muted-foreground-color mb-0.5">Coverage</div>
+                        <div className="text-sm font-light text-foreground">
+                          {typeCoverage.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground-color mb-0.5">Premium</div>
+                        <div className="text-sm font-light text-foreground">
+                          {typePremium.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}/mo
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Individual Policies */}
+                    {policies.length > 1 && (
+                      <div className="space-y-2 pt-3 border-t border-white/20 dark:border-black/10">
+                        {policies.map((policy) => (
+                          <div key={policy.id} className="flex items-center justify-between text-xs">
+                            <span className="text-foreground truncate flex-1 min-w-0 mr-2">
+                              {policy.policyName}
+                            </span>
+                            <span className="text-muted-foreground-color shrink-0">
+                              {policy.coverageAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </div>
+    </Widget>
+  );
 }
