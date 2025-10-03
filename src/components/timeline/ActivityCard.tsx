@@ -32,38 +32,38 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
       variants={cardVariants}
       initial="hidden"
       animate="visible"
-      className="relative pl-8"
+      className="relative pl-6 sm:pl-8"
     >
-      <div className="absolute left-0 top-1 w-4 h-4 bg-card border-2 border-blue-500 rounded-full z-10" />
-      <div className="flex items-start space-x-4">
-        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 text-white rounded-lg shadow-lg">
+      <div className="absolute left-0 top-1 w-3 h-3 sm:w-4 sm:h-4 bg-card border-2 border-blue-500 rounded-full z-10" />
+      <div className="flex items-start gap-3 sm:gap-4">
+        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500 text-white rounded-lg shadow-lg">
           <FontAwesomeIcon 
             icon={details.icon as IconDefinition} 
-            className={`text-xl`}
+            className={`text-base sm:text-xl`}
           />
         </div>
-        <div className="flex-grow">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-foreground">
+        <div className="flex-grow min-w-0">
+          <div className="flex items-start sm:items-center justify-between gap-2 flex-col sm:flex-row">
+            <h3 className="font-semibold text-foreground text-mobile-sm sm:text-base">
               {details.title}
             </h3>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-mobile-xs sm:text-sm text-muted-foreground flex-shrink-0">
               {timeAgo}
             </span>
           </div>
-          <p className="text-card-foreground mt-1">
+          <p className="text-card-foreground mt-1 text-mobile-sm sm:text-base">
             {details.description}
           </p>
           {activity.goalTitle && (
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-mobile-xs sm:text-sm text-muted-foreground mt-2">
               Goal: <span className="font-medium text-foreground">{activity.goalTitle}</span>
             </p>
           )}
           {activity.metadata?.newProgressPercentage !== undefined && (
             <div className="mt-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-medium text-foreground">Progress</span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-mobile-xs sm:text-sm font-medium text-foreground">Progress</span>
+                <span className="text-mobile-xs sm:text-sm font-medium text-foreground">
                   {activity.metadata.newProgressPercentage.toFixed(1)}%
                 </span>
               </div>

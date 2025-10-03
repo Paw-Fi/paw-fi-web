@@ -445,15 +445,15 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
 
   return (
     <div className="min-h-screen bg-moneko-background dark:bg-dark-background">
-      {/* Sticky progress bar with step indicators */}
-      <div className=" sticky lg:hidden top-0 z-10 bg-moneko-background/95 dark:bg-dark-background/95 backdrop-blur-sm border-b border-border">
-        <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3">
+      {/* Sticky progress bar with step indicators - Mobile Optimized */}
+      <div className="sticky lg:hidden top-0 z-10 bg-moneko-background/95 dark:bg-dark-background/95 backdrop-blur-sm border-b border-border">
+        <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3">
           <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-foreground/70">
+            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+              <span className="text-mobile-xs sm:text-sm font-medium text-foreground/70">
                 Step {currentItemIndex + 1} of {flashcardItems.length}
               </span>
-              <span className="text-sm font-medium text-foreground/70">
+              <span className="text-mobile-xs sm:text-sm font-medium text-foreground/70">
                 {Math.round(calculatedProgressPercentage)}%
               </span>
             </div>
@@ -462,10 +462,10 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
         </div>
       </div>
       
-      {/* Main content */}
-      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 pb-8">
-        <div className="max-w-4xl mx-auto min-h-[calc(100vh-200px)] flex items-center justify-center">
-          <div className="relative perspective-1000">
+      {/* Main content - Mobile Optimized */}
+      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 pb-6 sm:pb-8">
+        <div className="max-w-4xl mx-auto min-h-[calc(100vh-140px)] sm:min-h-[calc(100vh-200px)] flex items-center justify-center">
+          <div className="relative perspective-1000 w-full">
           {/* Content or Question container with AnimatePresence for smooth transitions */}
           <AnimatePresence mode="popLayout" initial={false}>
             {currentItem.type === "tutorials" ? (
@@ -527,7 +527,7 @@ function LessonPage({ dataSource = 'remote' }: LessonPageProps) {
                   }
                 }}
                 style={{ transformStyle: "preserve-3d" }}>
-            <div className="rounded-2xl sm:rounded-3xl bg-moneko-background p-4 sm:p-6 md:p-8 shadow-lg border border-border/50">
+            <div className="rounded-xl sm:rounded-2xl md:rounded-3xl bg-moneko-background p-3 sm:p-4 md:p-6 lg:p-8 shadow-lg border border-border/50">
               {/* Render the appropriate question component based on type */}
               <div>
               <LessonCardTitle

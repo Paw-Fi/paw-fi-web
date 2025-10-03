@@ -22,13 +22,14 @@ export function ActionButtons({
   isLoading = false,
 }: ActionButtonsProps) {
   return (
-    <div className="mt-8 flex justify-center">
+    <div className="mt-6 sm:mt-8 flex justify-center">
       {/* Show "Check Answer" button when answer is incorrect or not checked yet */}
       {!currentAnswerCorrect ? (
         <Button
           onClick={handleCheckAnswer}
           disabled={!isCurrentQuestionAnswered || countdownSeconds > 0}
           size="xl"
+          className="min-h-[48px] text-mobile-sm sm:text-base w-full sm:w-auto px-8 touch-manipulation"
         >
           Check Answer
         </Button>
@@ -38,6 +39,7 @@ export function ActionButtons({
           onClick={handleNext}
           size="xl"
           disabled={isLoading}
+          className="min-h-[48px] text-mobile-sm sm:text-base w-full sm:w-auto px-8 touch-manipulation"
         >
           {isLoading ? "Loading..." : (!isLastQuestion ? "Next Question" : "Complete Lesson")}
         </Button>

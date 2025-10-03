@@ -397,21 +397,21 @@ function GoalDetail() {
           ))}
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
-        {/* Hero Header */}
-        <div className="mb-12">
-          {/* Header with Actions */}
-          <div className="flex flex-col sm:flex-row items-start gap-6 sm:justify-between mb-8">
-            <div className="flex-1">
-              {/* Title - Inline Editing */}
-              <div className="mb-4" data-tour="goal-title">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
+        {/* Hero Header - Mobile Optimized */}
+        <div className="mb-8 sm:mb-10 md:mb-12">
+          {/* Header with Actions - Mobile Optimized */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 sm:justify-between mb-6 sm:mb-8">
+            <div className="flex-1 w-full">
+              {/* Title - Inline Editing - Mobile Optimized */}
+              <div className="mb-3 sm:mb-4" data-tour="goal-title">
                 {isEditingTitle ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <input
                       type="text"
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      className="text-3xl font-light bg-transparent border-b text-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 min-h-[44px]"  
+                      className="text-mobile-lg sm:text-2xl md:text-3xl font-light bg-transparent border-b text-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 min-h-[44px] text-mobile-base sm:text-base"  
                       placeholder="Enter goal title"
                       autoFocus
                       onKeyDown={(e) => {
@@ -422,26 +422,26 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <h1 
-                    className="text-3xl font-light text-foreground cursor-pointer hover:text-primary transition-colors group min-h-[44px] flex items-center"
+                    className="text-mobile-lg sm:text-2xl md:text-3xl font-light text-foreground cursor-pointer hover:text-primary transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingTitle}
                   >
                     {currentGoal.title}
                     <FontAwesomeIcon 
                       icon={faEdit} 
-                      className="w-4 h-4 ml-3 opacity-0 group-hover:opacity-50 transition-opacity" 
+                      className="w-3 h-3 sm:w-4 sm:h-4 ml-2 sm:ml-3 opacity-0 group-hover:opacity-50 transition-opacity" 
                     />
                   </h1>
                 )}
               </div>
               
-              {/* Description - Inline Editing */}
+              {/* Description - Inline Editing - Mobile Optimized */}
               <div>
                 {isEditingDescription ? (
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     <textarea
                       value={editedDescription}
                       onChange={(e) => setEditedDescription(e.target.value)}
-                      className="bg-transparent border-b text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 resize-none min-h-[44px]"
+                      className="bg-transparent border-b text-mobile-sm sm:text-base text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:border-primary flex-1 pb-2 resize-none min-h-[44px]"
                       placeholder="Describe your goal"
                       rows={2}
                       autoFocus
@@ -453,21 +453,21 @@ function GoalDetail() {
                   </div>
                 ) : (
                   <p 
-                    className="text-muted-foreground max-w-3xl cursor-pointer hover:text-foreground transition-colors group min-h-[44px] flex items-center"
+                    className="text-mobile-sm sm:text-base text-muted-foreground max-w-3xl cursor-pointer hover:text-foreground transition-colors group min-h-[44px] flex items-center"
                     onClick={startEditingDescription}
                   >
                     {currentGoal.description || 'Working towards your financial independence goal'}
                     <FontAwesomeIcon 
                       icon={faEdit} 
-                      className="w-3 h-3 ml-2 opacity-0 group-hover:opacity-50 transition-opacity" 
+                      className="w-2.5 h-2.5 sm:w-3 sm:h-3 ml-1.5 sm:ml-2 opacity-0 group-hover:opacity-50 transition-opacity" 
                     />
                   </p>
                 )}
               </div>
             </div>
             
-            <div className="relative flex items-center gap-3 w-full sm:w-auto">
-              {/* Inline Edit Controls */}
+            <div className="relative flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+              {/* Inline Edit Controls - Mobile Optimized */}
               <AnimatePresence>
                 {(isEditingTitle || isEditingDescription) && (
                   <motion.div
@@ -479,7 +479,7 @@ function GoalDetail() {
                     <button
                       onClick={saveInlineChanges}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 rounded-2xl bg-subtle-background hover:bg-subtle-background/80 text-success transition-all duration-200 disabled:opacity-50"
+                      className="min-w-[44px] min-h-[44px] p-2.5 sm:p-3 rounded-2xl bg-subtle-background hover:bg-subtle-background/80 text-success transition-all duration-200 disabled:opacity-50 touch-manipulation"
                       title="Save changes"
                     >
                       <FontAwesomeIcon 
@@ -490,7 +490,7 @@ function GoalDetail() {
                     <button
                       onClick={cancelEditing}
                       disabled={isUpdatingGoal}
-                      className="min-w-[44px] min-h-[44px] p-3 rounded-2xl bg-subtle-background hover:bg-subtle-background/80 text-destructive transition-all duration-200 disabled:opacity-50"
+                      className="min-w-[44px] min-h-[44px] p-2.5 sm:p-3 rounded-2xl bg-subtle-background hover:bg-subtle-background/80 text-destructive transition-all duration-200 disabled:opacity-50 touch-manipulation"
                       title="Cancel editing"
                     >
                       <FontAwesomeIcon icon={faTimes} className="w-4 h-4" />
@@ -501,16 +501,16 @@ function GoalDetail() {
               
               <button
                 onClick={() => setShowGoalMenu(!showGoalMenu)}
-                className="min-w-[44px] min-h-[44px] p-3 rounded-2xl hover:bg-subtle-background transition-all duration-200 group"
+                className="min-w-[44px] min-h-[44px] p-2.5 sm:p-3 rounded-2xl hover:bg-subtle-background transition-all duration-200 group touch-manipulation"
                 aria-label="Goal options"
               >
                 <FontAwesomeIcon 
                   icon={faEllipsisV} 
-                  className="w-5 h-5 text-muted-foreground group-hover:text-foreground" 
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground group-hover:text-foreground" 
                 />
               </button>
           
-              {/* Enhanced Dropdown Menu */}
+              {/* Enhanced Dropdown Menu - Mobile Optimized */}
               <AnimatePresence>
                 {showGoalMenu && (
                   <motion.div
@@ -518,22 +518,22 @@ function GoalDetail() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute right-0 top-full mt-2 w-64 sm:w-56 bg-card rounded-3xl shadow-sm hover:shadow-md transition-all duration-200 z-50 overflow-hidden max-w-[calc(100vw-2rem)] mx-2 sm:mx-0"
+                    className="absolute right-0 top-full mt-2 w-[calc(100vw-1.5rem)] sm:w-64 md:w-56 bg-card rounded-2xl sm:rounded-3xl shadow-lg sm:shadow-sm hover:shadow-md transition-all duration-200 z-50 overflow-hidden mx-3 sm:mx-0"
                   >
-                    <div className="py-3">
+                    <div className="py-2 sm:py-3">
                       <button
                         onClick={() => {
                           startWalkthrough();
                           setShowGoalMenu(false);
                         }}
-                        className="w-full text-left px-4 py-4 text-sm text-primary hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px]"
+                        className="w-full text-left px-3 sm:px-4 py-3 sm:py-4 text-mobile-sm sm:text-sm text-primary hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px] touch-manipulation"
                       >
-                        <div className="w-8 h-8 bg-subtle-background rounded-2xl flex items-center justify-center transition-colors">
+                        <div className="w-8 h-8 bg-subtle-background rounded-2xl flex items-center justify-center transition-colors flex-shrink-0">
                           <FontAwesomeIcon icon={faLightbulb} className="w-4 h-4 text-primary" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="font-medium">Take Tour</div>
-                          <div className="text-xs text-muted-foreground">Learn about goal features</div>
+                          <div className="text-mobile-xs sm:text-xs text-muted-foreground">Learn about goal features</div>
                         </div>
                       </button>
                       
@@ -544,14 +544,14 @@ function GoalDetail() {
                           setShowDeleteConfirm(true);
                           setShowGoalMenu(false);
                         }}
-                        className="w-full text-left px-4 py-4 text-sm text-destructive hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px]"
+                        className="w-full text-left px-3 sm:px-4 py-3 sm:py-4 text-mobile-sm sm:text-sm text-destructive hover:bg-subtle-background flex items-center gap-3 transition-colors group min-h-[48px] touch-manipulation"
                       >
-                        <div className="w-8 h-8 bg-subtle-background rounded-2xl flex items-center justify-center transition-colors">
+                        <div className="w-8 h-8 bg-subtle-background rounded-2xl flex items-center justify-center transition-colors flex-shrink-0">
                           <FontAwesomeIcon icon={faTrash} className="w-4 h-4 text-destructive" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <div className="font-medium">Delete Goal</div>
-                          <div className="text-xs text-muted-foreground">Permanently remove goal</div>
+                          <div className="text-mobile-xs sm:text-xs text-muted-foreground">Permanently remove goal</div>
                         </div>
                       </button>
                     </div>
@@ -569,99 +569,99 @@ function GoalDetail() {
             </div>
           </div>
           
-          {/* Visual Progress Section */}
-          <div className="mb-12">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:justify-between mb-8">
-              <div data-tour="current-savings">
-                <div className="text-sm font-medium text-muted-foreground-color mb-2">Current Saving</div>
+          {/* Visual Progress Section - Mobile Optimized */}
+          <div className="mb-8 sm:mb-10 md:mb-12">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 sm:justify-between mb-6 sm:mb-8">
+              <div data-tour="current-savings" className="w-full sm:w-auto">
+                <div className="text-mobile-xs sm:text-sm font-medium text-muted-foreground-color mb-1 sm:mb-2">Current Saving</div>
                 <AnimatedNumber 
                   value={progressData.currentAmount} 
                   prefix="$" 
-                  className="text-4xl font-semibold text-foreground"
+                  className="text-2xl sm:text-3xl md:text-4xl font-semibold text-foreground"
                   isAnimated={numbersAnimated}
                 />
-                <div className="text-muted-foreground-color mt-2">
+                <div className="text-mobile-xs sm:text-sm text-muted-foreground-color mt-1 sm:mt-2">
                   ${(progressData.targetAmount - progressData.currentAmount).toLocaleString()} to go
                 </div>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 {!isGoalCompleted && (
-                  <Button onClick={() => setShowUpdateProgressModal(true)} size="lg" data-tour="update-progress-btn">
+                  <Button onClick={() => setShowUpdateProgressModal(true)} size="lg" data-tour="update-progress-btn" className="min-h-[48px] text-mobile-sm sm:text-base w-full sm:w-auto">
                     Update Progress
                   </Button>
                 )}
                 
                 {isGoalCompleted && (
-                  <div className="flex items-center justify-center gap-2 px-6 py-3 bg-subtle-background text-success rounded-2xl font-medium">
+                  <div className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-subtle-background text-success rounded-2xl font-medium min-h-[48px] text-mobile-sm sm:text-base">
                     <FontAwesomeIcon icon={faCheck} className="w-4 h-4" />
                     Goal Completed!
                   </div>
                 )}
                 
-                <Button onClick={() => setShowTrackerModal(true)} variant="outline" size="lg" data-tour="goal-summary-btn">
+                <Button onClick={() => setShowTrackerModal(true)} variant="outline" size="lg" data-tour="goal-summary-btn" className="min-h-[48px] text-mobile-sm sm:text-base w-full sm:w-auto">
                   Goal Summary
                 </Button>
               </div>
             </div>
             
-            {/* Enhanced Progress Bar */}
+            {/* Enhanced Progress Bar - Mobile Optimized */}
             <div className="relative" data-tour="progress-bar">
-              <div className="w-full bg-subtle-background rounded-full h-3 overflow-hidden">
+              <div className="w-full bg-subtle-background rounded-full h-2.5 sm:h-3 overflow-hidden">
                 <motion.div
-                  className="bg-primary h-3 rounded-full"
+                  className="bg-primary h-2.5 sm:h-3 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progressData.progressPercentage}%` }}
                   transition={{ duration: 1.5, delay: 0.5, ease: "easeOut" }}
                 />
               </div>
-              <div className="flex justify-between mt-3 text-sm text-muted-foreground-color">
+              <div className="flex justify-between mt-2 sm:mt-3 text-mobile-xs sm:text-sm text-muted-foreground-color">
                 <span>$0</span>
                 <span className="font-medium text-foreground">${progressData.targetAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
-            {/* Key Metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6" data-tour="key-metrics">
-              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
-                <div className="mb-1"></div>
-                <div className="text-xs font-medium text-muted-foreground-color mb-1">Start Date</div>
-                <div className="text-sm font-semibold text-foreground">
-                  {currentGoal.start_date ? new Date(currentGoal.start_date).toLocaleDateString() : 'Not set'}
+            {/* Key Metrics - Mobile Optimized */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6" data-tour="key-metrics">
+              <div className="text-center bg-card border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm">
+                <div className="mb-0.5 sm:mb-1"></div>
+                <div className="text-mobile-xs sm:text-xs font-medium text-muted-foreground-color mb-0.5 sm:mb-1">Start Date</div>
+                <div className="text-mobile-sm sm:text-sm font-semibold text-foreground">
+                  {currentGoal.start_date ? new Date(currentGoal.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : 'Not set'}
                 </div>
               </div>
               
-              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
-                <div className="mb-1"></div>
-                <div className="text-xs font-medium text-muted-foreground-color mb-1">Target</div>
-                <div className="text-sm font-semibold text-foreground">
+              <div className="text-center bg-card border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm">
+                <div className="mb-0.5 sm:mb-1"></div>
+                <div className="text-mobile-xs sm:text-xs font-medium text-muted-foreground-color mb-0.5 sm:mb-1">Target</div>
+                <div className="text-mobile-sm sm:text-sm font-semibold text-foreground">
                   <AnimatedNumber value={progressData.targetAmount} prefix="$" isAnimated={numbersAnimated} />
                 </div>
               </div>
               
-              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
-                <div className="mb-1"></div>
-                <div className="text-xs font-medium text-muted-foreground-color mb-1">Timeline</div>
-                <div className="text-sm font-semibold text-foreground">
+              <div className="text-center bg-card border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm">
+                <div className="mb-0.5 sm:mb-1"></div>
+                <div className="text-mobile-xs sm:text-xs font-medium text-muted-foreground-color mb-0.5 sm:mb-1">Timeline</div>
+                <div className="text-mobile-sm sm:text-sm font-semibold text-foreground">
                   {Math.floor(progressData.daysLeft / 365)}y {Math.floor((progressData.daysLeft % 365) / 30)}m
                 </div>
               </div>
               
-              <div className="text-center bg-card border rounded-2xl p-6 shadow-sm">
-                <div className="mb-1"></div>
-                <div className="text-xs font-medium text-muted-foreground-color mb-1">Progress</div>
-                <div className="text-sm font-semibold text-foreground">
+              <div className="text-center bg-card border rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm">
+                <div className="mb-0.5 sm:mb-1"></div>
+                <div className="text-mobile-xs sm:text-xs font-medium text-muted-foreground-color mb-0.5 sm:mb-1">Progress</div>
+                <div className="text-mobile-sm sm:text-sm font-semibold text-foreground">
                   <AnimatedNumber value={progressData.progressPercentage} suffix="%" isAnimated={numbersAnimated} />
                 </div>
               </div>
             </div>
         </div>
         
-        {/* Tabbed Interface */}
-        <div className="mb-12">
-          {/* Tab Navigation */}
-          <div className="mb-8">
-            <nav className="flex flex-wrap gap-2" aria-label="Goal sections" data-tour="tab-navigation">
+        {/* Tabbed Interface - Mobile Optimized */}
+        <div className="mb-8 sm:mb-10 md:mb-12">
+          {/* Tab Navigation - Mobile Optimized */}
+          <div className="mb-6 sm:mb-8">
+            <nav className="flex flex-wrap gap-1.5 sm:gap-2" aria-label="Goal sections" data-tour="tab-navigation">
               {[
                 { id: "Quick Actions", label: "Quick Actions", tour: "quick-actions-tab" },
                 { id: 'Analytics', label: 'Analytics', tour: "analytics-tab" },
@@ -671,7 +671,7 @@ function GoalDetail() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`group flex items-center gap-2 px-6 py-3 text-sm font-medium rounded-2xl transition-all duration-200 ${
+                  className={`group flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 text-mobile-xs sm:text-sm font-medium rounded-xl sm:rounded-2xl transition-all duration-200 min-h-[44px] touch-manipulation ${
                     activeTab === tab.id
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground-color hover:bg-subtle-background'
@@ -685,7 +685,7 @@ function GoalDetail() {
             </nav>
           </div>
           
-          {/* Tab Content */}
+          {/* Tab Content - Mobile Optimized */}
           <div>
             <AnimatePresence mode="wait">
               {activeTab === 'Analytics' && (
@@ -697,7 +697,7 @@ function GoalDetail() {
                   transition={{ duration: 0.3 }}
                   className="space-y-4 sm:space-y-6 lg:space-y-8"
                 >               
-                   {/* AI Insights Section - "What Moneko thinks" */}
+                   {/* AI Insights Section - "What Moneko thinks" - Mobile Optimized */}
                    <GoalInsights 
                     insights={currentInsights || []} 
                     goal={currentGoal}
@@ -706,27 +706,27 @@ function GoalDetail() {
                     onSubscriptionRequired={handleSubscriptionRequired}
                   />
 
-                  {/* AI Generated Strategy */}
+                  {/* AI Generated Strategy - Mobile Optimized */}
                   {currentGoal.ai_generated_strategy && (
-                    <div className="bg-card border rounded-xl p-6 mb-8 shadow-sm">
-                      <h3 className="text-xl font-bold text-foreground mb-4">Personalised Strategy</h3>
+                    <div className="bg-card border rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm">
+                      <h3 className="text-mobile-base sm:text-lg md:text-xl font-bold text-foreground mb-3 sm:mb-4">Personalised Strategy</h3>
                       <Markdown 
                         content={currentGoal.ai_generated_strategy}
-                        className="prose mx-auto max-w-none dark:prose-invert lg:prose-lg"
+                        className="prose prose-sm sm:prose mx-auto max-w-none dark:prose-invert"
                         components={{
-                          h1: ({children}: any) => <h1 className="text-2xl font-bold text-foreground mb-4">{children}</h1>,
-                          h2: ({children}: any) => <h2 className="text-xl font-bold text-foreground mb-3 mt-6">{children}</h2>,
-                          h3: ({children}: any) => <h3 className="text-lg font-semibold text-foreground mb-2 mt-4">{children}</h3>,
-                          p: ({children}: any) => <p className="mb-4 text-muted-foreground-color leading-relaxed">{children}</p>,
-                          ul: ({children}: any) => <ul className="list-disc list-inside mb-4 space-y-2 text-muted-foreground-color">{children}</ul>,
-                          ol: ({children}: any) => <ol className="list-decimal list-inside mb-4 space-y-2 text-muted-foreground-color">{children}</ol>,
-                          li: ({children}: any) => <li className="text-muted-foreground-color">{children}</li>,
+                          h1: ({children}: any) => <h1 className="text-mobile-lg sm:text-xl md:text-2xl font-bold text-foreground mb-3 sm:mb-4">{children}</h1>,
+                          h2: ({children}: any) => <h2 className="text-mobile-base sm:text-lg md:text-xl font-bold text-foreground mb-2 sm:mb-3 mt-4 sm:mt-6">{children}</h2>,
+                          h3: ({children}: any) => <h3 className="text-mobile-sm sm:text-base md:text-lg font-semibold text-foreground mb-1.5 sm:mb-2 mt-3 sm:mt-4">{children}</h3>,
+                          p: ({children}: any) => <p className="mb-3 sm:mb-4 text-mobile-sm sm:text-base text-muted-foreground-color leading-relaxed">{children}</p>,
+                          ul: ({children}: any) => <ul className="list-disc list-inside mb-3 sm:mb-4 space-y-1.5 sm:space-y-2 text-mobile-sm sm:text-base text-muted-foreground-color">{children}</ul>,
+                          ol: ({children}: any) => <ol className="list-decimal list-inside mb-3 sm:mb-4 space-y-1.5 sm:space-y-2 text-mobile-sm sm:text-base text-muted-foreground-color">{children}</ol>,
+                          li: ({children}: any) => <li className="text-mobile-sm sm:text-base text-muted-foreground-color">{children}</li>,
                           strong: ({children}: any) => <strong className="font-semibold text-foreground">{children}</strong>,
                           em: ({children}: any) => <em className="italic text-muted-foreground-color">{children}</em>,
-                          blockquote: ({children}: any) => <blockquote className="border-l border pl-4 italic text-muted-foreground-color mb-4">{children}</blockquote>,
-                          table: ({children}: any) => <table className="w-full border-collapse border mb-4">{children}</table>,
-                          th: ({children}: any) => <th className="border px-3 py-2 bg-subtle-background font-semibold text-left">{children}</th>,
-                          td: ({children}: any) => <td className="border px-3 py-2">{children}</td>,
+                          blockquote: ({children}: any) => <blockquote className="border-l border pl-3 sm:pl-4 italic text-mobile-sm sm:text-base text-muted-foreground-color mb-3 sm:mb-4">{children}</blockquote>,
+                          table: ({children}: any) => <div className="overflow-x-auto"><table className="w-full border-collapse border mb-3 sm:mb-4 text-mobile-xs sm:text-sm">{children}</table></div>,
+                          th: ({children}: any) => <th className="border px-2 sm:px-3 py-1.5 sm:py-2 bg-subtle-background font-semibold text-left text-mobile-xs sm:text-sm">{children}</th>,
+                          td: ({children}: any) => <td className="border px-2 sm:px-3 py-1.5 sm:py-2 text-mobile-xs sm:text-sm">{children}</td>,
                         }}
                       />
                     </div>
@@ -857,7 +857,7 @@ function GoalDetail() {
                 transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.3 }}
                 className="mb-4 sm:mb-6"
               >
-                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 bg-success text-white rounded-full text-2xl sm:text-3xl lg:text-4xl xl:text-5xl mb-3 sm:mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-success text-white rounded-full text-3xl sm:text-4xl lg:text-5xl mb-3 sm:mb-4">
                   🎯
                 </div>
               </motion.div>
@@ -866,7 +866,7 @@ function GoalDetail() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-3 sm:mb-4">
+                className="text-mobile-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-foreground mb-3 sm:mb-4">
               
                 🎉 Congratulations! 🎉
               </motion.h2>
@@ -875,7 +875,7 @@ function GoalDetail() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="text-sm sm:text-base lg:text-lg text-muted-foreground-color mb-4 sm:mb-6 lg:mb-8">
+                className="text-mobile-sm sm:text-sm md:text-base lg:text-lg text-muted-foreground-color mb-4 sm:mb-6 lg:mb-8">
               
                 You've successfully achieved your "{currentGoal.title}" goal!<br className="hidden sm:block" />
                 <span className="sm:hidden"> </span>You've saved <span className="font-bold text-success">${progressData.targetAmount.toLocaleString()}</span> and reached 100% of your target.
@@ -888,27 +888,27 @@ function GoalDetail() {
                 className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8"
               >
                 <div className="bg-card border rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
-                  <div className="text-xl sm:text-2xl mb-1 sm:mb-2">💰</div>
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-success">
+                  <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">💰</div>
+                  <div className="text-mobile-base sm:text-lg lg:text-xl font-bold text-success">
                     ${progressData.targetAmount.toLocaleString()}
                   </div>
-                  <div className="text-xs text-muted-foreground-color">Total Saved</div>
+                  <div className="text-mobile-xs sm:text-xs text-muted-foreground-color">Total Saved</div>
                 </div>
                 
                 <div className="bg-card border rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
-                  <div className="text-xl sm:text-2xl mb-1 sm:mb-2">📈</div>
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-primary">
+                  <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">📈</div>
+                  <div className="text-mobile-base sm:text-lg lg:text-xl font-bold text-primary">
                     100%
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground-color">Goal Achieved</div>
+                  <div className="text-mobile-xs sm:text-xs md:text-sm text-muted-foreground-color">Goal Achieved</div>
                 </div>
                 
                 <div className="bg-card border rounded-lg sm:rounded-xl lg:rounded-2xl p-3 sm:p-4 lg:p-6 shadow-sm">
-                  <div className="text-xl sm:text-2xl mb-1 sm:mb-2">🏆</div>
-                  <div className="text-base sm:text-lg lg:text-xl font-bold text-primary">
+                  <div className="text-2xl sm:text-3xl mb-1 sm:mb-2">🏆</div>
+                  <div className="text-mobile-base sm:text-lg lg:text-xl font-bold text-primary">
                     Success!
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground-color">Mission Complete</div>
+                  <div className="text-mobile-xs sm:text-xs md:text-sm text-muted-foreground-color">Mission Complete</div>
                 </div>
               </motion.div>
               
@@ -916,15 +916,15 @@ function GoalDetail() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="space-y-4"
+                className="space-y-3 sm:space-y-4"
               >
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-3 sm:mb-4">What's Next?</h3>
+                <h3 className="text-mobile-base sm:text-lg md:text-xl lg:text-2xl font-bold text-foreground mb-3 sm:mb-4">What's Next?</h3>
                 <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
-                  <Button onClick={() => navigate({ to: '/dashboard/tracker' })} size="lg" className="min-h-[48px]">
+                  <Button onClick={() => navigate({ to: '/dashboard/tracker' })} size="lg" className="min-h-[48px] text-mobile-sm sm:text-base">
                     Create New Goal
                   </Button>
                   
-                  <Button onClick={() => navigate({ to: '/dashboard/tracker' })} variant="outline" size="lg" className="min-h-[48px]">
+                  <Button onClick={() => navigate({ to: '/dashboard/tracker' })} variant="outline" size="lg" className="min-h-[48px] text-mobile-sm sm:text-base">
                     View All Goals
                   </Button>
                 </div>
@@ -982,37 +982,39 @@ function GoalDetail() {
         onClose={() => setShowSubscriptionModal(false)}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal - Mobile Optimized */}
       <Modal
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         title="Delete Goal"
       >
         <div className="p-4 sm:p-6">
-          <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-subtle-background rounded-full flex items-center justify-center">
+          <div className="flex items-start gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-subtle-background rounded-full flex items-center justify-center flex-shrink-0">
               <FontAwesomeIcon icon={faTrash} className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-destructive" />
             </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-foreground break-words">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-mobile-base sm:text-base md:text-lg font-semibold text-foreground break-words mb-1">
                 Delete "{currentGoal.title}"?
               </h3>
-              <p className="text-xs sm:text-sm text-muted-foreground-color">
+              <p className="text-mobile-xs sm:text-xs md:text-sm text-muted-foreground-color">
                 This action cannot be undone. All milestones and progress will be permanently deleted.
               </p>
             </div>
           </div>
           
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
             <Button
               onClick={() => setShowDeleteConfirm(false)}
               variant="outline"
+              className="min-h-[44px] text-mobile-sm sm:text-sm w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleDeleteGoal}
               variant="destructive"
+              className="min-h-[44px] text-mobile-sm sm:text-sm w-full sm:w-auto"
             >
               Delete Goal
             </Button>

@@ -30,18 +30,18 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
   };
 
   return (
-    <div className="image-choice-question ">
+    <div className="image-choice-question">
       <div
-        className={classnames("mt-4 grid gap-4", {
-          "grid-cols-1 md:grid-cols-1": itemsPerRow === 1,
-          "grid-cols-1 md:grid-cols-2": itemsPerRow === 2,
+        className={classnames("mt-3 sm:mt-4 grid gap-3 sm:gap-4", {
+          "grid-cols-1": itemsPerRow === 1,
+          "grid-cols-1 sm:grid-cols-2": itemsPerRow === 2,
         })}
       >
         {options.map((option) => (
           <div
             key={option.id}
             className={classnames(
-              "cursor-pointer rounded-xl transition-all border-2 flex flex-col gap-3 p-4 image-choice-question-container",
+              "cursor-pointer rounded-lg sm:rounded-xl transition-all border-2 flex flex-col gap-2.5 sm:gap-3 p-3 sm:p-4 image-choice-question-container min-h-[44px] touch-manipulation",
               "hover:shadow-md",
               {
                 "border-primary shadow-lg": selectedOption === option.id,
@@ -50,18 +50,18 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
             )}
             onClick={() => handleOptionClick(option.id)}
           >
-            <div className="font-medium">{option.content}</div>
+            <div className="font-medium text-mobile-sm sm:text-base">{option.content}</div>
 
             {option.imageUrl ? (
               <OptimizedImage
                 src={option.imageUrl}
                 alt={option.content}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover rounded-md"
               />
             ) : option.imagePrompt ? (
               <div 
                 className="w-full h-full flex items-center justify-center" 
-                style={{ height: '30rem' }}
+                style={{ height: '20rem' }}
               >
                 <MermaidRenderer 
                   id={question.id} 
@@ -73,7 +73,7 @@ export function ImageChoiceQuestion({ question, onAnswer, value }: ImageChoiceQu
             ) : null}
 
             {option.caption && !option.imagePrompt && (
-              <div className="text-sm text-gray-600 mt-2">{option.caption}</div>
+              <div className="text-mobile-xs sm:text-sm text-gray-600 mt-1.5 sm:mt-2">{option.caption}</div>
             )}
             </div>
         ))}

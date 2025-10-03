@@ -13,19 +13,19 @@ export const LessonCardTitle = ({
   icon: IconProp;
 }) => {
   return (
-    <div className="mb-6 flex items-center justify-between">
-      <div className="flex items-center">
-        <div className="mr-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary">
+    <div className="mb-4 sm:mb-5 md:mb-6 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-primary flex-shrink-0">
           <FontAwesomeIcon
             icon={icon}
-            className="text-white"
+            className="text-white text-mobile-xs sm:text-sm"
           />
         </div>
-        <h3 className="text-lg font-medium text-primary">
+        <h3 className="text-mobile-sm sm:text-base md:text-lg font-medium text-primary truncate">
           {lessonTitle}
         </h3>
       </div>
-      <div className="hidden lg:block rounded-full bg-[var(--lesson-progress-bg)] px-3 py-1 text-sm font-medium text-[var(--lesson-progress-text)]">
+      <div className="hidden sm:block rounded-full bg-[var(--lesson-progress-bg)] px-2.5 sm:px-3 py-1 text-mobile-xs sm:text-sm font-medium text-[var(--lesson-progress-text)] whitespace-nowrap flex-shrink-0">
         {index + 1} of {allItemsTotal}
       </div>
     </div>

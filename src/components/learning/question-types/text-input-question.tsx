@@ -82,19 +82,19 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-3 sm:space-y-4">
       <div className="relative">
         {question.prefix && (
-          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-[var(--question-text-secondary)]">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 sm:pl-4 pointer-events-none text-mobile-sm sm:text-base text-[var(--question-text-secondary)]">
             {question.prefix}
           </div>
         )}
 
         <input
           type="text"
-          className={`w-full py-3 px-4 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors
-            ${question.prefix ? 'pl-8' : ''}
-            ${question.suffix ? 'pr-8' : ''}
+          className={`w-full py-3 px-3 sm:px-4 border rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors text-mobile-base sm:text-base min-h-[48px]
+            ${question.prefix ? 'pl-7 sm:pl-8' : ''}
+            ${question.suffix ? 'pr-7 sm:pr-8' : ''}
             ${error ? 'border-[var(--quiz-error-border)] bg-[var(--quiz-error-bg)]' : 'border-[var(--question-border)] bg-[var(--question-bg)]'}`}
           placeholder={question.placeholder || ''}
           value={inputValue}
@@ -105,7 +105,7 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
         />
 
         {question.suffix && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-[var(--question-text-secondary)]">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 sm:pr-4 pointer-events-none text-mobile-sm sm:text-base text-[var(--question-text-secondary)]">
             {question.suffix}
           </div>
         )}
@@ -114,7 +114,7 @@ export default function TextInputQuestion({ question, onAnswer, value = '' }: Te
       {error && (
         <p
           id={`${question.question_id}-error`}
-          className="text-sm text-[var(--quiz-error-text)]"
+          className="text-mobile-xs sm:text-sm text-[var(--quiz-error-text)]"
           aria-live="polite"
         >
           {error}

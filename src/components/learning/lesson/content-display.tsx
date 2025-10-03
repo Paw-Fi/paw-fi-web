@@ -62,7 +62,7 @@ function ContentDisplay({
 
   return (
     <motion.div
-      className="flex min-h-[550px] flex-col rounded-3xl bg-moneko-background p-8 shadow-md"
+      className="flex min-h-[400px] sm:min-h-[500px] md:min-h-[550px] flex-col rounded-xl sm:rounded-2xl md:rounded-3xl bg-moneko-background p-4 sm:p-6 md:p-8 shadow-md"
       initial="hidden"
       animate="visible"
       exit="exit"
@@ -76,44 +76,44 @@ function ContentDisplay({
           icon={isQuizTransition ? faClipboardQuestion : faLightbulb}
         />     
 
-        {/* Main content area with optional side-by-side layout */}
+        {/* Main content area with optional side-by-side layout - Mobile Optimized */}
         <motion.div 
-          className="mb-8 flex flex-col gap-8 md:flex-row"
+          className="mb-6 sm:mb-8 flex flex-col gap-4 sm:gap-6 md:gap-8 md:flex-row"
           variants={contentVariants}
         >
           <div className="flex-1">
             {/* Question title this content relates to */}
             {content.title && (
               <h2
-                className={`mb-6 border-b border-[var(--lesson-title-border)] pb-3 text-xl font-semibold text-[var(--lesson-title-text)] ${isQuizTransition ? "text-3xl" : ""}`}
+                className={`mb-4 sm:mb-5 md:mb-6 border-b border-[var(--lesson-title-border)] pb-2.5 sm:pb-3 text-mobile-base sm:text-lg md:text-xl font-semibold text-[var(--lesson-title-text)] ${isQuizTransition ? "text-mobile-lg sm:text-xl md:text-2xl lg:text-3xl" : ""}`}
               >
                 {content.title}
               </h2>
             )}
 
-            {/* Content blocks */}
-            <div className="space-y-4">
+            {/* Content blocks - Mobile Optimized */}
+            <div className="space-y-3 sm:space-y-4">
               {!isQuizTransition && content.content && (
-                <Markdown content={content.content} />
+                <Markdown content={content.content} className="text-mobile-sm sm:text-base" />
               )}
             </div>
 
-            {/* Key points box - only show for regular content, not quiz transition */}
+            {/* Key points box - only show for regular content, not quiz transition - Mobile Optimized */}
             {!isQuizTransition &&
               content.key_points &&
               content.key_points.length > 0 && (
-                <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-5">
-                  <div className="mb-3 flex items-center">
+                <div className="mt-6 sm:mt-8 rounded-lg sm:rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+                  <div className="mb-2.5 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
                     <FontAwesomeIcon
                       icon={faLightbulb}
-                      className="mr-2 text-primary"
+                      className="text-primary text-sm sm:text-base"
                     />
-                    <h4 className="font-medium text-primary">Key Points</h4>
+                    <h4 className="font-medium text-mobile-sm sm:text-base text-primary">Key Points</h4>
                   </div>
-                  <ul className="list-inside list-disc space-y-2">
+                  <ul className="list-inside list-disc space-y-1.5 sm:space-y-2">
                     {/* Extract key points from content blocks or use predefined ones */}
                    {content.key_points.map((point, index) => (
-                    <li key={`keypoint-${point.substring(0, 5)}-${index}`} className="text-[var(--lesson-keypoint-text)]">{point}</li>
+                    <li key={`keypoint-${point.substring(0, 5)}-${index}`} className="text-mobile-xs sm:text-sm text-[var(--lesson-keypoint-text)]">{point}</li>
                    ))}
                   </ul>
                 </div>
@@ -122,10 +122,10 @@ function ContentDisplay({
         </motion.div>
       </div>
 
-      {/* Quiz transition section with purple background */}
+      {/* Quiz transition section - Mobile Optimized */}
       {isQuizTransition && (
         <motion.div 
-          className="mb-8 rounded-xl  p-6"
+          className="mb-6 sm:mb-8 rounded-lg sm:rounded-xl p-4 sm:p-6"
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ 
@@ -135,15 +135,15 @@ function ContentDisplay({
             delay: 0.2 
           }}>
           <div className="mb-4 text-center">
-            <h3 className="mb-2 text-xl font-medium text-[var(--lesson-title-text)]">
+            <h3 className="mb-2 text-mobile-base sm:text-lg md:text-xl font-medium text-[var(--lesson-title-text)]">
               You've completed the learning section!
             </h3>
-            <p className="text-[var(--lesson-content-text)]">
+            <p className="text-mobile-sm sm:text-base text-[var(--lesson-content-text)]">
               Now it's time to test your understanding with a short quiz.
             </p>
           </div>
-          <div className="my-6 flex items-center justify-center">
-            <div className="relative mx-auto w-80">
+          <div className="my-4 sm:my-6 flex items-center justify-center">
+            <div className="relative mx-auto w-60 sm:w-72 md:w-80">
               <OptimizedImage
                 src={quizCompletedImage}
                 alt="Quiz card"
@@ -154,25 +154,25 @@ function ContentDisplay({
         </motion.div>
       )}
 
-      {/* Navigation buttons */}
+      {/* Navigation buttons - Mobile Optimized */}
       <motion.div 
-        className="mt-auto flex justify-between pt-4"
+        className="mt-auto flex justify-between gap-2 sm:gap-3 pt-4"
         variants={contentVariants}
       >
           <Button
             variant="outline"
             onClick={onBack}
-            className="rounded-full px-6 py-2"
+            className="rounded-full px-4 sm:px-6 py-2 text-mobile-sm sm:text-base min-h-[44px] touch-manipulation"
           >
-            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+            <FontAwesomeIcon icon={faArrowLeft} className="mr-1.5 sm:mr-2 text-xs sm:text-sm" />
             Back
           </Button>
           <Button
             onClick={onNext}
-            className="rounded-full px-6 py-2"
+            className="rounded-full px-4 sm:px-6 py-2 text-mobile-sm sm:text-base min-h-[44px] touch-manipulation"
           >
             {isQuizTransition ? "Start Quiz" : "Next"}
-            <FontAwesomeIcon icon={faArrowRight} className="ml-2" />
+            <FontAwesomeIcon icon={faArrowRight} className="ml-1.5 sm:ml-2 text-xs sm:text-sm" />
           </Button>
       </motion.div>
     </motion.div>

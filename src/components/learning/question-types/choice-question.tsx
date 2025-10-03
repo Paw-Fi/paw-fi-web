@@ -46,7 +46,7 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
     <div className="choice-question">
       {/* Render content blocks if available */}
       {question.content_blocks && question.content_blocks.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-3 sm:mb-4">
           <ContentBlockRenderer blocks={question.content_blocks} />
         </div>
       )}
@@ -54,9 +54,9 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
         className={classnames(
           // For single item per row, use vertical spacing
           {
-            "space-y-3": !useGridLayout,
+            "space-y-2.5 sm:space-y-3": !useGridLayout,
             // For two items per row, use grid
-            "grid grid-cols-1 gap-3 sm:grid-cols-2": useGridLayout,
+            "grid grid-cols-1 gap-2.5 sm:gap-3 sm:grid-cols-2": useGridLayout,
           },
         )}
       >
@@ -72,7 +72,7 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
             key={option.id}
             onClick={() => handleOptionSelect(option.id)}
             className={classnames(
-              "cursor-pointer rounded-lg border p-4 transition-all",
+              "cursor-pointer rounded-lg sm:rounded-xl border p-3 sm:p-4 transition-all min-h-[44px] touch-manipulation",
               {
                 "border-[var(--quiz-selected-border)] bg-[var(--quiz-selected-bg)]": isOptionSelected(option.id),
                 "border-[var(--question-border)] hover:border-[var(--question-hover-border)]": !isOptionSelected(
@@ -81,8 +81,8 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
               },
             )}
           >
-            <div className="flex items-start">
-              <div className="mt-0.5 mr-3">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="mt-0.5 flex-shrink-0">
                 {question.type === "mcq" ? (
                   <div
                     className={classnames(
@@ -128,12 +128,12 @@ function ChoiceQuestion({ question, onAnswer, value }: ChoiceQuestionProps) {
                   </div>
                 )}
               </div>
-              <div className="flex flex-col">
-                <span className="font-medium text-[var(--question-text)]">
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="font-medium text-mobile-sm sm:text-base text-[var(--question-text)]">
                   {option.content}
                 </span>
                 {option.description && (
-                  <span className="text-sm text-[var(--question-text-secondary)]">
+                  <span className="text-mobile-xs sm:text-sm text-[var(--question-text-secondary)] mt-0.5">
                     {option.description}
                   </span>
                 )}

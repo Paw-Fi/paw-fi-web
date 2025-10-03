@@ -132,13 +132,13 @@ export function ActivityContributionGraph({
   const yearOptions = Array.from({ length: 21 }, (_, i) => today.getFullYear() - 10 + i);
 
   return (
-    <div className="p-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-xl border border-white/20 dark:border-slate-700/50 shadow-lg">
-      {/* Header with Navigation */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+    <div className="p-3 sm:p-4 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl rounded-none sm:rounded-xl border-0 sm:border border-white/20 dark:border-slate-700/50 shadow-none sm:shadow-lg">
+      {/* Header with Navigation - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 sm:mb-4 gap-3">
+        <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
           <button
             onClick={goToPreviousMonth}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             aria-label="Previous month"
           >
             <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -146,14 +146,14 @@ export function ActivityContributionGraph({
             </svg>
           </button>
           
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <div className="flex items-center gap-2 flex-1">
+            <h3 className="text-mobile-sm sm:text-base font-semibold text-gray-900 dark:text-white">
               {monthName}
             </h3>
             <div className="relative">
               <button
                 onClick={() => setShowYearPicker(!showYearPicker)}
-                className="text-base font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                className="text-mobile-sm sm:text-base font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors touch-manipulation min-h-[44px] flex items-center"
               >
                 {selectedYear}
               </button>
@@ -167,7 +167,7 @@ export function ActivityContributionGraph({
                         setSelectedYear(year);
                         setShowYearPicker(false);
                       }}
-                      className={`w-full px-3 py-1.5 text-sm text-left hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors ${
+                      className={`w-full px-3 py-2.5 sm:py-1.5 text-mobile-sm sm:text-sm text-left hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors touch-manipulation ${
                         year === selectedYear 
                           ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
                           : 'text-gray-700 dark:text-gray-300'
@@ -184,7 +184,7 @@ export function ActivityContributionGraph({
           
           <button
             onClick={goToNextMonth}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             aria-label="Next month"
           >
             <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,14 +193,14 @@ export function ActivityContributionGraph({
           </button>
         </div>
 
-          {/* Stats */}
-      <div className="flex gap-2 items-center mb-3 text-xs text-gray-600 dark:text-gray-400">
+          {/* Stats - Mobile Optimized */}
+      <div className="flex flex-wrap gap-2 items-center text-mobile-xs sm:text-xs text-gray-600 dark:text-gray-400 w-full sm:w-auto">
         <div className="flex items-center gap-3">
           <span>🔥 <strong className="text-orange-500">{streak}</strong> streak</span>
         </div>
         {selectedDate && (
           <div className="flex items-center gap-2">
-            <span className="text-blue-600 dark:text-blue-400 text-xs">
+            <span className="text-blue-600 dark:text-blue-400 text-mobile-xs sm:text-xs">
               {new Date(selectedDate).toLocaleDateString('en-US', { 
                 month: 'short', 
                 day: 'numeric'
@@ -208,7 +208,7 @@ export function ActivityContributionGraph({
             </span>
             <button
               onClick={() => onDateSelect(null)}
-              className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors text-mobile-xs sm:text-xs touch-manipulation min-h-[36px]"
             >
               Clear
             </button>
@@ -218,7 +218,7 @@ export function ActivityContributionGraph({
 {(selectedMonth !== today.getMonth() || selectedYear !== today.getFullYear()) && (
             <button
               onClick={goToCurrentMonth}
-              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+              className="px-2 py-1 text-mobile-xs sm:text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors touch-manipulation min-h-[36px]"
             >
               Today
             </button>
@@ -231,23 +231,23 @@ export function ActivityContributionGraph({
     
       
       <div className="calendar-container">
-        {/* Weekday Headers */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        {/* Weekday Headers - Mobile Optimized */}
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1 sm:mb-2">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-            <div key={index} className="text-xs text-center text-gray-500 dark:text-gray-400 py-1 font-medium">
+            <div key={index} className="text-mobile-xs sm:text-xs text-center text-gray-500 dark:text-gray-400 py-1 font-medium">
               {day}
             </div>
           ))}
         </div>
         
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
+        {/* Calendar Grid - Mobile Optimized */}
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
           {/* Padding days for first week */}
           {paddingDays.map((_, index) => (
-            <div key={`padding-${index}`} className="w-8 h-8"></div>
+            <div key={`padding-${index}`} className="w-7 h-7 sm:w-8 sm:h-8"></div>
           ))}
           
-          {/* Calendar days */}
+          {/* Calendar days - Mobile Touch Optimized */}
           {calendarData.map((day) => (
             <button
               key={day.date}
@@ -258,7 +258,7 @@ export function ActivityContributionGraph({
                   onDateSelect(day.date);
                 }
               }}
-              className={`w-8 h-8 mx-auto rounded-md flex items-center justify-center text-xs font-medium transition-all duration-200 hover:scale-105 relative ${
+              className={`w-7 h-7 sm:w-8 sm:h-8 mx-auto rounded-md flex items-center justify-center text-mobile-xs sm:text-xs font-medium transition-all duration-200 hover:scale-105 relative touch-manipulation ${
                 day.isSelected
                   ? 'bg-blue-500 text-white shadow-md'
                   : day.isToday
@@ -277,13 +277,13 @@ export function ActivityContributionGraph({
             >
               {/* Activity indicator dot for top-right corner */}
               {day.hasActivity && !day.isInStreak && !day.isSelected && (
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-white dark:border-slate-800"></div>
+                <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full border border-white dark:border-slate-800"></div>
               )}
               
               {day.isInStreak ? (
                 <div className="flex flex-col items-center -space-y-1">
-                  <span className="text-xs">🔥</span>
-                  <span className="text-xs leading-none">{day.dayNumber}</span>
+                  <span className="text-[8px] sm:text-xs">🔥</span>
+                  <span className="text-[9px] sm:text-xs leading-none">{day.dayNumber}</span>
                 </div>
               ) : (
                 <span>{day.dayNumber}</span>
