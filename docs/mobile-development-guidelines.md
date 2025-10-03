@@ -31,7 +31,29 @@ Always design for mobile screens first, then progressively enhance for larger sc
 <div className="px-6 sm:px-4 mobile:px-3">
 ```
 
-### 2. Edge-to-Edge on Mobile
+### 2. **CSS Variables Over Hardcoded Values**
+**CRITICAL**: Always use CSS variables defined in `src/styles/app.css`. Never use hardcoded pixel values like `text-[13px]`.
+
+```tsx
+// ✅ Good: Using CSS variables
+<p className="text-mobile-sm sm:text-sm">Caption text</p>
+<input className="text-mobile-base sm:text-base" />
+<time className="text-mobile-xs sm:text-xs">12:30 PM</time>
+
+// ❌ Bad: Hardcoded pixel values
+<p className="text-[13px] sm:text-sm">Caption text</p>
+<input className="text-[15px] sm:text-base" />
+<time className="text-[11px] sm:text-xs">12:30 PM</time>
+```
+
+**Why CSS Variables?**
+- ✅ Centralized theme management
+- ✅ Easy to update across entire app
+- ✅ Consistent with design system
+- ✅ Better maintainability
+- ❌ Hardcoded values create maintenance nightmare
+
+### 3. Edge-to-Edge on Mobile
 Remove padding/margins on mobile for maximum screen real estate. Add them back on larger screens.
 
 ```tsx
@@ -42,15 +64,16 @@ Remove padding/margins on mobile for maximum screen real estate. Add them back o
 <div className="px-4 sm:px-6 lg:px-8">
 ```
 
-### 3. Hide Scrollbars on Mobile
-Modern mobile apps (Instagram, WhatsApp) hide scrollbars for cleaner UX. Users instinctively know content is scrollable.
+### 4. Hide Scrollbars on Mobile Only
+Modern mobile apps (Instagram, WhatsApp) hide scrollbars for cleaner UX. Keep them visible on desktop for discoverability.
 
 ```tsx
-// ✅ Good: Hidden scrollbar on mobile
-<div className="overflow-y-auto scrollbar-hide">
+// ✅ Good: Hidden on mobile, visible on desktop
+<div className="overflow-y-auto scrollbar-hide sm:scrollbar-auto">
 
-// ❌ Bad: Visible scrollbar cluttering mobile UI
-<div className="overflow-y-auto">
+// ❌ Bad: Hidden everywhere or visible on mobile
+<div className="overflow-y-auto scrollbar-hide">  // Hidden on desktop too
+<div className="overflow-y-auto">                 // Visible on mobile
 ```
 
 ---
@@ -475,7 +498,29 @@ For explicit scrollbar hiding on desktop too:
 </div>
 ```
 
-### ❌ Mistake 3: Fixed Heights Breaking Scroll
+### ❌ Mistake 3: Using Hardcoded Pixel Values
+
+```tsx
+// ❌ Bad: Hardcoded values make maintenance difficult
+<p className="text-[13px] sm:text-sm">Caption</p>
+<input className="text-[15px] sm:text-base" />
+<time className="text-[11px]">12:30 PM</time>
+<h1 className="text-[18px] sm:text-xl">Title</h1>
+
+// ✅ Good: CSS variables for maintainable code
+<p className="text-mobile-sm sm:text-sm">Caption</p>
+<input className="text-mobile-base sm:text-base" />
+<time className="text-mobile-xs sm:text-xs">12:30 PM</time>
+<h1 className="text-mobile-lg sm:text-xl">Title</h1>
+```
+
+**Why This Matters:**
+- CSS variables are defined once in `src/styles/app.css`
+- Changes propagate across entire app instantly
+- Consistent with design system tokens
+- Easy to maintain and update
+
+### ❌ Mistake 4: Fixed Heights Breaking Scroll
 
 ```tsx
 // ❌ Bad: Content overflow issues
@@ -493,21 +538,26 @@ For explicit scrollbar hiding on desktop too:
 </div>
 ```
 
-### ❌ Mistake 4: Visible Scrollbars on Mobile
+### ❌ Mistake 5: Wrong Scrollbar Visibility
 
 ```tsx
-// ❌ Bad: Cluttered mobile UI
-<div className="overflow-x-auto">
-  {/* Horizontal scroll with visible scrollbar */}
+// ❌ Bad: Hidden on desktop too
+<div className="overflow-x-auto scrollbar-hide">
+  {/* Scrollbar hidden everywhere */}
 </div>
 
-// ✅ Good: Hidden scrollbar
-<div className="overflow-x-auto scrollbar-hide">
-  {/* Clean horizontal scroll */}
+// ❌ Bad: Visible on mobile
+<div className="overflow-x-auto">
+  {/* Cluttered mobile UI */}
+</div>
+
+// ✅ Good: Hidden on mobile, visible on desktop
+<div className="overflow-x-auto scrollbar-hide sm:scrollbar-auto">
+  {/* Clean mobile, discoverable desktop */}
 </div>
 ```
 
-### ❌ Mistake 5: Insufficient Touch Targets
+### ❌ Mistake 6: Insufficient Touch Targets
 
 ```tsx
 // ❌ Bad: Too small for comfortable touch
@@ -521,17 +571,17 @@ For explicit scrollbar hiding on desktop too:
 </button>
 ```
 
-### ❌ Mistake 6: Not Using Progressive Enhancement
+### ❌ Mistake 7: Not Using Progressive Enhancement
 
 ```tsx
 // ❌ Bad: Desktop-first thinking
 <div className="text-xl sm:text-lg mobile:text-base">
 
 // ✅ Good: Mobile-first progressive enhancement
-<div className="text-base sm:text-lg lg:text-xl">
+<div className="text-mobile-base sm:text-lg lg:text-xl">
 ```
 
-### ❌ Mistake 7: Forgetting `touch-manipulation`
+### ❌ Mistake 8: Forgetting `touch-manipulation`
 
 ```tsx
 // ❌ Bad: Slow touch response, potential zoom
@@ -568,10 +618,11 @@ Test on real devices when possible, or use browser DevTools:
 
 ### Typography Checks
 
-- [ ] **Input font size ≥ 15px** on mobile (prevents iOS zoom)
+- [ ] **CSS variables used** (no hardcoded `text-[Xpx]` values)
+- [ ] **Input font size ≥ 15px** on mobile (prevents iOS zoom) - use `text-mobile-base`
 - [ ] **Base text readable** at 15px mobile, 16px desktop
-- [ ] **Timestamps/captions** use 11-13px on mobile
-- [ ] **Headings scale** appropriately across breakpoints
+- [ ] **Timestamps/captions** use CSS variables (`text-mobile-xs`, `text-mobile-sm`)
+- [ ] **Headings scale** appropriately across breakpoints with CSS variables
 
 ### Spacing Checks
 
@@ -616,11 +667,16 @@ Test on real devices when possible, or use browser DevTools:
 "gap-2 sm:gap-3"                 // Gap: tight → normal
 "space-y-3 sm:space-y-6"         // Vertical space: compact → spacious
 
-// Typography
-"text-[15px] sm:text-base"       // Body: 15px → 16px
-"text-[13px] sm:text-sm"         // Small: 13px → 14px
-"text-[11px] sm:text-xs"         // Tiny: 11px → 12px
-"text-lg sm:text-xl lg:text-2xl" // Heading: 18px → 20px → 24px
+// Typography (ALWAYS use CSS variables, NEVER hardcode)
+"text-mobile-base sm:text-base"  // Body: 15px → 16px (prevents iOS zoom)
+"text-mobile-sm sm:text-sm"      // Small: 13px → 14px (captions)
+"text-mobile-xs sm:text-xs"      // Tiny: 11px → 12px (timestamps)
+"text-mobile-lg sm:text-xl lg:text-2xl" // Heading: 18px → 20px → 24px
+
+// ❌ NEVER DO THIS:
+"text-[15px] sm:text-base"       // ❌ Hardcoded values forbidden
+"text-[13px] sm:text-sm"         // ❌ Use CSS variables instead
+"text-[11px] sm:text-xs"         // ❌ Defined in src/styles/app.css
 
 // Layout
 "rounded-none sm:rounded-2xl"    // Border radius: none → rounded
@@ -640,8 +696,10 @@ Test on real devices when possible, or use browser DevTools:
 ### Utility Class Reference
 
 ```tsx
-// Scrollbar
-scrollbar-hide                   // Hide scrollbar (all browsers)
+// Scrollbar (mobile-specific)
+scrollbar-hide                   // Hide scrollbar on mobile
+scrollbar-hide sm:scrollbar-auto // Hide mobile, show desktop
+sm:scrollbar-auto                // Show scrollbar on desktop only
 
 // Touch
 touch-manipulation               // Optimize touch interactions
@@ -654,6 +712,12 @@ scroll-smooth                    // Smooth scrolling
 // Flex
 flex-shrink-0                    // Prevent flex shrinking (header/footer)
 flex-1 min-h-0                   // Grow + allow scroll (main content)
+
+// CSS Variables (defined in src/styles/app.css)
+text-mobile-xs                   // 11px on mobile, 12px on desktop (timestamps)
+text-mobile-sm                   // 13px on mobile, 14px on desktop (captions)
+text-mobile-base                 // 15px on mobile, 16px on desktop (body, inputs)
+text-mobile-lg                   // 18px on mobile, 20px+ on desktop (headings)
 ```
 
 ---
@@ -661,6 +725,7 @@ flex-1 min-h-0                   // Grow + allow scroll (main content)
 ## Resources
 
 ### Related Files
+- **[src/styles/app.css](../src/styles/app.css)** - **CSS variables definition (REQUIRED READING)**
 - [src/styles/mobile-ux.css](../src/styles/mobile-ux.css) - Global mobile optimizations
 - [src/styles/scrollbar.css](../src/styles/scrollbar.css) - Scrollbar styling
 - [src/routes/onboarding/index.tsx](../src/routes/onboarding/index.tsx) - Reference implementation
@@ -681,9 +746,47 @@ flex-1 min-h-0                   // Grow + allow scroll (main content)
 
 If you're unsure about mobile implementation for a component:
 
-1. **Check existing patterns** in [src/components/chat/](../src/components/chat/) and [src/routes/onboarding/](../src/routes/onboarding/)
-2. **Test on real device** or use Chrome DevTools mobile emulation
-3. **Follow the checklist** above before submitting PR
-4. **Ask for review** if implementing new mobile patterns
+1. **Check CSS variables** in [src/styles/app.css](../src/styles/app.css) - **NEVER use hardcoded pixel values**
+2. **Check existing patterns** in [src/components/chat/](../src/components/chat/) and [src/routes/onboarding/](../src/routes/onboarding/)
+3. **Test on real device** or use Chrome DevTools mobile emulation
+4. **Follow the checklist** above before submitting PR
+5. **Ask for review** if implementing new mobile patterns
 
-**Remember**: Mobile users are the majority. Always prioritize mobile UX over desktop aesthetics.
+---
+
+## ⚠️ Critical Rules
+
+### 🚫 NEVER Do This:
+```tsx
+// ❌ Hardcoded pixel values
+<div className="text-[13px]">Caption</div>
+<input className="text-[15px]" />
+<time className="text-[11px]">12:30</time>
+
+// ❌ Scrollbar hidden everywhere
+<div className="scrollbar-hide">Horizontal scroll</div>
+
+// ❌ Desktop-first approach
+<div className="text-xl sm:text-base">Heading</div>
+```
+
+### ✅ ALWAYS Do This:
+```tsx
+// ✅ CSS variables from app.css
+<div className="text-mobile-sm sm:text-sm">Caption</div>
+<input className="text-mobile-base sm:text-base" />
+<time className="text-mobile-xs sm:text-xs">12:30</time>
+
+// ✅ Mobile-specific scrollbar hiding
+<div className="scrollbar-hide sm:scrollbar-auto">Horizontal scroll</div>
+
+// ✅ Mobile-first approach
+<div className="text-mobile-base sm:text-lg lg:text-xl">Heading</div>
+```
+
+---
+
+**Remember**:
+1. Mobile users are the majority - always prioritize mobile UX
+2. CSS variables are MANDATORY - check [src/styles/app.css](../src/styles/app.css)
+3. Scrollbars should only hide on mobile, not desktop

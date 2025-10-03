@@ -701,89 +701,89 @@ function DashboardHome() {
         initial="hidden"
         animate="visible"
       >
-        <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
           {/* Test Panel - TEMPORARY FOR TESTING */}
           {showTestPanel && (
-            <motion.div variants={itemVariants} className="mb-8">
+            <motion.div variants={itemVariants} className="mb-6 sm:mb-8">
               <GuidanceTestPanel onClose={() => setShowTestPanel(false)} />
             </motion.div>
           )}
 
-          {/* Welcome Header - Clean Apple-inspired */}
-          <motion.div variants={itemVariants} className="mb-16">
-            <div className="flex flex-col space-y-8 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col space-y-6 sm:space-y-0 sm:flex-row sm:items-center sm:space-x-8">
-                <Avatar className="h-24 w-24">
+          {/* Welcome Header - Clean Apple-inspired, Mobile Optimized */}
+          <motion.div variants={itemVariants} className="mb-8 sm:mb-12 md:mb-16">
+            <div className="flex flex-col space-y-6 sm:space-y-8 md:space-y-0 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col space-y-4 sm:space-y-6 md:space-y-0 md:flex-row md:items-center md:space-x-8">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24">
                   <AvatarImage src={monekoAvatar} alt="Moneko Avatar" />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xl font-medium">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg sm:text-xl font-medium">
                     M
                   </AvatarFallback>
                 </Avatar>
-                <div className="space-y-2">
-                  <h1 className="text-5xl font-light text-foreground tracking-tight">
+                <div className="space-y-1 sm:space-y-2">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light text-foreground tracking-tight">
                     {getGreeting()}
                   </h1>
-                  <p className="text-xl text-muted-foreground">
+                  <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
                     Ready to master your finances today?
                   </p>
                 </div>
               </div>
-              
-              {/* Level and Streak Info - Clean Design */}
-              <div className="flex space-x-4">
+
+              {/* Level and Streak Info - Mobile Optimized */}
+              <div className="flex gap-3 sm:gap-4">
                 {currentLevelReward && (
-                  <div className="bg-muted/30 dark:bg-slate-800/30 rounded-2xl p-6 text-center">
-                    <div className="text-2xl font-semibold text-foreground mb-1">Level {levelInfo.level}</div>
-                    <div className="text-sm text-muted-foreground">{currentLevelReward.title}</div>
+                  <div className="bg-muted/30 dark:bg-slate-800/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-center flex-1 sm:flex-none">
+                    <div className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-0.5 sm:mb-1">Level {levelInfo.level}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground truncate">{currentLevelReward.title}</div>
                   </div>
                 )}
-                
-                <div className="bg-orange-50 dark:bg-orange-950/30 rounded-2xl p-6 text-center">
-                  <div className="text-2xl font-semibold text-orange-600 dark:text-orange-400 mb-1">
+
+                <div className="bg-orange-50 dark:bg-orange-950/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-center flex-1 sm:flex-none">
+                  <div className="text-lg sm:text-xl md:text-2xl font-semibold text-orange-600 dark:text-orange-400 mb-0.5 sm:mb-1">
                     {currentStreak}
                   </div>
-                  <div className="text-sm text-orange-600/70 dark:text-orange-400/70">day streak</div>
+                  <div className="text-xs sm:text-sm text-orange-600/70 dark:text-orange-400/70">day streak</div>
                 </div>
               </div>
             </div>
           </motion.div>
 
-          {/* XP Progress Bar - Clean Apple Design */}
-          <motion.div variants={itemVariants} className="mb-16">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
-              <div className="flex items-center justify-between mb-6">
+          {/* XP Progress Bar - Mobile Optimized */}
+          <motion.div variants={itemVariants} className="mb-8 sm:mb-12 md:mb-16">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-4 sm:mb-6">
                 <div>
-                  <h2 className="text-2xl font-medium text-foreground mb-2">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">
                     Progress to Next Level
                   </h2>
-                  <p className="text-muted-foreground">
+                  <p className="text-sm sm:text-base text-muted-foreground">
                     {levelInfo.progressInLevel.toLocaleString()} / {(levelInfo.nextLevelXP - levelInfo.currentLevelXP).toLocaleString()} XP
                   </p>
                 </div>
                 {!levelInfo.isMaxLevel && (
-                  <div className="text-right">
-                    <div className="text-4xl font-light text-primary mb-1">
+                  <div className="text-left sm:text-right">
+                    <div className="text-2xl sm:text-3xl md:text-4xl font-light text-primary mb-0.5 sm:mb-1">
                       {levelInfo.xpNeededForNext.toLocaleString()}
                     </div>
-                    <div className="text-sm text-muted-foreground">XP to level {levelInfo.level + 1}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">XP to level {levelInfo.level + 1}</div>
                   </div>
                 )}
               </div>
-              
-              <div className="mb-8">
+
+              <div className="mb-6 sm:mb-8">
                 <Progress value={levelInfo.progressPercentage} className="h-2" />
               </div>
-              
+
               {nextLevelReward && (
-                <div className="flex items-center justify-between pt-6">
-                  <div className="text-sm text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 pt-4 sm:pt-6 border-t border-border/50">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     Next reward: {nextLevelReward.reward}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowRewardsModal(true)}
-                    className="text-primary hover:text-primary/80 transition-colors duration-200"
+                    className="text-primary hover:text-primary/80 transition-colors duration-200 w-full sm:w-auto"
                   >
                     View All Rewards
                   </Button>
@@ -792,21 +792,21 @@ function DashboardHome() {
             </div>
           </motion.div>
 
-          {/* Main Dashboard Grid - Enhanced Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-            
+          {/* Main Dashboard Grid - Mobile Optimized */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+
             {/* Left Column - 2 spans */}
-            <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6 md:space-y-8">
               
-              {/* Financial Overview Card - Clean Apple Design */}
+              {/* Financial Overview Card - Mobile Optimized */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 mb-8">
-                    <div className="flex items-center justify-between mb-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
                       <div>
-                        <h2 className="text-2xl font-medium text-foreground mb-2">Financial Overview</h2>
-                        <p className="text-muted-foreground">Your financial snapshot</p>
+                        <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">Financial Overview</h2>
+                        <p className="text-sm sm:text-base text-muted-foreground">Your financial snapshot</p>
                       </div>
-                      <Button variant="outline" size="sm" asChild className="rounded-full">
+                      <Button variant="outline" size="sm" asChild className="rounded-full w-full sm:w-auto">
                         <Link to="/dashboard/user-settings/profile">
                           Update Profile
                         </Link>
@@ -814,52 +814,52 @@ function DashboardHome() {
                     </div>
 
                     {financialProfileInsights.hasProfile ? (
-                        <div className="space-y-8">
-                          {/* Key Metrics Grid - Clean Apple Design */}
+                        <div className="space-y-6 sm:space-y-8">
+                          {/* Key Metrics Grid - Mobile Optimized */}
                           {Object.keys(financialProfileInsights.keyMetrics).length > 0 && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                               {financialProfileInsights.keyMetrics.monthlyIncome && (
-                                <div className="bg-green-50/50 dark:bg-green-950/30 rounded-2xl p-6 text-center">
-                                  <div className="text-3xl font-light text-foreground mb-2">
+                                <div className="bg-green-50/50 dark:bg-green-950/30 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center">
+                                  <div className="text-2xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                     ${financialProfileInsights.keyMetrics.monthlyIncome.toLocaleString()}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">Monthly Income</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">Monthly Income</div>
                                 </div>
                               )}
 
                               {financialProfileInsights.keyMetrics.monthlySavings && (
-                                <div className="bg-blue-50/50 dark:bg-blue-950/30 rounded-2xl p-6 text-center">
-                                  <div className="text-3xl font-light text-foreground mb-2">
+                                <div className="bg-blue-50/50 dark:bg-blue-950/30 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center">
+                                  <div className="text-2xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                     ${financialProfileInsights.keyMetrics.monthlySavings.toLocaleString()}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">Monthly Savings</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">Monthly Savings</div>
                                 </div>
                               )}
 
                               {financialProfileInsights.keyMetrics.emergencyFund && (
-                                <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-2xl p-6 text-center">
-                                  <div className="text-3xl font-light text-foreground mb-2">
+                                <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center">
+                                  <div className="text-2xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                     ${financialProfileInsights.keyMetrics.emergencyFund.toLocaleString()}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">Emergency Fund</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">Emergency Fund</div>
                                 </div>
                               )}
 
                               {financialProfileInsights.keyMetrics.yearsToRetirement && (
-                                <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-2xl p-6 text-center">
-                                  <div className="text-3xl font-light text-foreground mb-2">
+                                <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 text-center">
+                                  <div className="text-2xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                     {financialProfileInsights.keyMetrics.yearsToRetirement}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">Years to Retire</div>
+                                  <div className="text-xs sm:text-sm text-muted-foreground">Years to Retire</div>
                                 </div>
                               )}
                             </div>
                           )}
 
-                          {/* Profile Completion - Clean */}
-                          <div className="bg-muted/20 dark:bg-slate-800/20 rounded-2xl p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="text-lg font-medium">Profile Completion</h4>
+                          {/* Profile Completion - Mobile Optimized */}
+                          <div className="bg-muted/20 dark:bg-slate-800/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
+                            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                              <h4 className="text-base sm:text-lg font-medium">Profile Completion</h4>
                               <span className="text-sm font-medium text-primary">
                                 {financialProfileInsights.completionPercentage}%
                               </span>
@@ -868,15 +868,15 @@ function DashboardHome() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-16">
-                          <div className="w-24 h-24 mx-auto mb-8 bg-muted/30 rounded-3xl flex items-center justify-center">
-                            <User className="h-12 w-12 text-muted-foreground" />
+                        <div className="text-center py-8 sm:py-12 md:py-16">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto mb-4 sm:mb-6 md:mb-8 bg-muted/30 rounded-2xl sm:rounded-3xl flex items-center justify-center">
+                            <User className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-muted-foreground" />
                           </div>
-                          <h3 className="text-2xl font-light mb-4">Create Your Financial Profile</h3>
-                          <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+                          <h3 className="text-xl sm:text-2xl font-light mb-3 sm:mb-4 px-4">Create Your Financial Profile</h3>
+                          <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 max-w-md mx-auto leading-relaxed px-4">
                             Get personalized recommendations based on your financial goals and current situation
                           </p>
-                          <Button size="lg" asChild className="rounded-full">
+                          <Button size="lg" asChild className="rounded-full mx-4 w-auto">
                             <Link to="/dashboard/user-settings/profile">
                               Create Profile
                             </Link>
@@ -887,15 +887,15 @@ function DashboardHome() {
               </motion.div>
             
 
-              {/* Learning Progress Card - Clean Apple Design */}
+              {/* Learning Progress Card - Mobile Optimized */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
-                    <div className="flex items-center justify-between mb-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
                       <div>
-                        <h2 className="text-2xl font-medium text-foreground mb-2">Learning Progress</h2>
-                        <p className="text-muted-foreground">Your educational journey</p>
+                        <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">Learning Progress</h2>
+                        <p className="text-sm sm:text-base text-muted-foreground">Your educational journey</p>
                       </div>
-                      <Button variant="outline" size="sm" asChild className="rounded-full">
+                      <Button variant="outline" size="sm" asChild className="rounded-full w-full sm:w-auto">
                         <Link to="/dashboard/learning">
                           View All Courses
                         </Link>
@@ -903,44 +903,44 @@ function DashboardHome() {
                     </div>
 
                     {learningInsights.hasCourses ? (
-                        <div className="space-y-8">
-                          {/* Stats Grid - Clean Apple Design */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                            <div className="bg-green-50/50 dark:bg-green-950/30 rounded-2xl p-6 text-center">
-                              <div className="text-3xl font-light text-foreground mb-2">
+                        <div className="space-y-6 sm:space-y-8">
+                          {/* Stats Grid - Mobile Optimized: 3 columns even on mobile but smaller */}
+                          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+                            <div className="bg-green-50/50 dark:bg-green-950/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-center">
+                              <div className="text-xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                 {learningInsights.completedLessons}
                               </div>
-                              <div className="text-sm text-muted-foreground">Completed</div>
+                              <div className="text-xs sm:text-sm text-muted-foreground">Completed</div>
                             </div>
-                            <div className="bg-blue-50/50 dark:bg-blue-950/30 rounded-2xl p-6 text-center">
-                              <div className="text-3xl font-light text-foreground mb-2">
+                            <div className="bg-blue-50/50 dark:bg-blue-950/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-center">
+                              <div className="text-xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                 {learningInsights.earnedXP}
                               </div>
-                              <div className="text-sm text-muted-foreground">XP Earned</div>
+                              <div className="text-xs sm:text-sm text-muted-foreground">XP Earned</div>
                             </div>
-                            <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-2xl p-6 text-center">
-                              <div className="text-3xl font-light text-foreground mb-2">
+                            <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-center">
+                              <div className="text-xl sm:text-2xl md:text-3xl font-light text-foreground mb-1 sm:mb-2">
                                 {Math.round(learningInsights.progress)}%
                               </div>
-                              <div className="text-sm text-muted-foreground">Progress</div>
+                              <div className="text-xs sm:text-sm text-muted-foreground">Progress</div>
                             </div>
                           </div>
 
-                          {/* Progress Bar - Clean */}
-                          <div className="mb-8">
+                          {/* Progress Bar - Mobile Optimized */}
+                          <div>
                             <Progress value={learningInsights.progress} className="h-2" />
                           </div>
 
-                          {/* Next Lesson - Clean */}
+                          {/* Next Lesson - Mobile Optimized */}
                           {learningInsights.nextLesson && (
-                            <div className="bg-muted/20 dark:bg-slate-800/20 rounded-2xl p-6">
-                              <div className="flex items-center justify-between">
+                            <div className="bg-muted/20 dark:bg-slate-800/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
                                 <div className="flex-1">
-                                  <h4 className="text-lg font-medium mb-3">Continue Learning</h4>
-                                  <p className="font-medium mb-1">{learningInsights.nextLesson.title}</p>
-                                  <p className="text-sm text-muted-foreground">{learningInsights.currentCourse?.title}</p>
+                                  <h4 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Continue Learning</h4>
+                                  <p className="text-sm sm:text-base font-medium mb-1">{learningInsights.nextLesson.title}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground">{learningInsights.currentCourse?.title}</p>
                                 </div>
-                                <Button size="sm" asChild className="rounded-full ml-6">
+                                <Button size="sm" asChild className="rounded-full w-full sm:w-auto sm:ml-6">
                                   <Link to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}>
                                     Continue
                                   </Link>
@@ -949,22 +949,22 @@ function DashboardHome() {
                             </div>
                           )}
 
-                          {/* Recent Activity */}
-                          <div className="bg-muted/20 rounded-2xl p-6">
-                            <h4 className="text-lg font-medium mb-6">Recent Activity</h4>
+                          {/* Recent Activity - Mobile Optimized */}
+                          <div className="bg-muted/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
+                            <h4 className="text-base sm:text-lg font-medium mb-4 sm:mb-6">Recent Activity</h4>
                             <Timeline/>
                           </div>
                         </div>
                       ) : (
-                        <div className="text-center py-16">
-                          <div className="w-24 h-24 mx-auto mb-8 bg-muted/30 rounded-3xl flex items-center justify-center">
-                            <BookOpen className="h-12 w-12 text-muted-foreground" />
+                        <div className="text-center py-8 sm:py-12 md:py-16">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto mb-4 sm:mb-6 md:mb-8 bg-muted/30 rounded-2xl sm:rounded-3xl flex items-center justify-center">
+                            <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-muted-foreground" />
                           </div>
-                          <h3 className="text-2xl font-light mb-4">Start Learning</h3>
-                          <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+                          <h3 className="text-xl sm:text-2xl font-light mb-3 sm:mb-4 px-4">Start Learning</h3>
+                          <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 max-w-md mx-auto leading-relaxed px-4">
                             Begin your financial education journey with our comprehensive courses
                           </p>
-                          <Button size="lg" asChild className="rounded-full">
+                          <Button size="lg" asChild className="rounded-full mx-4 w-auto">
                             <Link to="/dashboard/learning">
                               Explore Courses
                             </Link>
@@ -976,36 +976,36 @@ function DashboardHome() {
          
           </div>
 
-            {/* Right Column - 1 span */}
-            <div className="space-y-8">
-              
-              {/* AI Assistant Card - Clean Apple Design */}
+            {/* Right Column - 1 span, Mobile Optimized */}
+            <div className="space-y-4 sm:space-y-6 md:space-y-8">
+
+              {/* AI Assistant Card - Mobile Optimized */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
-                    <div className="mb-8">
-                      <h2 className="text-2xl font-medium text-foreground mb-2">Moneko AI</h2>
-                      <p className="text-muted-foreground">Your personal financial advisor</p>
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
+                    <div className="mb-6 sm:mb-8">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">Moneko AI</h2>
+                      <p className="text-sm sm:text-base text-muted-foreground">Your personal financial advisor</p>
                     </div>
 
                     {conversationInsights.hasConversations ? (
-                        <div className="space-y-6">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-muted/20 rounded-2xl p-4 text-center">
-                              <div className="text-2xl font-light text-foreground mb-1">
+                        <div className="space-y-4 sm:space-y-6">
+                          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                            <div className="bg-muted/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center">
+                              <div className="text-xl sm:text-2xl font-light text-foreground mb-0.5 sm:mb-1">
                                 {conversationInsights.totalConversations}
                               </div>
                               <div className="text-xs text-muted-foreground">Chats</div>
                             </div>
-                            <div className="bg-muted/20 rounded-2xl p-4 text-center">
-                              <div className="text-2xl font-light text-foreground mb-1">
+                            <div className="bg-muted/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-center">
+                              <div className="text-xl sm:text-2xl font-light text-foreground mb-0.5 sm:mb-1">
                                 {conversationInsights.totalMessages}
                               </div>
                               <div className="text-xs text-muted-foreground">Messages</div>
                             </div>
                           </div>
 
-                          <Button 
-                            size="lg" 
+                          <Button
+                            size="lg"
                             onClick={() => openChat('advisor')}
                             className="w-full rounded-full"
                           >
@@ -1013,17 +1013,17 @@ function DashboardHome() {
                           </Button>
                         </div>
                       ) : (
-                        <div className="space-y-6">
-                          <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground mb-4">Get personalized help with:</p>
-                            <div className="space-y-3">
-                              <div className="text-sm text-muted-foreground">Investment strategies</div>
-                              <div className="text-sm text-muted-foreground">Budget planning</div>
-                              <div className="text-sm text-muted-foreground">Financial goals</div>
+                        <div className="space-y-4 sm:space-y-6">
+                          <div className="space-y-3 sm:space-y-4">
+                            <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">Get personalized help with:</p>
+                            <div className="space-y-2 sm:space-y-3">
+                              <div className="text-xs sm:text-sm text-muted-foreground">Investment strategies</div>
+                              <div className="text-xs sm:text-sm text-muted-foreground">Budget planning</div>
+                              <div className="text-xs sm:text-sm text-muted-foreground">Financial goals</div>
                             </div>
                           </div>
-                          <Button 
-                            size="lg" 
+                          <Button
+                            size="lg"
                             onClick={() => openChat('advisor')}
                             className="w-full rounded-full"
                           >
@@ -1033,32 +1033,32 @@ function DashboardHome() {
                       )}
                   </div>
               </motion.div>
-          
 
-              {/* Quick Tools Card - Clean Apple Design */}
+
+              {/* Quick Tools Card - Mobile Optimized */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
-                    <div className="flex items-center justify-between mb-8">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
                       <div>
-                        <h2 className="text-2xl font-medium text-foreground mb-2">Quick Tools</h2>
-                        <p className="text-muted-foreground">Financial calculators</p>
+                        <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">Quick Tools</h2>
+                        <p className="text-sm sm:text-base text-muted-foreground">Financial calculators</p>
                       </div>
-                      <Button variant="outline" size="sm" asChild className="rounded-full">
+                      <Button variant="outline" size="sm" asChild className="rounded-full w-full sm:w-auto">
                         <Link to="/calculators">
                           View All
                         </Link>
                       </Button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {availableCalculators.slice(0, 4).map((calculator) => {
                         return (
                           <motion.div key={calculator.title} whileHover={{ x: 4 }} transition={{ duration: 0.2 }}>
                             <Link to={calculator.path}>
-                              <div className="bg-muted/10 dark:bg-slate-800/10 hover:bg-muted/20 dark:hover:bg-slate-700/20 transition-colors duration-200 rounded-2xl p-4">
+                              <div className="bg-muted/10 dark:bg-slate-800/10 hover:bg-muted/20 dark:hover:bg-slate-700/20 transition-colors duration-200 rounded-xl sm:rounded-2xl p-3 sm:p-4">
                                 <div className="flex items-center justify-between">
                                   <div>
-                                    <div className="text-sm font-medium mb-1">
+                                    <div className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">
                                       {calculator.title}
                                     </div>
                                     <div className="text-xs text-muted-foreground">{calculator.category}</div>
@@ -1072,24 +1072,24 @@ function DashboardHome() {
                     </div>
                   </div>
               </motion.div>
-              
 
-              {/* Essential Lessons Card - Clean Apple Design */}
+
+              {/* Essential Lessons Card - Mobile Optimized */}
               <motion.div variants={itemVariants}>
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl p-8">
-                    <div className="mb-8">
-                      <h2 className="text-2xl font-medium text-foreground mb-2">Essential Lessons</h2>
-                      <p className="text-muted-foreground">Foundation knowledge</p>
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
+                    <div className="mb-6 sm:mb-8">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">Essential Lessons</h2>
+                      <p className="text-sm sm:text-base text-muted-foreground">Foundation knowledge</p>
                     </div>
 
-                    <div className="bg-muted/20 dark:bg-slate-800/20 rounded-2xl p-6">
-                      <h4 className="text-lg font-medium mb-3">Your 2025 Guide to Investing</h4>
-                      <p className="text-muted-foreground text-sm mb-6 leading-relaxed">Master investment fundamentals with 20+ comprehensive lessons</p>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground">
+                    <div className="bg-muted/20 dark:bg-slate-800/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
+                      <h4 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Your 2025 Guide to Investing</h4>
+                      <p className="text-muted-foreground text-xs sm:text-sm mb-4 sm:mb-6 leading-relaxed">Master investment fundamentals with 20+ comprehensive lessons</p>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                        <div className="text-xs sm:text-sm text-muted-foreground">
                           20+ lessons available
                         </div>
-                        <Button variant="outline" size="sm" asChild className="rounded-full">
+                        <Button variant="outline" size="sm" asChild className="rounded-full w-full sm:w-auto">
                           <Link to="/dashboard/essentials">
                             Start Learning
                           </Link>
@@ -1098,13 +1098,13 @@ function DashboardHome() {
                     </div>
                   </div>
               </motion.div>
-           
+
             </div>
           </div>
         </div>
       </motion.div>
 
-        {/* Premium Rewards Experience - 2025 Design */}
+        {/* Premium Rewards Experience - Mobile Optimized */}
         {showRewardsModal && (
           <Modal
             isOpen={showRewardsModal}
@@ -1112,47 +1112,47 @@ function DashboardHome() {
             width="xwide"
             contentClassName="p-0 bg-gradient-to-br from-background via-background to-muted/20"
           >
-            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-border/50 shadow-2xl">
-              
-              {/* Glassmorphism Header */}
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-border/50 shadow-2xl">
+
+              {/* Glassmorphism Header - Mobile Optimized */}
               <div className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10"></div>
-                <div className="relative px-8 py-10">
+                <div className="relative px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-3 mb-4">
-                        <motion.div 
-                          className="relative p-4 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30 backdrop-blur-sm border border-yellow-300/20"
+                      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <motion.div
+                          className="relative p-2 sm:p-3 md:p-4 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30 backdrop-blur-sm border border-yellow-300/20"
                           whileHover={{ scale: 1.05, rotate: 5 }}
                           transition={{ type: "spring", stiffness: 400, damping: 17 }}
                         >
-                          <Trophy className="h-7 w-7 text-yellow-600 dark:text-yellow-400" />
-                          <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 animate-pulse"></div>
+                          <Trophy className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 text-yellow-600 dark:text-yellow-400" />
+                          <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 animate-pulse"></div>
                         </motion.div>
                         <div>
-                          <h1 className="text-4xl font-semibold text-foreground tracking-tight">Achievement Path</h1>
-                          <p className="text-lg text-muted-foreground/80">Your journey to financial mastery</p>
+                          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight">Achievement Path</h1>
+                          <p className="text-sm sm:text-base md:text-lg text-muted-foreground/80">Your journey to financial mastery</p>
                         </div>
                       </div>
-                      
+
                       {/* Progress Stats */}
-                    
-                    </div>                 
+
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Enhanced Content Area */}
-              <div className="px-8 pb-8">
+              {/* Enhanced Content Area - Mobile Optimized */}
+              <div className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8">
                 <div className="max-h-[65vh] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/30">
                   <div className="relative">
                     
-                    {/* Dynamic Progress Path */}
-                    <div className="absolute left-12 top-8 bottom-8 w-px">
+                    {/* Dynamic Progress Path - Mobile Optimized */}
+                    <div className="absolute left-6 sm:left-8 md:left-12 top-4 sm:top-6 md:top-8 bottom-4 sm:bottom-6 md:bottom-8 w-px hidden sm:block">
                       <div className="h-full bg-gradient-to-b from-green-400/60 via-blue-400/60 to-purple-400/60 rounded-full"></div>
                     </div>
-                    
-                    <div className="space-y-8 pt-4">
+
+                    <div className="space-y-4 sm:space-y-6 md:space-y-8 pt-2 sm:pt-4">
                       {LEVEL_REWARDS.map((reward, index) => {
                         const isUnlocked = levelInfo.level >= reward.level;
                         const isNext = !isUnlocked && reward.level === levelInfo.level + 1;
@@ -1173,26 +1173,26 @@ function DashboardHome() {
                             }}
                             className="relative"
                           >
-                            {/* Achievement Card */}
-                            <motion.div 
+                            {/* Achievement Card - Mobile Optimized */}
+                            <motion.div
                               className={cn(
-                                "ml-20 rounded-3xl border transition-all duration-500 group",
+                                "sm:ml-16 md:ml-20 rounded-2xl sm:rounded-3xl border transition-all duration-500 group",
                                 "hover:shadow-lg hover:-translate-y-1",
-                                isUnlocked 
-                                  ? "bg-gradient-to-br from-background to-green-50/50 dark:to-green-950/30 border-green-200/50 dark:border-green-800/50 shadow-green-100/50 dark:shadow-green-900/20" 
+                                isUnlocked
+                                  ? "bg-gradient-to-br from-background to-green-50/50 dark:to-green-950/30 border-green-200/50 dark:border-green-800/50 shadow-green-100/50 dark:shadow-green-900/20"
                                   : isNext
                                   ? "bg-gradient-to-br from-background to-blue-50/50 dark:to-blue-950/30 border-blue-200/50 dark:border-blue-800/50 shadow-blue-100/50 dark:shadow-blue-900/20"
                                   : "bg-gradient-to-br from-background to-muted/30 border-border/30 opacity-60"
                               )}
                               whileHover={isUnlocked || isNext ? { scale: 1.02 } : {}}
                             >
-                              <div className="p-8">
-                                {/* Level Header */}
-                                <div className="flex items-start justify-between mb-6">
-                                  <div className="flex items-center gap-4">
-                                    <motion.div 
+                              <div className="p-4 sm:p-6 md:p-8">
+                                {/* Level Header - Mobile Optimized */}
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+                                    <motion.div
                                       className={cn(
-                                        "text-3xl font-bold tracking-tight",
+                                        "text-2xl sm:text-2xl md:text-3xl font-bold tracking-tight",
                                         isUnlocked ? "text-green-600 dark:text-green-400"
                                         : isNext ? "text-blue-600 dark:text-blue-400"
                                         : "text-muted-foreground"
@@ -1203,80 +1203,80 @@ function DashboardHome() {
                                     >
                                       {reward.level}
                                     </motion.div>
-                                    
+
                                     {isNext && (
                                       <motion.div
                                         initial={{ scale: 0, rotate: -10 }}
                                         animate={{ scale: 1, rotate: 0 }}
-                                        className="px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-300/30"
+                                        className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-300/30"
                                       >
                                         <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wide">NEXT</span>
                                       </motion.div>
                                     )}
-                                    
+
                                     {isUnlocked && (
                                       <motion.div
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        className="px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-600/20 border border-green-300/30"
+                                        className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-600/20 border border-green-300/30"
                                       >
-                                        <span className="text-xs font-semibold text-green-600 dark:text-green-400 tracking-wide flex items-center gap-1.5">
-                                          <CheckCircle className="h-3.5 w-3.5" />
+                                        <span className="text-xs font-semibold text-green-600 dark:text-green-400 tracking-wide flex items-center gap-1 sm:gap-1.5">
+                                          <CheckCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                                           UNLOCKED
                                         </span>
                                       </motion.div>
                                     )}
                                   </div>
-                                  
-                                  <div className="text-right">
-                                    <div className="text-sm font-medium text-muted-foreground">Required</div>
-                                    <div className="text-lg font-semibold text-foreground">
+
+                                  <div className="text-left sm:text-right">
+                                    <div className="text-xs sm:text-sm font-medium text-muted-foreground">Required</div>
+                                    <div className="text-base sm:text-lg font-semibold text-foreground">
                                       {xpRequired.toLocaleString()} XP
                                     </div>
                                   </div>
                                 </div>
-                                
-                                {/* Achievement Details */}
-                                <div className="space-y-4">
+
+                                {/* Achievement Details - Mobile Optimized */}
+                                <div className="space-y-3 sm:space-y-4">
                                   <div>
-                                    <h3 className="text-2xl font-semibold text-foreground mb-2">{reward.title}</h3>
-                                    <p className="text-muted-foreground leading-relaxed">{reward.description}</p>
+                                    <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-foreground mb-1 sm:mb-2">{reward.title}</h3>
+                                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{reward.description}</p>
                                   </div>
-                                  
-                                  {/* Reward Display */}
-                                  <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-border/30 dark:border-slate-700/30">
-                                    <motion.div 
-                                      className="p-3 rounded-xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30"
+
+                                  {/* Reward Display - Mobile Optimized */}
+                                  <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-border/30 dark:border-slate-700/30">
+                                    <motion.div
+                                      className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-yellow-400/20 to-yellow-500/30"
                                       whileHover={{ rotate: [0, -5, 5, 0] }}
                                       transition={{ duration: 0.5 }}
                                     >
-                                      <Gift className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                                      <Gift className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 dark:text-yellow-400" />
                                     </motion.div>
                                     <div>
-                                      <div className="text-sm font-medium text-muted-foreground mb-1">Reward</div>
-                                      <div className="font-semibold text-foreground">{reward.reward}</div>
+                                      <div className="text-xs sm:text-sm font-medium text-muted-foreground mb-0.5 sm:mb-1">Reward</div>
+                                      <div className="text-sm sm:text-base font-semibold text-foreground">{reward.reward}</div>
                                     </div>
                                   </div>
                                   
-                                  {/* Next Level Progress */}
+                                  {/* Next Level Progress - Mobile Optimized */}
                                   {isNext && (
-                                    <motion.div 
-                                      className="mt-6 p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/30 dark:border-blue-800/30"
+                                    <motion.div
+                                      className="mt-4 sm:mt-6 p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/30 dark:to-blue-900/20 border border-blue-200/30 dark:border-blue-800/30"
                                       initial={{ opacity: 0, scale: 0.95 }}
                                       animate={{ opacity: 1, scale: 1 }}
                                       transition={{ delay: 0.3 }}
                                     >
-                                      <div className="flex items-center justify-between mb-4">
-                                        <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3 sm:mb-4">
+                                        <div className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300">
                                           Progress to unlock
                                         </div>
-                                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                        <div className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400">
                                           {levelInfo.xpNeededForNext.toLocaleString()} XP needed
                                         </div>
                                       </div>
                                       <div className="relative">
-                                        <div className="h-3 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
-                                          <motion.div 
+                                        <div className="h-2 sm:h-3 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
+                                          <motion.div
                                             className="h-full rounded-full bg-gradient-to-r from-blue-400 to-blue-500"
                                             initial={{ width: 0 }}
                                             animate={{ width: `${Math.min((currentXP / xpRequired) * 100, 100)}%` }}
@@ -1291,13 +1291,13 @@ function DashboardHome() {
                               </div>
                             </motion.div>
 
-                            {/* Progress Path Node */}
-                            <motion.div 
-                              className="absolute left-10 top-12 w-6 h-6 rounded-full border-4 border-background z-10"
+                            {/* Progress Path Node - Mobile Hidden */}
+                            <motion.div
+                              className="absolute left-6 sm:left-8 md:left-10 top-8 sm:top-10 md:top-12 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 rounded-full border-2 sm:border-3 md:border-4 border-background z-10 hidden sm:block"
                               style={{
-                                background: isUnlocked 
-                                  ? 'linear-gradient(135deg, #10b981, #059669)' 
-                                  : isNext 
+                                background: isUnlocked
+                                  ? 'linear-gradient(135deg, #10b981, #059669)'
+                                  : isNext
                                   ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
                                   : 'linear-gradient(135deg, #6b7280, #4b5563)'
                               }}
@@ -1308,12 +1308,12 @@ function DashboardHome() {
                             >
                               {isUnlocked && (
                                 <motion.div
-                                  className="absolute inset-1 rounded-full bg-white flex items-center justify-center"
+                                  className="absolute inset-0.5 sm:inset-1 rounded-full bg-white flex items-center justify-center"
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
                                   transition={{ delay: index * 0.08 + 0.3 }}
                                 >
-                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                  <CheckCircle className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 text-green-500" />
                                 </motion.div>
                               )}
                             </motion.div>

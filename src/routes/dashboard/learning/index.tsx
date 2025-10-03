@@ -450,78 +450,78 @@ export function UnifiedLearningPage() {
       animate="animate"
     >
       {/* Clean Apple-inspired Header */}
-      <motion.div 
-        className="px-8 py-16 mb-16"
+      <motion.div
+        className="px-4 sm:px-6 md:px-8 py-6 sm:py-12 md:py-16 mb-8 sm:mb-12 md:mb-16"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-6xl font-light text-foreground mb-6 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light text-foreground mb-3 sm:mb-4 md:mb-6 tracking-tight">
             Master Your Financial Future
           </h1>
-          <p className="text-xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 md:mb-12 max-w-3xl mx-auto leading-relaxed">
             Build wealth through expert-led essentials and personalized AI courses. From budgeting basics to advanced investing strategies.
           </p>
           
           {/* Action buttons */}
-          <div className="flex items-center justify-center gap-6 mb-16">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-8 sm:mb-12 md:mb-16 px-4 sm:px-0">
             <button
               onClick={() => {
-                const nextCourse = learningStats.completedLessons === 0 
+                const nextCourse = learningStats.completedLessons === 0
                   ? `/dashboard/learning/${basicCourse.course_id}`
-                  : aiCourses.length > 0 
+                  : aiCourses.length > 0
                     ? `/dashboard/learning/${aiCourses[0].course_id}`
                     : `/dashboard/essentials`;
                 navigate({ to: nextCourse });
               }}
-              className="bg-primary text-primary-foreground px-8 py-4 rounded-full font-medium text-lg hover:opacity-90 transition-opacity duration-200"
+              className="w-full sm:w-auto bg-primary text-primary-foreground px-6 sm:px-8 py-3 sm:py-4 rounded-full font-medium text-base sm:text-lg hover:opacity-90 transition-opacity duration-200"
             >
               Start Learning Path
             </button>
             <button
               onClick={() => openChat('educator')}
-              className="border border-border bg-card text-card-foreground px-8 py-4 rounded-full font-medium text-lg hover:bg-muted/50 transition-colors duration-200"
+              className="w-full sm:w-auto border border-border bg-card text-card-foreground px-6 sm:px-8 py-3 sm:py-4 rounded-full font-medium text-base sm:text-lg hover:bg-muted/50 transition-colors duration-200"
             >
               Create AI Course
             </button>
           </div>
 
           {/* Stats Grid - Clean Design */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 md:gap-8 max-w-4xl mx-auto px-4 sm:px-0">
             <div className="text-center">
-              <div className="text-4xl font-light text-orange-600 dark:text-orange-400 mb-2">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-light text-orange-600 dark:text-orange-400 mb-1 sm:mb-2">
                 {learningStats.streak}
               </div>
-              <div className="text-sm text-muted-foreground">Learning Streak</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Learning Streak</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-light text-green-600 dark:text-green-400 mb-2">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-light text-green-600 dark:text-green-400 mb-1 sm:mb-2">
                 {learningStats.completedLessons}
               </div>
-              <div className="text-sm text-muted-foreground">Lessons Complete</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Lessons Complete</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-light text-blue-600 dark:text-blue-400 mb-2">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-light text-blue-600 dark:text-blue-400 mb-1 sm:mb-2">
                 {Math.round((learningStats.completedLessons / Math.max(learningStats.totalCourses * 5, 1)) * 100)}%
               </div>
-              <div className="text-sm text-muted-foreground">Progress</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Progress</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-light text-purple-600 dark:text-purple-400 mb-2">
+              <div className="text-2xl sm:text-3xl md:text-4xl font-light text-purple-600 dark:text-purple-400 mb-1 sm:mb-2">
                 {learningStats.earnedXP.toLocaleString()}
               </div>
-              <div className="text-sm text-muted-foreground">Skills XP</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Skills XP</div>
             </div>
           </div>
         </div>
       </motion.div>
 
       {/* Clean Tab Navigation */}
-      <motion.div 
-        className="px-8 mb-12"
+      <motion.div
+        className="px-4 sm:px-6 md:px-8 mb-6 sm:mb-8 md:mb-12"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
-          <div className="bg-muted/30 rounded-2xl p-2 flex">
+          <div className="bg-muted/30 rounded-xl sm:rounded-2xl p-1.5 sm:p-2 flex">
             {[
               { id: 'all', label: 'All Courses' },
               { id: 'personalized', label: 'AI Personalized' },
@@ -531,9 +531,9 @@ export function UnifiedLearningPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200
-                  ${activeTab === tab.id 
-                    ? 'bg-card text-foreground shadow-sm' 
+                  flex-1 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-medium text-sm sm:text-base transition-all duration-200 min-h-[44px]
+                  ${activeTab === tab.id
+                    ? 'bg-card text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                   }
                 `}
@@ -546,54 +546,180 @@ export function UnifiedLearningPage() {
       </motion.div>
 
       {/* Course Grid */}
-      <motion.section 
-        className="px-8 mb-16"
+      <motion.section
+        className="px-4 sm:px-6 md:px-8 mb-8 sm:mb-12 md:mb-16"
         variants={itemVariants}
       >
         <div className="max-w-7xl mx-auto">
           {isAICoursesLoading && activeTab !== 'essentials' ? (
-            <div className="flex justify-center py-20">
+            <div className="flex justify-center py-12 sm:py-20">
               <div className="w-8 h-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
             </div>
           ) : filteredCourses.length === 0 ? (
-            <motion.div 
-              className="text-center py-20"
+            <motion.div
+              className="text-center py-12 sm:py-20 px-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <div className="w-24 h-24 mx-auto mb-8 bg-muted/30 rounded-3xl flex items-center justify-center">
-                <Plus className="h-12 w-12 text-muted-foreground" />
+              <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 sm:mb-8 bg-muted/30 rounded-2xl sm:rounded-3xl flex items-center justify-center">
+                <Plus className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground" />
               </div>
-              <h3 className="text-2xl font-light text-foreground mb-4">No courses yet</h3>
-              <p className="text-muted-foreground mb-8 max-w-md mx-auto leading-relaxed">
+              <h3 className="text-xl sm:text-2xl font-light text-foreground mb-3 sm:mb-4">No courses yet</h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 max-w-md mx-auto leading-relaxed">
                 Start your learning journey by creating your first AI-powered course!
               </p>
               <button
                 onClick={() => openChat('educator')}
-                className="bg-primary text-primary-foreground px-8 py-3 rounded-full font-medium hover:opacity-90 transition-opacity duration-200"
+                className="w-full sm:w-auto bg-primary text-primary-foreground px-6 sm:px-8 py-3 rounded-full font-medium hover:opacity-90 transition-opacity duration-200"
               >
                 Create Your First Course
               </button>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              <AnimatePresence mode="popLayout">
-                {filteredCourses.map((course, index) => (
-                  <motion.div
-                    key={course.course_id}
-                    variants={courseCardVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit={{ opacity: 0, y: 20 }}
-                    whileHover="hover"
-                    layout
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <Link
-                      to={`/dashboard/learning/${course.course_id}`}
-                      className="block h-full"
+            <>
+              {/* Mobile: Compact List View - Hidden on sm and up */}
+              <div className="sm:hidden space-y-3">
+                <AnimatePresence mode="popLayout">
+                  {filteredCourses.map((course, index) => (
+                    <motion.div
+                      key={course.course_id}
+                      variants={courseCardVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit={{ opacity: 0, y: 20 }}
+                      layout
+                      transition={{ delay: index * 0.05 }}
                     >
-                      <div className="h-full bg-card rounded-3xl hover:bg-muted/20 transition-colors duration-200 overflow-hidden group p-8">
+                      <Link
+                        to={`/dashboard/learning/${course.course_id}`}
+                        className="block"
+                      >
+                        <div className="bg-card rounded-2xl hover:bg-muted/20 transition-colors duration-200 overflow-hidden p-4">
+                          {/* Compact horizontal layout */}
+                          <div className="flex items-start gap-3">
+                            {/* Icon and badge */}
+                            <div className="flex-shrink-0">
+                              <div className="text-3xl mb-2">{course.icon || "📚"}</div>
+                              <span className={`
+                                px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap
+                                ${course.type === 'essential'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                }
+                              `}>
+                                {course.type === 'essential' ? 'Expert' : 'AI'}
+                              </span>
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-base font-medium text-foreground mb-1 line-clamp-2">
+                                {course.title}
+                              </h3>
+                              <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                {course.description}
+                              </p>
+
+                              {/* Progress bar */}
+                              {(() => {
+                                const courseCompletedLessons = completedLessons.filter(cl =>
+                                  course.lessons.some((lesson: any) => lesson.id === cl.lesson_id)
+                                );
+                                const completedCount = courseCompletedLessons.length;
+                                const totalCount = course.lessons.length;
+                                const progressPercentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                                return (
+                                  <div className="mb-2">
+                                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                      <span>{completedCount}/{totalCount} lessons</span>
+                                      <span>{course.duration}</span>
+                                    </div>
+                                    <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                                      <motion.div
+                                        className={`h-full rounded-full ${
+                                          course.type === 'essential'
+                                            ? 'bg-green-600'
+                                            : 'bg-purple-600'
+                                        }`}
+                                        initial={{ width: 0 }}
+                                        animate={{
+                                          width: `${progressPercentage}%`
+                                        }}
+                                        transition={{
+                                          duration: 0.8,
+                                          delay: 0.3,
+                                          ease: [0.25, 0.46, 0.45, 0.94]
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+
+                            {/* Play button */}
+                            <div className="flex-shrink-0">
+                              <div className={`
+                                w-10 h-10 rounded-full flex items-center justify-center
+                                ${course.type === 'essential'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                }
+                              `}>
+                                <Play className="h-4 w-4" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </motion.div>
+                  ))}
+
+                  {/* Add New Course - Compact Mobile */}
+                  {activeTab !== 'essentials' && (
+                    <motion.div
+                      variants={courseCardVariants}
+                      initial="initial"
+                      animate="animate"
+                      onClick={() => openChat('educator')}
+                      className="cursor-pointer"
+                    >
+                      <div className="bg-muted/20 rounded-2xl hover:bg-muted/30 transition-colors duration-200 border-2 border-dashed border-muted hover:border-purple-400/50 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Plus className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-base font-medium text-foreground mb-0.5">Create New Course</h3>
+                            <p className="text-xs text-muted-foreground">AI-tailored to your goals</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Desktop: Card Grid View - Hidden below sm */}
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+                <AnimatePresence mode="popLayout">
+                  {filteredCourses.map((course, index) => (
+                    <motion.div
+                      key={course.course_id}
+                      variants={courseCardVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit={{ opacity: 0, y: 20 }}
+                      whileHover="hover"
+                      layout
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Link
+                        to={`/dashboard/learning/${course.course_id}`}
+                        className="block h-full"
+                      >
+                        <div className="h-full bg-card rounded-2xl sm:rounded-3xl hover:bg-muted/20 transition-colors duration-200 overflow-hidden group p-6 sm:p-8">
                         {/* Course Header */}
                         <div className="mb-6">
                           <div className="flex items-center gap-3 mb-4">
@@ -702,33 +828,34 @@ export function UnifiedLearningPage() {
                   </motion.div>
                 ))}
 
-                {/* Add New Course Card - Clean Design */}
-                {activeTab !== 'essentials' && (
-                  <motion.div
-                    variants={courseCardVariants}
-                    initial="initial"
-                    animate="animate"
-                    whileHover="hover"
-                    onClick={() => openChat('educator')}
-                    className="cursor-pointer"
-                  >
-                    <div className="h-full bg-muted/20 rounded-3xl hover:bg-muted/30 transition-colors duration-200 border-2 border-dashed border-muted hover:border-purple-400/50 flex items-center justify-center p-8">
-                      <div className="text-center">
-                        <motion.div 
-                          className="w-16 h-16 mx-auto mb-6 bg-card rounded-2xl flex items-center justify-center"
-                          whileHover={{ scale: 1.05 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <Plus className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                        </motion.div>
-                        <h3 className="text-lg font-medium text-foreground mb-3">Create New Course</h3>
-                        <p className="text-muted-foreground leading-relaxed">Let AI design a course tailored to your goals</p>
+                  {/* Add New Course Card - Desktop */}
+                  {activeTab !== 'essentials' && (
+                    <motion.div
+                      variants={courseCardVariants}
+                      initial="initial"
+                      animate="animate"
+                      whileHover="hover"
+                      onClick={() => openChat('educator')}
+                      className="cursor-pointer"
+                    >
+                      <div className="h-full bg-muted/20 rounded-2xl sm:rounded-3xl hover:bg-muted/30 transition-colors duration-200 border-2 border-dashed border-muted hover:border-purple-400/50 flex items-center justify-center p-6 sm:p-8">
+                        <div className="text-center">
+                          <motion.div
+                            className="w-16 h-16 mx-auto mb-6 bg-card rounded-2xl flex items-center justify-center"
+                            whileHover={{ scale: 1.05 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <Plus className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                          </motion.div>
+                          <h3 className="text-lg font-medium text-foreground mb-3">Create New Course</h3>
+                          <p className="text-muted-foreground leading-relaxed">Let AI design a course tailored to your goals</p>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </>
           )}
         </div>
       </motion.section>
@@ -736,18 +863,18 @@ export function UnifiedLearningPage() {
       {/* AI Coach Floating Button (Mobile) - Clean Design */}
       <motion.button
         onClick={() => openChat('educator')}
-        className="lg:hidden fixed bottom-4 sm:bottom-6 right-4 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 bg-purple-600 rounded-full shadow-lg flex items-center justify-center text-white z-40 touch-manipulation"
+        className="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-purple-600 rounded-full shadow-lg flex items-center justify-center text-white z-40 min-h-[44px] min-w-[44px]"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        transition={{ 
+        transition={{
           delay: 0.5,
           duration: 0.3,
           ease: [0.25, 0.46, 0.45, 0.94]
         }}
       >
-        <MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />
+        <MessageCircle className="h-6 w-6" />
       </motion.button>
     
       </motion.div>

@@ -427,54 +427,54 @@ function FinancialProfileSettings() {
     ]);
 
     return (
-    <div className="space-y-8">
-      {/* Profile Summary Card */}
-      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
-        <CardHeader className="pb-6">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold text-primary">
+    <div className="space-y-6 sm:space-y-8">
+      {/* Profile Summary Card - Mobile Optimized */}
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-none sm:rounded-xl md:rounded-2xl shadow-none sm:shadow-sm">
+        <CardHeader className="pb-4 sm:pb-6 px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <CardTitle className="text-mobile-base sm:text-xl md:text-2xl font-bold text-primary">
               Financial Profile Overview
             </CardTitle>
             <Button
               onClick={() => setIsEditMode(true)}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 w-full sm:w-auto min-h-[44px] text-mobile-sm sm:text-sm"
             >
               <FontAwesomeIcon icon={faEdit} className="mr-2" />
               Edit Profile
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">
+        <CardContent className="px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <div className="text-center p-3 sm:p-4 bg-card/50 rounded-xl">
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
                 {formatCurrency(profileData.net_monthly_income)}
               </div>
-              <div className="text-sm text-muted-foreground">Monthly Net Income</div>
+              <div className="text-mobile-xs sm:text-sm text-muted-foreground mt-1">Monthly Net Income</div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">
+            <div className="text-center p-3 sm:p-4 bg-card/50 rounded-xl">
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
                 {formatCurrency(totalSavings)}
               </div>
-              <div className="text-sm text-muted-foreground">Total Savings</div>
+              <div className="text-mobile-xs sm:text-sm text-muted-foreground mt-1">Total Savings</div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">
+            <div className="text-center p-3 sm:p-4 bg-card/50 rounded-xl">
+              <div className="text-2xl sm:text-3xl font-bold text-primary">
                 {Math.round(profileData.savings_rate)}%
               </div>
-              <div className="text-sm text-muted-foreground">Savings Rate</div>
+              <div className="text-mobile-xs sm:text-sm text-muted-foreground mt-1">Savings Rate</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Details Sections */}
-      <Accordion type="multiple" defaultValue={["personal", "income"]} className="space-y-4">
+      {/* Details Sections - Mobile Optimized */}
+      <Accordion type="multiple" defaultValue={["personal", "income"]} className="space-y-3 sm:space-y-4">
         {/* Personal Information */}
         <AccordionItem value="personal" className="border-b-0">
-          <Card className="shadow-lg rounded-lg">
+          <Card className="shadow-none sm:shadow-lg rounded-none sm:rounded-lg md:rounded-xl border-0 sm:border">
             <CardHeader className="p-0">
-              <AccordionTrigger className="px-6 py-4 text-base md:text-lg">
+              <AccordionTrigger className="px-4 sm:px-6 py-3 sm:py-4 text-mobile-sm sm:text-base md:text-lg touch-manipulation min-h-[44px]">
                 <span className="flex items-center gap-2 text-foreground">
                   <FontAwesomeIcon icon={faInfoCircle} className="text-primary" />
                   Personal Information
@@ -482,19 +482,19 @@ function FinancialProfileSettings() {
               </AccordionTrigger>
             </CardHeader>
             <AccordionContent className="px-0">
-              <CardContent className="px-6 pb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
-                    <span className="text-sm text-muted-foreground">Age</span>
-                    <div className="font-semibold">{profileData.current_age || 'Not specified'}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Age</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{profileData.current_age || 'Not specified'}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Marital Status</span>
-                    <div className="font-semibold capitalize">{profileData.marital_status.replace('_', ' ')}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Marital Status</span>
+                    <div className="font-semibold capitalize text-mobile-sm sm:text-base">{profileData.marital_status.replace('_', ' ')}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Dependents</span>
-                    <div className="font-semibold">{profileData.dependents}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Dependents</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{profileData.dependents}</div>
                   </div>
                 </div>
               </CardContent>
@@ -504,9 +504,9 @@ function FinancialProfileSettings() {
 
         {/* Income & Cash Flow */}
         <AccordionItem value="income" className="border-b-0">
-          <Card className="shadow-lg rounded-lg">
+          <Card className="shadow-none sm:shadow-lg rounded-none sm:rounded-lg md:rounded-xl border-0 sm:border">
             <CardHeader className="p-0">
-              <AccordionTrigger className="px-6 py-4 text-base md:text-lg">
+              <AccordionTrigger className="px-4 sm:px-6 py-3 sm:py-4 text-mobile-sm sm:text-base md:text-lg touch-manipulation min-h-[44px]">
                 <span className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faDollarSign} className="text-primary" />
                   Income & Cash Flow
@@ -514,31 +514,31 @@ function FinancialProfileSettings() {
               </AccordionTrigger>
             </CardHeader>
             <AccordionContent className="px-0">
-              <CardContent className="px-6 pb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div>
-                    <span className="text-sm text-muted-foreground">Gross Monthly Income</span>
-                    <div className="font-semibold text-lg">{formatCurrency(profileData.gross_monthly_income)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Gross Monthly Income</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base md:text-lg">{formatCurrency(profileData.gross_monthly_income)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Net Monthly Income</span>
-                    <div className="font-semibold text-lg">{formatCurrency(profileData.net_monthly_income)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Net Monthly Income</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base md:text-lg">{formatCurrency(profileData.net_monthly_income)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Income Stability</span>
-                    <div className="font-semibold capitalize">{profileData.income_stability.replace('_', ' ')}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Income Stability</span>
+                    <div className="font-semibold capitalize text-mobile-sm sm:text-base">{profileData.income_stability.replace('_', ' ')}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Annual Bonus</span>
-                    <div className="font-semibold">{formatCurrency(profileData.annual_bonus)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Annual Bonus</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.annual_bonus)}</div>
                   </div>
                 </div>
                 {profileData.additional_income_sources.length > 0 && (
-                  <div className="mt-4">
-                    <span className="text-sm text-muted-foreground">Additional Income Sources</span>
+                  <div className="mt-3 sm:mt-4">
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Additional Income Sources</span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {profileData.additional_income_sources.map((source) => (
-                        <Badge key={source} variant="secondary">
+                        <Badge key={source} variant="secondary" className="text-mobile-xs sm:text-xs">
                           {source.replace('_', ' ')}
                         </Badge>
                       ))}
@@ -552,9 +552,9 @@ function FinancialProfileSettings() {
 
         {/* Monthly Expenses */}
         <AccordionItem value="expenses" className="border-b-0">
-          <Card className="shadow-lg rounded-lg">
+          <Card className="shadow-none sm:shadow-lg rounded-none sm:rounded-lg md:rounded-xl border-0 sm:border">
             <CardHeader className="p-0">
-              <AccordionTrigger className="px-6 py-4 text-base md:text-lg">
+              <AccordionTrigger className="px-4 sm:px-6 py-3 sm:py-4 text-mobile-sm sm:text-base md:text-lg touch-manipulation min-h-[44px]">
                 <span className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faHome} className="text-primary" />
                   Monthly Expenses
@@ -562,40 +562,40 @@ function FinancialProfileSettings() {
               </AccordionTrigger>
             </CardHeader>
             <AccordionContent className="px-0">
-              <CardContent className="px-6 pb-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div>
-                    <span className="text-sm text-muted-foreground">Housing</span>
-                    <div className="font-semibold">{formatCurrency(profileData.housing_cost)}</div>
-                    <div className="text-xs text-muted-foreground/75 capitalize">{profileData.housing_type.replace('_', ' ')}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Housing</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.housing_cost)}</div>
+                    <div className="text-mobile-xs sm:text-xs text-muted-foreground/75 capitalize">{profileData.housing_type.replace('_', ' ')}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Food</span>
-                    <div className="font-semibold">{formatCurrency(profileData.food_expenses)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Food</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.food_expenses)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Transportation</span>
-                    <div className="font-semibold">{formatCurrency(profileData.transportation_expenses)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Transportation</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.transportation_expenses)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Healthcare</span>
-                    <div className="font-semibold">{formatCurrency(profileData.healthcare_expenses)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Healthcare</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.healthcare_expenses)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Insurance</span>
-                    <div className="font-semibold">{formatCurrency(profileData.insurance_expenses)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Insurance</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.insurance_expenses)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Entertainment</span>
-                    <div className="font-semibold">{formatCurrency(profileData.entertainment_expenses)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Entertainment</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.entertainment_expenses)}</div>
                   </div>
                   <div>
-                    <span className="text-sm text-muted-foreground">Other</span>
-                    <div className="font-semibold">{formatCurrency(profileData.other_monthly_expenses)}</div>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Other</span>
+                    <div className="font-semibold text-mobile-sm sm:text-base">{formatCurrency(profileData.other_monthly_expenses)}</div>
                   </div>
-                  <div className="bg-muted p-2 rounded">
-                    <span className="text-sm text-muted-foreground">Total Monthly</span>
-                    <div className="font-semibold text-lg">
+                  <div className="bg-muted p-2 sm:p-3 rounded-lg">
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Total Monthly</span>
+                    <div className="font-semibold text-mobile-base sm:text-base md:text-lg">
                       {formatCurrency(totalMonthlyExpenses)}
                     </div>
                   </div>
@@ -607,9 +607,9 @@ function FinancialProfileSettings() {
 
         {/* Assets & Savings */}
         <AccordionItem value="assets" className="border-b-0">
-          <Card className="shadow-lg rounded-lg">
+          <Card className="shadow-none sm:shadow-lg rounded-none sm:rounded-lg md:rounded-xl border-0 sm:border">
             <CardHeader className="p-0">
-              <AccordionTrigger className="px-6 py-4 text-base md:text-lg">
+              <AccordionTrigger className="px-4 sm:px-6 py-3 sm:py-4 text-mobile-sm sm:text-base md:text-lg touch-manipulation min-h-[44px]">
                 <span className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faChartLine} className="text-primary" />
                   Assets & Savings
@@ -617,8 +617,8 @@ function FinancialProfileSettings() {
               </AccordionTrigger>
             </CardHeader>
             <AccordionContent className="px-0">
-              <CardContent className="px-6 pb-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">Emergency Fund</span>
                     <div className="font-semibold">{formatCurrency(profileData.emergency_fund)}</div>
@@ -1653,20 +1653,20 @@ function FinancialProfileSettings() {
   ), [profileData, handleInputChange, handleNumberInputChange, handleMultipleChoice]);
 
   return (
-    <div className="bg-moneko-background text-foreground min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="bg-moneko-background text-foreground min-h-screen px-0 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-6 lg:py-8">
       <div className="w-full max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3 px-3 sm:px-0">
+          <div className="flex-1">
+            <h1 className="text-mobile-lg sm:text-2xl md:text-3xl font-bold text-foreground">
               Financial Profile
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-0.5 sm:mt-1 text-mobile-sm sm:text-sm">
               {isEditMode 
-                ? "Update your financial information to get personalized recommendations" 
+                ? "Update your financial information" 
                 : "Your comprehensive financial overview"}
             </p>
           </div>
-          {isEditMode&& <div className="flex gap-3">
+          {isEditMode&& <div className="flex gap-2 w-full sm:w-auto">
           <Button
             onClick={() => {
               setIsEditMode(false);
@@ -1732,6 +1732,7 @@ function FinancialProfileSettings() {
               }
             }}
             variant="outline"
+            className="flex-1 sm:flex-initial min-h-[44px] text-mobile-sm sm:text-sm"
           >
             <FontAwesomeIcon icon={faTimes} className="mr-2" />
             Cancel
@@ -1739,7 +1740,7 @@ function FinancialProfileSettings() {
           <Button
             onClick={handleSaveProfile}
             disabled={isSaving || !hasChanges}
-            className="bg-primary hover:bg-secondary text-white"
+            className="bg-primary hover:bg-secondary text-white flex-1 sm:flex-initial min-h-[44px] text-mobile-sm sm:text-sm"
           >
             <FontAwesomeIcon icon={faSave} className="mr-2" />
             {isSaving ? 'Saving...' : 'Save Changes'}
@@ -1748,14 +1749,14 @@ function FinancialProfileSettings() {
         </div>
 
         {!profile && !isLoading && !isEditMode && (
-          <div className="bg-muted border border-border rounded-lg p-4 mb-6">
-            <p className="text-foreground">
+          <div className="bg-muted border border-border rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 mx-3 sm:mx-0">
+            <p className="text-foreground text-mobile-sm sm:text-sm">
               You haven't completed your financial profile yet. 
               <Button 
                 variant="link" 
                 size="sm"
                 onClick={() => setIsEditMode(true)}
-                className="ml-1 p-0 h-auto align-baseline"
+                className="ml-1 p-0 h-auto align-baseline text-mobile-sm sm:text-sm"
               >
                 Create your profile
               </Button> to get personalized financial advice and recommendations.

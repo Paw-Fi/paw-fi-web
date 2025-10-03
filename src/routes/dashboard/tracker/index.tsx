@@ -431,7 +431,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
   
     return (
       <motion.main 
-        className="min-h-screen " 
+        className="min-h-screen" 
         role="main" 
         aria-label="Goals Dashboard"
         variants={pageVariants}
@@ -441,53 +441,56 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
         {/* Skip to main content link for keyboard navigation */}
         <a 
           href="#main-content" 
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-purple-600 dark:bg-purple-500 text-white px-4 py-2 rounded-md z-50 font-medium"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-primary-foreground px-4 py-2 rounded-md z-50 font-medium"
         >
           Skip to main content
         </a>
   
-        {/* Clean Header with Apple-inspired minimal design */}
-        <div className="">
-          <div className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6" data-tour="page-header">
-              <div className="min-w-0">
-                <h1 className="text-3xl sm:text-4xl font-light text-foreground mb-2">
+        {/* Compact Header - Mobile Optimized */}
+        <div className="border-b border-border/50">
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
+            <div className="flex items-center justify-between gap-3 sm:gap-6" data-tour="page-header">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-mobile-lg sm:text-3xl md:text-4xl font-light text-foreground mb-1 sm:mb-2">
                   Goals
                 </h1>
-                <p className="text-muted-foreground text-lg">
-                  Track your financial goals with AI-powered insights
+                <p className="text-muted-foreground text-mobile-sm sm:text-base md:text-lg">
+                  Track & achieve financial goals
                 </p>
               </div>
               <div className="shrink-0">
                 <Link to="/dashboard/tracker/create">
-                  <button 
-                    className="flex items-center cursor-pointer gap-3 px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                  <button
+                    className="flex items-center justify-center cursor-pointer gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full font-medium transition-all duration-200 shadow-sm hover:shadow-md min-h-[44px] min-w-[44px] touch-manipulation text-mobile-sm sm:text-base"
                     data-tour="create-goal-btn"
                   >
                     <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                    <span>Create Goal</span>
+                    <span className="hidden sm:inline">Create Goal</span>
                   </button>
                 </Link>
               </div>
             </div>
           </div>
         </div>
-  
-        {/* Main Content */}
-        <div id="main-content" className="max-w-7xl mx-auto px-0 sm:px-8 lg:px-8 py-8 space-y-8" tabIndex={-1}>
+
+        {/* Main Content - Mobile Optimized Spacing */}
+        <div id="main-content" className="max-w-7xl mx-auto px-0 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8" tabIndex={-1}>
           {hasGoals ? (
             <>
-              <div data-tour="spotlight-section">
+              {/* Compact Stats - Mobile First */}
+              <div data-tour="stats-bar" className="px-3 sm:px-0">
+                <StatsBar stats={statsData} />
+              </div>
+
+              {/* Spotlight Section - Compact Mobile */}
+              <div data-tour="spotlight-section" className="px-3 sm:px-0">
                 <SpotlightSection 
                   spotlightGoals={spotlightGoals}
                   getGoalStatus={getGoalStatus}
                 />
               </div>
               
-              <div data-tour="stats-bar">
-                <StatsBar stats={statsData} />
-              </div>
-              
+              {/* Goals List - Edge-to-edge on Mobile */}
               <div data-tour="goals-list">
                 <CommandCenter 
                   goals={sortedGoals}
@@ -504,7 +507,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
     );
   }
 
-// Spotlight Section Component
+// Compact Spotlight Section - Mobile Optimized
 const SpotlightSection = memo(function SpotlightSection({ 
   spotlightGoals, 
   getGoalStatus 
@@ -516,16 +519,16 @@ const SpotlightSection = memo(function SpotlightSection({
 
   
   return (
-    <motion.section 
-      className="space-y-6"
+    <motion.section
+      className="space-y-3 sm:space-y-4 md:space-y-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <h2 className="text-2xl font-medium text-foreground">Spotlight</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      <h2 className="text-mobile-base sm:text-xl md:text-2xl font-medium text-foreground">Spotlight</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6">
         {spotlightGoals.map((goal, index) => (
-          <SpotlightCard 
+          <SpotlightCard
             key={goal.id}
             goal={goal}
             type={goal.spotlightType}
@@ -540,7 +543,7 @@ const SpotlightSection = memo(function SpotlightSection({
   );
 });
 
-// Clean Spotlight Card with Apple-inspired minimal design
+// Compact Spotlight Card - Mobile Optimized
 const SpotlightCard = memo(function SpotlightCard({ 
   goal, 
   type, 
@@ -556,25 +559,26 @@ const SpotlightCard = memo(function SpotlightCard({
   reason?: string;
   priority?: number;
 }) {
-  const daysUntilTarget = goal.target_date 
+  const daysUntilTarget = goal.target_date
     ? Math.ceil((new Date(goal.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : 0;
-  
+
   return (
     <Link to={`/dashboard/tracker/${goal.id}`} params={{ goalId: goal.id }}>
-      <motion.div 
-        className="bg-moneko-background rounded-3xl p-8 cursor-pointer transition-all duration-200 hover:shadow-md shadow-sm"
+      <motion.div
+        className="bg-moneko-background rounded-xl sm:rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 cursor-pointer transition-all duration-200 hover:shadow-md shadow-sm min-h-[80px] sm:min-h-[120px] touch-manipulation"
         whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      >                
-        <div className="text-center space-y-4">
-          {/* Days Display */}
-          <div className="text-3xl font-light text-foreground">
+      >
+        <div className="text-center space-y-2 sm:space-y-3 md:space-y-4">
+          {/* Days Display - Compact on Mobile */}
+          <div className="text-xl sm:text-2xl md:text-3xl font-light text-foreground">
             {daysUntilTarget > 0 ? `${daysUntilTarget} Days` : daysUntilTarget === 0 ? 'Due Today' : 'Overdue'}
           </div>
-          
-          {/* Goal Title */}
-          <div className="text-muted-foreground font-medium leading-tight">
+
+          {/* Goal Title - Compact Typography */}
+          <div className="text-mobile-sm sm:text-sm md:text-base text-muted-foreground font-medium leading-tight line-clamp-2">
             Until {goal.title}
           </div>
         </div>
@@ -583,63 +587,63 @@ const SpotlightCard = memo(function SpotlightCard({
   );
 });
 
-// Clean Stats Bar with Apple-inspired minimal design
+// Compact Stats Bar - Mobile Optimized
 const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
   const statItems = [
     { 
-      label: 'Total Goals', 
+      label: 'Total', 
       value: stats.totalGoals, 
       icon: faBullseye,
-      bgColor: 'bg-blue-50 dark:bg-blue-950/20',
+      bgColor: 'bg-blue-50/50 dark:bg-blue-950/30',
       iconBg: 'bg-blue-100 dark:bg-blue-900/30',
       iconColor: 'text-blue-600 dark:text-blue-400'
     },
     { 
-      label: 'Active Goals', 
+      label: 'Active', 
       value: stats.activeGoals, 
       icon: faChartLine,
-      bgColor: 'bg-green-50 dark:bg-green-950/20',
+      bgColor: 'bg-green-50/50 dark:bg-green-950/30',
       iconBg: 'bg-green-100 dark:bg-green-900/30',
       iconColor: 'text-green-600 dark:text-green-400'
     },
     { 
-      label: 'Completed Goals', 
+      label: 'Completed', 
       value: stats.completedGoals, 
       icon: faTrophy,
-      bgColor: 'bg-amber-50 dark:bg-amber-950/20',
+      bgColor: 'bg-amber-50/50 dark:bg-amber-950/30',
       iconBg: 'bg-amber-100 dark:bg-amber-900/30',
       iconColor: 'text-amber-600 dark:text-amber-400'
     },
     { 
-      label: 'Overall Progress', 
+      label: 'Progress', 
       value: `${stats.onTrackPercentage}%`, 
       icon: faCheckCircle,
-      bgColor: 'bg-purple-50 dark:bg-purple-950/20',
+      bgColor: 'bg-purple-50/50 dark:bg-purple-950/30',
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       iconColor: 'text-purple-600 dark:text-purple-400'
     }
   ];
   
   return (
-    <motion.section 
-      className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8"
+    <motion.section
+      className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }}
     >
       {statItems.map((stat) => (
-        <motion.div 
-          key={stat.label} 
-          className={`${stat.bgColor} rounded-2xl p-6 text-center transition-all duration-200 hover:shadow-md shadow-sm`}
+        <motion.div
+          key={stat.label}
+          className={`${stat.bgColor} rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 text-center transition-all duration-200 hover:shadow-sm min-h-[80px] sm:min-h-[120px]`}
           whileHover={{ y: -1 }}
         >
-          <div className={`w-12 h-12 ${stat.iconBg} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-            <FontAwesomeIcon icon={stat.icon} className={`w-5 h-5 ${stat.iconColor}`} />
+          <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 ${stat.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3`}>
+            <FontAwesomeIcon icon={stat.icon} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 ${stat.iconColor}`} />
           </div>
-          <div className="text-3xl font-light text-foreground mb-2">
+          <div className="text-xl sm:text-2xl md:text-3xl font-light text-foreground mb-0.5 sm:mb-1">
             {stat.value}
           </div>
-          <div className="text-sm text-muted-foreground font-medium">
+          <div className="text-mobile-xs sm:text-xs md:text-sm text-muted-foreground font-medium">
             {stat.label}
           </div>
         </motion.div>
@@ -648,7 +652,7 @@ const StatsBar = memo(function StatsBar({ stats }: { stats: any }) {
   );
 });
 
-// Clean Goals List with Apple-inspired minimal design
+// Compact Goals List - Mobile Edge-to-Edge
 const CommandCenter = memo(function CommandCenter({ 
   goals, 
   getGoalStatus, 
@@ -659,29 +663,29 @@ const CommandCenter = memo(function CommandCenter({
   onUpdate: () => void;
 }) {
   return (
-    <motion.section 
-      className="bg-moneko-background rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200"
+    <motion.section
+      className="bg-moneko-background rounded-none sm:rounded-2xl md:rounded-3xl overflow-hidden shadow-none sm:shadow-sm hover:shadow-md transition-all duration-200"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.2 }}
     >
-      {/* Header */}
-      <div className="p-8 pb-6">
-        <h2 className="text-2xl font-medium text-foreground">Goals</h2>
+      {/* Header - Compact on Mobile */}
+      <div className="p-3 px-3 sm:p-6 md:p-8 pb-2 sm:pb-4 md:pb-6">
+        <h2 className="text-mobile-base sm:text-xl md:text-2xl font-medium text-foreground">Goals</h2>
       </div>
-      
+
       {/* Goals List */}
-      <div className="space-y-1">
+      <div className="space-y-0">
         {goals.length === 0 ? (
-          <div className="text-center py-16">
-            <FontAwesomeIcon icon={faFilter} className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No goals match your current filter</p>
+          <div className="text-center py-8 sm:py-12 md:py-16 px-4">
+            <FontAwesomeIcon icon={faFilter} className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-muted-foreground mb-2 sm:mb-3 md:mb-4" />
+            <p className="text-mobile-sm sm:text-sm md:text-base text-muted-foreground">No goals match your current filter</p>
           </div>
         ) : (
           goals.map((goal) => (
-            <GoalCard 
-              key={goal.id} 
-              goal={goal} 
+            <GoalCard
+              key={goal.id}
+              goal={goal}
               getGoalStatus={getGoalStatus}
             />
           ))
@@ -691,7 +695,7 @@ const CommandCenter = memo(function CommandCenter({
   );
 });
 
-// Clean Goal Card with Apple-inspired minimal design
+// Compact Goal Card - Mobile Optimized
 const GoalCard = memo(function GoalCard({ 
   goal, 
   getGoalStatus 
@@ -699,39 +703,40 @@ const GoalCard = memo(function GoalCard({
   goal: any;
   getGoalStatus: (goal: any) => string;
 }) {
-  const progress = goal.current_amount && goal.target_amount 
-    ? (goal.current_amount / goal.target_amount) * 100 
+  const progress = goal.current_amount && goal.target_amount
+    ? (goal.current_amount / goal.target_amount) * 100
     : 0;
-  
+
   return (
     <Link to={`/dashboard/tracker/${goal.id}`} params={{ goalId: goal.id }}>
-      <motion.div 
-        className="group px-8 py-6 transition-all duration-200 cursor-pointer hover:bg-subtle-background/50"
-        whileHover={{ x: 4 }}
-      >     
-        <div className="flex items-center gap-4">
-          {/* Minimal Icon */}
-          <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center flex-shrink-0">
-            <FontAwesomeIcon 
-              icon={getGoalIcon(goal)} 
-              className="w-5 h-5 text-muted-foreground" 
+      <motion.div
+        className="group px-3 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 transition-all duration-200 cursor-pointer hover:bg-subtle-background/50 min-h-[60px] sm:min-h-[72px] touch-manipulation border-b border-border/30 last:border-0"
+        whileHover={{ x: 2 }}
+        whileTap={{ scale: 0.995 }}
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 md:gap-4">
+          {/* Compact Icon */}
+          <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-muted rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+            <FontAwesomeIcon
+              icon={getGoalIcon(goal)}
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-muted-foreground"
             />
           </div>
-          
-          {/* Content */}
+
+          {/* Content - Compact */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-foreground truncate">
+            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+              <h3 className="text-mobile-sm sm:text-sm md:text-base font-medium text-foreground truncate">
                 {goal.title}
               </h3>
-              <span className="text-sm font-medium text-muted-foreground ml-4">
+              <span className="text-mobile-xs sm:text-xs md:text-sm font-medium text-muted-foreground ml-2 sm:ml-3 md:ml-4 flex-shrink-0">
                 {Math.round(progress)}%
               </span>
             </div>
-            
-            {/* Clean Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-2">
-              <motion.div 
+
+            {/* Compact Progress Bar */}
+            <div className="w-full bg-muted rounded-full h-1 sm:h-1.5 md:h-2">
+              <motion.div
                 className="h-full bg-primary rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(progress, 100)}%` }}
@@ -739,10 +744,10 @@ const GoalCard = memo(function GoalCard({
               />
             </div>
           </div>
-          
-          <FontAwesomeIcon 
-            icon={faChevronRight} 
-            className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors duration-200" 
+
+          <FontAwesomeIcon
+            icon={faChevronRight}
+            className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-muted-foreground group-hover:text-foreground transition-colors duration-200 flex-shrink-0"
           />
         </div>
       </motion.div>
@@ -750,103 +755,103 @@ const GoalCard = memo(function GoalCard({
   );
 });
 
-// Mission Control: Enhanced Empty State
+// Compact Empty State - Mobile Optimized
 const EmptyGoalsState = memo(function EmptyGoalsState() {
   return (
     <motion.section
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="flex flex-col items-center justify-center py-12 sm:py-16 lg:py-20 px-4"
+      className="flex flex-col items-center justify-center py-8 sm:py-12 md:py-16 lg:py-20 px-4"
       role="region"
       aria-labelledby="empty-state-heading"
     >
       <div className="max-w-lg text-center">
-        {/* Enhanced Icon Design */}
-        <div className="relative mb-8 sm:mb-10 lg:mb-12">
-          <motion.div 
-            className="w-32 h-32 sm:w-36 sm:h-36 lg:w-40 lg:h-40 mx-auto rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl"
+        {/* Compact Icon Design */}
+        <div className="relative mb-6 sm:mb-8 md:mb-10">
+          <motion.div
+            className="w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 mx-auto rounded-xl sm:rounded-2xl md:rounded-3xl flex items-center justify-center shadow-2xl"
             style={{
               background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)",
               backdropFilter: "blur(20px)",
               border: "1px solid rgba(255, 255, 255, 0.2)"
             }}
-            animate={{ 
+            animate={{
               rotate: [0, 5, 0, -5, 0],
               scale: [1, 1.02, 1]
             }}
-            transition={{ 
-              duration: 4, 
+            transition={{
+              duration: 4,
               repeat: Infinity,
               ease: "easeInOut"
             }}
           >
-            <div className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-xl">
-              <FontAwesomeIcon 
-                icon={faBullseye} 
-                className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 text-white"
+            <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-18 md:h-18 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center shadow-xl">
+              <FontAwesomeIcon
+                icon={faBullseye}
+                className="w-5 h-5 sm:w-7 sm:h-7 md:w-9 md:h-9 text-white"
                 aria-hidden="true"
               />
             </div>
           </motion.div>
-          
-          <motion.div 
-            className="absolute -bottom-3 -right-3 sm:-bottom-4 sm:-right-4 w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-xl"
-            animate={{ 
+
+          <motion.div
+            className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 md:-bottom-4 md:-right-4 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-xl"
+            animate={{
               y: [0, -8, 0],
               rotate: [0, 180, 360]
             }}
-            transition={{ 
-              duration: 3, 
+            transition={{
+              duration: 3,
               repeat: Infinity,
               ease: "easeInOut"
             }}
           >
-            <FontAwesomeIcon 
-              icon={faPlus} 
-              className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white"
+            <FontAwesomeIcon
+              icon={faPlus}
+              className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white"
               aria-hidden="true"
             />
           </motion.div>
         </div>
 
-        {/* Content with Expressive Typography */}
-        <motion.h2 
-          id="empty-state-heading" 
-          className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 leading-tight"
+        {/* Compact Typography */}
+        <motion.h2
+          id="empty-state-heading"
+          className="text-mobile-lg sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 md:mb-4 leading-tight"
         >
           Start Your Financial Journey
         </motion.h2>
-        
-        <motion.p 
-          className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 sm:mb-10 lg:mb-12 leading-relaxed max-w-md mx-auto px-2"
+
+        <motion.p
+          className="text-mobile-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 mb-6 sm:mb-8 md:mb-10 leading-relaxed max-w-md mx-auto px-2"
         >
-          Transform your financial dreams into achievable goals with AI-powered strategies, smart milestones, and progress tracking.
+          Transform your financial dreams into achievable goals with AI-powered strategies.
         </motion.p>
 
-        {/* Enhanced Benefits Grid */}
-        <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-8 sm:mb-10 lg:mb-12" role="list" aria-label="Goal tracker benefits">
+        {/* Compact Benefits Grid */}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 mb-6 sm:mb-8 md:mb-10" role="list" aria-label="Goal tracker benefits">
           {[
             { icon: faWandSparkles, label: 'AI Strategy', color: 'from-blue-500 to-blue-600' },
-            { icon: faBullseye, label: 'Smart Milestones', color: 'from-green-500 to-emerald-600' },
-            { icon: faTrophy, label: 'Track Progress', color: 'from-purple-500 to-purple-600' }
+            { icon: faBullseye, label: 'Milestones', color: 'from-green-500 to-emerald-600' },
+            { icon: faTrophy, label: 'Progress', color: 'from-purple-500 to-purple-600' }
           ].map((benefit, index) => (
-            <motion.div 
+            <motion.div
               key={benefit.label}
-              className="text-center" 
+              className="text-center"
               role="listitem"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ 
+              transition={{
                 delay: 0.2 + (index * 0.1),
                 duration: 0.4,
                 ease: [0.25, 0.8, 0.5, 1]
               }}
             >
-              <div className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 mx-auto bg-gradient-to-br ${benefit.color} rounded-xl sm:rounded-2xl flex items-center justify-center mb-2 sm:mb-3 lg:mb-4 shadow-lg`}>
-                <FontAwesomeIcon icon={benefit.icon} className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" aria-hidden="true" />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 mx-auto bg-gradient-to-br ${benefit.color} rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center mb-1.5 sm:mb-2 md:mb-3 shadow-lg`}>
+                <FontAwesomeIcon icon={benefit.icon} className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" aria-hidden="true" />
               </div>
-              <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <p className="text-mobile-xs sm:text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {benefit.label}
               </p>
             </motion.div>
@@ -859,11 +864,11 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
           whileTap={{ scale: 0.98 }}
         >
           <Link to="/dashboard/tracker/create" aria-describedby="empty-state-heading">
-            <button className="group h-12 sm:h-14 px-6 sm:px-8 lg:px-10 cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-2xl border-0 font-bold text-base sm:text-lg rounded-xl sm:rounded-2xl transition-all duration-300 w-full sm:w-auto" aria-label="Create your first financial goal">
-              <FontAwesomeIcon icon={faWandSparkles} className="mr-2 sm:mr-3 group-hover:rotate-12 transition-transform" aria-hidden="true" />
+            <button className="group h-11 sm:h-12 md:h-14 px-5 sm:px-6 md:px-8 lg:px-10 cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-2xl border-0 font-bold text-sm sm:text-base md:text-lg rounded-xl sm:rounded-2xl transition-all duration-300 w-full sm:w-auto min-h-[44px] touch-manipulation flex items-center justify-center gap-2 sm:gap-3" aria-label="Create your first financial goal">
+              <FontAwesomeIcon icon={faWandSparkles} className="group-hover:rotate-12 transition-transform" aria-hidden="true" />
               <span className="hidden xs:inline">Create Your First Goal</span>
               <span className="xs:hidden">Create Goal</span>
-              <FontAwesomeIcon icon={faArrowRight} className="ml-2 sm:ml-3 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+              <FontAwesomeIcon icon={faArrowRight} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </button>
           </Link>
         </motion.div>
@@ -872,7 +877,7 @@ const EmptyGoalsState = memo(function EmptyGoalsState() {
   );
 });
 
-// Mission Control: Enhanced Loading Skeleton
+// Compact Loading Skeleton - Mobile Optimized
 const GoalsLoadingSkeleton = memo(function GoalsLoadingSkeleton() {
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-900" role="main" aria-label="Loading goal tracker data">
@@ -880,54 +885,49 @@ const GoalsLoadingSkeleton = memo(function GoalsLoadingSkeleton() {
         <span className="sr-only">Loading your financial goals, please wait...</span>
       </div>
       
-      {/* Hero Skeleton */}
+      {/* Compact Header Skeleton */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div className="space-y-3">
-              <div className="h-8 bg-gray-200/60 dark:bg-gray-700/60 rounded w-32 animate-pulse"></div>
-              <div className="h-5 bg-gray-200/60 dark:bg-gray-700/60 rounded w-96 animate-pulse"></div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8">
+          <div className="flex items-center justify-between gap-3 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2 flex-1">
+              <div className="h-5 sm:h-6 md:h-8 bg-gray-200/60 dark:bg-gray-700/60 rounded w-20 sm:w-24 md:w-32 animate-pulse"></div>
+              <div className="h-3.5 sm:h-4 md:h-5 bg-gray-200/60 dark:bg-gray-700/60 rounded w-36 sm:w-48 md:w-64 animate-pulse"></div>
             </div>
-            <div className="h-12 w-40 bg-gray-200/60 dark:bg-gray-700/60 rounded-lg animate-pulse"></div>
+            <div className="h-11 w-11 sm:w-40 bg-gray-200/60 dark:bg-gray-700/60 rounded-full animate-pulse"></div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Spotlight Skeleton */}
-        <div className="space-y-4">
-          <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-24 animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="h-40 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"></div>
-            <div className="h-40 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"></div>
-          </div>
-        </div>
-        
-        {/* Stats Skeleton */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="max-w-7xl mx-auto px-0 sm:px-6 md:px-8 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6 md:space-y-8">
+        {/* Stats Skeleton - Compact on Mobile */}
+        <div className="px-3 sm:px-0">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 md:gap-6">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="text-center space-y-3">
-                <div className="w-12 h-12 bg-gray-200/60 dark:bg-gray-700/60 rounded-lg mx-auto animate-pulse"></div>
-                <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-16 mx-auto animate-pulse"></div>
-                <div className="h-4 bg-gray-200/60 dark:bg-gray-700/60 rounded w-20 mx-auto animate-pulse"></div>
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 p-3 sm:p-4 md:p-6 text-center space-y-2 sm:space-y-3 animate-pulse min-h-[80px] sm:min-h-[120px]">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gray-200/60 dark:bg-gray-700/60 rounded-lg sm:rounded-xl mx-auto"></div>
+                <div className="h-4 sm:h-5 md:h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-10 sm:w-12 md:w-16 mx-auto"></div>
+                <div className="h-2.5 sm:h-3 md:h-4 bg-gray-200/60 dark:bg-gray-700/60 rounded w-12 sm:w-16 md:w-20 mx-auto"></div>
               </div>
             ))}
           </div>
         </div>
-        
-        {/* Goals List Skeleton */}
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div className="h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-24 animate-pulse"></div>
-            <div className="flex gap-4">
-              <div className="h-10 bg-gray-200/60 dark:bg-gray-700/60 rounded w-32 animate-pulse"></div>
-              <div className="h-10 bg-gray-200/60 dark:bg-gray-700/60 rounded w-40 animate-pulse"></div>
-            </div>
+
+        {/* Spotlight Skeleton - Compact */}
+        <div className="space-y-3 sm:space-y-4 px-3 sm:px-0">
+          <div className="h-4 sm:h-5 md:h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-16 sm:w-20 md:w-24 animate-pulse"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6">
+            <div className="h-20 sm:h-28 md:h-32 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 animate-pulse"></div>
+            <div className="h-20 sm:h-28 md:h-32 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 animate-pulse"></div>
+            <div className="h-20 sm:h-28 md:h-32 bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 animate-pulse hidden lg:block"></div>
           </div>
-          <div className="space-y-4">
+        </div>
+
+        {/* Goals List Skeleton - Edge-to-edge Mobile */}
+        <div className="space-y-3 sm:space-y-4">
+          <div className="h-4 sm:h-5 md:h-6 bg-gray-200/60 dark:bg-gray-700/60 rounded w-16 sm:w-20 md:w-24 animate-pulse px-3 sm:px-0"></div>
+          <div className="space-y-0">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-32 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 animate-pulse"></div>
+              <div key={i} className="h-16 sm:h-20 md:h-24 bg-white dark:bg-gray-800 rounded-none sm:rounded-2xl border-b sm:border border-gray-200 dark:border-gray-700 animate-pulse"></div>
             ))}
           </div>
         </div>
@@ -936,58 +936,58 @@ const GoalsLoadingSkeleton = memo(function GoalsLoadingSkeleton() {
   );
 });
 
-// Mission Control: Enhanced Error State
+// Compact Error State - Mobile Optimized
 const ErrorState = memo(function ErrorState({ error, onRetry }: { error: any; onRetry: () => void }) {
   const handleRetry = useCallback(() => {
     onRetry();
   }, [onRetry]);
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center" role="main">
-      <div className="max-w-md text-center px-6">
-        <motion.div 
-          className="w-24 h-24 mx-auto mb-8 rounded-3xl flex items-center justify-center shadow-2xl"
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4" role="main">
+      <div className="max-w-md text-center px-4 sm:px-6">
+        <motion.div
+          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto mb-4 sm:mb-6 md:mb-8 rounded-xl sm:rounded-2xl md:rounded-3xl flex items-center justify-center shadow-2xl"
           style={{
             background: "linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 101, 101, 0.1) 100%)",
             backdropFilter: "blur(20px)",
             border: "1px solid rgba(239, 68, 68, 0.2)"
           }}
-          animate={{ 
+          animate={{
             scale: [1, 1.05, 1],
             rotate: [0, 5, 0, -5, 0]
           }}
-          transition={{ 
-            duration: 3, 
+          transition={{
+            duration: 3,
             repeat: Infinity,
             ease: "easeInOut"
           }}
         >
-          <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center">
-            <FontAwesomeIcon icon={faExclamationTriangle} className="w-6 h-6 text-white" aria-hidden="true" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-center">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" aria-hidden="true" />
           </div>
         </motion.div>
-        
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+
+        <h2 className="text-mobile-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 md:mb-4 leading-tight">
           Failed to Load Goals
         </h2>
-        
-        <p className="text-base text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+
+        <p className="text-mobile-sm sm:text-sm md:text-base text-gray-600 dark:text-gray-400 mb-4 sm:mb-6 md:mb-8 leading-relaxed">
           {error?.message || 'Something went wrong while loading your goals. Please try again.'}
         </p>
-        
+
         <div role="alert" aria-live="polite" className="sr-only">
           Error loading goals: {error?.message || 'Unknown error occurred'}
         </div>
-        
-        <motion.button 
+
+        <motion.button
           onClick={handleRetry}
-          className="h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-lg border-0 font-semibold rounded-xl transition-all duration-200"
+          className="h-11 sm:h-12 px-6 sm:px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 dark:from-blue-500 dark:to-purple-500 dark:hover:from-blue-600 dark:hover:to-purple-600 text-white shadow-lg border-0 font-semibold text-mobile-sm sm:text-sm md:text-base rounded-xl transition-all duration-200 min-h-[44px] touch-manipulation flex items-center justify-center gap-2 w-full sm:w-auto mx-auto"
           aria-label="Retry loading goals"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <FontAwesomeIcon icon={faRefresh} className="mr-2 w-4 h-4" aria-hidden="true" />
-          Try Again
+          <FontAwesomeIcon icon={faRefresh} className="w-4 h-4" aria-hidden="true" />
+          <span>Try Again</span>
         </motion.button>
       </div>
     </main>

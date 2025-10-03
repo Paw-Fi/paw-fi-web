@@ -292,33 +292,33 @@ export function UserSettings() {
   };
 
   return (
-    <div className="bg-moneko-background text-foreground dark:text-dark-foreground min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="bg-moneko-background text-foreground dark:text-dark-foreground min-h-screen px-0 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-6 lg:py-8">
     <div className="w-full max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-foreground dark:text-dark-foreground">Settings</h1>     
+      <h1 className="text-mobile-lg sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-foreground dark:text-dark-foreground px-3 sm:px-0">Settings</h1>     
       
-      <div className="bg-card dark:bg-dark-card shadow-lg rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-6">Profile Information</h2>
+      <div className="bg-card dark:bg-dark-card shadow-none sm:shadow-lg rounded-none sm:rounded-xl md:rounded-2xl p-4 sm:p-6 border-0 sm:border border-subtle-border dark:border-dark-subtle-border">
+        <h2 className="text-mobile-base sm:text-lg md:text-xl font-semibold mb-4 sm:mb-6">Profile Information</h2>
         
-        {/* Avatar Section */}
-        <div className="mb-6 pb-6 border-b border-subtle-border dark:border-dark-subtle-border">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
+        {/* Avatar Section - Compact Mobile */}
+        <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-subtle-border dark:border-dark-subtle-border">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="relative flex-shrink-0">
               <UserAvatar 
-                size="xl"
+                size="lg"
                 showPremiumBorder={true}
                 showPremiumCrown={true}
               />
             </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-foreground dark:text-dark-foreground mb-1">Profile Avatar</h3>
-              <p className="text-xs text-muted-foreground dark:text-dark-muted-foreground mb-3">
-                Customize your avatar appearance
+            <div className="flex-1 min-w-0">
+              <h3 className="text-mobile-sm sm:text-sm font-medium text-foreground dark:text-dark-foreground mb-0.5 sm:mb-1">Profile Avatar</h3>
+              <p className="text-mobile-xs sm:text-xs text-muted-foreground dark:text-dark-muted-foreground mb-2 sm:mb-3">
+                Customize your avatar
               </p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate({ to: '/avatar-customizer' })}
-                className="flex items-center space-x-2"
+                className="flex items-center gap-2 min-h-[44px] text-mobile-sm sm:text-sm"
               >
                 <FontAwesomeIcon icon={faPen} className="size-3" />
                 <span>Edit Avatar</span>
@@ -327,9 +327,9 @@ export function UserSettings() {
           </div>
         </div>
         
-        <form onSubmit={handleUpdateProfile} className="space-y-6">
+        <form onSubmit={handleUpdateProfile} className="space-y-4 sm:space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+            <label htmlFor="email" className="block text-mobile-sm sm:text-sm font-medium text-foreground dark:text-dark-foreground mb-1.5">
               Email
             </label>
             <Input
@@ -337,13 +337,13 @@ export function UserSettings() {
               type="email"
               value={user?.email || ''}
               disabled
-              className="bg-input-disabled dark:bg-dark-input-disabled"
+              className="bg-input-disabled dark:bg-dark-input-disabled text-mobile-base sm:text-base"
             />
-            <p className="mt-1 text-xs text-muted-foreground dark:text-dark-muted-foreground">Your email cannot be changed</p>
+            <p className="mt-1 text-mobile-xs sm:text-xs text-muted-foreground dark:text-dark-muted-foreground">Email cannot be changed</p>
           </div>
           
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-foreground dark:text-dark-foreground mb-1">
+            <label htmlFor="fullName" className="block text-mobile-sm sm:text-sm font-medium text-foreground dark:text-dark-foreground mb-1.5">
               Full Name
             </label>
             <Input
@@ -353,18 +353,18 @@ export function UserSettings() {
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Enter your full name"
               required
-              className="bg-input dark:bg-dark-input"
+              className="bg-input dark:bg-dark-input text-mobile-base sm:text-base"
             />
           </div>
           
           {error && (
-            <div className="text-danger dark:text-dark-danger text-sm p-2 bg-danger-light dark:bg-dark-danger-light rounded">
+            <div className="text-danger dark:text-dark-danger text-mobile-sm sm:text-sm p-2.5 sm:p-3 bg-danger-light dark:bg-dark-danger-light rounded-lg">
               {error}
             </div>
           )}
           
           {updateSuccess && (
-            <div className="text-success dark:text-dark-success text-sm p-2 bg-success-light dark:bg-dark-success-light rounded">
+            <div className="text-success dark:text-dark-success text-mobile-sm sm:text-sm p-2.5 sm:p-3 bg-success-light dark:bg-dark-success-light rounded-lg">
               Profile updated successfully!
             </div>
           )}
@@ -373,39 +373,39 @@ export function UserSettings() {
             <Button
               type="submit"
               disabled={isUpdating}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto min-h-[44px] text-mobile-sm sm:text-sm text-white "
             >
               {isUpdating ? 'Updating...' : 'Update Information'}
             </Button>
           </div>
         </form>
         
-        <div className="mt-8 pt-6 border-t border-subtle-border dark:border-dark-subtle-border">
-          <h2 className="text-lg font-semibold mb-4">Account Settings</h2>
+        <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-subtle-border dark:border-dark-subtle-border">
+          <h2 className="text-mobile-base sm:text-lg font-semibold mb-3 sm:mb-4">Account Settings</h2>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <h3 className="text-sm font-medium text-foreground dark:text-dark-foreground">Change Password</h3>
+              <h3 className="text-mobile-sm sm:text-sm font-medium text-foreground dark:text-dark-foreground">Change Password</h3>
               <Button
                 variant="outline"
-                className="mt-2"
+                className="mt-2 min-h-[44px] text-mobile-sm sm:text-sm"
                 onClick={handleResetPassword}
                 disabled={isResetting}
               >
                 {isResetting ? 'Sending Reset Email...' : 'Reset Password'}
               </Button>
               {resetSuccess && (
-                <div className="mt-2 text-success dark:text-dark-success text-sm">
+                <div className="mt-2 text-success dark:text-dark-success text-mobile-sm sm:text-sm">
                   Password reset email sent! Check your inbox.
                 </div>
               )}
             </div>
             
             <div>
-              <h3 className="text-sm font-medium text-danger dark:text-dark-danger">Danger Zone</h3>
+              <h3 className="text-mobile-sm sm:text-sm font-medium text-danger dark:text-dark-danger">Danger Zone</h3>
               <Button
                 variant="outline"
-                className="mt-2 text-danger dark:text-dark-danger border-danger/50 dark:border-dark-danger/50 hover:bg-danger-light dark:hover:bg-dark-danger-light"
+                className="mt-2 text-danger dark:text-dark-danger border-danger/50 dark:border-dark-danger/50 hover:bg-danger-light dark:hover:bg-dark-danger-light min-h-[44px] text-mobile-sm sm:text-sm"
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isDeleting}
               >
@@ -413,24 +413,25 @@ export function UserSettings() {
               </Button>
               
               {showDeleteConfirm && (
-                <div className="mt-4 p-4 border border-danger/20 rounded-lg bg-danger-light dark:bg-dark-danger-light">
-                  <h4 className="font-medium text-danger dark:text-dark-danger mb-2">Are you sure?</h4>
-                  <p className="text-sm text-danger dark:text-dark-danger mb-4">
+                <div className="mt-3 sm:mt-4 p-3 sm:p-4 border border-danger/20 rounded-lg bg-danger-light dark:bg-dark-danger-light">
+                  <h4 className="font-medium text-danger dark:text-dark-danger mb-2 text-mobile-sm sm:text-sm">Are you sure?</h4>
+                  <p className="text-mobile-sm sm:text-sm text-danger dark:text-dark-danger mb-3 sm:mb-4">
                     This action cannot be undone. All your data will be permanently deleted.
                   </p>
-                  <div className="flex space-x-2">
+                  <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setShowDeleteConfirm(false)}
                       disabled={isDeleting}
+                      className="min-h-[44px] text-mobile-sm sm:text-sm"
                     >
                       Cancel
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-danger dark:text-dark-danger border-danger/50 dark:border-dark-danger/50 hover:bg-danger-light dark:hover:bg-dark-danger-light"
+                      className="text-danger dark:text-dark-danger border-danger/50 dark:border-dark-danger/50 hover:bg-danger-light dark:hover:bg-dark-danger-light min-h-[44px] text-mobile-sm sm:text-sm"
                       onClick={handleDeleteAccount}
                       disabled={isDeleting}
                     >

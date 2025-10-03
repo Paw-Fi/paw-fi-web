@@ -271,237 +271,221 @@ export default function ModernCourseDetailPage() {
       animate="visible"
       variants={containerVariants}
     >
-      {/* Hero Section with Course Info */}
+      {/* Hero Section with Course Info - Mobile Optimized */}
       <motion.section
         className="relative overflow-hidden"
         variants={heroVariants}
       >
-        {/* Background Gradient */}
+        {/* Background Gradient - Subtle on mobile */}
         <div className={`absolute inset-0 ${isEssentialsCourse
-            ? 'bg-gradient-to-br from-emerald-600/10 dark:from-emerald-400/20 via-teal-600/10 dark:via-teal-400/20 to-green-600/10 dark:to-green-400/20'
-            : 'bg-gradient-to-br from-purple-600/10 dark:from-purple-400/20 via-indigo-600/10 dark:via-indigo-400/20 to-blue-600/10 dark:to-blue-400/20'
+            ? 'bg-gradient-to-br from-emerald-600/5 sm:from-emerald-600/10 dark:from-emerald-400/10 sm:dark:from-emerald-400/20 via-teal-600/5 sm:via-teal-600/10 dark:via-teal-400/10 sm:dark:via-teal-400/20 to-green-600/5 sm:to-green-600/10 dark:to-green-400/10 sm:dark:to-green-400/20'
+            : 'bg-gradient-to-br from-purple-600/5 sm:from-purple-600/10 dark:from-purple-400/10 sm:dark:from-purple-400/20 via-indigo-600/5 sm:via-indigo-600/10 dark:via-indigo-400/10 sm:dark:via-indigo-400/20 to-blue-600/5 sm:to-blue-600/10 dark:to-blue-400/10 sm:dark:to-blue-400/20'
           }`} />
 
-        {/* Decorative Elements */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-400/20 dark:bg-purple-400/30 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/20 dark:bg-indigo-400/30 rounded-full blur-3xl" />
+        {/* Decorative Elements - Hidden on mobile */}
+        <div className="hidden sm:block absolute -top-40 -right-40 w-80 h-80 bg-purple-400/20 dark:bg-purple-400/30 rounded-full blur-3xl" />
+        <div className="hidden sm:block absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/20 dark:bg-indigo-400/30 rounded-full blur-3xl" />
 
-        <div className="relative px-4 py-8 max-w-7xl mx-auto">
-          
-
-            {/* Course Header */}
-            <div className="grid lg:grid-cols-3 gap-8 ">
-              {/* Course Info */}
-              <div className="lg:col-span-2">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  {/* Course Type Badge */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`
-                      flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold
-                      ${isEssentialsCourse
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
-                      }
-                    `}>
-                      <FontAwesomeIcon icon={isEssentialsCourse ? faGraduationCap : faRobot} className="h-4 w-4" />
-                      <span>{isEssentialsCourse ? 'Expert-Led Course' : 'AI-Personalized'}</span>
-                    </div>
-                    {!isEssentialsCourse && (
-                      <span className="px-3 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-sm font-medium rounded-full">
-                        <FontAwesomeIcon icon={faGem} className="h-3 w-3 mr-1" />
-                        Premium
-                      </span>
-                    )}
+        <div className="relative px-3 sm:px-4 py-4 sm:py-8 max-w-7xl mx-auto">
+          {/* Course Header - Mobile Optimized Layout */}
+          <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-1 lg:grid-cols-3 sm:gap-8">
+            {/* Course Info */}
+            <div className="lg:col-span-2">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                {/* Course Type Badge - Mobile Optimized */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <div className={`
+                    flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-mobile-sm sm:text-sm font-semibold min-h-[32px]
+                    ${isEssentialsCourse
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
+                    }
+                  `}>
+                    <FontAwesomeIcon icon={isEssentialsCourse ? faGraduationCap : faRobot} className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>{isEssentialsCourse ? 'Expert-Led Course' : 'AI-Personalized'}</span>
                   </div>
-
-                  {/* Course Title & Description */}
-                  <h1 className="text-4xl lg:text-5xl font-bold mb-4">
-                    <span className={`
-                      bg-gradient-to-r bg-clip-text text-transparent
-                      ${isEssentialsCourse
-                        ? 'from-emerald-600 to-teal-600'
-                        : 'from-purple-600 to-indigo-600'
-                      }
-                    `}>
-                      {course.title}
+                  {!isEssentialsCourse && (
+                    <span className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-mobile-sm sm:text-sm font-medium rounded-full min-h-[32px] flex items-center">
+                      <FontAwesomeIcon icon={faGem} className="h-3 w-3 mr-1" />
+                      Premium
                     </span>
-                  </h1>
-                  <p className="text-lg text-foreground/70 mb-6 leading-relaxed">
-                    {course.description}
-                  </p>
+                  )}
+                </div>
 
-                  {/* Course Metrics */}
-                  <div className="flex flex-wrap gap-4 mb-6">
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faBookOpen} className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-foreground">{courseMetrics.totalLessons} Lessons</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faClock} className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-foreground">~{courseMetrics.estimatedTime} minutes</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon icon={faTrophy} className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-foreground">{courseMetrics.totalXP} XP Total</span>
-                    </div>
+                {/* Course Title & Description - Mobile Optimized Typography */}
+                <h1 className="text-mobile-lg sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4">
+                  <span className={`
+                    bg-gradient-to-r bg-clip-text text-transparent
+                    ${isEssentialsCourse
+                      ? 'from-emerald-600 to-teal-600'
+                      : 'from-purple-600 to-indigo-600'
+                    }
+                  `}>
+                    {course.title}
+                  </span>
+                </h1>
+                <p className="text-mobile-base sm:text-lg text-foreground/70 mb-4 sm:mb-6 leading-relaxed">
+                  {course.description}
+                </p>
+
+                {/* Course Metrics - Mobile Optimized with CSS Variables */}
+                <div className="flex flex-wrap gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <FontAwesomeIcon icon={faBookOpen} className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                    <span className="text-mobile-sm sm:text-base text-foreground">{courseMetrics.totalLessons} Lessons</span>
                   </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <FontAwesomeIcon icon={faClock} className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                    <span className="text-mobile-sm sm:text-base text-foreground">~{courseMetrics.estimatedTime} min</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <FontAwesomeIcon icon={faTrophy} className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                    <span className="text-mobile-sm sm:text-base text-foreground">{courseMetrics.totalXP} XP</span>
+                  </div>
+                </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-3">
-                    {courseMetrics.nextLesson ? (
-                      <button
-                        onClick={() => handleLessonClick(courseMetrics.nextLesson?.lesson_id || '')}
-                        className={`
-                          group flex items-center gap-2 px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-300
-                          ${isEssentialsCourse
-                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-xl'
-                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-xl'
-                          }
-                        `}
-                      >
-                        <span>{isFirstLesson? "Start Learning" : "Continue Learning"}</span>
-                        <FontAwesomeIcon icon={faPlay} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    ) : courseMetrics.progress === 100 ? (
-                      <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium shadow-lg">
-                        <FontAwesomeIcon icon={faCircleCheck} className="h-5 w-5" />
-                        <span>Course Completed!</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleLessonClick(course.lessons[0].lesson_id)}
-                        className={`
-                          group flex items-center gap-2 px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-300
-                          ${isEssentialsCourse
-                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-xl'
-                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-xl'
-                          }
-                        `}
-                      >
-                        <FontAwesomeIcon icon={faRocket} className="h-5 w-5" />
-                        <span>Start Course</span>
-                        <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                      </button>
-                    )}
-
-                    {/* <button
-                      onClick={() => setSavedCourse(!savedCourse)}
+                {/* Action Buttons - Mobile Optimized Touch Targets */}
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  {courseMetrics.nextLesson ? (
+                    <button
+                      onClick={() => handleLessonClick(courseMetrics.nextLesson?.lesson_id || '')}
                       className={`
-                        flex items-center gap-2 px-6 py-3 rounded-xl font-medium border-2 transition-all duration-300
-                        ${savedCourse
-                          ? 'bg-muted border-border text-foreground'
-                          : 'bg-card border-border text-foreground hover:border-border/80'
+                        group flex items-center justify-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-300 min-h-[44px] text-mobile-base sm:text-base
+                        ${isEssentialsCourse
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-xl'
+                          : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-xl'
                         }
                       `}
                     >
-                      <FontAwesomeIcon icon={faBookmark} className={`h-5 w-5 ${savedCourse ? 'text-yellow-500' : ''}`} />
-                      <span>{savedCourse ? 'Saved' : 'Save Course'}</span>
-                    </button> */}
-
-                    <button 
-                      onClick={() => setShowShareModal(true)}
-                      className="flex items-center gap-2 px-6 py-3 bg-card border-2 border-border text-foreground rounded-xl font-medium hover:border-border/80 transition-all duration-300"
-                    >
-                      <FontAwesomeIcon icon={faShareNodes} className="h-5 w-5" />
-                      <span>Share</span>
+                      <span>{isFirstLesson? "Start Learning" : "Continue Learning"}</span>
+                      <FontAwesomeIcon icon={faPlay} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </button>
-                  </div>
-                </motion.div>
-              </div>
-
-              {/* Progress Card */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="lg:col-span-1"
-              >
-                <div className="bg-card/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-border">
-                  <h3 className="text-lg font-bold text-foreground mb-4">Your Progress</h3>
-
-                  {/* Progress Ring */}
-                  <div className="relative w-48 h-48 mx-auto mb-6">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle
-                        cx="96"
-                        cy="96"
-                        r="80"
-                        stroke="currentColor"
-                        strokeWidth="12"
-                        fill="none"
-                        className="text-muted/50"
-                      />
-                      <motion.circle
-                        cx="96"
-                        cy="96"
-                        r="80"
-                        stroke="currentColor"
-                        strokeWidth="12"
-                        fill="none"
-                        strokeDasharray={`${2 * Math.PI * 80}`}
-                        strokeDashoffset={`${2 * Math.PI * 80 * (1 - courseMetrics.progress / 100)}`}
-                        className={isEssentialsCourse ? "text-emerald-500 dark:text-emerald-400" : "text-purple-500 dark:text-purple-400"}
-                        initial={{ strokeDashoffset: `${2 * Math.PI * 80}` }}
-                        animate={{ strokeDashoffset: `${2 * Math.PI * 80 * (1 - courseMetrics.progress / 100)}` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-4xl font-bold text-foreground">{courseMetrics.progress}%</span>
-                      <span className="text-sm text-muted-foreground">Complete</span>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                      <span className="text-muted-foreground">Lessons Completed</span>
-                      <span className="font-semibold text-foreground">
-                        {courseMetrics.completedLessons}/{courseMetrics.totalLessons}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                      <span className="text-muted-foreground">XP Earned</span>
-                      <span className="font-semibold text-foreground">
-                        {courseMetrics.earnedXP}/{courseMetrics.totalXP}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                      <span className="text-muted-foreground">Time Remaining</span>
-                      <span className="font-semibold text-foreground">
-                        ~{Math.round(courseMetrics.estimatedTime * (1 - courseMetrics.progress / 100))} min
-                      </span>
-                    </div>
-                  </div>
-
-                  {courseMetrics.progress === 100 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 bg-gradient-to-r from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700"
+                  ) : courseMetrics.progress === 100 ? (
+                    <button className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium shadow-lg min-h-[44px] text-mobile-base sm:text-base">
+                      <FontAwesomeIcon icon={faCircleCheck} className="h-5 w-5" />
+                      <span>Course Completed!</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleLessonClick(course.lessons[0].lesson_id)}
+                      className={`
+                        group flex items-center justify-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-medium shadow-lg transition-all duration-300 min-h-[44px] text-mobile-base sm:text-base
+                        ${isEssentialsCourse
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:shadow-xl'
+                          : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-xl'
+                        }
+                      `}
                     >
-                      <div className="flex items-center gap-3">
-                        <FontAwesomeIcon icon={faCertificate} className="h-6 w-6 text-green-600 dark:text-green-400" />
-                        <div>
-                          <p className="font-semibold text-green-800 dark:text-green-300">Certificate Available!</p>
-                          <p className="text-sm text-green-600 dark:text-green-400">Download your completion certificate</p>
-                        </div>
-                      </div>
-                    </motion.div>
+                      <FontAwesomeIcon icon={faRocket} className="h-5 w-5" />
+                      <span>Start Course</span>
+                      <FontAwesomeIcon icon={faChevronRight} className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                    </button>
                   )}
+
+                  <button 
+                    onClick={() => setShowShareModal(true)}
+                    className="flex items-center justify-center gap-2 px-4 sm:px-6 py-3 bg-card border-2 border-border text-foreground rounded-xl font-medium hover:border-border/80 transition-all duration-300 min-h-[44px] text-mobile-base sm:text-base"
+                  >
+                    <FontAwesomeIcon icon={faShareNodes} className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="hidden sm:inline">Share</span>
+                  </button>
                 </div>
               </motion.div>
             </div>
+
+            {/* Progress Card - Mobile Optimized Compact Design */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="lg:col-span-1"
+            >
+              <div className="bg-card/90 backdrop-blur-sm rounded-2xl sm:rounded-2xl shadow-lg sm:shadow-xl p-4 sm:p-6 border border-border">
+                <h3 className="text-mobile-base sm:text-lg font-bold text-foreground mb-3 sm:mb-4">Your Progress</h3>
+
+                {/* Progress Ring - Smaller on mobile */}
+                <div className="relative w-32 h-32 sm:w-48 sm:h-48 mx-auto mb-4 sm:mb-6">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle
+                      cx={window.innerWidth < 640 ? "64" : "96"}
+                      cy={window.innerWidth < 640 ? "64" : "96"}
+                      r={window.innerWidth < 640 ? "52" : "80"}
+                      stroke="currentColor"
+                      strokeWidth={window.innerWidth < 640 ? "8" : "12"}
+                      fill="none"
+                      className="text-muted/50"
+                    />
+                    <motion.circle
+                      cx={window.innerWidth < 640 ? "64" : "96"}
+                      cy={window.innerWidth < 640 ? "64" : "96"}
+                      r={window.innerWidth < 640 ? "52" : "80"}
+                      stroke="currentColor"
+                      strokeWidth={window.innerWidth < 640 ? "8" : "12"}
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * (window.innerWidth < 640 ? 52 : 80)}`}
+                      strokeDashoffset={`${2 * Math.PI * (window.innerWidth < 640 ? 52 : 80) * (1 - courseMetrics.progress / 100)}`}
+                      className={isEssentialsCourse ? "text-emerald-500 dark:text-emerald-400" : "text-purple-500 dark:text-purple-400"}
+                      initial={{ strokeDashoffset: `${2 * Math.PI * (window.innerWidth < 640 ? 52 : 80)}` }}
+                      animate={{ strokeDashoffset: `${2 * Math.PI * (window.innerWidth < 640 ? 52 : 80) * (1 - courseMetrics.progress / 100)}` }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl sm:text-4xl font-bold text-foreground">{courseMetrics.progress}%</span>
+                    <span className="text-mobile-xs sm:text-sm text-muted-foreground">Complete</span>
+                  </div>
+                </div>
+
+                {/* Stats - Mobile Optimized */}
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex justify-between items-center p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                    <span className="text-mobile-sm sm:text-base text-muted-foreground">Lessons</span>
+                    <span className="font-semibold text-mobile-sm sm:text-base text-foreground">
+                      {courseMetrics.completedLessons}/{courseMetrics.totalLessons}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                    <span className="text-mobile-sm sm:text-base text-muted-foreground">XP Earned</span>
+                    <span className="font-semibold text-mobile-sm sm:text-base text-foreground">
+                      {courseMetrics.earnedXP}/{courseMetrics.totalXP}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                    <span className="text-mobile-sm sm:text-base text-muted-foreground">Time Left</span>
+                    <span className="font-semibold text-mobile-sm sm:text-base text-foreground">
+                      ~{Math.round(courseMetrics.estimatedTime * (1 - courseMetrics.progress / 100))} min
+                    </span>
+                  </div>
+                </div>
+
+                {courseMetrics.progress === 100 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 sm:mt-4 p-3 sm:p-4 bg-gradient-to-r from-green-50 dark:from-green-900/20 to-emerald-50 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-700"
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <FontAwesomeIcon icon={faCertificate} className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-mobile-sm sm:text-base text-green-800 dark:text-green-300">Certificate Available!</p>
+                        <p className="text-mobile-xs sm:text-sm text-green-600 dark:text-green-400">Download your certificate</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         </div>
       </motion.section>
 
 
-      {/* Content Sections */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Content Sections - Mobile Optimized */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <AnimatePresence mode="wait">
           {/* Lessons Section */}
           {activeSection === 'lessons' && (
@@ -510,10 +494,10 @@ export default function ModernCourseDetailPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="grid lg:grid-cols-3 gap-8"
+              className="space-y-4 sm:space-y-0 sm:grid lg:grid-cols-3 sm:gap-8"
             >
-              {/* Lessons List */}
-              <div className="lg:col-span-2 space-y-4">
+              {/* Lessons List - Mobile Optimized */}
+              <div className="lg:col-span-2 space-y-3 sm:space-y-4">
                 {course.lessons.map((lesson, index) => {
                   const lessonId = lesson.id 
                   const isCompleted = completedLessons.some(cl => cl.lesson_id === lessonId);
@@ -545,25 +529,23 @@ export default function ModernCourseDetailPage() {
                       transition={{ delay: index * 0.1 }}
                       className="relative"
                     >
-                     
-
                       <button
                         onClick={() => isUnlocked && handleLessonClick(lesson.lesson_id)}
                         className={`
-                          block w-full text-left relative overflow-hidden rounded-2xl transition-all duration-300
+                          block w-full text-left relative overflow-hidden rounded-xl sm:rounded-2xl transition-all duration-300 touch-manipulation min-h-[44px]
                           ${isUnlocked
-                            ? 'bg-card shadow-lg hover:shadow-xl cursor-pointer'
+                            ? 'bg-card shadow-md sm:shadow-lg hover:shadow-xl active:scale-[0.98] cursor-pointer'
                             : 'bg-muted/50 cursor-not-allowed opacity-75'
                           }
-                          ${isNext ? 'ring-2 ring-purple-500 dark:ring-purple-400 ring-offset-2 dark:ring-offset-gray-900' : ''}
+                          ${isNext ? 'ring-2 ring-purple-500 dark:ring-purple-400 ring-offset-1 sm:ring-offset-2 dark:ring-offset-gray-900' : ''}
                         `}
                         disabled={!isUnlocked}
                       >
-                        <div className="p-4 sm:p-6">
-                          <div className="flex items-start gap-3 sm:gap-4">
-                            {/* Lesson Number/Status */}
+                        <div className="p-3 sm:p-4 lg:p-6">
+                          <div className="flex items-start gap-2.5 sm:gap-3 lg:gap-4">
+                            {/* Lesson Number/Status - Mobile Optimized */}
                             <div className={`
-                              w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0
+                              w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 rounded-full flex items-center justify-center text-base sm:text-lg lg:text-2xl font-bold flex-shrink-0
                               ${isCompleted
                                 ? 'bg-gradient-to-br from-green-400 to-emerald-500 text-white'
                                 : isUnlocked
@@ -572,53 +554,52 @@ export default function ModernCourseDetailPage() {
                               }
                             `}>
                               {isCompleted ? (
-                                <FontAwesomeIcon icon={faCheck} className="h-6 w-6" />
+                                <FontAwesomeIcon icon={faCheck} className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
                               ) : isUnlocked ? (
                                 <span>{index + 1}</span>
                               ) : (
-                                <FontAwesomeIcon icon={faLock} className="h-5 w-5" />
+                                <FontAwesomeIcon icon={faLock} className="h-4 w-4 sm:h-5 sm:w-5" />
                               )}
                             </div>
 
-                            {/* Lesson Content */}
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between gap-4 mb-2">
-                                <div>
+                            {/* Lesson Content - Mobile Optimized Typography */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 sm:gap-4 mb-1.5 sm:mb-2">
+                                <div className="flex-1 min-w-0">
                                   <h3 className={`
-                                    text-lg font-bold mb-1
+                                    text-mobile-base sm:text-lg font-bold mb-0.5 sm:mb-1
                                     ${isUnlocked ? 'text-foreground' : 'text-muted-foreground'}
                                   `}>
                                     {lesson.title}
                                   </h3>
                                   <p className={`
-                                    text-sm
+                                    text-mobile-sm sm:text-sm line-clamp-2
                                     ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}
                                   `}>
                                     {lesson.description}
                                   </p>
                                 </div>
-                                <div className="text-2xl sm:text-3xl flex-shrink-0">
+                                <div className="text-xl sm:text-2xl lg:text-3xl flex-shrink-0">
                                   {lesson.icon || '📚'}
                                 </div>
                               </div>
                               
-                              {/* ===== FIX START ===== */}
-                              {/* Lesson Meta */}
-                              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4">
-                                <div className="flex items-center gap-1.5">
+                              {/* Lesson Meta - Mobile Optimized with CSS Variables */}
+                              <div className="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-4 mt-2.5 sm:mt-4">
+                                <div className="flex items-center gap-1 sm:gap-1.5">
                                   <FontAwesomeIcon icon={faBookOpen} className={`h-3 w-3 sm:h-4 sm:w-4 ${isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} />
-                                  <span className={`text-xs sm:text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
+                                  <span className={`text-mobile-xs sm:text-xs lg:text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
                                     {lesson.questions.length} Questions
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1 sm:gap-1.5">
                                   <FontAwesomeIcon icon={faClock} className={`h-3 w-3 sm:h-4 sm:w-4 ${isUnlocked ? 'text-muted-foreground' : 'text-muted-foreground/60'}`} />
-                                  <span className={`text-xs sm:text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
+                                  <span className={`text-mobile-xs sm:text-xs lg:text-sm ${isUnlocked ? 'text-foreground/70' : 'text-muted-foreground/60'}`}>
                                     ~{Math.max(5, lesson.questions.length * 2)} min
                                   </span>
                                 </div>
                                 <div className={`
-                                  ml-auto px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold
+                                  ml-auto px-2 sm:px-2.5 lg:px-3 py-1 rounded-full text-mobile-xs sm:text-xs lg:text-sm font-semibold
                                   ${isCompleted
                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                                     : isUnlocked
@@ -630,24 +611,23 @@ export default function ModernCourseDetailPage() {
                                 </div>
                               </div>
 
-                              {/* Status Messages */}
+                              {/* Status Messages - Mobile Optimized */}
                               {isNext && (
                                 <motion.div
                                   initial={{ opacity: 0, y: -10 }}
                                   animate={{ opacity: 1, y: 0 }}
-                                  className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center gap-2"
+                                  className="mt-2 sm:mt-3 p-2 sm:p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg flex items-center gap-1.5 sm:gap-2"
                                 >
-                                  <FontAwesomeIcon icon={faForward} className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Let's move on!</span>
+                                  <FontAwesomeIcon icon={faForward} className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                                  <span className="text-mobile-sm sm:text-sm font-medium text-purple-700 dark:text-purple-300">Let's move on!</span>
                                 </motion.div>
                               )}
                               {!isUnlocked && (
-                                <div className="mt-3 p-3 bg-muted/50 rounded-lg flex items-center gap-2">
-                                  <FontAwesomeIcon icon={faLock} className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">Complete previous lessons to unlock</span>
+                                <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-muted/50 rounded-lg flex items-center gap-1.5 sm:gap-2">
+                                  <FontAwesomeIcon icon={faLock} className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-mobile-sm sm:text-sm text-muted-foreground">Complete previous lessons to unlock</span>
                                 </div>
                               )}
-                              {/* ===== FIX END ===== */}
                             </div>
                           </div>
                         </div>
@@ -657,17 +637,15 @@ export default function ModernCourseDetailPage() {
                 })}
               </div>
 
-              {/* AI Assistant Card */}
-              <div className="lg:col-span-1">
+              {/* Learning Tips - Hidden on mobile, visible on desktop */}
+              <div className="hidden lg:block lg:col-span-1">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   className="sticky top-24"
                 >
-            
-
                   {/* Learning Tips */}
-                  <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-6 border border-yellow-200 dark:border-yellow-700">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl p-6 border border-yellow-200 dark:border-yellow-700">
                     <div className="flex items-center gap-2 mb-3">
                       <FontAwesomeIcon icon={faLightbulb} className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                       <h4 className="font-semibold text-foreground">Learning Tip</h4>
@@ -685,43 +663,51 @@ export default function ModernCourseDetailPage() {
         </AnimatePresence>
       </div>
       
-      {/* Share Modal */}
+      {/* Share Modal - Mobile Optimized (Full-screen on mobile, Modal on desktop) */}
      {createPortal( <AnimatePresence>
         {showShareModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
             onClick={() => setShowShareModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 1, y: '100%' }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-card rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              exit={{ opacity: 0, scale: 1, y: '100%' }}
+              transition={{ 
+                type: "spring", 
+                damping: 25, 
+                stiffness: 300,
+                duration: 0.3
+              }}
+              className="bg-card w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header */}
-              <div className="p-6 border-b border-border">
+              {/* Modal Header - Mobile Optimized */}
+              <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-foreground">Share Course</h3>
+                  <div>
+                    <h3 className="text-mobile-lg sm:text-xl font-bold text-foreground">Share Course</h3>
+                    <p className="text-mobile-sm sm:text-sm text-muted-foreground mt-0.5">Spread the knowledge!</p>
+                  </div>
                   <button
                     onClick={() => setShowShareModal(false)}
-                    className="p-2 hover:bg-muted/50 rounded-lg transition-colors"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-muted/50 rounded-lg transition-colors touch-manipulation flex-shrink-0"
+                    aria-label="Close modal"
                   >
-                    <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <FontAwesomeIcon icon={faClose} className="h-5 w-5 text-muted-foreground" />
                   </button>
                 </div>
               </div>
 
-              {/* Course Preview */}
-              <div className="p-6 border-b border-border">
-                <div className="flex items-start gap-4">
+              {/* Course Preview - Mobile Optimized */}
+              <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
+                <div className="flex items-start gap-3 sm:gap-4">
                   <div className={`
-                    w-16 h-16 rounded-xl flex items-center justify-center text-2xl flex-shrink-0
+                    w-12 h-12 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center text-xl sm:text-2xl flex-shrink-0
                     ${isEssentialsCourse
                       ? 'bg-gradient-to-br from-emerald-100 to-teal-100'
                       : 'bg-gradient-to-br from-purple-100 to-indigo-100'
@@ -730,9 +716,9 @@ export default function ModernCourseDetailPage() {
                     {course?.icon || '📚'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-foreground mb-1 line-clamp-2">{course?.title}</h4>
-                    <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{course?.description}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <h4 className="font-semibold text-mobile-base sm:text-base text-foreground mb-1 line-clamp-2">{course?.title}</h4>
+                    <p className="text-mobile-sm sm:text-sm text-muted-foreground mb-2 line-clamp-2">{course?.description}</p>
+                    <div className="flex items-center gap-2 sm:gap-4 text-mobile-xs sm:text-xs text-muted-foreground">
                       <span>{courseMetrics?.totalLessons} lessons</span>
                       <span>•</span>
                       <span>{courseMetrics?.totalXP} XP</span>
@@ -743,30 +729,30 @@ export default function ModernCourseDetailPage() {
                 </div>
               </div>
 
-              {/* Share Options */}
-              <div className="p-6">
-                <p className="text-sm text-muted-foreground mb-4">Share this course with your friends and help them learn!</p>
+              {/* Share Options - Mobile Optimized with Scrollable Content */}
+              <div className="flex-1 overflow-y-auto scrollbar-hide sm:scrollbar-auto p-4 sm:p-6">
+                <p className="text-mobile-sm sm:text-sm text-muted-foreground mb-4">Share this course with your friends and help them learn!</p>
                 
-                {/* Copy Link */}
+                {/* Copy Link - Mobile Optimized */}
                 <button
                   onClick={() => {
                     const url = `https://moneko.io/dashboard/learning/${courseId}`;
                     navigator.clipboard.writeText(url);
                     toast.success('Link copied to clipboard!');
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors mb-3"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors mb-3 touch-manipulation min-h-[60px]"
                 >
-                  <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
                     <FontAwesomeIcon icon={faCopy} className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-foreground">Copy Link</div>
-                    <div className="text-sm text-muted-foreground">Share via any platform</div>
+                    <div className="font-medium text-mobile-base sm:text-base text-foreground">Copy Link</div>
+                    <div className="text-mobile-sm sm:text-sm text-muted-foreground">Share via any platform</div>
                   </div>
                 </button>
 
-                {/* Social Media Platforms */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Social Media Platforms - Mobile Optimized Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Twitter/X */}
                   <button
                     onClick={() => {
@@ -774,13 +760,13 @@ export default function ModernCourseDetailPage() {
                       const text = `Check out this amazing course: ${course?.title} on @MonekoApp! 🚀 #FinancialEducation #Learning`;
                       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors touch-manipulation min-h-[60px]"
                   >
-                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center flex-shrink-0">
                       <FontAwesomeIcon icon={faTwitter} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-foreground">X (Twitter)</div>
+                      <div className="font-medium text-mobile-base sm:text-base text-foreground">X (Twitter)</div>
                     </div>
                   </button>
 
@@ -792,13 +778,13 @@ export default function ModernCourseDetailPage() {
                       const summary = course?.description || 'Learn financial concepts with this comprehensive course';
                       window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&summary=${encodeURIComponent(summary)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors touch-manipulation min-h-[60px]"
                   >
-                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <FontAwesomeIcon icon={faLinkedin} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-foreground">LinkedIn</div>
+                      <div className="font-medium text-mobile-base sm:text-base text-foreground">LinkedIn</div>
                     </div>
                   </button>
 
@@ -808,13 +794,13 @@ export default function ModernCourseDetailPage() {
                       const url = `https://moneko.io/dashboard/learning/${courseId}`;
                       window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors touch-manipulation min-h-[60px]"
                   >
-                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
                       <FontAwesomeIcon icon={faFacebook} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-foreground">Facebook</div>
+                      <div className="font-medium text-mobile-base sm:text-base text-foreground">Facebook</div>
                     </div>
                   </button>
 
@@ -825,18 +811,18 @@ export default function ModernCourseDetailPage() {
                       const title = `${course?.title} - Free Financial Education Course`;
                       window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`, '_blank');
                     }}
-                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors touch-manipulation min-h-[60px]"
                   >
-                    <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
                       <FontAwesomeIcon icon={faReddit} className="h-4 w-4 text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="font-medium text-foreground">Reddit</div>
+                      <div className="font-medium text-mobile-base sm:text-base text-foreground">Reddit</div>
                     </div>
                   </button>
                 </div>
 
-                {/* Discord - Full Width */}
+                {/* Discord - Full Width - Mobile Optimized */}
                 <button
                   onClick={() => {
                     const url = `https://moneko.io/dashboard/learning/${courseId}`;
@@ -844,14 +830,14 @@ export default function ModernCourseDetailPage() {
                     navigator.clipboard.writeText(message);
                     toast.success('Discord message copied to clipboard!');
                   }}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors mt-3"
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/30 transition-colors mt-3 touch-manipulation min-h-[60px]"
                 >
-                  <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FontAwesomeIcon icon={faDiscord} className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium text-foreground">Discord</div>
-                    <div className="text-sm text-muted-foreground">Copy formatted message</div>
+                    <div className="font-medium text-mobile-base sm:text-base text-foreground">Discord</div>
+                    <div className="text-mobile-sm sm:text-sm text-muted-foreground">Copy formatted message</div>
                   </div>
                 </button>
               </div>

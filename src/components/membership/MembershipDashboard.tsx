@@ -39,7 +39,7 @@ export function MembershipDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[60vh] w-full items-center justify-center">
+      <div className="flex h-[60vh] w-full items-center justify-center px-3">
         <motion.div
           className="text-center"
           initial={{ opacity: 0, y: 20 }}
@@ -47,8 +47,8 @@ export function MembershipDashboard() {
           transition={{ duration: 0.4 }}
         >
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--question-text-secondary)]" />
-          <p className="mt-4 text-sm font-medium text-[var(--question-text-secondary)]">
-            Loading your membership details...
+          <p className="mt-4 text-mobile-sm sm:text-sm font-medium text-[var(--question-text-secondary)]">
+            Loading membership details...
           </p>
         </motion.div>
       </div>
@@ -59,17 +59,17 @@ export function MembershipDashboard() {
     return (
       <div className="flex h-[60vh] w-full items-center justify-center px-4 py-6">
         <motion.div
-          className="text-center"
+          className="text-center max-w-md"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
           <AlertCircle className="mx-auto h-8 w-8 text-[var(--quiz-error-icon)]" />
-          <h3 className="mt-4 text-lg font-semibold text-[var(--question-text)]">
+          <h3 className="mt-4 text-mobile-base sm:text-lg font-semibold text-[var(--question-text)]">
             Unable to load membership details
           </h3>
-          <p className="mt-2 text-sm text-[var(--question-text-secondary)]">
-            Please try again later or contact our support team.
+          <p className="mt-2 text-mobile-sm sm:text-sm text-[var(--question-text-secondary)]">
+            Please try again later or contact support.
           </p>
         </motion.div>
       </div>
@@ -98,56 +98,56 @@ export function MembershipDashboard() {
 
   return (
     <motion.div 
-      className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto max-w-6xl px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Header */}
-      <div className="mb-8">
+      {/* Header - Compact Mobile */}
+      <div className="mb-6 sm:mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--lesson-title-text)] sm:text-4xl">
+          <h1 className="text-mobile-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-[var(--lesson-title-text)]">
             Membership
           </h1>
-          <p className="mt-2 text-lg leading-6 text-[var(--lesson-content-text)]">
-            Manage your subscription and unlock premium features
+          <p className="mt-1 sm:mt-2 text-mobile-sm sm:text-base md:text-lg leading-6 text-[var(--lesson-content-text)]">
+            Manage subscription & premium features
           </p>
         </motion.div>
       </div>
 
-      {/* Current Plan Overview */}
+      {/* Current Plan Overview - Compact Mobile */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
-        <Card className="border-1 border-[var(--question-border)] bg-[var(--section-bg)] shadow-sm">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex flex-col items-start justify-between space-y-4 sm:flex-row sm:items-center sm:space-y-0">
-              <div className="flex items-center space-x-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-primary">
+        <Card className="border-1 border-[var(--question-border)] bg-[var(--section-bg)] shadow-sm rounded-xl sm:rounded-2xl">
+          <CardContent className="p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-primary flex-shrink-0">
                   {subscription?.plan && subscription.plan !== "free" ? (
-                    <Crown className="h-6 w-6 text-primary-foreground" />
+                    <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                   ) : (
-                    <User className="h-6 w-6 text-primary-foreground" />
+                    <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                   )}
                 </div>
-                <div>
-                  <div className="flex items-center space-x-3">
-                    <h2 className="text-xl font-semibold text-foreground">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <h2 className="text-mobile-base sm:text-lg md:text-xl font-semibold text-foreground">
                       {subscription?.plan ? subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1) : "Free"} Plan
                     </h2>
-                    <Badge variant={getStatusBadgeVariant(subscription?.status || "none")}>
+                    <Badge variant={getStatusBadgeVariant(subscription?.status || "none")} className="flex-shrink-0">
                       <span className={`mr-1.5 h-2 w-2 rounded-full ${getStatusColor(subscription?.status || "none")}`} />
                       {subscription?.status ? subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1) : "None"}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-0.5 sm:mt-1 text-mobile-xs sm:text-sm text-muted-foreground">
                     {subscription?.status === "active" && !subscription?.cancel_at_period_end && subscription?.days_until_next_payment !== null && (
                       <>Renews in {subscription.days_until_next_payment} days</>
                     )}
@@ -161,13 +161,14 @@ export function MembershipDashboard() {
                 </div>
               </div>
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                 {subscription?.status === "active" && subscription?.cancel_at_period_end && (
                   <Button
                     onClick={() => resumeSubscription()}
                     disabled={isMutating}
                     variant="outline"
                     size="sm"
+                    className="min-h-[44px] flex-1 sm:flex-initial text-mobile-sm sm:text-sm"
                   >
                     {isMutating ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -181,7 +182,7 @@ export function MembershipDashboard() {
                 {(!subscription?.status || subscription?.status === "none" || subscription?.status === "canceled") && (
                   <Button
                     onClick={() => setActiveTab("plans")}
-                    className="bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90"
+                    className="bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90 min-h-[44px] flex-1 sm:flex-initial text-mobile-sm sm:text-sm"
                     size="sm"
                   >
                     Upgrade Now
@@ -194,29 +195,29 @@ export function MembershipDashboard() {
         </Card>
       </motion.div>
 
-      {/* Tabs */}
+      {/* Tabs - Mobile Optimized */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
         <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 rounded-xl bg-muted/50 p-1">
-            <TabsTrigger value="overview" className="rounded-lg transition-all">
+          <TabsList className="grid w-full grid-cols-4 rounded-xl bg-muted/50 p-1 h-auto">
+            <TabsTrigger value="overview" className="rounded-lg transition-all text-mobile-xs sm:text-sm min-h-[44px]">
               Overview
             </TabsTrigger>
-            <TabsTrigger value="billing" className="rounded-lg transition-all">
+            <TabsTrigger value="billing" className="rounded-lg transition-all text-mobile-xs sm:text-sm min-h-[44px]">
               Billing
             </TabsTrigger>
-            <TabsTrigger value="plans" className="rounded-lg transition-all">
+            <TabsTrigger value="plans" className="rounded-lg transition-all text-mobile-xs sm:text-sm min-h-[44px]">
               Plans
             </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg transition-all">
+            <TabsTrigger value="history" className="rounded-lg transition-all text-mobile-xs sm:text-sm min-h-[44px]">
               History
             </TabsTrigger>
           </TabsList>
           
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <AnimatePresence mode="wait">
               <TabsContent value="overview" className="space-y-6">
                 <motion.div

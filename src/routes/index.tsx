@@ -180,9 +180,9 @@ export default function HomePage() {
       </section>
 
       {/* Video Section */}
-      <section className="relative bg-section-bg-light">
+      {/* <section className="relative bg-section-bg-light">
         <VideoSection data={pageData} />
-      </section>
+      </section> */}
 
       {/* Features Bento Grid Section */}
       <section className="relative bg-section-bg-light">
