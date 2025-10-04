@@ -206,8 +206,7 @@ export function UserCommunityShowcase() {
     fetchUserData();
   }, []);
 
-  // Multiply by 80.3 to make it look more impressive
-  const displayCount = Math.round(totalUsers * 80.3);
+  const displayCount = totalUsers;
 
   return (
     <section className="relative z-10 px-4 py-20 sm:px-6 lg:px-8 overflow-hidden">
