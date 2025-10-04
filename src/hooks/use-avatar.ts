@@ -92,7 +92,7 @@ export function useAvatar() {
 
   // TanStack Query hooks with production-optimized retry configuration
   const avatarQuery = useQuery({
-    queryKey: user ? AVATAR_QUERY_KEYS.avatar(user.id) : [],
+    queryKey: AVATAR_QUERY_KEYS.avatar(user?.id || 'unauthenticated'),
     queryFn: fetchUserAvatar,
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -100,7 +100,7 @@ export function useAvatar() {
   });
 
   const customizationQuery = useQuery({
-    queryKey: user ? AVATAR_QUERY_KEYS.customization(user.id) : [],
+    queryKey: AVATAR_QUERY_KEYS.customization(user?.id || 'unauthenticated'),
     queryFn: fetchAvatarCustomization,
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -110,7 +110,7 @@ export function useAvatar() {
   const hasAvatarQuery = useQuery({
     // Deprecated: avoid second network call. We keep the hook for backward compatibility,
     // but resolve from avatarQuery to prevent duplicate fetches to /users.
-    queryKey: user ? AVATAR_QUERY_KEYS.hasAvatar(user.id) : [],
+    queryKey: AVATAR_QUERY_KEYS.hasAvatar(user?.id || 'unauthenticated'),
     queryFn: async (): Promise<boolean> => {
       // If no user, resolve false
       if (!user) return false;

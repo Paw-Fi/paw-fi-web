@@ -590,10 +590,12 @@ export function Dashboard() {
         // Clear all chat context state immediately
         clearAllMessages(); // Clear AI chat messages (ai-chat-context)
         clearAllConversations(); // Clear all conversations (chat-context)
-        
-        // Invalidate all TanStack Query cache on signout
-        queryClient.invalidateQueries();
-        
+
+        // IMPORTANT: Use clear() instead of invalidateQueries() to prevent refetching
+        // invalidateQueries() triggers immediate refetches which causes infinite loading
+        // clear() removes all cached data without triggering refetches
+        queryClient.clear();
+
         // Clear all chat-related localStorage data
         if (typeof window !== 'undefined') {
           localStorage.removeItem('ai-chat-messages');
@@ -606,12 +608,17 @@ export function Dashboard() {
             }
           }
           keysToRemove.forEach(key => localStorage.removeItem(key));
-          
+
           // Clear guest session cookies
           document.cookie = "moneko-guest-session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         }
-        
+
         toast.success("You have been signed out.");
+
+        // Redirect to login after cleanup
+        // Use navigate instead of relying on ProtectedRouteSubscription
+        // to ensure immediate redirect without race conditions
+        navigate({ to: '/login' });
       }
     } catch (error) {
       console.error("Error signing out:", error);

@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, CheckCircle, Mail } from "lucide-react";
+import { ArrowRight, CheckCircle } from "lucide-react";
 import { type EarlyAccessClaim } from "@/lib/early-access";
-import { useRemainingSpots, useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
+import { useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { Input } from "@/components/ui/input";
 import { useCookie } from "@/utils/use-cookie";
 import { useAuth } from "@/contexts/auth-context";
-import { Link, useNavigate } from "@tanstack/react-router";
+import {  useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
 
 
@@ -36,7 +36,6 @@ export function FreeTrialGiveawayForm() {
   }>({});
 
   // Use TanStack Query hooks
-  const { data: remainingSpots = 98, isLoading: spotsLoading } = useRemainingSpots();
   const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
   const claimMutation = useClaimEarlyAccess();
 
@@ -256,7 +255,7 @@ export function FreeTrialGiveawayForm() {
   // Show sign-in prompt if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl">
+      <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 backdrop-blur-2xl">
         <div className="text-center">
           <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-6">
             Sign In Required
@@ -292,7 +291,7 @@ export function FreeTrialGiveawayForm() {
 
       <div id="freetrial-form" className={classNames("flex flex-col",
         {
-"rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl":!hasClaimed        }
+"rounded-3xl bg-white/20 dark:bg-slate-800/20 backdrop-blur-2xl":!hasClaimed        }
       )}>
         <form
           onSubmit={handleSubmit}
@@ -403,7 +402,7 @@ export function FreeTrialGiveawayForm() {
                 <motion.button
                   type="submit"
                   disabled={claimMutation.isPending || hasClaimed}
-                  className="group inline-flex w-full items-center justify-center rounded-xl bg-[#7458FF] hover:bg-[#836DFF] disabled:bg-gray-400 px-8 py-4 text-lg font-medium text-white transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:opacity-70"
+                  className="group inline-flex w-full items-center justify-center rounded-xl bg-[#7458FF] hover:bg-[#836DFF] disabled:bg-gray-400 px-8 py-4 sm:text-md lg:text-lg font-medium text-white transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:opacity-70"
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
@@ -419,7 +418,7 @@ export function FreeTrialGiveawayForm() {
                     </>
                   ) : (
                     <>
-                      Join Mobile Beta Waitlist
+                      Join Mobile Waitlist
         <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}

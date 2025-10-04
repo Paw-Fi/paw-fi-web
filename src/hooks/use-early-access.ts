@@ -27,12 +27,12 @@ export function useRemainingSpots() {
  */
 export function useUserHasClaimed(userId?: string) {
   return useQuery({
-    queryKey: userId ? earlyAccessKeys.userClaimed(userId) : [],
+    queryKey: earlyAccessKeys.userClaimed(userId || 'unauthenticated'),
     queryFn: checkUserHasClaimed,
     enabled: !!userId, // Only run query if userId is provided (user is authenticated)
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnWindowFocus: false, // Prevent infinite loading on window focus (global refetchOnMount handles freshness)
     retry: 2,
   });
 }
