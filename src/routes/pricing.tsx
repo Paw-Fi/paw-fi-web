@@ -23,16 +23,17 @@ import { SocialProofSection } from "@/components/pricing/social-proof-section";
 import { useAuth } from "@/contexts/auth-context";
 import { useSubscription } from "@/hooks/use-subscription";
 import { StructuredData } from "@/components/seo/structured-data";
+import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => {
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
-      title: "Moneko Pricing Plans | Free AI Personal Finance Coach & Budgeting App",
-      description: "Start free with Moneko's AI-powered finance coach. Choose from flexible plans designed for every budget: Free Starter, Plus Money Mover, or Premium Invest & Thrive. No credit card required to start.",
+      title: "Moneko Pricing Plans | Simple, Transparent AI Budgeting App Pricing",
+      description: "Choose the perfect plan for your financial journey: Free Starter for beginners, Plus at $49/year with AI support, or Lifetime access at $149 one-time. Start budgeting smarter today.",
       keywords:
-        "moneko pricing, moneko plans, moneko subscription, personal finance app pricing, AI finance coach plans, budgeting app subscription, financial education pricing, investment tools cost, moneko cost, moneko free",
+        "moneko pricing, moneko plans, moneko subscription, personal finance app pricing, AI budgeting app, budgeting app subscription, financial planning pricing, lifetime access, moneko cost, moneko free",
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
@@ -67,58 +68,46 @@ export const Route = createFileRoute("/pricing")({
         itemListElement: [
           {
             "@type": "Offer",
-            name: "Moneko Free Plan - Starter Pack",
+            name: "Moneko Starter Plan - Free Forever",
             price: "0",
             priceCurrency: "USD",
             description:
-              "Perfect if you’re just starting your financial journey.",
+              "Free dashboard to start budgeting smarter with AI",
             url: pageUrl,
             availability: "https://schema.org/InStock",
             category: "Digital Good",
           },
           {
             "@type": "Offer",
-            name: "Moneko Plus Plan - Money Mover",
+            name: "Moneko Plus Plan",
             priceSpecification: [
               {
                 "@type": "PriceSpecification",
-                price: "9",
+                price: "7.99",
                 priceCurrency: "USD",
                 billingDuration: "P1M", // ISO 8601 duration for 1 month
               },
               {
                 "@type": "PriceSpecification",
-                price: "79",
+                price: "49",
                 priceCurrency: "USD",
                 billingDuration: "P1Y", // ISO 8601 duration for 1 year
               },
             ],
-            description: "Great if you want deeper tools and investing prep.",
+            description: "Perfect for managing expenses, bills, and savings with AI support",
             url: pageUrl,
             availability: "https://schema.org/InStock",
             category: "Digital Good",
           },
           {
             "@type": "Offer",
-            name: "Moneko Premium Plan - Invest & Thrive",
-            priceSpecification: [
-              {
-                "@type": "PriceSpecification",
-                price: "19",
-                priceCurrency: "USD",
-                billingDuration: "P1M",
-              },
-              {
-                "@type": "PriceSpecification",
-                price: "149",
-                priceCurrency: "USD",
-                billingDuration: "P1Y",
-              },
-            ],
+            name: "Moneko Lifetime Plan",
+            price: "149",
+            priceCurrency: "USD",
             description:
-              "For users serious about mastering money & building wealth.",
+              "All features, AI support & Founder benefits — forever",
             url: pageUrl,
-            availability: "https://schema.org/InStock",
+            availability: "https://schema.org/LimitedAvailability",
             category: "Digital Good",
           },
         ],
@@ -238,8 +227,8 @@ function PricingPage() {
         return;
       }
 
-      if (plan === "premium") {
-       window.location.href = "mailto:hello@moneko.io?subject=Waitlist%20Request&body=Please%20add%20me%20to%20the%20waitlist!"
+      if (plan === "lifetime") {
+       window.location.href = "mailto:hello@moneko.io?subject=Lifetime%20Plan%20Request&body=I'm interested in the Lifetime plan!"
         return;
       }
       setIsLoading(true);
@@ -337,26 +326,22 @@ function PricingPage() {
             className="mb-6 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl"
             variants={itemVariants}
           >
-            Master Your Money with Expert Financial Education
+            Simple, Transparent Pricing
           </motion.h1>
-          <motion.p
-            className="mx-auto max-w-2xl text-lg text-muted-foreground-color md:text-xl"
-            variants={itemVariants}
-          >
-            From foundational lessons to AI-powered personalized guidance - choose the plan that accelerates your journey from financial beginner to confident investor. Created by certified financial experts.
-          </motion.p>
 
           <motion.div
-            className="mt-10 flex justify-center"
+            className="mt-10 flex justify-center items-center gap-4"
             variants={itemVariants}
           >
+            <span className="text-base font-medium text-muted-foreground-color">Monthly</span>
             <Switch
-              labelLeft="Monthly"
-              labelRight="Annually (Save up to 25%)"
+              labelLeft=""
+              labelRight=""
               onToggle={handleBillingToggle}
               initialToggled={isAnnual}
               srText="Toggle billing period"
             />
+            <span className="text-base font-medium text-foreground">Annually (Save 40%)</span>
           </motion.div>
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
@@ -371,129 +356,160 @@ function PricingPage() {
           viewport={{ once: true, margin: "-50px" }}
           variants={containerVariants}
         >
-          {pricingTiers.map((tier) => (
-            <motion.div
-              key={tier.title}
-              className="relative"
-              variants={itemVariants}
-              whileHover={prefersReducedMotion ? {} : { y: -8, transition: { duration: 0.2 } }}
-            >
-              {tier.badgeText && (
-                <Badge 
-                  className={classNames(
-                    "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
-                    {
-                      "bg-primary text-primary-foreground": tier.badgeText === "Most Popular",
-                      "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular",
-                    },
-                  )}
-                >
-                  {tier.badgeText}
-                </Badge>
-              )}
-              
-              <Card className={classNames(
-                "h-full transition-all duration-200 hover:shadow-md",
-                {
-                  "bg-card shadow-sm": tier.highlight,
-                  "bg-card": !tier.highlight,
-                }
-              )}>
-                <CardHeader className="text-center pb-6">
-                  <CardTitle className="text-2xl font-bold text-foreground">
-                    {tier.title}
-                  </CardTitle>
-                  <CardDescription className="text-base text-muted-foreground-color">
-                    {tier.subtitle}
-                  </CardDescription>
-                </CardHeader>
+          {pricingTiers.map((tier) => {
+            const isLifetime = tier.title === "Lifetime";
+            const displayPrice = isLifetime ? "$149" : (isAnnual && tier.title === "Plus" ? "$49/YEAR (SAVE 40%)" : tier.priceMonthly);
+            const priceLabel = isLifetime ? "" : (isAnnual && tier.title === "Plus" ? "USD / month" : "USD / month");
+            const secondaryLabel = isLifetime ? "Early-bird price (One-time)" : (isAnnual && tier.title === "Plus" ? "First Month Free" : "Free Forever");
 
-                <CardContent className="pt-0">
-                  <div className="mb-8 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-4xl font-bold text-foreground">
-                        {isAnnual && tier.priceYearly
-                          ? tier.priceYearly.replace("/year", "")
-                          : tier.priceMonthly}
-                      </span>
-                      <span className="text-base font-medium text-muted-foreground-color">
-                        /month
-                      </span>
-                    </div>
-                    
-                    {isAnnual && tier.annualTotal && (
-                      <p className="text-sm text-muted-foreground-color mt-2">
-                        ${tier.annualTotal}/year
-                      </p>
-                    )}
-                    
-                    {tier.priceYearly && tier.title !== "Starter" && (
-                      <p className={`mt-3 text-sm font-medium text-primary transition-opacity duration-300 ${isAnnual ? "opacity-100" : "opacity-0"}`}>
-                        {isAnnual&&tier.title==="Plus" &&(
-                          "Save 4 months"
-                        )}
-                      </p>
-                    )}
-                  </div>
-
-                  <ul className="space-y-4 mb-8">
-                    {tier.features.map((feature) => (
-                      <li key={feature.text} className="flex items-start gap-3">
-                        <Check className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground-color leading-relaxed">
-                          {feature.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {tier.trialText && (
-                    <div className="mb-6 text-center rounded-lg bg-subtle-background p-4">
-                      <span className="text-base font-semibold text-primary whitespace-pre-line">
-                        {tier.trialText}
-                      </span>
-                    </div>
-                  )}
-                </CardContent>
-
-                <CardFooter className="pt-0 flex-col gap-4">
-                  <Button
+            return (
+              <motion.div
+                key={tier.title}
+                className="relative"
+                variants={itemVariants}
+                whileHover={prefersReducedMotion ? {} : { y: -8, transition: { duration: 0.2 } }}
+              >
+                {tier.badgeText && (
+                  <Badge 
                     className={classNames(
-                      "w-full transition-all duration-200 hover:shadow-sm",
+                      "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
                       {
-                        "bg-primary hover:bg-primary/90": tier.highlight,
-                      }
+                        "bg-primary text-primary-foreground": tier.badgeText === "Most Popular",
+                        "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100": tier.badgeText === "Limited Spots Available",
+                        "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular" && tier.badgeText !== "Limited Spots Available",
+                      },
                     )}
-                    variant={tier.highlight ? "default" : "outline"}
-                    onClick={() => {
-                      const lowerTitle = tier.title.toLowerCase();
-                      // Free plan -> registration
-                      if (lowerTitle === "free") {
-                        navigate({ to: "/register", search: { redirect: "/pricing" } });
-                        return;
-                      }
-
-                      // Map plan id based on tier title
-                      const planParam = lowerTitle === "plus" ? "plus" : "premium";
-
-                      // Proceed to checkout flow
-                      handleSubscribe(planParam);
-                    }}
                   >
-                    {tier.actionText}
-                  </Button>
+                    {tier.badgeText}
+                  </Badge>
+                )}
+                
+                <Card className={classNames(
+                  "h-full transition-all duration-200 hover:shadow-md",
+                  {
+                    "border-2 border-primary shadow-lg": tier.highlight,
+                    "bg-card": !tier.highlight,
+                  }
+                )}>
+                  <CardHeader className="text-center pb-6">
+                    <CardTitle className="text-2xl font-bold text-foreground">
+                      {tier.title}
+                    </CardTitle>
+                    <CardDescription className="text-base text-muted-foreground-color">
+                      {tier.subtitle}
+                    </CardDescription>
+                  </CardHeader>
 
-                  {tier.audienceText && (
-                    <p className="text-xs text-muted-foreground-color text-center">
-                      {tier.audienceText}
-                    </p>
-                  )}
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
+                  <CardContent className="pt-0">
+                    <div className="mb-8 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {isLifetime ? (
+                          <span className="text-4xl font-bold text-foreground">
+                            $149
+                          </span>
+                        ) : tier.title === "Plus" && isAnnual ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-3xl font-bold text-primary">
+                              $49/YEAR (SAVE 40%)
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-4xl font-bold text-foreground">
+                              {tier.priceMonthly}
+                            </span>
+                            <span className="text-base font-medium text-muted-foreground-color">
+                              /month
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      
+                      {priceLabel && (
+                        <p className="text-sm text-muted-foreground-color mt-2">
+                          {priceLabel}
+                        </p>
+                      )}
+                      
+                      {tier.title === "Plus" && isAnnual && (
+                        <p className="text-sm font-medium text-primary mt-2">
+                          First Month Free
+                        </p>
+                      )}
+
+                      {isLifetime && (
+                        <p className="text-sm text-muted-foreground-color mt-2">
+                          Early-bird price (One-time)<br/>
+                          <span className="line-through">Original $199</span>
+                        </p>
+                      )}
+
+                      {tier.title === "Starter" && (
+                        <p className="text-sm font-medium text-foreground mt-2">
+                          Free Forever
+                        </p>
+                      )}
+                    </div>
+
+                    <ul className="space-y-4 mb-8">
+                      {tier.features.map((feature) => (
+                        <li key={feature.text} className="flex items-start gap-3">
+                          <Check className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-muted-foreground-color leading-relaxed">
+                            {feature.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+
+                  <CardFooter className="pt-0 flex-col gap-4">
+                    <Button
+                      className={classNames(
+                        "w-full transition-all duration-200 hover:shadow-sm",
+                        {
+                          "bg-primary hover:bg-primary/90": tier.highlight,
+                        }
+                      )}
+                      variant={tier.highlight ? "default" : "outline"}
+                      onClick={() => {
+                        const lowerTitle = tier.title.toLowerCase();
+                        // Free plan -> registration
+                        if (lowerTitle === "starter" || lowerTitle === "free") {
+                          navigate({ to: "/register", search: { redirect: "/pricing" } });
+                          return;
+                        }
+
+                        // Map plan id based on tier title
+                        const planParam = lowerTitle === "plus" ? "plus" : "lifetime";
+
+                        // Proceed to checkout flow
+                        handleSubscribe(planParam);
+                      }}
+                    >
+                      {tier.actionText}
+                    </Button>
+
+                    {tier.audienceText && tier.title !== "Lifetime" && (
+                      <p className="text-xs text-muted-foreground-color text-center">
+                        {tier.audienceText}
+                      </p>
+                    )}
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            );
+          })}
         </motion.div>
 
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={containerVariants}
+        >
+        <UserCommunityShowcase />
+        </motion.div>
         <motion.div
           initial="hidden"
           whileInView="visible"

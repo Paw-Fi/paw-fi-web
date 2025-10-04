@@ -48,13 +48,13 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointE
 export function DailyHabitCalculatorWidget({ widget }: { widget: IDailyHabitCalculatorWidget }) {
   const [dailySpend, setDailySpend] = useState(5);
   const [timeframe, setTimeframe] = useState(20);
-  
-  // Calculate future value assuming 6% annual return
+
+  // Calculate future value assuming 6% annual return - NO MOCK DATA
   const calculateFutureValue = () => {
     const monthlyInvestment = (dailySpend * 365) / 12;
     const monthlyRate = 0.06 / 12;
     const totalMonths = timeframe * 12;
-    
+
     // Future value of ordinary annuity formula
     const futureValue = monthlyInvestment * (((1 + monthlyRate) ** totalMonths - 1) / monthlyRate);
     return Math.round(futureValue);
@@ -64,69 +64,73 @@ export function DailyHabitCalculatorWidget({ widget }: { widget: IDailyHabitCalc
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-6 space-y-6">
+      <div className="h-full flex flex-col space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="text-center">
-          <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <p className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">
             What's a small daily habit you have?
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
             See how much your small expenses could grow if invested instead
           </p>
         </div>
 
-        {/* Daily Spend Slider */}
-        <div className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faCoffee} className="text-amber-600 text-lg" />
-            <div className="flex-1">
-              <RangeSlider
-                label="Daily Spend"
-                value={dailySpend}
-                onChange={(value) => setDailySpend(Number(value))}
-                min={1}
-                max={20}
-                step={1}
-                unit="$"
-                className="mb-4"
-              />
+        {/* Controls */}
+        <div className="space-y-4 sm:space-y-6">
+          <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-full p-2 sm:p-3">
+                <FontAwesomeIcon icon={faCoffee} className="text-lg sm:text-xl text-amber-500 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <RangeSlider
+                  label="Daily Spend"
+                  value={dailySpend}
+                  onChange={(value) => setDailySpend(Number(value))}
+                  min={1}
+                  max={20}
+                  step={1}
+                  unit="$"
+                  className=""
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-full p-2 sm:p-3">
+                <FontAwesomeIcon icon={faCalendarDays} className="text-lg sm:text-xl text-sky-500 dark:text-sky-400" />
+              </div>
+              <div className="flex-1">
+                <RangeSlider
+                  label="Timeframe"
+                  value={timeframe}
+                  onChange={(value) => setTimeframe(Number(value))}
+                  min={1}
+                  max={30}
+                  step={1}
+                  formatValue={(value) => `${value} years`}
+                  className=""
+                />
+              </div>
             </div>
           </div>
 
-          {/* Timeframe Slider */}
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faCalendarDays} className="text-blue-600 text-lg" />
-            <div className="flex-1">
-              <RangeSlider
-                label="Timeframe"
-                value={timeframe}
-                onChange={(value) => setTimeframe(Number(value))}
-                min={1}
-                max={30}
-                step={1}
-                formatValue={(value) => `${value} years`}
-                className="mb-4"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Result */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-6 text-center">
-          <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
-            ${futureValue.toLocaleString()}
-          </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            Your ${dailySpend} daily spend on coffee or lunches, if invested, could be worth{" "}
-            <span className="font-semibold text-green-600 dark:text-green-400">
+          {/* Result Card */}
+          <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-2xl p-6 sm:p-8 text-center">
+            <div className="text-3xl sm:text-4xl font-light text-emerald-600 dark:text-emerald-400 mb-3">
               ${futureValue.toLocaleString()}
-            </span>{" "}
-            in {timeframe} years.
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
-            <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
-            Calculation assumes 6% annual return
-          </p>
+            </div>
+            <p className="text-mobile-sm sm:text-sm text-muted-foreground-color leading-relaxed mb-2">
+              Your ${dailySpend}/day coffee habit could become{" "}
+              <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                ${futureValue.toLocaleString()}
+              </span>{" "}
+              in {timeframe} years if invested.
+            </p>
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color">
+              Assumes 6% annual return
+            </p>
+          </div>
         </div>
       </div>
     </Widget>
@@ -180,25 +184,25 @@ export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWi
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-6 space-y-6">
-        {/* Header */}
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header with mobile typography */}
         <div className="text-center">
-          <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <p className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">
             The Power of Your 401(k) Head Start
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
             See the power of starting early with a ${monthlyContribution} monthly contribution to your 401(k)
           </p>
         </div>
 
-        {/* Employer Match Toggle */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        {/* Employer Match Toggle with semantic colors */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="text-mobile-sm sm:text-sm font-medium text-foreground">
                 Include Employer Match?
               </label>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-1">
                 50% match on first 6% of salary
               </p>
             </div>
@@ -206,10 +210,10 @@ export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWi
               type="checkbox"
               checked={includeMatch}
               onChange={(e) => setIncludeMatch(e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
             />
           </div>
-          
+
           {includeMatch && (
             <div className="mt-4">
               <RangeSlider
@@ -226,10 +230,12 @@ export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWi
           )}
         </div>
 
-        {/* Age Slider */}
+        {/* Age Slider with icon container */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faUser} className="text-blue-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faUser} className="text-lg sm:text-xl text-sky-500 dark:text-sky-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Starting Age"
@@ -244,24 +250,24 @@ export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWi
           </div>
         </div>
 
-        {/* Bar Chart Visualization */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-4 text-center">
+        {/* Bar Chart Visualization with mobile responsive */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
+          <h4 className="text-mobile-sm sm:text-sm font-medium text-foreground mb-4 text-center">
             Pension Pot at Retirement (Age 67)
           </h4>
           <div className="space-y-2">
             {comparisonData.map((data) => (
               <div key={data.age} className="flex items-center">
-                <div className="w-8 text-xs text-slate-600 dark:text-slate-400">
+                <div className="w-8 text-mobile-xs sm:text-xs text-muted-foreground-color">
                   {data.age}
                 </div>
                 <div className="flex-1 mx-2">
-                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded relative">
+                  <div className="h-6 bg-subtle-background rounded-full relative">
                     <div
-                      className={`h-full rounded transition-all duration-500 ${
+                      className={`h-full rounded-full transition-all duration-500 ${
                         data.age === startAge
-                          ? "bg-gradient-to-r from-blue-500 to-purple-600"
-                          : "bg-gradient-to-r from-slate-400 to-slate-500"
+                          ? "bg-gradient-to-r from-primary/80 to-primary"
+                          : "bg-gradient-to-r from-muted-foreground-color/40 to-muted-foreground-color/60"
                       }`}
                       style={{ width: `${(data.pot / maxPot) * 100}%` }}
                     />
@@ -269,13 +275,13 @@ export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWi
                       <div className="absolute right-2 top-0 h-full flex items-center">
                         <FontAwesomeIcon
                           icon={faArrowRight}
-                          className="text-white text-xs"
+                          className="text-white text-mobile-xs sm:text-xs"
                         />
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="w-20 text-xs text-slate-600 dark:text-slate-400 text-right">
+                <div className="w-20 text-mobile-xs sm:text-xs text-muted-foreground-color text-right">
                   €{data.pot.toLocaleString()}
                 </div>
               </div>
@@ -283,23 +289,23 @@ export function PensionHeadStartWidget({ widget }: { widget: IPensionHeadStartWi
           </div>
         </div>
 
-        {/* Result */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6 text-center">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+        {/* Result with semantic color background */}
+        <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-2xl p-6 sm:p-8 text-center">
+          <div className="text-3xl sm:text-4xl font-light text-primary mb-3">
             ${pensionPot.toLocaleString()}
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color leading-relaxed">
             {startAge <= 25
               ? `Starting now could result in a 401(k) balance of $${pensionPot.toLocaleString()}.`
               : `Starting at ${startAge} gives you $${pensionPot.toLocaleString()}. Starting at 25 would give you $${comparisonData.find(d => d.age === 25)?.pot.toLocaleString()}.`}
           </p>
           {includeMatch && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+            <p className="text-mobile-xs sm:text-xs text-success mt-2">
               <FontAwesomeIcon icon={faCoins} className="mr-1" />
               Including employer match - that's free money!
             </p>
           )}
-          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
+          <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-2">
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             Assumes 6% annual return, retiring at 67
           </p>
@@ -333,21 +339,23 @@ export function MortgageDepositTimelineWidget({ widget }: { widget: IMortgageDep
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-6 space-y-6">
-        {/* Header */}
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header with mobile typography */}
         <div className="text-center">
-          <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <p className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">
             Your Down Payment Timeline
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
             Calculate your timeline for your home down payment
           </p>
         </div>
 
-        {/* Home Price Input */}
+        {/* Home Price Input with icon container */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faHome} className="text-green-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faHome} className="text-lg sm:text-xl text-emerald-500 dark:text-emerald-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Home Price"
@@ -363,36 +371,38 @@ export function MortgageDepositTimelineWidget({ widget }: { widget: IMortgageDep
           </div>
 
           {/* Down Payment Percentage Slider */}
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faCalculator} className="text-blue-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faCalculator} className="text-lg sm:text-xl text-sky-500 dark:text-sky-400" />
+            </div>
             <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <label className="text-lg font-medium text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 mb-2">
+                <label className="text-mobile-base sm:text-lg font-medium text-foreground">
                   Down Payment Percentage
                 </label>
                 <div className="relative">
-                  <FontAwesomeIcon 
-                    icon={faInfoCircle} 
-                    className="text-slate-400 cursor-pointer hover:text-slate-600"
+                  <FontAwesomeIcon
+                    icon={faInfoCircle}
+                    className="text-muted-foreground-color cursor-pointer hover:text-foreground"
                     onMouseEnter={() => setShowPMIInfo(true)}
                     onMouseLeave={() => setShowPMIInfo(false)}
                   />
                   {showPMIInfo && (
-                    <div className="absolute z-10 w-64 p-2 mt-1 text-xs bg-slate-800 text-white rounded shadow-lg -right-32">
+                    <div className="absolute z-10 w-64 p-2 mt-1 text-mobile-xs sm:text-xs bg-card text-foreground rounded-2xl shadow-lg -right-32">
                       In the US, a down payment of less than 20% usually requires you to pay Private Mortgage Insurance (PMI), which is an extra monthly cost.
                     </div>
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
                 {[3.5, 5, 10, 20].map(percentage => (
                   <button
                     key={percentage}
                     onClick={() => setDownPaymentPercentage(percentage)}
-                    className={`px-3 py-2 text-sm rounded-lg border transition-all ${
+                    className={`px-3 py-2 text-mobile-sm sm:text-sm rounded-full transition-all duration-200 ${
                       downPaymentPercentage === percentage
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-subtle-background/50 text-foreground hover:bg-subtle-background'
                     }`}
                   >
                     {getDownPaymentLabel(percentage)}
@@ -403,8 +413,10 @@ export function MortgageDepositTimelineWidget({ widget }: { widget: IMortgageDep
           </div>
 
           {/* Monthly Savings Slider */}
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faCoins} className="text-yellow-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faCoins} className="text-lg sm:text-xl text-amber-500 dark:text-amber-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Monthly Savings"
@@ -420,65 +432,65 @@ export function MortgageDepositTimelineWidget({ widget }: { widget: IMortgageDep
           </div>
         </div>
 
-        {/* Down Payment Calculation */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        {/* Down Payment Calculation with semantic colors */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Required Down Payment</p>
-              <p className="text-xl font-bold text-slate-700 dark:text-slate-200">
+              <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">Required Down Payment</p>
+              <p className="text-xl sm:text-2xl font-light text-foreground">
                 ${requiredDeposit.toLocaleString()}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-mobile-xs sm:text-xs text-muted-foreground-color">
                 {downPaymentPercentage}% of home price
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Monthly Progress</p>
-              <p className="text-xl font-bold text-slate-700 dark:text-slate-200">
+              <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">Monthly Progress</p>
+              <p className="text-xl sm:text-2xl font-light text-foreground">
                 {((monthlySavings / requiredDeposit) * 100).toFixed(1)}%
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-mobile-xs sm:text-xs text-muted-foreground-color">
                 of total needed
               </p>
             </div>
           </div>
         </div>
 
-        {/* Progress Bar */}
+        {/* Progress Bar with rounded styling */}
         <div className="space-y-2">
-          <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+          <div className="flex justify-between text-mobile-sm sm:text-sm text-muted-foreground-color">
             <span>Progress per month</span>
             <span>{((monthlySavings / requiredDeposit) * 100).toFixed(1)}%</span>
           </div>
-          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-subtle-background rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-green-400 to-blue-500 transition-all duration-500"
+              className="h-full bg-gradient-to-r from-success/80 to-success transition-all duration-500"
               style={{ width: `${Math.min(((monthlySavings / requiredDeposit) * 100), 100)}%` }}
             />
           </div>
         </div>
 
-        {/* Result */}
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-6 text-center">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-2">
+        {/* Result with semantic color background */}
+        <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-2xl p-6 sm:p-8 text-center">
+          <div className="text-3xl sm:text-4xl font-light text-success mb-3">
             {years > 0 ? `${years} years` : ""} {remainingMonths > 0 ? `${remainingMonths} months` : ""}
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color leading-relaxed">
             To save your ${requiredDeposit.toLocaleString()} down payment by putting aside ${monthlySavings} a month,
             it will take you{" "}
-            <span className="font-semibold text-green-600 dark:text-green-400">
+            <span className="font-medium text-success">
               {years > 0 && `${years} years`}
               {years > 0 && remainingMonths > 0 && " and "}
               {remainingMonths > 0 && `${remainingMonths} months`}
             </span>.
           </p>
           {downPaymentPercentage < 20 && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            <p className="text-mobile-xs sm:text-xs text-warning mt-2">
               <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
               Note: Less than 20% down payment typically requires PMI
             </p>
           )}
-          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
+          <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-2">
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             Based on US mortgage requirements
           </p>
@@ -633,10 +645,13 @@ export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) 
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="">       
-        {/* Monthly Income Input */}
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Monthly Income Input with mobile typography */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faCoins} className="text-lg sm:text-xl text-emerald-500 dark:text-emerald-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Monthly Take-Home Pay"
@@ -649,36 +664,32 @@ export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) 
                 className="mb-4"
               />
             </div>
-          </div>        
+          </div>
         </div>
 
-       
-
-        {/* Pie Chart */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        {/* Pie Chart with semantic background */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
           <div className="h-32 w-full flex items-center justify-center">
             <Pie data={chartData} options={chartOptions} />
           </div>
         </div>
 
-        {/* Budget Sliders */}
+        {/* Budget Sliders with mobile responsive */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium mt-2 text-center">
-          {generateInsight()}
+          <h4 className="text-mobile-sm sm:text-sm font-medium mt-2 text-center">
+            {generateInsight()}
           </h4>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {categories.map((category) => (
-              <div key={category.key} className="space-y-2">             
+              <div key={category.key} className="space-y-2">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                   <div className="flex items-center space-x-2">
-                    <FontAwesomeIcon icon={category.icon} className="text-slate-600 dark:text-slate-400" />
-                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <FontAwesomeIcon icon={category.icon} className="text-muted-foreground-color text-mobile-sm sm:text-sm" />
+                    <span className="text-mobile-xs sm:text-xs font-medium text-foreground">
                       {category.label} {budget[category.key as keyof typeof budget]}%
                     </span>
-                  </div>  
-                  </span>
-                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                  </div>
+                  <span className="text-mobile-sm sm:text-sm text-muted-foreground-color">
                     ${getDollarAmount(budget[category.key as keyof typeof budget]).toLocaleString()}
                   </span>
                 </div>
@@ -689,9 +700,9 @@ export function SalarySlicerWidget({ widget }: { widget: ISalarySlicerWidget }) 
                     max="60"
                     value={budget[category.key as keyof typeof budget]}
                     onChange={(e) => handleSliderChange(category.key, Number(e.target.value))}
-                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                    className="w-full h-2 bg-subtle-background rounded-full appearance-none cursor-pointer"
                     style={{
-                      background: `linear-gradient(to right, ${category.color} 0%, ${category.color} ${budget[category.key as keyof typeof budget] * 100/60}%, #e2e8f0 ${budget[category.key as keyof typeof budget] * 100/60}%, #e2e8f0 100%)`
+                      background: `linear-gradient(to right, ${category.color} 0%, ${category.color} ${budget[category.key as keyof typeof budget] * 100/60}%, var(--subtle-background) ${budget[category.key as keyof typeof budget] * 100/60}%, var(--subtle-background) 100%)`
                     }}
                   />
                 </div>
@@ -809,21 +820,23 @@ export function RealReturnsCalculatorWidget({ widget }: { widget: IRealReturnsCa
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-6 space-y-6">
-        {/* Header */}
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header with mobile typography */}
         <div className="text-center">
-          <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <p className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">
             Real Returns vs Inflation Impact
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
             See how inflation affects your investment's actual purchasing power
           </p>
         </div>
 
-        {/* Controls */}
+        {/* Controls with icon containers */}
         <div className="space-y-4">
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faMoneyBillWave} className="text-green-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faMoneyBillWave} className="text-lg sm:text-xl text-emerald-500 dark:text-emerald-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Initial Investment"
@@ -838,8 +851,10 @@ export function RealReturnsCalculatorWidget({ widget }: { widget: IRealReturnsCa
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faUpLong} className="text-blue-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faUpLong} className="text-lg sm:text-xl text-sky-500 dark:text-sky-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Expected Annual Return"
@@ -854,8 +869,10 @@ export function RealReturnsCalculatorWidget({ widget }: { widget: IRealReturnsCa
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faCalendarDays} className="text-purple-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faCalendarDays} className="text-lg sm:text-xl text-purple-500 dark:text-purple-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Time Horizon"
@@ -870,8 +887,10 @@ export function RealReturnsCalculatorWidget({ widget }: { widget: IRealReturnsCa
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faFire} className="text-red-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-red-50/50 dark:bg-red-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faFire} className="text-lg sm:text-xl text-red-500 dark:text-red-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Inflation Rate"
@@ -883,78 +902,78 @@ export function RealReturnsCalculatorWidget({ widget }: { widget: IRealReturnsCa
                 formatValue={(value) => `${value}%`}
                 className="mb-4"
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-1">
                 Current US average: ~3.2% (varies by year)
               </p>
             </div>
           </div>
         </div>
 
-        {/* Chart Visualization */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        {/* Chart Visualization with semantic background */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
           <div className="h-64">
             <Line data={generateChartData()} options={chartOptions} />
           </div>
         </div>
 
-        {/* Key Results */}
+        {/* Key Results with semantic colors */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+          <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-2xl p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-light text-sky-600 dark:text-sky-400 mb-1">
               ${results.nominalValue.toLocaleString()}
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
               Nominal Value
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-1">
               +${results.nominalGain.toLocaleString()}
             </p>
           </div>
-          
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
+
+          <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-2xl p-4 text-center">
+            <div className="text-2xl sm:text-3xl font-light text-success mb-1">
               ${results.realValue.toLocaleString()}
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
               Real Value (Today's $)
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-1">
               +${results.realGain.toLocaleString()}
             </p>
           </div>
         </div>
 
-        {/* Key Insight */}
-        <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 rounded-lg p-6 text-center">
-          <div className="text-lg font-bold text-amber-700 dark:text-amber-300 mb-2">
+        {/* Key Insight with semantic color */}
+        <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-2xl p-6 sm:p-8 text-center">
+          <div className="text-mobile-base sm:text-lg font-medium text-warning mb-2">
             Inflation Impact: -${results.purchasingPowerLoss.toLocaleString()}
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-            While your investment grows to <strong>${results.nominalValue.toLocaleString()}</strong>, 
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color leading-relaxed">
+            While your investment grows to <strong>${results.nominalValue.toLocaleString()}</strong>,
             inflation means it only has the purchasing power of{" "}
             <strong>${results.inflationAdjustedValue.toLocaleString()}</strong> in today's dollars.
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
+          <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-2">
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             Real return: {(annualReturn - inflationRate).toFixed(1)}% annually
           </p>
         </div>
 
-        {/* Educational Toggle */}
+        {/* Educational Toggle with mobile typography */}
         <div className="text-center">
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-mobile-sm sm:text-sm text-primary hover:underline transition-all duration-200"
           >
             {showDetails ? 'Hide' : 'Show'} inflation details
           </button>
-          
+
           {showDetails && (
-            <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg text-left">
-              <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-3">
+            <div className="mt-4 p-4 sm:p-6 bg-subtle-background/50 rounded-2xl text-left">
+              <h4 className="font-medium text-foreground mb-3 text-mobile-sm sm:text-sm">
                 Understanding Real vs Nominal Returns
               </h4>
-              <div className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+              <div className="space-y-2 text-mobile-sm sm:text-sm text-muted-foreground-color">
                 <p>
                   <strong>Nominal Return:</strong> The percentage your investment grows each year (before inflation).
                 </p>
@@ -964,7 +983,7 @@ export function RealReturnsCalculatorWidget({ widget }: { widget: IRealReturnsCa
                 <p>
                   <strong>Formula:</strong> Real Return ≈ Nominal Return - Inflation Rate
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-500 mt-3">
+                <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-3">
                   💡 This is why investors often target returns above the inflation rate to grow real wealth.
                 </p>
               </div>
@@ -1154,22 +1173,24 @@ export function AfterTaxReturnsWidget({ widget }: { widget: IAfterTaxReturnsWidg
 
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="p-6 space-y-6">
-        {/* Header */}
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header with mobile typography */}
         <div className="text-center">
-          <p className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <p className="text-mobile-base sm:text-lg font-medium text-foreground mb-2">
             After-Tax Investment Returns
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
             Compare real returns across taxable, traditional, and Roth accounts
           </p>
         </div>
 
-        {/* Controls */}
+        {/* Controls with mobile responsive grid */}
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <FontAwesomeIcon icon={faMoneyBillWave} className="text-green-600 text-sm" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-full p-2">
+                <FontAwesomeIcon icon={faMoneyBillWave} className="text-mobile-sm sm:text-sm text-emerald-500 dark:text-emerald-400" />
+              </div>
               <div className="flex-1">
                 <RangeSlider
                   label="Initial Investment"
@@ -1184,8 +1205,10 @@ export function AfterTaxReturnsWidget({ widget }: { widget: IAfterTaxReturnsWidg
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <FontAwesomeIcon icon={faCalendarDays} className="text-purple-600 text-sm" />
+            <div className="flex items-center gap-2">
+              <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-full p-2">
+                <FontAwesomeIcon icon={faCalendarDays} className="text-mobile-sm sm:text-sm text-purple-500 dark:text-purple-400" />
+              </div>
               <div className="flex-1">
                 <RangeSlider
                   label="Annual Contribution"
@@ -1201,9 +1224,11 @@ export function AfterTaxReturnsWidget({ widget }: { widget: IAfterTaxReturnsWidg
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <FontAwesomeIcon icon={faUpLong} className="text-blue-600 text-sm" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-full p-2">
+                <FontAwesomeIcon icon={faUpLong} className="text-mobile-sm sm:text-sm text-sky-500 dark:text-sky-400" />
+              </div>
               <div className="flex-1">
                 <RangeSlider
                   label="Expected Annual Return"
@@ -1218,8 +1243,10 @@ export function AfterTaxReturnsWidget({ widget }: { widget: IAfterTaxReturnsWidg
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <FontAwesomeIcon icon={faUser} className="text-indigo-600 text-sm" />
+            <div className="flex items-center gap-2">
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/30 rounded-full p-2">
+                <FontAwesomeIcon icon={faUser} className="text-mobile-sm sm:text-sm text-indigo-500 dark:text-indigo-400" />
+              </div>
               <div className="flex-1">
                 <RangeSlider
                   label="Time Horizon"
@@ -1235,8 +1262,10 @@ export function AfterTaxReturnsWidget({ widget }: { widget: IAfterTaxReturnsWidg
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <FontAwesomeIcon icon={faDollarSign} className="text-amber-600 text-lg" />
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-50/50 dark:bg-amber-950/30 rounded-full p-2 sm:p-3">
+              <FontAwesomeIcon icon={faDollarSign} className="text-lg sm:text-xl text-amber-500 dark:text-amber-400" />
+            </div>
             <div className="flex-1">
               <RangeSlider
                 label="Annual Income (for tax calculation)"
@@ -1248,104 +1277,104 @@ export function AfterTaxReturnsWidget({ widget }: { widget: IAfterTaxReturnsWidg
                 formatValue={(value) => `$${Number(value).toLocaleString()}`}
                 className="mb-2"
               />
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-1">
                 Marginal tax rate: {(marginalTaxRate * 100).toFixed(0)}% | Capital gains: {(capitalGainsRate * 100).toFixed(0)}%
               </p>
             </div>
           </div>
         </div>
 
-        {/* Chart Visualization */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+        {/* Chart Visualization with semantic background */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
           <div className="h-64">
             <Line data={generateComparisonChart()} options={chartOptions} />
           </div>
         </div>
 
-        {/* Results Comparison */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Results Comparison with semantic colors */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {/* Taxable Account */}
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 text-center">
+          <div className="bg-red-50/50 dark:bg-red-950/30 rounded-2xl p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <FontAwesomeIcon icon={faChartLine} className="text-red-600 text-sm" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Taxable</span>
+              <FontAwesomeIcon icon={faChartLine} className="text-mobile-sm sm:text-sm text-red-500 dark:text-red-400" />
+              <span className="text-mobile-sm sm:text-sm font-medium text-foreground">Taxable</span>
             </div>
-            <div className="text-xl font-bold text-red-600 dark:text-red-400 mb-1">
+            <div className="text-xl sm:text-2xl font-light text-red-600 dark:text-red-400 mb-1">
               ${scenarios.taxable.afterTax.toLocaleString()}
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color">
               {scenarios.taxable.effectiveReturn.toFixed(1)}% effective return
             </p>
           </div>
 
           {/* Traditional 401k */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+          <div className="bg-sky-50/50 dark:bg-sky-950/30 rounded-2xl p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <FontAwesomeIcon icon={faShieldAlt} className="text-blue-600 text-sm" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Traditional</span>
+              <FontAwesomeIcon icon={faShieldAlt} className="text-mobile-sm sm:text-sm text-sky-500 dark:text-sky-400" />
+              <span className="text-mobile-sm sm:text-sm font-medium text-foreground">Traditional</span>
             </div>
-            <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+            <div className="text-xl sm:text-2xl font-light text-sky-600 dark:text-sky-400 mb-1">
               ${scenarios.traditional.afterTax.toLocaleString()}
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color">
               {scenarios.traditional.effectiveReturn.toFixed(1)}% effective return
             </p>
           </div>
 
           {/* Roth */}
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+          <div className="bg-emerald-50/50 dark:bg-emerald-950/30 rounded-2xl p-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <FontAwesomeIcon icon={faLightbulb} className="text-green-600 text-sm" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Roth</span>
+              <FontAwesomeIcon icon={faLightbulb} className="text-mobile-sm sm:text-sm text-success" />
+              <span className="text-mobile-sm sm:text-sm font-medium text-foreground">Roth</span>
             </div>
-            <div className="text-xl font-bold text-green-600 dark:text-green-400 mb-1">
+            <div className="text-xl sm:text-2xl font-light text-success mb-1">
               ${scenarios.roth.afterTax.toLocaleString()}
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color">
               {scenarios.roth.effectiveReturn.toFixed(1)}% effective return
             </p>
           </div>
         </div>
 
-        {/* Key Insight */}
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg p-6 text-center">
-          <div className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-2">
-            Best Strategy: {scenarios.roth.afterTax > scenarios.traditional.afterTax ? 
+        {/* Key Insight with semantic color */}
+        <div className="bg-purple-50/50 dark:bg-purple-950/30 rounded-2xl p-6 sm:p-8 text-center">
+          <div className="text-mobile-base sm:text-lg font-medium text-primary mb-2">
+            Best Strategy: {scenarios.roth.afterTax > scenarios.traditional.afterTax ?
               (scenarios.roth.afterTax > scenarios.taxable.afterTax ? 'Roth Account' : 'Taxable Account') :
               (scenarios.traditional.afterTax > scenarios.taxable.afterTax ? 'Traditional Account' : 'Taxable Account')
             }
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+          <p className="text-mobile-sm sm:text-sm text-muted-foreground-color leading-relaxed">
             After {timeHorizon} years, your best after-tax value would be{" "}
             <strong>${Math.max(scenarios.taxable.afterTax, scenarios.traditional.afterTax, scenarios.roth.afterTax).toLocaleString()}</strong>.
             {scenarios.roth.afterTax > scenarios.traditional.afterTax && (
               <span> The Roth advantage: <strong>${(scenarios.roth.afterTax - scenarios.traditional.afterTax).toLocaleString()}</strong> more.</span>
             )}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
+          <p className="text-mobile-xs sm:text-xs text-muted-foreground-color mt-2">
             <FontAwesomeIcon icon={faInfoCircle} className="mr-1" />
             Based on current US tax rates and your income level
           </p>
         </div>
 
-        {/* Educational Note */}
-        <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-          <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-2">
+        {/* Educational Note with semantic background */}
+        <div className="bg-subtle-background/50 rounded-2xl p-4 sm:p-6">
+          <h4 className="font-medium text-foreground mb-3 text-mobile-sm sm:text-sm">
             Account Type Summary
           </h4>
-          <div className="grid grid-cols-3 gap-4 text-xs text-slate-600 dark:text-slate-400">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-mobile-xs sm:text-xs text-muted-foreground-color">
             <div>
-              <strong className="text-red-600">Taxable:</strong>
+              <strong className="text-red-600 dark:text-red-400">Taxable:</strong>
               <p>Pay taxes on contributions & gains</p>
               <p>Flexible access anytime</p>
             </div>
             <div>
-              <strong className="text-blue-600">Traditional:</strong>
+              <strong className="text-sky-600 dark:text-sky-400">Traditional:</strong>
               <p>Tax deduction now, pay later</p>
               <p>Good if lower tax rate in retirement</p>
             </div>
             <div>
-              <strong className="text-green-600">Roth:</strong>
+              <strong className="text-success">Roth:</strong>
               <p>Pay taxes now, grow tax-free</p>
               <p>Best for long-term growth</p>
             </div>

@@ -106,7 +106,7 @@ export function BarChartWidget({ widget }: { widget: IBarChartWidget }) {
   if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
     return (
       <Widget widget={widget}>
-        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+        <div className="p-4 sm:p-6 text-mobile-sm sm:text-sm text-muted-foreground-color">
           No data available for this chart.
         </div>
       </Widget>
@@ -187,7 +187,7 @@ export function LineChartWidget({ widget }: { widget: ILineChartWidget }) {
   if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
     return (
       <Widget widget={widget}>
-        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+        <div className="p-4 sm:p-6 text-mobile-sm sm:text-sm text-muted-foreground-color">
           No data available for this chart.
         </div>
       </Widget>
@@ -266,7 +266,7 @@ export function PieChartWidget({ widget }: { widget: IPieChartWidget }) {
   if (!chartDataDefinition || !chartDataDefinition.dataPoints || chartDataDefinition.dataPoints.length === 0) {
     return (
       <Widget widget={widget}>
-        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+        <div className="p-4 sm:p-6 text-mobile-sm sm:text-sm text-muted-foreground-color">
           No data available for this chart.
         </div>
       </Widget>
@@ -421,7 +421,7 @@ export function CashFlowWidget({ widget }: { widget: IQuickCashFlowSummaryWidget
   if (!cashFlowData || !cashFlowData.inflows || !cashFlowData.outflows) {
     return (
       <Widget widget={widget} controls={widget.controls}>
-        <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+        <div className="p-4 sm:p-6 text-mobile-sm sm:text-sm text-muted-foreground-color">
           Cash flow data is incomplete.
         </div>
       </Widget>

@@ -20,36 +20,36 @@ export function DataListWidget({ widget }: { widget: IDataListWidget }) {
   const { data } = widget;
   
   if (!data || !data.items || data.items.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-center text-slate-500 dark:text-slate-400">No data available.</div></Widget>;
+    return <Widget widget={widget}><div className="p-4 sm:p-6 text-center text-mobile-sm sm:text-sm text-muted-foreground-color">No data available.</div></Widget>;
   }
   
   const { items, tip, footerLink, groupByCategory, showTotals } = data;
   
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="space-y-4 p-1"> {/* Adjusted base padding slightly if Widget itself has substantial padding */}
+      <div className="space-y-3 sm:space-y-4">
         {items.map((item, index) => (
           <div 
             key={item.id || index} 
-            className="flex justify-between items-center py-3 border-b border-slate-200 dark:border-slate-700 last:border-0"
+            className="flex justify-between items-center py-3 sm:py-4"
           >
-            <span className="text-sm text-slate-500 dark:text-slate-400">{item.label}</span>
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-              {item.currency}{item.value.toLocaleString()} {/* Added toLocaleString for better number formatting */}
+            <span className="text-mobile-sm sm:text-sm text-muted-foreground-color">{item.label}</span>
+            <span className="text-mobile-base sm:text-base font-medium text-foreground">
+              {item.currency}{item.value.toLocaleString()}
             </span>
           </div>
         ))}
         
         {tip && (
-          <div className="mt-4 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{tip}</p>
+          <div className="mt-4 sm:mt-6 p-4 sm:p-5 bg-subtle-background/50 rounded-2xl">
+            <p className="text-mobile-xs sm:text-xs text-muted-foreground-color leading-relaxed">{tip}</p>
           </div>
         )}
         
         {footerLink && (
           <a 
             href={footerLink.url} 
-            className="mt-4 inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors group"
+            className="mt-4 sm:mt-6 inline-flex items-center text-mobile-sm sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors group"
           >
             <FontAwesomeIcon icon={faLink} className="h-4 w-4 mr-1.5 group-hover:scale-110 transition-transform" />
             {footerLink.text}
@@ -65,7 +65,7 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
   const { data } = widget;
   const { items = [], showPercentages = true, sortBy = 'custom' } = data;
   if (!items || items.length === 0) {
-    return <Widget widget={widget}><div className="p-4 text-center text-slate-500 dark:text-slate-400">No data available.</div></Widget>;
+    return <Widget widget={widget}><div className="p-4 sm:p-6 text-center text-mobile-sm sm:text-sm text-muted-foreground-color">No data available.</div></Widget>;
   }
   
   // Calculate progress percentage for each item
@@ -121,7 +121,7 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
   
   return (
     <Widget widget={widget} controls={widget.controls}>
-      <div className="space-y-4 px-1">
+      <div className="space-y-4 sm:space-y-6">
         {sortedItems.map((item, index) => {
           const progress = getProgressPercentage(item.current, item.max);
           const progressText = `${Math.round(progress)}%`;
@@ -129,27 +129,27 @@ export function ProgressBarListWidget({ widget }: { widget: IProgressBarListWidg
           const explanationText = generateExplanationText(item, progress);
           
           return (
-            <div key={item.id || index} className="space-y-2">
+            <div key={item.id || index} className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-slate-600 dark:text-slate-300">{statusText}</span>
+                <span className="text-mobile-base sm:text-lg font-medium text-foreground">{statusText}</span>
                 {showPercentages ? (
-                  <span className="text-lg font-semibold text-primary dark:text-dark-primary">
+                  <span className="text-mobile-base sm:text-lg font-medium text-primary">
                     {progressText}
                   </span>
                 ) : null}
               </div>
               
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+              <div className="w-full bg-subtle-background rounded-full h-2 sm:h-3">
                 <div 
-                  className="h-2 rounded-full transition-all duration-500 ease-out"
+                  className="h-2 sm:h-3 rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${progress}%`,
-                    backgroundColor: item.color || 'var(--color-primary-600)'
+                    backgroundColor: item.color || 'var(--color-primary)'
                   }}
                 />
               </div>
               
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-mobile-sm sm:text-sm text-muted-foreground-color">
                 {explanationText}
               </p>
             </div>
@@ -167,7 +167,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
   if (!data) {
     return (
       <Widget widget={widget} className="overflow-hidden">
-        <div className="flex items-center justify-center h-full text-center text-slate-500 dark:text-slate-400 text-base">
+        <div className="flex items-center justify-center h-full text-center text-mobile-sm sm:text-sm text-muted-foreground-color">
           No countdown data available.
         </div>
       </Widget>
@@ -202,30 +202,32 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
 
   const displayTitle = currentCountdownItem.title || 'Upcoming Goal';
   
-  // Determine background gradient based on days remaining
-  let gradientClass = "from-blue-500 to-purple-500"; // Default
+  // Determine semantic colors based on days remaining
+  let bgColorClass = "bg-sky-50/50 dark:bg-sky-950/30"; // Default
+  let textColorClass = "text-sky-600 dark:text-sky-400"; // Default
   
   if (daysRemaining <= 0) {
-    gradientClass = "from-gray-500 to-gray-400"; // Expired
+    bgColorClass = "bg-slate-50/50 dark:bg-slate-950/30"; // Expired
+    textColorClass = "text-muted-foreground-color";
   } else if (daysRemaining <= 7) {
-    gradientClass = "from-red-500 to-orange-400"; // Urgent (less than a week)
+    bgColorClass = "bg-red-50/50 dark:bg-red-950/30"; // Urgent (less than a week)
+    textColorClass = "text-red-600 dark:text-red-400";
   } else if (daysRemaining <= 30) {
-    gradientClass = "from-amber-500 to-yellow-400"; // Soon (less than a month)
+    bgColorClass = "bg-amber-50/50 dark:bg-amber-950/30"; // Soon (less than a month)
+    textColorClass = "text-amber-600 dark:text-amber-400";
   } else if (daysRemaining <= 60) {
-    gradientClass = "from-teal-400 to-emerald-500"; // Approaching (2 months)
+    bgColorClass = "bg-emerald-50/50 dark:bg-emerald-950/30"; // Approaching (2 months)
+    textColorClass = "text-emerald-600 dark:text-emerald-400";
   }
 
   return (
     <Widget widget={widget} className="overflow-hidden" controls={widget.controls}>
-      {/* Use absolute positioning to ensure no scrollbars */}
-      <div className="absolute inset-0 flex items-center justify-center">       
-        
-        {/* Content container with responsive sizing based on widget dimensions */}
-        <div className="flex flex-col items-center w-full text-center">
+      <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+        <div className="flex flex-col items-center w-full text-center space-y-3 sm:space-y-4">
           {/* Image with responsive sizing */}
           {currentCountdownItem.image && (
             <div 
-              className={`rounded-lg overflow-hidden shadow-md ring-1 ring-white/30 mb-2 ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'w-16 h-16' : 'w-12 h-12'}`}
+              className={`rounded-2xl overflow-hidden shadow-sm ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'w-16 h-16 sm:w-20 sm:h-20' : 'w-12 h-12 sm:w-14 sm:h-14'}`}
             >
               <OptimizedImage 
                 src={currentCountdownItem.image} 
@@ -235,24 +237,24 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
             </div>
           )}
           
-          {/* Title with responsive sizing */}
+          {/* Title with mobile typography */}
           <h3 
-            className={`font-medium text-slate-700 dark:text-slate-200 ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-base line-clamp-2 mb-1' : 'text-sm line-clamp-1'}`}
+            className={`font-medium text-foreground ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-mobile-base sm:text-base line-clamp-2' : 'text-mobile-sm sm:text-sm line-clamp-1'}`}
           >
             {displayTitle}
           </h3>
           
-          {/* Days counter with responsive sizing */}
-          <div className="flex flex-col items-center">
+          {/* Days counter with semantic color background */}
+          <div className={`${bgColorClass} rounded-3xl px-6 py-4 sm:px-8 sm:py-5`}>
             <div 
-              className={`font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-white ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-6xl' : 'text-4xl'}`}
+              className={`font-light ${textColorClass} ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-5xl sm:text-6xl' : 'text-3xl sm:text-4xl'}`}
             >
               {currentCountdownItem.targetDate 
                 ? (daysRemaining <= 0 ? '0' : daysRemaining)
                 : '—'}
             </div>
             <div 
-              className={`text-slate-600 dark:text-slate-300 font-medium ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-sm' : 'text-xs'}`}
+              className={`text-muted-foreground-color font-medium ${(widget.column_span === 2 || (widget.row_span ?? 1) > 1) ? 'text-mobile-sm sm:text-sm mt-2' : 'text-mobile-xs sm:text-xs mt-1'}`}
             >
               {!currentCountdownItem.targetDate 
                 ? 'No target date set'
@@ -266,7 +268,7 @@ export function CountdownCardWidget({ widget }: { widget: ICountdownCardWidget }
           
           {/* Target date - only show if there's room */}
           {currentCountdownItem.targetDate && (widget.row_span ?? 1) > 1 && (
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 bg-slate-100 dark:bg-slate-800/50 py-0.5 px-2 rounded-full">
+            <div className="text-mobile-xs sm:text-xs text-muted-foreground-color bg-subtle-background/50 py-1.5 px-3 rounded-full">
               {formattedDate}
             </div>
           )}
