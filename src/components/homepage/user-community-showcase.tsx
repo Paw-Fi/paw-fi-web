@@ -129,20 +129,19 @@ const generateMockUsers = (count: number): User[] => {
 
 export function UserCommunityShowcase() {
   const [totalUsers, setTotalUsers] = useState(0);
-  const [displayUsers, setDisplayUsers] = useState<User[]>([]);
+  const [displayUsers, setDisplayUsers] = useState<User[]>(generateMockUsers(20));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        
         // Fetch total user count
         const { count, error: countError } = await supabase
           .from('users')
           .select('*', { count: 'exact', head: true });
 
         if (countError) {
-          console.error('❌ Error fetching user count:', countError);
+          console.error('Error fetching user count:', countError);
         } else {
           setTotalUsers(count || 0);
         }
@@ -155,8 +154,7 @@ export function UserCommunityShowcase() {
           .limit(10);
 
         if (latestError) {
-          console.error('❌ Error fetching latest users:', latestError);
-        } else {
+          console.error('Error fetching latest users:', latestError);
         }
 
         // Fetch all users to pick 10 random ones (excluding the latest 10)
@@ -165,8 +163,7 @@ export function UserCommunityShowcase() {
           .select('id, email, full_name, avatar_url, created_at');
 
         if (allError) {
-          console.error('❌ Error fetching all users:', allError);
-        } else {
+          console.error('Error fetching all users:', allError);
         }
 
         // If we have real users, use them
@@ -193,7 +190,7 @@ export function UserCommunityShowcase() {
           }
         }
       } catch (error) {
-        console.error('❌ Error in fetchUserData:', error);
+        console.error('Error in fetchUserData:', error);
         // Fallback to mock users on any error
         const mockUsers = generateMockUsers(20);
         setDisplayUsers(mockUsers);
@@ -246,7 +243,7 @@ export function UserCommunityShowcase() {
 
           {/* Marquee Section */}
           {!isLoading && displayUsers.length > 0 && (
-            <motion.div variants={itemVariants} className="space-y-6">              
+            <div className="space-y-6">
               {/* First row - normal direction */}
               <Marquee pauseOnHover className="[--duration:40s]">
                 {displayUsers.slice(0, Math.min(10, displayUsers.length)).map((user) => (
@@ -271,7 +268,7 @@ export function UserCommunityShowcase() {
                   ))}
                 </Marquee>
               )}
-            </motion.div>
+            </div>
           )}
 
           {/* Loading State */}
