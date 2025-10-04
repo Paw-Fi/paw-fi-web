@@ -127,14 +127,16 @@ export const planData: Record<string, PlanData> = {
       "Basic budgeting & expense tracking",
       "Create and view savings goals",
       "Desktop access only",
-      "Join our budgeting community"
+      "Join our budgeting community",
+      "Best for trying Moneko before upgrading"
     ],
     featureItems: [
       { text: "Limited AI conversations with Moneko", icon: faComments },
       { text: "Basic budgeting & expense tracking", icon: faChartLine },
       { text: "Create and view savings goals", icon: faBullseye },
       { text: "Desktop access only", icon: faUsers },
-      { text: "Join our budgeting community", icon: faUsers }
+      { text: "Join our budgeting community", icon: faUsers },
+      { text: "Best for trying Moneko before upgrading", icon: faGift }
     ],
     featureComparison: {
       basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "Limited Access" },
@@ -167,7 +169,6 @@ export const planData: Record<string, PlanData> = {
     actionText: "Try Plus Free for 1 Month",
     actionLink: "/checkout?plan=plus",
     badgeText: "Most Popular",
-    trialText: "First Month Free",
     audienceText: "",
     bgColor: "bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20",
     textColor: "text-gray-900 dark:text-white",
@@ -215,7 +216,6 @@ export const planData: Record<string, PlanData> = {
     highlight: false,
     actionText: "Secure Lifetime Access",
     actionLink: "/checkout?plan=lifetime",
-    badgeText: "Limited Spots Available",
     audienceText: "Early-bird price (One-time)\nOriginal $199",
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",

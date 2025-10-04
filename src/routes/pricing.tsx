@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Rocket, Loader2 } from "lucide-react";
+import { Check, Rocket, Loader2, Sparkles } from "lucide-react";
+import { FaDiscord } from "react-icons/fa";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
 import { FaqSection } from "@/components/ui/faq-section";
@@ -24,6 +25,9 @@ import { useAuth } from "@/contexts/auth-context";
 import { useSubscription } from "@/hooks/use-subscription";
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
+import { DiscordLogoIcon } from "@radix-ui/react-icons";
+
+export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -321,18 +325,26 @@ function PricingPage() {
 
       <HomeHeader />
       <div className="container mx-auto min-h-screen px-4 py-12 md:py-20">
-        <motion.header 
+        <motion.header
           className="mb-16 text-center md:mb-20"
           initial="hidden"
           animate="visible"
           variants={containerVariants}
         >
           <motion.h1
-            className="mb-6 text-3xl font-bold text-foreground sm:text-4xl lg:text-5xl"
+            className="text-5xl mb-8 sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight"
             variants={itemVariants}
           >
-            Simple, Transparent Pricing
+            The AI Budgeting App for Smarter Money Management
+            <br />
           </motion.h1>
+
+          <motion.p
+            className="mx-auto max-w-3xl text-base text-muted-foreground-color sm:text-lg mb-10"
+            variants={itemVariants}
+          >
+            Manage your money with Moneko, the AI-powered budgeting app for desktop and mobile. Track expenses, set savings goals, and get smart reminders for bills and paychecks. Choose the plan that fits your journey.
+          </motion.p>
 
           <motion.div
             className="mt-10 flex justify-center items-center gap-4"
@@ -354,7 +366,7 @@ function PricingPage() {
         </motion.header>
 
         <motion.div 
-          className="mt-12 grid grid-cols-1 justify-center gap-8 md:grid-cols-2 lg:grid-cols-3" 
+          className="mt-12 grid grid-cols-1 justify-center gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto" 
           id="pricing-tiers"
           initial="hidden"
           whileInView="visible"
@@ -363,9 +375,7 @@ function PricingPage() {
         >
           {pricingTiers.map((tier) => {
             const isLifetime = tier.title === "Lifetime";
-            const displayPrice = isLifetime ? "$149" : (isAnnual && tier.title === "Plus" ? "$49/YEAR (SAVE 40%)" : tier.priceMonthly);
-            const priceLabel = isLifetime ? "" : (isAnnual && tier.title === "Plus" ? "USD / month" : "USD / month");
-            const secondaryLabel = isLifetime ? "Early-bird price (One-time)" : (isAnnual && tier.title === "Plus" ? "First Month Free" : "Free Forever");
+            const isPlusPlan = tier.title === "Plus";
 
             return (
               <motion.div
@@ -375,105 +385,92 @@ function PricingPage() {
                 whileHover={prefersReducedMotion ? {} : { y: -8, transition: { duration: 0.2 } }}
               >
                 {tier.badgeText && (
-                  <Badge 
+                  <Badge
                     className={classNames(
                       "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
                       {
                         "bg-primary text-primary-foreground": tier.badgeText === "Most Popular",
-                        "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100": tier.badgeText === "Limited Spots Available",
-                        "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular" && tier.badgeText !== "Limited Spots Available",
+                        "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100": tier.badgeText === "LIMITED SPOTS AVAILABLE",
+                        "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular" && tier.badgeText !== "LIMITED SPOTS AVAILABLE",
                       },
                     )}
                   >
                     {tier.badgeText}
                   </Badge>
                 )}
-                
+
                 <Card className={classNames(
-                  "h-full transition-all duration-200 hover:shadow-md",
+                  "h-full transition-all duration-200 hover:shadow-md rounded-2xl",
                   {
                     "border-2 border-primary shadow-lg": tier.highlight,
-                    "bg-card": !tier.highlight,
+                    "bg-card": !tier.highlight && !isLifetime,
+                    "bg-lifetime-card-bg": isLifetime,
                   }
                 )}>
-                  <CardHeader className="text-center pb-6">
-                    <CardTitle className="text-2xl font-bold text-foreground">
+                  <CardHeader className="text-center pb-8 pt-8">
+                    {/* Show annual pricing banner inside card below badge */}
+                    {isPlusPlan && (
+                      <div className="text-center mb-4">
+                        <span className="text-base font-semibold text-primary">
+                        LIMITED SPOTS AVAILABLE
+
+                        </span>
+                      </div>
+                    )}
+                     {isLifetime && (
+                      <div className="text-center mb-4">
+                        <span className="text-base font-semibold text-primary">
+                          $49/YEAR (SAVE 40%)
+                        </span>
+                      </div>
+                    )}
+
+                    <CardTitle className="text-3xl font-bold text-foreground mb-3">
                       {tier.title}
                     </CardTitle>
-                    <CardDescription className="text-base text-muted-foreground-color">
+                    <CardDescription className="text-sm text-muted-foreground-color px-4 leading-relaxed">
                       {tier.subtitle}
                     </CardDescription>
                   </CardHeader>
 
-                  <CardContent className="pt-0">
-                    <div className="mb-8 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {isLifetime ? (
-                          <span className="text-4xl font-bold text-foreground">
-                            $149
-                          </span>
-                        ) : tier.title === "Plus" && isAnnual ? (
-                          <div className="flex flex-col items-center">
-                            <span className="text-3xl font-bold text-primary">
-                              $49/YEAR (SAVE 40%)
-                            </span>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-4xl font-bold text-foreground">
-                              {tier.priceMonthly}
-                            </span>
-                            <span className="text-base font-medium text-muted-foreground-color">
-                              /month
-                            </span>
-                          </>
-                        )}
+                  <CardContent className="pt-0 px-8 pb-8">
+                    <div className="mb-6 text-center">
+                      <div className="flex items-baseline justify-center gap-0.5 mb-2">
+                        <span className="text-5xl font-bold text-foreground tracking-tight">
+                          {isAnnual && !isLifetime ? tier.priceYearly : tier.priceMonthly}
+                        </span>
+                        
                       </div>
-                      
-                      {priceLabel && (
-                        <p className="text-sm text-muted-foreground-color mt-2">
-                          {priceLabel}
-                        </p>
-                      )}
-                      
-                      {tier.title === "Plus" && isAnnual && (
-                        <p className="text-sm font-medium text-primary mt-2">
-                          First Month Free
-                        </p>
-                      )}
 
-                      {isLifetime && (
-                        <p className="text-sm text-muted-foreground-color mt-2">
-                          Early-bird price (One-time)<br/>
-                          <span className="line-through">Original $199</span>
+                      {/* Price label and additional info */}
+                      {!isLifetime && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          USD / {isAnnual ? "year" : "month"}
                         </p>
                       )}
 
                       {tier.title === "Starter" && (
-                        <p className="text-sm font-medium text-foreground mt-2">
+                        <p className="text-sm font-semibold text-foreground mt-2">
                           Free Forever
+                        </p>
+                      )}
+
+
+                      {isLifetime && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Early-bird price (One-time)<br />
+                          <span className="line-through">Original $199 USD</span>
                         </p>
                       )}
                     </div>
 
-                    <ul className="space-y-4 mb-8">
-                      {tier.features.map((feature) => (
-                        <li key={feature.text} className="flex items-start gap-3">
-                          <Check className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-muted-foreground-color leading-relaxed">
-                            {feature.text}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
+                    
 
-                  <CardFooter className="pt-0 flex-col gap-4">
                     <Button
                       className={classNames(
-                        "w-full transition-all duration-200 hover:shadow-sm",
+                        "w-full transition-all duration-200 hover:shadow-sm mb-6 rounded-lg py-6 text-base font-medium",
                         {
-                          "bg-primary hover:bg-primary/90": tier.highlight,
+                          "bg-primary hover:bg-primary/90 !text-white": tier.highlight,
                         }
                       )}
                       variant={tier.highlight ? "default" : "outline"}
@@ -495,12 +492,40 @@ function PricingPage() {
                       {tier.actionText}
                     </Button>
 
-                    {tier.audienceText && tier.title !== "Lifetime" && (
-                      <p className="text-xs text-muted-foreground-color text-center">
-                        {tier.audienceText}
-                      </p>
+                    {/* Discord Community Incentive - Elegant Info Pill */}
+                    {isLifetime && (
+                      <div 
+                        className="mb-4 mx-auto max-w-fit cursor-pointer group"
+                        onClick={() => window.open(DISCORD_URL, '_blank')}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            window.open(DISCORD_URL, '_blank');
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border border-purple-200/50 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
+                          <DiscordLogoIcon className="h-4 w-4 text-[#5865F2] flex-shrink-0" />
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          Join our Discord for discounts up to 50%!
+                          </span>
+                        </div>
+                      </div>
                     )}
-                  </CardFooter>
+
+                    <ul className="space-y-3">
+                      {tier.features.map((feature) => (
+                        <li key={feature.text} className="flex items-start gap-3">
+                          <Check className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
+                          <span className="text-sm text-muted-foreground leading-relaxed">
+                            {feature.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
                 </Card>
               </motion.div>
             );

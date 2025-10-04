@@ -22,17 +22,17 @@ interface User {
 const encryptEmail = (email: string): string => {
   const [localPart, domain] = email.split('@');
   
-  if (!localPart || !domain) return '****@****.com';
+  if (!localPart || !domain) return '****';
   
   if (localPart.length <= 4) {
     // For very short email addresses, show only first char
-    return `${localPart.charAt(0)}****@${domain}`;
+    return `${localPart.charAt(0)}****`;
   }
   
   const firstTwo = localPart.slice(0, 2);
   const lastTwo = localPart.slice(-2);
   
-  return `${firstTwo}****${lastTwo}@${domain}`;
+  return `${firstTwo}****${lastTwo}`;
 };
 
 /**
@@ -210,7 +210,7 @@ export function UserCommunityShowcase() {
   const displayCount = Math.round(totalUsers * 80.3);
 
   return (
-    <section className="relative z-10 px-4 py-20 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50/30 to-gray-50/20 dark:from-slate-900/30 dark:to-gray-900/20 overflow-hidden">
+    <section className="relative z-10 px-4 py-20 sm:px-6 lg:px-8 overflow-hidden">
       <div className="mx-auto max-w-7xl w-full">
         <motion.div
           variants={containerVariants}

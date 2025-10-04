@@ -49,7 +49,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
         </div>
 
         {/* Main Title */}
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
+        <h1 className="text-5xl mb-8 sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
         {titleWords.map((word, index) => (
             <span key={index}>
               {index === highlightIndex ? (

@@ -1,13 +1,13 @@
 {
   "main": {
     "meta": {
-      "title": "Moneko | The AI Personal Finance Coach & Budgeting App",
-      "description": "Take control of your finances with Moneko, the AI-powered budgeting app. Track spending, get personalized coaching, and achieve your financial goals with expert guidance.",
+      "title": "Moneko AI Budgeting App | Track Spending & Save Smarter",
+      "description": "Take control of your money with Moneko, the AI budgeting app that tracks expenses, manages bills, and helps you save toward your goals.",
       "keywords": "moneko, moneko app, moneko finance, AI budgeting app, personal finance coach, budget planner, expense tracker, savings goals, financial education, money management"
     },
     "hero": {
-      "title": "Smart Spending, Smarter Saving",
-      "subtitle": "Take control of your finances with Moneko's AI-powered budgeting app. Track spending, set savings goals, and get personalized guidance that meets you where you are.",
+      "title": "AI Budgeting Made Simple",
+      "subtitle": "One app to manage expenses, bills and savings goals on desktop and mobile",
       "ctaText": "Start with Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [

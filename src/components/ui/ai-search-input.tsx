@@ -107,10 +107,10 @@ export function AISearchInput({
       ],
       borderRadius: ["9999px", "30px", "25px", "20px"],
       backgroundColor: [
-        "rgba(255,255,255,0.6)",
-        "rgba(250,245,255,0.7)",
-        "rgba(245,240,255,0.75)",
-        "rgba(240,235,255,0.8)",
+        "var(--ai-search-anim-bg-1)",
+        "var(--ai-search-anim-bg-2)",
+        "var(--ai-search-anim-bg-3)",
+        "var(--ai-search-anim-bg-4)",
       ],
       backdropFilter: ["blur(8px)", "blur(10px)", "blur(12px)", "blur(15px)"],
       transition: { duration: 0.8, ease: [0.19, 1, 0.22, 1] },
@@ -133,7 +133,7 @@ export function AISearchInput({
         className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl transition-all duration-500 ${
           isAnimating 
             ? "bg-muted" 
-            : "bg-moneko-background shadow-sm hover:shadow-md dark:bg-black dark:border"
+            : "bg-moneko-background shadow-sm hover:shadow-md dark:bg-card/80 dark:border"
         }`}
         style={{
           opacity: animationComplete ? 0 : 1,

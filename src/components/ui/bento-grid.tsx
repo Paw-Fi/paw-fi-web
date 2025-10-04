@@ -43,7 +43,7 @@ const BentoCard = ({
 }) => (
   <div
     className={cn(
-      "group relative overflow-hidden bg-card hover:bg-card/95 transition-all duration-200 border-r border-b border-neutral-200 dark:border-neutral-800 last:border-r-0 [&:nth-child(2)]:border-r-0 [&:nth-child(3)]:border-b-0 [&:nth-child(4)]:border-b-0",
+      "group relative overflow-hidden bg-card hover:bg-card/95 transition-all duration-200 border-r border-b border-border last:border-r-0 [&:nth-child(2)]:border-r-0 [&:nth-child(3)]:border-b-0 [&:nth-child(4)]:border-b-0",
       className,
     )}
   >
@@ -53,7 +53,7 @@ const BentoCard = ({
     </div>
     
     {/* Floating Info Bar with Glassmorphism */}
-    <div className="absolute bottom-0  h-22 w-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md  border-white/20 dark:border-neutral-700/20 shadow-lg p-4">
+    <div className="absolute bottom-0  h-22 w-full bg-card/80 backdrop-blur-md border border-border/20 shadow-lg p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="min-w-0 flex-1">

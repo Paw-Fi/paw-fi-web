@@ -115,7 +115,7 @@ const FeatureTag = ({ label }: { label: string }) => (
     <Badge
       aria-label={label}
       variant="outline"
-      className="absolute left-full ml-2 rounded-full bg-card/80 backdrop-blur px-3 py-1 text-xs font-medium border border-white/20 dark:border-slate-800/50 shadow-sm text-foreground"
+      className="absolute left-full ml-2 rounded-full bg-card/80 backdrop-blur px-3 py-1 text-xs font-medium border border-border shadow-sm text-foreground"
     >
       {label}
     </Badge>
@@ -405,7 +405,7 @@ export function FeaturesBentoGrid() {
         </div>
 
         {/* Bento Grid */}
-        <BentoGrid className="lg:grid-cols-2 lg:grid-rows-2 border border-neutral-200 dark:border-neutral-800 rounded-3xl overflow-hidden">
+        <BentoGrid className="lg:grid-cols-2 lg:grid-rows-2 border border-border rounded-3xl overflow-hidden">
           {features.map((feature) => (
             <BentoCard
               key={feature.name}

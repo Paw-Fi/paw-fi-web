@@ -30,90 +30,69 @@
 Overall, this is an excellent set of changes that significantly improves the SEO implementation, page performance, and content strategy of the website. The refactoring to a centralized `StructuredData` component is a major improvement for code quality and maintainability. The addition of rich content and detailed schemas to the calculat...
 Flushing log events to Clearcut.
 Data collection is disabled.
-Excellent, I've reviewed the provided changes. Here is my feedback.
+Of course. Here is my review of the provided code changes.
 
-### Code Review
+Overall, this is a set of changes focused on a significant visual redesign of the homepage and pricing page, replacing a gradient animation with a new "beams" effect and adjusting typography and layout. However, there is a critical CSS error that must be addressed.
 
-Overall, this is an excellent set of changes that correctly and robustly implements a "Lifetime" one-time purchase plan and its associated lifecycle events. The modifications are well-executed across the entire stack, from the frontend UI components to the backend Stripe webhook handlers. The logic for provisioning and revoking access is sound, idempotent, and follows Stripe's recommended best practices.
+#### Critical Issues (Must Fix)
 
-The addition of the `charge.refunded` handler and the database-level `CHECK` constraint are particularly noteworthy, demonstrating a thorough approach to ensuring business logic and data integrity.
+*   **Invalid CSS Syntax and Missing Keyframes**
 
-There are no critical issues to report. This is a high-quality contribution.
+    In `src/styles/app.css`, a new custom property `--animate-spin` is defined with invalid syntax. It's placed outside of any selector and includes an extra closing brace. This will cause a CSS parsing error, and the animation will fail. Additionally, the `spin` animation it references is not defined anywhere in the provided changes.
 
-#### Warnings (Should Fix)
-
-*   **Unusual Stripe API Version**
-
-    Across several Supabase functions (`create-portal-session`, `get-subscription`, `preview-subscription-change`, etc.), the Stripe API version has been set to `2025-07-30.basil`. This date is in the future and the version name is non-standard.
-
-    **Risk:** If this is a typo, it could cause Stripe API calls to fail or behave unexpectedly when deployed. If it's an intentional version for a beta program, it should be confirmed that this is the correct and intended version string for your target Stripe environment.
-
-    *File*: `supabase/functions/create-portal-session/index.ts:25`
-    ```typescript
-    const stripe = new Stripe(env.stripeSecretKey, {
-      apiVersion: '2025-07-30.basil', // This version should be verified
-      httpClient: Stripe.createFetchHttpClient(),
-    });
+    *File*: `src/styles/app.css`
+    ```css
+    /* src/styles/app.css */
+    @@ -731,7 +754,8 @@
+       to {
+         transform: translateY(calc(-100% - var(--gap)));
+         }
+    -  }}
+    +  }
+    +  --animate-spin: spin 2s linear infinite} /* This is invalid CSS */
     ```
 
-*   **Code Duplication in Webhook Handlers**
+    **Recommendation:** Define the `@keyframes` for the `spin` animation and move the custom property into the `:root` selector with the correct syntax.
 
-    The logic for granting lifetime access (checking for an existing plan, upserting the subscription, and sending an email) is now present in two separate webhook handlers: `handleCheckoutSessionCompleted` and the new `handlePaymentIntentSucceeded`.
-
-    **Risk:** Duplicated logic increases the maintenance burden. If the process for granting lifetime access ever changes, it will need to be updated in two places, increasing the risk of inconsistency.
-
-    **Recommendation:** To improve maintainability, consider refactoring this logic into a single, idempotent function that can be called from both handlers.
-
-    *File*: `supabase/functions/stripe-webhook/index.ts`
-    ```typescript
-    // Example of a shared function
-    async function grantLifetimeAccess(userId: string, customerId: string, eventId: string) {
-      // 1. Check for existing lifetime plan (idempotency)
-      const { data: existingLifetime } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('plan', 'lifetime')
-        .maybeSingle();
-    
-      if (existingLifetime) {
-        console.log(`User ${userId} already has Lifetime access. Skipping duplicate fulfillment.`);
-        return;
+    ```css
+    /* Add this to your CSS file */
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
       }
-    
-      // 2. Upsert the subscription record
-      // ... (database upsert logic) ...
-    
-      // 3. Send the confirmation email
-      // ... (email sending logic) ...
+      to {
+        transform: rotate(360deg);
+      }
     }
-    
-    // Then call this from both handleCheckoutSessionCompleted and handlePaymentIntentSucceeded:
-    await grantLifetimeAccess(userId, customerId, event.id);
+
+    /* Fix the custom property definition */
+    @layer base {
+      :root {
+        /* ... other variables */
+        --animate-spin: spin 2s linear infinite;
+      }
+    }
     ```
 
 #### Suggestions (Consider Improving)
 
-*   **Confirm Default Billing Interval Change**
+*   **UI Component Replacement**
 
-    In the plan selector, the default `billingInterval` was changed from `"monthly"` to `"yearly"`. This is a product decision that affects what users see by default and can impact conversion rates. It would be good to confirm that this change was intentional and aligns with business goals.
+    The `<BackgroundGradientAnimation>` component has been replaced with `<BackgroundBeams>` in `src/components/ui/ambient-halo.tsx`. This is a major aesthetic change that affects the entire site feel.
 
-    *File*: `src/components/membership/PlanSelector.tsx:42`
-    ```typescript
-    const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
-      (currentBillingInterval as "monthly" | "yearly") || "yearly" // Changed from "monthly"
-    );
-    ```
+    **Recommendation:** Ensure this new component has been thoroughly tested across different browsers and devices to confirm it performs well, is not distracting, and aligns with the desired user experience.
 
-*   **Pricing Data Correction**
+*   **Pricing Page Readability**
 
-    The `yearlyPrice` for the "plus" plan was changed from `7.99` to `49`. This appears to be a necessary correction of a typo. This is a good catch.
+    The pricing page (`src/routes/pricing.tsx`) has been updated with new marketing copy and a refactored price display. When "Annual" is selected for the "Plus" plan, a new banner correctly shows the annual savings. However, the main price display below it still shows the monthly price (`tier.priceMonthly`). This could be confusing for users who might expect to see the annual price reflected there as well.
 
-    *File*: `src/data/pricing-plans.ts:160`
-    ```typescript
-    // ...
-    monthlyPrice: 7.99,
-    yearlyPrice: 49, // Corrected from 7.99
-    annualTotal: 49,
-    // ...
-    ```
+    **Recommendation:** Consider updating the main price display to reflect the selected billing interval more directly to avoid any potential confusion for the user.
+
+#### Positive Changes
+
+It's also worth noting some good improvements:
+
+*   **Typo Fix:** The extra closing brace `}}` in `src/styles/app.css` was corrected.
+*   **Improved Copy:** The new header and descriptive paragraph on the pricing page are more engaging and clearly communicate the app's value proposition.
+*   **Visual Cohesion:** The changes across the pricing page and the new background effect create a more consistent visual theme.
+*   **CSS Variable Adoption:** The increased use of CSS variables for colors (e.g., `--lifetime-card-bg`, `--ai-search-anim-bg-*`) and borders (`border-border`) improves theming and maintainability.

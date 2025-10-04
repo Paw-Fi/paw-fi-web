@@ -2,6 +2,7 @@
 
 import { BackgroundGradientAnimation } from "@/components/ui/shadcn-io/background-gradient-animation";
 import { memo } from 'react';
+import { BackgroundBeams } from "./shadcn-io/background-beams";
 
 /**
  * AmbientHalo component using BackgroundGradientAnimation.
@@ -9,12 +10,7 @@ import { memo } from 'react';
  */
 const AmbientHalo = memo(() => {
   return (
-    <BackgroundGradientAnimation
-      size="80%"
-      blendingValue="hard-light"
-      interactive={false}
-      containerClassName="fixed inset-0 z-0 pointer-events-none"
-    />
+    <BackgroundBeams className="fixed inset-0 z-[1] pointer-events-none"/>
   );
 });
 
