@@ -14,7 +14,7 @@ interface SubscriptionStatusProps {
   subscription: {
     plan: string;
     status: string;
-    current_period_end: string;
+    current_period_end: string | null; // Null for lifetime plans
     cancel_at_period_end: boolean;
     days_until_next_payment: number | null;
   } | null;
@@ -51,6 +51,8 @@ export function SubscriptionStatus({
         return "Plus";
       case "premium":
         return "Premium";
+      case "lifetime":
+        return "Lifetime";
       default:
         return plan.charAt(0).toUpperCase() + plan.slice(1);
     }
@@ -190,7 +192,8 @@ export function SubscriptionStatus({
         </div>
 
         <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
-          {subscription.status === "active" && !subscription.cancel_at_period_end && (
+          {/* Don't show cancel button for lifetime plan */}
+          {subscription.plan !== "lifetime" && subscription.status === "active" && !subscription.cancel_at_period_end && (
             <button
               onClick={onCancel}
               disabled={isMutating}
@@ -205,7 +208,8 @@ export function SubscriptionStatus({
               Cancel Subscription
             </button>
           )}
-          {subscription.cancel_at_period_end && (
+          {/* Resume button only for recurring plans */}
+          {subscription.plan !== "lifetime" && subscription.cancel_at_period_end && (
             <button
               onClick={onResume}
               disabled={isMutating}
@@ -224,7 +228,26 @@ export function SubscriptionStatus({
       </div>
 
       {/* Subscription Details */}
-      {subscription.current_period_end && (
+      {subscription.plan === "lifetime" ? (
+        /* Lifetime Plan: Show permanent access message */
+        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center">
+            <FontAwesomeIcon
+              icon={faCrown}
+              className="mr-3 h-5 w-5 text-amber-600"
+            />
+            <div>
+              <p className="text-sm font-medium text-amber-900">
+                Lifetime Access - Never Expires
+              </p>
+              <p className="text-sm text-amber-700">
+                You have permanent access to all features with no recurring billing.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : subscription.current_period_end ? (
+        /* Recurring Plans: Show billing period */
         <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
           <div className="flex items-center">
             <FontAwesomeIcon
@@ -255,7 +278,7 @@ export function SubscriptionStatus({
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

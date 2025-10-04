@@ -24,7 +24,7 @@ const env = validateEnvironment();
 
 // Initialize Stripe
 const stripe = new Stripe(env.stripeSecretKey, {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 });
 

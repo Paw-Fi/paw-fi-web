@@ -31,28 +31,10 @@ export default function HeroSection({ data }: HeroSectionProps) {
   };
 
   const titleWords = hero.title.split(" ");
-  const highlightIndex = titleWords.findIndex(word =>
-    word.toLowerCase().includes("smarter") ||
-    word.toLowerCase().includes("interest") ||
-    word.toLowerCase().includes("passive") ||
-    word.toLowerCase().includes("budget") ||
-    word.toLowerCase().includes("cashflow") ||
-    word.toLowerCase().includes("autopilot") ||
-    word.toLowerCase().includes("simplified") ||
-    word.toLowerCase().includes("net worth") ||
-    word.toLowerCase().includes("financial") ||
-    word.toLowerCase().includes("coach") ||
-    word.toLowerCase().includes("emergency") ||
-    word.toLowerCase().includes("real wealth") ||
-    word.toLowerCase().includes("retirement") ||
-    word.toLowerCase().includes("debt-free") ||
-    word.toLowerCase().includes("investment") ||
-    word.toLowerCase().includes("passive income") ||
-    word.toLowerCase().includes("budgeting")
-  );
+  const highlightIndex = -1
 
   return (
-    <section className="relative z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <section className="relative bg-transparent z-10 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl text-center w-full">
         {/* Early Access Pill Button with Gradient */}
         <div className="mb-8 sm:mt-4 lg:mt-0">
@@ -67,8 +49,8 @@ export default function HeroSection({ data }: HeroSectionProps) {
         </div>
 
         {/* Main Title */}
-        <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl mb-8 font-lato">
-          {titleWords.map((word, index) => (
+        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
+        {titleWords.map((word, index) => (
             <span key={index}>
               {index === highlightIndex ? (
                 <Highlighter action="underline" color="#FF9800" animationDuration={1000} strokeWidth={2}>

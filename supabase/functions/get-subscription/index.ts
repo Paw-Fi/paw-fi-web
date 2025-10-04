@@ -118,13 +118,15 @@ serve(async (req) => {
     // We only need customer ID to fetch invoices - subscription ID is optional
     if (finalSubscription.stripe_customer_id) {
       try {
-        // Get all invoices for the customer (only customer ID needed)
+        // Get all invoices for the customer (works for both Lifetime and recurring)
+        // Lifetime: invoice_creation enabled in checkout creates official invoices
+        // Recurring: invoices created automatically by subscription
         const invoiceList = await stripe.invoices.list({
           customer: finalSubscription.stripe_customer_id,
           limit: 20,
         })
 
-        invoices = invoiceList.data.map(invoice => ({
+        invoices = invoiceList.data.map((invoice: Stripe.Invoice) => ({
           id: invoice.id,
           amount_paid: invoice.amount_paid / 100, // Convert from cents
           currency: invoice.currency,
@@ -160,10 +162,17 @@ serve(async (req) => {
     }
 
     // Calculate days until next payment
+    // Lifetime plan: No next payment (one-time purchase)
     const now = new Date()
-    const daysUntilNextPayment = finalSubscription.status === 'active' && !finalSubscription.cancel_at_period_end
-      ? Math.ceil((new Date(finalSubscription.current_period_end).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      : null
+    let daysUntilNextPayment = null
+
+    if (finalSubscription.plan === 'lifetime') {
+      // Lifetime never has a next payment
+      daysUntilNextPayment = null
+    } else if (finalSubscription.status === 'active' && !finalSubscription.cancel_at_period_end && finalSubscription.current_period_end) {
+      // Recurring plans: Calculate days until period end
+      daysUntilNextPayment = Math.ceil((new Date(finalSubscription.current_period_end).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    }
 
     // Return the subscription details
     return new Response(JSON.stringify({

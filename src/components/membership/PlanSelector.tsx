@@ -40,7 +40,7 @@ export function PlanSelector({
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
-    (currentBillingInterval as "monthly" | "yearly") || "monthly"
+    (currentBillingInterval as "monthly" | "yearly") || "yearly"
   );
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -52,7 +52,8 @@ export function PlanSelector({
     const levels: Record<string, number> = {
       free: 0,
       plus: 1,
-      premium: 2,
+      premium: 2, // Keep for backward compatibility
+      lifetime: 3, // Highest tier - one-time payment
     };
     return levels[plan.toLowerCase()] || 0;
   };
@@ -87,7 +88,7 @@ export function PlanSelector({
       toast.info("Premium plan is coming soon! Join the waitlist at hello@moneko.io");
       return;
     }
-    
+
     // Can't select free plan - must cancel subscription instead
     if(planId === "free") {
       if (currentPlan === "free") {
@@ -98,20 +99,45 @@ export function PlanSelector({
       toast.info("To downgrade to free, please cancel your subscription from the Overview tab");
       return;
     }
-    
-    // Check if already on this plan with this billing interval
-    if (planId === currentPlan && billingInterval === currentBillingInterval) {
-      toast.info("You are already on this plan with this billing interval");
+
+    // Lifetime plan users cannot change plans (permanent access)
+    if (currentPlan === "lifetime") {
+      toast.info("You have Lifetime access - no need to change plans!");
       return;
     }
-    
+
+    // Check if already on this plan
+    if (planId === currentPlan) {
+      // For Lifetime, no billing interval to check
+      if (planId === "lifetime") {
+        toast.info("You already have Lifetime access");
+        return;
+      }
+      // For recurring plans, check billing interval
+      if (billingInterval === currentBillingInterval) {
+        toast.info("You are already on this plan with this billing interval");
+        return;
+      }
+    }
+
     // Determine if this is an upgrade or downgrade
     const currentLevel = getPlanLevel(currentPlan);
     const newLevel = getPlanLevel(planId);
-    
+
     // UPGRADE: Redirect to checkout page (same flow as pricing page)
     if (newLevel > currentLevel) {
-      // Navigate to checkout page with plan details
+      // Lifetime: one-time payment, no billing interval
+      if (planId === "lifetime") {
+        navigate({
+          to: "/checkout",
+          search: {
+            plan: "lifetime", // No billing interval for Lifetime
+          },
+        });
+        return;
+      }
+
+      // Recurring plans: include billing interval
       navigate({
         to: "/checkout",
         search: {
@@ -122,7 +148,7 @@ export function PlanSelector({
       });
       return;
     }
-    
+
     // DOWNGRADE or BILLING INTERVAL CHANGE: Show preview dialog
     setSelectedPlan(planId);
   };
@@ -274,10 +300,15 @@ export function PlanSelector({
           {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan === plan.id;
             const isSelected = selectedPlan === plan.id;
-            const price =
-              billingInterval === "monthly"
+            
+            // Calculate price based on billing interval
+            // Lifetime plan: always show one-time price (no interval)
+            // Recurring plans: show monthly price or yearly price / 12
+            const price = plan.id === "lifetime"
+              ? plan.monthlyPrice  // One-time payment
+              : billingInterval === "monthly"
                 ? plan.monthlyPrice
-                : plan.yearlyPrice;
+                : plan.yearlyPrice / 12;  // Yearly divided by 12 for monthly rate
 
             return (
               <motion.div
@@ -289,7 +320,7 @@ export function PlanSelector({
               >
                 <Card
                   className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
-                    getPlanGradient(plan.id, isSelected, plan.popular)
+                    getPlanGradient(plan.id, isSelected, plan.popular || false)
                   } ${
                     isCurrentPlan ? "cursor-default" : ""
                   } ${plan.id === "premium" ? "cursor-not-allowed opacity-60" : ""}`}
@@ -321,13 +352,20 @@ export function PlanSelector({
                         <span className="text-3xl font-bold tracking-tight text-foreground">
                           ${price.toFixed(0)}
                         </span>
-                        <span className="ml-1 text-sm text-muted-foreground">
-                          /month
-                        </span>
+                        {plan.id !== "lifetime" && (
+                          <span className="ml-1 text-sm text-muted-foreground">
+                            /month
+                          </span>
+                        )}
                       </div>
-                      {billingInterval === "yearly" && (
+                      {billingInterval === "yearly" && plan.id !== "lifetime" && (
                         <p className="mt-1 text-sm text-muted-foreground">
                           Billed annually (${plan.yearlyPrice.toFixed(0)}/year)
+                        </p>
+                      )}
+                      {plan.id === "lifetime" && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          One-time payment
                         </p>
                       )}
                     </div>

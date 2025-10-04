@@ -227,10 +227,6 @@ function PricingPage() {
         return;
       }
 
-      if (plan === "lifetime") {
-       window.location.href = "mailto:hello@moneko.io?subject=Lifetime%20Plan%20Request&body=I'm interested in the Lifetime plan!"
-        return;
-      }
       setIsLoading(true);
 
       // Get the current user ID if logged in
@@ -246,12 +242,21 @@ function PricingPage() {
         return;
       }
 
+      // Lifetime plan: one-time payment, no billing interval needed
+      if (plan === "lifetime") {
+        console.log('Pricing page - Creating checkout for Lifetime (one-time payment)');
+        navigate({
+          to: "/checkout",
+          search: { plan: "lifetime" }, // No billing interval for Lifetime
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Recurring plans (Plus): require billing interval
       const billingInterval = isAnnual ? "yearly" : "monthly";
-      
       console.log('Pricing page - Creating checkout with:', { plan, billingInterval });
 
-      // Redirect to checkout page with plan and billing interval
-      // The backend will automatically determine trial eligibility based on subscription history
       navigate({
         to: "/checkout",
         search: { plan, billing: billingInterval },

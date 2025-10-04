@@ -124,6 +124,9 @@ serve(async (req) => {
         case 'checkout.session.async_payment_failed':
           await handleCheckoutSessionAsyncPaymentFailed(event.data.object as Stripe.Checkout.Session)
           break
+        case 'charge.refunded':
+          await handleChargeRefunded(event.data.object as Stripe.Charge, event.id)
+          break
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
           await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, event.id)
@@ -224,6 +227,78 @@ serve(async (req) => {
     )
   }
 })
+
+// Handler for refunded charges (revoke lifetime access if applicable)
+async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
+  try {
+    console.log('Processing charge.refunded:', charge.id)
+
+    // Get customer and payment intent info
+    const customerId = typeof charge.customer === 'string' ? charge.customer : charge.customer?.id
+    const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id
+
+    if (!customerId || !paymentIntentId) {
+      console.log('Missing customer or payment_intent on charge, skipping refund handling')
+      return
+    }
+
+    // Retrieve PaymentIntent to access metadata
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const plan = pi.metadata?.plan
+    const userId = (pi.metadata?.user_id || pi.metadata?.userId || null) as string | null
+
+    // Only revoke if it was a Lifetime purchase
+    if (plan !== 'lifetime' || !userId) {
+      console.log('Refund is not for a Lifetime purchase or missing user id, skipping')
+      return
+    }
+
+    // Downgrade user to free plan
+    const { error: updateError } = await supabase
+      .from('subscriptions')
+      .update({
+        plan: 'free',
+        status: 'canceled',
+        billing_interval: null,
+        stripe_subscription_id: null,
+        ended_at: new Date().toISOString(),
+        last_event_id: eventId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      console.error('Error downgrading user after refund:', updateError)
+      return
+    }
+
+    // Notify user of revocation
+    const { data: userData } = await supabase
+      .from('users')
+      .select('email, full_name')
+      .eq('id', userId)
+      .single()
+
+    if (userData) {
+      const name = userData.full_name || ''
+      const emailTemplate = subscriptionCanceledTemplate({
+        name,
+        planName: 'Lifetime',
+        endDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        immediateCancel: true,
+      })
+      await sendUserEmail(userData.email, name, emailTemplate)
+      console.log(`Refund revocation email sent to ${userData.email}`)
+    }
+  } catch (error) {
+    console.error('Error in handleChargeRefunded:', {
+      error: (error as any).message,
+      stack: (error as any).stack,
+    })
+    throw error
+  }
+}
 
 // Helper function to safely extract product ID from price object
 // Handles both string and expanded object formats
@@ -454,13 +529,15 @@ async function handleSubscriptionUpdated(
     
     if (isNew) {
       // Send welcome email for new subscriptions
+      const isLifetime = subscription.plan === 'lifetime'
       const emailTemplate = subscriptionCreatedTemplate({
         name,
         planName,
-        endDate,
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`
+        endDate: isLifetime ? undefined : endDate, // Lifetime has no end date
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        isLifetime
       })
-      
+
       await sendUserEmail(user.email, name, emailTemplate)
       console.log(`Welcome email sent to ${user.email}`)
     } else if (cancelAtPeriodEnd && previousSub?.status === 'active') {
@@ -929,18 +1006,89 @@ async function handleCheckoutSessionCompleted(
     
     // Update user's customer ID if not set
     await supabase
-      .from('users')
-      .update({ stripe_customer_id: customerId })
-      .eq('id', userId)
-      .is('stripe_customer_id', null)
-    
+      .from('user_stripe_mapping')
+      .upsert({
+        user_id: userId,
+        stripe_customer_id: customerId
+      }, {
+        onConflict: 'user_id'
+      })
+
     // For subscriptions, the customer.subscription.created event will handle the subscription
-    // For one-time payments, handle fulfillment here
+    // For one-time payments (Lifetime), handle fulfillment here
     if (session.mode === 'subscription') {
       console.log('Subscription checkout completed, subscription will be created via webhook')
-    } else {
-      console.log('One-time payment completed:', session.id)
-      // Handle one-time payment fulfillment if needed
+    } else if (session.mode === 'payment') {
+      console.log('One-time payment completed (Lifetime):', session.id)
+
+      // LIFETIME PLAN: Create subscription record with special handling
+      const plan = session.metadata?.plan || 'lifetime'
+
+      if (plan === 'lifetime') {
+        console.log('Processing Lifetime plan purchase for user:', userId)
+
+        // Create or update subscription record for Lifetime plan
+        // Lifetime has no Stripe subscription ID (one-time payment)
+        const lifetimeSubscriptionData = {
+          user_id: userId,
+          plan: 'lifetime',
+          status: 'active', // Lifetime is always active (no expiry)
+          stripe_customer_id: customerId,
+          stripe_subscription_id: null, // Lifetime has no subscription ID
+          billing_interval: null, // One-time payment
+          current_period_end: null, // Lifetime never expires
+          cancel_at_period_end: false,
+          trial_start: null,
+          trial_end: null,
+          last_event_id: eventId,
+          updated_at: new Date().toISOString(),
+        }
+
+        console.log('Upserting Lifetime subscription with data:', lifetimeSubscriptionData)
+
+        const { error: upsertError } = await supabase
+          .from('subscriptions')
+          .upsert(lifetimeSubscriptionData, {
+            onConflict: 'user_id',
+            ignoreDuplicates: false
+          })
+
+        if (upsertError) {
+          console.error('Error creating Lifetime subscription:', {
+            error: upsertError,
+            userId,
+            customerId,
+            code: upsertError.code,
+            message: upsertError.message,
+            details: upsertError.details,
+            hint: upsertError.hint
+          })
+          throw upsertError
+        }
+
+        console.log('✅ Lifetime subscription created successfully for user:', userId)
+
+        // Get user details for welcome email
+        const { data: userData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single()
+
+        if (userData) {
+          // Send Lifetime purchase confirmation email
+          const name = userData.full_name || ''
+          const emailTemplate = subscriptionCreatedTemplate({
+            name,
+            planName: 'Lifetime',
+            dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+            isLifetime: true // No end date, permanent access
+          })
+
+          await sendUserEmail(userData.email, name, emailTemplate)
+          console.log(`Lifetime confirmation email sent to ${userData.email}`)
+        }
+      }
     }
     
   } catch (error) {

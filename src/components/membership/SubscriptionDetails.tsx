@@ -22,14 +22,15 @@ interface SubscriptionDetailsProps {
     id: string;
     plan: string;
     status: string;
-    current_period_end: string;
+    current_period_end: string | null; // Null for lifetime plans
     next_payment_date: string | null;
     cancel_at_period_end: boolean;
-    stripe_subscription_id: string;
+    stripe_subscription_id: string | null; // Null for lifetime plans (one-time payment)
     stripe_customer_id: string;
     created_at: string;
     updated_at: string;
     days_until_next_payment: number | null;
+    billing_interval?: string | null; // Null for lifetime plans
   } | null;
   features: Array<{
     feature: string;
@@ -121,8 +122,8 @@ export function SubscriptionDetails({
                 </div>
               </div>
 
-              {/* Auto Renewal */}
-              {subscription?.status !== "none" && subscription?.status && (
+              {/* Auto Renewal - Only for recurring plans (not lifetime) */}
+              {subscription?.status !== "none" && subscription?.status && subscription?.plan !== "lifetime" && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground">Auto-Renew</p>
                   <div className="flex items-center space-x-2">
@@ -146,78 +147,103 @@ export function SubscriptionDetails({
               <>
                 <Separator className="my-6" />
                 
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  {/* Current Period End */}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Current Period Ends</p>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground">
-                        {subscription?.current_period_end
-                          ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })
-                          : "N/A"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Next Payment */}
-                  {subscription?.days_until_next_payment !== null && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Next Payment</p>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">
-                          {subscription.days_until_next_payment === 0
-                            ? "Today"
-                            : subscription.days_until_next_payment === 1
-                            ? "Tomorrow"
-                            : `In ${subscription.days_until_next_payment} days`}
-                        </span>
+                {/* Lifetime Plan: Show special message */}
+                {subscription?.plan === "lifetime" ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/20">
+                    <div className="flex items-start space-x-3">
+                      <Crown className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-400">
+                          Lifetime Access
+                        </h4>
+                        <p className="mt-1 text-sm text-amber-700 dark:text-amber-500">
+                          You have permanent access to all features with no recurring billing. Your one-time payment was made on{" "}
+                          {subscription?.created_at
+                            ? new Date(subscription.created_at).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })
+                            : "N/A"}.
+                        </p>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Next Payment Date */}
-                  {subscription?.next_payment_date && (
+                  </div>
+                ) : (
+                  /* Recurring Plans: Show billing period details */
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    {/* Current Period End */}
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Next Payment Date</p>
+                      <p className="text-sm font-medium text-muted-foreground">Current Period Ends</p>
                       <div className="flex items-center space-x-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-foreground">
-                          {new Date(subscription.next_payment_date).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {subscription?.current_period_end
+                            ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })
+                            : "N/A"}
                         </span>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Subscription Created */}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">Subscription Created</p>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-foreground">
-                        {subscription?.created_at
-                          ? new Date(subscription.created_at).toLocaleDateString(undefined, {
+
+                    {/* Next Payment */}
+                    {subscription?.days_until_next_payment !== null && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Next Payment</p>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {subscription.days_until_next_payment === 0
+                              ? "Today"
+                              : subscription.days_until_next_payment === 1
+                              ? "Tomorrow"
+                              : `In ${subscription.days_until_next_payment} days`}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Next Payment Date */}
+                    {subscription?.next_payment_date && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">Next Payment Date</p>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">
+                            {new Date(subscription.next_payment_date).toLocaleDateString(undefined, {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
-                            })
-                          : "N/A"}
-                      </span>
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Subscription Created */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-muted-foreground">Subscription Created</p>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-foreground">
+                          {subscription?.created_at
+                            ? new Date(subscription.created_at).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })
+                            : "N/A"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Cancel Subscription Button - Only show if active/trialing and not already scheduled for cancellation */}
-                {isActive&& (
+                {/* Cancel Subscription Button - Only for recurring plans (not lifetime) */}
+                {isActive && subscription?.plan !== "lifetime" && (
                   <>
                     <Separator className="my-6" />
                     <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/20 dark:bg-red-950/10">

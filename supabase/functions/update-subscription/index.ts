@@ -7,7 +7,7 @@ import { authenticateUser } from '../shared/auth.ts'
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -84,7 +84,32 @@ serve(async (req) => {
         // Get current plan for comparison
         const currentPlan = subscription?.plan || 'free'
         
-        // Plan hierarchy for determining upgrade vs downgrade
+        // IMPORTANT: Lifetime users cannot change plans (one-time purchase)
+        if (currentPlan === 'lifetime') {
+          return new Response(JSON.stringify({
+            error: 'Lifetime subscriptions cannot be changed. You already have permanent access.',
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Cannot "upgrade" to Lifetime via plan change - must use checkout
+        if (plan === 'lifetime') {
+          const origin = req.headers.get('origin') || 'https://moneko.io'
+          const checkoutUrl = `${origin}/checkout?plan=lifetime`
+
+          return new Response(JSON.stringify({
+            action: 'redirect_to_checkout',
+            url: checkoutUrl,
+            message: 'Lifetime is a one-time purchase. Please complete checkout to upgrade.',
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Plan hierarchy for determining upgrade vs downgrade (without lifetime)
         const PLAN_HIERARCHY = { free: 0, plus: 1, premium: 2 }
         const isUpgrade = PLAN_HIERARCHY[plan] > PLAN_HIERARCHY[currentPlan]
         
@@ -286,7 +311,17 @@ serve(async (req) => {
           })
         }
 
-        // Cancinel the subscription at period end
+        // IMPORTANT: Lifetime subscriptions cannot be canceled (one-time purchase, never expires)
+        if (subscription.plan === 'lifetime') {
+          return new Response(JSON.stringify({
+            error: 'Lifetime subscriptions are permanent and cannot be canceled.',
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Cancel the subscription at period end
         const canceledSubscription = await stripe.subscriptions.update(
           subscription.stripe_subscription_id,
           { cancel_at_period_end: true }
@@ -314,6 +349,16 @@ serve(async (req) => {
       case 'cancel_immediately': {
         if (!subscription || (subscription.status !== 'active' && subscription.status !== 'trialing')) {
           return new Response(JSON.stringify({ error: 'No active subscription to cancel' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // IMPORTANT: Lifetime subscriptions cannot be canceled (one-time purchase, never expires)
+        if (subscription.plan === 'lifetime') {
+          return new Response(JSON.stringify({
+            error: 'Lifetime subscriptions are permanent and cannot be canceled.',
+          }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })

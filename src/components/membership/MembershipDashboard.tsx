@@ -148,12 +148,18 @@ export function MembershipDashboard() {
                     </Badge>
                   </div>
                   <p className="mt-0.5 sm:mt-1 text-mobile-xs sm:text-sm text-muted-foreground">
-                    {subscription?.status === "active" && !subscription?.cancel_at_period_end && subscription?.days_until_next_payment !== null && (
+                    {/* Lifetime Plan: Permanent access, no renewal */}
+                    {subscription?.plan === "lifetime" && subscription?.status === "active" && (
+                      <>🎉 Lifetime access - Never expires</>
+                    )}
+                    {/* Recurring Plans: Show renewal info */}
+                    {subscription?.plan !== "lifetime" && subscription?.status === "active" && !subscription?.cancel_at_period_end && subscription?.days_until_next_payment !== null && (
                       <>Renews in {subscription.days_until_next_payment} days</>
                     )}
-                    {subscription?.status === "active" && subscription?.cancel_at_period_end && (
+                    {subscription?.plan !== "lifetime" && subscription?.status === "active" && subscription?.cancel_at_period_end && (
                       <>Expires on {new Date(subscription.current_period_end).toLocaleDateString()}</>
                     )}
+                    {/* Free/Canceled Plans */}
                     {(!subscription?.status || subscription?.status === "none" || subscription?.status === "canceled") && (
                       "Upgrade to access premium features"
                     )}
@@ -162,7 +168,8 @@ export function MembershipDashboard() {
               </div>
               
               <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                {subscription?.status === "active" && subscription?.cancel_at_period_end && (
+                {/* Resume button: Only for recurring plans that are canceled at period end */}
+                {subscription?.plan !== "lifetime" && subscription?.status === "active" && subscription?.cancel_at_period_end && (
                   <Button
                     onClick={() => resumeSubscription()}
                     disabled={isMutating}
@@ -178,16 +185,25 @@ export function MembershipDashboard() {
                     Resume
                   </Button>
                 )}
-                
+
+                {/* Upgrade button: Only for free/canceled/none status */}
                 {(!subscription?.status || subscription?.status === "none" || subscription?.status === "canceled") && (
                   <Button
                     onClick={() => setActiveTab("plans")}
-                    className="bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90 min-h-[44px] flex-1 sm:flex-initial text-mobile-sm sm:text-sm"
+                    className="bg-gradient-to-r from-primary/90 to-primary hover:from-primary !text-white hover:to-primary/90 min-h-[44px] flex-1 sm:flex-initial text-mobile-sm sm:text-sm"
                     size="sm"
                   >
                     Upgrade Now
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
+                )}
+
+                {/* Lifetime badge: Show special badge for Lifetime users */}
+                {subscription?.plan === "lifetime" && subscription?.status === "active" && (
+                  <Badge variant="outline" className="min-h-[44px] px-4 border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200 flex items-center gap-2">
+                    <Crown className="h-4 w-4" />
+                    Lifetime Member
+                  </Badge>
                 )}
               </div>
             </div>
@@ -243,13 +259,26 @@ export function MembershipDashboard() {
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {subscription && subscription.stripe_customer_id && user?.id ? (
+                  {/* Lifetime Plan: No payment method management (one-time payment) */}
+                  {subscription?.plan === "lifetime" && subscription?.status === "active" ? (
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="flex flex-col items-center justify-center py-12">
+                        <CheckCircle2 className="h-12 w-12 text-green-500 dark:text-green-400 mb-4" />
+                        <p className="text-sm font-medium text-foreground">Lifetime Plan - No Billing Required</p>
+                        <p className="text-sm text-muted-foreground/70 mt-1 text-center max-w-md">
+                          You've made a one-time payment for lifetime access. No recurring billing or payment method needed!
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : subscription && subscription.stripe_customer_id && user?.id && subscription.plan !== "lifetime" ? (
+                    /* Recurring Plans: Show payment method manager */
                     <PaymentMethodManager
                       paymentMethod={paymentMethod}
                       customerId={subscription.stripe_customer_id}
                       userId={user.id}
                     />
                   ) : (
+                    /* Free/No Subscription: Upgrade prompt */
                     <Card className="border-0 shadow-sm">
                       <CardContent className="flex flex-col items-center justify-center py-12">
                         <CreditCard className="h-12 w-12 text-muted-foreground/50 mb-4" />

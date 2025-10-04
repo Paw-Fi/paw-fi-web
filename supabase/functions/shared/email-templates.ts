@@ -69,13 +69,19 @@ const baseTemplate = (content: string, footerContent?: string) => `
 export const subscriptionCreatedTemplate = (data: {
   name: string;
   planName: string;
-  endDate: string;
+  endDate?: string; // Optional for Lifetime (no renewal)
   dashboardUrl: string;
+  isLifetime?: boolean;
 }) => {
+  // Lifetime vs recurring subscription messaging
+  const subscriptionMessage = data.isLifetime
+    ? `Thank you for purchasing our ${data.planName} plan. You now have permanent access to all premium features - no renewals, no recurring charges.`
+    : `Thank you for subscribing to our ${data.planName} plan. Your subscription is now active and will automatically renew on ${data.endDate}.`;
+
   const content = `
     <h1>Welcome to ${data.planName}!</h1>
     <p>Hi ${data.name},</p>
-    <p>Thank you for subscribing to our ${data.planName} plan. Your subscription is now active and will automatically renew on ${data.endDate}.</p>
+    <p>${subscriptionMessage}</p>
     <p>You now have access to all the premium features included in your plan.</p>
     <p>
       <a href="${data.dashboardUrl}" class="button">View Your Membership</a>
@@ -84,7 +90,7 @@ export const subscriptionCreatedTemplate = (data: {
     <p>Happy financial planning!</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),

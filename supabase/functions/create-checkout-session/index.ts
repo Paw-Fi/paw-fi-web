@@ -81,6 +81,7 @@ serve(async (req) => {
 
     // Parse the request body (plan, billingInterval, successUrl, cancelUrl only)
     // NOTE: isTrial is determined by backend based on subscription history (security)
+    // NOTE: billingInterval is optional for Lifetime (one-time payment)
     const { plan, billingInterval, successUrl, cancelUrl } = await req.json()
 
     // Validate plan
@@ -99,18 +100,24 @@ serve(async (req) => {
       })
     }
 
-    // Validate billing interval
-    if (!billingInterval || !isValidInterval(billingInterval)) {
-      return new Response(JSON.stringify({ error: 'Invalid billing interval' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    // Lifetime is one-time payment, doesn't require billing interval
+    // For other plans, validate billing interval
+    if (plan !== 'lifetime') {
+      if (!billingInterval || !isValidInterval(billingInterval)) {
+        return new Response(JSON.stringify({ error: 'Invalid billing interval' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     // Get the price ID based on plan and billing interval (with validation)
     let priceId: string
     try {
-      priceId = getPriceId(plan as PlanType, billingInterval as BillingInterval)
+      // Lifetime doesn't use billing interval
+      priceId = plan === 'lifetime'
+        ? getPriceId(plan as PlanType)
+        : getPriceId(plan as PlanType, billingInterval as BillingInterval)
     } catch (error) {
       console.error('Error getting price ID:', error)
       return new Response(JSON.stringify({ error: error.message }), {
@@ -230,7 +237,67 @@ serve(async (req) => {
       const origin = req.headers.get('origin') || env.appUrl
       const finalSuccessUrl = successUrl || `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`
       const finalCancelUrl = cancelUrl || `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`
-      
+
+      // LIFETIME PLAN: Use payment mode (one-time) instead of subscription mode
+      if (plan === 'lifetime') {
+        console.log('Creating LIFETIME checkout session (payment mode):', { userId, plan, priceId })
+
+        const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+          customer: customerId, // CRITICAL: Always attach customer (email is already on customer)
+          client_reference_id: userId, // CRITICAL: User ID for verification after checkout
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price: priceId,
+              quantity: 1,
+            },
+          ],
+          mode: 'payment', // ONE-TIME payment, NOT subscription
+          success_url: finalSuccessUrl,
+          cancel_url: finalCancelUrl,
+          allow_promotion_codes: true,
+          // CRITICAL: Enable invoice creation for one-time payments (Stripe official invoices)
+          invoice_creation: {
+            enabled: true,
+          },
+          // Payment metadata - persists on the payment intent
+          payment_intent_data: {
+            metadata: {
+              user_id: userId,
+              plan: plan,
+              checkout_type: 'lifetime',
+            },
+            receipt_email: userData.email, // CRITICAL: Stripe sends receipt email
+          },
+          // Session metadata - for tracking checkout process only
+          metadata: {
+            user_id: userId,
+            plan: plan,
+            checkout_type: 'lifetime',
+          },
+        }
+
+        const session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+
+        console.log('Lifetime checkout session created:', {
+          id: session.id,
+          customerId,
+          url: session.url,
+        })
+
+        return new Response(JSON.stringify({
+          clientSecret: session.client_secret,
+          checkoutUrl: session.url,
+          sessionId: session.id,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // RECURRING PLANS (Plus, Premium): Use subscription mode
+      console.log('Creating SUBSCRIPTION checkout session:', { userId, plan, billingInterval, priceId })
+
       // Build session config according to Stripe best practices
       const sessionConfig: Stripe.Checkout.SessionCreateParams = {
         customer: customerId, // CRITICAL: Always attach customer
@@ -260,7 +327,7 @@ serve(async (req) => {
           checkout_type: 'subscription',
         },
       }
-      
+
       // Trial configuration - Determined by backend based on subscription history
       // Only eligible users (new users who never subscribed) get trials WITHOUT payment method
       if (isEligibleForTrial) {
@@ -279,7 +346,7 @@ serve(async (req) => {
         sessionConfig.payment_method_collection = 'always' // Always require payment method
         sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // CRITICAL: Checkout Sessions require 'allow_incomplete' for proper 3DS/failed payment handling
       }
-      
+
       // Create checkout session with retry
       // NOTE: Per Stripe docs, idempotency keys are NOT recommended for Checkout Sessions
       // because sessions expire after 24 hours and users should be able to create new ones

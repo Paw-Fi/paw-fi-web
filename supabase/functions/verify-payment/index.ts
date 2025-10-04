@@ -6,7 +6,7 @@ import { validate as validateUuid } from 'https://deno.land/std@0.177.0/uuid/mod
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -79,8 +79,27 @@ serve(async (req) => {
       )
     }
 
-    // Get the subscription details from the session
+    // Handle Lifetime (mode='payment') vs Recurring (mode='subscription') sessions
     const subscriptionId = session.subscription as string
+
+    // Lifetime plan: one-time payment (mode='payment'), no subscription ID
+    if (session.mode === 'payment') {
+      console.log('Lifetime payment session detected - webhook will handle fulfillment')
+      return new Response(
+        JSON.stringify({
+          verified: true,
+          message: 'Lifetime payment successful - access granted via webhook',
+          plan: session.metadata?.plan || 'lifetime',
+          mode: 'payment',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
+
+    // Recurring plans: require subscription ID
     if (!subscriptionId) {
       console.error('No subscription ID found in session')
       return new Response(

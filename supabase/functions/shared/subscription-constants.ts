@@ -6,11 +6,12 @@
  */
 
 // Plan hierarchy for upgrade/downgrade detection
-// NOTE: Premium plan is not yet available - remove from production until price IDs are configured
+// NOTE: Lifetime is a one-time purchase (highest tier), not a recurring subscription
 export const PLAN_HIERARCHY = {
   free: 0,
   plus: 1,
-  // premium: 2, // DISABLED - Not yet available
+  premium: 2, // DISABLED - Not yet available, but keep for hierarchy
+  lifetime: 3, // Highest tier - One-time payment, permanent access
 } as const;
 
 export type PlanType = keyof typeof PLAN_HIERARCHY;

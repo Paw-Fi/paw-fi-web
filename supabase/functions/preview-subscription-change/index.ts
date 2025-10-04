@@ -7,7 +7,7 @@ import { authenticateUser } from '../shared/auth.ts'
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-07-30.basil',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -54,8 +54,16 @@ serve(async (req) => {
     // Parse the request body (newPlan, newBillingInterval only)
     const { newPlan, newBillingInterval } = await req.json()
 
-    if (!newPlan || !newBillingInterval) {
-      return new Response(JSON.stringify({ error: 'Plan and billing interval are required' }), {
+    if (!newPlan) {
+      return new Response(JSON.stringify({ error: 'Plan is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Lifetime doesn't require billing interval (one-time payment)
+    if (newPlan !== 'lifetime' && !newBillingInterval) {
+      return new Response(JSON.stringify({ error: 'Billing interval is required for recurring plans' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -80,8 +88,34 @@ serve(async (req) => {
 
     // Get current plan
     const currentPlan = subscription?.plan || 'free'
-    
-    // Determine if this is an upgrade or downgrade
+
+    // IMPORTANT: Lifetime users cannot preview plan changes (one-time purchase, permanent)
+    if (currentPlan === 'lifetime') {
+      return new Response(JSON.stringify({
+        error: 'Lifetime subscriptions cannot be changed. You already have permanent access.',
+        action: 'no_change',
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Cannot preview "upgrade" to Lifetime - must use checkout
+    if (newPlan === 'lifetime') {
+      const origin = req.headers.get('origin') || 'https://moneko.io'
+      const checkoutUrl = `${origin}/checkout?plan=lifetime`
+
+      return new Response(JSON.stringify({
+        action: 'redirect_to_checkout',
+        url: checkoutUrl,
+        message: 'Lifetime is a one-time purchase. Please complete checkout to upgrade.',
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Determine if this is an upgrade or downgrade (without lifetime)
     const isUpgrade = PLAN_HIERARCHY[newPlan] > PLAN_HIERARCHY[currentPlan]
     const isDowngrade = PLAN_HIERARCHY[newPlan] < PLAN_HIERARCHY[currentPlan]
     const isSamePlan = newPlan === currentPlan
