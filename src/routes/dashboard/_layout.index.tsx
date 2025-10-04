@@ -872,7 +872,7 @@ function DashboardHome() {
                           <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto mb-4 sm:mb-6 md:mb-8 bg-muted/30 rounded-2xl sm:rounded-3xl flex items-center justify-center">
                             <User className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-muted-foreground" />
                           </div>
-                          <h3 className="text-xl sm:text-2xl font-light mb-3 sm:mb-4 px-4">Create Your Financial Profile</h3>
+                          <h3 className="text-xl sm:text-2xl font-light mb-3 sm:mb-4 px-4 text-foreground">Create Your Financial Profile</h3>
                           <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 max-w-md mx-auto leading-relaxed px-4">
                             Get personalized recommendations based on your financial goals and current situation
                           </p>
@@ -936,9 +936,9 @@ function DashboardHome() {
                             <div className="bg-muted/20 dark:bg-slate-800/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
                                 <div className="flex-1">
-                                  <h4 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Continue Learning</h4>
-                                  <p className="text-sm sm:text-base font-medium mb-1">{learningInsights.nextLesson.title}</p>
-                                  <p className="text-xs sm:text-sm text-muted-foreground">{learningInsights.currentCourse?.title}</p>
+                                  <h4 className="text-base text-foreground sm:text-lg font-medium mb-2 sm:mb-3">Continue Learning</h4>
+                                  <p className="text-sm text-foreground sm:text-base font-medium mb-1">{learningInsights.nextLesson.title}</p>
+                                  <p className="text-xs text-foreground sm:text-sm">{learningInsights.currentCourse?.title}</p>
                                 </div>
                                 <Button size="sm" asChild className="rounded-full w-full sm:w-auto sm:ml-6">
                                   <Link to={`/dashboard/learning/${learningInsights.currentCourse?.course_id}/lesson/${learningInsights.nextLesson.lesson_id}` as any}>
@@ -951,7 +951,7 @@ function DashboardHome() {
 
                           {/* Recent Activity - Mobile Optimized */}
                           <div className="bg-muted/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
-                            <h4 className="text-base sm:text-lg font-medium mb-4 sm:mb-6">Recent Activity</h4>
+                            <h4 className="text-base text-foreground sm:text-lg font-medium mb-4 sm:mb-6">Recent Activity</h4>
                             <Timeline/>
                           </div>
                         </div>
@@ -960,7 +960,7 @@ function DashboardHome() {
                           <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 mx-auto mb-4 sm:mb-6 md:mb-8 bg-muted/30 rounded-2xl sm:rounded-3xl flex items-center justify-center">
                             <BookOpen className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 text-muted-foreground" />
                           </div>
-                          <h3 className="text-xl sm:text-2xl font-light mb-3 sm:mb-4 px-4">Start Learning</h3>
+                          <h3 className="text-xl sm:text-2xl font-light mb-3 sm:mb-4 px-4 text-foreground">Start Learning</h3>
                           <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 max-w-md mx-auto leading-relaxed px-4">
                             Begin your financial education journey with our comprehensive courses
                           </p>
@@ -1078,12 +1078,12 @@ function DashboardHome() {
               <motion.div variants={itemVariants}>
                   <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8">
                     <div className="mb-6 sm:mb-8">
-                      <h2 className="text-lg sm:text-xl md:text-2xl font-medium text-foreground mb-1 sm:mb-2">Essential Lessons</h2>
-                      <p className="text-sm sm:text-base text-muted-foreground">Foundation knowledge</p>
+                      <h2 className="text-lg text-foreground sm:text-xl md:text-2xl font-medium mb-1 sm:mb-2">Essential Lessons</h2>
+                      <p className="text-sm text-foreground sm:text-base ">Foundation knowledge</p>
                     </div>
 
                     <div className="bg-muted/20 dark:bg-slate-800/20 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6">
-                      <h4 className="text-base sm:text-lg font-medium mb-2 sm:mb-3">Your 2025 Guide to Investing</h4>
+                      <h4 className="text-base text-foreground sm:text-lg font-medium mb-2 sm:mb-3">Your 2025 Guide to Investing</h4>
                       <p className="text-muted-foreground text-xs sm:text-sm mb-4 sm:mb-6 leading-relaxed">Master investment fundamentals with 20+ comprehensive lessons</p>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-muted-foreground">
