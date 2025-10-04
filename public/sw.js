@@ -1,272 +1,68 @@
 /**
- * Service Worker for Moneko Web App
- * Provides intelligent caching for SSR performance optimization
+ * Service Worker Self-Destruct Script
+ *
+ * This Service Worker immediately unregisters itself to fix the infinite reload bug.
+ * It runs ONCE to clean up any existing registrations and then removes itself permanently.
+ *
+ * IMPORTANT: This is a one-time cleanup script that ensures:
+ * 1. Any existing Service Worker registrations are removed
+ * 2. All caches are cleared
+ * 3. The Service Worker unregisters itself
+ * 4. NO page reloads are triggered
+ *
+ * After deployment, users will visit once, the cleanup happens silently,
+ * and the Service Worker will never register again.
  */
 
-const CACHE_NAME = 'moneko-v1.0.1';
-const STATIC_CACHE = 'moneko-static-v1.0.1';
-const DYNAMIC_CACHE = 'moneko-dynamic-v1.0.1';
-const IMAGE_CACHE = 'moneko-images-v1.0.1';
-
-// Critical resources to cache immediately (HTML pages should NOT be pre-cached to avoid SSR mismatches)
-const CRITICAL_RESOURCES = [];
-
-// Resources to cache on first visit
-const RUNTIME_CACHE = [
-  '/dashboard/learning',
-  '/dashboard/portfolio', 
-  '/dashboard/tracker',
-];
-// Image cache patterns
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.ico'];
-
-// API cache patterns
-const API_PATTERNS = [
-  /^https:\/\/.+\.supabase\.co\/rest\/v1\//,
-  /^https:\/\/.+\.supabase\.co\/functions\/v1\//,
-];
-
-// Toggle to fully disable fetch interception (diagnostic/temporary)
-const INTERCEPT_FETCH = false;
+// Version to track cleanup execution
+const CLEANUP_VERSION = 'cleanup-v1.0.0';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then(() => {
-        // Intentionally avoid pre-caching HTML navigations to prevent serving stale SSR markup
-        console.log('✅ Service worker installed (no HTML pre-caching)');
-        return self.skipWaiting();
-      })
-      .catch((error) => {
-        console.error('❌ Service worker install failed:', error);
-      })
-  );
+  console.log('🧹 Service Worker cleanup: Installing...');
+  // Skip waiting to activate immediately
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     try {
-      // Clean up all caches to avoid any stale responses
+      console.log('🧹 Service Worker cleanup: Starting cleanup...');
+
+      // 1. Delete ALL caches (complete cleanup)
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map((name) => caches.delete(name)));
+      console.log(`🧹 Deleted ${cacheNames.length} cache(s)`);
 
-      // Unregister this service worker to fully disable it
+      // 2. Take control of all clients (without reloading)
+      await self.clients.claim();
+      console.log('🧹 Claimed all clients');
+
+      // 3. Unregister this Service Worker
       const unregistered = await self.registration.unregister();
-      console.log('🧹 Service worker unregistered:', unregistered);
+      console.log(`🧹 Service Worker unregistered: ${unregistered}`);
 
-      // Take control and reload all clients so they detach from SW immediately
-      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      for (const client of clientList) {
-        try { client.navigate(client.url); } catch (e) {}
+      // 4. Mark cleanup as complete in localStorage via postMessage
+      const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of allClients) {
+        client.postMessage({
+          type: 'SW_CLEANUP_COMPLETE',
+          version: CLEANUP_VERSION,
+          message: 'Service Worker has been permanently removed. No action needed.'
+        });
       }
-    } catch (e) {
-      console.error('Error during SW deactivate/unregister:', e);
+
+      console.log('✅ Service Worker cleanup complete - will not register again');
+
+    } catch (error) {
+      console.error('❌ Error during Service Worker cleanup:', error);
     }
   })());
 });
 
+// Do NOT intercept any fetch requests - let all requests go directly to network
 self.addEventListener('fetch', (event) => {
-  if (!INTERCEPT_FETCH) {
-    // Do not intercept any fetches
-    return;
-  }
-  const request = event.request;
-  const url = new URL(request.url);
-  // Skip non-GET or non-http
-  if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
-    return;
-  }
-  event.respondWith(handleRequest(request));
+  // No interception - all requests pass through to network
+  return;
 });
 
-async function handleRequest(request) {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-  
-  try {
-    // 1. Handle HTML pages (navigation requests)
-    if (request.mode === 'navigate') {
-      return await handleNavigation(request);
-    }
-    
-    // 2. Handle images
-    if (IMAGE_EXTENSIONS.some(ext => pathname.includes(ext))) {
-      return await handleImageRequest(request);
-    }
-    
-    // 3. Handle API requests
-    if (API_PATTERNS.some(pattern => pattern.test(request.url))) {
-      return await handleAPIRequest(request);
-    }
-    
-    // 4. Handle static assets (JS, CSS, fonts)
-    if (pathname.includes('/assets/') || 
-        pathname.includes('.js') || 
-        pathname.includes('.css') ||
-        pathname.includes('.woff') ||
-        pathname.includes('.woff2')) {
-      return await handleStaticAsset(request);
-    }
-    
-    // 5. Default: try cache first, then network
-    return await cacheFirstStrategy(request, DYNAMIC_CACHE);
-    
-  } catch (error) {
-    console.error('Service worker fetch error:', error);
-    return fetch(request);
-  }
-}
-
-// Handle navigation requests with network-first strategy
-async function handleNavigation(request) {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-  
-  try {
-    // For critical routes, try cache first for faster loading
-    if (CRITICAL_RESOURCES.includes(pathname)) {
-      const cachedResponse = await caches.match(request);
-      if (cachedResponse) {
-        // Serve from cache immediately, update in background
-        fetch(request).then(response => {
-          if (response.ok) {
-            caches.open(STATIC_CACHE).then(cache => {
-              cache.put(request, response.clone());
-            });
-          }
-        });
-        return cachedResponse;
-      }
-    }
-    
-    // Network first for dynamic content
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      // Cache successful responses
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
-    }
-    
-    return networkResponse;
-    
-  } catch (error) {
-    // Network failed, try cache
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    
-    // Return offline page if available
-    return await caches.match('/offline.html') || 
-           new Response('Offline - Please check your connection', {
-             status: 503,
-             headers: { 'Content-Type': 'text/plain' }
-           });
-  }
-}
-
-// Handle image requests with cache-first strategy
-async function handleImageRequest(request) {
-  return await cacheFirstStrategy(request, IMAGE_CACHE, 86400000); // 24 hours
-}
-
-// Handle API requests with network-first and short cache
-async function handleAPIRequest(request) {
-  // Bypass SW for API requests to avoid body stream issues and duplicate fetches
-  // This ensures Supabase REST and Edge Function calls are not cached or modified
-  return fetch(request);
-}
-
-// Handle static assets with cache-first strategy
-async function handleStaticAsset(request) {
-  return await cacheFirstStrategy(request, STATIC_CACHE, 604800000); // 7 days
-}
-
-// Generic cache-first strategy
-async function cacheFirstStrategy(request, cacheName, maxAge = 3600000) { // 1 hour default
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    // Check if cache is still fresh
-    const cacheTimestamp = cachedResponse.headers.get('sw-cache-timestamp');
-    if (!cacheTimestamp || Date.now() - parseInt(cacheTimestamp) < maxAge) {
-      return cachedResponse;
-    }
-  }
-  
-  // Not in cache or stale, fetch from network
-  try {
-    const networkResponse = await fetch(request);
-    
-    // Only cache complete 200 OK responses (avoid caching 206 partial content)
-    if (networkResponse.ok && networkResponse.status === 200) {
-      const cache = await caches.open(cacheName);
-      
-      const responseWithTimestamp = new Response(networkResponse.body, {
-        status: networkResponse.status,
-        statusText: networkResponse.statusText,
-        headers: {
-          ...Object.fromEntries(networkResponse.headers.entries()),
-          'sw-cache-timestamp': Date.now().toString()
-        }
-      });
-      
-      cache.put(request, responseWithTimestamp.clone());
-      return responseWithTimestamp;
-    }
-    
-    return networkResponse;
-    
-  } catch (error) {
-    // Network failed, return stale cache if available
-    if (cachedResponse) {
-      return cachedResponse;
-    }
-    throw error;
-  }
-}
-
-// Background sync for failed requests
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'background-sync') {
-    event.waitUntil(
-      // Handle background sync logic here
-      console.log('Background sync triggered')
-    );
-  }
-});
-
-// Handle push notifications
-self.addEventListener('push', (event) => {
-  if (event.data) {
-    const options = {
-      body: event.data.text(),
-      icon: '/icon-192x192.png',
-      badge: '/badge-72x72.png',
-      vibrate: [100, 50, 100],
-      data: {
-        dateOfArrival: Date.now(),
-        primaryKey: '2'
-      },
-      actions: [
-        {
-          action: 'explore',
-          title: 'Explore',
-          icon: '/checkmark.png'
-        },
-        {
-          action: 'close',
-          title: 'Close',
-          icon: '/xmark.png'
-        },
-      ]
-    };
-    
-    event.waitUntil(
-      self.registration.showNotification('Moneko Update', options)
-    );
-  }
-});
-
-console.log('🚀 Moneko Service Worker loaded');
+console.log('🧹 Service Worker cleanup script loaded');

@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { motion, Variants } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { Marquee } from '@/components/ui/marquee';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users } from 'lucide-react';
+import { useCommunityStats } from '@/hooks/use-community-stats';
 
 interface User {
   id: string;
@@ -35,17 +35,6 @@ const encryptEmail = (email: string): string => {
   return `${firstTwo}****${lastTwo}`;
 };
 
-/**
- * Shuffle array using Fisher-Yates algorithm
- */
-const shuffleArray = <T,>(array: T[]): T[] => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -128,80 +117,12 @@ const generateMockUsers = (count: number): User[] => {
 };
 
 export function UserCommunityShowcase() {
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [displayUsers, setDisplayUsers] = useState<User[]>(generateMockUsers(20));
-  const [isLoading, setIsLoading] = useState(true);
+  // Use TanStack Query hook for data fetching with caching
+  const { data, isLoading, error } = useCommunityStats();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Fetch total user count
-        const { count, error: countError } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
-
-        if (countError) {
-          console.error('Error fetching user count:', countError);
-        } else {
-          setTotalUsers(count || 0);
-        }
-
-        // Fetch 10 latest users
-        const { data: latestUsers, error: latestError } = await supabase
-          .from('users')
-          .select('id, email, full_name, avatar_url, created_at')
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (latestError) {
-          console.error('Error fetching latest users:', latestError);
-        }
-
-        // Fetch all users to pick 10 random ones (excluding the latest 10)
-        const { data: allUsers, error: allError } = await supabase
-          .from('users')
-          .select('id, email, full_name, avatar_url, created_at');
-
-        if (allError) {
-          console.error('Error fetching all users:', allError);
-        }
-
-        // If we have real users, use them
-        if (latestUsers && latestUsers.length > 0) {
-          // Filter out the latest users and shuffle the rest
-          const latestUserIds = new Set(latestUsers?.map((u) => u.id) || []);
-          const otherUsers = (allUsers || []).filter((u) => !latestUserIds.has(u.id));
-          const shuffledOthers = shuffleArray(otherUsers);
-          const randomUsers = shuffledOthers.slice(0, 10);
-
-          // Combine latest and random users
-          const combined = [...(latestUsers || []), ...randomUsers];
-          
-          // Shuffle the combined array for variety in the marquee
-          const finalUsers = shuffleArray(combined);
-          setDisplayUsers(finalUsers);
-        } else {
-          // Fallback to mock users if database is empty or has errors
-          const mockUsers = generateMockUsers(20);
-          setDisplayUsers(mockUsers);
-          // Use a base number for demo if no real users
-          if (count === 0 || count === null) {
-            setTotalUsers(250); // Demo base number
-          }
-        }
-      } catch (error) {
-        console.error('Error in fetchUserData:', error);
-        // Fallback to mock users on any error
-        const mockUsers = generateMockUsers(20);
-        setDisplayUsers(mockUsers);
-        setTotalUsers(250); // Demo base number
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, []);
+  // Fallback to mock data on error or empty database
+  const totalUsers = data?.totalUsers || 250;
+  const displayUsers = data?.displayUsers?.length ? data.displayUsers : generateMockUsers(40);
 
   const displayCount = totalUsers;
 
