@@ -412,7 +412,8 @@ function PricingPage() {
                     {isPlusPlan && (
                       <div className="text-center mb-4">
                         <span className="text-base font-semibold text-primary">
-                        LIMITED SPOTS AVAILABLE
+                        
+                        $49/YEAR (SAVE 40%)
 
                         </span>
                       </div>
@@ -420,7 +421,7 @@ function PricingPage() {
                      {isLifetime && (
                       <div className="text-center mb-4">
                         <span className="text-base font-semibold text-primary">
-                          $49/YEAR (SAVE 40%)
+                        LIMITED SPOTS AVAILABLE
                         </span>
                       </div>
                     )}
