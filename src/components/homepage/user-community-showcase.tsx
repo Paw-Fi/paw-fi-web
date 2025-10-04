@@ -122,7 +122,7 @@ export function UserCommunityShowcase() {
 
   // Fallback to mock data on error or empty database
   const totalUsers = data?.totalUsers || 250;
-  const displayUsers = data?.displayUsers?.length ? data.displayUsers : generateMockUsers(40);
+  const displayUsers = data?.displayUsers?.length ? data.displayUsers : generateMockUsers(30);
 
   const displayCount = totalUsers;
 
@@ -165,14 +165,14 @@ export function UserCommunityShowcase() {
           {/* Marquee Section */}
           {!isLoading && displayUsers.length > 0 && (
             <div className="space-y-6">
-              {/* First row - normal direction */}
+              {/* First row - users 0-9 (normal direction) */}
               <Marquee pauseOnHover className="[--duration:40s]">
                 {displayUsers.slice(0, Math.min(10, displayUsers.length)).map((user) => (
                   <UserCard key={`row1-${user.id}`} user={user} />
                 ))}
               </Marquee>
 
-              {/* Second row - reverse direction */}
+              {/* Second row - users 10-19 (reverse direction) */}
               {displayUsers.length >= 10 && (
                 <Marquee reverse pauseOnHover className="[--duration:45s]">
                   {displayUsers.slice(10, Math.min(20, displayUsers.length)).map((user) => (
@@ -181,10 +181,10 @@ export function UserCommunityShowcase() {
                 </Marquee>
               )}
 
-              {/* If we have enough users, add a third row */}
+              {/* Third row - users 20-29 (normal direction) - NO DUPLICATES */}
               {displayUsers.length >= 20 && (
                 <Marquee pauseOnHover className="[--duration:50s]">
-                  {displayUsers.slice(0, 10).map((user) => (
+                  {displayUsers.slice(20, Math.min(30, displayUsers.length)).map((user) => (
                     <UserCard key={`row3-${user.id}`} user={user} />
                   ))}
                 </Marquee>
