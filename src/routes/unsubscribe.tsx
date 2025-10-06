@@ -4,6 +4,9 @@ import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { supabase } from "@/lib/supabase";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/unsubscribe")({
   component: Unsubscribe,
@@ -62,38 +65,38 @@ function Unsubscribe() {
   }, [email]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-lg mx-auto p-6 bg-white rounded-lg shadow-md text-center">
-        {status === "working" && (
-          <>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4" />
-            <h1 className="text-2xl font-semibold">Updating your preferences…</h1>
-            <p className="text-gray-600 mt-2">Please wait while we unsubscribe you.</p>
-          </>
-        )}
-        {status === "success" && (
-          <>
-            <div className="flex justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+    <div className="min-h-screen bg-moneko-background flex items-center justify-center px-4 py-20">
+      <Card className="w-full max-w-xl rounded-3xl p-8 shadow-sm">
+        <CardContent className="p-0 text-center space-y-4">
+          {status === "working" && (
+            <div className="space-y-2">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+              <h1 className="text-2xl font-medium text-foreground">Updating your preferences9</h1>
+              <p className="text-muted-foreground">Please wait while we unsubscribe you.</p>
             </div>
-            <h1 className="text-2xl font-bold text-green-600">You're unsubscribed</h1>
-            <p className="text-gray-600 mt-2">{message}</p>
-          </>
-        )}
-        {status === "error" && (
-          <>
-            <div className="flex justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+          )}
+
+          {status === "success" && (
+            <div className="space-y-2">
+              <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto" />
+              <h1 className="text-2xl font-medium text-foreground">You're unsubscribed</h1>
+              <p className="text-muted-foreground">{message}</p>
             </div>
-            <h1 className="text-2xl font-bold text-red-600">We couldn't process that</h1>
-            <p className="text-gray-600 mt-2">{message || "Please try again later."}</p>
-          </>
-        )}
-      </div>
+          )}
+
+          {status === "error" && (
+            <Alert variant="default" className="mx-auto text-left">
+              <XCircle className="h-5 w-5 text-red-500" />
+              <div>
+                <AlertTitle className="text-foreground">We couldn't process that</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  {message || "Please try again later."}
+                </AlertDescription>
+              </div>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
