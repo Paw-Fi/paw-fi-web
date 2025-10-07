@@ -1,0 +1,45 @@
+-- WhatsApp budgeting tables for free-text updates via LLM
+
+-- 1) Contacts linked by phone (for pre-auth data capture)
+create table if not exists public.user_contacts (
+  id uuid primary key default gen_random_uuid(),
+  phone_e164 text not null unique,
+  whatsapp_user_id text,
+  user_id uuid references public.users(id) on delete set null,
+  verified boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+comment on table public.user_contacts is 'Maps WhatsApp/phone contacts to users for syncing later';
+
+-- 2) Daily budgets per contact
+create table if not exists public.daily_budgets (
+  id uuid primary key default gen_random_uuid(),
+  contact_id uuid not null references public.user_contacts(id) on delete cascade,
+  date date not null,
+  amount_cents integer not null,
+  currency text default 'USD',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (contact_id, date)
+);
+
+comment on table public.daily_budgets is 'Daily budget amounts per contact';
+
+-- 3) Expenses per contact
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  contact_id uuid not null references public.user_contacts(id) on delete cascade,
+  date date not null,
+  amount_cents integer not null,
+  currency text default 'USD',
+  category text,
+  raw_text text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_expenses_contact_date on public.expenses(contact_id, date);
+
+comment on table public.expenses is 'Individual expense entries extracted from free text';
