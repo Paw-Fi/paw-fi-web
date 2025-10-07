@@ -6,6 +6,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 
+function symbolFor(code?: string): string {
+  const m: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", JPY: "¥", AUD: "A$", CAD: "C$", SGD: "S$", HKD: "HK$", INR: "₹" };
+  const up = (code || "USD").toUpperCase();
+  return m[up] || "$";
+}
+
 // Types
 interface UpdateRequest {
   phone: string;       // E.164 format
@@ -24,6 +30,8 @@ interface LlmResult {
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
+const DEBUG = Deno.env.get('DEBUG_LOG') === 'true';
+
 
 function errorResponse(message: string, status = 400, details?: unknown) {
   return jsonResponse({ error: message, details }, status);
@@ -37,6 +45,7 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (DEBUG) console.error('config error', { hasGemini: !!GEMINI_API_KEY, hasUrl: !!SUPABASE_URL, hasKey: !!SUPABASE_SERVICE_ROLE_KEY });
     return errorResponse("Server not configured", 500);
   }
 
@@ -57,7 +66,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-  const currency = (inputCurrency || "USD").toUpperCase();
+  const providedCurrency = (inputCurrency || "USD").toUpperCase();
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -67,7 +76,7 @@ Deno.serve(async (req: Request) => {
   // Ensure contact exists
   const { data: contact, error: contactErr } = await supabase
     .from("user_contacts")
-    .select("id, user_id")
+    .select("id, user_id, preferred_currency")
     .eq("phone_e164", phone)
     .maybeSingle();
 
@@ -77,10 +86,12 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to fetch contact", 500);
   }
 
+  const preferredCurrency = (contact?.preferred_currency as string | null) || providedCurrency || 'USD';
+
   if (!contactId) {
     const { data: inserted, error: insertErr } = await supabase
       .from("user_contacts")
-      .insert({ phone_e164: phone })
+      .insert({ phone_e164: phone, preferred_currency: preferredCurrency })
       .select("id")
       .single();
     if (insertErr) {
@@ -92,7 +103,7 @@ Deno.serve(async (req: Request) => {
 
   // Use Gemini to derive operations
   const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const systemPrompt = `You are a budgeting extraction engine.
 Given arbitrary user text (possibly casual or multi-intent), produce STRICT JSON with this shape:
@@ -115,14 +126,14 @@ Rules:
   try {
     const result = await model.generateContent({
       contents: [
-        { role: "user", parts: [{ text: `${systemPrompt}\n\nCaller Currency: ${currency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}` }] },
+        { role: "user", parts: [{ text: `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}` }] },
       ],
       generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 },
     });
     llmText = result.response.text();
   } catch (e) {
     console.error("Gemini error", e);
-    return errorResponse("AI processing failed", 500);
+    return errorResponse("AI processing failed", 500, { phone, dateStr });
   }
 
   let ops: LlmResult = {};
@@ -132,17 +143,29 @@ Rules:
     ops = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
   } catch (e) {
     console.error("Parse ops error", e, llmText);
-    return errorResponse("AI returned invalid JSON", 500, { llmText });
+    return errorResponse("AI returned invalid JSON", 500, { llmText, phone, dateStr });
   }
 
   const actions = ops?.actions || {};
-  const results: any = { date: dateStr, currency };
+  const results: any = { date: dateStr, currency: preferredCurrency };
 
   // Upsert budget if provided
   if (actions.set_budget?.amount && contactId) {
     const budgetCents = Math.round(actions.set_budget.amount * 100);
-    const budgetDate = (actions.set_budget.date || dateStr).slice(0, 10);
-    const budgetCurrency = (actions.set_budget.currency || currency).toUpperCase();
+    
+    // Validate and sanitize the budget date
+    let budgetDate = dateStr; // Default to caller's date (today)
+    if (actions.set_budget.date) {
+      const parsedDate = new Date(actions.set_budget.date);
+      // Check if date is valid and in reasonable range
+      if (!isNaN(parsedDate.getTime()) && actions.set_budget.date.length >= 8) {
+        budgetDate = parsedDate.toISOString().slice(0, 10);
+      } else {
+        console.warn('[finance-update] Invalid budget date from AI, using default:', actions.set_budget.date);
+      }
+    }
+    
+    const budgetCurrency = (actions.set_budget.currency || preferredCurrency).toUpperCase();
 
     const { error: upsertErr } = await supabase
       .from("daily_budgets")
@@ -157,18 +180,32 @@ Rules:
 
   // Insert expenses if provided
   if (Array.isArray(actions.add_expenses) && actions.add_expenses.length && contactId) {
-    const rows = actions.add_expenses.map((e) => ({
-      contact_id: contactId!,
-      date: (e.date || dateStr).slice(0, 10),
-      amount_cents: Math.round((e.amount || 0) * 100),
-      currency: (e.currency || currency).toUpperCase(),
-      category: e.category || null,
-      raw_text: userText,
-      updated_at: new Date().toISOString(),
-    })).filter(r => r.amount_cents > 0);
+    const rows = actions.add_expenses.map((e) => {
+      // Validate and sanitize the date
+      let expenseDate = dateStr; // Default to caller's date (today)
+      if (e.date) {
+        const parsedDate = new Date(e.date);
+        // Check if date is valid and in reasonable range (not just "20" or malformed)
+        if (!isNaN(parsedDate.getTime()) && e.date.length >= 8) {
+          expenseDate = parsedDate.toISOString().slice(0, 10);
+        } else {
+          console.warn('[finance-update] Invalid date from AI, using default:', e.date);
+        }
+      }
+      
+      return {
+        contact_id: contactId!,
+        date: expenseDate,
+        amount_cents: Math.round((e.amount || 0) * 100),
+        currency: (e.currency || preferredCurrency).toUpperCase(),
+        category: e.category || null,
+        raw_text: userText,
+        updated_at: new Date().toISOString(),
+      };
+    }).filter(r => r.amount_cents > 0);
 
     if (rows.length) {
-      const { error: insertErr } = await supabase.from("expenses").insert(rows);
+      const { error: insertErr } = await supabase.from("expenses").insert(rows).select("id");
       if (insertErr) {
         console.error("expenses insert error", insertErr);
         return errorResponse("Failed to save expenses", 500);
@@ -200,18 +237,19 @@ Rules:
       budget_cents: budgetCents,
       spent_cents: totalCents,
       remaining_cents: remainingCents,
-      currency: budgetRow?.currency || currency,
+      currency: budgetRow?.currency || preferredCurrency,
     };
   }
 
   // Simple text reply for bots to display
   let reply = "";
   if (results.totals) {
-    const c = results.totals.currency || currency;
+    const code = (results.totals.currency || preferredCurrency).toUpperCase();
+    const sym = symbolFor(code);
     const toMoney = (cents: number) => (cents / 100).toFixed(2);
-    const setPart = results.budget_set ? `Budget set to ${c} ${toMoney(results.budget_set.amount_cents)}. ` : "";
+    const setPart = results.budget_set ? `Budget set to ${sym} ${toMoney(results.budget_set.amount_cents)}. ` : "";
     const added = results.expenses_added ? `${results.expenses_added} expense(s) logged. ` : "";
-    reply = `${setPart}${added}Today: spent ${c} ${toMoney(results.totals.spent_cents)} / budget ${c} ${toMoney(results.totals.budget_cents)}. Remaining: ${c} ${toMoney(results.totals.remaining_cents)}.`;
+    reply = `${setPart}${added}Today: spent ${sym} ${toMoney(results.totals.spent_cents)} / budget ${sym} ${toMoney(results.totals.budget_cents)}. Remaining: ${sym} ${toMoney(results.totals.remaining_cents)}.`;
   } else {
     reply = "Update recorded.";
   }

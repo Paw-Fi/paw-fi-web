@@ -7,6 +7,7 @@ create table if not exists public.user_contacts (
   whatsapp_user_id text,
   user_id uuid references public.users(id) on delete set null,
   verified boolean default false,
+  preferred_currency text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -27,7 +28,39 @@ create table if not exists public.daily_budgets (
 
 comment on table public.daily_budgets is 'Daily budget amounts per contact';
 
--- 3) Expenses per contact
+-- 3) Categories per contact (predefined or user-defined)
+create table if not exists public.expense_categories (
+  id uuid primary key default gen_random_uuid(),
+  contact_id uuid references public.user_contacts(id) on delete cascade,
+  name text not null,
+  is_default boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (contact_id, name)
+);
+
+comment on table public.expense_categories is 'Expense categories; contact_id null rows are global defaults';
+
+-- Seed some global defaults (idempotent)
+insert into public.expense_categories (contact_id, name, is_default)
+select null, x.name, true
+from (values
+  ('groceries'),
+  ('shopping'),
+  ('food'),
+  ('transport'),
+  ('housing'),
+  ('utilities'),
+  ('entertainment'),
+  ('healthcare'),
+  ('education'),
+  ('travel'),
+  ('income'),
+  ('other')
+) as x(name)
+on conflict do nothing;
+
+-- 4) Expenses per contact
 create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   contact_id uuid not null references public.user_contacts(id) on delete cascade,
