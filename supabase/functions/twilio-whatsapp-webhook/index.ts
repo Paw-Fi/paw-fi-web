@@ -4,6 +4,7 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import { buildHelpMessage, buildVerificationPrompt, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
 
 function xmlResponse(xml: string, status = 200) {
   return new Response(xml, { status, headers: { 'Content-Type': 'text/xml' } });
@@ -118,6 +119,27 @@ Deno.serve(async (req: Request) => {
   const hasMedia = Number(params.get('NumMedia') || '0') > 0;
   if (!from || (!body && !hasMedia)) {
     return xmlResponse('<Response><Message>Invalid message</Message></Response>');
+  }
+
+  // Check if user is verified (unless they're sending /verify command)
+  const isVerifyCommand = body.trim().toLowerCase() === '/verify';
+  if (!isVerifyCommand) {
+    const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
+    });
+    
+    const { data: contact } = await supabaseCheck
+      .from('user_contacts')
+      .select('verified, user_id')
+      .eq('phone_e164', from)
+      .maybeSingle();
+
+    // Check if contact exists and is verified
+    if (!contact || contact.verified !== true || !contact.user_id) {
+      const verifyMsg = buildVerificationPrompt();
+      return xmlResponse(`<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${verifyMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Message></Response>`);
+    }
   }
   // Media handling (WhatsApp receipts) - if an image is present, route to Gemini vision
   const numMedia = Number(params.get('NumMedia') || '0');
@@ -348,17 +370,7 @@ Use the add_expenses tool with a single item containing:
     global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
   });
 
-  // Commands registry
-  const COMMANDS: { name: string; alias?: string[]; usage: string; description: string }[] = [
-    { name: '/help', usage: '/help', description: 'Show available commands and how to use free-form updates' },
-    { name: '/setBudget', alias: ['/setbudget'], usage: '/setBudget <amount>', description: "Set today's budget using your preferred currency" },
-    { name: '/setCurrency', alias: ['/setcurrency'], usage: '/setCurrency <ISO>', description: 'Set your preferred currency (e.g., USD, EUR, GBP)' },
-    { name: '/expenses', usage: '/expenses', description: "List today's expenses with totals" },
-    { name: '/addCategory', alias: ['/addcategory'], usage: '/addCategory <name>', description: 'Add a custom expense category' },
-  ];
   const HELP_IMAGE_URL = Deno.env.get('HELP_IMAGE_URL') || '';
-
-  type Reply = { text: string; mediaUrl?: string | null };
 
     // Receipt image via WhatsApp
     if (numMedia > 0 && mediaUrl0 && mediaContentType0.startsWith('image/')) {
@@ -443,16 +455,6 @@ Return a concise human summary and structured items with amount, currency (if vi
       }
     }
 
-  function buildHelpReply(): Reply {
-    const lines = [
-      'Welcome to Moneko Budgeting! You can:',
-      '',
-      '- Send free-form text like: "I spent 4 on food and 2 on groceries today"',
-      '- Or use commands:',
-      ...COMMANDS.map(c => `  ${c.usage} — ${c.description}`),
-    ];
-    return { text: lines.join('\n'), mediaUrl: HELP_IMAGE_URL || null };
-  }
 
   async function isFirstMessageForContact(phone: string): Promise<boolean> {
     const { data, error } = await supabase
@@ -470,18 +472,12 @@ Return a concise human summary and structured items with amount, currency (if vi
 
   // Command routing: explicit slash commands take priority and are handled deterministically
   const lower = body.trim();
-  const replyText = async (): Promise<Reply> => {
-    // Show help if first message in conversation or user typed /help
-    const firstMsg = await isFirstMessageForContact(from!);
-    if (firstMsg || lower === '/help') {
-      return buildHelpReply();
-    }
-
-    // 1) Slash commands
+  const replyText = async (): Promise<WhatsAppReply> => {
+    // 1) Slash commands - check these FIRST before help message
     if (lower.startsWith('/')) {
       // match registered commands
       const token = lower.split(/\s+/)[0];
-      const matched = COMMANDS.find(c => c.name.toLowerCase() === token.toLowerCase() || (c.alias || []).includes(token.toLowerCase()));
+      const matched = WHATSAPP_COMMANDS.find(c => c.name.toLowerCase() === token.toLowerCase() || (c.alias || []).includes(token.toLowerCase()));
       if (!matched) {
         return { text: `Sorry, I didn’t understand that command. Send /help to see available commands.` };
       }
@@ -558,7 +554,43 @@ Return a concise human summary and structured items with amount, currency (if vi
       }
 
       if (matched.name.toLowerCase() === '/help') {
-        return buildHelpReply();
+        return buildHelpMessage(HELP_IMAGE_URL);
+      }
+
+      if (matched.name.toLowerCase() === '/verify') {
+        // Generate OTP and send verification link
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // Delete any existing unverified codes for this phone to keep only one active
+        await supabase
+          .from('whatsapp_verifications')
+          .delete()
+          .eq('phone_e164', from!)
+          .eq('verified', false);
+
+        // Store new verification (without user_id since they're not logged in yet)
+        const { error: insertError } = await supabase
+          .from('whatsapp_verifications')
+          .insert({
+            phone_e164: from!,
+            verification_code: code,
+            user_id: null,
+            expires_at: expiresAt.toISOString(),
+          });
+
+        if (insertError) {
+          console.error('Failed to store verification:', insertError);
+          return { text: '❌ *Failed to generate verification link*\n\nPlease try again later.' };
+        }
+
+        // Build verification URL
+        const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.app';
+        const verificationUrl = `${appUrl}/verify-whatsapp?otp=${code}`;
+
+        return {
+          text: `🔗 *Account Verification*\n\nClick this link to verify your account:\n${verificationUrl}\n\nOr enter code: *${code}*\n\nValid for 10 minutes.`
+        };
       }
 
       if (matched.name.toLowerCase() === '/addcategory') {
