@@ -4,6 +4,8 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
+import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 
 function xmlResponse(xml: string, status = 200) {
   return new Response(xml, { status, headers: { 'Content-Type': 'text/xml' } });
@@ -72,9 +74,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const TWILIO_AUTH_TOKEN = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const TWILIO_ACCOUNT_SID = Deno.env.get('TWILIO_ACCOUNT_SID');
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!TWILIO_AUTH_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  
+  if (!TWILIO_AUTH_TOKEN || !TWILIO_ACCOUNT_SID || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({ error: 'Server not configured' }, 500);
   }
 
@@ -112,12 +116,55 @@ Deno.serve(async (req: Request) => {
   }
 
   const from = normalizePhone(params.get('From'));
+  const to = params.get('To') || ''; // The Twilio number that received the message
   const body = params.get('Body') || '';
 
   // Safety fallback (allow image-only messages where Body may be empty)
   const hasMedia = Number(params.get('NumMedia') || '0') > 0;
   if (!from || (!body && !hasMedia)) {
     return xmlResponse('<Response><Message>Invalid message</Message></Response>');
+  }
+
+  // Check if user is verified (unless they're sending Start Verification command)
+  const isVerifyCommand = body.trim().toLowerCase() === 'start verification';
+  if (!isVerifyCommand) {
+    const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
+    });
+    
+    const { data: contact } = await supabaseCheck
+      .from('user_contacts')
+      .select('verified, user_id')
+      .eq('phone_e164', from)
+      .maybeSingle();
+
+    // Check if contact exists and is verified
+    if (!contact || contact.verified !== true || !contact.user_id) {
+      // Send verification template message via Twilio API
+      console.log('[twilio-webhook] User not verified, sending template message to:', from);
+      console.log('[twilio-webhook] Using From number (our Twilio number):', to);
+      
+      const templateResult = await sendWhatsAppTemplate(
+        TWILIO_ACCOUNT_SID,
+        TWILIO_AUTH_TOKEN,
+        to, // Use the 'To' param - this is our Twilio WhatsApp number
+        from, // Send to the user who messaged us
+        TWILIO_TEMPLATES.VERIFICATION_PROMPT
+        // No contentVariables needed for this template
+      );
+      
+      if (!templateResult.success) {
+        console.error('[twilio-webhook] Failed to send template:', templateResult.error);
+        // Fallback to TwiML if template fails
+        const verifyMsg = buildVerificationPrompt();
+        return xmlResponse(`<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${verifyMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Message></Response>`);
+      }
+      
+      console.log('[twilio-webhook] Template sent successfully:', templateResult.messageSid);
+      // Return empty TwiML response since we sent the message via API
+      return xmlResponse('<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>');
+    }
   }
   // Media handling (WhatsApp receipts) - if an image is present, route to Gemini vision
   const numMedia = Number(params.get('NumMedia') || '0');
@@ -191,7 +238,7 @@ Deno.serve(async (req: Request) => {
           },
         ],
       }];
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools: toolsForVision });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools: toolsForVision });
 
       const callerDate = new Date().toISOString().slice(0, 10);
       const callerCurrency = 'USD';
@@ -348,17 +395,7 @@ Use the add_expenses tool with a single item containing:
     global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
   });
 
-  // Commands registry
-  const COMMANDS: { name: string; alias?: string[]; usage: string; description: string }[] = [
-    { name: '/help', usage: '/help', description: 'Show available commands and how to use free-form updates' },
-    { name: '/setBudget', alias: ['/setbudget'], usage: '/setBudget <amount>', description: "Set today's budget using your preferred currency" },
-    { name: '/setCurrency', alias: ['/setcurrency'], usage: '/setCurrency <ISO>', description: 'Set your preferred currency (e.g., USD, EUR, GBP)' },
-    { name: '/expenses', usage: '/expenses', description: "List today's expenses with totals" },
-    { name: '/addCategory', alias: ['/addcategory'], usage: '/addCategory <name>', description: 'Add a custom expense category' },
-  ];
   const HELP_IMAGE_URL = Deno.env.get('HELP_IMAGE_URL') || '';
-
-  type Reply = { text: string; mediaUrl?: string | null };
 
     // Receipt image via WhatsApp
     if (numMedia > 0 && mediaUrl0 && mediaContentType0.startsWith('image/')) {
@@ -408,7 +445,7 @@ Use the add_expenses tool with a single item containing:
             },
           ],
         }];
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools: toolsForVision });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools: toolsForVision });
         const prompt = `You are an assistant that extracts line-item expenses from a receipt image. 
 Return a concise human summary and structured items with amount, currency (if visible), and category (groceries, food, transport, etc.).`;
         const result = await model.generateContent({
@@ -443,16 +480,6 @@ Return a concise human summary and structured items with amount, currency (if vi
       }
     }
 
-  function buildHelpReply(): Reply {
-    const lines = [
-      'Welcome to Moneko Budgeting! You can:',
-      '',
-      '- Send free-form text like: "I spent 4 on food and 2 on groceries today"',
-      '- Or use commands:',
-      ...COMMANDS.map(c => `  ${c.usage} — ${c.description}`),
-    ];
-    return { text: lines.join('\n'), mediaUrl: HELP_IMAGE_URL || null };
-  }
 
   async function isFirstMessageForContact(phone: string): Promise<boolean> {
     const { data, error } = await supabase
@@ -470,18 +497,68 @@ Return a concise human summary and structured items with amount, currency (if vi
 
   // Command routing: explicit slash commands take priority and are handled deterministically
   const lower = body.trim();
-  const replyText = async (): Promise<Reply> => {
-    // Show help if first message in conversation or user typed /help
-    const firstMsg = await isFirstMessageForContact(from!);
-    if (firstMsg || lower === '/help') {
-      return buildHelpReply();
+  const replyText = async (): Promise<WhatsAppReply> => {
+    // 0) Check for "Start Verification" plain text FIRST (before slash commands)
+    if (lower.toLowerCase() === 'start verification') {
+      // Generate OTP and send verification link
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      // Delete any existing unverified codes for this phone to keep only one active
+      await supabase
+        .from('whatsapp_verifications')
+        .delete()
+        .eq('phone_e164', from!)
+        .eq('verified', false);
+
+      // Store new verification (without user_id since they're not logged in yet)
+      const { error: insertError } = await supabase
+        .from('whatsapp_verifications')
+        .insert({
+          phone_e164: from!,
+          verification_code: code,
+          user_id: null,
+          expires_at: expiresAt.toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Failed to store verification:', insertError);
+        return { text: '❌ *Failed to generate verification link*\n\nPlease try again later.' };
+      }
+
+      // Send verification code via template
+      const templateResult = await sendWhatsAppTemplate(
+        TWILIO_ACCOUNT_SID,
+        TWILIO_AUTH_TOKEN,
+        to, // Use the 'To' param - this is our Twilio WhatsApp number
+        from!, // Send to the user who messaged us
+        TWILIO_TEMPLATES.VERIFICATION_CODE,
+        JSON.stringify({ CODE: code }) // Template variable
+      );
+
+      if (!templateResult.success) {
+        console.error('[verification] Failed to send template:', templateResult.error);
+        // Fallback to plain text if template fails
+        const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.app';
+        const verificationUrl = `${appUrl}/verify-whatsapp?otp=${code}`;
+        return {
+          text: `🔗 *Account Verification*\n\nClick this link to verify your account:\n${verificationUrl}\n\nOr enter code: *${code}*\n\nValid for 10 minutes.`
+        };
+      }
+
+      console.log('[verification] Template sent successfully:', templateResult.messageSid);
+      // Template already sent via API, no need to return additional text
+      // Return empty to avoid duplicate messages
+      return {
+        text: ''
+      };
     }
 
-    // 1) Slash commands
+    // 1) Slash commands - check these FIRST before help message
     if (lower.startsWith('/')) {
       // match registered commands
       const token = lower.split(/\s+/)[0];
-      const matched = COMMANDS.find(c => c.name.toLowerCase() === token.toLowerCase() || (c.alias || []).includes(token.toLowerCase()));
+      const matched = WHATSAPP_COMMANDS.find(c => c.name.toLowerCase() === token.toLowerCase() || (c.alias || []).includes(token.toLowerCase()));
       if (!matched) {
         return { text: `Sorry, I didn’t understand that command. Send /help to see available commands.` };
       }
@@ -558,7 +635,13 @@ Return a concise human summary and structured items with amount, currency (if vi
       }
 
       if (matched.name.toLowerCase() === '/help') {
-        return buildHelpReply();
+        return buildHelpMessage(HELP_IMAGE_URL);
+      }
+
+      // This command is no longer used - verification is handled via plain text
+      // Keeping this block for backward compatibility but it won't match anymore
+      if (matched.name.toLowerCase() === '/start verification') {
+        return { text: 'Please use "Start Verification" (without the slash) to verify your account.' };
       }
 
       if (matched.name.toLowerCase() === '/addcategory') {
@@ -705,7 +788,7 @@ Return a concise human summary and structured items with amount, currency (if vi
       ],
     }];
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools });
     const systemInstruction =
       'You are a budgeting assistant. Decide whether the user is setting a budget or logging expenses. '
       + 'Always infer and attach clear categories for each expense item (e.g., groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other). '
