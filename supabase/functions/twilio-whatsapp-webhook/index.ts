@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
+import { uploadReceiptImage } from "./storage-helper.ts";
 
 function xmlResponse(xml: string, status = 200) {
   return new Response(xml, { status, headers: { 'Content-Type': 'text/xml' } });
@@ -196,6 +197,15 @@ Deno.serve(async (req: Request) => {
       }
       const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
 
+      // We'll upload to storage asynchronously after sending the response
+      // to avoid blocking the user. Store the upload promise to execute later.
+      const storageUploadTask = {
+        imgBuf,
+        contentType,
+        phone: from!,
+        executed: false,
+      };
+
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const toolsForVision = [{
         function_declarations: [
@@ -238,7 +248,7 @@ Deno.serve(async (req: Request) => {
           },
         ],
       }];
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools: toolsForVision });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools: toolsForVision });
 
       const callerDate = new Date().toISOString().slice(0, 10);
       const callerCurrency = 'USD';
@@ -310,7 +320,7 @@ Use the add_expenses tool with a single item containing:
             .join(', ');
           
           console.log('[add_expenses] Composed text for finance-update:', composed);
-          
+
           const { data, error } = await supabase.functions.invoke('finance-update', {
             body: { phone: from!, text: composed, date: callerDate },
           });
@@ -365,6 +375,7 @@ Use the add_expenses tool with a single item containing:
           auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
           global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
         });
+        console.log('[receipt-textOut] finance-update(receipt) textOut:', textOut);
         const { data, error } = await supabase.functions.invoke('finance-update', {
           body: { phone: from!, text: textOut },
         });
@@ -381,6 +392,61 @@ Use the add_expenses tool with a single item containing:
       const textEsc = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
       console.log('[receipt-parse] Sending TwiML response:', twiml);
+
+      // Upload image to storage asynchronously after response is sent
+      // This won't block the response to the user
+      Promise.resolve().then(async () => {
+        try {
+          console.log('[async-storage] Starting background upload...');
+          const storageUrl = await uploadReceiptImage(
+            SUPABASE_URL,
+            SUPABASE_SERVICE_ROLE_KEY,
+            storageUploadTask.imgBuf,
+            storageUploadTask.contentType,
+            storageUploadTask.phone
+          );
+
+          if (storageUrl) {
+            console.log('[async-storage] Upload successful:', storageUrl);
+
+            // Update the most recent expense with the receipt URL
+            const supabaseUpdate = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+              auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+              global: { headers: { 'X-Client-Info': 'moneko-async-storage' } },
+            });
+
+            // Get contact ID
+            const { data: contact } = await supabaseUpdate
+              .from('user_contacts')
+              .select('id')
+              .eq('phone_e164', storageUploadTask.phone)
+              .maybeSingle();
+
+            if (contact?.id) {
+              // Update most recent expense created in last 60 seconds for this contact
+              const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+              const { error: updateError } = await supabaseUpdate
+                .from('expenses')
+                .update({ receipt_image_url: storageUrl })
+                .eq('contact_id', contact.id)
+                .gte('created_at', sixtySecondsAgo)
+                .is('receipt_image_url', null)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+              if (updateError) {
+                console.error('[async-storage] Failed to update expense:', updateError);
+              } else {
+                console.log('[async-storage] Expense updated with receipt URL');
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[async-storage] Background upload failed:', err);
+          // Don't throw - this is a background task
+        }
+      });
+
       return xmlResponse(twiml);
     } catch (e) {
       console.error('receipt parse error', e);
@@ -461,8 +527,7 @@ Return a concise human summary and structured items with amount, currency (if vi
         // If a tool call is requested, execute similarly to text flow
         const tool = result.response.functionCalls()?.[0];
         if (tool) {
-          const out = await callTool(tool.name, tool.args);
-          return typeof out === 'string' ? { text: out } : out;
+          // Fallback: proceed with text pipeline below for this environment
         }
         // Fallback: send any extracted text through finance-update pipeline
         const textOut = result.response.text() || '';
@@ -638,11 +703,6 @@ Return a concise human summary and structured items with amount, currency (if vi
         return buildHelpMessage(HELP_IMAGE_URL);
       }
 
-      // This command is no longer used - verification is handled via plain text
-      // Keeping this block for backward compatibility but it won't match anymore
-      if (matched.name.toLowerCase() === '/start verification') {
-        return { text: 'Please use "Start Verification" (without the slash) to verify your account.' };
-      }
 
       if (matched.name.toLowerCase() === '/addcategory') {
         const parts = lower.split(/\s+/);
@@ -683,6 +743,126 @@ Return a concise human summary and structured items with amount, currency (if vi
           return { text: 'Failed to add category.' };
         }
         return { text: `Added category "${name}".` };
+      }
+
+      // ===== Zero-Based Budgeting (Envelope) Commands =====
+      if (matched.name.toLowerCase() === '/createenvelope') {
+        // Usage: /createEnvelope <name> [monthlyTarget]
+        const parts = lower.split(/\s+/).slice(1)
+        if (!parts.length) return { text: 'Usage: /createEnvelope <name> [monthlyTarget]' }
+        const maybeAmount = parseFloat(parts[parts.length - 1])
+        const hasAmount = isFinite(maybeAmount)
+        const name = (hasAmount ? parts.slice(0, -1) : parts).join(' ').trim()
+        if (!name) return { text: 'Usage: /createEnvelope <name> [monthlyTarget]' }
+        const { data: contact, error: cErr } = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
+        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const targetCents = hasAmount && maybeAmount > 0 ? Math.round(maybeAmount * 100) : 0
+        const { data: envRow, error: envErr } = await supabase
+          .from('budget_envelopes')
+          .upsert({ contact_id: contact.id, name, monthly_target_cents: targetCents, updated_at: new Date().toISOString() }, { onConflict: 'contact_id,name' })
+          .select('id, monthly_target_cents')
+          .maybeSingle()
+        if (envErr) return { text: '❌ *Failed to create/update envelope*' }
+        const tgt = envRow?.monthly_target_cents ?? targetCents
+        return { text: `✅ *Envelope ready*\n\n📁 ${name}\n🎯 Monthly Target: ${(tgt/100).toFixed(2)}` }
+      }
+
+      if (matched.name.toLowerCase() === '/setenvelopealloc') {
+        // Usage: /setEnvelopeAlloc <name> <YYYY-MM> <amount>
+        const parts = lower.split(/\s+/).slice(1)
+        if (parts.length < 3) return { text: 'Usage: /setEnvelopeAlloc <name> <YYYY-MM> <amount>' }
+        const amount = parseFloat(parts[parts.length - 1])
+        const monthStr = parts[parts.length - 2]
+        const name = parts.slice(0, -2).join(' ').trim()
+        if (!name || !/^\d{4}-\d{2}$/.test(monthStr) || !isFinite(amount) || amount <= 0) return { text: 'Usage: /setEnvelopeAlloc <name> <YYYY-MM> <amount>' }
+        const period_month = `${monthStr}-01`
+        const { data: contact, error: cErr } = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
+        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const { data: env, error: envFindErr } = await supabase
+          .from('budget_envelopes')
+          .select('id')
+          .eq('contact_id', contact.id)
+          .eq('name', name)
+          .maybeSingle()
+        if (envFindErr || !env?.id) return { text: `❌ *Envelope not found:* ${name}` }
+        const { error: upErr } = await supabase
+          .from('envelope_allocations')
+          .upsert({ envelope_id: env.id, period_month, amount_cents: Math.round(amount*100), updated_at: new Date().toISOString() }, { onConflict: 'envelope_id,period_month' })
+        if (upErr) return { text: '❌ *Failed to set allocation*' }
+        return { text: `✅ *Allocation saved*\n\n📁 ${name}\n🗓️ ${monthStr}\n💰 ${amount.toFixed(2)}` }
+      }
+
+      if (matched.name.toLowerCase() === '/linkcategoryenvelope') {
+        // Usage: /linkCategoryEnvelope <name> <category>
+        const parts = lower.split(/\s+/).slice(1)
+        if (parts.length < 2) return { text: 'Usage: /linkCategoryEnvelope <name> <category>' }
+        const category = parts[parts.length - 1]
+        const name = parts.slice(0, -1).join(' ').trim()
+        if (!name || !category) return { text: 'Usage: /linkCategoryEnvelope <name> <category>' }
+        const { data: contact, error: cErr } = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
+        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const { data: env, error: envFindErr } = await supabase
+          .from('budget_envelopes')
+          .select('id')
+          .eq('contact_id', contact.id)
+          .eq('name', name)
+          .maybeSingle()
+        if (envFindErr || !env?.id) return { text: `❌ *Envelope not found:* ${name}` }
+        const { error: linkErr } = await supabase
+          .from('envelope_category_links')
+          .upsert({ envelope_id: env.id, category: category.toLowerCase(), updated_at: new Date().toISOString() }, { onConflict: 'envelope_id,category' })
+        if (linkErr) return { text: '❌ *Failed to link category*' }
+        return { text: `✅ *Linked*\n\n📁 ${name}\n🏷️ ${category.toLowerCase()}` }
+      }
+
+      if (matched.name.toLowerCase() === '/envelopestatus') {
+        // Usage: /envelopeStatus [YYYY-MM]
+        const parts = lower.split(/\s+/)
+        const monthStr = parts[1] && /^\d{4}-\d{2}$/.test(parts[1]) ? parts[1] : new Date().toISOString().slice(0,7)
+        const period_month = `${monthStr}-01`
+        const { data: contact, error: cErr } = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
+        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const { data: envs, error: envErr } = await supabase
+          .from('budget_envelopes')
+          .select('id,name,monthly_target_cents')
+          .eq('contact_id', contact.id)
+          .order('name', { ascending: true })
+        if (envErr) return { text: '❌ *Failed to load envelopes*' }
+        if (!envs?.length) return { text: '📁 *No envelopes defined yet.* Use /createEnvelope.' }
+        const envIds = envs.map(e => e.id)
+        const { data: allocs } = await supabase
+          .from('envelope_allocations')
+          .select('envelope_id, period_month, amount_cents')
+          .in('envelope_id', envIds)
+          .eq('period_month', period_month)
+        const { data: spentRows } = await supabase
+          .from('v_envelope_monthly_spend')
+          .select('envelope_id, period_month, spent_cents')
+          .in('envelope_id', envIds)
+          .eq('period_month', period_month)
+        const spentMap = new Map<string, number>()
+        for (const r of spentRows || []) spentMap.set(r.envelope_id as string, Number(r.spent_cents)||0)
+        const allocMap = new Map<string, number>()
+        for (const a of allocs || []) allocMap.set(a.envelope_id as string, Number(a.amount_cents)||0)
+        let totalAlloc = 0, totalSpent = 0
+        let msg = `📦 *Envelope Status* — ${monthStr}\n\n`
+        envs.forEach((e, idx) => {
+          const alloc = allocMap.get(e.id) ?? (Number(e.monthly_target_cents)||0)
+          const spent = spentMap.get(e.id) ?? 0
+          totalAlloc += alloc
+          totalSpent += spent
+          const remaining = Math.max(alloc - spent, 0)
+          msg += `${idx+1}. ${e.name}\n   Alloc: ${(alloc/100).toFixed(2)}  Spent: ${(spent/100).toFixed(2)}  Rem: ${(remaining/100).toFixed(2)}\n`
+        })
+        msg += `\n━━━━━━━━━━━━━━━━\n\n`+
+               `💰 *Total Alloc:* ${(totalAlloc/100).toFixed(2)}\n`+
+               `📉 *Total Spent:* ${(totalSpent/100).toFixed(2)}\n`+
+               `✅ *Total Remaining:* ${((Math.max(totalAlloc-totalSpent,0))/100).toFixed(2)}`
+        return { text: msg }
       }
 
       if (matched.name.toLowerCase() === '/setcurrency') {

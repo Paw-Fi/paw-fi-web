@@ -18,6 +18,11 @@ export const WHATSAPP_COMMANDS: WhatsAppCommand[] = [
   { name: '/setCurrency', alias: ['/setcurrency'], usage: '/setCurrency <ISO>', description: 'Set your preferred currency (e.g., USD, EUR, GBP)' },
   { name: '/expenses', usage: '/expenses', description: "List today's expenses with totals" },
   { name: '/addCategory', alias: ['/addcategory'], usage: '/addCategory <name>', description: 'Add a custom expense category' },
+  // Envelopes (Zero-Based Budgeting)
+  { name: '/createEnvelope', alias: ['/createenvelope'], usage: '/createEnvelope <name> [monthlyTarget]', description: 'Create an envelope, optional default monthly target' },
+  { name: '/setEnvelopeAlloc', alias: ['/setenvelopealloc'], usage: '/setEnvelopeAlloc <name> <YYYY-MM> <amount>', description: 'Set allocation for a month' },
+  { name: '/linkCategoryEnvelope', alias: ['/linkcategoryenvelope'], usage: '/linkCategoryEnvelope <name> <category>', description: 'Map a category to an envelope' },
+  { name: '/envelopeStatus', alias: ['/envelopestatus'], usage: '/envelopeStatus [YYYY-MM]', description: 'Show envelope allocations vs spent for a month' },
 ];
 
 export function buildHelpMessage(helpImageUrl?: string): WhatsAppReply {

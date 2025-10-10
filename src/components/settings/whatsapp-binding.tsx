@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 
@@ -12,17 +11,18 @@ interface WhatsAppBindingProps {
 }
 
 export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(otpFromUrl || '');
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Auto-fill OTP from URL parameter
   useEffect(() => {
-    if (otpFromUrl) {
+    if (otpFromUrl && otpFromUrl !== code) {
+      console.log('Setting OTP from URL:', otpFromUrl);
       setCode(otpFromUrl);
-      // Auto-verify if OTP is provided
-      verifyCode(otpFromUrl);
+
+        verifyCode(otpFromUrl);
     }
   }, [otpFromUrl]);
 
@@ -180,9 +180,15 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
                 </InputOTPGroup>
               </InputOTP>
             </div>
-            <p className="text-xs text-muted-foreground text-center">
-              Enter the 6-digit code from WhatsApp
-            </p>
+            {otpFromUrl ? (
+              <p className="text-xs text-primary text-center font-medium">
+                Code auto-filled from verification link
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center">
+                Enter the 6-digit code from WhatsApp
+              </p>
+            )}
           </div>
           <Button disabled={true} className="w-full">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -209,7 +215,7 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
               maxLength={6}
               value={code}
               onChange={(value) => setCode(value)}
-              disabled={loading}
+              disabled={loading || !!otpFromUrl}
               pattern={REGEXP_ONLY_DIGITS}
             >
               <InputOTPGroup>
@@ -222,11 +228,17 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
               </InputOTPGroup>
             </InputOTP>
           </div>
-          <p className="text-xs text-muted-foreground text-center">
-            Enter the 6-digit code from WhatsApp
-          </p>
+          {otpFromUrl ? (
+            <p className="text-xs text-primary text-center font-medium">
+              Code auto-filled from verification link
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center">
+              Enter the 6-digit code from WhatsApp
+            </p>
+          )}
         </div>
-        <Button onClick={() => verifyCode()} disabled={loading} className="w-full">
+        <Button onClick={() => verifyCode()} disabled={loading || !code} className="w-full">
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

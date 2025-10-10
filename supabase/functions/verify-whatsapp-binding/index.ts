@@ -3,7 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-import { buildHelpMessage } from "../shared/whatsapp-helpers.ts";
+import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -105,22 +105,14 @@ Deno.serve(async (req: Request) => {
 
     // Send onboarding message to WhatsApp after successful verification
     try {
-      const HELP_IMAGE_URL = Deno.env.get('HELP_IMAGE_URL') || '';
-      const helpMessage = buildHelpMessage(HELP_IMAGE_URL);
       const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
       const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
 
-      // Use Messaging Service SID if available (for WhatsApp Business Account)
-      // Otherwise fall back to direct phone number (for sandbox)
+      // Send onboarding message using Twilio Content Template
       const twilioParams: Record<string, string> = {
         To: `whatsapp:${verification.phone_e164}`,
-        Body: helpMessage.text,
+        ContentSid: TWILIO_TEMPLATES.ONBOARDING,
       };
-
-      // Add media URL if available
-      if (helpMessage.mediaUrl) {
-        twilioParams.MediaUrl = helpMessage.mediaUrl;
-      }
 
       if (TWILIO_MESSAGING_SERVICE_SID) {
         twilioParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
