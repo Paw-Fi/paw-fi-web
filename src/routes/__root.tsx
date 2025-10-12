@@ -75,18 +75,6 @@ export const Route = createRootRoute({
       {
         rel: 'icon',
         type: 'image/webp',
-        sizes: '512x512',
-        href: '/logo512.webp',
-      },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        sizes: '512x512',
-        href: '/logo512.png',
-      },
-      {
-        rel: 'icon',
-        type: 'image/webp',
         sizes: '32x32',
         href: '/logo192.webp',
       },

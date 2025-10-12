@@ -207,12 +207,13 @@ Rules:
     }).filter(r => r.amount_cents > 0);
 
     if (rows.length) {
-      const { error: insertErr } = await supabase.from("expenses").insert(rows).select("id");
+      const { data: insertedExpenses, error: insertErr } = await supabase.from("expenses").insert(rows).select("*");
       if (insertErr) {
         console.error("expenses insert error", insertErr);
         return errorResponse("Failed to save expenses", 500);
       }
       results.expenses_added = rows.length;
+      results.expenses = insertedExpenses; // Return full expense data
     }
   }
 

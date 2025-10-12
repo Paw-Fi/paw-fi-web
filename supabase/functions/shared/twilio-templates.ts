@@ -12,6 +12,9 @@ export const TWILIO_TEMPLATES = {
   //Onboarding message - sent after verification
   ONBOARDING: 'HX077aaa1227e050cb6dcb25f60204e2cb',
 
+  //Non-subscriber message - sent to users who are on the Free plan
+  NON_SUBSCRIBER: 'HX1f022ebaaba733057d471c3dbdc1c627',
+
 } as const;
 
 export type TemplateId = typeof TWILIO_TEMPLATES[keyof typeof TWILIO_TEMPLATES];

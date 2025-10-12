@@ -3,10 +3,11 @@
 
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { uploadReceiptImage } from "./storage-helper.ts";
+import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
+import { isFreeUser } from "../shared/is-free-user.ts";
 
 function xmlResponse(xml: string, status = 200) {
   return new Response(xml, { status, headers: { 'Content-Type': 'text/xml' } });
@@ -60,10 +61,69 @@ function normalizePhone(from: string | null): string | null {
   return from;
 }
 
-function b64encode(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
+// Format ProcessResult into user-friendly message
+function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): string {
+  if (result.error) {
+    if (result.type === 'fallback' && result.error === 'Could not read receipt') {
+      return '❌ *Could not read receipt*\n\nPlease try again with:\n• A clearer photo\n• Better lighting\n• All text visible\n\nOr type the items manually.';
+    }
+    return `❌ *${result.error}*\n\nPlease try again or contact support.`;
+  }
+
+  if (result.type === 'budget') {
+    const reply = result.reply || 'Budget updated.';
+    // finance-update already provides complete message with amount, no need to duplicate
+    return `✅ *Budget Updated*\n\n💰 ${reply}`;
+  }
+
+  if (result.type === 'expense') {
+    // Use different format for receipts vs text expenses
+    if (result.isReceipt && result.items.length === 1) {
+      // Original receipt format - more detailed for single receipt entry
+      const item = result.items[0];
+      const symbol = item.currencySymbol || item.currency || '$';
+
+      let formattedMsg = `✅ *Receipt Logged*\n\n`;
+      formattedMsg += `💰 *Amount:* ${symbol}${item.amount}\n`;
+      if (item.category) {
+        formattedMsg += `📁 *Category:* ${item.category}\n`;
+      }
+      if (item.note) {
+        formattedMsg += `📝 *Items:* ${item.note}\n`;
+      }
+
+      formattedMsg += `\n━━━━━━━━━━━━━━━━\n\n`;
+
+      // Add the totals from finance-update
+      const totalsMsg = result.reply || 'Receipt processed.';
+      formattedMsg += `📊 *${totalsMsg}*`;
+
+      return formattedMsg;
+    }
+
+    // Standard format for text expenses or multiple items
+    let formattedMsg = `✅ *Expenses Logged*\n\n`;
+
+    // List each expense (defaults already applied by expense-processors.ts)
+    result.items.forEach((item, index) => {
+      const symbol = item.currencySymbol || item.currency || '$';
+      formattedMsg += `${index + 1}. ${symbol}${item.amount}`;
+      if (item.category) formattedMsg += ` (${item.category})`;
+      if (item.note) formattedMsg += ` - ${item.note}`;
+      formattedMsg += `\n`;
+    });
+
+    formattedMsg += `\n━━━━━━━━━━━━━━━━\n\n`;
+
+    // Add the totals from finance-update
+    const totalsMsg = result.reply || 'Expenses recorded.';
+    formattedMsg += `📊 *${totalsMsg}*`;
+
+    return formattedMsg;
+  }
+
+  // Fallback type
+  return result.reply || 'Update recorded.';
 }
 
 Deno.serve(async (req: Request) => {
@@ -166,6 +226,36 @@ Deno.serve(async (req: Request) => {
       // Return empty TwiML response since we sent the message via API
       return xmlResponse('<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>');
     }
+
+    // User is verified - check if they're on free plan
+    if (contact && contact.user_id) {
+      const { data: subscription } = await supabaseCheck
+        .from('subscriptions')
+        .select('plan, status')
+        .eq('user_id', contact.user_id)
+        .maybeSingle();
+
+      if (isFreeUser(subscription)) {
+        console.log('[twilio-webhook] User is on free plan, sending NON_SUBSCRIBER template');
+
+        const freeUserResult = await sendWhatsAppTemplate(
+          TWILIO_ACCOUNT_SID,
+          TWILIO_AUTH_TOKEN,
+          to, // Use the 'To' param - this is our Twilio WhatsApp number
+          from, // Send to the user who messaged us
+          TWILIO_TEMPLATES.NON_SUBSCRIBER
+        );
+
+        if (!freeUserResult.success) {
+          console.error('[twilio-webhook] Failed to send NON_SUBSCRIBER template:', freeUserResult.error);
+        } else {
+          console.log('[twilio-webhook] NON_SUBSCRIBER template sent successfully:', freeUserResult.messageSid);
+        }
+
+        // Return empty TwiML response since we sent the message via API
+        return xmlResponse('<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>');
+      }
+    }
   }
   // Media handling (WhatsApp receipts) - if an image is present, route to Gemini vision
   const numMedia = Number(params.get('NumMedia') || '0');
@@ -179,6 +269,20 @@ Deno.serve(async (req: Request) => {
       if (!GEMINI_API_KEY) {
         return xmlResponse('<?xml version="1.0" encoding="UTF-8"?><Response><Message>Image processing is unavailable. Try sending text.</Message></Response>');
       }
+
+      // Fetch user's preferred currency from database
+      const supabaseCurrency = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+        global: { headers: { 'X-Client-Info': 'moneko-currency-fetch' } },
+      });
+
+      const { data: contactData } = await supabaseCurrency
+        .from('user_contacts')
+        .select('preferred_currency')
+        .eq('phone_e164', from)
+        .maybeSingle();
+
+      const userCurrency = contactData?.preferred_currency || 'USD';
 
       // Twilio Media URLs often require Basic Auth: AccountSid:AuthToken
       const accountSid = params.get('AccountSid') || Deno.env.get('TWILIO_ACCOUNT_SID') || '';
@@ -197,213 +301,42 @@ Deno.serve(async (req: Request) => {
       }
       const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
 
-      // We'll upload to storage asynchronously after sending the response
-      // to avoid blocking the user. Store the upload promise to execute later.
-      const storageUploadTask = {
-        imgBuf,
-        contentType,
+      // Call the extracted receipt processing function
+      const result = await processReceiptImage({
         phone: from!,
-        executed: false,
-      };
-
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const toolsForVision = [{
-        function_declarations: [
-          {
-            name: 'set_budget',
-            description: 'Set or update the daily budget for this contact (today by default). Amount in major units.',
-            parameters: {
-              type: 'OBJECT',
-              properties: {
-                amount: { type: 'NUMBER', description: 'Budget amount in major units', nullable: false },
-                currency: { type: 'STRING', description: 'ISO currency code', nullable: true },
-                date: { type: 'STRING', description: 'ISO date, YYYY-MM-DD', nullable: true },
-              },
-              required: ['amount'],
-            },
-          },
-          {
-            name: 'add_expenses',
-            description: 'Append one or more expenses for this contact (today by default). Amount in major units.',
-            parameters: {
-              type: 'OBJECT',
-              properties: {
-                items: {
-                  type: 'ARRAY',
-                  items: {
-                    type: 'OBJECT',
-                    properties: {
-                      amount: { type: 'NUMBER', nullable: false },
-                      category: { type: 'STRING', nullable: true, description: 'Normalized category label' },
-                      currency: { type: 'STRING', nullable: true },
-                      date: { type: 'STRING', nullable: true },
-                      note: { type: 'STRING', nullable: true, description: 'Optional user-provided note' },
-                    },
-                    required: ['amount'],
-                  },
-                },
-              },
-              required: ['items'],
-            },
-          },
-        ],
-      }];
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools: toolsForVision });
-
-      const callerDate = new Date().toISOString().slice(0, 10);
-      const callerCurrency = 'USD';
-
-      // According to official Gemini docs: https://ai.google.dev/gemini-api/docs/image-understanding#javascript
-      // For the older SDK, pass contents as a simple array of parts (inlineData + text)
-      const prompt = `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\n\nYou are a budgeting assistant analyzing a receipt image.
-
-CRITICAL INSTRUCTIONS:
-1. Find the FINAL TOTAL amount at the bottom of the receipt (after all taxes, service charges, tips, etc.)
-2. Create a SINGLE expense entry with this total amount
-3. For the note field, list the main items purchased (e.g., "Burrata, Solomillo, Chocolate fondat, etc.")
-4. Determine the appropriate category based on the items (food, drink, groceries, transport, shopping, entertainment, etc.)
-5. If multiple categories apply (food + drinks), choose the primary one or use "dining"
-6. Do NOT create separate expenses for each line item - only ONE expense with the total
-
-Use the add_expenses tool with a single item containing:
-- amount: the final total (e.g., 61.95)
-- category: appropriate category (e.g., "dining", "food", "groceries")
-- note: brief description of main items (e.g., "Burrata, Solomillo, Chocolate, drinks")
-- currency: extract from receipt or use ${callerCurrency}
-- date: ${callerDate} unless a different date is clearly visible`;
-      
-      const result = await model.generateContent([
-        {
-          inlineData: {
-            mimeType: mediaContentType0,
-            data: b64encode(imgBuf)
-          }
-        },
-        prompt
-      ]);
-
-      console.log('[receipt-parse] Gemini response received', {
-        hasFunctionCalls: !!result.response.functionCalls,
-        functionCallsCount: result.response.functionCalls()?.length || 0,
-        hasText: !!result.response.text(),
-        textPreview: result.response.text()?.slice(0, 100)
+        imageBuffer: imgBuf,
+        contentType,
+        supabaseUrl: SUPABASE_URL,
+        supabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+        geminiApiKey: GEMINI_API_KEY,
+        callerDate: new Date().toISOString().slice(0, 10),
+        callerCurrency: userCurrency,
       });
 
-      // Execute a single tool call if returned
-      const executeToolCall = async (name: string, args: any): Promise<string> => {
-        // Recreate minimal Supabase client here for function invokes
-        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
-          auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-          global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
-        });
-        if (name === 'set_budget') {
-          const amount = Number(args?.amount);
-          const date = String(args?.date || callerDate);
-          const { data, error } = await supabase.functions.invoke('finance-update', {
-            body: { phone: from!, text: `/setBudget ${amount}`, date },
-          });
-          if (error) {
-            console.error('set_budget(receipt) error', error);
-            return '❌ *Failed to set budget*\n\nPlease try again or contact support.';
-          }
-          
-          // Format budget response
-          const reply = data?.reply || 'Budget updated.';
-          return `✅ *Budget Updated*\n\n💰 ${reply}`;
-        }
-        if (name === 'add_expenses') {
-          const items = Array.isArray(args?.items) ? args.items : [];
-          console.log('[add_expenses] Received items from Gemini:', JSON.stringify(items, null, 2));
-          
-          const composed = items
-            .map((it: any) => `I spent ${it.amount}${it.currency ? ' ' + it.currency : ''}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`)
-            .join(', ');
-          
-          console.log('[add_expenses] Composed text for finance-update:', composed);
-
-          const { data, error } = await supabase.functions.invoke('finance-update', {
-            body: { phone: from!, text: composed, date: callerDate },
-          });
-          
-          console.log('[add_expenses] finance-update response:', { data, error });
-          
-          if (error) {
-            console.error('add_expenses(receipt) error', error);
-            return '❌ *Failed to add expenses*\n\nPlease try again or contact support.';
-          }
-          
-          // Build a detailed, formatted response message
-          const firstItem = items[0];
-          const amount = firstItem?.amount || 0;
-          const currency = firstItem?.currency || callerCurrency;
-          const category = firstItem?.category || 'expense';
-          const note = firstItem?.note || '';
-          
-          // Format the response with proper structure
-          let formattedMsg = `✅ *Receipt Logged*\n\n`;
-          formattedMsg += `💰 *Amount:* ${currency} ${amount}\n`;
-          formattedMsg += `📁 *Category:* ${category}\n`;
-          if (note) {
-            formattedMsg += `📝 *Items:* ${note}\n`;
-          }
-          formattedMsg += `\n━━━━━━━━━━━━━━━━\n\n`;
-          
-          // Add the totals from finance-update
-          const totalsMsg = data?.reply || 'Expenses recorded.';
-          formattedMsg += `📊 *${totalsMsg}*`;
-          
-          return formattedMsg;
-        }
-        return 'No action performed.';
-      };
-
-      const tool = result.response.functionCalls()?.[0];
-      let message = '';
-      if (tool) {
-        console.log('[receipt-parse] Executing tool:', tool.name);
-        message = await executeToolCall(tool.name, tool.args);
-        console.log('[receipt-parse] Tool execution result message:', message);
-      } else {
-        const textOut = (result.response.text() || '').trim();
-        if (!textOut) {
-          const textEsc = '❌ *Could not read receipt*\n\nPlease try again with:\n• A clearer photo\n• Better lighting\n• All text visible\n\nOr type the items manually.'
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          const tw = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
-          return xmlResponse(tw);
-        }
-        const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
-          auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-          global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
-        });
-        console.log('[receipt-textOut] finance-update(receipt) textOut:', textOut);
-        const { data, error } = await supabase.functions.invoke('finance-update', {
-          body: { phone: from!, text: textOut },
-        });
-        if (error) {
-          console.error('finance-update(receipt) error', error);
-          message = '❌ *Failed to process receipt*\n\nPlease try again or contact support.';
-        } else {
-          const reply = data?.reply || 'Receipt processed.';
-          message = `✅ *Receipt Processed*\n\n📊 ${reply}`;
-        }
-      }
+      // Format the result into user-friendly message
+      const message = formatProcessResult(result, userCurrency);
 
       console.log('[receipt-parse] Final message to send:', message);
       const textEsc = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
       console.log('[receipt-parse] Sending TwiML response:', twiml);
 
-      // Upload image to storage asynchronously after response is sent
-      // This won't block the response to the user
-      Promise.resolve().then(async () => {
+      // Upload image to storage ONLY if receipt was successfully processed
+      // Don't store unreadable receipts to avoid storage costs
+      const shouldUpload = !result.error || (result.type === 'expense' && result.items.length > 0);
+
+      if (shouldUpload) {
+        // Upload image to storage asynchronously after response is sent
+        // This won't block the response to the user
+        Promise.resolve().then(async () => {
         try {
           console.log('[async-storage] Starting background upload...');
           const storageUrl = await uploadReceiptImage(
             SUPABASE_URL,
             SUPABASE_SERVICE_ROLE_KEY,
-            storageUploadTask.imgBuf,
-            storageUploadTask.contentType,
-            storageUploadTask.phone
+            imgBuf,
+            contentType,
+            from!
           );
 
           if (storageUrl) {
@@ -419,7 +352,7 @@ Use the add_expenses tool with a single item containing:
             const { data: contact } = await supabaseUpdate
               .from('user_contacts')
               .select('id')
-              .eq('phone_e164', storageUploadTask.phone)
+              .eq('phone_e164', from!)
               .maybeSingle();
 
             if (contact?.id) {
@@ -445,7 +378,10 @@ Use the add_expenses tool with a single item containing:
           console.error('[async-storage] Background upload failed:', err);
           // Don't throw - this is a background task
         }
-      });
+        });
+      } else {
+        console.log('[async-storage] Skipping upload - receipt could not be read');
+      }
 
       return xmlResponse(twiml);
     } catch (e) {
@@ -462,89 +398,6 @@ Use the add_expenses tool with a single item containing:
   });
 
   const HELP_IMAGE_URL = Deno.env.get('HELP_IMAGE_URL') || '';
-
-    // Receipt image via WhatsApp
-    if (numMedia > 0 && mediaUrl0 && mediaContentType0.startsWith('image/')) {
-      try {
-        // Fetch image bytes
-        const imgRes = await fetch(mediaUrl0);
-        const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
-        const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') || '');
-        const toolsForVision = [{
-          function_declarations: [
-            {
-              name: 'set_budget',
-              description: 'Set or update the daily budget for this contact (today by default). Amount in major units.',
-              parameters: {
-                type: 'OBJECT',
-                properties: {
-                  amount: { type: 'NUMBER', description: 'Budget amount in major units', nullable: false },
-                  currency: { type: 'STRING', description: 'ISO currency code', nullable: true },
-                  date: { type: 'STRING', description: 'ISO date, YYYY-MM-DD', nullable: true },
-                },
-                required: ['amount'],
-              },
-            },
-            {
-              name: 'add_expenses',
-              description: 'Append one or more expenses for this contact (today by default). Amount in major units.',
-              parameters: {
-                type: 'OBJECT',
-                properties: {
-                  items: {
-                    type: 'ARRAY',
-                    items: {
-                      type: 'OBJECT',
-                      properties: {
-                        amount: { type: 'NUMBER', nullable: false },
-                        category: { type: 'STRING', nullable: true, description: 'Normalized category label' },
-                        currency: { type: 'STRING', nullable: true },
-                        date: { type: 'STRING', nullable: true },
-                        note: { type: 'STRING', nullable: true, description: 'Optional user-provided note' },
-                      },
-                      required: ['amount'],
-                    },
-                  },
-                },
-                required: ['items'],
-              },
-            },
-          ],
-        }];
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools: toolsForVision });
-        const prompt = `You are an assistant that extracts line-item expenses from a receipt image. 
-Return a concise human summary and structured items with amount, currency (if visible), and category (groceries, food, transport, etc.).`;
-        const result = await model.generateContent({
-          systemInstruction: 'You are the same budgeting assistant that handles free-form text. Use the same tools and behaviors to parse a receipt image and update expenses/budget accordingly.',
-          contents: [
-            { role: 'user', parts: [
-              { text: `Caller Currency: USD\nCaller Date: ${new Date().toISOString().slice(0,10)}\nUser sent a receipt image. Extract items and call tools.` },
-              { inlineData: { mimeType: mediaContentType0, data: b64encode(imgBuf) } }
-            ] },
-          ],
-          generationConfig: { maxOutputTokens: 512 },
-        });
-        // If a tool call is requested, execute similarly to text flow
-        const tool = result.response.functionCalls()?.[0];
-        if (tool) {
-          // Fallback: proceed with text pipeline below for this environment
-        }
-        // Fallback: send any extracted text through finance-update pipeline
-        const textOut = result.response.text() || '';
-        const { data, error } = await supabase.functions.invoke('finance-update', {
-          body: { phone: from!, text: textOut },
-        });
-        if (error) {
-          console.error('finance-update(receipt) error', error);
-          return { text: 'Failed to process receipt.' };
-        }
-        return { text: data?.reply || 'Receipt processed.' };
-      } catch (e) {
-        console.error('receipt parse error', e);
-        return { text: 'Sorry, I could not read that receipt. Please try again or type the items.' };
-      }
-    }
-
 
   async function isFirstMessageForContact(phone: string): Promise<boolean> {
     const { data, error } = await supabase
@@ -563,6 +416,15 @@ Return a concise human summary and structured items with amount, currency (if vi
   // Command routing: explicit slash commands take priority and are handled deterministically
   const lower = body.trim();
   const replyText = async (): Promise<WhatsAppReply> => {
+    // Fetch user's preferred currency from database (used for text processing)
+    const { data: contactData } = await supabase
+      .from('user_contacts')
+      .select('preferred_currency')
+      .eq('phone_e164', from)
+      .maybeSingle();
+
+    const userCurrency = contactData?.preferred_currency || 'USD';
+
     // 0) Check for "Start Verification" plain text FIRST (before slash commands)
     if (lower.toLowerCase() === 'start verification') {
       // Generate OTP and send verification link
@@ -924,140 +786,19 @@ Return a concise human summary and structured items with amount, currency (if vi
       return { text: '❌ *Could not understand*\n\nSend */help* to see available commands.' };
     }
 
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    // Define function(s) the model can call to update DB
-    const tools = [{
-      function_declarations: [
-        {
-          name: 'set_budget',
-          description: 'Set or update the daily budget for this contact (today by default). Amount in major units.',
-          parameters: {
-            type: 'OBJECT',
-            properties: {
-              amount: { type: 'NUMBER', description: 'Budget amount in major units', nullable: false },
-              currency: { type: 'STRING', description: 'ISO currency code', nullable: true },
-              date: { type: 'STRING', description: 'ISO date, YYYY-MM-DD', nullable: true },
-            },
-            required: ['amount'],
-          },
-        },
-        {
-          name: 'add_expenses',
-          description: 'Append one or more expenses for this contact (today by default). Amount in major units.',
-          parameters: {
-            type: 'OBJECT',
-            properties: {
-              items: {
-                type: 'ARRAY',
-                items: {
-                  type: 'OBJECT',
-                  properties: {
-                    amount: { type: 'NUMBER', nullable: false },
-                    category: { type: 'STRING', nullable: true, description: 'Normalized category label' },
-                    currency: { type: 'STRING', nullable: true },
-                    date: { type: 'STRING', nullable: true },
-                    note: { type: 'STRING', nullable: true, description: 'Optional user-provided note' },
-                  },
-                  required: ['amount'],
-                },
-              },
-            },
-            required: ['items'],
-          },
-        },
-      ],
-    }];
-
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools });
-    const systemInstruction =
-      'You are a budgeting assistant. Decide whether the user is setting a budget or logging expenses. '
-      + 'Always infer and attach clear categories for each expense item (e.g., groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other). '
-      + 'Prefer the user\'s preferred currency; if none is specified, default to USD with the $ symbol in user-facing text. '
-      + 'Use the provided functions to perform updates, including category fields. Keep replies short and human-friendly.';
-
-    const callerDate = new Date().toISOString().slice(0, 10);
-    const callerCurrency = 'USD';
-
-    // Start a tool-enabled turn
-    let response = await model.generateContent({
-      systemInstruction,
-      contents: [{ role: 'user', parts: [{ text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nUser: ${body}` }] }],
-      generationConfig: { maxOutputTokens: 512 },
+    // Call the extracted free-form text expense processor
+    const result = await processFreeFormTextExpense({
+      phone: from!,
+      text: body,
+      supabaseUrl: SUPABASE_URL,
+      supabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      callerDate: new Date().toISOString().slice(0, 10),
+      callerCurrency: userCurrency,
     });
 
-    // While model wants to call a function, execute and provide results
-    const callTool = async (name: string, args: any): Promise<string> => {
-      if (name === 'set_budget') {
-        const amount = Number(args?.amount);
-        const date = String(args?.date || callerDate);
-        const { data, error } = await supabase.functions.invoke('finance-update', {
-          body: { phone: from!, text: `/setBudget ${amount}`, date },
-        });
-        if (error) {
-          console.error('set_budget via finance-update error', error);
-          return { text: '❌ *Failed to set budget*\n\nPlease try again or contact support.' };
-        }
-        const reply = data?.reply || 'Budget updated.';
-        return { text: `✅ *Budget Updated*\n\n💰 ${reply}` };
-      }
-      if (name === 'add_expenses') {
-        const items = Array.isArray(args?.items) ? args.items : [];
-        // Reuse finance-update free-form to insert expenses; pass the raw text synthesized from items
-        const composed = items
-          .map((it: any) => `I spent ${it.amount}${it.currency ? ' ' + it.currency : ''}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`)
-          .join(', ');
-        const { data, error } = await supabase.functions.invoke('finance-update', {
-          body: { phone: from!, text: composed, date: callerDate },
-        });
-        if (error) {
-          console.error('add_expenses via finance-update error', error);
-          return { text: '❌ *Failed to add expenses*\n\nPlease try again or contact support.' };
-        }
-        
-        // Build a detailed, formatted response message (similar to receipt image)
-        let formattedMsg = `✅ *Expenses Logged*\n\n`;
-        
-        // List each expense
-        items.forEach((item: any, index: number) => {
-          const amount = item.amount || 0;
-          const currency = item.currency || callerCurrency;
-          const category = item.category || 'expense';
-          const note = item.note || '';
-          
-          formattedMsg += `${index + 1}. ${currency} ${amount}`;
-          if (category) formattedMsg += ` (${category})`;
-          if (note) formattedMsg += ` - ${note}`;
-          formattedMsg += `\n`;
-        });
-        
-        formattedMsg += `\n━━━━━━━━━━━━━━━━\n\n`;
-        
-        // Add the totals from finance-update
-        const totalsMsg = data?.reply || 'Expenses recorded.';
-        formattedMsg += `📊 *${totalsMsg}*`;
-        
-        return { text: formattedMsg };
-      }
-      return { text: 'No action performed.' };
-    };
-
-    // Tool execution loop (single-step for lite usage)
-    const tool = response.response.functionCalls()?.[0];
-    if (tool) {
-      const result = await callTool(tool.name, tool.args);
-      // Return human-friendly result
-      return typeof result === 'string' ? { text: result } : result;
-    }
-
-    // If no tool call suggested, fallback to finance-update
-    const { data, error } = await supabase.functions.invoke('finance-update', {
-      body: { phone: from!, text: body },
-    });
-    if (error) {
-      console.error('finance-update fallback2 error', error);
-      return { text: 'Failed to process message.' };
-    }
-    return { text: data?.reply || 'Update recorded.' };
+    // Format the result into user-friendly message
+    return { text: formatProcessResult(result, userCurrency) };
   };
 
   const reply = await replyText();

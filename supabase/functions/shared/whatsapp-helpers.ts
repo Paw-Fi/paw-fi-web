@@ -1,4 +1,5 @@
 // Shared WhatsApp helper functions and types
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 export interface WhatsAppReply {
   text: string;
@@ -108,4 +109,81 @@ export async function sendWhatsAppTemplate(
     console.error('[sendWhatsAppTemplate] Error:', error);
     return { success: false, error: String(error) };
   }
+}
+
+/**
+ * Currency code to symbol mapping
+ * Maps ISO 4217 currency codes to their common symbols
+ */
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  // Major currencies
+  'USD': '$',
+  'EUR': '€',
+  'GBP': '£',
+  'JPY': '¥',
+  'CNY': '¥',
+  'CHF': 'CHF',
+  'CAD': 'C$',
+  'AUD': 'A$',
+  'NZD': 'NZ$',
+  'HKD': 'HK$',
+  'SGD': 'S$',
+  'KRW': '₩',
+  'INR': '₹',
+  'RUB': '₽',
+  'BRL': 'R$',
+  'MXN': 'Mex$',
+  'ZAR': 'R',
+  'SEK': 'kr',
+  'NOK': 'kr',
+  'DKK': 'kr',
+  'PLN': 'zł',
+  'THB': '฿',
+  'IDR': 'Rp',
+  'MYR': 'RM',
+  'PHP': '₱',
+  'TRY': '₺',
+  'AED': 'د.إ',
+  'SAR': 'ر.س',
+  'EGP': 'E£',
+  'NGN': '₦',
+};
+
+/**
+ * Convert ISO currency code to symbol
+ * @param currencyCode - ISO 4217 currency code (e.g., 'USD', 'EUR')
+ * @returns Currency symbol (e.g., '$', '€') or the code itself if not found
+ */
+export function getCurrencySymbol(currencyCode: string): string {
+  return CURRENCY_SYMBOLS[currencyCode.toUpperCase()] || currencyCode;
+}
+
+/**
+ * Interface for user currency info
+ */
+export interface UserCurrencyInfo {
+  code: string;      // ISO currency code (e.g., 'USD')
+  symbol: string;    // Currency symbol (e.g., '$')
+}
+
+/**
+ * Fetch user's preferred currency from database
+ * @param supabase - Supabase client instance
+ * @param phone - User's phone number in E.164 format
+ * @returns UserCurrencyInfo with code and symbol, defaults to USD/$
+ */
+export async function getUserCurrency(
+  supabase: SupabaseClient,
+  phone: string
+): Promise<UserCurrencyInfo> {
+  const { data: contactData } = await supabase
+    .from('user_contacts')
+    .select('preferred_currency')
+    .eq('phone_e164', phone)
+    .maybeSingle();
+
+  const code = contactData?.preferred_currency || 'USD';
+  const symbol = getCurrencySymbol(code);
+
+  return { code, symbol };
 }
