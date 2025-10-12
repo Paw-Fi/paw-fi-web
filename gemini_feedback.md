@@ -34,47 +34,26 @@ Excellent, I have reviewed the provided changes. Here is my feedback.
 
 ### Code Review
 
-This is a solid improvement that fixes a UI bug and aligns the fallback data with the component's display logic.
+Overall, these changes introduce a significant new feature: differentiating between free and subscribed users in the WhatsApp channel. The implementation correctly identifies free-tier users and sends them a specific message, effectively gating the expense processing feature. The change to return the complete expense object from the `finance-update` function is also a good improvement for data consistency.
+
+However, the current implementation raises some important questions about the intended user experience and has some areas for improvement.
 
 #### Warnings (Should Fix)
 
-*   **Potential for Empty Row:** The third marquee is rendered if `displayUsers.length >= 20`. However, the slice inside it is `displayUsers.slice(20, Math.min(30, displayUsers.length))`. If `displayUsers.length` is exactly 20, the slice will be empty (`.slice(20, 20)`), resulting in an empty, non-scrolling marquee row being rendered. This is especially relevant for the fallback `generateMockUsers(30)` if that number were ever reduced to 20.
+*   **Feature Gating for Free Users:** In `twilio-whatsapp-webhook/index.ts`, if a user is identified as a free user, the `NON_SUBSCRIBER` template is sent, and the function returns immediately. This means **any message from a free user (including valid expenses) will be blocked from processing**. This is a major change to the user experience. Please confirm if this is the intended behavior. If so, the `NON_SUBSCRIBER` message should be very clear to the user about why their message isn't being processed and what they need to do to enable the feature.
 
-    *   **Recommendation:** Change the condition to `displayUsers.length > 20` to ensure the third row is only rendered when there are actually users to display in it.
+*   **Repetitive Messaging to Free Users:** The `NON_SUBSCRIBER` template is sent in `verify-whatsapp-binding` upon initial verification and also in `twilio-whatsapp-webhook` on **every subsequent message** from a free user. Sending this message every single time a free user interacts with the service could be perceived as spammy and lead to a poor user experience.
 
-    ```tsx
-    {/* Third row - users 20-29 (normal direction) - NO DUPLICATES */}
-    {displayUsers.length > 20 && ( // Changed >= to >
-      <Marquee pauseOnHover className="[--duration:50s]">
-        {displayUsers.slice(20, Math.min(30, displayUsers.length)).map((user) => (
-          <UserCard key={`row3-${user.id}`} user={user} />
-        ))}
-      </Marquee>
-    )}
-    ```
+    *   **Recommendation:** Consider a more nuanced approach. You could send the `NON_SUBSCRIBER` message once upon verification and then rely on a different mechanism for subsequent interactions, or perhaps send it only once per day/week. Alternatively, you could check if the message has been sent recently before sending it again.
 
 #### Suggestions (Consider Improving)
 
-*   **Code Clarity:** The logic for slicing users for each marquee is repeated. While it's clear enough, you could define the slices in variables to make the JSX cleaner and the logic more explicit at a glance.
+*   **Missing `is-free-user.ts` Implementation:** The review is incomplete because the logic for `isFreeUser` is not included in the diff. The correctness of the entire feature gate depends on this function. For a full review, I would need to see the contents of `supabase/functions/shared/is-free-user.ts`.
 
-    *   **Example:**
+*   **Consolidate Subscription Check:** The logic to fetch the user's subscription and check if they are a free user is duplicated in `twilio-whatsapp-webhook/index.ts` and `verify-whatsapp-binding/index.ts`.
 
-    ```tsx
-    const firstRowUsers = displayUsers.slice(0, Math.min(10, displayUsers.length));
-    const secondRowUsers = displayUsers.slice(10, Math.min(20, displayUsers.length));
-    const thirdRowUsers = displayUsers.slice(20, Math.min(30, displayUsers.length));
+    *   **Recommendation:** You could centralize this check. Since the `contact` object (which contains the `user_id`) is already being fetched in the webhook, you could potentially augment the `contact` object with subscription status at a higher level if it's needed in multiple places. However, given these are two separate function entry points, some duplication might be acceptable.
 
-    // ... later in the JSX
-    <Marquee pauseOnHover className="[--duration:40s]">
-      {firstRowUsers.map((user) => <UserCard ... />)}
-    </Marquee>
+### Summary
 
-    {secondRowUsers.length > 0 && (
-      <Marquee reverse pauseOnHover className="[--duration:45s]">
-        {secondRowUsers.map((user) => <UserCard ... />)}
-      </Marquee>
-    )}
-    // etc.
-    ```
-
-There are no critical issues to report. The primary change correctly fixes the bug of displaying duplicate users in the third row. Well done.
+The changes are functionally sound for the purpose of gating features for free users. However, the current implementation may create a negative user experience due to repetitive messaging and an abrupt blocking of functionality. I strongly recommend reconsidering the messaging strategy for free users.

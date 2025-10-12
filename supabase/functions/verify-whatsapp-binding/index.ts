@@ -3,7 +3,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-import { buildHelpMessage } from "../shared/whatsapp-helpers.ts";
+import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
+import { isFreeUser } from "../shared/is-free-user.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -105,22 +106,14 @@ Deno.serve(async (req: Request) => {
 
     // Send onboarding message to WhatsApp after successful verification
     try {
-      const HELP_IMAGE_URL = Deno.env.get('HELP_IMAGE_URL') || '';
-      const helpMessage = buildHelpMessage(HELP_IMAGE_URL);
       const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
       const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
 
-      // Use Messaging Service SID if available (for WhatsApp Business Account)
-      // Otherwise fall back to direct phone number (for sandbox)
+      // Send onboarding message using Twilio Content Template
       const twilioParams: Record<string, string> = {
         To: `whatsapp:${verification.phone_e164}`,
-        Body: helpMessage.text,
+        ContentSid: TWILIO_TEMPLATES.ONBOARDING,
       };
-
-      // Add media URL if available
-      if (helpMessage.mediaUrl) {
-        twilioParams.MediaUrl = helpMessage.mediaUrl;
-      }
 
       if (TWILIO_MESSAGING_SERVICE_SID) {
         twilioParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
@@ -141,6 +134,45 @@ Deno.serve(async (req: Request) => {
         },
         body: twilioBody.toString(),
       });
+
+      // Check if user is on free plan and send NON_SUBSCRIBER message
+      const { data: subscription } = await supabase
+        .from("subscriptions")
+        .select("plan, status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (isFreeUser(subscription)) {
+        console.log(`[verify-whatsapp-binding] User ${user.id} is on free plan, sending NON_SUBSCRIBER template`);
+
+        // Send NON_SUBSCRIBER template using the same method as onboarding
+        const nonSubscriberParams: Record<string, string> = {
+          To: `whatsapp:${verification.phone_e164}`,
+          ContentSid: TWILIO_TEMPLATES.NON_SUBSCRIBER,
+          MessagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
+        };
+
+        const nonSubscriberBody = new URLSearchParams(nonSubscriberParams);
+
+        const nonSubscriberResponse = await fetch(twilioUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${twilioAuth}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: nonSubscriberBody.toString(),
+        });
+
+        if (nonSubscriberResponse.ok) {
+          const result = await nonSubscriberResponse.json();
+          console.log(`[verify-whatsapp-binding] NON_SUBSCRIBER template sent successfully: ${result.sid}`);
+        } else {
+          const errorText = await nonSubscriberResponse.text();
+          console.error(`[verify-whatsapp-binding] Failed to send NON_SUBSCRIBER template:`, errorText);
+        }
+      } else {
+        console.log(`[verify-whatsapp-binding] User ${user.id} is not on free plan, skipping NON_SUBSCRIBER template`);
+      }
     } catch (twilioError) {
       // Don't fail the verification if message sending fails
       console.error("Failed to send onboarding message:", twilioError);

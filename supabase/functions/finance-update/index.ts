@@ -18,6 +18,7 @@ interface UpdateRequest {
   text: string;        // free text, e.g., "I spent 4 on food"
   date?: string;       // ISO date like 2025-10-07; default today (UTC)
   currency?: string;   // Optional currency code, default USD
+  receipt_image_url?: string;  // Optional Supabase Storage URL for receipt image
 }
 
 interface LlmResult {
@@ -56,7 +57,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { phone, text, date: inputDate, currency: inputCurrency } = payload || {};
+  const { phone, text, date: inputDate, currency: inputCurrency, receipt_image_url } = payload || {};
   if (!phone || !text || typeof phone !== "string" || typeof text !== "string") {
     return errorResponse("'phone' and 'text' are required strings", 400);
   }
@@ -200,17 +201,19 @@ Rules:
         currency: (e.currency || preferredCurrency).toUpperCase(),
         category: e.category || null,
         raw_text: userText,
+        receipt_image_url: receipt_image_url || null,
         updated_at: new Date().toISOString(),
       };
     }).filter(r => r.amount_cents > 0);
 
     if (rows.length) {
-      const { error: insertErr } = await supabase.from("expenses").insert(rows).select("id");
+      const { data: insertedExpenses, error: insertErr } = await supabase.from("expenses").insert(rows).select("*");
       if (insertErr) {
         console.error("expenses insert error", insertErr);
         return errorResponse("Failed to save expenses", 500);
       }
       results.expenses_added = rows.length;
+      results.expenses = insertedExpenses; // Return full expense data
     }
   }
 
