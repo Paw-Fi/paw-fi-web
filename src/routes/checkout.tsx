@@ -167,8 +167,25 @@ function CheckoutPage() {
           }
 
           console.log('Mobile user authenticated in browser:', sessionData.session.user.id);
+          
+          // CRITICAL: Wait a moment for session to propagate through Supabase client
+          // This ensures the JWT token is included in subsequent Edge Function calls
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Verify session is actually set in Supabase client
+          const currentSession = await supabase.auth.getSession();
+          if (!currentSession.data.session) {
+            console.error('Session not set in Supabase client after setSession call');
+            setError('Failed to establish authenticated session. Please try again.');
+            setIsLoading(false);
+            setIsValidatingUser(false);
+            return;
+          }
+          
+          console.log('Session verified in Supabase client:', currentSession.data.session.user.id);
           setValidatedUserId(sessionData.session.user.id);
           setIsValidatingUser(false);
+          setIsLoading(false);
         } catch (err) {
           console.error('Error authenticating mobile user:', err);
           setError('Failed to authenticate for mobile checkout. Please try again.');
@@ -220,6 +237,7 @@ function CheckoutPage() {
 
           setValidatedUserId(paramUserId);
           setIsValidatingUser(false);
+          setIsLoading(false);
         } catch (err) {
           console.error('Error validating userId:', err);
           setError('Failed to validate user. Please try again.');
@@ -350,6 +368,20 @@ function CheckoutPage() {
         console.log('Creating Stripe session with billing interval:', billing);
         console.log('Using validated userId:', validatedUserId);
         console.log('Is mobile checkout:', isMobileCheckout);
+        
+        // CRITICAL: Verify we have an active session before calling Edge Function
+        const activeSession = await supabase.auth.getSession();
+        console.log('Current session before Edge Function call:', {
+          hasSession: !!activeSession.data.session,
+          userId: activeSession.data.session?.user?.id,
+          expiresAt: activeSession.data.session?.expires_at,
+        });
+        
+        if (!activeSession.data.session) {
+          console.error('No active session when calling create-checkout-session');
+          setPaymentStatus("failed");
+          throw new Error("Authentication session expired. Please try again from the app.");
+        }
         
         const { data, error } = await supabase.functions.invoke("create-checkout-session", {
           method: "POST",
