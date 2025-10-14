@@ -22,6 +22,8 @@ type CheckoutSearchParams = {
   userId?: string; // User ID for mobile app checkout (when user not logged in)
   source?: string; // Source platform: 'mobile' or 'web'
   redirectUrl?: string; // Deep link URL to redirect back to mobile app after success
+  accessToken?: string; // JWT access token from mobile app for authentication
+  refreshToken?: string; // JWT refresh token from mobile app
   // NOTE: Trial eligibility is determined by backend based on subscription history
 };
 
@@ -83,7 +85,9 @@ function CheckoutPage() {
     session_id, 
     userId: paramUserId,
     source,
-    redirectUrl 
+    redirectUrl,
+    accessToken,
+    refreshToken
   } = searchParams;
   
   // Debug log to see what we're receiving
@@ -140,8 +144,42 @@ function CheckoutPage() {
         return;
       }
 
-      // If no user is logged in but userId param is provided, validate it
-      if (paramUserId && !user) {
+      // For mobile checkout with access token: Set up authenticated session
+      if (accessToken && refreshToken && !user && isMobileCheckout) {
+        setIsValidatingUser(true);
+        setIsLoading(true);
+
+        try {
+          console.log('Mobile checkout: Setting session from provided tokens');
+          
+          // Set the session using tokens from mobile app
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (sessionError || !sessionData.session) {
+            console.error('Failed to set session:', sessionError);
+            setError('Unable to authenticate for mobile checkout. Please try again from the app.');
+            setIsLoading(false);
+            setIsValidatingUser(false);
+            return;
+          }
+
+          console.log('Mobile user authenticated in browser:', sessionData.session.user.id);
+          setValidatedUserId(sessionData.session.user.id);
+          setIsValidatingUser(false);
+        } catch (err) {
+          console.error('Error authenticating mobile user:', err);
+          setError('Failed to authenticate for mobile checkout. Please try again.');
+          setIsLoading(false);
+          setIsValidatingUser(false);
+        }
+        return;
+      }
+
+      // If no user is logged in but userId param is provided (old flow - not secure)
+      if (paramUserId && !user && !accessToken) {
         setIsValidatingUser(true);
         setIsLoading(true);
 
@@ -565,26 +603,6 @@ function CheckoutPage() {
                 <p className="text-xl text-muted-foreground-color max-w-2xl mx-auto">
                   Subscribe to Moneko {plan.charAt(0).toUpperCase() + plan.slice(1)} and unlock premium features
                 </p>
-              </div>
-
-              {/* Badges */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-                {isMobileCheckout && (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50/50 dark:bg-blue-950/30 text-sm font-medium text-blue-700 dark:text-blue-400">
-                    <span className="text-base">📱</span>
-                    Mobile Purchase
-                  </div>
-                )}
-                {promo && (
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-success-light/50 dark:bg-success-light/30 text-sm font-medium text-success">
-                    <CheckCircle className="w-4 h-4" />
-                    Code "{promo}" applied
-                  </div>
-                )}
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-subtle-background text-sm font-medium text-muted-foreground-color">
-                  <Shield className="w-4 h-4" />
-                  Secure Payment
-                </div>
               </div>
             </motion.div>
 

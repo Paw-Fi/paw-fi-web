@@ -6,7 +6,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="qbuynyxyemigtnvdujts"
+PROJECT_REF="pbopcsmrcykdzbilpilf"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Budgeting Functions to Supabase"
