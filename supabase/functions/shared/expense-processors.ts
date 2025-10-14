@@ -44,7 +44,8 @@ export type ProcessResult = BudgetResult | ExpenseResult | FallbackResult;
  * Returns raw data without formatting - parent should handle presentation
  */
 export async function processFreeFormTextExpense(params: {
-  phone: string;
+  userId?: string;
+  phone?: string;
   text: string;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
@@ -53,6 +54,7 @@ export async function processFreeFormTextExpense(params: {
   callerCurrency?: string;
 }): Promise<ProcessResult> {
   const {
+    userId,
     phone,
     text,
     supabaseUrl,
@@ -132,7 +134,7 @@ export async function processFreeFormTextExpense(params: {
       const currency = tool.args?.currency || callerCurrency;
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { phone, text: `/setBudget ${amount}`, date },
+        body: { userId, phone, text: `/setBudget ${amount}`, date },
       });
 
       if (error) {
@@ -165,7 +167,7 @@ export async function processFreeFormTextExpense(params: {
         .join(', ');
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { phone, text: composed, date: callerDate },
+        body: { userId, phone, text: composed, date: callerDate },
       });
 
       if (error) {
@@ -194,7 +196,7 @@ export async function processFreeFormTextExpense(params: {
 
   // Fallback to finance-update
   const { data, error } = await supabase.functions.invoke('finance-update', {
-    body: { phone, text },
+    body: { userId, phone, text },
   });
 
   if (error) {
@@ -219,7 +221,8 @@ function b64encode(bytes: Uint8Array): string {
  * Returns raw data without formatting - parent should handle presentation
  */
 export async function processReceiptImage(params: {
-  phone: string;
+  userId?: string;
+  phone?: string;
   imageBuffer: Uint8Array;
   contentType: string;
   supabaseUrl: string;
@@ -229,6 +232,7 @@ export async function processReceiptImage(params: {
   callerCurrency?: string;
 }): Promise<ProcessResult> {
   const {
+    userId,
     phone,
     imageBuffer,
     contentType,
@@ -331,7 +335,7 @@ Use the add_expenses tool with a single item containing:
       const currency = tool.args?.currency || callerCurrency;
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { phone, text: `/setBudget ${amount}`, date },
+        body: { userId, phone, text: `/setBudget ${amount}`, date },
       });
 
       if (error) {
@@ -367,7 +371,7 @@ Use the add_expenses tool with a single item containing:
       console.log('[add_expenses] Composed text for finance-update:', composed);
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { phone, text: composed, date: callerDate },
+        body: { userId, phone, text: composed, date: callerDate },
       });
 
       console.log('[add_expenses] finance-update response:', { data, error });
@@ -405,7 +409,7 @@ Use the add_expenses tool with a single item containing:
 
   console.log('[receipt-textOut] finance-update(receipt) textOut:', textOut);
   const { data, error } = await supabase.functions.invoke('finance-update', {
-    body: { phone, text: textOut },
+    body: { userId, phone, text: textOut },
   });
 
   if (error) {

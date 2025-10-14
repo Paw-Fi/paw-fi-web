@@ -1,5 +1,5 @@
 // Supabase Edge Function: finance-update
-// Accepts free text + phone, uses Gemini to derive structured update ops, then updates DB.
+// Accepts free text + (phone OR userId), uses Gemini to derive structured update ops, then updates DB.
 
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
@@ -14,7 +14,8 @@ function symbolFor(code?: string): string {
 
 // Types
 interface UpdateRequest {
-  phone: string;       // E.164 format
+  phone?: string;      // E.164 format (optional if userId provided)
+  userId?: string;     // User ID (optional if phone provided)
   text: string;        // free text, e.g., "I spent 4 on food"
   date?: string;       // ISO date like 2025-10-07; default today (UTC)
   currency?: string;   // Optional currency code, default USD
@@ -57,9 +58,17 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { phone, text, date: inputDate, currency: inputCurrency, receipt_image_url } = payload || {};
-  if (!phone || !text || typeof phone !== "string" || typeof text !== "string") {
-    return errorResponse("'phone' and 'text' are required strings", 400);
+  const { phone, userId, text, date: inputDate, currency: inputCurrency, receipt_image_url } = payload || {};
+  
+  // Validate: either phone or userId must be provided
+  if ((!phone && !userId) || !text || typeof text !== "string") {
+    return errorResponse("'text' is required, and either 'phone' or 'userId' must be provided", 400);
+  }
+  if (phone && typeof phone !== "string") {
+    return errorResponse("'phone' must be a string", 400);
+  }
+  if (userId && typeof userId !== "string") {
+    return errorResponse("'userId' must be a string", 400);
   }
 
   const date = inputDate ? new Date(inputDate) : new Date();
@@ -74,12 +83,29 @@ Deno.serve(async (req: Request) => {
     global: { headers: { "X-Client-Info": "moneko-finance-update" } },
   });
 
-  // Ensure contact exists
-  const { data: contact, error: contactErr } = await supabase
-    .from("user_contacts")
-    .select("id, user_id, preferred_currency")
-    .eq("phone_e164", phone)
-    .maybeSingle();
+  // Find or create contact - search by phone if provided, otherwise by userId
+  let contact: any = null;
+  let contactErr: any = null;
+  
+  if (phone) {
+    // Search by phone number
+    const result = await supabase
+      .from("user_contacts")
+      .select("id, user_id, preferred_currency")
+      .eq("phone_e164", phone)
+      .maybeSingle();
+    contact = result.data;
+    contactErr = result.error;
+  } else if (userId) {
+    // Search by user_id
+    const result = await supabase
+      .from("user_contacts")
+      .select("id, user_id, preferred_currency, phone_e164")
+      .eq("user_id", userId)
+      .maybeSingle();
+    contact = result.data;
+    contactErr = result.error;
+  }
 
   let contactId: string | null = contact?.id ?? null;
   if (contactErr) {
@@ -90,16 +116,32 @@ Deno.serve(async (req: Request) => {
   const preferredCurrency = (contact?.preferred_currency as string | null) || providedCurrency || 'USD';
 
   if (!contactId) {
-    const { data: inserted, error: insertErr } = await supabase
-      .from("user_contacts")
-      .insert({ phone_e164: phone, preferred_currency: preferredCurrency })
-      .select("id")
-      .single();
-    if (insertErr) {
-      console.error("contact insert error", insertErr);
-      return errorResponse("Failed to create contact", 500);
+    // Create new contact
+    if (phone) {
+      // If phone provided, create contact with phone
+      const { data: inserted, error: insertErr } = await supabase
+        .from("user_contacts")
+        .insert({ phone_e164: phone, user_id: userId || null, preferred_currency: preferredCurrency })
+        .select("id")
+        .single();
+      if (insertErr) {
+        console.error("contact insert error", insertErr);
+        return errorResponse("Failed to create contact", 500);
+      }
+      contactId = inserted.id;
+    } else if (userId) {
+      // If only userId provided, create contact without phone
+      const { data: inserted, error: insertErr } = await supabase
+        .from("user_contacts")
+        .insert({ user_id: userId, preferred_currency: preferredCurrency })
+        .select("id")
+        .single();
+      if (insertErr) {
+        console.error("contact insert error", insertErr);
+        return errorResponse("Failed to create contact", 500);
+      }
+      contactId = inserted.id;
     }
-    contactId = inserted.id;
   }
 
   // Use Gemini to derive operations
@@ -134,7 +176,7 @@ Rules:
     llmText = result.response.text();
   } catch (e) {
     console.error("Gemini error", e);
-    return errorResponse("AI processing failed", 500, { phone, dateStr });
+    return errorResponse("AI processing failed", 500, { contactId, dateStr });
   }
 
   let ops: LlmResult = {};
@@ -144,7 +186,7 @@ Rules:
     ops = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
   } catch (e) {
     console.error("Parse ops error", e, llmText);
-    return errorResponse("AI returned invalid JSON", 500, { llmText, phone, dateStr });
+    return errorResponse("AI returned invalid JSON", 500, { llmText, contactId, dateStr });
   }
 
   const actions = ops?.actions || {};

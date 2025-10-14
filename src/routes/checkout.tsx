@@ -2,17 +2,14 @@ import { createFileRoute, FileRoutesByPath } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { seo } from "@/utils/seo";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
 import { useSubscription } from "@/hooks/use-subscription";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, Sparkles, Shield, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
 
 // Define the search params type for this route
@@ -22,6 +19,9 @@ type CheckoutSearchParams = {
   promo?: string; // Promo code
   status?: string; // Payment status: success, failed, canceled
   session_id?: string; // Stripe session ID for status verification
+  userId?: string; // User ID for mobile app checkout (when user not logged in)
+  source?: string; // Source platform: 'mobile' or 'web'
+  redirectUrl?: string; // Deep link URL to redirect back to mobile app after success
   // NOTE: Trial eligibility is determined by backend based on subscription history
 };
 
@@ -46,11 +46,45 @@ export const Route = createFileRoute("/checkout")({
   },
 });
 
+// Animation variants with Apple-like easing
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.46, 0.45, 0.94],
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  },
+};
+
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false });
-  const { plan = "plus", billing = "monthly", promo, status, session_id } = searchParams;
+  const { 
+    plan = "plus", 
+    billing = "monthly", 
+    promo, 
+    status, 
+    session_id, 
+    userId: paramUserId,
+    source,
+    redirectUrl 
+  } = searchParams;
   
   // Debug log to see what we're receiving
   console.log('Checkout page search params:', searchParams);
@@ -61,6 +95,8 @@ function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [validatedUserId, setValidatedUserId] = useState<string | null>(null);
+  const [isValidatingUser, setIsValidatingUser] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<
     "idle" | "processing" | "success" | "failed" | "canceled"
   >(
@@ -68,6 +104,9 @@ function CheckoutPage() {
       status === "failed" ? "failed" :
         status === "canceled" ? "canceled" : "idle"
   );
+
+  // Determine if this is a mobile checkout
+  const isMobileCheckout = source === 'mobile' || !!redirectUrl;
 
   // Load Stripe.js
   useEffect(() => {
@@ -92,6 +131,76 @@ function CheckoutPage() {
     };
   }, []);
 
+  // Validate userId parameter if provided (for mobile app checkout)
+  useEffect(() => {
+    const validateUserId = async () => {
+      // If user is logged in, use their ID
+      if (user?.id) {
+        setValidatedUserId(user.id);
+        return;
+      }
+
+      // If no user is logged in but userId param is provided, validate it
+      if (paramUserId && !user) {
+        setIsValidatingUser(true);
+        setIsLoading(true);
+
+        try {
+          // Check if the userId exists in the database
+          const { data, error: dbError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', paramUserId)
+            .single();
+
+          if (dbError || !data) {
+            console.error('Invalid userId provided:', paramUserId, dbError);
+            setError('Invalid user ID. Please ensure you have a valid account.');
+            setIsLoading(false);
+            setIsValidatingUser(false);
+            return;
+          }
+
+          // UserId is valid, now check if they already have an active subscription
+          console.log('UserId validated successfully:', paramUserId);
+          
+          // Check for existing subscription
+          const { data: subscriptionData, error: subError } = await supabase
+            .from('subscriptions')
+            .select('status, end_date')
+            .eq('user_id', paramUserId)
+            .in('status', ['active', 'trialing'])
+            .single();
+
+          if (subscriptionData && !subError) {
+            console.log('User already has an active subscription');
+            setError('This account already has an active subscription.');
+            setIsLoading(false);
+            setIsValidatingUser(false);
+            return;
+          }
+
+          setValidatedUserId(paramUserId);
+          setIsValidatingUser(false);
+        } catch (err) {
+          console.error('Error validating userId:', err);
+          setError('Failed to validate user. Please try again.');
+          setIsLoading(false);
+          setIsValidatingUser(false);
+        }
+      } else if (!user && !paramUserId) {
+        // No user logged in and no userId provided
+        setError('Authentication required. Please log in to continue.');
+        setIsLoading(false);
+      }
+    };
+
+    // Only validate if we're not handling a status callback
+    if (!status) {
+      validateUserId();
+    }
+  }, [user, paramUserId, status]);
+
   // If user already has an active subscription and we're not handling a status callback, redirect them
   useEffect(() => {
     if (user && hasActiveSub && !status) {
@@ -104,8 +213,23 @@ function CheckoutPage() {
   useEffect(() => {
     // Handle payment status from URL parameters
     if (status) {
+      // If this is a mobile checkout with redirectUrl, handle differently
+      if (isMobileCheckout && redirectUrl && typeof window !== 'undefined') {
+        if (status === "success") {
+          // Redirect directly to mobile app with success status
+          window.location.href = `${redirectUrl}?status=success${session_id ? `&session_id=${session_id}` : ''}`;
+          return;
+        } else if (status === "failed") {
+          window.location.href = `${redirectUrl}?status=failed&error=${encodeURIComponent('Payment failed')}`;
+          return;
+        } else if (status === "canceled") {
+          window.location.href = `${redirectUrl}?status=canceled`;
+          return;
+        }
+      }
+
+      // For web checkout, redirect to payment status page
       if (status === "success" && session_id) {
-        // Redirect to payment status page with session ID
         navigate({
           to: "/payment-status",
           search: {
@@ -115,7 +239,6 @@ function CheckoutPage() {
         });
         return;
       } else if (status === "failed") {
-        // Redirect to payment status page with error
         navigate({
           to: "/payment-status",
           search: {
@@ -125,7 +248,6 @@ function CheckoutPage() {
         });
         return;
       } else if (status === "canceled") {
-        // Redirect to payment status page with canceled status
         navigate({
           to: "/payment-status",
           search: {
@@ -139,12 +261,13 @@ function CheckoutPage() {
     if (status) {
       return;
     }
-  }, [session_id, status, navigate]);
+  }, [session_id, status, navigate, isMobileCheckout, redirectUrl]);
 
   // Initialize Stripe when loaded
   useEffect(() => {
     // Don't initialize Stripe if we're handling a payment status callback
-    if (!stripeLoaded || status) return;
+    // or if we're still validating the user
+    if (!stripeLoaded || status || isValidatingUser) return;
 
     const initializeStripe = async () => {
       try {
@@ -157,18 +280,38 @@ function CheckoutPage() {
         const stripe = window.Stripe(stripeKey);
         console.log("Stripe loaded with key:", stripeKey ? "✓" : "✗")
 
-        // Check if user is logged in
-        if (!user || !user.id) {
-          console.error("User not logged in or missing ID");
+        // Check if we have a validated user ID (either from auth or param)
+        if (!validatedUserId) {
+          console.error("No validated user ID available");
           setPaymentStatus("failed");
-          throw new Error("You must be logged in to make a purchase");
+          throw new Error("User authentication required to make a purchase");
         }
 
         // Get the current origin safely
         const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
         
+        // Build success and cancel URLs with proper parameters
+        const baseSuccessUrl = isMobileCheckout && redirectUrl 
+          ? redirectUrl 
+          : `${origin}/checkout`;
+        
+        const baseCancelUrl = isMobileCheckout && redirectUrl
+          ? redirectUrl
+          : `${origin}/checkout`;
+
+        // Add status parameters to URLs
+        const successUrl = isMobileCheckout && redirectUrl
+          ? `${redirectUrl}?status=success&session_id={CHECKOUT_SESSION_ID}`
+          : `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}${source ? `&source=${source}` : ''}${redirectUrl ? `&redirectUrl=${encodeURIComponent(redirectUrl)}` : ''}`;
+        
+        const cancelUrl = isMobileCheckout && redirectUrl
+          ? `${redirectUrl}?status=canceled&session_id={CHECKOUT_SESSION_ID}`
+          : `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}${source ? `&source=${source}` : ''}`;
+        
         // Create a payment session on the server
         console.log('Creating Stripe session with billing interval:', billing);
+        console.log('Using validated userId:', validatedUserId);
+        console.log('Is mobile checkout:', isMobileCheckout);
         
         const { data, error } = await supabase.functions.invoke("create-checkout-session", {
           method: "POST",
@@ -176,11 +319,10 @@ function CheckoutPage() {
             plan,
             billingInterval: billing,
             promoCode: promo,
-            // Add the success and cancel URLs with status parameters
-            successUrl: `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`,
-            cancelUrl: `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`,
-            // Pass the user ID to the server
-            userId: user.id,
+            successUrl,
+            cancelUrl,
+            // Pass the validated user ID to the server (either from auth or validated param)
+            userId: validatedUserId,
             // NOTE: Trial eligibility is determined by backend based on subscription history
           },
         });
@@ -267,153 +409,304 @@ function CheckoutPage() {
     };
 
     initializeStripe();
-  }, [stripeLoaded, plan, billing, navigate, user, status]);
+  }, [stripeLoaded, plan, billing, navigate, validatedUserId, status, isValidatingUser, isMobileCheckout, redirectUrl, source, promo]);
 
-  // Helper function to render payment status UI
-  const renderPaymentStatus = () => {
-    switch (paymentStatus) {
-      case "success":
-        return (
-          <Alert className="mb-6 border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-50">
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-            <AlertTitle>Payment Successful!</AlertTitle>
-            <AlertDescription>
-              <p>Thank you for your subscription. Your account has been upgraded to the {plan} plan.</p>
-              <p className="mt-2">You will be redirected to your dashboard shortly...</p>
-              <Button 
-                onClick={() => navigate({ to: "/dashboard" })}
-                className="mt-4"
-              >
-                Go to Dashboard
-              </Button>
-            </AlertDescription>
-          </Alert>
-        );
-      case 'failed':
-        return (
-          <Alert variant="destructive" className="mb-6">
-            <XCircle className="h-5 w-5" />
-            <AlertTitle>Payment Failed</AlertTitle>
-            <AlertDescription>
-              <p>We couldn't process your payment. {error && `Error: ${error}`}</p>
-              <p className="mt-2">Please try again or contact support if the problem persists.</p>
-              <div className="flex flex-wrap gap-4 mt-4">
-                <Button 
-                  onClick={() => {
-                    setPaymentStatus('idle');
-                    setError(null);
-                    window.location.reload();
-                  }}
-                  variant="outline"
-                >
-                  Try Again
-                </Button>
-                <Button 
-                  onClick={() => navigate({ to: "/pricing" })}
-                >
-                  Return to Pricing
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        );
-      case 'canceled':
-        return (
-          <Alert className="mb-6">
-            <XCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            <AlertTitle>Payment Canceled</AlertTitle>
-            <AlertDescription>
-              <p>You've canceled the payment process.</p>
-              <Button 
-                onClick={() => navigate({ to: "/pricing" })}
-                className="mt-4"
-              >
-                Return to Pricing
-              </Button>
-            </AlertDescription>
-          </Alert>
-        );
-      default:
-        return null;
-    }
-  };
+  // Render success state
+  const renderSuccess = () => (
+    <motion.div
+      variants={itemVariants}
+      className="bg-green-50/50 dark:bg-green-950/30 rounded-3xl p-8 space-y-6"
+    >
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 w-12 h-12 rounded-full bg-success/10 dark:bg-success/20 flex items-center justify-center">
+          <CheckCircle className="w-6 h-6 text-success" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <h3 className="text-2xl font-light text-foreground">Payment Successful</h3>
+          <p className="text-muted-foreground-color">
+            Thank you for subscribing to Moneko {plan.charAt(0).toUpperCase() + plan.slice(1)}. Your premium features are now active.
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex gap-4">
+        {isMobileCheckout && redirectUrl ? (
+          <Button 
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = `${redirectUrl}?status=success&plan=${plan}`;
+              }
+            }}
+            size="lg"
+            className="rounded-full"
+          >
+            Return to App <ArrowRight className="ml-2 w-4 h-4" />
+          </Button>
+        ) : (
+          <Button 
+            onClick={() => navigate({ to: "/dashboard" })}
+            size="lg"
+            className="rounded-full"
+          >
+            Go to Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    </motion.div>
+  );
+
+  // Render error/failed state
+  const renderError = () => (
+    <motion.div
+      variants={itemVariants}
+      className="bg-danger-light/30 dark:bg-danger-light/20 rounded-3xl p-8 space-y-6"
+    >
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 w-12 h-12 rounded-full bg-danger/10 dark:bg-danger/20 flex items-center justify-center">
+          <XCircle className="w-6 h-6 text-danger" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <h3 className="text-2xl font-light text-foreground">Payment Failed</h3>
+          <p className="text-muted-foreground-color">
+            {error || "We couldn't process your payment. Please try again or contact support if the problem persists."}
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex flex-wrap gap-4">
+        <Button 
+          onClick={() => {
+            setPaymentStatus('idle');
+            setError(null);
+            window.location.reload();
+          }}
+          variant="outline"
+          size="lg"
+          className="rounded-full"
+        >
+          Try Again
+        </Button>
+        <Button 
+          onClick={() => navigate({ to: "/pricing" })}
+          variant="ghost"
+          size="lg"
+          className="rounded-full"
+        >
+          Return to Pricing
+        </Button>
+      </div>
+    </motion.div>
+  );
+
+  // Render canceled state
+  const renderCanceled = () => (
+    <motion.div
+      variants={itemVariants}
+      className="bg-warning-light/30 dark:bg-warning-light/20 rounded-3xl p-8 space-y-6"
+    >
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 w-12 h-12 rounded-full bg-warning/10 dark:bg-warning/20 flex items-center justify-center">
+          <XCircle className="w-6 h-6 text-warning" />
+        </div>
+        <div className="flex-1 space-y-2">
+          <h3 className="text-2xl font-light text-foreground">Payment Canceled</h3>
+          <p className="text-muted-foreground-color">
+            You've canceled the payment process. No charges have been made.
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex gap-4">
+        {isMobileCheckout && redirectUrl ? (
+          <Button 
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = `${redirectUrl}?status=canceled`;
+              }
+            }}
+            size="lg"
+            className="rounded-full"
+          >
+            Return to App
+          </Button>
+        ) : (
+          <Button 
+            onClick={() => navigate({ to: "/pricing" })}
+            size="lg"
+            className="rounded-full"
+          >
+            Return to Pricing
+          </Button>
+        )}
+      </div>
+    </motion.div>
+  );
 
   return (
     <AmbientHaloLayout>
-      <div className="container mx-auto min-h-screen px-4 py-12 md:py-20">
-        <motion.div
-          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
-          animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto max-w-2xl"
-        >
-          <Card className="border-0 bg-card/60 shadow-2xl backdrop-blur-xl">
-            <CardHeader className="text-center space-y-4">
-              <CardTitle className="text-3xl font-bold">
-                Complete Your Purchase
-              </CardTitle>
-              <CardDescription className="text-lg">
-                You're subscribing to the {plan.charAt(0).toUpperCase() + plan.slice(1)} plan
-              </CardDescription>
-              
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {promo && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                    ✓ Promo code "{promo}" applied
-                  </Badge>
-                )}
+      <div className="min-h-screen">
+        <div className="max-w-4xl mx-auto px-4 sm:px-8 py-16 md:py-24">
+          <motion.div
+            initial={prefersReducedMotion ? undefined : "hidden"}
+            animate={prefersReducedMotion ? undefined : "visible"}
+            variants={containerVariants}
+            className="space-y-12"
+          >
+            {/* Header Section */}
+            <motion.div variants={itemVariants} className="text-center space-y-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 dark:bg-primary/20 mb-6">
+                <Sparkles className="w-10 h-10 text-primary" />
               </div>
-            </CardHeader>
+              
+              <div className="space-y-3">
+                <h1 className="text-5xl md:text-6xl font-light text-foreground tracking-tight">
+                  Secure Checkout
+                </h1>
+                <p className="text-xl text-muted-foreground-color max-w-2xl mx-auto">
+                  Subscribe to Moneko {plan.charAt(0).toUpperCase() + plan.slice(1)} and unlock premium features
+                </p>
+              </div>
 
-            <CardContent className="space-y-6">
-              {isLoading && (
-                <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="text-muted-foreground">
-                    Loading payment form...
-                  </p>
+              {/* Badges */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+                {isMobileCheckout && (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50/50 dark:bg-blue-950/30 text-sm font-medium text-blue-700 dark:text-blue-400">
+                    <span className="text-base">📱</span>
+                    Mobile Purchase
+                  </div>
+                )}
+                {promo && (
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-success-light/50 dark:bg-success-light/30 text-sm font-medium text-success">
+                    <CheckCircle className="w-4 h-4" />
+                    Code "{promo}" applied
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-subtle-background text-sm font-medium text-muted-foreground-color">
+                  <Shield className="w-4 h-4" />
+                  Secure Payment
                 </div>
+              </div>
+            </motion.div>
+
+            {/* Main Content */}
+            <div className="bg-moneko-background rounded-3xl p-8 md:p-12 shadow-sm">
+              {/* Validating State */}
+              {isValidatingUser && (
+                <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-16 space-y-6">
+                  <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-medium text-foreground">Validating account</h3>
+                    <p className="text-muted-foreground-color">Please wait while we verify your information...</p>
+                  </div>
+                </motion.div>
               )}
 
-              {error && (
-                <Alert variant="destructive">
-                  <XCircle className="h-5 w-5" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>
-                    <p>{error}</p>
-                    <Button
-                      onClick={() => navigate({ to: "/pricing" })}
-                      variant="outline"
-                      className="mt-4"
-                    >
-                      Return to Pricing
-                    </Button>
-                  </AlertDescription>
-                </Alert>
+              {/* Loading State */}
+              {isLoading && !isValidatingUser && (
+                <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-16 space-y-6">
+                  <Loader2 className="w-16 h-16 animate-spin text-primary" />
+                  <div className="text-center space-y-2">
+                    <h3 className="text-xl font-medium text-foreground">Preparing checkout</h3>
+                    <p className="text-muted-foreground-color">Setting up your secure payment form...</p>
+                  </div>
+                </motion.div>
               )}
 
-              {renderPaymentStatus()}
+              {/* Error State */}
+              {error && !isValidatingUser && (
+                <motion.div variants={itemVariants} className="bg-danger-light/30 dark:bg-danger-light/20 rounded-3xl p-8 space-y-6">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 w-12 h-12 rounded-full bg-danger/10 dark:bg-danger/20 flex items-center justify-center">
+                      <XCircle className="w-6 h-6 text-danger" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <h3 className="text-2xl font-light text-foreground">Unable to proceed</h3>
+                      <p className="text-muted-foreground-color">{error}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    {isMobileCheckout && redirectUrl ? (
+                      <Button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            window.location.href = `${redirectUrl}?status=error&message=${encodeURIComponent(error)}`;
+                          }
+                        }}
+                        size="lg"
+                        className="rounded-full"
+                      >
+                        Return to App
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => navigate({ to: "/pricing" })}
+                        size="lg"
+                        className="rounded-full"
+                      >
+                        Return to Pricing
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
-              {!isLoading && !error && (
-                <>
-                  <div id="express-checkout-element" className="min-h-[200px]">
+              {/* Payment Status */}
+              {paymentStatus === "success" && renderSuccess()}
+              {paymentStatus === "failed" && renderError()}
+              {paymentStatus === "canceled" && renderCanceled()}
+
+              {/* Checkout Form */}
+              {!isLoading && !error && !isValidatingUser && paymentStatus === "idle" && (
+                <motion.div variants={itemVariants} className="space-y-8">
+                  <div id="express-checkout-element" className="min-h-[240px]">
                     {/* Stripe Express Checkout Element will be mounted here */}
                   </div>
                   
-                  <div className="text-center">
-                    <Button
-                      onClick={() => navigate({ to: "/pricing" })}
-                      variant="ghost"
-                      size="sm"
-                    >
-                      Cancel and return to pricing
-                    </Button>
+                  <div className="text-center pt-6 border-t border-subtle-border">
+                    {isMobileCheckout && redirectUrl ? (
+                      <button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            window.location.href = `${redirectUrl}?status=canceled`;
+                          }
+                        }}
+                        className="text-sm text-muted-foreground-color hover:text-foreground transition-colors duration-200"
+                      >
+                        Cancel and return to app
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => navigate({ to: "/pricing" })}
+                        className="text-sm text-muted-foreground-color hover:text-foreground transition-colors duration-200"
+                      >
+                        Cancel and return to pricing
+                      </button>
+                    )}
                   </div>
-                </>
+                </motion.div>
               )}
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+
+            {/* Security Footer */}
+            {paymentStatus === "idle" && !error && (
+              <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-center gap-8 pt-8 text-sm text-muted-foreground-color">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  <span>256-bit SSL encryption</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>PCI DSS compliant</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Powered by Stripe</span>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
       </div>
     </AmbientHaloLayout>
   );

@@ -6,7 +6,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
 
 interface RequestBody {
-  phone: string;
+  userId?: string; // User ID (from mobile app)
+  phone?: string; // Phone number (from WhatsApp webhook)
   text?: string;
   image?: {
     data: string; // base64 encoded image
@@ -34,10 +35,10 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const body: RequestBody = await req.json();
 
-    // Validate required fields
-    if (!body.phone) {
+    // Validate required fields - must have either userId or phone
+    if (!body.userId && !body.phone) {
       return new Response(
-        JSON.stringify({ error: 'Missing required field: phone' }),
+        JSON.stringify({ error: 'Must provide either userId or phone' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -79,6 +80,7 @@ Deno.serve(async (req: Request) => {
       // Process free-form text
       console.log('[process-expenses] Processing text input:', body.text.substring(0, 50));
       result = await processFreeFormTextExpense({
+        userId: body.userId,
         phone: body.phone,
         text: body.text,
         supabaseUrl: SUPABASE_URL,
@@ -119,6 +121,7 @@ Deno.serve(async (req: Request) => {
       }
 
       result = await processReceiptImage({
+        userId: body.userId,
         phone: body.phone,
         imageBuffer,
         contentType: body.image.contentType,

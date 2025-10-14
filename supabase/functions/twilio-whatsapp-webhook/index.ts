@@ -496,13 +496,12 @@ Deno.serve(async (req: Request) => {
         if (!isFinite(amount) || amount <= 0) {
           return { text: 'Usage: /setBudget <amount>' };
         }
-        // Upsert budget for today via finance-update using preferred currency
-        // Prefer stored currency: finance-update should read user_contacts.preferred_currency when missing
-        const { data, error } = await supabase.functions.invoke('finance-update', {
-          body: { phone: from!, text: `/setBudget ${amount}` },
+        // Use set-budget endpoint for direct budget update (no AI needed)
+        const { data, error } = await supabase.functions.invoke('set-budget', {
+          body: { phone: from!, amount: amount },
         });
         if (error) {
-          console.error('finance-update(setBudget) error', error);
+          console.error('set-budget error', error);
           return { text: 'Failed to set budget.' };
         }
         return { text: data?.reply || 'Budget updated.' };
