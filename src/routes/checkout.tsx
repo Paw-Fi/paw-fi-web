@@ -237,7 +237,7 @@ function CheckoutPage() {
     if (!status) {
       validateUserId();
     }
-  }, [user, paramUserId, status]);
+  }, [user, paramUserId, status, accessToken, refreshToken, isMobileCheckout]);
 
   // If user already has an active subscription and we're not handling a status callback, redirect them
   useEffect(() => {
