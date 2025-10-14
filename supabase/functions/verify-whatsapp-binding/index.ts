@@ -2,19 +2,20 @@
 // Verifies OTP and binds WhatsApp number to user account
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { corsHeaders } from "../shared/cors.ts";
+import { getCorsHeaders } from "../shared/cors.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 
 Deno.serve(async (req: Request) => {
+  const cors = getCorsHeaders(req.headers.get("Origin") ?? undefined);
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { headers: cors });
   }
 
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
@@ -33,7 +34,7 @@ Deno.serve(async (req: Request) => {
     if (!codeStr) {
       return new Response(JSON.stringify({ error: "Verification code is required" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -42,7 +43,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -53,7 +54,7 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -70,7 +71,7 @@ Deno.serve(async (req: Request) => {
       console.error('Verification lookup error:', verifyError);
       return new Response(JSON.stringify({ error: "Invalid or expired verification code" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -100,7 +101,7 @@ Deno.serve(async (req: Request) => {
       console.error("Failed to bind phone:", upsertError);
       return new Response(JSON.stringify({ error: "Failed to bind WhatsApp number" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
@@ -120,7 +121,7 @@ Deno.serve(async (req: Request) => {
       } else {
         return new Response(JSON.stringify({ error: "Missing Messaging Service SID" }), {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...cors, "Content-Type": "application/json" },
         });
       }
 
@@ -186,14 +187,14 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...cors, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 });

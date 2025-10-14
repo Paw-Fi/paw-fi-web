@@ -17,9 +17,22 @@ export const baseCorsHeaders = {
  * Dynamically sets Access-Control-Allow-Origin based on request origin
  */
 export function getCorsHeaders(requestOrigin?: string): Record<string, string> {
-  const origin = requestOrigin && allowedOrigins.includes(requestOrigin) 
-    ? requestOrigin 
-    : allowedOrigins[0]; // Fallback to first allowed origin
+  let origin = allowedOrigins[0]; // Default fallback
+  
+  if (requestOrigin) {
+    // Check exact match first
+    if (allowedOrigins.includes(requestOrigin)) {
+      origin = requestOrigin;
+    } 
+    // Allow any moneko.io subdomain (www, apex, etc.)
+    else if (requestOrigin.match(/^https?:\/\/(www\.)?moneko\.io$/)) {
+      origin = requestOrigin;
+    }
+    // Allow localhost on any port for development
+    else if (requestOrigin.match(/^https?:\/\/localhost(:\d+)?$/)) {
+      origin = requestOrigin;
+    }
+  }
   
   return {
     ...baseCorsHeaders,
