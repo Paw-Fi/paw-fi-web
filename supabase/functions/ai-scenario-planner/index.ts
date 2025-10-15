@@ -74,7 +74,6 @@ serve(async (req: Request): Promise<Response> => {
       .from('user_contacts')
       .select('id,user_id,phone_e164,verified,preferred_currency')
       .eq('user_id', userId)
-      .eq('verified', true)
       .maybeSingle();
 
     if (contactError || !contact) {

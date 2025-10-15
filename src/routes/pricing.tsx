@@ -550,14 +550,14 @@ function PricingPage() {
           <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
         </motion.div>
 
-        <motion.div
+        {/* <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
           variants={containerVariants}
         >
           <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
-        </motion.div>
+        </motion.div> */}
 
         <motion.div
           initial="hidden"

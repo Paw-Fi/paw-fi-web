@@ -50,6 +50,11 @@ supabase functions deploy update-preferred-currency --project-ref $PROJECT_REF
 echo "✅ update-preferred-currency deployed"
 echo ""
 
+echo "📦 [6/5] Deploying process-expenses function..."
+supabase functions deploy process-expenses --project-ref $PROJECT_REF
+echo "✅ process-expenses deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All budgeting functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"
