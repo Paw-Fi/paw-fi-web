@@ -1,4 +1,5 @@
-// Helper function to upload receipt images to Supabase Storage
+// Shared helper for uploading receipt images to Supabase Storage
+// Used by both WhatsApp webhook and mobile app process-expenses
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
@@ -7,7 +8,7 @@ export async function uploadReceiptImage(
   supabaseServiceKey: string,
   imageBuffer: Uint8Array,
   contentType: string,
-  phone: string
+  identifier: string // userId or phone
 ): Promise<string | null> {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
@@ -16,14 +17,16 @@ export async function uploadReceiptImage(
     });
 
     const timestamp = Date.now();
-    const phoneHash = phone.replace(/[^0-9]/g, '').slice(-10); // Last 10 digits for privacy
     const ext = contentType.split('/')[1] || 'jpg';
-    const fileName = `receipts/${phoneHash}/${timestamp}.${ext}`;
+    const fileName = `receipts/${identifier}/${timestamp}.${ext}`;
+
+    console.log('[storage-helper] Uploading to:', fileName);
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('expense-receipts')
       .upload(fileName, imageBuffer, {
-        contentType: contentType,
+        contentType,
+        cacheControl: '3600',
         upsert: false,
       });
 
@@ -36,7 +39,7 @@ export async function uploadReceiptImage(
       .from('expense-receipts')
       .getPublicUrl(fileName);
 
-    console.log('[storage-helper] Image uploaded successfully:', urlData.publicUrl);
+    console.log('[storage-helper] Upload successful:', urlData.publicUrl);
     return urlData.publicUrl;
   } catch (error) {
     console.error('[storage-helper] Unexpected error:', error);

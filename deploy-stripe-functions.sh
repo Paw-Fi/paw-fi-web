@@ -6,7 +6,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="pbopcsmrcykdzbilpilf"
+PROJECT_REF="qbuynyxyemigtnvdujts"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Stripe Functions to Supabase"

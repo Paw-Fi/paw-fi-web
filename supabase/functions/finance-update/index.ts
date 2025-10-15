@@ -261,12 +261,28 @@ Rules:
 
   // Compute today totals and remaining
   if (contactId) {
+    // Try to fetch budget for the specific date
     const { data: budgetRow } = await supabase
       .from("daily_budgets")
       .select("amount_cents,currency")
       .eq("contact_id", contactId)
       .eq("date", dateStr)
       .maybeSingle();
+
+    // If no budget for today, fetch the most recent budget before today
+    let effectiveBudgetRow = budgetRow;
+    if (!budgetRow) {
+      const { data: recentBudget } = await supabase
+        .from("daily_budgets")
+        .select("amount_cents,currency")
+        .eq("contact_id", contactId)
+        .lt("date", dateStr)
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      effectiveBudgetRow = recentBudget;
+    }
 
     const { data: expenseRows } = await supabase
       .from("expenses")
@@ -275,14 +291,14 @@ Rules:
       .eq("date", dateStr);
 
     const totalCents = (expenseRows || []).reduce((sum, r: any) => sum + (r.amount_cents || 0), 0);
-    const budgetCents = budgetRow?.amount_cents || 0;
+    const budgetCents = effectiveBudgetRow?.amount_cents || 0;
     const remainingCents = Math.max(budgetCents - totalCents, 0);
 
     results.totals = {
       budget_cents: budgetCents,
       spent_cents: totalCents,
       remaining_cents: remainingCents,
-      currency: budgetRow?.currency || preferredCurrency,
+      currency: effectiveBudgetRow?.currency || preferredCurrency,
     };
   }
 

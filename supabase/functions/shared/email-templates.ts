@@ -1,66 +1,136 @@
 import { htmlToText } from 'https://esm.sh/html-to-text@9.0.5';
 
-// Base template with common elements
+// Apple-inspired base template with Moneko design system
 const baseTemplate = (content: string, footerContent?: string) => `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Moneko</title>
   <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
+    /* Reset & mobile optimization */
+    body, html {
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9fb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #111;
+    }
+    table {
+      border-spacing: 0;
+      width: 100%;
+    }
+    img {
+      border: none;
+      max-width: 100%;
+      display: block;
+    }
+    a {
+      color: #7458FF;
+      text-decoration: none;
+    }
+    /* Container */
+    .email-body {
       max-width: 600px;
       margin: 0 auto;
-      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 24px;
+      padding: 48px 40px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
     }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
+    /* Logo */
     .logo {
-      max-width: 150px;
-      margin-bottom: 20px;
+      margin: 0 auto 32px auto;
+      width: 100px;
+      height: auto;
     }
-    .content {
-      background-color: #f9f9f9;
-      padding: 30px;
-      border-radius: 8px;
+    /* Typography */
+    .title {
+      font-size: 28px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      color: #111;
+      line-height: 1.3;
     }
+    .subtitle {
+      font-size: 16px;
+      color: #555;
+      margin: 0 0 32px 0;
+      line-height: 1.5;
+    }
+    p {
+      font-size: 16px;
+      color: #333;
+      margin: 0 0 16px 0;
+      line-height: 1.6;
+    }
+    ul {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+    li {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    strong {
+      font-weight: 600;
+      color: #111;
+    }
+    /* Button */
     .button {
       display: inline-block;
-      background: linear-gradient(to right, #6d28d9, #4f46e5);
-      color: white;
-      padding: 12px 24px;
-      text-decoration: none;
-      border-radius: 6px;
+      background-color: #7458FF;
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 9999px;
       font-weight: 500;
-      margin: 20px 0;
+      font-size: 16px;
+      text-decoration: none;
+      margin: 24px 0;
+      transition: opacity 0.2s ease-in-out;
     }
+    .button:hover {
+      opacity: 0.9;
+    }
+    /* Footer */
     .footer {
-      margin-top: 30px;
+      margin-top: 48px;
+      font-size: 12px;
+      color: #999;
       text-align: center;
-      font-size: 14px;
-      color: #666;
+      line-height: 1.5;
+    }
+    .footer p {
+      font-size: 12px;
+      color: #999;
+      margin: 8px 0;
+    }
+    .footer a {
+      color: #7458FF;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="https://moneko.io/logo192.png" alt="Moneko Logo" class="logo" />
-  </div>
-  <div class="content">
-    ${content}
-  </div>
-  <div class="footer">
-    ${footerContent || `
-      <p>Moneko Inc., 123 Financial St., San Francisco, CA 94103</p>
-      <p>This email was sent to {{email}}. <a href="{{unsubscribeUrl}}">Unsubscribe</a></p>
-    `}
-  </div>
+  <table>
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <div class="email-body">
+          <img src="https://moneko.io/logo192.png" alt="Moneko" class="logo" />
+          ${content}
+          <div class="footer">
+            ${footerContent || `
+              <p>&copy; 2025 Moneko. All rights reserved.</p>
+              <p>You're receiving this email because you joined Moneko.</p>
+            `}
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;
@@ -73,28 +143,23 @@ export const subscriptionCreatedTemplate = (data: {
   dashboardUrl: string;
   isLifetime?: boolean;
 }) => {
-  // Lifetime vs recurring subscription messaging
   const subscriptionMessage = data.isLifetime
-    ? `Thank you for purchasing our ${data.planName} plan. You now have permanent access to all premium features - no renewals, no recurring charges.`
-    : `Thank you for subscribing to our ${data.planName} plan. Your subscription is now active and will automatically renew on ${data.endDate}.`;
+    ? `You now have lifetime access to all premium features — no renewals, no recurring charges.`
+    : `Your subscription is now active and will automatically renew on ${data.endDate}.`;
 
   const content = `
-    <h1>Welcome to ${data.planName}!</h1>
-    <p>Hi ${data.name},</p>
-    <p>${subscriptionMessage}</p>
-    <p>You now have access to all the premium features included in your plan.</p>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">View Your Membership</a>
-    </p>
-    <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
-    <p>Happy financial planning!</p>
+    <h1 class="title">Welcome to ${data.planName}</h1>
+    <p class="subtitle">Thank you for joining Moneko. ${subscriptionMessage}</p>
+    <p>You now have full access to all premium features included in your plan.</p>
+    <a href="${data.dashboardUrl}" class="button">Go to Dashboard</a>
+    <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Welcome to Moneko ${data.planName}!`,
+    subject: `Welcome to Moneko ${data.planName}`,
   };
 };
 
@@ -106,30 +171,28 @@ export const subscriptionUpdatedTemplate = (data: {
   dashboardUrl: string;
   changeType: 'upgrade' | 'downgrade' | 'renewal' | 'interval_changed';
 }) => {
-  let title, message;
+  let title, subtitle;
   
   if (data.changeType === 'upgrade') {
-    title = 'Your subscription has been upgraded!';
-    message = `You've successfully upgraded to our ${data.planName} plan.`;
+    title = 'Your Subscription Has Been Upgraded';
+    subtitle = `You've successfully upgraded to the ${data.planName} plan.`;
   } else if (data.changeType === 'downgrade') {
-    title = 'Your subscription has been changed';
-    message = `Your subscription has been changed to our ${data.planName} plan.`;
+    title = 'Your Subscription Has Been Changed';
+    subtitle = `Your subscription has been changed to the ${data.planName} plan.`;
   } else if (data.changeType === 'interval_changed') {
-    title = 'Your billing cycle has been updated';
-    message = `Your ${data.planName} subscription billing cycle has been updated.`;
+    title = 'Your Billing Cycle Has Been Updated';
+    subtitle = `Your ${data.planName} subscription billing cycle has been updated.`;
   } else {
-    title = 'Your subscription has been renewed!';
-    message = `Your ${data.planName} subscription has been successfully renewed.`;
+    title = 'Your Subscription Has Been Renewed';
+    subtitle = `Your ${data.planName} subscription has been successfully renewed.`;
   }
   
   const content = `
-    <h1>${title}</h1>
-    <p>Hi ${data.name},</p>
-    <p>${message} Your subscription will automatically renew on ${data.endDate}.</p>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">View Your Membership</a>
-    </p>
-    <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+    <h1 class="title">${title}</h1>
+    <p class="subtitle">${subtitle}</p>
+    <p>Your subscription will automatically renew on ${data.endDate}.</p>
+    <a href="${data.dashboardUrl}" class="button">Go to Dashboard</a>
+    <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -148,24 +211,21 @@ export const subscriptionCanceledTemplate = (data: {
   dashboardUrl: string;
   immediateCancel: boolean;
 }) => {
-  const title = "Your subscription has been canceled";
-  let message;
+  const title = "Your Subscription Has Been Canceled";
+  let subtitle;
   
   if (data.immediateCancel) {
-    message = `Your ${data.planName} subscription has been canceled and is no longer active. We're sorry to see you go!`;
+    subtitle = `Your ${data.planName} subscription is no longer active.`;
   } else {
-    message = `Your ${data.planName} subscription has been canceled and will remain active until ${data.endDate}. After this date, you'll no longer have access to premium features.`;
+    subtitle = `Your ${data.planName} subscription will remain active until ${data.endDate}.`;
   }
   
   const content = `
-    <h1>${title}</h1>
-    <p>Hi ${data.name},</p>
-    <p>${message}</p>
-    <p>We hope to welcome you back soon. If you change your mind, you can resubscribe anytime.</p>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">Manage Your Membership</a>
-    </p>
-    <p>We'd love to know why you've decided to cancel. Your feedback helps us improve.</p>
+    <h1 class="title">${title}</h1>
+    <p class="subtitle">${subtitle}</p>
+    <p>We're sorry to see you go. If you change your mind, you can resubscribe anytime.</p>
+    <a href="${data.dashboardUrl}" class="button">Manage Membership</a>
+    <p>We'd love to hear your feedback about why you canceled. Your input helps us improve.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -184,21 +244,18 @@ export const paymentFailedTemplate = (data: {
   updatePaymentUrl: string;
 }) => {
   const content = `
-    <h1>Payment Failed</h1>
-    <p>Hi ${data.name},</p>
-    <p>We were unable to process your payment for the ${data.planName} subscription.</p>
+    <h1 class="title">Payment Failed</h1>
+    <p class="subtitle">We were unable to process your payment for the ${data.planName} subscription.</p>
     <p>Please update your payment method to avoid any interruption to your service.</p>
-    <p>
-      <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
-    </p>
-    <p>If you need assistance, please contact our support team.</p>
+    <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
+    <p>If you need assistance, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
   
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Action Required: Payment Failed for Your Moneko Subscription`,
+    subject: `Action Required — Payment Failed`,
   };
 };
 
@@ -210,14 +267,11 @@ export const trialEndingTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const content = `
-    <h1>Your Trial Period is Ending Soon</h1>
-    <p>Hi ${data.name},</p>
-    <p>Your ${data.planName} trial period will end on ${data.trialEndDate}.</p>
-    <p>To continue enjoying all the benefits of your subscription without interruption, please ensure your payment method is up to date.</p>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">Manage Your Membership</a>
-    </p>
-    <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+    <h1 class="title">Your Trial Period Ends Soon</h1>
+    <p class="subtitle">Your ${data.planName} trial will end on ${data.trialEndDate}.</p>
+    <p>To continue enjoying all the benefits without interruption, please ensure your payment method is up to date.</p>
+    <a href="${data.dashboardUrl}" class="button">Manage Membership</a>
+    <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -236,9 +290,8 @@ export const welcomeTemplate = (data: {
   gettingStartedUrl?: string;
 }) => {
   const content = `
-    <h1>Welcome to Moneko!</h1>
-    <p>Hi ${data.name},</p>
-    <p>Welcome to Moneko, your personal finance companion! We're excited to help you take control of your financial future.</p>
+    <h1 class="title">Welcome to Moneko</h1>
+    <p class="subtitle">We're excited to help you take control of your financial future.</p>
     <p>Your account has been successfully created with the email: <strong>${data.email}</strong></p>
     <p>Here's what you can do to get started:</p>
     <ul>
@@ -247,19 +300,16 @@ export const welcomeTemplate = (data: {
       <li>Explore our budgeting tools</li>
       <li>Review personalized insights</li>
     </ul>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">Get Started</a>
-    </p>
-    ${data.gettingStartedUrl ? `<p>Need help getting started? Check out our <a href="${data.gettingStartedUrl}">Getting Started Guide</a>.</p>` : ''}
-    <p>If you have any questions, our support team is here to help!</p>
-    <p>Happy financial planning!</p>
+    <a href="${data.dashboardUrl}" class="button">Get Started</a>
+    ${data.gettingStartedUrl ? `<p>Need help? Check out our <a href="${data.gettingStartedUrl}">Getting Started Guide</a>.</p>` : ''}
+    <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
   
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: 'Welcome to Moneko - Let\'s Get Started!',
+    subject: 'Welcome to Moneko',
   };
 };
 
@@ -272,13 +322,11 @@ export const emailVerificationTemplate = (data: {
   const expiryText = data.expiryHours ? ` within ${data.expiryHours} hours` : '';
   
   const content = `
-    <h1>Verify Your Email Address</h1>
-    <p>Hi ${data.name},</p>
-    <p>Thank you for signing up with Moneko! To complete your registration, please verify your email address by clicking the button below:</p>
-    <p>
-      <a href="${data.verificationUrl}" class="button">Verify Email Address</a>
-    </p>
-    <p>Please verify your email${expiryText} to activate your account and start using Moneko.</p>
+    <h1 class="title">Verify Your Email Address</h1>
+    <p class="subtitle">To complete your registration, please verify your email address.</p>
+    <p>Click the button below to activate your account and start using Moneko:</p>
+    <a href="${data.verificationUrl}" class="button">Verify Email Address</a>
+    <p>Please verify your email${expiryText} to activate your account.</p>
     <p>If you didn't create this account, you can safely ignore this email.</p>
     <p>The Moneko Team</p>
   `;
@@ -299,13 +347,10 @@ export const passwordResetTemplate = (data: {
   const expiryText = data.expiryHours ? ` This link will expire in ${data.expiryHours} hours.` : '';
   
   const content = `
-    <h1>Reset Your Password</h1>
-    <p>Hi ${data.name},</p>
-    <p>We received a request to reset your password for your Moneko account.</p>
+    <h1 class="title">Reset Your Password</h1>
+    <p class="subtitle">We received a request to reset your password for your Moneko account.</p>
     <p>Click the button below to create a new password:</p>
-    <p>
-      <a href="${data.resetUrl}" class="button">Reset Password</a>
-    </p>
+    <a href="${data.resetUrl}" class="button">Reset Password</a>
     <p>${expiryText}</p>
     <p>If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
     <p>For security reasons, this link can only be used once.</p>
@@ -325,18 +370,18 @@ export const newsletterSubscriptionTemplate = (data: {
   unsubscribeUrl: string;
 }) => {
   const content = `
-    <h1>Newsletter Subscription Confirmed</h1>
-    <p>Thank you for subscribing to the Moneko newsletter!</p>
-    <p>You'll now receive our latest financial tips, product updates, and insights delivered to <strong>${data.email}</strong>.</p>
-    <p>We promise to keep your inbox valuable with actionable content and never spam you.</p>
-    <p>You can unsubscribe at any time by <a href="${data.unsubscribeUrl}">clicking here</a>.</p>
+    <h1 class="title">Newsletter Subscription Confirmed</h1>
+    <p class="subtitle">Thank you for subscribing to the Moneko newsletter.</p>
+    <p>You'll now receive our latest financial tips, product updates, and insights at <strong>${data.email}</strong>.</p>
+    <p>We promise to keep your inbox valuable with actionable content.</p>
+    <p>You can <a href="${data.unsubscribeUrl}">unsubscribe</a> at any time.</p>
     <p>The Moneko Team</p>
   `;
   
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: 'Welcome to the Moneko Newsletter!',
+    subject: 'Welcome to the Moneko Newsletter',
   };
 };
 
@@ -346,9 +391,9 @@ export const newsletterUnsubscribeTemplate = (data: {
   resubscribeUrl?: string;
 }) => {
   const content = `
-    <h1>You've Been Unsubscribed</h1>
-    <p>We've successfully unsubscribed <strong>${data.email}</strong> from the Moneko newsletter.</p>
-    <p>We're sorry to see you go! Your email address has been removed from our mailing list.</p>
+    <h1 class="title">You've Been Unsubscribed</h1>
+    <p class="subtitle">We've successfully unsubscribed <strong>${data.email}</strong> from the Moneko newsletter.</p>
+    <p>We're sorry to see you go. Your email address has been removed from our mailing list.</p>
     ${data.resubscribeUrl ? `<p>Changed your mind? You can <a href="${data.resubscribeUrl}">resubscribe here</a>.</p>` : ''}
     <p>If you have any feedback about why you unsubscribed, we'd love to hear from you.</p>
     <p>The Moneko Team</p>
@@ -371,24 +416,24 @@ export const securityAlertTemplate = (data: {
   dashboardUrl: string;
   supportUrl?: string;
 }) => {
-  let title, message;
+  let title, subtitle;
   
   switch (data.alertType) {
     case 'login':
       title = 'New Login to Your Account';
-      message = `We detected a new login to your Moneko account on ${data.timestamp}.`;
+      subtitle = `We detected a new login to your Moneko account on ${data.timestamp}.`;
       break;
     case 'password_change':
       title = 'Password Changed Successfully';
-      message = `Your Moneko account password was changed on ${data.timestamp}.`;
+      subtitle = `Your Moneko account password was changed on ${data.timestamp}.`;
       break;
     case 'email_change':
       title = 'Email Address Changed';
-      message = `Your Moneko account email address was changed on ${data.timestamp}.`;
+      subtitle = `Your Moneko account email address was changed on ${data.timestamp}.`;
       break;
     case 'suspicious_activity':
       title = 'Suspicious Activity Detected';
-      message = `We detected suspicious activity on your Moneko account on ${data.timestamp}.`;
+      subtitle = `We detected suspicious activity on your Moneko account on ${data.timestamp}.`;
       break;
   }
   
@@ -396,16 +441,13 @@ export const securityAlertTemplate = (data: {
   const ipInfo = data.ipAddress ? `<p><strong>IP Address:</strong> ${data.ipAddress}</p>` : '';
   
   const content = `
-    <h1>${title}</h1>
-    <p>Hi ${data.name},</p>
-    <p>${message}</p>
+    <h1 class="title">${title}</h1>
+    <p class="subtitle">${subtitle}</p>
     ${locationInfo}
     ${ipInfo}
     <p>If this was you, no further action is needed.</p>
     <p>If you don't recognize this activity, please secure your account immediately:</p>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">Secure My Account</a>
-    </p>
+    <a href="${data.dashboardUrl}" class="button">Secure My Account</a>
     ${data.supportUrl ? `<p>If you need help, please <a href="${data.supportUrl}">contact our support team</a>.</p>` : ''}
     <p>The Moneko Team</p>
   `;
@@ -413,7 +455,7 @@ export const securityAlertTemplate = (data: {
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Moneko Security Alert: ${title}`,
+    subject: `Moneko Security Alert — ${title}`,
   };
 };
 
@@ -428,14 +470,9 @@ export const notificationTemplate = (data: {
 }) => {
   
   const content = `
-    <h1>${data.title}</h1>
-    <p>Hi ${data.name},</p>
-    <p>${data.message}</p>
-    ${data.actionUrl && data.actionText ? `
-    <p>
-      <a href="${data.actionUrl}" class="button">${data.actionText}</a>
-    </p>
-    ` : ''}
+    <h1 class="title">${data.title}</h1>
+    <p class="subtitle">${data.message}</p>
+    ${data.actionUrl && data.actionText ? `<a href="${data.actionUrl}" class="button">${data.actionText}</a>` : ''}
     <p>The Moneko Team</p>
   `;
   
@@ -456,27 +493,20 @@ export const courseCompletionTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const content = `
-    <h1>🎉 Congratulations on Completing Your Course!</h1>
-    <p>Hi ${data.name},</p>
-    <p>Well done! You've successfully completed the <strong>${data.courseName}</strong> course on ${data.completionDate}.</p>
-    <p>You've taken an important step in your financial education journey. We're proud of your dedication to learning!</p>
-    ${data.certificateUrl ? `
-    <p>
-      <a href="${data.certificateUrl}" class="button">Download Certificate</a>
-    </p>
-    ` : ''}
+    <h1 class="title">Congratulations on Completing Your Course</h1>
+    <p class="subtitle">You've successfully completed the <strong>${data.courseName}</strong> course on ${data.completionDate}.</p>
+    <p>You've taken an important step in your financial education journey. We're proud of your dedication to learning.</p>
+    ${data.certificateUrl ? `<a href="${data.certificateUrl}" class="button">Download Certificate</a>` : ''}
     ${data.nextCourseUrl ? `<p>Ready for your next challenge? <a href="${data.nextCourseUrl}">Check out recommended courses</a> to continue your learning journey.</p>` : ''}
-    <p>
-      <a href="${data.dashboardUrl}" class="button">View Dashboard</a>
-    </p>
-    <p>Keep up the great work!</p>
+    <a href="${data.dashboardUrl}" class="button">View Dashboard</a>
+    <p>Keep up the great work.</p>
     <p>The Moneko Team</p>
   `;
   
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `🎉 Course Completed: ${data.courseName}`,
+    subject: `Course Completed — ${data.courseName}`,
   };
 };
 
@@ -492,24 +522,21 @@ export const invoiceFinalizedTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const content = `
-    <h1>Your Invoice is Ready</h1>
-    <p>Hi ${data.name},</p>
-    <p>Your invoice for ${data.planName} subscription is now ready.</p>
+    <h1 class="title">Your Invoice is Ready</h1>
+    <p class="subtitle">Your invoice for ${data.planName} subscription is now ready.</p>
     <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     ${data.dueDate ? `<p><strong>Due Date:</strong> ${data.dueDate}</p>` : ''}
-    <p>
-      <a href="${data.invoiceUrl}" class="button">View Invoice</a>
-    </p>
+    <a href="${data.invoiceUrl}" class="button">View Invoice</a>
     ${data.invoicePdfUrl ? `<p>You can also <a href="${data.invoicePdfUrl}">download the PDF version</a>.</p>` : ''}
     <p>If you have automatic payments enabled, your payment method will be charged automatically.</p>
-    <p>If you have any questions about this invoice, please don't hesitate to contact our support team.</p>
+    <p>If you have any questions about this invoice, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Invoice Ready: ${data.planName} Subscription`,
+    subject: `Invoice Ready — ${data.planName}`,
   };
 };
 
@@ -525,26 +552,21 @@ export const invoiceUpcomingTemplate = (data: {
   updatePaymentUrl?: string;
 }) => {
   const urgencyMessage = data.daysUntil <= 3
-    ? `Your subscription will renew in ${data.daysUntil} ${data.daysUntil === 1 ? 'day' : 'days'}!`
+    ? `Your subscription will renew in ${data.daysUntil} ${data.daysUntil === 1 ? 'day' : 'days'}.`
     : `Your subscription will renew soon.`;
 
   const content = `
-    <h1>Upcoming Subscription Renewal</h1>
-    <p>Hi ${data.name},</p>
-    <p>${urgencyMessage}</p>
+    <h1 class="title">Upcoming Subscription Renewal</h1>
+    <p class="subtitle">${urgencyMessage}</p>
     <p><strong>Plan:</strong> ${data.planName}</p>
     <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     <p><strong>Charge Date:</strong> ${data.chargeDate}</p>
     <p>Your payment method on file will be charged automatically on this date.</p>
     ${data.updatePaymentUrl ? `
     <p>If you need to update your payment method, please do so before the charge date:</p>
-    <p>
-      <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
-    </p>
+    <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
     ` : ''}
-    <p>
-      <a href="${data.dashboardUrl}" class="button">Manage Subscription</a>
-    </p>
+    <a href="${data.dashboardUrl}" class="button">Manage Subscription</a>
     <p>If you want to make changes to your subscription or cancel, please do so before the renewal date.</p>
     <p>The Moneko Team</p>
   `;
@@ -552,7 +574,7 @@ export const invoiceUpcomingTemplate = (data: {
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Upcoming Renewal: ${data.planName} - ${data.chargeDate}`,
+    subject: `Upcoming Renewal — ${data.planName}`,
   };
 };
 
@@ -571,14 +593,11 @@ export const paymentActionRequiredTemplate = (data: {
     : '';
 
   const content = `
-    <h1>Action Required: Authenticate Your Payment</h1>
-    <p>Hi ${data.name},</p>
-    <p>We need you to authenticate your payment for the ${data.planName} subscription.</p>
+    <h1 class="title">Action Required — Authenticate Your Payment</h1>
+    <p class="subtitle">We need you to authenticate your payment for the ${data.planName} subscription.</p>
     <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     <p>Your bank requires additional verification (3D Secure) to complete this payment.</p>
-    <p>
-      <a href="${data.authenticationUrl}" class="button">Authenticate Payment</a>
-    </p>
+    <a href="${data.authenticationUrl}" class="button">Authenticate Payment</a>
     <p>${expiryText}</p>
     <p>This is a security measure to protect you from unauthorized transactions. The authentication process is quick and secure.</p>
     <p>If you don't recognize this charge, please <a href="${data.dashboardUrl}">review your subscription</a> immediately.</p>
@@ -588,7 +607,7 @@ export const paymentActionRequiredTemplate = (data: {
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Action Required: Authenticate Your Payment - ${data.planName}`,
+    subject: `Action Required — Authenticate Your Payment`,
   };
 };
 
@@ -600,14 +619,11 @@ export const paymentMethodUpdatedTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const content = `
-    <h1>Payment Method Updated</h1>
-    <p>Hi ${data.name},</p>
-    <p>Your payment method has been successfully updated.</p>
+    <h1 class="title">Payment Method Updated</h1>
+    <p class="subtitle">Your payment method has been successfully updated.</p>
     <p><strong>New Payment Method:</strong> ${data.paymentMethodDetails || data.paymentMethodType}</p>
     <p>This payment method will be used for all future charges on your account.</p>
-    <p>
-      <a href="${data.dashboardUrl}" class="button">View Payment Methods</a>
-    </p>
+    <a href="${data.dashboardUrl}" class="button">View Payment Methods</a>
     <p>If you didn't make this change, please <a href="${data.dashboardUrl}">review your account</a> immediately and contact our support team.</p>
     <p>The Moneko Team</p>
   `;
@@ -632,28 +648,23 @@ export const invoicePaymentSucceededTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const content = `
-    <h1>Payment Received - Thank You!</h1>
-    <p>Hi ${data.name},</p>
-    <p>We've successfully received your payment for ${data.planName}. Thank you for your continued subscription!</p>
+    <h1 class="title">Payment Received — Thank You</h1>
+    <p class="subtitle">We've successfully received your payment for ${data.planName}.</p>
     <p><strong>Invoice Number:</strong> ${data.invoiceNumber}</p>
     <p><strong>Amount Paid:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     <p><strong>Payment Date:</strong> ${data.paymentDate}</p>
-    <p>
-      <a href="${data.invoiceUrl}" class="button">View Invoice</a>
-    </p>
+    <a href="${data.invoiceUrl}" class="button">View Invoice</a>
     ${data.invoicePdfUrl ? `<p>You can also <a href="${data.invoicePdfUrl}">download your receipt (PDF)</a> for your records.</p>` : ''}
     <p>This receipt confirms your payment has been processed successfully. Your subscription remains active and you continue to have full access to all premium features.</p>
-    <p>
-      <a href="${data.dashboardUrl}">Manage Your Subscription</a>
-    </p>
-    <p>If you have any questions about this payment or your subscription, please don't hesitate to contact our support team.</p>
-    <p>Thank you for being a valued member!</p>
+    <p><a href="${data.dashboardUrl}">Manage Your Subscription</a></p>
+    <p>If you have any questions about this payment, our support team is here to help.</p>
+    <p>Thank you for being a valued member.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Payment Receipt - Invoice ${data.invoiceNumber}`,
+    subject: `Payment Receipt — Invoice ${data.invoiceNumber}`,
   };
 };

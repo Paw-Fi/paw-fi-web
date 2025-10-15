@@ -2,6 +2,7 @@
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCurrencySymbol } from "./whatsapp-helpers.ts";
+import { uploadReceiptImage } from "./storage-helper.ts";
 
 export interface ExpenseItem {
   amount: number;
@@ -364,6 +365,16 @@ Use the add_expenses tool with a single item containing:
       const items: ExpenseItem[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
       console.log('[add_expenses] Received items from Gemini:', JSON.stringify(items, null, 2));
 
+      // Upload receipt image to Supabase Storage using shared helper
+      const identifier = userId || phone || 'unknown';
+      const receiptImageUrl = await uploadReceiptImage(
+        supabaseUrl,
+        supabaseServiceRoleKey,
+        imageBuffer,
+        contentType,
+        identifier
+      );
+
       const composed = items
         .map((it: any) => `I spent ${it.amount}${it.currency ? ' ' + it.currency : ''}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`)
         .join(', ');
@@ -371,7 +382,13 @@ Use the add_expenses tool with a single item containing:
       console.log('[add_expenses] Composed text for finance-update:', composed);
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { userId, phone, text: composed, date: callerDate },
+        body: { 
+          userId, 
+          phone, 
+          text: composed, 
+          date: callerDate,
+          receipt_image_url: receiptImageUrl // Pass the uploaded image URL
+        },
       });
 
       console.log('[add_expenses] finance-update response:', { data, error });
@@ -401,7 +418,16 @@ Use the add_expenses tool with a single item containing:
     }
   }
 
-  // Fallback: no tool call
+  // Fallback: no tool call - upload image anyway using shared helper
+  const identifier = userId || phone || 'unknown';
+  const receiptImageUrl = await uploadReceiptImage(
+    supabaseUrl,
+    supabaseServiceRoleKey,
+    imageBuffer,
+    contentType,
+    identifier
+  );
+
   const textOut = (result.response.text() || '').trim();
   if (!textOut) {
     return { type: 'fallback', error: 'Could not read receipt' };
@@ -409,7 +435,12 @@ Use the add_expenses tool with a single item containing:
 
   console.log('[receipt-textOut] finance-update(receipt) textOut:', textOut);
   const { data, error } = await supabase.functions.invoke('finance-update', {
-    body: { userId, phone, text: textOut },
+    body: { 
+      userId, 
+      phone, 
+      text: textOut,
+      receipt_image_url: receiptImageUrl // Pass the uploaded image URL
+    },
   });
 
   if (error) {

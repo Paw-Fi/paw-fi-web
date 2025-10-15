@@ -5,7 +5,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
-import { uploadReceiptImage } from "./storage-helper.ts";
+import { uploadReceiptImage } from "../shared/storage-helper.ts";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 
