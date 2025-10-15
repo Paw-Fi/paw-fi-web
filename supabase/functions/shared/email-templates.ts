@@ -82,18 +82,25 @@ const baseTemplate = (content: string, footerContent?: string) => `
     /* Button */
     .button {
       display: inline-block;
-      background-color: #7458FF;
-      color: #fff;
+      background-color: #7458FF !important;
+      color: #ffffff !important;
       padding: 14px 28px;
       border-radius: 9999px;
       font-weight: 500;
       font-size: 16px;
-      text-decoration: none;
+      text-decoration: none !important;
       margin: 24px 0;
       transition: opacity 0.2s ease-in-out;
     }
     .button:hover {
       opacity: 0.9;
+      color: #ffffff !important;
+    }
+    .button:visited {
+      color: #ffffff !important;
+    }
+    .button:active {
+      color: #ffffff !important;
     }
     /* Footer */
     .footer {
@@ -151,7 +158,7 @@ export const subscriptionCreatedTemplate = (data: {
     <h1 class="title">Welcome to ${data.planName}</h1>
     <p class="subtitle">Thank you for joining Moneko. ${subscriptionMessage}</p>
     <p>You now have full access to all premium features included in your plan.</p>
-    <a href="${data.dashboardUrl}" class="button">Go to Dashboard</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Go to Dashboard</a>
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
@@ -191,7 +198,7 @@ export const subscriptionUpdatedTemplate = (data: {
     <h1 class="title">${title}</h1>
     <p class="subtitle">${subtitle}</p>
     <p>Your subscription will automatically renew on ${data.endDate}.</p>
-    <a href="${data.dashboardUrl}" class="button">Go to Dashboard</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Go to Dashboard</a>
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
@@ -224,7 +231,7 @@ export const subscriptionCanceledTemplate = (data: {
     <h1 class="title">${title}</h1>
     <p class="subtitle">${subtitle}</p>
     <p>We're sorry to see you go. If you change your mind, you can resubscribe anytime.</p>
-    <a href="${data.dashboardUrl}" class="button">Manage Membership</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Manage Membership</a>
     <p>We'd love to hear your feedback about why you canceled. Your input helps us improve.</p>
     <p>The Moneko Team</p>
   `;
@@ -247,7 +254,7 @@ export const paymentFailedTemplate = (data: {
     <h1 class="title">Payment Failed</h1>
     <p class="subtitle">We were unable to process your payment for the ${data.planName} subscription.</p>
     <p>Please update your payment method to avoid any interruption to your service.</p>
-    <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
+    <a href="${data.updatePaymentUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Update Payment Method</a>
     <p>If you need assistance, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
@@ -270,7 +277,7 @@ export const trialEndingTemplate = (data: {
     <h1 class="title">Your Trial Period Ends Soon</h1>
     <p class="subtitle">Your ${data.planName} trial will end on ${data.trialEndDate}.</p>
     <p>To continue enjoying all the benefits without interruption, please ensure your payment method is up to date.</p>
-    <a href="${data.dashboardUrl}" class="button">Manage Membership</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Manage Membership</a>
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
@@ -300,7 +307,7 @@ export const welcomeTemplate = (data: {
       <li>Explore our budgeting tools</li>
       <li>Review personalized insights</li>
     </ul>
-    <a href="${data.dashboardUrl}" class="button">Get Started</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Get Started</a>
     ${data.gettingStartedUrl ? `<p>Need help? Check out our <a href="${data.gettingStartedUrl}">Getting Started Guide</a>.</p>` : ''}
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
@@ -325,7 +332,7 @@ export const emailVerificationTemplate = (data: {
     <h1 class="title">Verify Your Email Address</h1>
     <p class="subtitle">To complete your registration, please verify your email address.</p>
     <p>Click the button below to activate your account and start using Moneko:</p>
-    <a href="${data.verificationUrl}" class="button">Verify Email Address</a>
+    <a href="${data.verificationUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Verify Email Address</a>
     <p>Please verify your email${expiryText} to activate your account.</p>
     <p>If you didn't create this account, you can safely ignore this email.</p>
     <p>The Moneko Team</p>
@@ -350,7 +357,7 @@ export const passwordResetTemplate = (data: {
     <h1 class="title">Reset Your Password</h1>
     <p class="subtitle">We received a request to reset your password for your Moneko account.</p>
     <p>Click the button below to create a new password:</p>
-    <a href="${data.resetUrl}" class="button">Reset Password</a>
+    <a href="${data.resetUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Reset Password</a>
     <p>${expiryText}</p>
     <p>If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
     <p>For security reasons, this link can only be used once.</p>
@@ -447,7 +454,7 @@ export const securityAlertTemplate = (data: {
     ${ipInfo}
     <p>If this was you, no further action is needed.</p>
     <p>If you don't recognize this activity, please secure your account immediately:</p>
-    <a href="${data.dashboardUrl}" class="button">Secure My Account</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Secure My Account</a>
     ${data.supportUrl ? `<p>If you need help, please <a href="${data.supportUrl}">contact our support team</a>.</p>` : ''}
     <p>The Moneko Team</p>
   `;
@@ -472,7 +479,7 @@ export const notificationTemplate = (data: {
   const content = `
     <h1 class="title">${data.title}</h1>
     <p class="subtitle">${data.message}</p>
-    ${data.actionUrl && data.actionText ? `<a href="${data.actionUrl}" class="button">${data.actionText}</a>` : ''}
+    ${data.actionUrl && data.actionText ? `<a href="${data.actionUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">${data.actionText}</a>` : ''}
     <p>The Moneko Team</p>
   `;
   
@@ -496,9 +503,9 @@ export const courseCompletionTemplate = (data: {
     <h1 class="title">Congratulations on Completing Your Course</h1>
     <p class="subtitle">You've successfully completed the <strong>${data.courseName}</strong> course on ${data.completionDate}.</p>
     <p>You've taken an important step in your financial education journey. We're proud of your dedication to learning.</p>
-    ${data.certificateUrl ? `<a href="${data.certificateUrl}" class="button">Download Certificate</a>` : ''}
+    ${data.certificateUrl ? `<a href="${data.certificateUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Download Certificate</a>` : ''}
     ${data.nextCourseUrl ? `<p>Ready for your next challenge? <a href="${data.nextCourseUrl}">Check out recommended courses</a> to continue your learning journey.</p>` : ''}
-    <a href="${data.dashboardUrl}" class="button">View Dashboard</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">View Dashboard</a>
     <p>Keep up the great work.</p>
     <p>The Moneko Team</p>
   `;
@@ -526,7 +533,7 @@ export const invoiceFinalizedTemplate = (data: {
     <p class="subtitle">Your invoice for ${data.planName} subscription is now ready.</p>
     <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     ${data.dueDate ? `<p><strong>Due Date:</strong> ${data.dueDate}</p>` : ''}
-    <a href="${data.invoiceUrl}" class="button">View Invoice</a>
+    <a href="${data.invoiceUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">View Invoice</a>
     ${data.invoicePdfUrl ? `<p>You can also <a href="${data.invoicePdfUrl}">download the PDF version</a>.</p>` : ''}
     <p>If you have automatic payments enabled, your payment method will be charged automatically.</p>
     <p>If you have any questions about this invoice, our support team is here to help.</p>
@@ -564,9 +571,9 @@ export const invoiceUpcomingTemplate = (data: {
     <p>Your payment method on file will be charged automatically on this date.</p>
     ${data.updatePaymentUrl ? `
     <p>If you need to update your payment method, please do so before the charge date:</p>
-    <a href="${data.updatePaymentUrl}" class="button">Update Payment Method</a>
+    <a href="${data.updatePaymentUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Update Payment Method</a>
     ` : ''}
-    <a href="${data.dashboardUrl}" class="button">Manage Subscription</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Manage Subscription</a>
     <p>If you want to make changes to your subscription or cancel, please do so before the renewal date.</p>
     <p>The Moneko Team</p>
   `;
@@ -597,7 +604,7 @@ export const paymentActionRequiredTemplate = (data: {
     <p class="subtitle">We need you to authenticate your payment for the ${data.planName} subscription.</p>
     <p><strong>Amount:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     <p>Your bank requires additional verification (3D Secure) to complete this payment.</p>
-    <a href="${data.authenticationUrl}" class="button">Authenticate Payment</a>
+    <a href="${data.authenticationUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Authenticate Payment</a>
     <p>${expiryText}</p>
     <p>This is a security measure to protect you from unauthorized transactions. The authentication process is quick and secure.</p>
     <p>If you don't recognize this charge, please <a href="${data.dashboardUrl}">review your subscription</a> immediately.</p>
@@ -623,7 +630,7 @@ export const paymentMethodUpdatedTemplate = (data: {
     <p class="subtitle">Your payment method has been successfully updated.</p>
     <p><strong>New Payment Method:</strong> ${data.paymentMethodDetails || data.paymentMethodType}</p>
     <p>This payment method will be used for all future charges on your account.</p>
-    <a href="${data.dashboardUrl}" class="button">View Payment Methods</a>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">View Payment Methods</a>
     <p>If you didn't make this change, please <a href="${data.dashboardUrl}">review your account</a> immediately and contact our support team.</p>
     <p>The Moneko Team</p>
   `;
@@ -653,7 +660,7 @@ export const invoicePaymentSucceededTemplate = (data: {
     <p><strong>Invoice Number:</strong> ${data.invoiceNumber}</p>
     <p><strong>Amount Paid:</strong> ${data.amount} ${data.currency.toUpperCase()}</p>
     <p><strong>Payment Date:</strong> ${data.paymentDate}</p>
-    <a href="${data.invoiceUrl}" class="button">View Invoice</a>
+    <a href="${data.invoiceUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">View Invoice</a>
     ${data.invoicePdfUrl ? `<p>You can also <a href="${data.invoicePdfUrl}">download your receipt (PDF)</a> for your records.</p>` : ''}
     <p>This receipt confirms your payment has been processed successfully. Your subscription remains active and you continue to have full access to all premium features.</p>
     <p><a href="${data.dashboardUrl}">Manage Your Subscription</a></p>

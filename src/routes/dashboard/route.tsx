@@ -523,10 +523,10 @@ export function Dashboard() {
 
       // Redirect to onboarding only if user has never created any goals OR complete profile
       // and has no pending guest goals/profiles to migrate
-      if (!hasGoals && !hasProfile && !hasPendingGuestGoals && !hasPendingGuestProfiles) {
-        console.log('🚀 Redirecting to onboarding - user needs to complete setup');
-        navigate({ to: '/onboarding' });
-      }
+      // if (!hasGoals && !hasProfile && !hasPendingGuestGoals && !hasPendingGuestProfiles) {
+      //   console.log('🚀 Redirecting to onboarding - user needs to complete setup');
+      //   navigate({ to: '/onboarding' });
+      // }
 
       setHasCheckedOnboarding(true);
     }
