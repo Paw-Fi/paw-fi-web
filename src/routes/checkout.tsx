@@ -462,6 +462,7 @@ function CheckoutPage() {
 
         setIsLoading(false);
       } catch (err: unknown) {
+        navigate({ to: "/register", search: { redirect: `/checkout?plan=${plan}` } });
         console.error("Error initializing Stripe:", err);
         setPaymentStatus("failed");
         setError(err instanceof Error ? err.message : "An error occurred while initializing payment. Please try again.");

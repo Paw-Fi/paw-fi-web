@@ -189,7 +189,7 @@ export async function processFreeFormTextExpense(params: {
             note: it.note,
           };
         }),
-        expenses: data?.expenses || [], // Return actual database records
+        expenses: data?.results?.expenses || [], // FIX: Access expenses from results object
         reply: data?.reply || 'Expenses recorded.'
       };
     }
@@ -412,7 +412,7 @@ Use the add_expenses tool with a single item containing:
             note: it.note,
           };
         }),
-        expenses: data?.expenses || [], // Return actual database records
+        expenses: data?.results?.expenses || [], // FIX: Access expenses from results object
         reply: data?.reply || 'Expenses recorded.'
       };
     }
