@@ -375,88 +375,73 @@ async function handleWebhookEmail(webhook: WebhookPayload): Promise<{ success: b
         
         // Send mobile app waitlist welcome email using design system
         const content = `
-          <h1>Welcome to the Moneko Mobile App Waitlist!</h1>
+          <h1>Welcome to the Moneko Mobile Public Beta!</h1>
           <p>Hi ${userName},</p>
-          <p>Thanks for joining our mobile app waitlist! You're now on the list to get early access to Moneko's mobile budgeting app, currently in development.</p>
-          
+          <p>Thanks for helping us test the Moneko mobile experience. You're officially part of our public beta, and we can't wait for you to explore the latest build.</p>
+
           <div class="highlight-card">
-            <h3>🚀 What to Expect</h3>
-            <span class="expectation-item">✨ Early beta invitations</span>
-            <span class="expectation-item">📧 Development updates</span>
-            <span class="expectation-item">🎯 First access when ready</span>
-            <p class="muted" style="margin-top: 24px;">We'll notify you as soon as mobile beta testing begins!</p>
+            <h3>You're Ready to Install</h3>
+            <span class="expectation-item">Download the TestFlight build and start budgeting on mobile</span>
+            <span class="expectation-item">Share feedback directly with the team to shape upcoming releases</span>
+            <span class="expectation-item">Expect frequent updates as we add more capabilities</span>
           </div>
-          
-          <h2>While You Wait - Try Our Live Web Dashboard!</h2>
-          <p>Don't wait for mobile! Moneko's full budgeting platform is already live and ready to use:</p>
+
+          <h2>What You Can Explore Right Now</h2>
           <ul>
-            <li><strong>Smart Budgeting</strong> - Create and track budgets with AI insights</li>
-            <li><strong>Goal Tracking</strong> - Set and monitor financial goals with progress tracking</li>
-            <li><strong>Learning Center</strong> - AI-powered financial education and courses</li>
-            <li><strong>Financial Calculators</strong> - Compound interest, mortgage, retirement planning</li>
-            <li><strong>Expense Analytics</strong> - Detailed spending insights and trends</li>
+            <li><strong>Chat-based expense logging</strong> - Log expenses or income with natural language and quick taps.</li>
+            <li><strong>Smart spending insights</strong> - Let AI categorize your spending and surface top categories.</li>
+            <li><strong>Bill & paycheck reminders</strong> - Stay notified about upcoming income and obligations.</li>
+            <li><strong>Goal tracking with celebrations</strong> - Set goals, track growth, and celebrate milestones.</li>
           </ul>
-          
+
           <div class="feature-list">
-            <h4>Available Now on Desktop:</h4>
+            <h4>Need a desktop companion?</h4>
             <ul>
-              <li>Complete budgeting and expense tracking</li>
-              <li>AI financial coaching and insights</li>
-              <li>Goal setting with smart recommendations</li>
-              <li>Interactive learning courses</li>
-              <li>Advanced financial calculators</li>
+              <li>Use the live web dashboard for advanced budgeting and analytics.</li>
+              <li>Keep your goals and insights synced across devices.</li>
             </ul>
           </div>
-          
+
           <div style="text-align: center;">
-            <a href="https://moneko.io/dashboard" class="button">Try the Web Dashboard Today →</a>
+            <a href="https://testflight.apple.com/join/Q9rNbkN5" class="button">Download on TestFlight →</a>
           </div>
-          
-          <p>Questions about the mobile app or need help with the web dashboard? Reply to this email or reach out to us at <a href="mailto:hello@moneko.io" style="color: #7458FF; text-decoration: none;">hello@moneko.io</a></p>
-          
-          <p><strong>Thanks for being part of our journey!</strong></p>
+
+          <p>Need help or have feedback about the beta? Reply to this email or contact us at <a href="mailto:hello@moneko.io" style="color: #7458FF; text-decoration: none;">hello@moneko.io</a></p>
+
+          <p><strong>Thanks for building Moneko with us!</strong></p>
           <p class="muted">The Moneko Team</p>
         `
 
         const template = {
-          subject: '📱 Welcome to the Moneko Mobile App Waitlist!',
+          subject: 'Welcome to the Moneko Mobile Public Beta!',
           html: baseTemplate(content),
           text: `
-📱 Welcome to the Moneko Mobile App Waitlist!
+Welcome to the Moneko Mobile Public Beta!
 
 Hi ${userName}!
 
-Thanks for joining our mobile app waitlist! You're now on the list to get early access to Moneko's mobile budgeting app, currently in development.
+Thanks for helping us test the Moneko mobile experience. You're officially part of our public beta, and we can't wait for you to explore the latest build.
 
-🚀 What to Expect:
-✨ Early beta invitations
-📧 Development updates  
-🎯 First access when ready
+You're Ready to Install:
+Download the TestFlight build and start budgeting on mobile
+Share feedback directly with the team to shape upcoming releases
+Expect frequent updates as we add more capabilities
 
-We'll notify you as soon as mobile beta testing begins!
+What You Can Explore Right Now:
+• Chat-based expense logging — Log expenses or income with natural language and quick taps.
+• Smart spending insights — Let AI categorize your spending and surface top categories.
+• Bill & paycheck reminders — Stay notified about upcoming income and obligations.
+• Goal tracking with celebrations — Set goals, track growth, and celebrate milestones.
 
-While You Wait - Try Our Live Web Dashboard!
+Need a desktop companion?
+• Use the live web dashboard for advanced budgeting and analytics.
+• Keep your goals and insights synced across devices.
 
-Don't wait for mobile! Moneko's full budgeting platform is already live and ready to use:
+Download on TestFlight: https://testflight.apple.com/join/Q9rNbkN5
 
-• Smart Budgeting - Create and track budgets with AI insights
-• Goal Tracking - Set and monitor financial goals with progress tracking
-• Learning Center - AI-powered financial education and courses
-• Financial Calculators - Compound interest, mortgage, retirement planning
-• Expense Analytics - Detailed spending insights and trends
+Need help or have feedback about the beta? Reply to this email or contact us at hello@moneko.io
 
-📊 Available Now on Desktop:
-• Complete budgeting and expense tracking
-• AI financial coaching and insights
-• Goal setting with smart recommendations
-• Interactive learning courses
-• Advanced financial calculators
-
-Try the Web Dashboard: https://moneko.io/dashboard
-
-Questions about the mobile app or need help with the web dashboard? Reply to this email or reach out to us at hello@moneko.io
-
-Thanks for being part of our journey!
+Thanks for building Moneko with us!
 The Moneko Team
           `
         }

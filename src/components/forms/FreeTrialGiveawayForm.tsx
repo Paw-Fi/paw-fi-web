@@ -12,7 +12,9 @@ import { useCookie } from "@/utils/use-cookie";
 import { useAuth } from "@/contexts/auth-context";
 import {  useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
+import { DiscordLogoIcon } from "@radix-ui/react-icons";
 
+const TESTFLIGHT_URL = "https://testflight.apple.com/join/Q9rNbkN5"
 
 export function FreeTrialGiveawayForm() {
   const { getCookie, setCookie } = useCookie();
@@ -219,6 +221,7 @@ export function FreeTrialGiveawayForm() {
             interestedMobileFeatures: [],
             devicePreference: "",
           });
+          window.location.href = TESTFLIGHT_URL;
         } else {
           setResult(response);
         }
@@ -258,11 +261,10 @@ export function FreeTrialGiveawayForm() {
       <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 backdrop-blur-2xl">
         <div className="text-center">
           <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-200 mb-6">
-            Sign In Required
+            Welcome to Moneko Beta
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-            Please sign in to join our mobile app community and receive launch notifications.
-          </p>
+          Sign in to join our public beta on TestFlight. Explore, share, and help us build a budgeting experience that feels simple and human.          </p>
           <div className="space-y-4">
             <motion.button
               onClick={() => navigate({ to: "/login", search: { redirect: "/early-access" } })}
@@ -400,29 +402,34 @@ export function FreeTrialGiveawayForm() {
               {/* Submit button */}
              { !hasClaimed&&<div className="text-center">
                 <motion.button
-                  type="submit"
-                  disabled={claimMutation.isPending || hasClaimed}
+                  type="submit"                
                   className="group inline-flex w-full items-center justify-center rounded-xl bg-[#7458FF] hover:bg-[#836DFF] disabled:bg-gray-400 px-8 py-4 sm:text-md lg:text-lg font-medium text-white transition-all duration-200 ease-in-out disabled:cursor-not-allowed disabled:opacity-70"
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
+
                 >
                   {claimMutation.isPending ? (
                     <>
                       <div className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      Joining...
+                      Processing...
                     </>
                   ) : hasClaimed ? (
                     <>
-                       Joined Waiting List
+                       Try on TestFlight
 <CheckCircle className="ml-2 w-5 h-5" />
                     </>
                   ) : (
                     <>
-                      Join Mobile Waitlist
+                      Try on TestFlight
         <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
                 </motion.button>
+
+                <div className="text-center mt-6 flex items-center w-full justify-center gap-2">
+                 <DiscordLogoIcon className="w-6 h-6 text-slate-800 dark:text-slate-200" />
+                 <a href="https://discord.gg/M2Dgujvtze" target="_blank" className="text-sm text-slate-800 dark:text-slate-200">Join Discord & save up to 50%!</a>
+                </div>
               </div>}
 
               {(result.success||hasClaimed)&&<motion.div
@@ -435,10 +442,10 @@ export function FreeTrialGiveawayForm() {
                 <div className="rounded-2xl bg-green-100/20 dark:bg-green-900/20 p-6 border border-green-200 dark:border-green-700">
                   <div className="flex items-center justify-center mb-3">
 <CheckCircle className="mr-3 text-green-600 dark:text-green-400 w-5 h-5" />
-                    <span className="font-semibold text-green-700 dark:text-green-300">Joined Waiting List</span>
+                    <span className="font-semibold text-green-700 dark:text-green-300">Thank you for joining!</span>
                   </div>
                   <p className="text-sm text-green-600 dark:text-green-400 leading-relaxed">
-                    In the meantime, feel free to explore the <a href="/dashboard" className="underline decoration-slate-300 font-bold hover:decoration-slate-500 dark:decoration-slate-600">desktop version</a> and start managing your finances today
+                    Click <a href={TESTFLIGHT_URL} target="_blank" className="underline decoration-slate-300 font-bold hover:decoration-slate-500 dark:decoration-slate-600">here</a> to download the mobile app
                   </p>
                 </div>
               </div>

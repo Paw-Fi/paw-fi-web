@@ -24,11 +24,11 @@ export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/early-access");
-    const title = "Join the Moneko Mobile App Waitlist | AI Budgeting App Coming Soon";
+    const title = "Moneko AI Budgeting App | Now in Public Beta on TestFlight";
     const description =
-      `Join the Moneko mobile app waitlist and be first to experience AI-powered budgeting on your phone. Built on Moneko's proven desktop platform with smart budgeting, goal tracking, AI learning, and financial calculators. Try the web dashboard today while we perfect the mobile experience.`;
+      `Try Moneko’s AI budgeting app in public beta! Track goals, manage money, and get smart insights with the power of AI on TestFlight.`;
     const keywords =
-      "moneko mobile app, moneko waitlist, moneko early access, mobile budgeting app waitlist, personal finance app, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, moneko dashboard";
+      "moneko mobile app, moneko beta testing, moneko waitlist, moneko early access, mobile budgeting app waitlist, personal finance app, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, moneko dashboard";
 
     const meta = seo({
       title: title,
@@ -235,7 +235,7 @@ function DevelopmentTimeline() {
       steps: [
         {
           icon: <TestTube className="w-6 h-6" />,
-          content: "Private beta for waitlist members (invites in waves)."
+          content: "Public beta now open on TestFlight."
         },
         {
           icon: <Bell className="w-6 h-6" />,
@@ -260,7 +260,7 @@ function DevelopmentTimeline() {
         <ArcTimeline 
           data={timelineData}
           className="mb-4"
-          defaultActiveStep={{ time: "Development", stepIndex: 0 }}
+          defaultActiveStep={{ time: "Beta & Launch", stepIndex: 0 }}
           arcConfig={{
             circleWidth: 5000,
             angleBetweenMinorSteps: 0.35,
@@ -268,14 +268,8 @@ function DevelopmentTimeline() {
             boundaryPlaceholderLinesCount: 50
           }}
         />
-      </div>
-      
-      <div className="text-center">
-      <div className="flex items-center justify-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span>Mobile app in development • Expected launch: {EXPECTED_LAUNCH}</span>
-        </div>
-      </div>
+      </div>      
+     
     </motion.div>
   );
 }
@@ -373,7 +367,7 @@ export default function EarlyAccessPage() {
                 className="mb-10 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
                 variants={itemVariants}
               >
-                Your AI budgeting assistant — anytime, anywhere. Join the waitlist or try the <a className="underline font-semibold" href="/dashboard" target="_blank">web dashboard</a>.
+                Your AI budgeting assistant — anytime, anywhere. Join the Beta or try the <a className="underline font-semibold" href="/dashboard" target="_blank">web dashboard</a>.
                 
               </motion.p>
             
