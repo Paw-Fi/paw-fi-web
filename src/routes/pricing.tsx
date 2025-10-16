@@ -169,7 +169,6 @@ function PricingPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const { subscription, isActive: hasActiveSub, isLoading: isSubLoading } = useSubscription(user?.id);
 
   // Get pricing tiers from shared data module
   const pricingTiers = getPricingTiers(isAnnual);
@@ -219,18 +218,6 @@ function PricingPage() {
 
   const handleSubscribe = async (plan: string) => {
     try {
-      // If user already has an active subscription, don't create another checkout session
-      if (hasActiveSub) {
-        const currentPlan = (subscription?.plan || "").toLowerCase();
-        if (currentPlan === plan) {
-          toast.info("You're already subscribed to this plan.");
-        } else {
-          toast.info("You already have an active subscription.");
-        }
-        navigate({ to: "/dashboard" });
-        return;
-      }
-
       setIsLoading(true);
 
       // Get the current user ID if logged in

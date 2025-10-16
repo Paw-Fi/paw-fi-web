@@ -72,6 +72,28 @@ interface ShadcnSignUpFormProps {
   children?: ReactNode
 }
 
+// Helper function to parse redirect URLs with query parameters
+const parseRedirectUrl = (url: string | undefined) => {
+  if (!url) return { to: "/dashboard" as const };
+  
+  // Split by ? to separate path and query string
+  const [path, queryString] = url.split('?');
+  
+  // If no query string, return simple path navigation
+  if (!queryString) return { to: path as any };
+  
+  // Parse query string into search params object
+  const searchParams: Record<string, any> = {};
+  queryString.split('&').forEach(param => {
+    const [key, value] = param.split('=');
+    if (key && value) {
+      searchParams[key] = decodeURIComponent(value);
+    }
+  });
+  
+  return { to: path as any, search: searchParams as any };
+}
+
 export function ShadcnSignUpForm({
   redirectUrl,
   hideBottomLink,
@@ -128,7 +150,8 @@ export function ShadcnSignUpForm({
           if (!hasAvatar) {
             navigate({ to: "/avatar-customizer" })
           } else {
-            navigate({ to: redirectUrl || "/dashboard" })
+            const redirectParams = parseRedirectUrl(redirectUrl)
+            navigate(redirectParams)
           }
         }
       }
@@ -178,7 +201,8 @@ export function ShadcnSignUpForm({
         if (!hasAvatar) {
           navigate({ to: "/avatar-customizer" })
         } else {
-          navigate({ to: redirectUrl || "/dashboard" })
+          const redirectParams = parseRedirectUrl(redirectUrl)
+          navigate(redirectParams)
         }
       }
     } catch (error: any) {

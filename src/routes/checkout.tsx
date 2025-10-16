@@ -7,7 +7,6 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
-import { useSubscription } from "@/hooks/use-subscription";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, Sparkles, Shield, ArrowRight } from "lucide-react";
 import { toast } from "react-toastify";
@@ -95,7 +94,6 @@ function CheckoutPage() {
   console.log('Billing interval:', billing);
   
   const { user } = useAuth();
-  const { isActive: hasActiveSub } = useSubscription(user?.id);
   const [isLoading, setIsLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -257,14 +255,6 @@ function CheckoutPage() {
     }
   }, [user, paramUserId, status, accessToken, refreshToken, isMobileCheckout]);
 
-  // If user already has an active subscription and we're not handling a status callback, redirect them
-  useEffect(() => {
-    if (user && hasActiveSub && !status) {
-      toast.info("You already have an active subscription.");
-      navigate({ to: "/dashboard" });
-    }
-  }, [user, hasActiveSub, status, navigate]);
-
   // Handle payment status verification when returning from Stripe checkout
   useEffect(() => {
     // Handle payment status from URL parameters
@@ -340,6 +330,7 @@ function CheckoutPage() {
         if (!validatedUserId) {
           console.error("No validated user ID available");
           setPaymentStatus("failed");
+          navigate({ to: "/register", search: { redirect: `/checkout?plan=${plan}` } });
           throw new Error("User authentication required to make a purchase");
         }
 

@@ -15,6 +15,26 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+/**
+ * Safely converts a Unix timestamp to ISO string
+ * Returns null if timestamp is invalid or null
+ */
+function safeUnixToISO(unixTimestamp: number | null | undefined): string | null {
+  if (!unixTimestamp) return null
+  
+  try {
+    const date = new Date(unixTimestamp * 1000)
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid Unix timestamp:', unixTimestamp)
+      return null
+    }
+    return date.toISOString()
+  } catch (error) {
+    console.error('Error converting timestamp to ISO:', error)
+    return null
+  }
+}
+
 serve(async (req) => {
   try {
     // Handle CORS preflight OPTIONS request
@@ -117,10 +137,25 @@ serve(async (req) => {
     // Retrieve the subscription from Stripe
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
-    // Extract subscription details
+    // Extract subscription details with proper null handling
     const plan = subscription.metadata.plan || 'plus'
     const status = subscription.status
-    const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString()
+    
+    // CRITICAL: For trialing subscriptions without payment method, use trial_end as current_period_end
+    // This ensures every subscription has a proper end date (30 days default)
+    let currentPeriodEnd = safeUnixToISO(subscription.current_period_end)
+    const trialEnd = safeUnixToISO(subscription.trial_end)
+    
+    // If subscription is trialing without payment method, use trial_end as the period end
+    if (!currentPeriodEnd && status === 'trialing' && trialEnd) {
+      console.log('Trialing subscription without payment method - using trial_end as current_period_end')
+      currentPeriodEnd = trialEnd
+    } else if (!currentPeriodEnd && subscription.current_period_end) {
+      console.warn('Failed to convert current_period_end:', subscription.current_period_end)
+    } else if (!currentPeriodEnd) {
+      console.warn('Subscription has no current_period_end or trial_end - this may cause issues')
+    }
+    
     const cancelAtPeriodEnd = subscription.cancel_at_period_end
 
     console.log('Subscription details:', {
@@ -128,7 +163,9 @@ serve(async (req) => {
       plan,
       status,
       currentPeriodEnd,
+      trialEnd,
       cancelAtPeriodEnd,
+      hasPaymentMethod: !!subscription.default_payment_method,
     })
 
     // Update the user's subscription in the database
@@ -149,16 +186,28 @@ serve(async (req) => {
           console.error('Error checking for existing subscription:', findError)
         }
 
-        // Prepare subscription data
+        // Prepare subscription data with safe timestamp handling
+        const now = new Date()
+        
+        // CRITICAL: Ensure we always have a valid end date
+        if (!currentPeriodEnd) {
+          console.error('No valid end date for subscription - this should not happen', {
+            subscriptionId,
+            status,
+            hasTrialEnd: !!subscription.trial_end,
+            hasPeriodEnd: !!subscription.current_period_end,
+          })
+        }
+        
         const subscriptionData = {
           user_id: userId,
           stripe_subscription_id: subscriptionId,
           stripe_customer_id: session.customer as string,
           plan,
           status,
-          current_period_end: currentPeriodEnd,
+          current_period_end: currentPeriodEnd, // Should always be set (from period_end or trial_end)
           cancel_at_period_end: cancelAtPeriodEnd,
-          updated_at: new Date().toISOString()
+          updated_at: now.toISOString()
         }
 
         // If subscription exists, update it
@@ -176,7 +225,7 @@ serve(async (req) => {
             .from('subscriptions')
             .insert({
               ...subscriptionData,
-              created_at: new Date().toISOString()
+              created_at: now.toISOString() // Use same timestamp for consistency
             })
 
           subscriptionUpdateError = error
@@ -206,7 +255,7 @@ serve(async (req) => {
         // Continue with verification even if database operations fail
       }
 
-    // Return success response
+    // Return success response with subscription details
     return new Response(
       JSON.stringify({
         verified: true,
@@ -214,8 +263,9 @@ serve(async (req) => {
           id: subscriptionId,
           plan,
           status,
-          currentPeriodEnd,
+          currentPeriodEnd: currentPeriodEnd || null, // Explicitly return null if not set
           cancelAtPeriodEnd,
+          trialEnd,
         },
       }),
       {
