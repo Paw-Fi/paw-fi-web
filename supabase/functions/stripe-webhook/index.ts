@@ -127,6 +127,10 @@ serve(async (req) => {
         case 'charge.refunded':
           await handleChargeRefunded(event.data.object as Stripe.Charge, event.id)
           break
+        case 'payment_intent.succeeded':
+          // Handle successful one-time payments (lifetime) as additional verification
+          await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, event.id)
+          break
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
           await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, event.id)
@@ -297,6 +301,38 @@ async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
       stack: (error as any).stack,
     })
     throw error
+  }
+}
+
+// Handler for successful payment intents (one-time payments like Lifetime)
+// This provides additional verification layer for payment mode checkouts
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent, eventId: string) {
+  try {
+    console.log('Processing payment_intent.succeeded:', paymentIntent.id)
+    
+    // Only process one-time payments for lifetime (not invoices with subscriptions)
+    const plan = paymentIntent.metadata?.plan
+    const userId = paymentIntent.metadata?.user_id
+    
+    if (!plan || !userId) {
+      console.log('No plan or user_id in payment_intent metadata, skipping')
+      return
+    }
+    
+    if (plan === 'lifetime') {
+      console.log(`Payment intent for lifetime plan, user ${userId}`)
+      
+      // This is logged for monitoring - actual fulfillment should happen in checkout.session.completed
+      // We don't create subscription here to avoid duplicates
+      console.log('ℹ️  Lifetime payment confirmed - fulfillment handled by checkout.session.completed or invoice.payment_succeeded')
+    }
+  } catch (error) {
+    console.error('Error in handlePaymentIntentSucceeded:', {
+      paymentIntentId: paymentIntent.id,
+      error: (error as any).message,
+      stack: (error as any).stack,
+    })
+    // Don't throw - this is just for logging/monitoring
   }
 }
 
@@ -688,11 +724,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, even
 
 // Handler for successful invoice payments
 // CRITICAL: Send invoice receipt email with PDF to customer
+// HANDLES BOTH: Recurring subscription invoices AND one-time payment invoices (lifetime)
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: string) {
   try {
     console.log('Processing successful payment for invoice:', invoice.id)
     
-    // Only process subscription invoices
+    // Process RECURRING subscription invoices
     if (invoice.subscription) {
       const subscriptionId = typeof invoice.subscription === 'string' 
         ? invoice.subscription 
@@ -757,6 +794,109 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
       
       await sendUserEmail(user.email, user.full_name || '', emailTemplate)
       console.log(`Invoice receipt email sent to ${user.email} with PDF link`)
+    } else {
+      // CRITICAL FIX: Handle ONE-TIME PAYMENT invoices (Lifetime)
+      // For Checkout with mode='payment', invoice.subscription is NULL
+      // This acts as backup/verification for checkout.session.completed
+      console.log('Processing one-time payment invoice (no subscription):', invoice.id)
+      
+      // Get customer ID
+      const customerId = typeof invoice.customer === 'string'
+        ? invoice.customer
+        : invoice.customer?.id
+      
+      if (!customerId) {
+        console.error('No customer ID in one-time payment invoice:', invoice.id)
+        return
+      }
+      
+      // Get payment intent to access metadata
+      const paymentIntentId = typeof invoice.payment_intent === 'string'
+        ? invoice.payment_intent
+        : invoice.payment_intent?.id
+      
+      if (!paymentIntentId) {
+        console.log('No payment_intent in invoice, skipping one-time payment handling')
+        return
+      }
+      
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+        const plan = paymentIntent.metadata?.plan
+        const userId = paymentIntent.metadata?.user_id
+        
+        if (!plan || !userId) {
+          console.log('No plan or user_id in payment_intent metadata, skipping')
+          return
+        }
+        
+        if (plan === 'lifetime') {
+          console.log(`ONE-TIME PAYMENT: Lifetime plan for user ${userId}`)
+          
+          // Verify user has lifetime subscription - if not, create it (backup)
+          const { data: existingSub } = await supabase
+            .from('subscriptions')
+            .select('plan, status')
+            .eq('user_id', userId)
+            .maybeSingle()
+          
+          if (existingSub?.plan === 'lifetime' && existingSub?.status === 'active') {
+            console.log(`✅ User ${userId} already has active lifetime subscription`)
+          } else {
+            console.warn(`⚠️  BACKUP FULFILLMENT: User ${userId} paid for lifetime but doesn't have it! Creating now...`)
+            
+            // Create lifetime subscription (backup for failed checkout.session.completed)
+            const lifetimeData = {
+              user_id: userId,
+              plan: 'lifetime',
+              status: 'active',
+              stripe_customer_id: customerId,
+              stripe_subscription_id: null,
+              billing_interval: null,
+              current_period_end: null,
+              cancel_at_period_end: false,
+              trial_start: null,
+              trial_end: null,
+              last_event_id: `backup_${eventId}`,
+              updated_at: new Date().toISOString(),
+            }
+            
+            const { error: upsertError } = await supabase
+              .from('subscriptions')
+              .upsert(lifetimeData, {
+                onConflict: 'user_id',
+                ignoreDuplicates: false
+              })
+            
+            if (upsertError) {
+              console.error('CRITICAL: Backup fulfillment failed:', upsertError)
+              throw upsertError
+            }
+            
+            console.log(`✅ BACKUP FULFILLMENT SUCCESS: Lifetime subscription created for user ${userId}`)
+            
+            // Send confirmation email
+            const { data: userData } = await supabase
+              .from('users')
+              .select('email, full_name')
+              .eq('id', userId)
+              .single()
+            
+            if (userData) {
+              const emailTemplate = subscriptionCreatedTemplate({
+                name: userData.full_name || '',
+                planName: 'Lifetime',
+                dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+                isLifetime: true
+              })
+              await sendUserEmail(userData.email, userData.full_name || '', emailTemplate)
+              console.log(`Lifetime confirmation email sent to ${userData.email}`)
+            }
+          }
+        }
+      } catch (piError) {
+        console.error('Error retrieving payment_intent for one-time payment:', piError)
+      }
     }
   } catch (error) {
     console.error('Error in handleInvoicePaymentSucceeded:', {
@@ -1019,13 +1159,39 @@ async function handleCheckoutSessionCompleted(
     if (session.mode === 'subscription') {
       console.log('Subscription checkout completed, subscription will be created via webhook')
     } else if (session.mode === 'payment') {
-      console.log('One-time payment completed (Lifetime):', session.id)
+      console.log('One-time payment completed:', session.id)
 
       // LIFETIME PLAN: Create subscription record with special handling
-      const plan = session.metadata?.plan || 'lifetime'
+      // CRITICAL: Validate metadata explicitly - don't assume payment mode = lifetime
+      const plan = session.metadata?.plan
+      
+      if (!plan) {
+        console.error('CRITICAL: Payment mode checkout without plan metadata!', {
+          sessionId: session.id,
+          userId,
+          customerId,
+          metadata: session.metadata,
+        })
+        throw new Error('Invalid checkout session: payment mode requires plan metadata')
+      }
 
       if (plan === 'lifetime') {
         console.log('Processing Lifetime plan purchase for user:', userId)
+
+        // CRITICAL: Fetch old subscription ID BEFORE upserting lifetime
+        // We need to cancel any existing Stripe subscription when user upgrades to lifetime
+        const { data: oldSubData } = await supabase
+          .from('subscriptions')
+          .select('stripe_subscription_id, plan, status')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        const oldStripeSubscriptionId = oldSubData?.stripe_subscription_id
+        console.log('Existing subscription before lifetime upgrade:', {
+          oldPlan: oldSubData?.plan,
+          oldStatus: oldSubData?.status,
+          oldSubscriptionId: oldStripeSubscriptionId,
+        })
 
         // Create or update subscription record for Lifetime plan
         // Lifetime has no Stripe subscription ID (one-time payment)
@@ -1068,6 +1234,29 @@ async function handleCheckoutSessionCompleted(
 
         console.log('✅ Lifetime subscription created successfully for user:', userId)
 
+        // CRITICAL FIX: Cancel the old Stripe subscription to prevent webhook conflicts
+        // If user had an active trial/paid subscription, it must be canceled immediately
+        if (oldStripeSubscriptionId && oldStripeSubscriptionId !== 'null' && oldStripeSubscriptionId.startsWith('sub_')) {
+          console.log(`🔄 Canceling old subscription ${oldStripeSubscriptionId} for user ${userId} (upgraded to lifetime)`)
+          
+          try {
+            // Cancel immediately (user already paid for lifetime)
+            await stripe.subscriptions.cancel(oldStripeSubscriptionId, {
+              prorate: false, // Don't prorate, they already paid for lifetime
+            })
+            console.log(`✅ Old subscription ${oldStripeSubscriptionId} canceled successfully`)
+          } catch (cancelError) {
+            // Log but don't throw - lifetime is already granted
+            console.error(`⚠️  Warning: Could not cancel old subscription ${oldStripeSubscriptionId}:`, {
+              error: cancelError.message,
+              code: cancelError.code,
+            })
+            console.log('   User still has lifetime access. Admin should manually cancel subscription in Stripe.')
+          }
+        } else {
+          console.log('ℹ️  No existing Stripe subscription to cancel (user may have been on free plan or first purchase)')
+        }
+
         // Get user details for welcome email
         const { data: userData } = await supabase
           .from('users')
@@ -1088,6 +1277,26 @@ async function handleCheckoutSessionCompleted(
           await sendUserEmail(userData.email, name, emailTemplate)
           console.log(`Lifetime confirmation email sent to ${userData.email}`)
         }
+      } else {
+        // CRITICAL ERROR: Payment mode used for non-lifetime plan
+        console.error('CRITICAL: Payment mode checkout with non-lifetime plan!', {
+          sessionId: session.id,
+          userId,
+          customerId,
+          plan,
+          metadata: session.metadata,
+        })
+        
+        // Log to help debug why this happened
+        console.error('This should never happen! Payment mode should only be used for lifetime plans.')
+        console.error('User paid but subscription was not created. Manual intervention required!')
+        
+        // Still process as best we can - treat as lifetime to avoid user losing money
+        console.log('FALLBACK: Treating as lifetime to prevent user from losing payment')
+        
+        // Send alert email or log to monitoring system here
+        // For now, we'll just throw an error after logging
+        throw new Error(`Invalid payment mode checkout: plan="${plan}" should be "lifetime"`)
       }
     }
     

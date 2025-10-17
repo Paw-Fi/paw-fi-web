@@ -57,7 +57,11 @@ function AuthCallback() {
           const needsAvatar = await shouldPromptForAvatar()
           
           if (needsAvatar) {
-            navigate({ to: '/avatar-customizer' })
+            // CRITICAL FIX: Preserve redirect URL when going to avatar customizer
+            navigate({ 
+              to: '/avatar-customizer',
+              search: next && next !== '/dashboard' ? { redirect: next } : undefined
+            })
           } else {
             navigate({ to: next })
           }
@@ -72,7 +76,11 @@ function AuthCallback() {
               const needsAvatar = await shouldPromptForAvatar()
               
               if (needsAvatar) {
-                navigate({ to: '/avatar-customizer' })
+                // CRITICAL FIX: Preserve redirect URL when going to avatar customizer
+                navigate({ 
+                  to: '/avatar-customizer',
+                  search: next && next !== '/dashboard' ? { redirect: next } : undefined
+                })
               } else {
                 navigate({ to: next })
               }

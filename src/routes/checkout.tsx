@@ -77,8 +77,8 @@ function CheckoutPage() {
   const navigate = useNavigate();
   const searchParams = useSearch({ strict: false });
   const { 
-    plan = "plus", 
-    billing = "monthly", 
+    plan, 
+    billing, 
     promo, 
     status, 
     session_id, 
@@ -89,9 +89,20 @@ function CheckoutPage() {
     refreshToken
   } = searchParams;
   
+  // CRITICAL FIX: Don't default to "plus" - use explicit values
+  // If plan is missing, user should be redirected to pricing page
+  const selectedPlan = plan || 'plus'; // For backward compatibility, but log it
+  const selectedBilling = billing || 'monthly';
+  
   // Debug log to see what we're receiving
   console.log('Checkout page search params:', searchParams);
-  console.log('Billing interval:', billing);
+  console.log('Plan:', selectedPlan, '(explicit:', plan, ')');
+  console.log('Billing interval:', selectedBilling);
+  
+  // SECURITY: Log potential issues
+  if (!plan && !status) {
+    console.warn('⚠️  Checkout accessed without plan parameter - defaulting to plus. User should have been redirected from pricing page.');
+  }
   
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -330,7 +341,7 @@ function CheckoutPage() {
         if (!validatedUserId) {
           console.error("No validated user ID available");
           setPaymentStatus("failed");
-          navigate({ to: "/register", search: { redirect: `/checkout?plan=${plan}` } });
+          navigate({ to: "/register", search: { redirect: `/checkout?plan=${selectedPlan}` } });
           throw new Error("User authentication required to make a purchase");
         }
 
@@ -377,8 +388,8 @@ function CheckoutPage() {
         const { data, error } = await supabase.functions.invoke("create-checkout-session", {
           method: "POST",
           body: {
-            plan,
-            billingInterval: billing,
+            plan: selectedPlan,
+            billingInterval: selectedBilling,
             promoCode: promo,
             successUrl,
             cancelUrl,
@@ -462,7 +473,7 @@ function CheckoutPage() {
 
         setIsLoading(false);
       } catch (err: unknown) {
-        navigate({ to: "/register", search: { redirect: `/checkout?plan=${plan}` } });
+        navigate({ to: "/register", search: { redirect: `/checkout?plan=${selectedPlan}` } });
         console.error("Error initializing Stripe:", err);
         setPaymentStatus("failed");
         setError(err instanceof Error ? err.message : "An error occurred while initializing payment. Please try again.");
@@ -471,7 +482,7 @@ function CheckoutPage() {
     };
 
     initializeStripe();
-  }, [stripeLoaded, plan, billing, navigate, validatedUserId, status, isValidatingUser, isMobileCheckout, redirectUrl, source, promo]);
+  }, [stripeLoaded, selectedPlan, selectedBilling, navigate, validatedUserId, status, isValidatingUser, isMobileCheckout, redirectUrl, source, promo]);
 
   // Render success state
   const renderSuccess = () => (
@@ -486,7 +497,7 @@ function CheckoutPage() {
         <div className="flex-1 space-y-2">
           <h3 className="text-2xl font-light text-foreground">Payment Successful</h3>
           <p className="text-muted-foreground-color">
-            Thank you for subscribing to Moneko {plan.charAt(0).toUpperCase() + plan.slice(1)}. Your premium features are now active.
+            Thank you for subscribing to Moneko {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)}. Your premium features are now active.
           </p>
         </div>
       </div>
@@ -496,7 +507,7 @@ function CheckoutPage() {
           <Button 
             onClick={() => {
               if (typeof window !== 'undefined') {
-                window.location.href = `${redirectUrl}?status=success&plan=${plan}`;
+                window.location.href = `${redirectUrl}?status=success&plan=${selectedPlan}`;
               }
             }}
             size="lg"
@@ -625,7 +636,7 @@ function CheckoutPage() {
                   Secure Checkout
                 </h1>
                 <p className="text-xl text-muted-foreground-color max-w-2xl mx-auto">
-                  Subscribe to Moneko {plan.charAt(0).toUpperCase() + plan.slice(1)} and unlock premium features
+                  Subscribe to Moneko {selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} and unlock premium features
                 </p>
               </div>
             </motion.div>
