@@ -26,6 +26,16 @@ function AuthCallback() {
       setIsProcessing(true)
       
       try {
+        // Check for recovery type in URL (password reset flow)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const queryParams = new URLSearchParams(window.location.search)
+        const type = hashParams.get('type') || queryParams.get('type')
+        
+        // If this is a password recovery flow, redirect to reset-password page
+        if (type === 'recovery') {
+          navigate({ to: '/reset-password' })
+          return
+        }
         
         // Check if we have a session - Supabase handles OAuth exchange automatically
         const { data: { session }, error } = await supabase.auth.getSession()

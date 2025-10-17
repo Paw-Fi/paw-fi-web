@@ -48,9 +48,10 @@ export function ResetPassword() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        // Check if this is a recovery session by looking at the URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const type = urlParams.get('type');
+        // Check if this is a recovery session by looking at both hash and query parameters
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const queryParams = new URLSearchParams(window.location.search);
+        const type = hashParams.get('type') || queryParams.get('type');
         
         if (type === 'recovery' || session?.user) {
           setIsValidSession(true);
