@@ -98,6 +98,10 @@ export function useUserActivities() {
   useEffect(() => {
     if (!user) return;
 
+    // Track if component is mounted to prevent invalidations after unmount
+    // This prevents infinite loading issues during navigation
+    let isMounted = true;
+
     const channel = supabase
       .channel(`user-activities-${user.id}`)
       .on(
@@ -110,14 +114,21 @@ export function useUserActivities() {
         },
         (payload: RealtimePostgresChangesPayload<ActivityRecord>) => {
           console.log('New activity detected, refetching activities:', payload);
-          // Invalidate the query to trigger a refetch
-          queryClient.invalidateQueries({ queryKey });
+          // CRITICAL FIX: Only invalidate if component is still mounted
+          if (isMounted) {
+            // Invalidate the query to trigger a refetch
+            queryClient.invalidateQueries({ queryKey });
+          }
         }
       )
       .subscribe();
 
     // Cleanup subscription on component unmount
     return () => {
+      // Mark as unmounted FIRST to prevent any pending callbacks
+      isMounted = false;
+      
+      // Then cleanup the channel
       supabase.removeChannel(channel);
     };
   }, [user, queryClient, queryKey]);

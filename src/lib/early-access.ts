@@ -71,13 +71,17 @@ export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<Ear
  */
 export async function checkUserHasClaimed(): Promise<boolean> {
   try {
+    console.log('🔎 checkUserHasClaimed: Starting check...');
+    
     // Get current authenticated user's session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session?.user) {
-      console.log('No authenticated user, returning false');
+      console.log('❌ No authenticated user, returning false');
       return false;
     }
+    
+    console.log('👤 Checking claims for user:', session.user.id);
     
     // Query database directly for this user's claim
     const { data, error, count } = await supabase
@@ -86,15 +90,26 @@ export async function checkUserHasClaimed(): Promise<boolean> {
       .eq('user_id', session.user.id)
       .limit(1);
     
+    console.log('📊 Query result:', { 
+      data, 
+      error, 
+      count,
+      dataLength: data?.length,
+      hasData: !!(data && data.length > 0),
+      hasCount: !!(count !== null && count > 0)
+    });
+    
     if (error) {
-      console.error('Error checking claim status:', error);
+      console.error('❌ Error checking claim status:', error);
       return false;
     }
     
     // Return true if we found at least one claim
-    return (data && data.length > 0) || (count !== null && count > 0);
+    const hasClaimed = (data && data.length > 0) || (count !== null && count > 0);
+    console.log('✅ Final result - User has claimed:', hasClaimed);
+    return hasClaimed;
   } catch (error) {
-    console.error('Unexpected error checking claim status:', error);
+    console.error('❌ Unexpected error checking claim status:', error);
     return false;
   }
 }

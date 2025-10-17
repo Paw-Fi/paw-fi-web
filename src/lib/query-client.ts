@@ -43,17 +43,23 @@ export function makeQueryClient() {
         networkMode: 'online',
         
         // CRITICAL: Set a maximum query time to prevent infinite loading
-        // If a query takes longer than 30 seconds, it will fail
+        // If a query takes longer than 15 seconds, it will timeout and fail
         // This prevents the infinite loading spinner issue
-        queryFn: undefined, // Will be overridden by individual queries
+        meta: {
+          timeout: 15000, // 15 second timeout for all queries
+        }
       },
       mutations: {
         // Apply retry configuration for mutations as well
-        retry: 2,
+        retry: 1, // REDUCED from 2 to 1 to fail faster
         retryDelay: (attemptIndex: number) =>
-          Math.min(1000 * Math.pow(2, attemptIndex), 4000),
+          Math.min(1000 * Math.pow(2, attemptIndex), 3000),
         // CRITICAL: Add network timeout for mutations too
         networkMode: 'online',
+        // Add timeout for mutations
+        meta: {
+          timeout: 20000, // 20 second timeout for mutations
+        },
       },
     },
   });

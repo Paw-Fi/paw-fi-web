@@ -88,6 +88,14 @@ interface MenuItem {
 
 export const Route = createFileRoute("/dashboard")({
   component: Dashboard,
+  // CRITICAL FIX: Add loader to fix TanStack Router pending state issue
+  // Without a loader, router can get stuck in pending state during navigation
+  // See: https://github.com/TanStack/router/issues/3556
+  loader: async () => {
+    // Return immediately - we don't block on data
+    // This just signals to router that route is ready
+    return {};
+  },
   head: () => {
     // Add canonical URL for dashboard page
     const pageUrl = getCanonicalUrl('/dashboard');
@@ -587,16 +595,11 @@ export function Dashboard() {
     try {
       const result = await signOut();
       if (result.success) {
-        // Clear all chat context state immediately
+        // 1. Clear all chat context state immediately
         clearAllMessages(); // Clear AI chat messages (ai-chat-context)
         clearAllConversations(); // Clear all conversations (chat-context)
 
-        // IMPORTANT: Use clear() instead of invalidateQueries() to prevent refetching
-        // invalidateQueries() triggers immediate refetches which causes infinite loading
-        // clear() removes all cached data without triggering refetches
-        queryClient.clear();
-
-        // Clear all chat-related localStorage data
+        // 2. Clear all chat-related localStorage data
         if (typeof window !== 'undefined') {
           localStorage.removeItem('ai-chat-messages');
           // Clear any other chat-related storage
@@ -615,10 +618,15 @@ export function Dashboard() {
 
         toast.success("You have been signed out.");
 
-        // Redirect to login after cleanup
-        // Use navigate instead of relying on ProtectedRouteSubscription
-        // to ensure immediate redirect without race conditions
-        navigate({ to: '/login' });
+        // 3. CRITICAL FIX: Navigate FIRST, then clear cache
+        // This prevents race condition where new route tries to fetch cleared queries
+        await navigate({ to: '/login' });
+        
+        // 4. Clear query cache AFTER navigation completes
+        // Use setTimeout to ensure navigation finishes before cache clear
+        setTimeout(() => {
+          queryClient.clear();
+        }, 100);
       }
     } catch (error) {
       console.error("Error signing out:", error);

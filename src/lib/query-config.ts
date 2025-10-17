@@ -9,15 +9,15 @@ export const isProduction = typeof window !== 'undefined' &&
 
 /**
  * Production-optimized retry configuration for critical queries
- * Higher retry count and faster initial retries for cold start recovery
+ * REDUCED retry count to prevent infinite loading during navigation
  */
 export const getCriticalQueryConfig = () => ({
-  retry: isProduction ? 5 : 3,
+  retry: isProduction ? 3 : 2, // REDUCED from 5 to 3 to prevent hanging
   retryDelay: (attemptIndex: number) => {
     // Fast retries for cold start recovery, then exponential backoff
     if (attemptIndex === 0) return 500;  // Quick first retry
     if (attemptIndex === 1) return 1000; // Second retry
-    return Math.min(2000 * Math.pow(1.5, attemptIndex - 2), 8000); // Capped exponential
+    return Math.min(2000 * Math.pow(1.5, attemptIndex - 2), 5000); // Reduced max to 5s
   },
   refetchOnWindowFocus: false, // Prevent unnecessary refetches
 });
@@ -25,14 +25,14 @@ export const getCriticalQueryConfig = () => ({
 /**
  * Production-optimized retry configuration for standard queries
  * Balanced retry strategy for non-critical data
+ * REDUCED retries to prevent infinite loading during navigation
  */
 export const getStandardQueryConfig = () => ({
-  retry: isProduction ? 4 : 3,
+  retry: isProduction ? 2 : 1, // REDUCED from 4 to 2 to prevent hanging
   retryDelay: (attemptIndex: number) => {
     // Faster initial retries for cold start recovery
-    if (attemptIndex === 0) return 400;  // Quick first retry
-    if (attemptIndex === 1) return 900;  // Second retry
-    return Math.min(1800 * Math.pow(1.6, attemptIndex - 2), 7000); // Capped exponential
+    if (attemptIndex === 0) return 500;  // Quick first retry
+    return Math.min(1000 * Math.pow(2, attemptIndex), 3000); // Max 3s delay
   },
   refetchOnWindowFocus: false,
 });

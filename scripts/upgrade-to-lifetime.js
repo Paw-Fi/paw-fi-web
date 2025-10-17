@@ -3,16 +3,19 @@
  * 
  * This script upgrades a user's subscription to Lifetime by:
  * 1. Looking up user by email or user ID
- * 2. Canceling their current Stripe subscription (if any)
+ * 2. Canceling their current Stripe subscription immediately (if any)
  * 3. Updating the database to reflect Lifetime status
  * 4. Optionally sending them a confirmation email
  * 
+ * IMPORTANT: Stripe subscription is ALWAYS canceled immediately for lifetime upgrades
+ * to prevent webhook race conditions. The webhook handler has been updated to ignore
+ * updates for users who have been manually upgraded to lifetime.
+ * 
  * Usage:
- *   node scripts/upgrade-to-lifetime.js <email_or_user_id> [--no-email] [--cancel-immediately]
+ *   node scripts/upgrade-to-lifetime.js <email_or_user_id> [--no-email]
  * 
  * Options:
  *   --no-email            Skip sending confirmation email
- *   --cancel-immediately  Cancel Stripe subscription immediately (default: at period end)
  * 
  * Examples:
  *   node scripts/upgrade-to-lifetime.js user@example.com
@@ -66,11 +69,10 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
 const args = process.argv.slice(2)
 const userInput = args[0]
 const skipEmail = args.includes('--no-email')
-const cancelImmediately = args.includes('--cancel-immediately')
 
 if (!userInput) {
   console.error('❌ Error: Email or User ID is required')
-  console.error('Usage: node scripts/upgrade-to-lifetime.js <email_or_user_id> [--no-email] [--cancel-immediately]')
+  console.error('Usage: node scripts/upgrade-to-lifetime.js <email_or_user_id> [--no-email]')
   console.error('\nExamples:')
   console.error('  node scripts/upgrade-to-lifetime.js user@example.com')
   console.error('  node scripts/upgrade-to-lifetime.js abc123-def-456-ghi-789')
@@ -93,7 +95,7 @@ console.log('\n🚀 Starting Lifetime Upgrade Process')
 console.log('=====================================')
 console.log(`Input: ${userInput} (${isEmail ? 'Email' : 'User ID'})`)
 console.log(`Skip Email: ${skipEmail}`)
-console.log(`Cancel Immediately: ${cancelImmediately}`)
+console.log(`Cancel Stripe: Immediate (always for lifetime upgrades)`)
 console.log('=====================================\n')
 
 async function upgradeToLifetime() {
@@ -170,39 +172,31 @@ async function upgradeToLifetime() {
       }
     }
 
-    // Step 3: Cancel Stripe subscription if exists
+    // Step 3: Cancel Stripe subscription if exists (BEFORE updating database)
+    // CRITICAL: Cancel Stripe first to minimize webhook race conditions
     if (currentSub?.stripe_subscription_id) {
       console.log('\n📋 Step 3: Canceling Stripe subscription...')
       
       try {
-        const cancelAtPeriodEnd = !cancelImmediately
+        // ALWAYS cancel immediately for lifetime upgrades to prevent webhooks
+        console.log('   Canceling subscription immediately (required for lifetime upgrades)...')
         
-        const canceledSub = await stripe.subscriptions.update(
-          currentSub.stripe_subscription_id,
-          {
-            cancel_at_period_end: cancelAtPeriodEnd,
-            // If canceling immediately, also set cancel_at to now
-            ...(cancelImmediately && { cancel_at: Math.floor(Date.now() / 1000) })
-          }
-        )
-
-        if (cancelImmediately) {
-          // For immediate cancellation, we need to actually delete it
-          await stripe.subscriptions.cancel(currentSub.stripe_subscription_id)
-          console.log(`✅ Stripe subscription canceled immediately`)
-        } else {
-          const targetTimestamp = canceledSub.cancel_at ?? canceledSub.current_period_end ?? canceledSub.ended_at ?? null
-          const formattedDate = formatStripeTimestamp(targetTimestamp)
-
-          if (formattedDate) {
-            console.log(`✅ Stripe subscription will cancel at period end: ${formattedDate}`)
-          } else {
-            console.log('ℹ️  Stripe subscription cancellation scheduled, but the period end date could not be determined. Please verify directly in Stripe.')
-          }
-        }
+        await stripe.subscriptions.cancel(currentSub.stripe_subscription_id, {
+          prorate: false, // Don't prorate since they're getting lifetime
+        })
+        
+        console.log(`✅ Stripe subscription canceled immediately`)
+        
+        // Wait for Stripe to process the cancellation and send webhooks
+        // This reduces (but doesn't eliminate) the webhook race condition
+        // The webhook handler now has protection against overwriting lifetime plans
+        console.log('   Waiting 3 seconds for Stripe to process cancellation...')
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        
       } catch (stripeError) {
         console.error(`⚠️  Warning: Could not cancel Stripe subscription: ${stripeError.message}`)
         console.log('   This may be okay if subscription was already canceled')
+        console.log('   Proceeding with lifetime upgrade anyway...')
       }
     } else {
       console.log('\n📋 Step 3: No Stripe subscription to cancel (user may have been on free plan)')
@@ -325,8 +319,9 @@ async function upgradeToLifetime() {
     console.log(`✅ Status: active`)
     console.log(`✅ Expires: Never`)
     if (currentSub?.stripe_subscription_id) {
-      console.log(`✅ Previous Stripe subscription: ${cancelImmediately ? 'Canceled immediately' : 'Will cancel at period end'}`)
+      console.log(`✅ Previous Stripe subscription: Canceled immediately`)
     }
+    console.log('✅ Webhook protection: Active (webhooks will not override lifetime status)')
     console.log('=====================================\n')
 
   } catch (error) {

@@ -116,17 +116,30 @@ export function FreeTrialGiveawayForm() {
 
   // Separate useEffect for claim status checking
   useEffect(() => {
+    console.log('🔍 Claim status check:', {
+      isAuthenticated,
+      hasUser: !!user,
+      userId: user?.id,
+      claimStatusLoading,
+      userHasClaimedFromDB,
+      currentHasClaimed: hasClaimed
+    });
+    
     if (isAuthenticated && user) {
       // Use database check as primary source of truth
       if (!claimStatusLoading) {
+        console.log('✅ Setting hasClaimed to:', userHasClaimedFromDB);
         setHasClaimed(userHasClaimedFromDB);
+      } else {
+        console.log('⏳ Still loading claim status...');
       }
     } else {
       // Fallback to email-based cookie for non-authenticated users
       const claimed = getCookie("early-access-claimed");
+      console.log('🍪 Using cookie fallback, claimed:', !!claimed);
       setHasClaimed(!!claimed);
     }
-  }, [isAuthenticated, user, userHasClaimedFromDB, claimStatusLoading, getCookie]);
+  }, [isAuthenticated, user, userHasClaimedFromDB, claimStatusLoading]);
 
 
   const handleInputChange = (
@@ -260,6 +273,7 @@ export function FreeTrialGiveawayForm() {
   
   // Only show loading if we haven't timed out yet
   if (isAuthenticated && claimStatusLoading && !loadingTimeout) {
+    console.log('🔄 Rendering: Loading screen');
     return (
       <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl">
         <div className="text-center">
@@ -279,6 +293,7 @@ export function FreeTrialGiveawayForm() {
 
   // Show sign-in prompt if not authenticated
   if (!isAuthenticated) {
+    console.log('🔄 Rendering: Sign-in prompt');
     return (
       <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 backdrop-blur-2xl">
         <div className="text-center">
@@ -310,6 +325,12 @@ export function FreeTrialGiveawayForm() {
       </div>
     );
   }
+
+  console.log('🔄 Rendering: Main form', { 
+    hasClaimed, 
+    resultSuccess: result.success,
+    showSuccessMessage: result.success || hasClaimed 
+  });
 
   return (
 
