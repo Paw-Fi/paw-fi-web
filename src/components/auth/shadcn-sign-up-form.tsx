@@ -148,7 +148,12 @@ export function ShadcnSignUpForm({
           const hasAvatar = await checkUserHasAvatar()
           
           if (!hasAvatar) {
-            navigate({ to: "/avatar-customizer" })
+            // CRITICAL FIX: Preserve redirect URL when going to avatar customizer
+            // This ensures users registering to purchase (e.g., lifetime) get back to checkout
+            navigate({ 
+              to: "/avatar-customizer",
+              search: redirectUrl ? { redirect: redirectUrl } : undefined 
+            })
           } else {
             const redirectParams = parseRedirectUrl(redirectUrl)
             navigate(redirectParams)
@@ -199,7 +204,12 @@ export function ShadcnSignUpForm({
         const hasAvatar = await checkUserHasAvatar()
         
         if (!hasAvatar) {
-          navigate({ to: "/avatar-customizer" })
+          // CRITICAL FIX: Preserve redirect URL when going to avatar customizer
+          // This ensures users registering to purchase (e.g., lifetime) get back to checkout
+          navigate({ 
+            to: "/avatar-customizer",
+            search: redirectUrl ? { redirect: redirectUrl } : undefined 
+          })
         } else {
           const redirectParams = parseRedirectUrl(redirectUrl)
           navigate(redirectParams)

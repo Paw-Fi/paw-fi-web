@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router'
 import { applyColorToSvg } from '../lib/svg-utils'
 import { useAvatar } from '@/hooks/use-avatar'
 import { useAuth } from '@/contexts/auth-context'
@@ -118,6 +118,11 @@ import Star6 from '@/assets/images/avatar/11.stars/Star6.svg?raw'
 
 export const Route = createFileRoute('/avatar-customizer')({
   component: AvatarCustomizer,
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      redirect: (search.redirect as string) || undefined,
+    };
+  },
 })
 
 // SVG content mapping
@@ -207,6 +212,7 @@ const colorPalettes = {
 function AvatarCustomizer() {
   const { user,isLoading } = useAuth()
   const navigate = useNavigate()
+  const { redirect } = useSearch({ strict: false }) // Get redirect parameter
   const { saveAvatar, skipAvatarForNow, customization, isCustomizationLoading, isUploading, uploadProgress, hasAvatar } = useAvatar()
   const isEditing = hasAvatar === true
   const [selectedElements, setSelectedElements] = useState({
@@ -324,9 +330,26 @@ function AvatarCustomizer() {
         pauseOnHover: true,
         draggable: true,
       })
-      // Navigate to dashboard after successful save
+      // Navigate after successful save - preserve redirect URL if exists
       setTimeout(() => {
-        navigate({ to: '/dashboard' })
+        if (redirect) {
+          // Parse redirect URL to handle query parameters
+          const [path, queryString] = redirect.split('?')
+          if (queryString) {
+            const searchParams: Record<string, any> = {}
+            queryString.split('&').forEach(param => {
+              const [key, value] = param.split('=')
+              if (key && value) {
+                searchParams[key] = decodeURIComponent(value)
+              }
+            })
+            navigate({ to: path as any, search: searchParams })
+          } else {
+            navigate({ to: redirect as any })
+          }
+        } else {
+          navigate({ to: '/dashboard' })
+        }
       }, 500)
     } else {
       toast.error(result.error || 'Failed to save avatar. Please try again.', {
@@ -341,7 +364,24 @@ function AvatarCustomizer() {
   }
 
   const handleCancelEditing = () => {
-    navigate({ to: '/dashboard' })
+    // Preserve redirect URL if exists
+    if (redirect) {
+      const [path, queryString] = redirect.split('?')
+      if (queryString) {
+        const searchParams: Record<string, any> = {}
+        queryString.split('&').forEach(param => {
+          const [key, value] = param.split('=')
+          if (key && value) {
+            searchParams[key] = decodeURIComponent(value)
+          }
+        })
+        navigate({ to: path as any, search: searchParams })
+      } else {
+        navigate({ to: redirect as any })
+      }
+    } else {
+      navigate({ to: '/dashboard' })
+    }
   }
 
   const handleSkipAvatar = async () => {
@@ -356,7 +396,24 @@ function AvatarCustomizer() {
         pauseOnHover: true,
         draggable: true,
       })
-      navigate({ to: '/dashboard' })
+      // Preserve redirect URL if exists
+      if (redirect) {
+        const [path, queryString] = redirect.split('?')
+        if (queryString) {
+          const searchParams: Record<string, any> = {}
+          queryString.split('&').forEach(param => {
+            const [key, value] = param.split('=')
+            if (key && value) {
+              searchParams[key] = decodeURIComponent(value)
+            }
+          })
+          navigate({ to: path as any, search: searchParams })
+        } else {
+          navigate({ to: redirect as any })
+        }
+      } else {
+        navigate({ to: '/dashboard' })
+      }
     } else {
       toast.error(result.error || 'Failed to skip avatar creation. Please try again.', {
         position: 'top-right',
