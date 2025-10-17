@@ -57,18 +57,16 @@ export default function HomePage() {
   const navigate = useNavigate();
   const pageUrl = getCanonicalUrl("/");
 
-  // Check for password recovery flow
+  // Backup check for password recovery flow (primary check is in AuthProvider)
   useEffect(() => {
-    // Check both hash and query parameters for recovery type
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const queryParams = new URLSearchParams(window.location.search);
     const type = hashParams.get('type') || queryParams.get('type');
     
-    // If this is a password recovery flow, redirect to reset-password page
     if (type === 'recovery') {
-      navigate({ to: '/reset-password' });
+      window.location.href = '/reset-password' + window.location.hash;
     }
-  }, [navigate]);
+  }, []);
 
   const structuredData = {
     "@context": "https://schema.org",

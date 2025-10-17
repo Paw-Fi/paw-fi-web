@@ -31,7 +31,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 // Load environment variables from .env file
-dotenv.config({ path: path.join(__dirname, '../.env') })
+dotenv.config({ path: path.join(__dirname, '../.env.production') })
 
 // Validate required environment variables
 // Use SUPABASE_URL if available, otherwise fall back to VITE_SUPABASE_URL
@@ -40,7 +40,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 // Support both STRIPE_SECRET_KEY and VITE_STRIPE_SECRET_KEY
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || process.env.VITE_STRIPE_SECRET_KEY
 const APP_URL = process.env.VITE_APP_URL || 'https://moneko.io'
-
+console.log("SUPABASE_URL",SUPABASE_URL)
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !STRIPE_SECRET_KEY) {
   console.error('❌ Error: Missing required environment variables')
   console.error('Required: VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY (or VITE_STRIPE_SECRET_KEY)')
