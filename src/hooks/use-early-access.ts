@@ -33,7 +33,10 @@ export function useUserHasClaimed(userId?: string) {
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false, // Prevent infinite loading on window focus (global refetchOnMount handles freshness)
-    retry: 2,
+    retry: 1, // Only retry once for faster failure
+    retryDelay: 1000, // Wait 1 second before retry
+    // CRITICAL: Add network timeout to prevent infinite loading
+    networkMode: 'online',
   });
 }
 

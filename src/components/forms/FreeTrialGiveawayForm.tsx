@@ -242,7 +242,23 @@ export function FreeTrialGiveawayForm() {
 
 
   // Show loading state while checking claim status for authenticated users
-  if (isAuthenticated && claimStatusLoading) {
+  // IMPORTANT: Add a fallback timeout - if loading takes more than 5 seconds, show the form anyway
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  
+  useEffect(() => {
+    if (isAuthenticated && claimStatusLoading) {
+      // Set a 5 second timeout
+      const timer = setTimeout(() => {
+        console.warn('Claim status check timed out, showing form anyway');
+        setLoadingTimeout(true);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, claimStatusLoading]);
+  
+  // Only show loading if we haven't timed out yet
+  if (isAuthenticated && claimStatusLoading && !loadingTimeout) {
     return (
       <div className="rounded-3xl bg-white/20 dark:bg-slate-800/20 p-12 backdrop-blur-2xl">
         <div className="text-center">

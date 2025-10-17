@@ -21,9 +21,13 @@ export interface EarlyAccessResponse {
 
 export async function getRemainingSpots(): Promise<number> {
   try {
-    const { data, error } = await supabase.functions.invoke('early-access', {
+    const invokePromise = supabase.functions.invoke('early-access', {
       method: 'GET'
     });
+    
+    // Add 10 second timeout to prevent hanging
+    const result = await withTimeout(invokePromise, 10000);
+    const { data, error } = result as { data?: { remainingSpots?: number }, error?: any };
     
     if (error) {
       console.error('Error fetching remaining spots:', error);
@@ -32,17 +36,25 @@ export async function getRemainingSpots(): Promise<number> {
     
     return data?.remainingSpots || 0;
   } catch (error) {
-    console.error('Error calling early-access function:', error);
+    if (error instanceof Error && error.message === 'Request timeout') {
+      console.error('Get remaining spots timed out');
+    } else {
+      console.error('Error calling early-access function:', error);
+    }
     return 0;
   }
 }
 
 export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<EarlyAccessResponse> {
   try {
-    const { data, error } = await supabase.functions.invoke('early-access', {
+    const invokePromise = supabase.functions.invoke('early-access', {
       method: 'POST',
       body: claim
     });
+    
+    // Add 15 second timeout for claim submission (slightly longer for POST)
+    const result = await withTimeout(invokePromise, 15000);
+    const { data, error } = result as { data?: EarlyAccessResponse, error?: any };
     
     if (error) {
       console.error('Error claiming spot:', error);
@@ -54,6 +66,13 @@ export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<Ear
     
     return data as EarlyAccessResponse;
   } catch (error) {
+    if (error instanceof Error && error.message === 'Request timeout') {
+      console.error('Claim submission timed out');
+      return {
+        success: false,
+        error: 'Request timed out. Please try again.'
+      };
+    }
     console.error('Error calling early-access function:', error);
     return {
       success: false,
@@ -62,11 +81,27 @@ export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<Ear
   }
 }
 
+/**
+ * Add timeout wrapper to prevent infinite loading
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number = 10000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), timeoutMs)
+    ),
+  ]);
+}
+
 export async function checkUserHasClaimed(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.functions.invoke('check-user-claim', {
+    const invokePromise = supabase.functions.invoke('check-user-claim', {
       method: 'GET'
     });
+    
+    // Add 10 second timeout to prevent hanging
+    const result = await withTimeout(invokePromise, 10000);
+    const { data, error } = result as { data?: { hasClaimed?: boolean }, error?: any };
     
     if (error) {
       console.error('Error checking claim status:', error);
@@ -75,7 +110,11 @@ export async function checkUserHasClaimed(): Promise<boolean> {
     
     return data?.hasClaimed === true;
   } catch (error) {
-    console.error('Error checking claim status:', error);
+    if (error instanceof Error && error.message === 'Request timeout') {
+      console.error('Check claim status timed out');
+    } else {
+      console.error('Error checking claim status:', error);
+    }
     return false;
   }
 }
