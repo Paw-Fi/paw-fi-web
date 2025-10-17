@@ -169,6 +169,11 @@ export function FreeTrialGiveawayForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setResult({});
+    if(hasClaimed)
+    {
+      window.location.href = TESTFLIGHT_URL;
+      return;
+    }
 
     // Require authentication before claiming
     if (!isAuthenticated || !user) {
