@@ -49,11 +49,6 @@ export function ResetPassword() {
         // Supabase should have already processed the recovery hash by now
         const { data: { session } } = await supabase.auth.getSession();
         
-        console.log('Reset password page - session check:', { 
-          hasSession: !!session, 
-          userId: session?.user?.id 
-        });
-        
         if (session?.user) {
           setIsValidSession(true);
         } else {

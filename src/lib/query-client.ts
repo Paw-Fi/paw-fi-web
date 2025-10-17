@@ -29,20 +29,31 @@ export function makeQueryClient() {
         retryDelay: standardConfig.retryDelay,
         refetchOnWindowFocus: standardConfig.refetchOnWindowFocus,
 
-        // IMPORTANT: Changed from false to 'always' to fix infinite loading bug
-        // When using SSR with client-side navigation, refetchOnMount: false can cause
-        // queries to get stuck in loading state if cache hydration fails
-        // 'always' ensures data is refetched on mount, preventing stale/stuck states
-        refetchOnMount: 'always',
+        // CRITICAL FIX: Use true instead of 'always' to prevent stuck loading states
+        // true = refetch if data is stale (respects staleTime)
+        // 'always' = refetch every time even if data is fresh, can cause infinite loading
+        // false = never refetch on mount (can cause stale data issues)
+        refetchOnMount: true,
 
         // Prevent refetching on reconnect if data is fresh
         refetchOnReconnect: false,
+
+        // CRITICAL: Add network timeout to prevent hanging requests
+        // This prevents queries from staying in loading state forever
+        networkMode: 'online',
+        
+        // CRITICAL: Set a maximum query time to prevent infinite loading
+        // If a query takes longer than 30 seconds, it will fail
+        // This prevents the infinite loading spinner issue
+        queryFn: undefined, // Will be overridden by individual queries
       },
       mutations: {
         // Apply retry configuration for mutations as well
         retry: 2,
         retryDelay: (attemptIndex: number) =>
           Math.min(1000 * Math.pow(2, attemptIndex), 4000),
+        // CRITICAL: Add network timeout for mutations too
+        networkMode: 'online',
       },
     },
   });

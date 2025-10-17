@@ -224,7 +224,7 @@ async function upgradeToLifetime() {
       console.log('   - Cleared existing current_period_end value')
     }
 
-    if (currentSub?.status !== 'active') {
+    if (currentSub && currentSub.status !== 'active') {
       const { error: activateStatusError } = await supabase
         .from('subscriptions')
         .update({ status: 'active' })
@@ -235,7 +235,11 @@ async function upgradeToLifetime() {
       }
 
       console.log('   - Updated subscription status to active')
+    } else if (!currentSub) {
+      console.log('   - No existing subscription row found; preparing to create a lifetime record')
     }
+
+    const stripeCustomerId = currentSub?.stripe_customer_id ?? `manual_lifetime_${userId}`
 
     const lifetimeData = {
       user_id: userId,
@@ -247,8 +251,7 @@ async function upgradeToLifetime() {
       trial_start: null,
       trial_end: null,
       stripe_subscription_id: null,
-      // Keep the stripe_customer_id if it exists
-      ...(currentSub?.stripe_customer_id && { stripe_customer_id: currentSub.stripe_customer_id }),
+      stripe_customer_id: stripeCustomerId,
       last_event_id: 'manual_upgrade_script',
       updated_at: new Date().toISOString(),
     }
