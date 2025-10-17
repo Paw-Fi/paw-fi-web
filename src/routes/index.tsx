@@ -1,7 +1,6 @@
 "use client";
 
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
 import { getCanonicalUrl } from "@/utils/canonical";
@@ -54,19 +53,7 @@ export const Route = createFileRoute("/")({
 });
 
 export default function HomePage() {
-  const navigate = useNavigate();
   const pageUrl = getCanonicalUrl("/");
-
-  // Backup check for password recovery flow (primary check is in AuthProvider)
-  useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const queryParams = new URLSearchParams(window.location.search);
-    const type = hashParams.get('type') || queryParams.get('type');
-    
-    if (type === 'recovery') {
-      window.location.href = '/reset-password' + window.location.hash;
-    }
-  }, []);
 
   const structuredData = {
     "@context": "https://schema.org",

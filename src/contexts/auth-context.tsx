@@ -39,25 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Check for password recovery flow BEFORE Supabase processes the URL
-    const checkRecoveryBeforeAuth = () => {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const queryParams = new URLSearchParams(window.location.search);
-      const type = hashParams.get('type') || queryParams.get('type');
-      
-      if (type === 'recovery') {
-        console.log('Recovery flow detected, redirecting to reset-password');
-        // Redirect to reset-password page with the hash intact
-        window.location.href = '/reset-password' + window.location.hash;
-        return true; // Indicate we're redirecting
-      }
-      return false;
-    };
-
-    // Check for recovery flow first
-    const isRedirecting = checkRecoveryBeforeAuth();
-    if (isRedirecting) return; // Exit early if redirecting
-
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -68,10 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Handle password recovery events
+        console.log('Auth state change:', event, session?.user?.email);
+
+        // Handle password recovery events - Supabase triggers this after processing recovery hash
         if (event === 'PASSWORD_RECOVERY') {
-          console.log('PASSWORD_RECOVERY event detected');
-          window.location.href = '/reset-password';
+          console.log('PASSWORD_RECOVERY event detected, redirecting to reset-password');
+          // Only redirect if we're not already on the reset-password page
+          if (!window.location.pathname.includes('/reset-password')) {
+            window.location.href = '/reset-password';
+          }
           return;
         }
 

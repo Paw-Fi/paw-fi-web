@@ -191,8 +191,14 @@ async function upgradeToLifetime() {
           await stripe.subscriptions.cancel(currentSub.stripe_subscription_id)
           console.log(`✅ Stripe subscription canceled immediately`)
         } else {
-          const periodEnd = new Date(canceledSub.current_period_end * 1000).toLocaleDateString()
-          console.log(`✅ Stripe subscription will cancel at period end: ${periodEnd}`)
+          const targetTimestamp = canceledSub.cancel_at ?? canceledSub.current_period_end ?? canceledSub.ended_at ?? null
+          const formattedDate = formatStripeTimestamp(targetTimestamp)
+
+          if (formattedDate) {
+            console.log(`✅ Stripe subscription will cancel at period end: ${formattedDate}`)
+          } else {
+            console.log('ℹ️  Stripe subscription cancellation scheduled, but the period end date could not be determined. Please verify directly in Stripe.')
+          }
         }
       } catch (stripeError) {
         console.error(`⚠️  Warning: Could not cancel Stripe subscription: ${stripeError.message}`)
@@ -204,7 +210,33 @@ async function upgradeToLifetime() {
 
     // Step 4: Update database to Lifetime
     console.log('\n📋 Step 4: Updating database to Lifetime plan...')
-    
+
+    if (currentSub?.current_period_end) {
+      const { error: clearPeriodEndError } = await supabase
+        .from('subscriptions')
+        .update({ current_period_end: null })
+        .eq('user_id', userId)
+
+      if (clearPeriodEndError) {
+        throw new Error(`Failed to clear current_period_end: ${clearPeriodEndError.message}`)
+      }
+
+      console.log('   - Cleared existing current_period_end value')
+    }
+
+    if (currentSub?.status !== 'active') {
+      const { error: activateStatusError } = await supabase
+        .from('subscriptions')
+        .update({ status: 'active' })
+        .eq('user_id', userId)
+
+      if (activateStatusError) {
+        throw new Error(`Failed to update status to active: ${activateStatusError.message}`)
+      }
+
+      console.log('   - Updated subscription status to active')
+    }
+
     const lifetimeData = {
       user_id: userId,
       plan: 'lifetime',
@@ -214,7 +246,7 @@ async function upgradeToLifetime() {
       cancel_at_period_end: false,
       trial_start: null,
       trial_end: null,
-      stripe_subscription_id: userId, // Lifetime has no recurring subscription
+      stripe_subscription_id: null,
       // Keep the stripe_customer_id if it exists
       ...(currentSub?.stripe_customer_id && { stripe_customer_id: currentSub.stripe_customer_id }),
       last_event_id: 'manual_upgrade_script',
@@ -239,28 +271,43 @@ async function upgradeToLifetime() {
       console.log('\n📋 Step 5: Sending confirmation email...')
       
       try {
-        // Call the email edge function
-        const { error: emailError } = await supabase.functions.invoke('send-email', {
+        const greetingName = userData.full_name || 'there'
+        const dashboardUrl = `${APP_URL}/dashboard/membership`
+
+        const htmlBody = `
+          <p>Hi ${greetingName},</p>
+          <p>Great news — your Moneko account has been upgraded to the <strong>Lifetime</strong> membership. You now have ongoing access to every premium feature with no future billing.</p>
+          <p>Visit your membership dashboard anytime to review what’s included and explore new capabilities.</p>
+          <p><a href="${dashboardUrl}" style="background-color:#7458FF;color:#ffffff;padding:12px 24px;border-radius:9999px;text-decoration:none;display:inline-block;">Go to Membership Dashboard</a></p>
+          <p>If you ever need help, just reply to this email and our team will take care of you.</p>
+          <p>— The Moneko Team</p>
+        `
+
+        const textBody = `Hi ${greetingName},\n\nYour Moneko account has been upgraded to the Lifetime membership. You now have ongoing access to every premium feature with no future billing.\n\nVisit your membership dashboard: ${dashboardUrl}\n\nIf you ever need help, reply to this email and our team will assist you.\n\n— The Moneko Team`
+
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-email', {
           body: {
+            type: 'direct',
             to: userData.email,
-            name: userData.full_name || 'there',
-            template: 'subscription_created',
-            data: {
-              planName: 'Lifetime',
-              dashboardUrl: `${APP_URL}/dashboard/membership`,
-              isLifetime: true,
-            }
+            subject: 'Your Moneko Lifetime Membership Is Active',
+            html: htmlBody,
+            text: textBody,
+            replyTo: 'hello@moneko.io',
           }
         })
 
         if (emailError) {
           console.error(`⚠️  Warning: Could not send email: ${emailError.message}`)
           console.log('   User was upgraded successfully, but they did not receive confirmation email')
+        } else if (!emailResult?.success) {
+          console.error(`⚠️  Warning: Email function responded with an error: ${emailResult?.error || 'Unknown error'}`)
+          console.log('   User was upgraded successfully, but they did not receive confirmation email')
         } else {
           console.log(`✅ Confirmation email sent to ${userData.email}`)
         }
       } catch (emailError) {
-        console.error(`⚠️  Warning: Could not send email: ${emailError.message}`)
+        const message = emailError instanceof Error ? emailError.message : JSON.stringify(emailError)
+        console.error(`⚠️  Warning: Could not send email: ${message}`)
         console.log('   User was upgraded successfully, but they did not receive confirmation email')
       }
     } else {
@@ -299,6 +346,24 @@ function askYesNo(question) {
       resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes')
     })
   })
+}
+
+function formatStripeTimestamp(timestamp) {
+  if (timestamp === null || timestamp === undefined) {
+    return null
+  }
+
+  const numeric = typeof timestamp === 'string'
+    ? Number.parseInt(timestamp, 10)
+    : Number(timestamp)
+
+  if (Number.isNaN(numeric) || numeric <= 0) {
+    return null
+  }
+
+  const date = new Date(numeric * 1000)
+
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString()
 }
 
 // Run the script

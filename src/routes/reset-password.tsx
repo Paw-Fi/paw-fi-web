@@ -46,16 +46,18 @@ export function ResetPassword() {
     // Check if we have a valid recovery session
     const checkSession = async () => {
       try {
+        // Supabase should have already processed the recovery hash by now
         const { data: { session } } = await supabase.auth.getSession();
         
-        // Check if this is a recovery session by looking at both hash and query parameters
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const queryParams = new URLSearchParams(window.location.search);
-        const type = hashParams.get('type') || queryParams.get('type');
+        console.log('Reset password page - session check:', { 
+          hasSession: !!session, 
+          userId: session?.user?.id 
+        });
         
-        if (type === 'recovery' || session?.user) {
+        if (session?.user) {
           setIsValidSession(true);
         } else {
+          // No valid session found
           setIsValidSession(false);
         }
       } catch (err) {
