@@ -36,6 +36,7 @@ export function FreeTrialGiveawayForm() {
     message?: string; 
     error?: string 
   }>({});
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   // Use TanStack Query hooks
   const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
@@ -241,10 +242,7 @@ export function FreeTrialGiveawayForm() {
   };
 
 
-  // Show loading state while checking claim status for authenticated users
-  // IMPORTANT: Add a fallback timeout - if loading takes more than 5 seconds, show the form anyway
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-  
+  // Fallback timeout effect: if loading takes more than 5 seconds, show the form anyway
   useEffect(() => {
     if (isAuthenticated && claimStatusLoading) {
       // Set a 5 second timeout
@@ -254,6 +252,9 @@ export function FreeTrialGiveawayForm() {
       }, 5000);
       
       return () => clearTimeout(timer);
+    } else {
+      // Reset timeout when not loading
+      setLoadingTimeout(false);
     }
   }, [isAuthenticated, claimStatusLoading]);
   
