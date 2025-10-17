@@ -42,7 +42,10 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
           const hasAvatar = await checkUserHasAvatar();
           
           if (!hasAvatar) {
-            navigate({ to: '/avatar-customizer' });
+            navigate({ 
+              to: '/avatar-customizer',
+              search: redirectUrl ? { redirect: redirectUrl } : undefined
+            });
           } else {
             navigate({ to: redirectUrl || '/dashboard' });
           }
@@ -94,7 +97,10 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         const hasAvatar = await checkUserHasAvatar();
         
         if (!hasAvatar) {
-          navigate({ to: '/avatar-customizer' });
+          navigate({ 
+            to: '/avatar-customizer',
+            search: redirectUrl ? { redirect: redirectUrl } : undefined
+          });
         } else {
           const targetUrl = redirectUrl || '/dashboard';
           navigate({ to: targetUrl });

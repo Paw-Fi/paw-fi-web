@@ -30,7 +30,10 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
         const needsAvatar = await shouldPromptForAvatar();
         
         if (needsAvatar) {
-          navigate({ to: '/avatar-customizer' });
+          navigate({ 
+            to: '/avatar-customizer',
+            search: redirectUrl ? { redirect: redirectUrl } : undefined
+          });
         } else {
           navigate({ to: redirectUrl || '/dashboard' });
         }

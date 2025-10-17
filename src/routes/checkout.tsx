@@ -89,9 +89,8 @@ function CheckoutPage() {
     refreshToken
   } = searchParams;
   
-  // CRITICAL FIX: Don't default to "plus" - use explicit values
-  // If plan is missing, user should be redirected to pricing page
-  const selectedPlan = plan || 'plus'; // For backward compatibility, but log it
+  // Default to lifetime if plan not provided to avoid user confusion
+  const selectedPlan = plan || 'lifetime';
   const selectedBilling = billing || 'monthly';
   
   // Debug log to see what we're receiving
@@ -101,7 +100,7 @@ function CheckoutPage() {
   
   // SECURITY: Log potential issues
   if (!plan && !status) {
-    console.warn('⚠️  Checkout accessed without plan parameter - defaulting to plus. User should have been redirected from pricing page.');
+    console.warn('⚠️  Checkout accessed without plan parameter - defaulting to lifetime.');
   }
   
   const { user } = useAuth();
@@ -273,14 +272,14 @@ function CheckoutPage() {
       // If this is a mobile checkout with redirectUrl, handle differently
       if (isMobileCheckout && redirectUrl && typeof window !== 'undefined') {
         if (status === "success") {
-          // Redirect directly to mobile app with success status
-          window.location.href = `${redirectUrl}?status=success${session_id ? `&session_id=${session_id}` : ''}`;
+          // Redirect directly to mobile app with success status and selected plan
+          window.location.href = `${redirectUrl}?status=success${session_id ? `&session_id=${session_id}` : ''}&plan=${selectedPlan}`;
           return;
         } else if (status === "failed") {
-          window.location.href = `${redirectUrl}?status=failed&error=${encodeURIComponent('Payment failed')}`;
+          window.location.href = `${redirectUrl}?status=failed&plan=${selectedPlan}&error=${encodeURIComponent('Payment failed')}`;
           return;
         } else if (status === "canceled") {
-          window.location.href = `${redirectUrl}?status=canceled`;
+          window.location.href = `${redirectUrl}?status=canceled&plan=${selectedPlan}`;
           return;
         }
       }
@@ -292,6 +291,7 @@ function CheckoutPage() {
           search: {
             status: "success",
             session_id: session_id,
+            plan: selectedPlan,
           },
         });
         return;
@@ -301,6 +301,7 @@ function CheckoutPage() {
           search: {
             status: "failed",
             error: "Payment failed. Please try again.",
+            plan: selectedPlan,
           },
         });
         return;
@@ -309,6 +310,7 @@ function CheckoutPage() {
           to: "/payment-status",
           search: {
             status: "canceled",
+            plan: selectedPlan,
           },
         });
       }
@@ -360,11 +362,11 @@ function CheckoutPage() {
         // Add status parameters to URLs
         const successUrl = isMobileCheckout && redirectUrl
           ? `${redirectUrl}?status=success&session_id={CHECKOUT_SESSION_ID}`
-          : `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}${source ? `&source=${source}` : ''}${redirectUrl ? `&redirectUrl=${encodeURIComponent(redirectUrl)}` : ''}`;
+          : `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}&plan=${selectedPlan}${source ? `&source=${source}` : ''}${redirectUrl ? `&redirectUrl=${encodeURIComponent(redirectUrl)}` : ''}`;
         
         const cancelUrl = isMobileCheckout && redirectUrl
           ? `${redirectUrl}?status=canceled&session_id={CHECKOUT_SESSION_ID}`
-          : `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}${source ? `&source=${source}` : ''}`;
+          : `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}&plan=${selectedPlan}${source ? `&source=${source}` : ''}`;
         
         // Create a payment session on the server
         console.log('Creating Stripe session with billing interval:', billing);
@@ -385,18 +387,22 @@ function CheckoutPage() {
           throw new Error("Authentication session expired. Please try again from the app.");
         }
         
+        const checkoutBody: any = {
+          plan: selectedPlan,
+          promoCode: promo,
+          successUrl,
+          cancelUrl,
+          // Pass the validated user ID to the server (either from auth or validated param)
+          userId: validatedUserId,
+          // NOTE: Trial eligibility is determined by backend based on subscription history
+        };
+        if (selectedPlan !== 'lifetime') {
+          checkoutBody.billingInterval = selectedBilling;
+        }
+
         const { data, error } = await supabase.functions.invoke("create-checkout-session", {
           method: "POST",
-          body: {
-            plan: selectedPlan,
-            billingInterval: selectedBilling,
-            promoCode: promo,
-            successUrl,
-            cancelUrl,
-            // Pass the validated user ID to the server (either from auth or validated param)
-            userId: validatedUserId,
-            // NOTE: Trial eligibility is determined by backend based on subscription history
-          },
+          body: checkoutBody,
         });
         
         console.log('Stripe session created with response:', { data, error });

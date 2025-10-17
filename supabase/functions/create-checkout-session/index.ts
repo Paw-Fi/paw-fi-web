@@ -37,7 +37,7 @@ const env = validateEnvironment()
 
 // Initialize Stripe with validated configuration
 const stripe = new Stripe(env.stripeSecretKey, {
-  apiVersion: '2025-07-30.basil',
+  // Use account's default API version for maximum compatibility
   httpClient: Stripe.createFetchHttpClient(),
 })
 

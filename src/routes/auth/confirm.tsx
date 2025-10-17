@@ -33,17 +33,24 @@ export const Route = createFileRoute('/auth/confirm')({
               .eq('id', user.id)
               .single();
             
-            // If no avatar, redirect to avatar customizer, otherwise use intended destination
-            const redirectTo = (!userData?.avatar_url) ? '/avatar-customizer' : (next || '/dashboard');
+            // If no avatar, redirect to avatar customizer and PRESERVE intended destination
+            if (!userData?.avatar_url) {
+              throw redirect({
+                to: '/avatar-customizer',
+                search: next ? { redirect: next } : undefined,
+                replace: true,
+              });
+            }
+            
+            // Otherwise go to intended destination (or dashboard)
             throw redirect({
-              to: redirectTo,
+              to: next || '/dashboard',
               replace: true,
             });
           } else {
             // Fallback if no user data
-            const redirectTo = next || '/dashboard';
             throw redirect({
-              to: redirectTo,
+              to: next || '/dashboard',
               replace: true,
             });
           }

@@ -26,7 +26,7 @@ const env = validateEnvironment({ requireWebhookSecret: true })
 
 // Initialize Stripe with validated configuration - using latest API version
 const stripe = new Stripe(env.stripeSecretKey, {
-  apiVersion: '2025-07-30.basil',
+  // Use account's default API version for maximum compatibility and to follow Stripe guidance
   httpClient: Stripe.createFetchHttpClient(),
 })
 
@@ -565,7 +565,7 @@ async function handleSubscriptionUpdated(
     
     if (isNew) {
       // Send welcome email for new subscriptions
-      const isLifetime = subscription.plan === 'lifetime'
+      const isLifetime = finalPlan === 'lifetime'
       const emailTemplate = subscriptionCreatedTemplate({
         name,
         planName,

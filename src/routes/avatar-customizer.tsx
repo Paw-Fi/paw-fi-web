@@ -245,9 +245,12 @@ function AvatarCustomizer() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !user) {
-      navigate({ to: '/login', search: { redirect: '/avatar-customizer' } })
+      const nestedRedirect = redirect 
+        ? `/avatar-customizer?redirect=${encodeURIComponent(redirect)}` 
+        : '/avatar-customizer'
+      navigate({ to: '/login', search: { redirect: nestedRedirect } })
     }
-  }, [user, isLoading, navigate])
+  }, [user, isLoading, navigate, redirect])
 
   // Load saved avatar customization from cache
   useEffect(() => {

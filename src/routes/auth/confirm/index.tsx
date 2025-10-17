@@ -57,7 +57,10 @@ function AuthConfirm() {
           const needsAvatar = await shouldPromptForAvatar()
           
           if (needsAvatar) {
-            navigate({ to: '/avatar-customizer' })
+            navigate({ 
+              to: '/avatar-customizer',
+              search: next && next !== '/dashboard' ? { redirect: next } : undefined
+            })
           } else {
             navigate({ to: next })
           }
