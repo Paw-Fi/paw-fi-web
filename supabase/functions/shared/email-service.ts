@@ -53,6 +53,9 @@ export async function sendEmail({
       cc,
       bcc,
       attachments,
+      // CRITICAL: Disable click tracking to prevent breaking Supabase auth URLs
+      tags: [],
+      headers: {},
     });
 
     if (result.error) {

@@ -35,22 +35,27 @@ Deno.serve(async (req) => {
   if (!phone) return json({ error: "Missing phone" }, 400);
   if (!["add", "list"].includes(action)) return json({ error: "Invalid action" }, 400);
 
-  // Ensure contact
-  const { data: contact, error: cErr } = await supabase
+  // Ensure contact (handle duplicates by getting most recent)
+  const contactResult = await supabase
     .from("user_contacts")
     .select("id")
     .eq("phone_e164", phone)
-    .maybeSingle();
-  if (cErr) return json({ error: "Contact lookup failed" }, 500);
-  let contactId = contact?.id as string | undefined;
+    .order('id', { ascending: false })
+    .limit(1);
+  if (contactResult.error) return json({ error: "Contact lookup failed" }, 500);
+  let contactId = contactResult.data?.[0]?.id as string | undefined;
   if (!contactId) {
-    const { data: inserted, error: iErr } = await supabase
+    // Use UPSERT to prevent duplicates on phone_e164
+    const { data: upserted, error: upsertErr } = await supabase
       .from("user_contacts")
-      .insert({ phone_e164: phone })
+      .upsert(
+        { phone_e164: phone, updated_at: new Date().toISOString() },
+        { onConflict: 'phone_e164' }
+      )
       .select("id")
-      .maybeSingle();
-    if (iErr || !inserted?.id) return json({ error: "Contact create failed" }, 500);
-    contactId = inserted.id;
+      .single();
+    if (upsertErr || !upserted?.id) return json({ error: "Contact create failed" }, 500);
+    contactId = upserted.id;
   }
 
   if (action === "add") {

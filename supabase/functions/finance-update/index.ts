@@ -88,22 +88,24 @@ Deno.serve(async (req: Request) => {
   let contactErr: any = null;
   
   if (phone) {
-    // Search by phone number
+    // Search by phone number (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_currency")
       .eq("phone_e164", phone)
-      .maybeSingle();
-    contact = result.data;
+      .order('id', { ascending: false })
+      .limit(1);
+    contact = result.data?.[0] ?? null;
     contactErr = result.error;
   } else if (userId) {
-    // Search by user_id
+    // Search by user_id (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_currency, phone_e164")
       .eq("user_id", userId)
-      .maybeSingle();
-    contact = result.data;
+      .order('id', { ascending: false })
+      .limit(1);
+    contact = result.data?.[0] ?? null;
     contactErr = result.error;
   }
 
@@ -116,21 +118,24 @@ Deno.serve(async (req: Request) => {
   const preferredCurrency = (contact?.preferred_currency as string | null) || providedCurrency || 'USD';
 
   if (!contactId) {
-    // Create new contact
+    // Create new contact using UPSERT to prevent duplicates
     if (phone) {
-      // If phone provided, create contact with phone
-      const { data: inserted, error: insertErr } = await supabase
+      // If phone provided, upsert contact with phone (prevents duplicates on phone_e164)
+      const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
-        .insert({ phone_e164: phone, user_id: userId || null, preferred_currency: preferredCurrency })
+        .upsert(
+          { phone_e164: phone, user_id: userId || null, preferred_currency: preferredCurrency, updated_at: new Date().toISOString() },
+          { onConflict: 'phone_e164' }
+        )
         .select("id")
         .single();
-      if (insertErr) {
-        console.error("contact insert error", insertErr);
+      if (upsertErr) {
+        console.error("contact upsert error", upsertErr);
         return errorResponse("Failed to create contact", 500);
       }
-      contactId = inserted.id;
+      contactId = upserted.id;
     } else if (userId) {
-      // If only userId provided, create contact without phone
+      // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
         .insert({ user_id: userId, preferred_currency: preferredCurrency })

@@ -2,16 +2,22 @@
  * Upgrade User to Lifetime Subscription
  * 
  * This script upgrades a user's subscription to Lifetime by:
- * 1. Canceling their current Stripe subscription (if any)
- * 2. Updating the database to reflect Lifetime status
- * 3. Optionally sending them a confirmation email
+ * 1. Looking up user by email or user ID
+ * 2. Canceling their current Stripe subscription (if any)
+ * 3. Updating the database to reflect Lifetime status
+ * 4. Optionally sending them a confirmation email
  * 
  * Usage:
- *   node scripts/upgrade-to-lifetime.js <user_id> [--no-email] [--cancel-immediately]
+ *   node scripts/upgrade-to-lifetime.js <email_or_user_id> [--no-email] [--cancel-immediately]
  * 
  * Options:
  *   --no-email            Skip sending confirmation email
  *   --cancel-immediately  Cancel Stripe subscription immediately (default: at period end)
+ * 
+ * Examples:
+ *   node scripts/upgrade-to-lifetime.js user@example.com
+ *   node scripts/upgrade-to-lifetime.js abc123-def-456-ghi-789
+ *   node scripts/upgrade-to-lifetime.js user@example.com --no-email
  */
 
 import Stripe from 'stripe'
@@ -28,14 +34,25 @@ const __dirname = path.dirname(__filename)
 dotenv.config({ path: path.join(__dirname, '../.env') })
 
 // Validate required environment variables
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL
+// Use SUPABASE_URL if available, otherwise fall back to VITE_SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
+// Support both STRIPE_SECRET_KEY and VITE_STRIPE_SECRET_KEY
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || process.env.VITE_STRIPE_SECRET_KEY
 const APP_URL = process.env.VITE_APP_URL || 'https://moneko.io'
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !STRIPE_SECRET_KEY) {
   console.error('❌ Error: Missing required environment variables')
-  console.error('Required: VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY')
+  console.error('Required: VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY (or VITE_STRIPE_SECRET_KEY)')
+  console.error('\nYour .env file has:')
+  console.error(`  VITE_SUPABASE_URL: ${SUPABASE_URL ? '✓' : '✗'}`)
+  console.error(`  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY ? '✓' : '✗ MISSING'}`)
+  console.error(`  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY ? '✓' : '✗ MISSING'}`)
+  console.error('\n💡 To get your service role key:')
+  console.error('  1. Go to your Supabase project dashboard')
+  console.error('  2. Settings → API')
+  console.error('  3. Copy the "service_role" key (NOT the anon key)')
+  console.error('  4. Add to .env: SUPABASE_SERVICE_ROLE_KEY=your_service_role_key')
   process.exit(1)
 }
 
@@ -47,42 +64,76 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, {
 
 // Parse command line arguments
 const args = process.argv.slice(2)
-const userId = args[0]
+const userInput = args[0]
 const skipEmail = args.includes('--no-email')
 const cancelImmediately = args.includes('--cancel-immediately')
 
-if (!userId) {
-  console.error('❌ Error: User ID is required')
-  console.error('Usage: node scripts/upgrade-to-lifetime.js <user_id> [--no-email] [--cancel-immediately]')
+if (!userInput) {
+  console.error('❌ Error: Email or User ID is required')
+  console.error('Usage: node scripts/upgrade-to-lifetime.js <email_or_user_id> [--no-email] [--cancel-immediately]')
+  console.error('\nExamples:')
+  console.error('  node scripts/upgrade-to-lifetime.js user@example.com')
+  console.error('  node scripts/upgrade-to-lifetime.js abc123-def-456-ghi-789')
   process.exit(1)
 }
 
-// Validate UUID format
+// Detect if input is email or UUID
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-if (!uuidRegex.test(userId)) {
-  console.error('❌ Error: Invalid user ID format (must be UUID)')
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const isEmail = emailRegex.test(userInput)
+const isUuid = uuidRegex.test(userInput)
+
+if (!isEmail && !isUuid) {
+  console.error('❌ Error: Input must be a valid email address or UUID')
+  console.error(`Received: ${userInput}`)
   process.exit(1)
 }
 
 console.log('\n🚀 Starting Lifetime Upgrade Process')
 console.log('=====================================')
-console.log(`User ID: ${userId}`)
+console.log(`Input: ${userInput} (${isEmail ? 'Email' : 'User ID'})`)
 console.log(`Skip Email: ${skipEmail}`)
 console.log(`Cancel Immediately: ${cancelImmediately}`)
 console.log('=====================================\n')
 
 async function upgradeToLifetime() {
   try {
-    // Step 1: Get user details
+    // Step 1: Get user details (lookup by email or UUID)
     console.log('📋 Step 1: Fetching user details...')
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, email, full_name')
-      .eq('id', userId)
-      .single()
+    
+    let userData
+    let userId
+    
+    if (isEmail) {
+      // Look up user by email
+      console.log(`   Looking up user by email: ${userInput}`)
+      const { data, error: userError } = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .eq('email', userInput)
+        .single()
 
-    if (userError || !userData) {
-      throw new Error(`User not found: ${userError?.message || 'No data returned'}`)
+      if (userError || !data) {
+        throw new Error(`User not found with email "${userInput}": ${userError?.message || 'No data returned'}`)
+      }
+      
+      userData = data
+      userId = data.id
+      console.log(`   Found user ID: ${userId}`)
+    } else {
+      // Look up user by UUID
+      userId = userInput
+      const { data, error: userError } = await supabase
+        .from('users')
+        .select('id, email, full_name')
+        .eq('id', userId)
+        .single()
+
+      if (userError || !data) {
+        throw new Error(`User not found with ID "${userId}": ${userError?.message || 'No data returned'}`)
+      }
+      
+      userData = data
     }
 
     console.log(`✅ User found: ${userData.email} (${userData.full_name || 'No name'})`)
@@ -163,7 +214,7 @@ async function upgradeToLifetime() {
       cancel_at_period_end: false,
       trial_start: null,
       trial_end: null,
-      stripe_subscription_id: null, // Lifetime has no recurring subscription
+      stripe_subscription_id: userId, // Lifetime has no recurring subscription
       // Keep the stripe_customer_id if it exists
       ...(currentSub?.stripe_customer_id && { stripe_customer_id: currentSub.stripe_customer_id }),
       last_event_id: 'manual_upgrade_script',

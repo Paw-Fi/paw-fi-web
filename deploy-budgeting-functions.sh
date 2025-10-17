@@ -55,6 +55,16 @@ supabase functions deploy process-expenses --project-ref $PROJECT_REF
 echo "✅ process-expenses deployed"
 echo ""
 
+echo "📦 [6/5] Deploying categories function..."
+supabase functions deploy categories --project-ref $PROJECT_REF
+echo "✅ categories deployed"
+echo ""
+
+echo "📦 [6/5] Deploying ai-scenario-planner function..."
+supabase functions deploy ai-scenario-planner --project-ref $PROJECT_REF
+echo "✅ ai-scenario-planner deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All budgeting functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

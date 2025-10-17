@@ -69,12 +69,15 @@ serve(async (req: Request): Promise<Response> => {
 
     const targetDate = new Date(targetDateStr);
 
-    // Get the user's contact (to map to expenses/budgets contact_id)
-    const { data: contact, error: contactError } = await supabaseClient
+    // Get the user's contact (to map to expenses/budgets contact_id, handle duplicates by getting most recent)
+    const contactResult = await supabaseClient
       .from('user_contacts')
       .select('id,user_id,phone_e164,verified,preferred_currency')
       .eq('user_id', userId)
-      .maybeSingle();
+      .order('id', { ascending: false })
+      .limit(1);
+    const contact = contactResult.data?.[0] ?? null;
+    const contactError = contactResult.error;
 
     if (contactError || !contact) {
       return new Response(JSON.stringify({ error: "Verified contact not found for user" }), {

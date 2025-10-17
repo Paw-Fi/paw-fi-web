@@ -194,11 +194,13 @@ Deno.serve(async (req: Request) => {
       global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-webhook' } },
     });
     
-    const { data: contact } = await supabaseCheck
+    const contactResult = await supabaseCheck
       .from('user_contacts')
       .select('verified, user_id')
       .eq('phone_e164', from)
-      .maybeSingle();
+      .order('id', { ascending: false })
+      .limit(1);
+    const contact = contactResult.data?.[0] ?? null;
 
     // Check if contact exists and is verified
     if (!contact || contact.verified !== true || !contact.user_id) {
@@ -276,11 +278,13 @@ Deno.serve(async (req: Request) => {
         global: { headers: { 'X-Client-Info': 'moneko-currency-fetch' } },
       });
 
-      const { data: contactData } = await supabaseCurrency
+      const contactDataResult = await supabaseCurrency
         .from('user_contacts')
         .select('preferred_currency')
         .eq('phone_e164', from)
-        .maybeSingle();
+        .order('id', { ascending: false })
+        .limit(1);
+      const contactData = contactDataResult.data?.[0] ?? null;
 
       const userCurrency = contactData?.preferred_currency || 'USD';
 
@@ -349,11 +353,13 @@ Deno.serve(async (req: Request) => {
             });
 
             // Get contact ID
-            const { data: contact } = await supabaseUpdate
+            const contactResult = await supabaseUpdate
               .from('user_contacts')
               .select('id')
               .eq('phone_e164', from!)
-              .maybeSingle();
+              .order('id', { ascending: false })
+              .limit(1);
+            const contact = contactResult.data?.[0] ?? null;
 
             if (contact?.id) {
               // Update most recent expense created in last 60 seconds for this contact
@@ -400,28 +406,31 @@ Deno.serve(async (req: Request) => {
   const HELP_IMAGE_URL = Deno.env.get('HELP_IMAGE_URL') || '';
 
   async function isFirstMessageForContact(phone: string): Promise<boolean> {
-    const { data, error } = await supabase
+    const result = await supabase
       .from('user_contacts')
       .select('id')
       .eq('phone_e164', phone)
-      .maybeSingle();
-    if (error) {
-      console.warn('check contact error', error);
+      .order('id', { ascending: false })
+      .limit(1);
+    if (result.error) {
+      console.warn('check contact error', result.error);
       // If unsure, treat as not first to avoid spammy help
       return false;
     }
-    return !data;
+    return !result.data || result.data.length === 0;
   }
 
   // Command routing: explicit slash commands take priority and are handled deterministically
   const lower = body.trim();
   const replyText = async (): Promise<WhatsAppReply> => {
     // Fetch user's preferred currency from database (used for text processing)
-    const { data: contactData } = await supabase
+    const contactDataResult = await supabase
       .from('user_contacts')
       .select('preferred_currency')
       .eq('phone_e164', from)
-      .maybeSingle();
+      .order('id', { ascending: false })
+      .limit(1);
+    const contactData = contactDataResult.data?.[0] ?? null;
 
     const userCurrency = contactData?.preferred_currency || 'USD';
 
@@ -510,13 +519,15 @@ Deno.serve(async (req: Request) => {
       if (matched.name.toLowerCase() === '/expenses') {
         // Fetch today's expenses for this contact and show total
         const today = new Date().toISOString().slice(0, 10);
-        const { data: contact, error: cErr } = await supabase
+        const contactResult = await supabase
           .from('user_contacts')
           .select('id')
           .eq('phone_e164', from!)
-          .maybeSingle();
-        if (cErr || !contact?.id) {
-          console.error('fetch contact for expenses error', cErr);
+          .order('id', { ascending: false })
+          .limit(1);
+        const contact = contactResult.data?.[0] ?? null;
+        if (contactResult.error || !contact?.id) {
+          console.error('fetch contact for expenses error', contactResult.error);
           return { text: "❌ *Could not find account*\n\nTry sending a message again." };
         }
         const { data: rows, error: eErr } = await supabase
@@ -571,27 +582,32 @@ Deno.serve(async (req: Request) => {
         if (!name) {
           return { text: 'Usage: /addCategory <name>' };
         }
-        const { data: contact, error: cErr } = await supabase
+        const contactResult = await supabase
           .from('user_contacts')
           .select('id')
           .eq('phone_e164', from!)
-          .maybeSingle();
-        if (cErr) {
-          console.error('fetch contact for addCategory error', cErr);
+          .order('id', { ascending: false })
+          .limit(1);
+        if (contactResult.error) {
+          console.error('fetch contact for addCategory error', contactResult.error);
           return { text: 'Failed to add category.' };
         }
-        let contactId = contact?.id;
+        let contactId = contactResult.data?.[0]?.id;
         if (!contactId) {
-          const { data: inserted, error: iErr } = await supabase
+          // Use UPSERT to prevent duplicates on phone_e164
+          const { data: upserted, error: upsertErr } = await supabase
             .from('user_contacts')
-            .insert({ phone_e164: from! })
+            .upsert(
+              { phone_e164: from!, updated_at: new Date().toISOString() },
+              { onConflict: 'phone_e164' }
+            )
             .select('id')
-            .maybeSingle();
-          if (iErr || !inserted?.id) {
-            console.error('insert contact for addCategory error', iErr);
+            .single();
+          if (upsertErr || !upserted?.id) {
+            console.error('upsert contact for addCategory error', upsertErr);
             return { text: 'Failed to add category.' };
           }
-          contactId = inserted.id;
+          contactId = upserted.id;
         }
         const { error: uErr } = await supabase
           .from('expense_categories')
@@ -615,9 +631,10 @@ Deno.serve(async (req: Request) => {
         const hasAmount = isFinite(maybeAmount)
         const name = (hasAmount ? parts.slice(0, -1) : parts).join(' ').trim()
         if (!name) return { text: 'Usage: /createEnvelope <name> [monthlyTarget]' }
-        const { data: contact, error: cErr } = await supabase
-          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
-        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const contactResult = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).order('id', { ascending: false }).limit(1)
+        const contact = contactResult.data?.[0] ?? null;
+        if (contactResult.error || !contact?.id) return { text: '❌ *Failed to find your account*' }
         const targetCents = hasAmount && maybeAmount > 0 ? Math.round(maybeAmount * 100) : 0
         const { data: envRow, error: envErr } = await supabase
           .from('budget_envelopes')
@@ -638,9 +655,10 @@ Deno.serve(async (req: Request) => {
         const name = parts.slice(0, -2).join(' ').trim()
         if (!name || !/^\d{4}-\d{2}$/.test(monthStr) || !isFinite(amount) || amount <= 0) return { text: 'Usage: /setEnvelopeAlloc <name> <YYYY-MM> <amount>' }
         const period_month = `${monthStr}-01`
-        const { data: contact, error: cErr } = await supabase
-          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
-        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const contactResult = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).order('id', { ascending: false }).limit(1)
+        const contact = contactResult.data?.[0] ?? null;
+        if (contactResult.error || !contact?.id) return { text: '❌ *Failed to find your account*' }
         const { data: env, error: envFindErr } = await supabase
           .from('budget_envelopes')
           .select('id')
@@ -662,9 +680,10 @@ Deno.serve(async (req: Request) => {
         const category = parts[parts.length - 1]
         const name = parts.slice(0, -1).join(' ').trim()
         if (!name || !category) return { text: 'Usage: /linkCategoryEnvelope <name> <category>' }
-        const { data: contact, error: cErr } = await supabase
-          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
-        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const contactResult = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).order('id', { ascending: false }).limit(1)
+        const contact = contactResult.data?.[0] ?? null;
+        if (contactResult.error || !contact?.id) return { text: '❌ *Failed to find your account*' }
         const { data: env, error: envFindErr } = await supabase
           .from('budget_envelopes')
           .select('id')
@@ -684,9 +703,10 @@ Deno.serve(async (req: Request) => {
         const parts = lower.split(/\s+/)
         const monthStr = parts[1] && /^\d{4}-\d{2}$/.test(parts[1]) ? parts[1] : new Date().toISOString().slice(0,7)
         const period_month = `${monthStr}-01`
-        const { data: contact, error: cErr } = await supabase
-          .from('user_contacts').select('id').eq('phone_e164', from!).maybeSingle()
-        if (cErr || !contact?.id) return { text: '❌ *Failed to find your account*' }
+        const contactResult = await supabase
+          .from('user_contacts').select('id').eq('phone_e164', from!).order('id', { ascending: false }).limit(1)
+        const contact = contactResult.data?.[0] ?? null;
+        if (contactResult.error || !contact?.id) return { text: '❌ *Failed to find your account*' }
         const { data: envs, error: envErr } = await supabase
           .from('budget_envelopes')
           .select('id,name,monthly_target_cents')
@@ -732,24 +752,29 @@ Deno.serve(async (req: Request) => {
         if (!/^\w{3}$/.test(iso)) {
           return { text: 'Usage: /setCurrency <ISO>. Example: /setCurrency USD' };
         }
-        const { data: contact, error: cErr } = await supabase
+        const contactResult = await supabase
           .from('user_contacts')
           .select('id')
           .eq('phone_e164', from!)
-          .maybeSingle();
-        if (cErr) {
-          console.error('fetch contact for setCurrency error', cErr);
+          .order('id', { ascending: false })
+          .limit(1);
+        const contact = contactResult.data?.[0] ?? null;
+        if (contactResult.error) {
+          console.error('fetch contact for setCurrency error', contactResult.error);
           return { text: 'Failed to update currency.' };
         }
         if (!contact) {
-          // Create contact if it does not exist
-          const { data: inserted, error: iErr } = await supabase
+          // Use UPSERT to prevent duplicates on phone_e164
+          const { data: upserted, error: upsertErr } = await supabase
             .from('user_contacts')
-            .insert({ phone_e164: from!, preferred_currency: iso })
+            .upsert(
+              { phone_e164: from!, preferred_currency: iso, updated_at: new Date().toISOString() },
+              { onConflict: 'phone_e164' }
+            )
             .select('id')
-            .maybeSingle();
-          if (iErr || !inserted?.id) {
-            console.error('insert contact for setCurrency error', iErr);
+            .single();
+          if (upsertErr || !upserted?.id) {
+            console.error('upsert contact for setCurrency error', upsertErr);
             return { text: 'Failed to update currency.' };
           }
           return { text: `Preferred currency set to ${iso}.` };

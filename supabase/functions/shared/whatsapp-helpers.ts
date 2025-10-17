@@ -176,11 +176,13 @@ export async function getUserCurrency(
   supabase: SupabaseClient,
   phone: string
 ): Promise<UserCurrencyInfo> {
-  const { data: contactData } = await supabase
+  const contactResult = await supabase
     .from('user_contacts')
     .select('preferred_currency')
     .eq('phone_e164', phone)
-    .maybeSingle();
+    .order('id', { ascending: false })
+    .limit(1);
+  const contactData = contactResult.data?.[0] ?? null;
 
   const code = contactData?.preferred_currency || 'USD';
   const symbol = getCurrencySymbol(code);
