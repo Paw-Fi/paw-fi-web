@@ -37,56 +37,24 @@ export async function getRemainingSpots(): Promise<number> {
   }
 }
 
-/**
- * CRITICAL FIX: Add timeout wrapper to prevent infinite loading during SPA navigation
- */
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(errorMessage));
-      }, timeoutMs);
-    })
-  ]);
-}
-
 export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<EarlyAccessResponse> {
   try {
-    console.log('🚀 Starting early access claim with timeout protection...');
-    
-    // CRITICAL FIX: Wrap the Supabase function call with timeout
-    // This prevents infinite loading during SPA navigation issues
-    const { data, error } = await withTimeout(
-      supabase.functions.invoke('early-access', {
-        method: 'POST',
-        body: claim
-      }),
-      6000, // 6 second timeout
-      'Early access claim timed out after 6 seconds. Please refresh the page and try again.'
-    );
+    const { data, error } = await supabase.functions.invoke('early-access', {
+      method: 'POST',
+      body: claim
+    });
     
     if (error) {
-      console.error('❌ Error claiming spot:', error);
+      console.error('Error claiming spot:', error);
       return {
         success: false,
         error: 'Failed to claim spot. Please try again.'
       };
     }
     
-    console.log('✅ Early access claim successful:', data);
     return data as EarlyAccessResponse;
-  } catch (error: any) {
-    console.error('❌ Error calling early-access function:', error);
-    
-    // Provide specific error message for timeout
-    if (error.message?.includes('timed out')) {
-      return {
-        success: false,
-        error: 'Request timed out. This might be due to navigation issues. Try refreshing the page and submitting again.'
-      };
-    }
-    
+  } catch (error) {
+    console.error('Error calling early-access function:', error);
     return {
       success: false,
       error: 'An unexpected error occurred. Please try again.'

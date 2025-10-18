@@ -40,7 +40,6 @@ export function FreeTrialGiveawayForm() {
     error?: string 
   }>({});
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const [submissionTimeout, setSubmissionTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Use TanStack Query hooks
   const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
@@ -111,13 +110,6 @@ export function FreeTrialGiveawayForm() {
         queryKey: earlyAccessKeys.userClaimed(user.id),
       });
     }
-    
-    // Cleanup: Clear any pending timeout on unmount
-    return () => {
-      if (submissionTimeout) {
-        clearTimeout(submissionTimeout);
-      }
-    };
   }, []); // Empty deps = runs once on mount
 
   useEffect(() => {
@@ -224,14 +216,8 @@ export function FreeTrialGiveawayForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setResult({});
-    
-    // Clear any existing timeout
-    if (submissionTimeout) {
-      clearTimeout(submissionTimeout);
-      setSubmissionTimeout(null);
-    }
-    
-    if(hasClaimed) {
+    if(hasClaimed)
+    {
       window.location.href = TESTFLIGHT_URL;
       return;
     }
@@ -244,8 +230,6 @@ export function FreeTrialGiveawayForm() {
       });
       return;
     }
-
-    console.log('📝 Starting early access claim submission...');
 
     const detectedDevice = formData.devicePreference || detectDeviceType();
     const claim: EarlyAccessClaim = {
@@ -266,31 +250,8 @@ export function FreeTrialGiveawayForm() {
       ].filter(Boolean),
     };
 
-    // CRITICAL FIX: Add 6-second timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.error('⏱️ Submission timeout - Edge Function took longer than 6s');
-      setResult({
-        success: false,
-        error: 'Request timed out after 6 seconds. Please refresh the page and try again.'
-      });
-      // Force reset mutation state
-      queryClient.setMutationDefaults(['claim-early-access'], {
-        mutationFn: undefined,
-      });
-    }, 6000); // 6 second timeout
-    
-    setSubmissionTimeout(timeoutId);
-
     claimMutation.mutate(claim, {
       onSuccess: (response) => {
-        console.log('✅ Claim mutation succeeded:', response);
-        
-        // Clear timeout
-        if (submissionTimeout) {
-          clearTimeout(submissionTimeout);
-          setSubmissionTimeout(null);
-        }
-        
         if (response.success) {
           setResult({
             success: true,
@@ -314,19 +275,10 @@ export function FreeTrialGiveawayForm() {
           });
           window.location.href = TESTFLIGHT_URL;
         } else {
-          console.warn('⚠️ Claim unsuccessful:', response);
           setResult(response);
         }
       },
-      onError: (error) => {
-        console.error('❌ Claim mutation error:', error);
-        
-        // Clear timeout
-        if (submissionTimeout) {
-          clearTimeout(submissionTimeout);
-          setSubmissionTimeout(null);
-        }
-        
+      onError: () => {
         setResult({
           success: false,
           error: 'An unexpected error occurred. Please try again.'

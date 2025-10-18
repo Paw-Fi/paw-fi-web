@@ -432,19 +432,10 @@ function CheckoutPage() {
           checkoutBody.billingInterval = selectedBilling;
         }
 
-        // CRITICAL FIX: Add timeout wrapper to prevent infinite loading during SPA navigation
-        console.log('🚀 Calling create-checkout-session with timeout protection...');
-        const { data, error } = await Promise.race([
-          supabase.functions.invoke("create-checkout-session", {
-            method: "POST",
-            body: checkoutBody,
-          }),
-          new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('Checkout session creation timed out after 6 seconds. Please refresh the page and try again.'));
-            }, 6000); // 6 second timeout
-          })
-        ]) as { data: any, error: any };
+        const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+          method: "POST",
+          body: checkoutBody,
+        });
         
         console.log('Stripe session created with response:', { data, error });
 
@@ -522,15 +513,7 @@ function CheckoutPage() {
       } catch (err: unknown) {
         console.error("❌ Error initializing Stripe:", err);
         setPaymentStatus("failed");
-        
-        // CRITICAL FIX: Provide specific error handling for timeout issues
-        if (err instanceof Error && err.message.includes('timed out')) {
-          console.error("💥 TIMEOUT ERROR during checkout - this is likely the SPA navigation bug!");
-          setError("Payment setup timed out. This might be due to navigation issues. Please refresh the page and try again.");
-        } else {
-          setError(err instanceof Error ? err.message : "An error occurred while initializing payment. Please try again.");
-        }
-        
+        setError(err instanceof Error ? err.message : "An error occurred while initializing payment. Please try again.");
         setCheckoutLoading(false);
         // NOTE: We no longer redirect to register on errors - user is already authenticated
         // The error will be displayed on the page for them to retry

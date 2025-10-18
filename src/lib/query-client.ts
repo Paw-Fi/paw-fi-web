@@ -7,42 +7,6 @@ import { QueryClient, isServer } from '@tanstack/react-query';
 import { getStandardQueryConfig } from './query-config';
 
 /**
- * CRITICAL FIX: Create timeout wrapper for network requests
- * React Query doesn't support timeout natively, so we need to implement it ourselves
- */
-function createRequestWithTimeout<T>(
-  requestFn: (signal?: AbortSignal) => Promise<T>,
-  timeout: number = 6000
-): () => Promise<T> {
-  return () => {
-    return new Promise<T>((resolve, reject) => {
-      // Create AbortController for manual cancellation
-      const controller = new AbortController();
-      
-      // Set up timeout
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        reject(new Error(`Request timed out after ${timeout/1000} seconds. Please refresh the page and try again.`));
-      }, timeout);
-      
-      // Execute the request
-      requestFn(controller.signal)
-        .then((result) => {
-          clearTimeout(timeoutId);
-          resolve(result);
-        })
-        .catch((error) => {
-          clearTimeout(timeoutId);
-          // If aborted due to timeout, the timeout reject will handle it
-          if (!controller.signal.aborted) {
-            reject(error);
-          }
-        });
-    });
-  };
-}
-
-/**
  * Creates a new QueryClient with optimal default configuration
  * This function is called on every server request and once on the client
  */
@@ -52,9 +16,9 @@ export function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // CRITICAL FIX: Reduce staleTime to prevent stale data during SPA navigation
-        // 60s was too long and could cause issues with fresh data after navigation
-        staleTime: 30 * 1000, // 30 seconds (reduced from 60s)
+        // With SSR, we set a staleTime > 0 to avoid refetching immediately on the client
+        // This prevents the "flash of loading" and unnecessary network requests
+        staleTime: 60 * 1000, // 60 seconds
 
         // Garbage collection time - how long unused queries stay in cache
         // Set higher than staleTime to prevent premature cache eviction
@@ -71,44 +35,33 @@ export function makeQueryClient() {
         // false = never refetch on mount (can cause stale data issues)
         refetchOnMount: true,
 
-        // CRITICAL FIX: Enable refetching on reconnect to recover from network issues
-        // This helps recover from broken connections during SPA navigation
-        refetchOnReconnect: true,
+        // Prevent refetching on reconnect if data is fresh
+        refetchOnReconnect: false,
 
         // CRITICAL: Add network timeout to prevent hanging requests
         // This prevents queries from staying in loading state forever
         networkMode: 'online',
+        
+        // CRITICAL: Set a maximum query time to prevent infinite loading
+        // If a query takes longer than 15 seconds, it will timeout and fail
+        // This prevents the infinite loading spinner issue
+        meta: {
+          timeout: 15000, // 15 second timeout for all queries
+        }
       },
       mutations: {
-        // CRITICAL FIX: Reduce retry to fail faster during network issues
-        // This prevents mutations from hanging forever during SPA navigation
-        retry: 0, // REDUCED from 1 to 0 - fail immediately to prevent infinite loading
+        // Apply retry configuration for mutations as well
+        retry: 1, // REDUCED from 2 to 1 to fail faster
         retryDelay: (attemptIndex: number) =>
           Math.min(1000 * Math.pow(2, attemptIndex), 3000),
         // CRITICAL: Add network timeout for mutations too
         networkMode: 'online',
+        // Add timeout for mutations
+        meta: {
+          timeout: 20000, // 20 second timeout for mutations
+        },
       },
     },
-    // CRITICAL FIX: Add global error handler to detect and log hanging requests
-    mutationCache: {
-      onError: (error, variables, context, mutation) => {
-        console.error('🚨 Mutation failed:', {
-          error: error?.message,
-          mutationKey: mutation.options.mutationKey,
-          variables,
-          timestamp: new Date().toISOString(),
-        });
-      },
-    } as any,
-    queryCache: {
-      onError: (error, query) => {
-        console.error('🚨 Query failed:', {
-          error: error?.message,
-          queryKey: query.queryKey,
-          timestamp: new Date().toISOString(),
-        });
-      },
-    } as any,
   });
 }
 
