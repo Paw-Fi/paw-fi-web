@@ -39,6 +39,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Handle recovery links that land on the root (e.g. redirect_to=https://moneko.io)
+    // We must redirect to our reset form even if the PASSWORD_RECOVERY event was missed.
+    if (typeof window !== 'undefined') {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const queryParams = new URLSearchParams(window.location.search)
+      const type = hashParams.get('type') || queryParams.get('type')
+      if (type === 'recovery' && !window.location.pathname.includes('/reset-password')) {
+        // Preserve the hash so Supabase can parse the recovery tokens on the reset page
+        window.location.replace('/reset-password' + window.location.hash)
+        return
+      }
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);

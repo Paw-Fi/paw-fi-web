@@ -43,25 +43,61 @@ export function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have a valid recovery session
+    let timeout1: number | undefined;
+    let timeout2: number | undefined;
+
     const checkSession = async () => {
       try {
-        // Supabase should have already processed the recovery hash by now
         const { data: { session } } = await supabase.auth.getSession();
-        
         if (session?.user) {
           setIsValidSession(true);
-        } else {
-          // No valid session found
-          setIsValidSession(false);
+          return true;
         }
+        return false;
       } catch (err) {
         console.error('Error checking session:', err);
-        setIsValidSession(false);
+        return false;
       }
     };
 
-    checkSession();
+    // Fast path
+    checkSession().then((ok) => {
+      if (ok) return;
+
+      // If recovery params exist, wait briefly for Supabase to parse the hash
+      const hasRecoveryFlag = (() => {
+        const hash = new URLSearchParams(window.location.hash.substring(1));
+        const qs = new URLSearchParams(window.location.search);
+        return (hash.get('type') === 'recovery') || (qs.get('type') === 'recovery');
+      })();
+
+      if (hasRecoveryFlag) {
+        timeout1 = window.setTimeout(async () => {
+          const ok1 = await checkSession();
+          if (!ok1) {
+            timeout2 = window.setTimeout(async () => {
+              const ok2 = await checkSession();
+              if (!ok2) setIsValidSession(false);
+            }, 1200);
+          }
+        }, 400);
+      } else {
+        setIsValidSession(false);
+      }
+    });
+
+    // Also listen for PASSWORD_RECOVERY just in case
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsValidSession(true);
+      }
+    });
+
+    return () => {
+      if (subscription) subscription.unsubscribe();
+      if (timeout1) clearTimeout(timeout1);
+      if (timeout2) clearTimeout(timeout2);
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
