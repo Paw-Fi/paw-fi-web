@@ -30,9 +30,10 @@ export function useUserHasClaimed(userId?: string) {
     queryKey: earlyAccessKeys.userClaimed(userId || 'unauthenticated'),
     queryFn: checkUserHasClaimed,
     enabled: !!userId, // Only run query if userId is provided (user is authenticated)
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // CRITICAL FIX: Set to 0 to always fetch fresh data, preventing false success messages
     gcTime: 1000 * 60 * 10, // 10 minutes
-    refetchOnWindowFocus: false, // Prevent infinite loading on window focus (global refetchOnMount handles freshness)
+    refetchOnMount: 'always', // CRITICAL FIX: Always refetch on mount to get fresh database state
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
     retry: 1, // Only retry once for faster failure
     retryDelay: 1000, // Wait 1 second before retry
     // CRITICAL: Add network timeout to prevent infinite loading

@@ -10,9 +10,11 @@ import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { Input } from "@/components/ui/input";
 import { useCookie } from "@/utils/use-cookie";
 import { useAuth } from "@/contexts/auth-context";
-import {  useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
+import { useQueryClient } from "@tanstack/react-query";
+import { earlyAccessKeys } from "@/hooks/use-early-access";
 
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/Q9rNbkN5"
 
@@ -20,6 +22,7 @@ export function FreeTrialGiveawayForm() {
   const { getCookie, setCookie } = useCookie();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [hasClaimed, setHasClaimed] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -91,6 +94,24 @@ export function FreeTrialGiveawayForm() {
     return "desktop";
   }
 
+  // CRITICAL FIX: Reset state on mount and invalidate cache to prevent stale data
+  // This fixes the issue where success message shows even when user hasn't claimed
+  useEffect(() => {
+    console.log('🔄 Component mounted - resetting state and invalidating cache');
+    
+    // Reset hasClaimed to false to prevent stale state from previous navigations
+    setHasClaimed(false);
+    
+    // Force invalidate the query cache to ensure fresh data from database
+    // This prevents React Query from returning stale cached data
+    if (user?.id) {
+      console.log('🗑️ Invalidating claim status cache for user:', user.id);
+      queryClient.invalidateQueries({
+        queryKey: earlyAccessKeys.userClaimed(user.id),
+      });
+    }
+  }, []); // Empty deps = runs once on mount
+
   useEffect(() => {
     // Auto-fill form with user data when authenticated
     if (isAuthenticated && user) {
@@ -114,6 +135,16 @@ export function FreeTrialGiveawayForm() {
     setFormData(prev => ({ ...prev, devicePreference: detected }));
   }, []);
 
+  // Invalidate cache when user becomes available (e.g., after OAuth redirect)
+  useEffect(() => {
+    if (user?.id) {
+      console.log('👤 User loaded - invalidating cache for user:', user.id);
+      queryClient.invalidateQueries({
+        queryKey: earlyAccessKeys.userClaimed(user.id),
+      });
+    }
+  }, [user?.id]); // Runs when user ID changes
+
   // Separate useEffect for claim status checking
   useEffect(() => {
     console.log('🔍 Claim status check:', {
@@ -135,8 +166,10 @@ export function FreeTrialGiveawayForm() {
       }
     } else {
       // Fallback to email-based cookie for non-authenticated users
+      // SECURITY NOTE: Cookie is only used when user is not authenticated
+      // Once authenticated, database is the source of truth
       const claimed = getCookie("early-access-claimed");
-      console.log('🍪 Using cookie fallback, claimed:', !!claimed);
+      console.log('🍪 Using cookie fallback (unauthenticated), claimed:', !!claimed);
       setHasClaimed(!!claimed);
     }
   }, [isAuthenticated, user, userHasClaimedFromDB, claimStatusLoading]);

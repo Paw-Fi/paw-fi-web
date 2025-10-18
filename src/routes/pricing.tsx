@@ -3,7 +3,7 @@ import { Variants, motion } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
@@ -173,6 +173,12 @@ function PricingPage() {
   // Get pricing tiers from shared data module
   const pricingTiers = getPricingTiers(isAnnual);
 
+  // CRITICAL FIX: Reset loading state on component mount to prevent stuck loading from previous navigations
+  // This fixes the issue where loading modal persists when navigating from other pages via <Link>
+  useEffect(() => {
+    setIsLoading(false);
+  }, []); // Empty deps = runs once on mount
+
   // FAQ data for pricing page
   const faqData = [
     {
@@ -218,6 +224,7 @@ function PricingPage() {
 
   const handleSubscribe = async (plan: string) => {
     try {
+      // Show loading indicator during async user check
       setIsLoading(true);
 
       // Get the current user ID if logged in
@@ -227,11 +234,15 @@ function PricingPage() {
       const userId = user?.id;
 
       if (!userId) {
+        setIsLoading(false);
         toast.error("Please sign in to subscribe");
         navigate({ to: "/login",search:{redirect:"/pricing"} });
-        setIsLoading(false);
         return;
       }
+
+      // User is authenticated, navigate to checkout
+      // Navigation is synchronous, no need to keep loading indicator
+      setIsLoading(false);
 
       // Lifetime plan: one-time payment, no billing interval needed
       if (plan === "lifetime") {
@@ -240,7 +251,6 @@ function PricingPage() {
           to: "/checkout",
           search: { plan: "lifetime" }, // No billing interval for Lifetime
         });
-        setIsLoading(false);
         return;
       }
 
@@ -252,12 +262,10 @@ function PricingPage() {
         to: "/checkout",
         search: { plan, billing: billingInterval },
       });
-
-      setIsLoading(false);
     } catch (err) {
       console.error("Error handling subscription:", err);
-      toast.error("An error occurred. Please try again.");
       setIsLoading(false);
+      toast.error("An error occurred. Please try again.");
     }
   };
 
