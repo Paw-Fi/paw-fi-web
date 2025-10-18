@@ -103,8 +103,8 @@ function CheckoutPage() {
     console.warn('⚠️  Checkout accessed without plan parameter - defaulting to lifetime.');
   }
   
-  const { user } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading: authLoading } = useAuth();
+  const [checkoutLoading, setCheckoutLoading] = useState(true);
   const [stripeLoaded, setStripeLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validatedUserId, setValidatedUserId] = useState<string | null>(null);
@@ -131,7 +131,7 @@ function CheckoutPage() {
     };
     script.onerror = () => {
       setError("Failed to load Stripe. Please try again later.");
-      setIsLoading(false);
+      setCheckoutLoading(false);
     };
     document.body.appendChild(script);
 
@@ -145,17 +145,28 @@ function CheckoutPage() {
 
   // Validate userId parameter if provided (for mobile app checkout)
   useEffect(() => {
+    // CRITICAL: Wait for auth context to initialize before making any decisions
+    // This prevents infinite redirect loops when returning from OAuth
+    if (authLoading || status) {
+      console.log("🔒 validateUserId blocked:", { authLoading, status });
+      return;
+    }
+    
     const validateUserId = async () => {
+      console.log("🔍 validateUserId running:", { hasUser: !!user?.id, userId: user?.id });
+      
       // If user is logged in, use their ID
       if (user?.id) {
+        console.log("✅ User authenticated, setting validatedUserId:", user.id);
         setValidatedUserId(user.id);
+        setCheckoutLoading(false);
         return;
       }
 
       // For mobile checkout with access token: Set up authenticated session
       if (accessToken && refreshToken && !user && isMobileCheckout) {
         setIsValidatingUser(true);
-        setIsLoading(true);
+        setCheckoutLoading(true);
 
         try {
           console.log('Mobile checkout: Setting session from provided tokens');
@@ -169,7 +180,7 @@ function CheckoutPage() {
           if (sessionError || !sessionData.session) {
             console.error('Failed to set session:', sessionError);
             setError('Unable to authenticate for mobile checkout. Please try again from the app.');
-            setIsLoading(false);
+            setCheckoutLoading(false);
             setIsValidatingUser(false);
             return;
           }
@@ -185,7 +196,7 @@ function CheckoutPage() {
           if (!currentSession.data.session) {
             console.error('Session not set in Supabase client after setSession call');
             setError('Failed to establish authenticated session. Please try again.');
-            setIsLoading(false);
+            setCheckoutLoading(false);
             setIsValidatingUser(false);
             return;
           }
@@ -193,11 +204,11 @@ function CheckoutPage() {
           console.log('Session verified in Supabase client:', currentSession.data.session.user.id);
           setValidatedUserId(sessionData.session.user.id);
           setIsValidatingUser(false);
-          setIsLoading(false);
+          setCheckoutLoading(false);
         } catch (err) {
           console.error('Error authenticating mobile user:', err);
           setError('Failed to authenticate for mobile checkout. Please try again.');
-          setIsLoading(false);
+          setCheckoutLoading(false);
           setIsValidatingUser(false);
         }
         return;
@@ -206,7 +217,7 @@ function CheckoutPage() {
       // If no user is logged in but userId param is provided (old flow - not secure)
       if (paramUserId && !user && !accessToken) {
         setIsValidatingUser(true);
-        setIsLoading(true);
+        setCheckoutLoading(true);
 
         try {
           // Check if the userId exists in the database
@@ -219,7 +230,7 @@ function CheckoutPage() {
           if (dbError || !data) {
             console.error('Invalid userId provided:', paramUserId, dbError);
             setError('Invalid user ID. Please ensure you have a valid account.');
-            setIsLoading(false);
+            setCheckoutLoading(false);
             setIsValidatingUser(false);
             return;
           }
@@ -238,32 +249,29 @@ function CheckoutPage() {
           if (subscriptionData && !subError) {
             console.log('User already has an active subscription');
             setError('This account already has an active subscription.');
-            setIsLoading(false);
+            setCheckoutLoading(false);
             setIsValidatingUser(false);
             return;
           }
 
           setValidatedUserId(paramUserId);
           setIsValidatingUser(false);
-          setIsLoading(false);
+          setCheckoutLoading(false);
         } catch (err) {
           console.error('Error validating userId:', err);
           setError('Failed to validate user. Please try again.');
-          setIsLoading(false);
+          setCheckoutLoading(false);
           setIsValidatingUser(false);
         }
       } else if (!user && !paramUserId) {
         // No user logged in and no userId provided
         setError('Authentication required. Please log in to continue.');
-        setIsLoading(false);
+        setCheckoutLoading(false);
       }
     };
 
-    // Only validate if we're not handling a status callback
-    if (!status) {
-      validateUserId();
-    }
-  }, [user, paramUserId, status, accessToken, refreshToken, isMobileCheckout]);
+    validateUserId();
+  }, [authLoading, user, paramUserId, status, accessToken, refreshToken, isMobileCheckout]);
 
   // Handle payment status verification when returning from Stripe checkout
   useEffect(() => {
@@ -324,13 +332,34 @@ function CheckoutPage() {
 
   // Initialize Stripe when loaded
   useEffect(() => {
+    console.log("💳 Stripe init effect triggered:", { 
+      stripeLoaded, 
+      status, 
+      isValidatingUser, 
+      authLoading, 
+      hasUser: !!user, 
+      validatedUserId 
+    });
+    
     // Don't initialize Stripe if we're handling a payment status callback
-    // or if we're still validating the user
-    if (!stripeLoaded || status || isValidatingUser) return;
+    // or if we're still validating the user or if auth is still loading
+    // CRITICAL: Wait for auth to fully initialize to prevent redirect loops
+    if (!stripeLoaded || status || isValidatingUser || authLoading) {
+      console.log("🔒 Stripe init blocked by initial guards");
+      return;
+    }
+    
+    // CRITICAL FIX: If auth has loaded and we have a user, wait for validateUserId to set validatedUserId
+    // This prevents race condition where Stripe init runs before validateUserId completes
+    if (!authLoading && user && !validatedUserId) {
+      console.log("⏳ Waiting for validatedUserId to be set by validateUserId effect...");
+      return;
+    }
 
     const initializeStripe = async () => {
+      console.log("🚀 Initializing Stripe checkout...");
       try {
-        setIsLoading(true);
+        setCheckoutLoading(true);
         setPaymentStatus("processing");
 
         // @ts-ignore - Stripe is loaded via script tag and window.Stripe is available
@@ -341,11 +370,14 @@ function CheckoutPage() {
 
         // Check if we have a validated user ID (either from auth or param)
         if (!validatedUserId) {
-          console.error("No validated user ID available");
+          console.error("❌ REDIRECT TO REGISTER: No validated user ID available");
+          console.error("This should NOT happen if guards are working correctly!");
           setPaymentStatus("failed");
           navigate({ to: "/register", search: { redirect: `/checkout?plan=${selectedPlan}` } });
           throw new Error("User authentication required to make a purchase");
         }
+        
+        console.log("✅ Proceeding with Stripe checkout for user:", validatedUserId);
 
         // Get the current origin safely
         const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
@@ -477,18 +509,19 @@ function CheckoutPage() {
           throw new Error("Promo code checkout not properly configured. Please try again.");
         }
 
-        setIsLoading(false);
+        setCheckoutLoading(false);
       } catch (err: unknown) {
-        navigate({ to: "/register", search: { redirect: `/checkout?plan=${selectedPlan}` } });
-        console.error("Error initializing Stripe:", err);
+        console.error("❌ Error initializing Stripe:", err);
         setPaymentStatus("failed");
         setError(err instanceof Error ? err.message : "An error occurred while initializing payment. Please try again.");
-        setIsLoading(false);
+        setCheckoutLoading(false);
+        // NOTE: We no longer redirect to register on errors - user is already authenticated
+        // The error will be displayed on the page for them to retry
       }
     };
 
     initializeStripe();
-  }, [stripeLoaded, selectedPlan, selectedBilling, navigate, validatedUserId, status, isValidatingUser, isMobileCheckout, redirectUrl, source, promo]);
+  }, [authLoading, user, stripeLoaded, selectedPlan, selectedBilling, navigate, validatedUserId, status, isValidatingUser, isMobileCheckout, redirectUrl, source, promo]);
 
   // Render success state
   const renderSuccess = () => (
@@ -661,7 +694,7 @@ function CheckoutPage() {
               )}
 
               {/* Loading State */}
-              {isLoading && !isValidatingUser && (
+              {(checkoutLoading || authLoading) && !isValidatingUser && (
                 <motion.div variants={itemVariants} className="flex flex-col items-center justify-center py-16 space-y-6">
                   <Loader2 className="w-16 h-16 animate-spin text-primary" />
                   <div className="text-center space-y-2">
@@ -671,8 +704,8 @@ function CheckoutPage() {
                 </motion.div>
               )}
 
-              {/* Error State */}
-              {error && !isValidatingUser && (
+              {/* Error State (only when not in a payment status) */}
+              {error && !isValidatingUser && paymentStatus === "idle" && (
                 <motion.div variants={itemVariants} className="bg-danger-light/30 dark:bg-danger-light/20 rounded-3xl p-8 space-y-6">
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 w-12 h-12 rounded-full bg-danger/10 dark:bg-danger/20 flex items-center justify-center">
@@ -716,7 +749,7 @@ function CheckoutPage() {
               {paymentStatus === "canceled" && renderCanceled()}
 
               {/* Checkout Form */}
-              {!isLoading && !error && !isValidatingUser && paymentStatus === "idle" && (
+              {!checkoutLoading && !authLoading && !error && !isValidatingUser && paymentStatus === "idle" && (
                 <motion.div variants={itemVariants} className="space-y-8">
                   <div id="express-checkout-element" className="min-h-[240px]">
                     {/* Stripe Express Checkout Element will be mounted here */}

@@ -277,7 +277,43 @@ serve(async (req) => {
           },
         }
 
-        const session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+        // Try to create session, handle customer not found error
+        let session
+        try {
+          session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+        } catch (sessionError) {
+          // If customer doesn't exist, recreate it and try again
+          if (sessionError.code === 'resource_missing' && sessionError.message?.includes('customer')) {
+            console.log('Customer not found during checkout, recreating:', customerId)
+            
+            const newCustomer = await createCustomerWithRetry(stripe, {
+              email: userData.email,
+              name: userData.full_name || undefined,
+              metadata: {
+                userId,
+              },
+            })
+
+            customerId = newCustomer.id
+            
+            await supabase
+              .from('user_stripe_mapping')
+              .upsert({ 
+                user_id: userId, 
+                stripe_customer_id: customerId 
+              }, {
+                onConflict: 'user_id'
+              })
+            
+            // Update config with new customer ID
+            sessionConfig.customer = customerId
+            
+            // Retry with new customer
+            session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+          } else {
+            throw sessionError
+          }
+        }
 
         console.log('Lifetime checkout session created:', {
           id: session.id,
@@ -350,7 +386,42 @@ serve(async (req) => {
       // Create checkout session with retry
       // NOTE: Per Stripe docs, idempotency keys are NOT recommended for Checkout Sessions
       // because sessions expire after 24 hours and users should be able to create new ones
-      const session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+      let session
+      try {
+        session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+      } catch (sessionError) {
+        // If customer doesn't exist, recreate it and try again
+        if (sessionError.code === 'resource_missing' && sessionError.message?.includes('customer')) {
+          console.log('Customer not found during checkout, recreating:', customerId)
+          
+          const newCustomer = await createCustomerWithRetry(stripe, {
+            email: userData.email,
+            name: userData.full_name || undefined,
+            metadata: {
+              userId,
+            },
+          })
+
+          customerId = newCustomer.id
+          
+          await supabase
+            .from('user_stripe_mapping')
+            .upsert({ 
+              user_id: userId, 
+              stripe_customer_id: customerId 
+            }, {
+              onConflict: 'user_id'
+            })
+          
+          // Update config with new customer ID
+          sessionConfig.customer = customerId
+          
+          // Retry with new customer
+          session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+        } else {
+          throw sessionError
+        }
+      }
       
       console.log('Checkout session created:', {
         id: session.id,
