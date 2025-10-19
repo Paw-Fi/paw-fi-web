@@ -162,10 +162,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
-      // Delete the auth user
-      const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+      // Call the database function to delete the user account
+      // This is a SECURITY DEFINER function that can delete from auth.users
+      const { data, error } = await supabase.rpc('delete_user_account');
       
-      if (authError) throw authError;
+      if (error) throw error;
+      
+      // Check if the function returned success
+      if (data && !data.success) {
+        throw new Error(data.message || 'Failed to delete account');
+      }
       
       return { success: true };
     } catch (error) {
