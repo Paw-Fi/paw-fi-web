@@ -215,16 +215,28 @@ export function FreeTrialGiveawayForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🎯 handleSubmit called');
     e.preventDefault();
     setResult({});
+    
+    console.log('📊 Current state:', {
+      hasClaimed,
+      isAuthenticated,
+      hasUser: !!user,
+      userId: user?.id,
+      formData
+    });
+    
     if(hasClaimed)
     {
+      console.log('✅ Already claimed, redirecting to TestFlight');
       window.location.href = TESTFLIGHT_URL;
       return;
     }
 
     // Require authentication before claiming
     if (!isAuthenticated || !user) {
+      console.log('❌ Not authenticated or no user');
       setResult({
         success: false,
         error: 'Please sign in to join the mobile app waitlist.'
@@ -251,8 +263,12 @@ export function FreeTrialGiveawayForm() {
       ].filter(Boolean),
     };
 
+    console.log('📤 Prepared claim data:', claim);
+    console.log('🔄 Calling claimMutation.mutate...');
+
     claimMutation.mutate(claim, {
       onSuccess: (response) => {
+        console.log('✅ Mutation onSuccess called with:', response);
         if (response.success) {
           setResult({
             success: true,
@@ -276,10 +292,12 @@ export function FreeTrialGiveawayForm() {
           });
           window.location.href = TESTFLIGHT_URL;
         } else {
+          console.log('⚠️ Response success is false:', response);
           setResult(response);
         }
       },
-      onError: () => {
+      onError: (error) => {
+        console.error('❌ Mutation onError called with:', error);
         setResult({
           success: false,
           error: 'An unexpected error occurred. Please try again.'
