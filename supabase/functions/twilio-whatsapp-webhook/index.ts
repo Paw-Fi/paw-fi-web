@@ -3,7 +3,7 @@
 
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
+import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply, getCurrencySymbol } from "../shared/whatsapp-helpers.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { uploadReceiptImage } from "../shared/storage-helper.ts";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
@@ -61,6 +61,36 @@ function normalizePhone(from: string | null): string | null {
   return from;
 }
 
+// Parse YYYY-MM-DD as local date to avoid timezone issues
+function parseYMDLocal(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+// Helper function to format date relative to today
+function formatRelativeDate(dateStr: string): string {
+  const today = new Date();
+  const itemLocal = parseYMDLocal(dateStr) || new Date(dateStr);
+  
+  // Reset time to compare just dates
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const itemOnly = new Date(itemLocal.getFullYear(), itemLocal.getMonth(), itemLocal.getDate());
+  
+  const diffDays = Math.round((todayOnly.getTime() - itemOnly.getTime()) / 86400000);
+  
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays > 1 && diffDays <= 7) return `${diffDays} days ago`;
+  
+  // For more than 7 days, show the actual date
+  return itemOnly.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: itemOnly.getFullYear() !== today.getFullYear() ? 'numeric' : undefined 
+  });
+}
+
 // Format ProcessResult into user-friendly message
 function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): string {
   if (result.error) {
@@ -85,6 +115,14 @@ function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): str
 
       let formattedMsg = `✅ *Receipt Logged*\n\n`;
       formattedMsg += `💰 *Amount:* ${symbol}${item.amount}\n`;
+      
+      // Add date information if available
+      if (item.date) {
+        const relativeDate = formatRelativeDate(item.date);
+        const label = relativeDate === 'today' ? 'Today' : relativeDate === 'yesterday' ? 'Yesterday' : relativeDate;
+        formattedMsg += `📅 *Date:* ${label}\n`;
+      }
+      
       if (item.category) {
         formattedMsg += `📁 *Category:* ${item.category}\n`;
       }
@@ -110,6 +148,15 @@ function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): str
       formattedMsg += `${index + 1}. ${symbol}${item.amount}`;
       if (item.category) formattedMsg += ` (${item.category})`;
       if (item.note) formattedMsg += ` - ${item.note}`;
+      
+      // Add date info if different from today
+      if (item.date) {
+        const relativeDate = formatRelativeDate(item.date);
+        if (relativeDate !== 'today') {
+          formattedMsg += ` [${relativeDate}]`;
+        }
+      }
+      
       formattedMsg += `\n`;
     });
 
@@ -325,9 +372,16 @@ Deno.serve(async (req: Request) => {
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
       console.log('[receipt-parse] Sending TwiML response:', twiml);
 
-      // Upload image to storage ONLY if receipt was successfully processed
-      // Don't store unreadable receipts to avoid storage costs
-      const shouldUpload = !result.error || (result.type === 'expense' && result.items.length > 0);
+      // Check if image was already uploaded by processReceiptImage
+      const alreadyStored = result.type === 'expense' && 
+        Array.isArray(result.expenses) && 
+        result.expenses.some(e => e?.receipt_image_url);
+      
+      // Only upload in webhook when result.type === 'expense' with items
+      // processReceiptImage already handles uploads for fallback and expense types
+      const shouldUpload = result.type === 'expense' &&
+        result.items.length > 0 &&
+        !alreadyStored;
 
       if (shouldUpload) {
         // Upload image to storage asynchronously after response is sent
@@ -362,21 +416,32 @@ Deno.serve(async (req: Request) => {
             const contact = contactResult.data?.[0] ?? null;
 
             if (contact?.id) {
-              // Update most recent expense created in last 60 seconds for this contact
+              // First SELECT the most recent expense created in last 60 seconds for this contact
               const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
-              const { error: updateError } = await supabaseUpdate
+              const { data: recentExpense } = await supabaseUpdate
                 .from('expenses')
-                .update({ receipt_image_url: storageUrl })
+                .select('id')
                 .eq('contact_id', contact.id)
                 .gte('created_at', sixtySecondsAgo)
                 .is('receipt_image_url', null)
                 .order('created_at', { ascending: false })
-                .limit(1);
+                .limit(1)
+                .maybeSingle();
 
-              if (updateError) {
-                console.error('[async-storage] Failed to update expense:', updateError);
+              if (recentExpense?.id) {
+                // UPDATE by ID (PostgREST compatible)
+                const { error: updateError } = await supabaseUpdate
+                  .from('expenses')
+                  .update({ receipt_image_url: storageUrl })
+                  .eq('id', recentExpense.id);
+
+                if (updateError) {
+                  console.error('[async-storage] Failed to update expense:', updateError);
+                } else {
+                  console.log('[async-storage] Expense updated with receipt URL');
+                }
               } else {
-                console.log('[async-storage] Expense updated with receipt URL');
+                console.log('[async-storage] No recent expense found to update');
               }
             }
           }
@@ -545,11 +610,7 @@ Deno.serve(async (req: Request) => {
         }
         
         const toMoney = (cents: number) => (cents / 100).toFixed(2);
-        const sym = (code: string) => {
-          const m: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', SGD: 'S$', HKD: 'HK$', INR: '₹' };
-          const up = (code || 'USD').toUpperCase();
-          return m[up] || '$';
-        };
+        const sym = (code: string) => getCurrencySymbol((code || 'USD').toUpperCase());
         
         // Build formatted table
         let response = `📊 *Today's Expenses*\n\n`;
@@ -562,11 +623,29 @@ Deno.serve(async (req: Request) => {
           response += `${index + 1}. ${s}${amount} - ${cat}\n`;
         });
         
-        // Add separator and total
+        // Add separator and currency-specific totals
         response += `\n━━━━━━━━━━━━━━━━\n\n`;
-        const firstCur = (rows[0]?.currency || 'USD').toUpperCase();
-        const totalCents = rows.reduce((s: number, r: any) => s + (r.amount_cents || 0), 0);
-        response += `💰 *Total:* ${sym(firstCur)}${toMoney(totalCents)}`;
+        
+        // Group by currency to avoid mixed-currency summation
+        const currencyGroups = new Map<string, number>();
+        rows.forEach((r: any) => {
+          const currency = (r.currency || 'USD').toUpperCase();
+          const current = currencyGroups.get(currency) || 0;
+          currencyGroups.set(currency, current + (r.amount_cents || 0));
+        });
+        
+        // Display totals by currency
+        if (currencyGroups.size === 1) {
+          // Single currency - show simple total
+          const [currency, totalCents] = [...currencyGroups.entries()][0];
+          response += `💰 *Total:* ${sym(currency)}${toMoney(totalCents)}`;
+        } else {
+          // Multiple currencies - show breakdown
+          response += `💰 *Totals by Currency:*\n`;
+          [...currencyGroups.entries()].forEach(([currency, totalCents]) => {
+            response += `   ${sym(currency)}${toMoney(totalCents)}\n`;
+          });
+        }
         
         return { text: response };
       }
@@ -826,6 +905,11 @@ Deno.serve(async (req: Request) => {
   };
 
   const reply = await replyText();
+
+  // Don't send empty TwiML messages (e.g., after verification templates)
+  if ((!reply.text || !reply.text.trim()) && !reply.mediaUrl) {
+    return xmlResponse('<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>');
+  }
 
   // Respond with TwiML so Twilio replies to the user (optionally with media)
   const textEsc = reply.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

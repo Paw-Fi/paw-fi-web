@@ -164,11 +164,15 @@ export async function processFreeFormTextExpense(params: {
       const items: ExpenseItem[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
 
       const composed = items
-        .map((it: any) => `I spent ${it.amount}${it.currency ? ' ' + it.currency : ''}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`)
+        .map((it: any) => {
+          const currencyCode = it.currency || callerCurrency;
+          const currencySymbol = getCurrencySymbol(currencyCode);
+          return `I spent ${currencySymbol}${it.amount}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`;
+        })
         .join(', ');
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { userId, phone, text: composed, date: callerDate },
+        body: { userId, phone, text: composed, date: callerDate, currency: callerCurrency },
       });
 
       if (error) {
@@ -303,13 +307,14 @@ CRITICAL INSTRUCTIONS:
 4. Determine the appropriate category based on the items (food, drink, groceries, transport, shopping, entertainment, etc.)
 5. If multiple categories apply (food + drinks), choose the primary one or use "dining"
 6. Do NOT create separate expenses for each line item - only ONE expense with the total
+7. CAREFULLY look for any date information on the receipt (transaction date, order date, etc.)
 
 Use the add_expenses tool with a single item containing:
 - amount: the final total (e.g., 61.95)
 - category: appropriate category (e.g., "dining", "food", "groceries")
 - note: brief description of main items (e.g., "Burrata, Solomillo, Chocolate, drinks")
 - currency: extract from receipt or use ${callerCurrency}
-- date: ${callerDate} unless a different date is clearly visible`;
+- date: IMPORTANT - Look carefully for the transaction date on the receipt. Extract it in YYYY-MM-DD format if found, otherwise use ${callerDate}`;
 
   const result = await model.generateContent([
     {
@@ -376,7 +381,11 @@ Use the add_expenses tool with a single item containing:
       );
 
       const composed = items
-        .map((it: any) => `I spent ${it.amount}${it.currency ? ' ' + it.currency : ''}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`)
+        .map((it: any) => {
+          const currencyCode = it.currency || callerCurrency;
+          const currencySymbol = getCurrencySymbol(currencyCode);
+          return `I spent ${currencySymbol}${it.amount}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`;
+        })
         .join(', ');
 
       console.log('[add_expenses] Composed text for finance-update:', composed);
@@ -387,6 +396,7 @@ Use the add_expenses tool with a single item containing:
           phone, 
           text: composed, 
           date: callerDate,
+          currency: callerCurrency,
           receipt_image_url: receiptImageUrl // Pass the uploaded image URL
         },
       });
@@ -439,6 +449,7 @@ Use the add_expenses tool with a single item containing:
       userId, 
       phone, 
       text: textOut,
+      currency: callerCurrency,
       receipt_image_url: receiptImageUrl // Pass the uploaded image URL
     },
   });

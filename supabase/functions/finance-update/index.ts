@@ -4,13 +4,10 @@
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { getCurrencySymbol } from "../shared/whatsapp-helpers.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 
-function symbolFor(code?: string): string {
-  const m: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", JPY: "¥", AUD: "A$", CAD: "C$", SGD: "S$", HKD: "HK$", INR: "₹" };
-  const up = (code || "USD").toUpperCase();
-  return m[up] || "$";
-}
+
 
 // Types
 interface UpdateRequest {
@@ -289,33 +286,130 @@ Rules:
       effectiveBudgetRow = recentBudget;
     }
 
+    // Smart currency handling: prioritize user's preferred currency
+    const budgetCurrency = (effectiveBudgetRow?.currency || preferredCurrency).toUpperCase();
+    const userPreferredCurrency = preferredCurrency.toUpperCase();
+    
+    // If budget currency differs from preferred currency, use preferred currency for totals
+    const calculationCurrency = userPreferredCurrency;
+    
+    // Get expenses in user's preferred currency
     const { data: expenseRows } = await supabase
       .from("expenses")
       .select("amount_cents")
       .eq("contact_id", contactId)
-      .eq("date", dateStr);
+      .eq("date", dateStr)
+      .eq("currency", calculationCurrency);
 
     const totalCents = (expenseRows || []).reduce((sum, r: any) => sum + (r.amount_cents || 0), 0);
-    const budgetCents = effectiveBudgetRow?.amount_cents || 0;
+    
+    // If budget currency differs from preferred currency, convert or use zero budget
+    let budgetCents = 0;
+    let budgetMismatch = false;
+    if (effectiveBudgetRow) {
+      if (budgetCurrency === userPreferredCurrency) {
+        budgetCents = effectiveBudgetRow.amount_cents || 0;
+      } else {
+        budgetMismatch = true;
+        // Budget exists in different currency - user should set budget in their preferred currency
+      }
+    }
+    // Note: We could add currency conversion here in the future
+    
     const remainingCents = Math.max(budgetCents - totalCents, 0);
 
     results.totals = {
       budget_cents: budgetCents,
       spent_cents: totalCents,
       remaining_cents: remainingCents,
-      currency: effectiveBudgetRow?.currency || preferredCurrency,
+      currency: calculationCurrency,
     };
   }
 
   // Simple text reply for bots to display
+  // Determine the appropriate date for totals display
+  let dateForTotals = dateStr;
+  let dateLabel = 'Today';
+  
+  if (Array.isArray(results.expenses) && results.expenses.length) {
+    const dates = new Set(results.expenses.map((r: any) => r.date));
+    if (dates.size === 1) {
+      dateForTotals = [...dates][0] as string;
+      dateLabel = dateForTotals === new Date().toISOString().slice(0, 10) ? 'Today' : dateForTotals;
+    }
+  }
+
+  // Recompute totals for the effective date
+  if (contactId && dateForTotals !== dateStr) {
+    // Try to fetch budget for the specific date
+    const { data: budgetRow } = await supabase
+      .from("daily_budgets")
+      .select("amount_cents,currency")
+      .eq("contact_id", contactId)
+      .eq("date", dateForTotals)
+      .maybeSingle();
+
+    // If no budget for that date, fetch the most recent budget before that date
+    let effectiveBudgetRow = budgetRow;
+    if (!budgetRow) {
+      const { data: recentBudget } = await supabase
+        .from("daily_budgets")
+        .select("amount_cents,currency")
+        .eq("contact_id", contactId)
+        .lt("date", dateForTotals)
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      effectiveBudgetRow = recentBudget;
+    }
+
+    // Smart currency handling: prioritize user's preferred currency for effective date too
+    const budgetCurrency = (effectiveBudgetRow?.currency || preferredCurrency).toUpperCase();
+    const userPreferredCurrency = preferredCurrency.toUpperCase();
+    const calculationCurrency = userPreferredCurrency;
+    
+    const { data: expenseRows } = await supabase
+      .from("expenses")
+      .select("amount_cents")
+      .eq("contact_id", contactId)
+      .eq("date", dateForTotals)
+      .eq("currency", calculationCurrency);
+
+    const totalCents = (expenseRows || []).reduce((sum, r: any) => sum + (r.amount_cents || 0), 0);
+    
+    // If budget currency differs from preferred currency, convert or use zero budget
+    let budgetCents = 0;
+    if (effectiveBudgetRow && budgetCurrency === userPreferredCurrency) {
+      budgetCents = effectiveBudgetRow.amount_cents || 0;
+    }
+    
+    const remainingCents = Math.max(budgetCents - totalCents, 0);
+
+    results.totals = {
+      budget_cents: budgetCents,
+      spent_cents: totalCents,
+      remaining_cents: remainingCents,
+      currency: calculationCurrency,
+    };
+  }
+
   let reply = "";
   if (results.totals) {
     const code = (results.totals.currency || preferredCurrency).toUpperCase();
-    const sym = symbolFor(code);
+    const sym = getCurrencySymbol(code);
     const toMoney = (cents: number) => (cents / 100).toFixed(2);
-    const setPart = results.budget_set ? `Budget set to ${sym} ${toMoney(results.budget_set.amount_cents)}. ` : "";
+    const setPart = results.budget_set ? `Budget set to ${sym}${toMoney(results.budget_set.amount_cents)}. ` : "";
     const added = results.expenses_added ? `${results.expenses_added} expense(s) logged. ` : "";
-    reply = `${setPart}${added}Today: spent ${sym} ${toMoney(results.totals.spent_cents)} / budget ${sym} ${toMoney(results.totals.budget_cents)}. Remaining: ${sym} ${toMoney(results.totals.remaining_cents)}.`;
+    
+    // Check if budget is zero due to currency mismatch
+    const budgetMismatch = results.totals.budget_cents === 0 && results.totals.spent_cents > 0;
+    
+    if (budgetMismatch) {
+      reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
+    } else {
+      reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} / budget ${sym}${toMoney(results.totals.budget_cents)}. Remaining: ${sym}${toMoney(results.totals.remaining_cents)}.`;
+    }
   } else {
     reply = "Update recorded.";
   }

@@ -3,12 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-
-function symbolFor(code?: string): string {
-  const m: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", JPY: "¥", AUD: "A$", CAD: "C$", SGD: "S$", HKD: "HK$", INR: "₹" };
-  const up = (code || "USD").toUpperCase();
-  return m[up] || "$";
-}
+import { getCurrencySymbol } from "../shared/whatsapp-helpers.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -162,12 +157,13 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to save budget", 500);
   }
 
-  // Get totals for today
+  // Get totals for today (use budget currency since we just set it to preferred currency)
   const { data: expenseRows } = await supabase
     .from("expenses")
     .select("amount_cents")
     .eq("contact_id", contactId)
-    .eq("date", dateStr);
+    .eq("date", dateStr)
+    .eq("currency", budgetCurrency);
 
   const totalSpentCents = (expenseRows || []).reduce((sum, r: any) => sum + (r.amount_cents || 0), 0);
   const remainingCents = Math.max(budgetCents - totalSpentCents, 0);
@@ -190,7 +186,7 @@ Deno.serve(async (req: Request) => {
   };
 
   // Simple text reply
-  const sym = symbolFor(budgetCurrency);
+  const sym = getCurrencySymbol(budgetCurrency);
   const toMoney = (cents: number) => (cents / 100).toFixed(2);
   const reply = `Budget set to ${sym}${toMoney(budgetCents)}. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${toMoney(budgetCents)}. Remaining: ${sym}${toMoney(remainingCents)}.`;
 

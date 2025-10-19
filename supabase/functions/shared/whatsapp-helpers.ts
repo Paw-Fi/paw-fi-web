@@ -147,6 +147,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   'SAR': 'ر.س',
   'EGP': 'E£',
   'NGN': '₦',
+  'PKR': '₨',
 };
 
 /**
