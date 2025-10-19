@@ -1,5 +1,5 @@
-// Supabase Edge Function: update-prefer-currency
-// Simple API to set/update daily budget for a user (no AI involved, direct database operation)
+// Supabase Edge Function: update-preferred-currency
+// Simple API to update preferred currency for a user (direct database operation)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";

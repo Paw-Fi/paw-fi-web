@@ -214,7 +214,7 @@ Rules:
 
     const { error: upsertErr } = await supabase
       .from("daily_budgets")
-      .upsert([{ contact_id: contactId, date: budgetDate, amount_cents: budgetCents, currency: budgetCurrency, updated_at: new Date().toISOString() }], { onConflict: "contact_id,date" });
+      .upsert([{ contact_id: contactId, date: budgetDate, amount_cents: budgetCents, currency: budgetCurrency, updated_at: new Date().toISOString() }], { onConflict: "contact_id,date,currency" });  // Updated: now includes currency
 
     if (upsertErr) {
       console.error("budget upsert error", upsertErr);

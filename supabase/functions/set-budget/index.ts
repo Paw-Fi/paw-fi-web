@@ -61,7 +61,19 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-  const providedCurrency = (inputCurrency || "USD").toUpperCase();
+  
+  // Validate currency is supported
+  const requestedCurrency = inputCurrency?.trim().toUpperCase();
+  const supportedCurrencies = [
+    'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'NZD', 'HKD', 
+    'SGD', 'KRW', 'INR', 'RUB', 'BRL', 'MXN', 'ZAR', 'SEK', 'NOK', 'DKK', 
+    'PLN', 'THB', 'IDR', 'MYR', 'PHP', 'TRY', 'AED', 'SAR', 'EGP', 'NGN', 
+    'PKR', 'CZK', 'KES', 'GHS'
+  ];
+  
+  if (requestedCurrency && !supportedCurrencies.includes(requestedCurrency)) {
+    return errorResponse(`Unsupported currency: ${requestedCurrency}. Supported: ${supportedCurrencies.join(', ')}`, 400);
+  }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -100,7 +112,9 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to fetch contact", 500);
   }
 
-  const preferredCurrency = (contact?.preferred_currency as string | null) || providedCurrency || 'USD';
+  // Use requested currency if provided, otherwise fall back to contact's preferred currency
+  const preferredCurrency = (contact?.preferred_currency as string | null) || 'USD';
+  const budgetCurrency = requestedCurrency || preferredCurrency;
 
   if (!contactId) {
     // Create new contact using UPSERT to prevent duplicates
@@ -136,9 +150,8 @@ Deno.serve(async (req: Request) => {
 
   // Convert amount to cents
   const budgetCents = Math.round(amount * 100);
-  const budgetCurrency = preferredCurrency;
 
-  // Upsert budget
+  // Upsert budget using new multi-currency constraint
   const { error: upsertErr } = await supabase
     .from("daily_budgets")
     .upsert(
@@ -149,7 +162,7 @@ Deno.serve(async (req: Request) => {
         currency: budgetCurrency, 
         updated_at: new Date().toISOString() 
       }], 
-      { onConflict: "contact_id,date" }
+      { onConflict: "contact_id,date,currency" }  // Updated: now includes currency
     );
 
   if (upsertErr) {
