@@ -373,7 +373,14 @@ function CheckoutPage() {
           console.error("❌ REDIRECT TO REGISTER: No validated user ID available");
           console.error("This should NOT happen if guards are working correctly!");
           setPaymentStatus("failed");
-          navigate({ to: "/register", search: { redirect: `/checkout?plan=${selectedPlan}` } });
+          
+          // Build redirect URL preserving all query parameters
+          const redirectParams = new URLSearchParams();
+          redirectParams.set('plan', selectedPlan);
+          if (selectedBilling) redirectParams.set('billing', selectedBilling);
+          if (promo) redirectParams.set('promo', promo);
+          
+          navigate({ to: "/register", search: { redirect: `/checkout?${redirectParams.toString()}` } });
           throw new Error("User authentication required to make a purchase");
         }
         
@@ -394,11 +401,30 @@ function CheckoutPage() {
         // Add status parameters to URLs
         const successUrl = isMobileCheckout && redirectUrl
           ? `${redirectUrl}?status=success&session_id={CHECKOUT_SESSION_ID}`
-          : `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}&plan=${selectedPlan}${source ? `&source=${source}` : ''}${redirectUrl ? `&redirectUrl=${encodeURIComponent(redirectUrl)}` : ''}`;
+          : (() => {
+              const params = new URLSearchParams();
+              params.set('status', 'success');
+              params.set('session_id', '{CHECKOUT_SESSION_ID}');
+              params.set('plan', selectedPlan);
+              if (selectedBilling) params.set('billing', selectedBilling);
+              if (promo) params.set('promo', promo);
+              if (source) params.set('source', source);
+              if (redirectUrl) params.set('redirectUrl', redirectUrl);
+              return `${origin}/checkout?${params.toString()}`;
+            })();
         
         const cancelUrl = isMobileCheckout && redirectUrl
           ? `${redirectUrl}?status=canceled&session_id={CHECKOUT_SESSION_ID}`
-          : `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}&plan=${selectedPlan}${source ? `&source=${source}` : ''}`;
+          : (() => {
+              const params = new URLSearchParams();
+              params.set('status', 'canceled');
+              params.set('session_id', '{CHECKOUT_SESSION_ID}');
+              params.set('plan', selectedPlan);
+              if (selectedBilling) params.set('billing', selectedBilling);
+              if (promo) params.set('promo', promo);
+              if (source) params.set('source', source);
+              return `${origin}/checkout?${params.toString()}`;
+            })();
         
         // Create a payment session on the server
         console.log('Creating Stripe session with billing interval:', billing);
