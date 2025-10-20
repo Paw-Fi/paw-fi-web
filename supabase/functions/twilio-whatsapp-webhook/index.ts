@@ -8,6 +8,7 @@ import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { uploadReceiptImage } from "../shared/storage-helper.ts";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 function xmlResponse(xml: string, status = 200) {
   return new Response(xml, { status, headers: { 'Content-Type': 'text/xml' } });
@@ -586,7 +587,7 @@ Deno.serve(async (req: Request) => {
         const today = new Date().toISOString().slice(0, 10);
         const contactResult = await supabase
           .from('user_contacts')
-          .select('id')
+          .select('id, preferred_currency')
           .eq('phone_e164', from!)
           .order('id', { ascending: false })
           .limit(1);
@@ -595,11 +596,16 @@ Deno.serve(async (req: Request) => {
           console.error('fetch contact for expenses error', contactResult.error);
           return { text: "❌ *Could not find account*\n\nTry sending a message again." };
         }
+        
+        // Use user's preferred currency for filtering and display
+        const preferredCurrency = contact.preferred_currency || 'USD';
+        
         const { data: rows, error: eErr } = await supabase
           .from('expenses')
           .select('date, amount_cents, currency, category, raw_text, created_at')
           .eq('contact_id', contact.id)
           .eq('date', today)
+          .eq('currency', preferredCurrency)
           .order('created_at', { ascending: true });
         if (eErr) {
           console.error('fetch expenses error', eErr);
@@ -610,21 +616,22 @@ Deno.serve(async (req: Request) => {
         }
         
         const toMoney = (cents: number) => (cents / 100).toFixed(2);
-        const sym = (code: string) => getCurrencySymbol((code || 'USD').toUpperCase());
+        const currencySymbol = getCurrencySymbol(preferredCurrency);
         
         // Build formatted table
         let response = `📊 *Today's Expenses*\n\n`;
         
         rows.forEach((r: any, index: number) => {
-          const s = sym(r.currency || 'USD');
           const amount = toMoney(r.amount_cents);
           const cat = r.category || 'uncategorized';
           
-          response += `${index + 1}. ${s}${amount} - ${cat}\n`;
+          response += `${index + 1}. ${currencySymbol}${amount} - ${cat}\n`;
         });
         
         // Add separator and currency-specific totals
         response += `\n━━━━━━━━━━━━━━━━\n\n`;
+        const totalCents = rows.reduce((s: number, r: any) => s + (r.amount_cents || 0), 0);
+        response += `💰 *Total:* ${currencySymbol}${toMoney(totalCents)}`;
         
         // Group by currency to avoid mixed-currency summation
         const currencyGroups = new Map<string, number>();

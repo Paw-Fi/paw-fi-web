@@ -4,6 +4,7 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
+import { validateCurrency } from "../shared/currency-validator.ts";
 
 interface RequestBody {
   userId?: string; // User ID (from mobile app)
@@ -69,9 +70,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Set defaults
+    // Set defaults with validation
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
-    const callerCurrency = body.currency || 'USD';
+    const callerCurrency = validateCurrency(body.currency);
 
     let result: ProcessResult;
 

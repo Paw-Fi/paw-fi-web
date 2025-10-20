@@ -56,6 +56,12 @@ supabase functions deploy process-expenses --project-ref $PROJECT_REF
 echo "✅ process-expenses deployed"
 echo ""
 
+
+echo "📦 [6/5] Deploying update-expense function..."
+supabase functions deploy update-expense --project-ref $PROJECT_REF
+echo "✅ update-expense deployed"
+echo ""
+
 echo "📦 [6/5] Deploying categories function..."
 supabase functions deploy categories --project-ref $PROJECT_REF
 echo "✅ categories deployed"

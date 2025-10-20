@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { getCurrencySymbol } from "../shared/whatsapp-helpers.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 
 
@@ -73,7 +74,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-  const providedCurrency = (inputCurrency || "USD").toUpperCase();
+  const providedCurrency = inputCurrency ? inputCurrency.toUpperCase() : null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -112,7 +113,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to fetch contact", 500);
   }
 
-  const preferredCurrency = (contact?.preferred_currency as string | null) || providedCurrency || 'USD';
+  const preferredCurrency = providedCurrency || (contact?.preferred_currency as string | null) || 'USD';
 
   if (!contactId) {
     // Create new contact using UPSERT to prevent duplicates
@@ -263,21 +264,23 @@ Rules:
 
   // Compute today totals and remaining
   if (contactId) {
-    // Try to fetch budget for the specific date
+    // Try to fetch budget for the specific date AND preferred currency
     const { data: budgetRow } = await supabase
       .from("daily_budgets")
       .select("amount_cents,currency")
       .eq("contact_id", contactId)
       .eq("date", dateStr)
+      .eq("currency", preferredCurrency)
       .maybeSingle();
 
-    // If no budget for today, fetch the most recent budget before today
+    // If no budget for today with preferred currency, fetch the most recent budget with preferred currency
     let effectiveBudgetRow = budgetRow;
     if (!budgetRow) {
       const { data: recentBudget } = await supabase
         .from("daily_budgets")
         .select("amount_cents,currency")
         .eq("contact_id", contactId)
+        .eq("currency", preferredCurrency)
         .lt("date", dateStr)
         .order("date", { ascending: false })
         .limit(1)
@@ -296,7 +299,7 @@ Rules:
     // Get expenses in user's preferred currency
     const { data: expenseRows } = await supabase
       .from("expenses")
-      .select("amount_cents")
+      .select("amount_cents,currency")
       .eq("contact_id", contactId)
       .eq("date", dateStr)
       .eq("currency", calculationCurrency);

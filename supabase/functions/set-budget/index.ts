@@ -3,7 +3,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-import { getCurrencySymbol } from "../shared/whatsapp-helpers.ts";
+import { validateCurrency } from "../shared/currency-validator.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -61,19 +62,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-  
-  // Validate currency is supported
-  const requestedCurrency = inputCurrency?.trim().toUpperCase();
-  const supportedCurrencies = [
-    'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'CHF', 'CAD', 'AUD', 'NZD', 'HKD', 
-    'SGD', 'KRW', 'INR', 'RUB', 'BRL', 'MXN', 'ZAR', 'SEK', 'NOK', 'DKK', 
-    'PLN', 'THB', 'IDR', 'MYR', 'PHP', 'TRY', 'AED', 'SAR', 'EGP', 'NGN', 
-    'PKR', 'CZK', 'KES', 'GHS'
-  ];
-  
-  if (requestedCurrency && !supportedCurrencies.includes(requestedCurrency)) {
-    return errorResponse(`Unsupported currency: ${requestedCurrency}. Supported: ${supportedCurrencies.join(', ')}`, 400);
-  }
+  const providedCurrency = validateCurrency(inputCurrency);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -112,9 +101,8 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to fetch contact", 500);
   }
 
-  // Use requested currency if provided, otherwise fall back to contact's preferred currency
-  const preferredCurrency = (contact?.preferred_currency as string | null) || 'USD';
-  const budgetCurrency = requestedCurrency || preferredCurrency;
+  // FIX: Prioritize incoming currency over contact's preferred (for per-currency budgets)
+  const budgetCurrency = providedCurrency || validateCurrency(contact?.preferred_currency as string | null);
 
   if (!contactId) {
     // Create new contact using UPSERT to prevent duplicates
@@ -123,7 +111,7 @@ Deno.serve(async (req: Request) => {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: userId || null, preferred_currency: preferredCurrency, updated_at: new Date().toISOString() },
+          { phone_e164: phone, user_id: userId || null, preferred_currency: budgetCurrency, updated_at: new Date().toISOString() },
           { onConflict: 'phone_e164' }
         )
         .select("id")
@@ -137,7 +125,7 @@ Deno.serve(async (req: Request) => {
       // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, preferred_currency: preferredCurrency })
+        .insert({ user_id: userId, preferred_currency: budgetCurrency })
         .select("id")
         .single();
       if (insertErr) {
@@ -170,10 +158,10 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to save budget", 500);
   }
 
-  // Get totals for today (use budget currency since we just set it to preferred currency)
+  // Get totals for today - ONLY sum expenses matching the budget currency
   const { data: expenseRows } = await supabase
     .from("expenses")
-    .select("amount_cents")
+    .select("amount_cents,currency")
     .eq("contact_id", contactId)
     .eq("date", dateStr)
     .eq("currency", budgetCurrency);

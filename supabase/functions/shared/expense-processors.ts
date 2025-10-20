@@ -1,8 +1,8 @@
 // Expense processing functions for WhatsApp and other integrations
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { getCurrencySymbol } from "./whatsapp-helpers.ts";
 import { uploadReceiptImage } from "./storage-helper.ts";
+import { getCurrencySymbol } from "./currency-symbols.ts";
 
 export interface ExpenseItem {
   amount: number;
@@ -118,7 +118,8 @@ export async function processFreeFormTextExpense(params: {
   const systemInstruction =
     'You are a budgeting assistant. Decide whether the user is setting a budget or logging expenses. '
     + 'Always infer and attach clear categories for each expense item (e.g., groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other). '
-    + 'Prefer the user\'s preferred currency; if none is specified, default to USD with the $ symbol in user-facing text. '
+    + 'CURRENCY HANDLING: If the user explicitly mentions a currency (e.g., "50 USD", "100 RM", "75 SAR"), use that currency. '
+    + 'If NO currency is mentioned in the text, you MUST use the Caller Currency. DO NOT leave currency field empty. '
     + 'Use the provided functions to perform updates, including category fields. Keep replies short and human-friendly.';
 
   const response = await model.generateContent({
@@ -135,7 +136,7 @@ export async function processFreeFormTextExpense(params: {
       const currency = tool.args?.currency || callerCurrency;
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { userId, phone, text: `/setBudget ${amount}`, date },
+        body: { userId, phone, text: `/setBudget ${amount}`, date, currency },
       });
 
       if (error) {
@@ -201,7 +202,7 @@ export async function processFreeFormTextExpense(params: {
 
   // Fallback to finance-update
   const { data, error } = await supabase.functions.invoke('finance-update', {
-    body: { userId, phone, text },
+    body: { userId, phone, text, currency: callerCurrency },
   });
 
   if (error) {
@@ -309,6 +310,12 @@ CRITICAL INSTRUCTIONS:
 6. Do NOT create separate expenses for each line item - only ONE expense with the total
 7. CAREFULLY look for any date information on the receipt (transaction date, order date, etc.)
 
+CURRENCY HANDLING (CRITICAL):
+- Look for currency symbols or codes on the receipt (e.g., $, €, RM, SAR, etc.)
+- If you find a clear currency on the receipt, use that currency code (e.g., "MYR" for RM, "USD" for $)
+- If NO currency is visible or the currency is unclear/unreadable, you MUST use the Caller Currency: ${callerCurrency}
+- DO NOT leave currency empty - always provide either the detected currency OR ${callerCurrency}
+
 Use the add_expenses tool with a single item containing:
 - amount: the final total (e.g., 61.95)
 - category: appropriate category (e.g., "dining", "food", "groceries")
@@ -341,7 +348,7 @@ Use the add_expenses tool with a single item containing:
       const currency = tool.args?.currency || callerCurrency;
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { userId, phone, text: `/setBudget ${amount}`, date },
+        body: { userId, phone, text: `/setBudget ${amount}`, date, currency },
       });
 
       if (error) {
