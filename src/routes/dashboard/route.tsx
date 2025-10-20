@@ -643,7 +643,7 @@ export function Dashboard() {
     <ProtectedRouteSubscription>
       {/* Add style tag for custom scrollbar hiding */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarHideStyles }} />
-      <div className="lg:h-screen lg:overflow-hidden lg:bg-gradient-to-br from-purple-50/30 to-blue-50/20 dark:from-slate-900 dark:to-purple-900/20 p-4 sm:p-5 md:p-6 lg:p-4 font-sans mobile-text-optimize">
+      <div className="lg:h-screen lg:overflow-hidden bg-gradient-to-br from-purple-50/30 to-blue-50/20 dark:from-slate-900 dark:to-purple-900/20 p-4 sm:p-5 md:p-6 lg:p-4 font-sans mobile-text-optimize">
         <div className="flex flex-col md:flex-row h-full gap-3 sm:gap-4 md:gap-3 overflow-hidden">
       {/* Mobile Header - Optimized for touch and readability */}
       <div className="flex items-center justify-between md:hidden mb-3 sm:mb-4 px-3 sm:px-4 py-2">

@@ -39,10 +39,20 @@ export async function getRemainingSpots(): Promise<number> {
 
 export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<EarlyAccessResponse> {
   try {
-    const { data, error } = await supabase.functions.invoke('early-access', {
-      method: 'POST',
+    console.log('🚀 Claiming early access spot for:', claim.email);
+    
+    // Add timeout to prevent infinite loading
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), 7000); // 7 second timeout
+    });
+    
+    const invokePromise = supabase.functions.invoke('early-access', {
       body: claim
     });
+    
+    const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
+    
+    console.log('📡 Function response:', { data, error });
     
     if (error) {
       console.error('Error claiming spot:', error);
@@ -55,9 +65,12 @@ export async function claimEarlyAccessSpot(claim: EarlyAccessClaim): Promise<Ear
     return data as EarlyAccessResponse;
   } catch (error) {
     console.error('Error calling early-access function:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
     return {
       success: false,
-      error: 'An unexpected error occurred. Please try again.'
+      error: errorMessage.includes('timeout') 
+        ? 'Request timed out. Please check your connection and try again.'
+        : 'An unexpected error occurred. Please try again.'
     };
   }
 }

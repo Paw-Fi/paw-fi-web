@@ -35,30 +35,6 @@ serve(async (req) => {
   try {
     const { method } = req;
 
-    if (method === 'GET') {
-      // Get remaining spots
-      const { data, error } = await supabase.rpc('get_remaining_spots');
-      
-      if (error) {
-        console.error('Error fetching remaining spots:', error);
-        return new Response(
-          JSON.stringify({ error: 'Failed to fetch remaining spots' }),
-          { 
-            status: 500, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-          }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ remainingSpots: data || 0 }),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
     if (method === 'POST') {
       // Claim early access spot
       const body: EarlyAccessClaim = await req.json();

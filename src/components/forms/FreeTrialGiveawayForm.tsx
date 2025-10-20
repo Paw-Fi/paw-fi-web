@@ -198,7 +198,7 @@ export function FreeTrialGiveawayForm() {
 
   const handleMultiSelectChange = (
     value: string, 
-    field: 'financialGoals' | 'interestedFeatures', 
+    field: 'mobileAppPriorities' | 'interestedMobileFeatures', 
   ) => {
     setFormData((prev) => {
       const currentArray = prev[field];
@@ -206,8 +206,9 @@ export function FreeTrialGiveawayForm() {
       
       if (currentArray.includes(value)) {
         newArray = currentArray.filter((item) => item !== value);
-      }else {
-        newArray = [...currentArray, value];      }
+      } else {
+        newArray = [...currentArray, value];
+      }
       
       return { ...prev, [field]: newArray };
     });
