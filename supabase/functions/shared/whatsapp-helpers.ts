@@ -1,5 +1,6 @@
 // Shared WhatsApp helper functions and types
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { getCurrencySymbol } from "./currency-symbols.ts";
 
 export interface WhatsAppReply {
   text: string;
@@ -109,53 +110,6 @@ export async function sendWhatsAppTemplate(
     console.error('[sendWhatsAppTemplate] Error:', error);
     return { success: false, error: String(error) };
   }
-}
-
-/**
- * Currency code to symbol mapping
- * Maps ISO 4217 currency codes to their common symbols
- */
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  // Major currencies
-  'USD': '$',
-  'EUR': '€',
-  'GBP': '£',
-  'JPY': '¥',
-  'CNY': '¥',
-  'CHF': 'CHF',
-  'CAD': 'C$',
-  'AUD': 'A$',
-  'NZD': 'NZ$',
-  'HKD': 'HK$',
-  'SGD': 'S$',
-  'KRW': '₩',
-  'INR': '₹',
-  'RUB': '₽',
-  'BRL': 'R$',
-  'MXN': 'Mex$',
-  'ZAR': 'R',
-  'SEK': 'kr',
-  'NOK': 'kr',
-  'DKK': 'kr',
-  'PLN': 'zł',
-  'THB': '฿',
-  'IDR': 'Rp',
-  'MYR': 'RM',
-  'PHP': '₱',
-  'TRY': '₺',
-  'AED': 'د.إ',
-  'SAR': 'ر.س',
-  'EGP': 'E£',
-  'NGN': '₦',
-};
-
-/**
- * Convert ISO currency code to symbol
- * @param currencyCode - ISO 4217 currency code (e.g., 'USD', 'EUR')
- * @returns Currency symbol (e.g., '$', '€') or the code itself if not found
- */
-export function getCurrencySymbol(currencyCode: string): string {
-  return CURRENCY_SYMBOLS[currencyCode.toUpperCase()] || currencyCode;
 }
 
 /**

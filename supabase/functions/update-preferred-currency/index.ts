@@ -1,8 +1,9 @@
-// Supabase Edge Function: update-prefer-currency
-// Simple API to set/update daily budget for a user (no AI involved, direct database operation)
+// Supabase Edge Function: update-preferred-currency
+// Simple API to update preferred currency for a user (direct database operation)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { validateCurrency } from "../shared/currency-validator.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -51,7 +52,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("'userId' must be a string", 400);
   }
 
-  const providedCurrency = (inputCurrency || "USD").toUpperCase();
+  const providedCurrency = validateCurrency(inputCurrency);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },

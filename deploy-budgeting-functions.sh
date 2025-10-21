@@ -2,11 +2,12 @@
 
 # Budgeting Functions Deployment Script
 # Project: Moneko
-# Project Ref: qbuynyxyemigtnvdujts
+# Projectm Dev Ref: qbuynyxyemigtnvdujts
+# Project Prod Ref: pbopcsmrcykdzbilpilf
 
 set -e  # Exit on any error
 
-PROJECT_REF="pbopcsmrcykdzbilpilf"
+PROJECT_REF="qbuynyxyemigtnvdujts"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Budgeting Functions to Supabase"
@@ -53,6 +54,12 @@ echo ""
 echo "📦 [6/5] Deploying process-expenses function..."
 supabase functions deploy process-expenses --project-ref $PROJECT_REF
 echo "✅ process-expenses deployed"
+echo ""
+
+
+echo "📦 [6/5] Deploying update-expense function..."
+supabase functions deploy update-expense --project-ref $PROJECT_REF
+echo "✅ update-expense deployed"
 echo ""
 
 echo "📦 [6/5] Deploying categories function..."

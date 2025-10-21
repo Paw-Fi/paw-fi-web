@@ -8,6 +8,7 @@ import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { uploadReceiptImage } from "../shared/storage-helper.ts";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 function xmlResponse(xml: string, status = 200) {
   return new Response(xml, { status, headers: { 'Content-Type': 'text/xml' } });
@@ -61,8 +62,45 @@ function normalizePhone(from: string | null): string | null {
   return from;
 }
 
+// Parse YYYY-MM-DD as local date to avoid timezone issues
+function parseYMDLocal(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+// Helper function to format date relative to today
+function formatRelativeDate(dateStr: string): string {
+  const today = new Date();
+  const itemLocal = parseYMDLocal(dateStr) || new Date(dateStr);
+  
+  // Reset time to compare just dates
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const itemOnly = new Date(itemLocal.getFullYear(), itemLocal.getMonth(), itemLocal.getDate());
+  
+  const diffDays = Math.round((todayOnly.getTime() - itemOnly.getTime()) / 86400000);
+  
+  if (diffDays === 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays > 1 && diffDays <= 7) return `${diffDays} days ago`;
+  
+  // For more than 7 days, show the actual date
+  return itemOnly.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    year: itemOnly.getFullYear() !== today.getFullYear() ? 'numeric' : undefined 
+  });
+}
+
 // Format ProcessResult into user-friendly message
+// ROBUST: Always returns a non-empty string, even on total failure
 function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): string {
+  // Safety check: if result is malformed, return safe default
+  if (!result || typeof result !== 'object') {
+    console.error('[formatProcessResult] Invalid result object:', result);
+    return '✅ *Update Recorded*\n\nYour transaction has been logged successfully.';
+  }
+
   if (result.error) {
     if (result.type === 'fallback' && result.error === 'Could not read receipt') {
       return '❌ *Could not read receipt*\n\nPlease try again with:\n• A clearer photo\n• Better lighting\n• All text visible\n\nOr type the items manually.';
@@ -85,6 +123,14 @@ function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): str
 
       let formattedMsg = `✅ *Receipt Logged*\n\n`;
       formattedMsg += `💰 *Amount:* ${symbol}${item.amount}\n`;
+      
+      // Add date information if available
+      if (item.date) {
+        const relativeDate = formatRelativeDate(item.date);
+        const label = relativeDate === 'today' ? 'Today' : relativeDate === 'yesterday' ? 'Yesterday' : relativeDate;
+        formattedMsg += `📅 *Date:* ${label}\n`;
+      }
+      
       if (item.category) {
         formattedMsg += `📁 *Category:* ${item.category}\n`;
       }
@@ -110,6 +156,15 @@ function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): str
       formattedMsg += `${index + 1}. ${symbol}${item.amount}`;
       if (item.category) formattedMsg += ` (${item.category})`;
       if (item.note) formattedMsg += ` - ${item.note}`;
+      
+      // Add date info if different from today
+      if (item.date) {
+        const relativeDate = formatRelativeDate(item.date);
+        if (relativeDate !== 'today') {
+          formattedMsg += ` [${relativeDate}]`;
+        }
+      }
+      
       formattedMsg += `\n`;
     });
 
@@ -122,8 +177,18 @@ function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): str
     return formattedMsg;
   }
 
-  // Fallback type
-  return result.reply || 'Update recorded.';
+  // Fallback type - ROBUST: Always return something
+  const fallbackReply = result.reply && result.reply.trim() ? result.reply : 'Update recorded.';
+  return fallbackReply;
+}
+
+// Safety wrapper to ensure we NEVER return empty messages
+function ensureNonEmptyMessage(message: string, fallback: string = '✅ Update processed successfully.'): string {
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    console.warn('[ensureNonEmptyMessage] Empty message detected, using fallback');
+    return fallback;
+  }
+  return message;
 }
 
 Deno.serve(async (req: Request) => {
@@ -318,75 +383,31 @@ Deno.serve(async (req: Request) => {
       });
 
       // Format the result into user-friendly message
-      const message = formatProcessResult(result, userCurrency);
+      const message = ensureNonEmptyMessage(
+        formatProcessResult(result, userCurrency),
+        '✅ *Receipt Processed*\n\nYour receipt has been logged. Check your app for details.'
+      );
 
       console.log('[receipt-parse] Final message to send:', message);
       const textEsc = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
       console.log('[receipt-parse] Sending TwiML response:', twiml);
 
-      // Upload image to storage ONLY if receipt was successfully processed
-      // Don't store unreadable receipts to avoid storage costs
-      const shouldUpload = !result.error || (result.type === 'expense' && result.items.length > 0);
-
-      if (shouldUpload) {
-        // Upload image to storage asynchronously after response is sent
-        // This won't block the response to the user
-        Promise.resolve().then(async () => {
-        try {
-          console.log('[async-storage] Starting background upload...');
-          const storageUrl = await uploadReceiptImage(
-            SUPABASE_URL,
-            SUPABASE_SERVICE_ROLE_KEY,
-            imgBuf,
-            contentType,
-            from!
-          );
-
-          if (storageUrl) {
-            console.log('[async-storage] Upload successful:', storageUrl);
-
-            // Update the most recent expense with the receipt URL
-            const supabaseUpdate = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-              auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-              global: { headers: { 'X-Client-Info': 'moneko-async-storage' } },
-            });
-
-            // Get contact ID
-            const contactResult = await supabaseUpdate
-              .from('user_contacts')
-              .select('id')
-              .eq('phone_e164', from!)
-              .order('id', { ascending: false })
-              .limit(1);
-            const contact = contactResult.data?.[0] ?? null;
-
-            if (contact?.id) {
-              // Update most recent expense created in last 60 seconds for this contact
-              const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
-              const { error: updateError } = await supabaseUpdate
-                .from('expenses')
-                .update({ receipt_image_url: storageUrl })
-                .eq('contact_id', contact.id)
-                .gte('created_at', sixtySecondsAgo)
-                .is('receipt_image_url', null)
-                .order('created_at', { ascending: false })
-                .limit(1);
-
-              if (updateError) {
-                console.error('[async-storage] Failed to update expense:', updateError);
-              } else {
-                console.log('[async-storage] Expense updated with receipt URL');
-              }
-            }
-          }
-        } catch (err) {
-          console.error('[async-storage] Background upload failed:', err);
-          // Don't throw - this is a background task
+      // NOTE: Image upload is already handled by processReceiptImage() in expense-processors.ts
+      // It uploads to storage and passes receipt_image_url to finance-update
+      // No need for redundant async upload here - just log the result
+      
+      if (result.type === 'expense' && result.items.length > 0) {
+        const hasReceiptUrl = Array.isArray(result.expenses) && 
+          result.expenses.some(e => e?.receipt_image_url);
+        
+        if (hasReceiptUrl) {
+          console.log('[receipt-storage] Receipt image already uploaded by processReceiptImage');
+        } else {
+          console.log('[receipt-storage] Receipt processed without image URL (may be fallback case)');
         }
-        });
-      } else {
-        console.log('[async-storage] Skipping upload - receipt could not be read');
+      } else if (result.type === 'fallback') {
+        console.log('[receipt-storage] Receipt could not be read - no image to store');
       }
 
       return xmlResponse(twiml);
@@ -521,7 +542,7 @@ Deno.serve(async (req: Request) => {
         const today = new Date().toISOString().slice(0, 10);
         const contactResult = await supabase
           .from('user_contacts')
-          .select('id')
+          .select('id, preferred_currency')
           .eq('phone_e164', from!)
           .order('id', { ascending: false })
           .limit(1);
@@ -530,11 +551,16 @@ Deno.serve(async (req: Request) => {
           console.error('fetch contact for expenses error', contactResult.error);
           return { text: "❌ *Could not find account*\n\nTry sending a message again." };
         }
+        
+        // Use user's preferred currency for filtering and display
+        const preferredCurrency = contact.preferred_currency || 'USD';
+        
         const { data: rows, error: eErr } = await supabase
           .from('expenses')
           .select('date, amount_cents, currency, category, raw_text, created_at')
           .eq('contact_id', contact.id)
           .eq('date', today)
+          .eq('currency', preferredCurrency)
           .order('created_at', { ascending: true });
         if (eErr) {
           console.error('fetch expenses error', eErr);
@@ -545,28 +571,43 @@ Deno.serve(async (req: Request) => {
         }
         
         const toMoney = (cents: number) => (cents / 100).toFixed(2);
-        const sym = (code: string) => {
-          const m: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', JPY: '¥', AUD: 'A$', CAD: 'C$', SGD: 'S$', HKD: 'HK$', INR: '₹' };
-          const up = (code || 'USD').toUpperCase();
-          return m[up] || '$';
-        };
+        const currencySymbol = getCurrencySymbol(preferredCurrency);
         
         // Build formatted table
         let response = `📊 *Today's Expenses*\n\n`;
         
         rows.forEach((r: any, index: number) => {
-          const s = sym(r.currency || 'USD');
           const amount = toMoney(r.amount_cents);
           const cat = r.category || 'uncategorized';
           
-          response += `${index + 1}. ${s}${amount} - ${cat}\n`;
+          response += `${index + 1}. ${currencySymbol}${amount} - ${cat}\n`;
         });
         
-        // Add separator and total
+        // Add separator and currency-specific totals
         response += `\n━━━━━━━━━━━━━━━━\n\n`;
-        const firstCur = (rows[0]?.currency || 'USD').toUpperCase();
         const totalCents = rows.reduce((s: number, r: any) => s + (r.amount_cents || 0), 0);
-        response += `💰 *Total:* ${sym(firstCur)}${toMoney(totalCents)}`;
+        response += `💰 *Total:* ${currencySymbol}${toMoney(totalCents)}`;
+        
+        // Group by currency to avoid mixed-currency summation
+        const currencyGroups = new Map<string, number>();
+        rows.forEach((r: any) => {
+          const currency = (r.currency || 'USD').toUpperCase();
+          const current = currencyGroups.get(currency) || 0;
+          currencyGroups.set(currency, current + (r.amount_cents || 0));
+        });
+        
+        // Display totals by currency
+        if (currencyGroups.size === 1) {
+          // Single currency - show simple total
+          const [currency, totalCents] = [...currencyGroups.entries()][0];
+          response += `💰 *Total:* ${getCurrencySymbol(currency)}${toMoney(totalCents)}`;
+        } else {
+          // Multiple currencies - show breakdown
+          response += `💰 *Totals by Currency:*\n`;
+          [...currencyGroups.entries()].forEach(([currency, totalCents]) => {
+            response += `   ${getCurrencySymbol(currency)}${toMoney(totalCents)}\n`;
+          });
+        }
         
         return { text: response };
       }
@@ -821,11 +862,31 @@ Deno.serve(async (req: Request) => {
       callerCurrency: userCurrency,
     });
 
-    // Format the result into user-friendly message
-    return { text: formatProcessResult(result, userCurrency) };
+    // Format the result into user-friendly message (with safety wrapper)
+    const formattedText = ensureNonEmptyMessage(
+      formatProcessResult(result, userCurrency),
+      '✅ *Update Recorded*\n\nYour expense has been logged successfully.'
+    );
+    return { text: formattedText };
   };
 
   const reply = await replyText();
+
+  // Debug logging to see what reply is being generated
+  console.log('[twilio-webhook] Reply generated:', { 
+    hasText: !!reply.text, 
+    textLength: reply.text?.length || 0,
+    textPreview: reply.text?.slice(0, 100),
+    hasMedia: !!reply.mediaUrl,
+    from: from,
+    bodyPreview: body?.slice(0, 50)
+  });
+
+  // Don't send empty TwiML messages (e.g., after verification templates)
+  if ((!reply.text || !reply.text.trim()) && !reply.mediaUrl) {
+    console.log('[twilio-webhook] Empty reply detected - returning empty TwiML');
+    return xmlResponse('<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>');
+  }
 
   // Respond with TwiML so Twilio replies to the user (optionally with media)
   const textEsc = reply.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

@@ -3,12 +3,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-
-function symbolFor(code?: string): string {
-  const m: Record<string, string> = { USD: "$", EUR: "€", GBP: "£", JPY: "¥", AUD: "A$", CAD: "C$", SGD: "S$", HKD: "HK$", INR: "₹" };
-  const up = (code || "USD").toUpperCase();
-  return m[up] || "$";
-}
+import { validateCurrency } from "../shared/currency-validator.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -66,7 +62,7 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-  const providedCurrency = (inputCurrency || "USD").toUpperCase();
+  const providedCurrency = validateCurrency(inputCurrency);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -105,7 +101,8 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to fetch contact", 500);
   }
 
-  const preferredCurrency = (contact?.preferred_currency as string | null) || providedCurrency || 'USD';
+  // FIX: Prioritize incoming currency over contact's preferred (for per-currency budgets)
+  const budgetCurrency = providedCurrency || validateCurrency(contact?.preferred_currency as string | null);
 
   if (!contactId) {
     // Create new contact using UPSERT to prevent duplicates
@@ -114,7 +111,7 @@ Deno.serve(async (req: Request) => {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: userId || null, preferred_currency: preferredCurrency, updated_at: new Date().toISOString() },
+          { phone_e164: phone, user_id: userId || null, preferred_currency: budgetCurrency, updated_at: new Date().toISOString() },
           { onConflict: 'phone_e164' }
         )
         .select("id")
@@ -128,7 +125,7 @@ Deno.serve(async (req: Request) => {
       // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, preferred_currency: preferredCurrency })
+        .insert({ user_id: userId, preferred_currency: budgetCurrency })
         .select("id")
         .single();
       if (insertErr) {
@@ -141,9 +138,8 @@ Deno.serve(async (req: Request) => {
 
   // Convert amount to cents
   const budgetCents = Math.round(amount * 100);
-  const budgetCurrency = preferredCurrency;
 
-  // Upsert budget
+  // Upsert budget using new multi-currency constraint
   const { error: upsertErr } = await supabase
     .from("daily_budgets")
     .upsert(
@@ -154,7 +150,7 @@ Deno.serve(async (req: Request) => {
         currency: budgetCurrency, 
         updated_at: new Date().toISOString() 
       }], 
-      { onConflict: "contact_id,date" }
+      { onConflict: "contact_id,date,currency" }  // Updated: now includes currency
     );
 
   if (upsertErr) {
@@ -162,12 +158,13 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Failed to save budget", 500);
   }
 
-  // Get totals for today
+  // Get totals for today - ONLY sum expenses matching the budget currency
   const { data: expenseRows } = await supabase
     .from("expenses")
-    .select("amount_cents")
+    .select("amount_cents,currency")
     .eq("contact_id", contactId)
-    .eq("date", dateStr);
+    .eq("date", dateStr)
+    .eq("currency", budgetCurrency);
 
   const totalSpentCents = (expenseRows || []).reduce((sum, r: any) => sum + (r.amount_cents || 0), 0);
   const remainingCents = Math.max(budgetCents - totalSpentCents, 0);
@@ -190,7 +187,7 @@ Deno.serve(async (req: Request) => {
   };
 
   // Simple text reply
-  const sym = symbolFor(budgetCurrency);
+  const sym = getCurrencySymbol(budgetCurrency);
   const toMoney = (cents: number) => (cents / 100).toFixed(2);
   const reply = `Budget set to ${sym}${toMoney(budgetCents)}. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${toMoney(budgetCents)}. Remaining: ${sym}${toMoney(remainingCents)}.`;
 
