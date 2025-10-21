@@ -795,107 +795,173 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
       await sendUserEmail(user.email, user.full_name || '', emailTemplate)
       console.log(`Invoice receipt email sent to ${user.email} with PDF link`)
     } else {
-      // CRITICAL FIX: Handle ONE-TIME PAYMENT invoices (Lifetime)
-      // For Checkout with mode='payment', invoice.subscription is NULL
-      // This acts as backup/verification for checkout.session.completed
+      // CRITICAL: Handle ONE-TIME invoices (e.g., Lifetime), including manual $0 invoices with discounts
+      // invoice.subscription === null. This is a backup/verification path for Checkout mode=payment
       console.log('Processing one-time payment invoice (no subscription):', invoice.id)
-      
-      // Get customer ID
+
+      // Get customer and mapped user
       const customerId = typeof invoice.customer === 'string'
         ? invoice.customer
         : invoice.customer?.id
-      
+
       if (!customerId) {
         console.error('No customer ID in one-time payment invoice:', invoice.id)
         return
       }
-      
-      // Get payment intent to access metadata
+
+      const user = await getUserByCustomerId(customerId)
+      const mappedUserId = user?.id as string | undefined
+
+      // Try to determine plan and user by multiple fallbacks
+      // 1) PaymentIntent metadata (preferred when present)
       const paymentIntentId = typeof invoice.payment_intent === 'string'
         ? invoice.payment_intent
         : invoice.payment_intent?.id
-      
-      if (!paymentIntentId) {
-        console.log('No payment_intent in invoice, skipping one-time payment handling')
-        return
-      }
-      
-      try {
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-        const plan = paymentIntent.metadata?.plan
-        const userId = paymentIntent.metadata?.user_id
-        
-        if (!plan || !userId) {
-          console.log('No plan or user_id in payment_intent metadata, skipping')
-          return
+
+      let determinedPlan: PlanType | null = null
+      let determinedUserId: string | null = null
+
+      if (paymentIntentId) {
+        try {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+          const piPlan = paymentIntent.metadata?.plan as PlanType | undefined
+          const piUserId = paymentIntent.metadata?.user_id as string | undefined
+          if (piPlan) determinedPlan = piPlan
+          if (piUserId) determinedUserId = piUserId
+        } catch (piErr) {
+          console.error('Error retrieving payment_intent metadata:', piErr)
         }
-        
-        if (plan === 'lifetime') {
-          console.log(`ONE-TIME PAYMENT: Lifetime plan for user ${userId}`)
-          
-          // Verify user has lifetime subscription - if not, create it (backup)
-          const { data: existingSub } = await supabase
-            .from('subscriptions')
-            .select('plan, status')
-            .eq('user_id', userId)
-            .maybeSingle()
-          
-          if (existingSub?.plan === 'lifetime' && existingSub?.status === 'active') {
-            console.log(`✅ User ${userId} already has active lifetime subscription`)
-          } else {
-            console.warn(`⚠️  BACKUP FULFILLMENT: User ${userId} paid for lifetime but doesn't have it! Creating now...`)
-            
-            // Create lifetime subscription (backup for failed checkout.session.completed)
-            const lifetimeData = {
-              user_id: userId,
-              plan: 'lifetime',
-              status: 'active',
-              stripe_customer_id: customerId,
-              stripe_subscription_id: null,
-              billing_interval: null,
-              current_period_end: null,
-              cancel_at_period_end: false,
-              trial_start: null,
-              trial_end: null,
-              last_event_id: `backup_${eventId}`,
-              updated_at: new Date().toISOString(),
-            }
-            
-            const { error: upsertError } = await supabase
-              .from('subscriptions')
-              .upsert(lifetimeData, {
-                onConflict: 'user_id',
-                ignoreDuplicates: false
-              })
-            
-            if (upsertError) {
-              console.error('CRITICAL: Backup fulfillment failed:', upsertError)
-              throw upsertError
-            }
-            
-            console.log(`✅ BACKUP FULFILLMENT SUCCESS: Lifetime subscription created for user ${userId}`)
-            
-            // Send confirmation email
-            const { data: userData } = await supabase
-              .from('users')
-              .select('email, full_name')
-              .eq('id', userId)
-              .single()
-            
-            if (userData) {
-              const emailTemplate = subscriptionCreatedTemplate({
-                name: userData.full_name || '',
-                planName: 'Lifetime',
-                dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
-                isLifetime: true
-              })
-              await sendUserEmail(userData.email, userData.full_name || '', emailTemplate)
-              console.log(`Lifetime confirmation email sent to ${userData.email}`)
-            }
+      }
+
+      // 2) Invoice metadata fallback (plan)
+      if (!determinedPlan && (invoice as any).metadata?.plan) {
+        determinedPlan = ((invoice as any).metadata.plan as string) as PlanType
+      }
+
+      // 2b) Invoice metadata fallback (user id)
+      if (!determinedUserId && (invoice as any).metadata) {
+        const meta: any = (invoice as any).metadata
+        if (meta.user_id || meta.userId) {
+          determinedUserId = (meta.user_id || meta.userId) as string
+        }
+      }
+
+      // 3) Price ID mapping from invoice lines
+      if (!determinedPlan && invoice.lines?.data?.length) {
+        const lineAny: any = invoice.lines.data[0]
+        const priceId = lineAny?.price?.id || lineAny?.pricing?.price_details?.price
+        if (priceId) {
+          const planInfo = getPlanFromPriceId(priceId)
+          if (planInfo?.plan) {
+            determinedPlan = planInfo.plan
           }
         }
-      } catch (piError) {
-        console.error('Error retrieving payment_intent for one-time payment:', piError)
+      }
+
+      // 4) Product name heuristic (last resort)
+      if (!determinedPlan && invoice.lines?.data?.length) {
+        const productId = getProductIdFromPrice(invoice.lines.data[0]?.price)
+        if (productId) {
+          try {
+            const product = await stripe.products.retrieve(productId)
+            if (product?.name && /lifetime/i.test(product.name)) {
+              determinedPlan = 'lifetime'
+            }
+          } catch (prodErr) {
+            console.error('Error retrieving product for invoice line:', prodErr)
+          }
+        }
+      }
+
+      // Resolve userId: prefer PI metadata, else mapped user from customer
+      const userId = determinedUserId || mappedUserId
+
+      if (!determinedPlan) {
+        console.log('One-time invoice without determinable plan; skipping fulfillment', {
+          invoiceId: invoice.id,
+          hasPaymentIntent: !!paymentIntentId,
+          linePriceId: invoice.lines?.data?.[0]?.price?.id || null,
+        })
+        return
+      }
+
+      if (!userId) {
+        console.error('Cannot fulfill one-time invoice: user not resolved from customer mapping or metadata', {
+          invoiceId: invoice.id,
+          customerId,
+        })
+        return
+      }
+
+      // Only fulfill one-time Lifetime. Recurring plans must come via subscriptions
+      if (determinedPlan === 'lifetime') {
+        // Note: invoice.amount_paid can be 0 (100% discount). Stripe marks status=paid; honor that.
+        console.log(`ONE-TIME LIFETIME FULFILLMENT: user=${userId}, invoice=${invoice.id}, amount_paid=${invoice.amount_paid}`)
+
+        // Check existing sub
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('plan, status')
+          .eq('user_id', userId)
+          .maybeSingle()
+
+        if (existingSub?.plan === 'lifetime' && existingSub?.status === 'active') {
+          console.log(`✅ User ${userId} already has active lifetime subscription`)
+          return
+        }
+
+        const lifetimeData = {
+          user_id: userId,
+          plan: 'lifetime',
+          status: 'active',
+          stripe_customer_id: customerId,
+          stripe_subscription_id: null,
+          billing_interval: null,
+          current_period_end: null,
+          cancel_at_period_end: false,
+          trial_start: null,
+          trial_end: null,
+          last_event_id: `invoice_${eventId}`,
+          updated_at: new Date().toISOString(),
+        }
+
+        const { error: upsertError } = await supabase
+          .from('subscriptions')
+          .upsert(lifetimeData, {
+            onConflict: 'user_id',
+            ignoreDuplicates: false
+          })
+
+        if (upsertError) {
+          console.error('CRITICAL: Lifetime fulfillment upsert failed:', upsertError)
+          throw upsertError
+        }
+
+        console.log(`✅ Lifetime subscription upserted for user ${userId}`)
+
+        // Send confirmation email
+        const { data: userData } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single()
+
+        if (userData) {
+          const emailTemplate = subscriptionCreatedTemplate({
+            name: userData.full_name || '',
+            planName: 'Lifetime',
+            dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+            isLifetime: true
+          })
+          await sendUserEmail(userData.email, userData.full_name || '', emailTemplate)
+          console.log(`Lifetime confirmation email sent to ${userData.email}`)
+        }
+      } else {
+        // Safety: do not create recurring subscriptions from manual invoices without subscription ID
+        console.log('One-time invoice maps to non-lifetime plan; skipping DB subscription creation', {
+          invoiceId: invoice.id,
+          plan: determinedPlan,
+        })
       }
     }
   } catch (error) {
@@ -1127,11 +1193,19 @@ async function handleCheckoutSessionCompleted(
   try {
     console.log('Processing checkout session completed:', session.id)
     
-    // Get user ID from session metadata
-    const userId = session.metadata?.user_id || session.client_reference_id
-    
+    // Resolve user ID from session metadata/client_reference_id; fallback to PaymentIntent metadata
+    let userId: string | undefined = (session.metadata?.user_id || (session.metadata as any)?.userId || session.client_reference_id) as string | undefined
+    if (!userId && session.payment_intent) {
+      const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id
+      try {
+        const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+        userId = (pi.metadata?.user_id || (pi.metadata as any)?.userId) as string | undefined
+      } catch (e) {
+        console.error('Error retrieving PaymentIntent for user_id fallback:', (e as any)?.message || e)
+      }
+    }
     if (!userId) {
-      console.error('No user ID in checkout session:', session.id)
+      console.error('No user ID in checkout session (and PI fallback failed):', session.id)
       return
     }
     
@@ -1162,8 +1236,21 @@ async function handleCheckoutSessionCompleted(
       console.log('One-time payment completed:', session.id)
 
       // LIFETIME PLAN: Create subscription record with special handling
-      // CRITICAL: Validate metadata explicitly - don't assume payment mode = lifetime
-      const plan = session.metadata?.plan
+      // Resolve plan from session metadata; fallback to PaymentIntent metadata
+      let plan: string | undefined = session.metadata?.plan as string | undefined
+      if (!plan && session.payment_intent) {
+        const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent.id
+        try {
+          const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+          plan = pi.metadata?.plan as string | undefined
+          // Also backfill userId if still missing (defensive)
+          if (!userId) {
+            userId = (pi.metadata?.user_id || (pi.metadata as any)?.userId) as string | undefined
+          }
+        } catch (e) {
+          console.error('Error retrieving PaymentIntent for plan fallback:', (e as any)?.message || e)
+        }
+      }
       
       if (!plan) {
         console.error('CRITICAL: Payment mode checkout without plan metadata!', {

@@ -404,13 +404,13 @@ function CheckoutPage() {
           : (() => {
               const params = new URLSearchParams();
               params.set('status', 'success');
-              params.set('session_id', '{CHECKOUT_SESSION_ID}');
+              // DO NOT encode the Stripe placeholder; append it raw at the end
               params.set('plan', selectedPlan);
               if (selectedBilling) params.set('billing', selectedBilling);
               if (promo) params.set('promo', promo);
               if (source) params.set('source', source);
               if (redirectUrl) params.set('redirectUrl', redirectUrl);
-              return `${origin}/checkout?${params.toString()}`;
+              return `${origin}/checkout?${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
             })();
         
         const cancelUrl = isMobileCheckout && redirectUrl
@@ -418,12 +418,12 @@ function CheckoutPage() {
           : (() => {
               const params = new URLSearchParams();
               params.set('status', 'canceled');
-              params.set('session_id', '{CHECKOUT_SESSION_ID}');
+              // DO NOT encode the Stripe placeholder; append it raw at the end
               params.set('plan', selectedPlan);
               if (selectedBilling) params.set('billing', selectedBilling);
               if (promo) params.set('promo', promo);
               if (source) params.set('source', source);
-              return `${origin}/checkout?${params.toString()}`;
+              return `${origin}/checkout?${params.toString()}&session_id={CHECKOUT_SESSION_ID}`;
             })();
         
         // Create a payment session on the server
