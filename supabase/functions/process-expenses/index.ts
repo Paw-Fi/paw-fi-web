@@ -72,7 +72,57 @@ Deno.serve(async (req: Request) => {
 
     // Set defaults with validation
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
-    const callerCurrency = validateCurrency(body.currency);
+    
+    // CURRENCY HIERARCHY (Layers 2-4):
+    // Layer 1: Gemini detects currency in photo/text (handled by processors)
+    // Layer 2: body.currency (user manually selected currency in app)
+    // Layer 3: preferred_currency from database (user's saved preference)
+    // Layer 4: 'USD' (final fallback)
+    
+    let callerCurrency: string;
+    
+    if (body.currency) {
+      // Layer 2: User selected currency in request
+      callerCurrency = validateCurrency(body.currency);
+      console.log('[process-expenses] Using Layer 2 currency (request):', callerCurrency);
+    } else {
+      // Layer 3: Fetch user's preferred currency from database
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+        global: { headers: { 'X-Client-Info': 'moneko-process-expenses-currency' } },
+      });
+      
+      let preferredCurrency: string | null = null;
+      
+      if (body.userId) {
+        const { data: contact } = await supabase
+          .from('user_contacts')
+          .select('preferred_currency')
+          .eq('user_id', body.userId)
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        preferredCurrency = contact?.preferred_currency || null;
+      } else if (body.phone) {
+        const { data: contact } = await supabase
+          .from('user_contacts')
+          .select('preferred_currency')
+          .eq('phone_e164', body.phone)
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        preferredCurrency = contact?.preferred_currency || null;
+      }
+      
+      if (preferredCurrency) {
+        callerCurrency = validateCurrency(preferredCurrency);
+        console.log('[process-expenses] Using Layer 3 currency (preferred_currency):', callerCurrency);
+      } else {
+        // Layer 4: Final fallback
+        callerCurrency = 'USD';
+        console.log('[process-expenses] Using Layer 4 currency (USD fallback)');
+      }
+    }
 
     let result: ProcessResult;
 
@@ -102,21 +152,57 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Decode base64 image
+      // Decode base64 image with enhanced error handling
       let imageBuffer: Uint8Array;
       try {
+        // Validate image data is not empty
+        if (!body.image.data || body.image.data.trim().length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Image data is empty' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
         const base64Data = body.image.data.replace(/^data:image\/\w+;base64,/, '');
+        
+        // Validate base64 data
+        if (base64Data.length === 0) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Image data is empty after removing prefix' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
         imageBuffer = bytes;
+        
+        // Validate image size (max 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (imageBuffer.length > maxSize) {
+          return new Response(
+            JSON.stringify({ success: false, error: `Image too large. Maximum size is 10MB, received ${(imageBuffer.length / 1024 / 1024).toFixed(2)}MB` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Validate minimum image size (1KB to prevent empty images)
+        if (imageBuffer.length < 1024) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Image too small. Minimum size is 1KB' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log(`[process-expenses] Image decoded successfully: ${(imageBuffer.length / 1024).toFixed(2)}KB`);
       } catch (e) {
         console.error('[process-expenses] Failed to decode base64 image:', e);
         return new Response(
-          JSON.stringify({ error: 'Invalid base64 image data' }),
+          JSON.stringify({ success: false, error: 'Invalid base64 image data', details: e instanceof Error ? e.message : String(e) }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

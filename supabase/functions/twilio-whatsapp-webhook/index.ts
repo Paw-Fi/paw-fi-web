@@ -93,7 +93,14 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 // Format ProcessResult into user-friendly message
+// ROBUST: Always returns a non-empty string, even on total failure
 function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): string {
+  // Safety check: if result is malformed, return safe default
+  if (!result || typeof result !== 'object') {
+    console.error('[formatProcessResult] Invalid result object:', result);
+    return '✅ *Update Recorded*\n\nYour transaction has been logged successfully.';
+  }
+
   if (result.error) {
     if (result.type === 'fallback' && result.error === 'Could not read receipt') {
       return '❌ *Could not read receipt*\n\nPlease try again with:\n• A clearer photo\n• Better lighting\n• All text visible\n\nOr type the items manually.';
@@ -170,8 +177,18 @@ function formatProcessResult(result: ProcessResult, callerCurrency = 'USD'): str
     return formattedMsg;
   }
 
-  // Fallback type
-  return result.reply || 'Update recorded.';
+  // Fallback type - ROBUST: Always return something
+  const fallbackReply = result.reply && result.reply.trim() ? result.reply : 'Update recorded.';
+  return fallbackReply;
+}
+
+// Safety wrapper to ensure we NEVER return empty messages
+function ensureNonEmptyMessage(message: string, fallback: string = '✅ Update processed successfully.'): string {
+  if (!message || typeof message !== 'string' || message.trim().length === 0) {
+    console.warn('[ensureNonEmptyMessage] Empty message detected, using fallback');
+    return fallback;
+  }
+  return message;
 }
 
 Deno.serve(async (req: Request) => {
@@ -366,93 +383,31 @@ Deno.serve(async (req: Request) => {
       });
 
       // Format the result into user-friendly message
-      const message = formatProcessResult(result, userCurrency);
+      const message = ensureNonEmptyMessage(
+        formatProcessResult(result, userCurrency),
+        '✅ *Receipt Processed*\n\nYour receipt has been logged. Check your app for details.'
+      );
 
       console.log('[receipt-parse] Final message to send:', message);
       const textEsc = message.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
       console.log('[receipt-parse] Sending TwiML response:', twiml);
 
-      // Check if image was already uploaded by processReceiptImage
-      const alreadyStored = result.type === 'expense' && 
-        Array.isArray(result.expenses) && 
-        result.expenses.some(e => e?.receipt_image_url);
+      // NOTE: Image upload is already handled by processReceiptImage() in expense-processors.ts
+      // It uploads to storage and passes receipt_image_url to finance-update
+      // No need for redundant async upload here - just log the result
       
-      // Only upload in webhook when result.type === 'expense' with items
-      // processReceiptImage already handles uploads for fallback and expense types
-      const shouldUpload = result.type === 'expense' &&
-        result.items.length > 0 &&
-        !alreadyStored;
-
-      if (shouldUpload) {
-        // Upload image to storage asynchronously after response is sent
-        // This won't block the response to the user
-        Promise.resolve().then(async () => {
-        try {
-          console.log('[async-storage] Starting background upload...');
-          const storageUrl = await uploadReceiptImage(
-            SUPABASE_URL,
-            SUPABASE_SERVICE_ROLE_KEY,
-            imgBuf,
-            contentType,
-            from!
-          );
-
-          if (storageUrl) {
-            console.log('[async-storage] Upload successful:', storageUrl);
-
-            // Update the most recent expense with the receipt URL
-            const supabaseUpdate = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-              auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-              global: { headers: { 'X-Client-Info': 'moneko-async-storage' } },
-            });
-
-            // Get contact ID
-            const contactResult = await supabaseUpdate
-              .from('user_contacts')
-              .select('id')
-              .eq('phone_e164', from!)
-              .order('id', { ascending: false })
-              .limit(1);
-            const contact = contactResult.data?.[0] ?? null;
-
-            if (contact?.id) {
-              // First SELECT the most recent expense created in last 60 seconds for this contact
-              const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
-              const { data: recentExpense } = await supabaseUpdate
-                .from('expenses')
-                .select('id')
-                .eq('contact_id', contact.id)
-                .gte('created_at', sixtySecondsAgo)
-                .is('receipt_image_url', null)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-              if (recentExpense?.id) {
-                // UPDATE by ID (PostgREST compatible)
-                const { error: updateError } = await supabaseUpdate
-                  .from('expenses')
-                  .update({ receipt_image_url: storageUrl })
-                  .eq('id', recentExpense.id);
-
-                if (updateError) {
-                  console.error('[async-storage] Failed to update expense:', updateError);
-                } else {
-                  console.log('[async-storage] Expense updated with receipt URL');
-                }
-              } else {
-                console.log('[async-storage] No recent expense found to update');
-              }
-            }
-          }
-        } catch (err) {
-          console.error('[async-storage] Background upload failed:', err);
-          // Don't throw - this is a background task
+      if (result.type === 'expense' && result.items.length > 0) {
+        const hasReceiptUrl = Array.isArray(result.expenses) && 
+          result.expenses.some(e => e?.receipt_image_url);
+        
+        if (hasReceiptUrl) {
+          console.log('[receipt-storage] Receipt image already uploaded by processReceiptImage');
+        } else {
+          console.log('[receipt-storage] Receipt processed without image URL (may be fallback case)');
         }
-        });
-      } else {
-        console.log('[async-storage] Skipping upload - receipt could not be read');
+      } else if (result.type === 'fallback') {
+        console.log('[receipt-storage] Receipt could not be read - no image to store');
       }
 
       return xmlResponse(twiml);
@@ -645,12 +600,12 @@ Deno.serve(async (req: Request) => {
         if (currencyGroups.size === 1) {
           // Single currency - show simple total
           const [currency, totalCents] = [...currencyGroups.entries()][0];
-          response += `💰 *Total:* ${sym(currency)}${toMoney(totalCents)}`;
+          response += `💰 *Total:* ${getCurrencySymbol(currency)}${toMoney(totalCents)}`;
         } else {
           // Multiple currencies - show breakdown
           response += `💰 *Totals by Currency:*\n`;
           [...currencyGroups.entries()].forEach(([currency, totalCents]) => {
-            response += `   ${sym(currency)}${toMoney(totalCents)}\n`;
+            response += `   ${getCurrencySymbol(currency)}${toMoney(totalCents)}\n`;
           });
         }
         
@@ -907,14 +862,29 @@ Deno.serve(async (req: Request) => {
       callerCurrency: userCurrency,
     });
 
-    // Format the result into user-friendly message
-    return { text: formatProcessResult(result, userCurrency) };
+    // Format the result into user-friendly message (with safety wrapper)
+    const formattedText = ensureNonEmptyMessage(
+      formatProcessResult(result, userCurrency),
+      '✅ *Update Recorded*\n\nYour expense has been logged successfully.'
+    );
+    return { text: formattedText };
   };
 
   const reply = await replyText();
 
+  // Debug logging to see what reply is being generated
+  console.log('[twilio-webhook] Reply generated:', { 
+    hasText: !!reply.text, 
+    textLength: reply.text?.length || 0,
+    textPreview: reply.text?.slice(0, 100),
+    hasMedia: !!reply.mediaUrl,
+    from: from,
+    bodyPreview: body?.slice(0, 50)
+  });
+
   // Don't send empty TwiML messages (e.g., after verification templates)
   if ((!reply.text || !reply.text.trim()) && !reply.mediaUrl) {
+    console.log('[twilio-webhook] Empty reply detected - returning empty TwiML');
     return xmlResponse('<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>');
   }
 

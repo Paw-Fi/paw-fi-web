@@ -4,6 +4,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { uploadReceiptImage } from "./storage-helper.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
 
+// Retry helper for critical operations
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 2,
+  delayMs: number = 500,
+  operationName: string = 'operation'
+): Promise<T> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      console.warn(`[retry] ${operationName} attempt ${attempt}/${maxRetries} failed:`, error);
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export interface ExpenseItem {
   amount: number;
   category?: string;
@@ -43,6 +65,11 @@ export type ProcessResult = BudgetResult | ExpenseResult | FallbackResult;
 /**
  * Processes free-form text to extract and log expenses using Gemini AI
  * Returns raw data without formatting - parent should handle presentation
+ * 
+ * CURRENCY PRIORITY:
+ * 1. Currency explicitly mentioned in text (e.g., "50 EUR", "100 RM") - Gemini detects
+ * 2. callerCurrency parameter (from caller - can be user selected or preferred_currency)
+ * 3. 'USD' default (applied by caller before calling this function)
  */
 export async function processFreeFormTextExpense(params: {
   userId?: string;
@@ -52,7 +79,7 @@ export async function processFreeFormTextExpense(params: {
   supabaseServiceRoleKey: string;
   geminiApiKey: string;
   callerDate?: string;
-  callerCurrency?: string;
+  callerCurrency?: string;  // DEFAULT currency if not detected in text (should already be: inputCurrency || preferred_currency || 'USD')
 }): Promise<ProcessResult> {
   const {
     userId,
@@ -62,7 +89,7 @@ export async function processFreeFormTextExpense(params: {
     supabaseServiceRoleKey,
     geminiApiKey,
     callerDate = new Date().toISOString().slice(0, 10),
-    callerCurrency = 'USD',
+    callerCurrency = 'USD',  // Final fallback if caller doesn't provide
   } = params;
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -118,8 +145,11 @@ export async function processFreeFormTextExpense(params: {
   const systemInstruction =
     'You are a budgeting assistant. Decide whether the user is setting a budget or logging expenses. '
     + 'Always infer and attach clear categories for each expense item (e.g., groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other). '
-    + 'CURRENCY HANDLING: If the user explicitly mentions a currency (e.g., "50 USD", "100 RM", "75 SAR"), use that currency. '
-    + 'If NO currency is mentioned in the text, you MUST use the Caller Currency. DO NOT leave currency field empty. '
+    + '\n\nCURRENCY HANDLING (STRICT PRIORITY):\n'
+    + '1. FIRST: Look for currency explicitly mentioned by user (e.g., "50 USD", "€100", "100 RM", "75 SAR")\n'
+    + '   - If found, use THAT currency code (EUR for €, MYR for RM, SAR for ر.س, etc.)\n'
+    + '2. FALLBACK: If NO currency is mentioned, use the Caller Currency provided below\n'
+    + '3. NEVER leave currency field empty - always provide currency code\n\n'
     + 'Use the provided functions to perform updates, including category fields. Keep replies short and human-friendly.';
 
   const response = await model.generateContent({
@@ -172,13 +202,42 @@ export async function processFreeFormTextExpense(params: {
         })
         .join(', ');
 
-      const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { userId, phone, text: composed, date: callerDate, currency: callerCurrency },
-      });
+      // ROBUST: Retry finance-update call with exponential backoff
+      let data: any, error: any;
+      try {
+        const result = await retryOperation(
+          async () => {
+            const response = await supabase.functions.invoke('finance-update', {
+              body: { userId, phone, text: composed, date: callerDate, currency: callerCurrency },
+            });
+            if (response.error) throw response.error;
+            return response;
+          },
+          2, // max 2 retries
+          500, // 500ms initial delay
+          'finance-update(add_expenses)'
+        );
+        data = result.data;
+        error = result.error;
+      } catch (e) {
+        error = e;
+        console.error('add_expenses via finance-update error (after retries):', error);
+        return { 
+          type: 'expense', 
+          items, 
+          error: 'Failed to add expenses. Please try again.',
+          reply: `Added ${items.length} expense(s) locally, but sync failed. Please check your connection.`
+        };
+      }
 
       if (error) {
         console.error('add_expenses via finance-update error', error);
-        return { type: 'expense', items, error: 'Failed to add expenses' };
+        return { 
+          type: 'expense', 
+          items, 
+          error: 'Failed to add expenses',
+          reply: `Expenses logged but totals couldn't be calculated. Check your app.`
+        };
       }
 
       return {
@@ -225,6 +284,11 @@ function b64encode(bytes: Uint8Array): string {
 /**
  * Processes receipt image to extract and log expenses using Gemini Vision AI
  * Returns raw data without formatting - parent should handle presentation
+ * 
+ * CURRENCY PRIORITY:
+ * 1. Currency detected on receipt (€, $, RM, etc.) - Gemini Vision detects
+ * 2. callerCurrency parameter (from caller - can be user selected or preferred_currency)
+ * 3. 'USD' default (applied by caller before calling this function)
  */
 export async function processReceiptImage(params: {
   userId?: string;
@@ -235,7 +299,7 @@ export async function processReceiptImage(params: {
   supabaseServiceRoleKey: string;
   geminiApiKey: string;
   callerDate?: string;
-  callerCurrency?: string;
+  callerCurrency?: string;  // DEFAULT currency if not detected on receipt (should already be: inputCurrency || preferred_currency || 'USD')
 }): Promise<ProcessResult> {
   const {
     userId,
@@ -246,7 +310,7 @@ export async function processReceiptImage(params: {
     supabaseServiceRoleKey,
     geminiApiKey,
     callerDate = new Date().toISOString().slice(0, 10),
-    callerCurrency = 'USD',
+    callerCurrency = 'USD',  // Final fallback if caller doesn't provide
   } = params;
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -310,17 +374,23 @@ CRITICAL INSTRUCTIONS:
 6. Do NOT create separate expenses for each line item - only ONE expense with the total
 7. CAREFULLY look for any date information on the receipt (transaction date, order date, etc.)
 
-CURRENCY HANDLING (CRITICAL):
-- Look for currency symbols or codes on the receipt (e.g., $, €, RM, SAR, etc.)
-- If you find a clear currency on the receipt, use that currency code (e.g., "MYR" for RM, "USD" for $)
-- If NO currency is visible or the currency is unclear/unreadable, you MUST use the Caller Currency: ${callerCurrency}
-- DO NOT leave currency empty - always provide either the detected currency OR ${callerCurrency}
+CURRENCY HANDLING (STRICT PRIORITY):
+Priority 1: DETECT currency on receipt
+- Look carefully for currency symbols or codes on the receipt (€, $, £, RM, SAR, د.إ, ₹, ¥, etc.)
+- Common mappings: € = EUR, $ = USD, RM = MYR, SAR = SAR, د.إ = AED, £ = GBP, ₹ = INR, ¥ = JPY/CNY
+- If you find ANY currency indicator on the receipt, use that currency code
+
+Priority 2: FALLBACK to Caller Currency
+- If NO currency is visible, unclear, or unreadable on receipt, use: ${callerCurrency}
+
+Priority 3: NEVER leave empty
+- You MUST always provide a currency code - either detected OR ${callerCurrency}
 
 Use the add_expenses tool with a single item containing:
 - amount: the final total (e.g., 61.95)
 - category: appropriate category (e.g., "dining", "food", "groceries")
 - note: brief description of main items (e.g., "Burrata, Solomillo, Chocolate, drinks")
-- currency: extract from receipt or use ${callerCurrency}
+- currency: DETECTED currency OR ${callerCurrency} (NEVER empty)
 - date: IMPORTANT - Look carefully for the transaction date on the receipt. Extract it in YYYY-MM-DD format if found, otherwise use ${callerDate}`;
 
   const result = await model.generateContent([
@@ -397,22 +467,53 @@ Use the add_expenses tool with a single item containing:
 
       console.log('[add_expenses] Composed text for finance-update:', composed);
 
-      const { data, error } = await supabase.functions.invoke('finance-update', {
-        body: { 
-          userId, 
-          phone, 
-          text: composed, 
-          date: callerDate,
-          currency: callerCurrency,
-          receipt_image_url: receiptImageUrl // Pass the uploaded image URL
-        },
-      });
+      // ROBUST: Retry receipt processing with exponential backoff
+      let data: any, error: any;
+      try {
+        const result = await retryOperation(
+          async () => {
+            const response = await supabase.functions.invoke('finance-update', {
+              body: { 
+                userId, 
+                phone, 
+                text: composed, 
+                date: callerDate,
+                currency: callerCurrency,
+                receipt_image_url: receiptImageUrl
+              },
+            });
+            if (response.error) throw response.error;
+            return response;
+          },
+          2,
+          500,
+          'finance-update(receipt)'
+        );
+        data = result.data;
+        error = result.error;
+      } catch (e) {
+        error = e;
+        console.error('add_expenses(receipt) error (after retries):', error);
+        return { 
+          type: 'expense', 
+          items, 
+          isReceipt: true,
+          error: 'Receipt uploaded but processing failed',
+          reply: `Receipt saved but couldn't calculate totals. Check your app for details.`
+        };
+      }
 
       console.log('[add_expenses] finance-update response:', { data, error });
 
       if (error) {
         console.error('add_expenses(receipt) error', error);
-        return { type: 'expense', items, error: 'Failed to add expenses' };
+        return { 
+          type: 'expense', 
+          items, 
+          isReceipt: true,
+          error: 'Failed to process receipt',
+          reply: `Receipt logged but totals couldn't be calculated.`
+        };
       }
 
       return {
