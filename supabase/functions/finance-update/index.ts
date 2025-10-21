@@ -374,13 +374,13 @@ Rules:
   // Simple text reply for bots to display
   // Determine the appropriate date for totals display
   let dateForTotals = dateStr;
-  let dateLabel = 'Today';
+  let dateLabel = dateForTotals; // Use actual date to avoid timezone issues
   
   if (Array.isArray(results.expenses) && results.expenses.length) {
     const dates = new Set(results.expenses.map((r: any) => r.date));
     if (dates.size === 1) {
       dateForTotals = [...dates][0] as string;
-      dateLabel = dateForTotals === new Date().toISOString().slice(0, 10) ? 'Today' : dateForTotals;
+      dateLabel = dateForTotals; // Always show the actual date
     }
   }
 
