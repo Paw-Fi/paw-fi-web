@@ -13,7 +13,8 @@ import {
   invoiceUpcomingTemplate,
   paymentActionRequiredTemplate,
   paymentMethodUpdatedTemplate,
-  invoicePaymentSucceededTemplate
+  invoicePaymentSucceededTemplate,
+  discountExpiringTemplate
 } from '../shared/email-templates.ts'
 import { validateEnvironment } from '../shared/env-validation.ts'
 import { isWebhookEventProcessed, markWebhookEventProcessed } from '../shared/idempotency.ts'
@@ -1039,15 +1040,20 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
         }
         
         const name = userData.full_name || ''
+        
+        // Send payment failure email with downgrade notification
+        // User will be downgraded when subscription status changes to unpaid/incomplete_expired
         const emailTemplate = paymentFailedTemplate({
           name,
           planName,
-          dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
-          updatePaymentUrl: `${DASHBOARD_URL}/dashboard/membership?tab=payment`
+          dashboardUrl: 'https://moneko.io/dashboard/user-settings/membership',
+          updatePaymentUrl: 'https://moneko.io/dashboard/user-settings/membership',
+          isDowngraded: true, // Indicate user will be/has been downgraded
+          resubscribeUrl: 'https://moneko.io/dashboard/user-settings/membership', // CTA for resubscription
         })
         
         await sendUserEmail(userData.email, name, emailTemplate)
-        console.log(`Payment failure email sent to ${userData.email}`)
+        console.log(`💳 Payment failure with downgrade notification sent to ${userData.email}`)
       }
     }
   } catch (error) {
@@ -1533,6 +1539,68 @@ async function handleInvoiceUpcoming(invoice: Stripe.Invoice) {
     const now = new Date()
     const daysUntil = Math.ceil((chargeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     
+    // === DISCOUNT EXPIRATION DETECTION (2025 Stripe API) ===
+    // Check if this invoice has active discounts but no payment method
+    // Using correct 2025 property names: invoice.discounts (array), invoice.total_discount_amounts
+    const hasActiveDiscount = (invoice.discounts && invoice.discounts.length > 0) || 
+                             (invoice.total_discount_amounts && invoice.total_discount_amounts.length > 0)
+    
+    // Check if customer has payment method - need to check both invoice and customer
+    // Per 2025 Stripe docs: invoice.default_payment_method can be null even if customer has one
+    let hasPaymentMethod = !!invoice.default_payment_method
+    
+    if (!hasPaymentMethod) {
+      // Double-check customer's default payment method (more reliable)
+      try {
+        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer
+        hasPaymentMethod = !!(customer.invoice_settings?.default_payment_method)
+      } catch (err) {
+        console.error('Error retrieving customer for payment method check:', err)
+      }
+    }
+    
+    // PROMOTIONAL DISCOUNT EXPIRING SCENARIO
+    // If discount is active but no payment method, user will be charged and fail
+    // Send proactive reminder emails at key intervals
+    if (hasActiveDiscount && !hasPaymentMethod) {
+      console.log(`🎫 Discount expiring scenario for ${user.email}: discount active but no payment method`)
+      console.log(`   Days until charge: ${daysUntil}`)
+      
+      // Only send reminders at specific intervals: 30, 14, 7, 3 days before expiry
+      const reminderDays = [30, 14, 7, 3]
+      if (!reminderDays.includes(daysUntil)) {
+        console.log(`   Not a reminder day (${daysUntil} days), skipping discount expiration email`)
+        return
+      }
+      
+      console.log(`📧 Sending ${daysUntil}-day discount expiration reminder to ${user.email}`)
+      
+      // Get plan name from invoice line items
+      const productId = invoice.lines?.data?.length > 0
+        ? getProductIdFromPrice(invoice.lines.data[0]?.price)
+        : null
+      const planName = await getPlanNameFromProductId(productId)
+      
+      // Send discount expiration reminder email
+      const emailTemplate = discountExpiringTemplate({
+        name: user.full_name || 'there',
+        planName,
+        daysUntil,
+        expiryDate: chargeDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        dashboardUrl: 'https://moneko.io/dashboard/user-settings/membership',
+      })
+      
+      await sendUserEmail(user.email, user.full_name || '', emailTemplate)
+      console.log(`✅ Discount expiration reminder sent to ${user.email} (${daysUntil} days before expiry)`)
+      
+      return // Don't send regular renewal email
+    }
+    
+    // === REGULAR RENEWAL REMINDER (no discount scenario) ===
     console.log(`Upcoming invoice for ${user.email}, charging in ${daysUntil} days`)
     console.log(`Amount: ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency.toUpperCase()}`)
     

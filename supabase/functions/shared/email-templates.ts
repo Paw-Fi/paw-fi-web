@@ -249,20 +249,38 @@ export const paymentFailedTemplate = (data: {
   planName: string;
   dashboardUrl: string;
   updatePaymentUrl: string;
+  isDowngraded?: boolean; // NEW: Indicates user was downgraded to free
+  resubscribeUrl?: string; // NEW: URL for resubscription (membership dashboard)
 }) => {
+  const title = data.isDowngraded 
+    ? "Subscription Renewal Failed — Downgraded to Free"
+    : "Payment Failed";
+    
+  const message = data.isDowngraded
+    ? `We attempted to renew your ${data.planName} subscription, but were unable to process payment. Your account has been automatically downgraded to our free plan.`
+    : `We were unable to process your payment for the ${data.planName} subscription.`;
+    
+  const ctaText = data.isDowngraded ? "Resubscribe Now" : "Update Payment Method";
+  const ctaUrl = data.resubscribeUrl || data.updatePaymentUrl;
+
   const content = `
-    <h1 class="title">Payment Failed</h1>
-    <p class="subtitle">We were unable to process your payment for the ${data.planName} subscription.</p>
-    <p>Please update your payment method to avoid any interruption to your service.</p>
-    <a href="${data.updatePaymentUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Update Payment Method</a>
-    <p>If you need assistance, our support team is here to help.</p>
+    <h1 class="title">${title}</h1>
+    <p class="subtitle">${message}</p>
+    ${data.isDowngraded ? `
+      <p><strong>What does this mean?</strong></p>
+      <p>You now have access to our free plan features. Your data is safe, and you can resubscribe at any time to regain access to all premium features.</p>
+    ` : `
+      <p>Please update your payment method to avoid any interruption to your service.</p>
+    `}
+    <a href="${ctaUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">${ctaText}</a>
+    <p>If you have any questions or need assistance, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
   
   return {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
-    subject: `Action Required — Payment Failed`,
+    subject: title,
   };
 };
 
@@ -639,6 +657,38 @@ export const paymentMethodUpdatedTemplate = (data: {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
     subject: 'Payment Method Updated Successfully',
+  };
+};
+
+// Discount expiring email template (promotional period ending)
+export const discountExpiringTemplate = (data: {
+  name: string;
+  planName: string;
+  daysUntil: number;
+  expiryDate: string;
+  dashboardUrl: string;
+}) => {
+  const urgencyMessage = data.daysUntil <= 7
+    ? `Your promotional discount expires in ${data.daysUntil} ${data.daysUntil === 1 ? 'day' : 'days'}!`
+    : 'Your promotional discount is expiring soon.';
+
+  const content = `
+    <h1 class="title">Your Promotional Period is Ending</h1>
+    <p class="subtitle">${urgencyMessage}</p>
+    <p>Your ${data.planName} subscription has been free thanks to our promotional offer, but this promotion will expire on <strong>${data.expiryDate}</strong>.</p>
+    <p>To continue enjoying all premium features without interruption, please add a payment method to your account:</p>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Add Payment Method</a>
+    <p><strong>What happens if you don't add a payment method?</strong></p>
+    <p>After ${data.expiryDate}, if no payment method is on file, your account will be automatically downgraded to our free plan. You can always resubscribe later from your membership dashboard.</p>
+    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Manage Membership</a>
+    <p>Thank you for being part of Moneko. We hope you continue your premium experience.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: `Action Needed — Your Moneko Discount Expires ${data.daysUntil <= 7 ? 'Soon' : `in ${data.daysUntil} days`}`,
   };
 };
 
