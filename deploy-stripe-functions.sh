@@ -2,11 +2,12 @@
 
 # Stripe Functions Deployment Script
 # Project: Moneko
-# Project Ref: qbuynyxyemigtnvdujts
+# Projectm Dev Ref: qbuynyxyemigtnvdujts
+# Project Prod Ref: pbopcsmrcykdzbilpilf
 
 set -e  # Exit on any error
 
-PROJECT_REF="qbuynyxyemigtnvdujts"
+PROJECT_REF="pbopcsmrcykdzbilpilf"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Stripe Functions to Supabase"

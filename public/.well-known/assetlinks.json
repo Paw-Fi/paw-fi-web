@@ -1,0 +1,16 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.moneko.mobile",
+      "sha256_cert_fingerprints": [
+        "GET_DEBUG_SHA256_WITH: cd moneko-mobile/android && ./gradlew signingReport",
+        "GET_RELEASE_SHA256_WITH: keytool -list -v -keystore your-release-key.keystore",
+        "IMPORTANT: Replace these placeholder strings with actual SHA256 fingerprints (64-character hex strings)"
+      ]
+    }
+  }
+]

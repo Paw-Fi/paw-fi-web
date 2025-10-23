@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "G779AVFRMK.com.moneko.mobile",
+        "paths": [
+          "/invites/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "G779AVFRMK.com.moneko.mobile"
+    ]
+  }
+}
