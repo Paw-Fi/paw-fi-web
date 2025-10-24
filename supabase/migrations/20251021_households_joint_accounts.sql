@@ -15,9 +15,6 @@ CREATE TYPE household_role AS ENUM ('owner', 'admin', 'member');
 -- Invitation status
 CREATE TYPE invite_status AS ENUM ('pending', 'accepted', 'revoked', 'expired');
 
--- Transaction sharing scope
-CREATE TYPE share_scope AS ENUM ('private', 'household', 'custom');
-
 -- Expense split type
 CREATE TYPE split_type AS ENUM ('equal', 'percentage', 'amount', 'shares');
 
@@ -187,31 +184,14 @@ BEGIN
     CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON public.expenses(user_id) WHERE user_id IS NOT NULL;
   END IF;
 
-  -- Add share_scope column
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'expenses' AND column_name = 'share_scope'
-  ) THEN
-    ALTER TABLE public.expenses
-    ADD COLUMN share_scope share_scope DEFAULT 'private';
-  END IF;
-
   -- Add household_id column
+  -- NOTE: No share_scope or shared_member_ids columns - all household members can see all expenses
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'expenses' AND column_name = 'household_id'
   ) THEN
     ALTER TABLE public.expenses
     ADD COLUMN household_id UUID REFERENCES public.households(id) ON DELETE SET NULL;
-  END IF;
-
-  -- Add shared_member_ids column (for custom sharing)
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'expenses' AND column_name = 'shared_member_ids'
-  ) THEN
-    ALTER TABLE public.expenses
-    ADD COLUMN shared_member_ids UUID[];
   END IF;
 END $$;
 
@@ -322,22 +302,14 @@ CREATE TABLE IF NOT EXISTS public.shared_budgets (
 );
 
 -- ====================
--- SHARING PREFERENCES TABLE
+-- SHARING PREFERENCES TABLE (NUDGE PREFERENCES ONLY)
 -- ====================
 CREATE TABLE IF NOT EXISTS public.sharing_prefs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   household_id UUID NOT NULL REFERENCES public.households(id) ON DELETE CASCADE,
 
-  -- Default sharing preferences
-  default_transaction_share_scope share_scope DEFAULT 'private',
-  default_account_share_scope share_scope DEFAULT 'private',
-
-  -- Category-specific overrides (JSON format)
-  -- Example: {"groceries": "household", "personal": "private"}
-  per_category_overrides JSONB DEFAULT '{}',
-
-  -- Nudge preferences
+  -- Nudge preferences (budget notification settings)
   enable_nudges BOOLEAN DEFAULT true,
   nudge_quiet_hours_start TIME, -- e.g., '22:00'
   nudge_quiet_hours_end TIME,   -- e.g., '08:00'
@@ -366,6 +338,11 @@ CREATE TABLE IF NOT EXISTS public.notification_events (
   is_sent BOOLEAN DEFAULT false,
   sent_at TIMESTAMPTZ,
   error_message TEXT,
+
+  -- Retry tracking (for webhook fallback)
+  retry_count INTEGER DEFAULT 0,
+  last_retry_at TIMESTAMPTZ,
+  delivery_error TEXT,
 
   -- Metadata
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -407,12 +384,8 @@ CREATE INDEX IF NOT EXISTS idx_devices_platform ON public.devices(platform);
 -- Expenses (household queries)
 CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON public.expenses(user_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_household_id ON public.expenses(household_id) WHERE household_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_expenses_share_scope ON public.expenses(share_scope);
 CREATE INDEX IF NOT EXISTS idx_expenses_household_date ON public.expenses(household_id, date) WHERE household_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_expenses_split_group_id ON public.expenses(split_group_id) WHERE split_group_id IS NOT NULL;
-
--- GIN index for shared_member_ids array
-CREATE INDEX IF NOT EXISTS idx_expenses_shared_members ON public.expenses USING GIN(shared_member_ids) WHERE shared_member_ids IS NOT NULL;
 
 -- Expense Split Groups
 CREATE INDEX IF NOT EXISTS idx_split_groups_household_id ON public.expense_split_groups(household_id);
@@ -757,24 +730,17 @@ END $$;
 
 -- Users can view:
 -- 1. Their own expenses (where user_id = auth.uid())
--- 2. Household-scoped expenses where they're a member
--- 3. Custom-shared expenses where they're in shared_member_ids
-CREATE POLICY "Users can view accessible expenses" ON public.expenses
+-- 2. ALL expenses from households they're a member of (no privacy restrictions)
+CREATE POLICY "Users can view their expenses and household expenses" ON public.expenses
   FOR SELECT USING (
     user_id = auth.uid() -- Own expenses
     OR (
-      share_scope = 'household'
-      AND household_id IS NOT NULL
+      household_id IS NOT NULL
       AND EXISTS (
         SELECT 1 FROM public.household_members
         WHERE household_id = expenses.household_id
           AND user_id = auth.uid()
       )
-    )
-    OR (
-      share_scope = 'custom'
-      AND shared_member_ids IS NOT NULL
-      AND auth.uid() = ANY(shared_member_ids)
     )
   );
 
@@ -907,7 +873,7 @@ COMMENT ON TABLE public.devices IS 'User devices for push notifications';
 COMMENT ON TABLE public.expense_split_groups IS 'Groups of split expenses within households';
 COMMENT ON TABLE public.expense_split_lines IS 'Individual member allocations in expense splits';
 COMMENT ON TABLE public.shared_budgets IS 'Household budgets with nudge thresholds';
-COMMENT ON TABLE public.sharing_prefs IS 'User privacy and sharing preferences per household';
+COMMENT ON TABLE public.sharing_prefs IS 'User notification preferences per household (nudges and quiet hours)';
 COMMENT ON TABLE public.notification_events IS 'Audit log of notification events';
 
 COMMENT ON COLUMN public.households.cover_image_url IS 'URL to household cover image stored in Supabase storage';
@@ -915,7 +881,6 @@ COMMENT ON COLUMN public.invites.token IS 'Unique token for invitation URLs (sin
 COMMENT ON COLUMN public.devices.push_token IS 'FCM/APNs push notification token';
 COMMENT ON COLUMN public.shared_budgets.warn_threshold IS 'Budget percentage (0-1) to trigger warning nudge';
 COMMENT ON COLUMN public.shared_budgets.alert_threshold IS 'Budget percentage (0-1) to trigger alert nudge';
-COMMENT ON COLUMN public.sharing_prefs.per_category_overrides IS 'Category-specific sharing scope overrides (JSON)';
 
 -- ====================
 -- STORAGE BUCKET SETUP

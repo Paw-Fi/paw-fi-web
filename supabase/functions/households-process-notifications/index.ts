@@ -4,7 +4,11 @@ import { getCorsHeaders } from "../shared/cors.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
+
+// Firebase Cloud Messaging V1 API - Modern approach (2025)
+// Requires Service Account JSON from Firebase Console
+const firebaseServiceAccount = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
+const firebaseProjectId = Deno.env.get('FIREBASE_PROJECT_ID');
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
@@ -16,43 +20,166 @@ interface ProcessNotificationsResponse {
   errors: string[];
 }
 
-// Send FCM push notification
-async function sendFCMPush(token: string, title: string, body: string, data: any): Promise<boolean> {
-  if (!fcmServerKey) {
-    console.error('FCM_SERVER_KEY not configured');
+/**
+ * Get OAuth 2.0 access token using Service Account credentials
+ * Firebase Cloud Messaging API V1 requires OAuth tokens, not legacy server keys
+ * Token is valid for 1 hour and should be cached
+ */
+async function getAccessToken(): Promise<string | null> {
+  if (!firebaseServiceAccount) {
+    console.warn('[fcm-v1] FIREBASE_SERVICE_ACCOUNT_JSON not configured');
+    return null;
+  }
+
+  try {
+    const serviceAccount = JSON.parse(firebaseServiceAccount);
+
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT',
+      kid: serviceAccount.private_key_id
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const claims = {
+      iss: serviceAccount.client_email,
+      sub: serviceAccount.client_email,
+      aud: 'https://oauth2.googleapis.com/token',
+      iat: now,
+      exp: now + 3600,
+      scope: 'https://www.googleapis.com/auth/firebase.messaging'
+    };
+
+    const encoder = new TextEncoder();
+    const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const encodedClaims = btoa(JSON.stringify(claims)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    const unsignedToken = `${encodedHeader}.${encodedClaims}`;
+
+    const privateKeyPem = serviceAccount.private_key;
+    const pemHeader = '-----BEGIN PRIVATE KEY-----';
+    const pemFooter = '-----END PRIVATE KEY-----';
+    const pemContents = privateKeyPem.substring(
+      pemHeader.length,
+      privateKeyPem.length - pemFooter.length
+    ).replace(/\s/g, '');
+
+    const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+    const key = await crypto.subtle.importKey(
+      'pkcs8',
+      binaryKey,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const signature = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      key,
+      encoder.encode(unsignedToken)
+    );
+
+    const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/=/g, '')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_');
+
+    const jwt = `${unsignedToken}.${encodedSignature}`;
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      console.error('[fcm-v1] Token exchange failed:', error);
+      return null;
+    }
+
+    const tokenData = await tokenResponse.json();
+    return tokenData.access_token;
+  } catch (error) {
+    console.error('[fcm-v1] Error getting access token:', error);
+    return null;
+  }
+}
+
+/**
+ * Send push notification using Firebase Cloud Messaging API V1
+ * Modern API endpoint: https://fcm.googleapis.com/v1/projects/{project_id}/messages:send
+ */
+async function sendFCMv1Notification(
+  deviceToken: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+  accessToken: string
+): Promise<boolean> {
+  if (!firebaseProjectId) {
+    console.error('[fcm-v1] FIREBASE_PROJECT_ID not configured');
     return false;
   }
 
   try {
-    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `key=${fcmServerKey}`
-      },
-      body: JSON.stringify({
-        to: token,
+    const message = {
+      message: {
+        token: deviceToken,
         notification: {
           title,
-          body,
-          sound: 'default',
-          badge: 1
+          body
         },
         data,
-        priority: 'high'
-      })
-    });
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default'
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+              badge: 1
+            }
+          }
+        }
+      }
+    };
 
-    const result = await response.json();
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${firebaseProjectId}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(message)
+      }
+    );
 
-    if (!response.ok || result.failure > 0) {
-      console.error('FCM push failed:', result);
+    if (response.ok) {
+      console.log('[fcm-v1] Push notification sent successfully');
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error('[fcm-v1] FCM API error:', response.status, errorText);
+
+      if (errorText.includes('UNREGISTERED') || errorText.includes('INVALID_ARGUMENT')) {
+        console.warn('[fcm-v1] Invalid or expired device token - should be cleaned up');
+      }
+
       return false;
     }
-
-    return true;
   } catch (error) {
-    console.error('Error sending FCM push:', error);
+    console.error('[fcm-v1] Error sending notification:', error);
     return false;
   }
 }
@@ -151,6 +278,25 @@ serve(async (req) => {
         } as ProcessNotificationsResponse),
         {
           status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Get OAuth access token for FCM V1 API (valid for 1 hour)
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      console.error('[process-notifications] Failed to obtain FCM access token');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          processed: 0,
+          sent: 0,
+          failed: 0,
+          errors: ['Failed to authenticate with Firebase']
+        } as ProcessNotificationsResponse),
+        {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
@@ -318,12 +464,12 @@ serve(async (req) => {
           continue;
         }
 
-        // Send push notifications
+        // Send push notifications using FCM V1 API
         let eventSentCount = 0;
         let eventFailedCount = 0;
 
         const pushPromises = devices.map(async (device) => {
-          const success = await sendFCMPush(
+          const success = await sendFCMv1Notification(
             device.push_token,
             title,
             body,
@@ -331,8 +477,14 @@ serve(async (req) => {
               event_type: event.event_type,
               household_id: event.household_id || '',
               event_id: event.id,
-              ...event.payload
-            }
+              ...(typeof event.payload === 'object' ?
+                Object.fromEntries(
+                  Object.entries(event.payload).map(([k, v]) => [k, String(v)])
+                ) :
+                {}
+              )
+            },
+            accessToken
           );
 
           return { device, success };

@@ -220,45 +220,45 @@ serve(async (req) => {
       );
     }
 
-    // 3. Send push notification to inviter (if they have devices)
-    const { data: inviterDevices } = await supabase
-      .from('devices')
-      .select('push_token, platform')
-      .eq('user_id', invite.inviter_id)
-      .eq('is_active', true);
+    // 3. Notify ALL household members about new member joining
+    // Get household name and all members for notification
+    const { data: household } = await supabase
+      .from('households')
+      .select('name')
+      .eq('id', invite.household_id)
+      .single();
 
-    if (inviterDevices && inviterDevices.length > 0) {
-      // Get household name for notification
-      const { data: household } = await supabase
-        .from('households')
-        .select('name')
-        .eq('id', invite.household_id)
-        .single();
+    const { data: allMembers } = await supabase
+      .from('household_members')
+      .select('user_id')
+      .eq('household_id', invite.household_id);
 
-      // Queue push notifications (will be sent by send-push-notification function)
+    if (allMembers && allMembers.length > 0) {
+      // Create notification events for ALL members EXCEPT the new member
       const notificationPayload = {
-        title: 'Invitation Accepted! 🎉',
-        body: `${user.email} has joined "${household?.name || 'your household'}"`,
-        data: {
-          type: 'invite_accepted',
-          household_id: invite.household_id,
-          member_id: newMember.id
-        }
+        member_id: newMember.id,
+        member_email: user.email,
+        household_name: household?.name || 'your household'
       };
 
-      // Store notification for async processing
-      await supabase
-        .from('notification_events')
-        .insert({
+      // Create notification for each existing member
+      const notificationEvents = allMembers
+        .filter(m => m.user_id !== user.id) // Exclude the new member themselves
+        .map(member => ({
           household_id: invite.household_id,
-          user_id: invite.inviter_id,
-          event_type: 'invite_accepted',
-          payload: {
-            ...notificationPayload,
-            device_tokens: inviterDevices.map(d => d.push_token)
-          },
+          user_id: member.user_id,
+          event_type: 'member_joined',
+          payload: notificationPayload,
           is_sent: false
-        });
+        }));
+
+      if (notificationEvents.length > 0) {
+        await supabase
+          .from('notification_events')
+          .insert(notificationEvents);
+
+        console.log(`[accept-invite] Created ${notificationEvents.length} member_joined notifications`);
+      }
     }
 
     const response: AcceptInviteResponse = {

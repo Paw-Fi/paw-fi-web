@@ -161,11 +161,11 @@ serve(async (req) => {
     const endDate = end_date || new Date().toISOString();
 
     // Fetch household expenses
+    // NOTE: No share_scope filter - all household members can see all expenses
     let expensesQuery = supabase
       .from('expenses')
       .select('*')
       .eq('household_id', household_id)
-      .or(`share_scope.eq.household,share_scope.eq.custom`)
       .gte('date', startDate.split('T')[0]) // expenses table uses 'date' not 'created_at'
       .lte('date', endDate.split('T')[0]);
 

@@ -124,6 +124,7 @@ Deno.serve(async (req: Request) => {
     const amountCents = Math.round(body.amount * 100);
 
     // Insert expense into expenses table
+    // NOTE: No share_scope column - all household expenses are visible to all members
     const { data: expense, error: expenseError } = await supabase
       .from('expenses')
       .insert({
@@ -136,7 +137,6 @@ Deno.serve(async (req: Request) => {
         currency: currency,
         receipt_image_url: body.receiptImageUrl || null,
         household_id: body.householdId || null,
-        share_scope: body.householdId ? 'household' : 'private',
         created_at: new Date().toISOString(),
       })
       .select()
