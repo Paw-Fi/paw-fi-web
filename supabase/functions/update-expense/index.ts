@@ -160,7 +160,7 @@ Deno.serve(async (req: Request) => {
     // Fetch expense with contact information to verify ownership
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
-      .select('id, contact_id, user_contacts!inner(user_id)')
+      .select('id, contact_id, household_id, user_contacts!inner(user_id)')
       .eq('id', expenseId)
       .single();
 
@@ -200,6 +200,29 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`[update-expense] Successfully updated expense ${expenseId} for user ${userId}`);
+
+    // If expense is shared with a household, notify other members
+    if (expense.household_id) {
+      console.log(`[update-expense] Notifying household members about edit for household ${expense.household_id}`);
+      
+      const { error: notifyError } = await supabase.rpc('notify_household_members_expense', {
+        p_household_id: expense.household_id,
+        p_expense_id: expenseId,
+        p_actor_user_id: userId,
+        p_event_type: 'expense_edited',
+        p_expense_data: {
+          updates: updates,
+          updated_fields: Object.keys(updates),
+        },
+      });
+
+      if (notifyError) {
+        console.error('[update-expense] Error creating notifications:', notifyError);
+        // Don't fail the request, just log the error
+      } else {
+        console.log('[update-expense] Notifications created for household members');
+      }
+    }
     
     return jsonResponse({
       success: true,

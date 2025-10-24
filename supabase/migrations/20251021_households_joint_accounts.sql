@@ -38,7 +38,9 @@ CREATE TYPE notification_event_type AS ENUM (
   'budget_warn',
   'budget_alert',
   'split_created',
-  'split_settled'
+  'split_settled',
+  'expense_added',
+  'expense_edited'
 );
 
 -- ====================
@@ -252,9 +254,9 @@ CREATE TABLE IF NOT EXISTS public.expense_split_lines (
   percentage DECIMAL(5,2), -- Percentage (0-100, for 'percentage' type)
   shares INTEGER, -- Number of shares (for 'shares' type)
 
-  -- Settlement tracking
-  is_settled BOOLEAN DEFAULT false,
-  settled_at TIMESTAMPTZ,
+  -- Settlement tracking (auto-accepted by default for better UX)
+  is_settled BOOLEAN DEFAULT true,
+  settled_at TIMESTAMPTZ DEFAULT NOW(),
 
   -- Metadata
   created_at TIMESTAMPTZ DEFAULT NOW(),

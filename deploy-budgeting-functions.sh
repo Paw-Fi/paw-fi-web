@@ -7,7 +7,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="pbopcsmrcykdzbilpilf"
+PROJECT_REF="qbuynyxyemigtnvdujts"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Budgeting Functions to Supabase"
@@ -60,6 +60,16 @@ echo ""
 echo "📦 [6/5] Deploying update-expense function..."
 supabase functions deploy update-expense --project-ref $PROJECT_REF
 echo "✅ update-expense deployed"
+echo ""
+
+echo "📦 [6/5] Deploying analyze-expense function..."
+supabase functions deploy analyze-expense --project-ref $PROJECT_REF
+echo "✅ analyze-expense deployed"
+echo ""
+
+echo "📦 [6/5] Deploying save-expense function..."
+supabase functions deploy save-expense --project-ref $PROJECT_REF
+echo "✅ save-expense deployed"
 echo ""
 
 echo "📦 [6/5] Deploying categories function..."
