@@ -137,21 +137,40 @@ serve(async (req) => {
 
     console.log('Creating checkout session:', { userId, plan, billingInterval, priceId })
     
-    // SECURITY: Check trial eligibility based on subscription history
-    // A user is eligible for trial ONLY if no subscription row exists at all
-    // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
+    // SECURITY: Check if user is bound to a household subscription
+    // Bound users cannot create their own subscriptions - they must unbind first
     const { data: existingSub } = await supabase
       .from('subscriptions')
-      .select('id')
+      .select('id, bound_to_user_id, bound_to_household_id')
       .eq('user_id', userId)
       .maybeSingle()
     
+    // CRITICAL: Prevent bound users from subscribing directly
+    if (existingSub?.bound_to_user_id) {
+      console.error('User is bound to household subscription:', {
+        userId,
+        boundTo: existingSub.bound_to_user_id,
+        household: existingSub.bound_to_household_id
+      })
+      return new Response(JSON.stringify({ 
+        error: 'You are currently sharing a household subscription. Please leave the household first to manage your own subscription.',
+        code: 'BOUND_TO_HOUSEHOLD'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    
+    // SECURITY: Check trial eligibility based on subscription history
+    // A user is eligible for trial ONLY if no subscription row exists at all
+    // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
     // Simple and secure: Only new users (no row) get trials
     const isEligibleForTrial = !existingSub
     
     console.log('Trial eligibility check:', {
       hasExistingRow: !!existingSub,
-      isEligible: isEligibleForTrial
+      isEligible: isEligibleForTrial,
+      isBound: !!existingSub?.bound_to_user_id
     })
     
     // Get user details from auth.users (basic info)
