@@ -142,7 +142,7 @@ serve(async (req) => {
       );
     }
 
-    if (invite.status === 'expired' || new Date(invite.expires_at) < new Date()) {
+    if (invite.status === 'expired' || (invite.expires_at && new Date(invite.expires_at) < new Date())) {
       return new Response(
         JSON.stringify({ error: 'This invitation has expired' }),
         {

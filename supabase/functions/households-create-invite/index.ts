@@ -18,7 +18,7 @@ interface CreateInviteRequest {
 interface CreateInviteResponse {
   invite_url: string;
   token: string;
-  expires_at: string;
+  expires_at: string | null;
 }
 
 serve(async (req) => {
@@ -71,7 +71,9 @@ serve(async (req) => {
 
     // Parse request body
     const body: CreateInviteRequest = await req.json();
-    const { household_id, invited_email, personal_message, expires_in_days = 7 } = body;
+    const { household_id, invited_email, personal_message } = body;
+    let { expires_in_days } = body as { expires_in_days?: number };
+    if (typeof expires_in_days !== 'number') expires_in_days = 7;
 
     if (!household_id) {
       return new Response(
@@ -111,34 +113,28 @@ serve(async (req) => {
       );
     }
 
-    // Validate TTL (max 30 days for security)
+    // Validate TTL (max 30 days), allow 0 = unlimited
     const maxTTLDays = 30;
-    if (expires_in_days > maxTTLDays) {
-      return new Response(
-        JSON.stringify({ error: `Invite expiry cannot exceed ${maxTTLDays} days` }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    if (expires_in_days < 1) {
-      return new Response(
-        JSON.stringify({ error: 'Invite expiry must be at least 1 day' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
+    if (expires_in_days !== 0) {
+      if (expires_in_days! > maxTTLDays) {
+        return new Response(
+          JSON.stringify({ error: `Invite expiry cannot exceed ${maxTTLDays} days` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (expires_in_days! < 1) {
+        return new Response(
+          JSON.stringify({ error: 'Invite expiry must be at least 1 day or 0 for unlimited' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Generate unique token
     const token = crypto.randomUUID() + '-' + Date.now().toString(36);
 
-    // Calculate expiry date
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + expires_in_days);
+    // Calculate expiry date (null for unlimited)
+    const expiresAt = expires_in_days === 0 ? null : new Date(Date.now() + expires_in_days! * 24 * 60 * 60 * 1000);
 
     // Create invite
     const { data: invite, error: inviteError } = await supabase
@@ -149,7 +145,7 @@ serve(async (req) => {
         inviter_id: user.id,
         invited_email,
         personal_message,
-        expires_at: expiresAt.toISOString(),
+        expires_at: expiresAt ? expiresAt.toISOString() : null,
         status: 'pending'
       })
       .select()

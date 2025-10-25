@@ -7,6 +7,8 @@
 -- Enable pg_cron extension (requires superuser, may need manual setup)
 -- Note: In Supabase Cloud, pg_cron is pre-enabled
 CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- Required for net.http_post used below
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- ====================
 -- CRON JOB LOGS TABLE (for monitoring)
@@ -48,6 +50,7 @@ SELECT cron.schedule(
         SELECT COUNT(*)
         FROM public.invites
         WHERE status = 'expired'
+          AND expires_at IS NOT NULL
           AND updated_at >= NOW() - INTERVAL '1 hour'
       );
   $$

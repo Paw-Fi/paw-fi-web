@@ -145,9 +145,8 @@ serve(async (req) => {
       );
     }
 
-    // Check if invite is expired
-    const expiresAt = new Date(invite.expires_at);
-    if (expiresAt < new Date()) {
+    // Check if invite is expired (null = unlimited)
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       // Update status to expired
       await supabase
         .from('invites')

@@ -52,12 +52,16 @@ CREATE TABLE IF NOT EXISTS public.households (
   cover_image_url TEXT, -- URL to household cover image
   theme_color VARCHAR(7), -- Hex color code
 
+  -- Base currency (immutable)
+  currency VARCHAR(3) NOT NULL,
+
   -- Metadata
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   -- Constraints
-  CONSTRAINT name_not_empty CHECK (LENGTH(TRIM(name)) > 0)
+  CONSTRAINT name_not_empty CHECK (LENGTH(TRIM(name)) > 0),
+  CONSTRAINT households_currency_format CHECK (currency ~ '^[A-Z]{3}$')
 );
 
 -- ====================
@@ -90,7 +94,7 @@ CREATE TABLE IF NOT EXISTS public.invites (
 
   -- Status and lifecycle
   status invite_status NOT NULL DEFAULT 'pending',
-  expires_at TIMESTAMPTZ NOT NULL,
+  expires_at TIMESTAMPTZ, -- NULL means unlimited
   accepted_at TIMESTAMPTZ,
 
   -- Optional invitation details
@@ -102,7 +106,7 @@ CREATE TABLE IF NOT EXISTS public.invites (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
   -- Constraints
-  CONSTRAINT valid_expiry CHECK (expires_at > created_at),
+  CONSTRAINT valid_expiry CHECK (expires_at IS NULL OR expires_at > created_at),
   CONSTRAINT accepted_requires_user CHECK (
     (status = 'accepted' AND invited_user_id IS NOT NULL AND accepted_at IS NOT NULL) OR
     (status != 'accepted')
@@ -772,6 +776,21 @@ $$ LANGUAGE plpgsql;
 -- Create triggers for updated_at
 CREATE TRIGGER households_updated_at BEFORE UPDATE ON public.households
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Household currency is immutable after creation
+CREATE OR REPLACE FUNCTION prevent_household_currency_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.currency IS DISTINCT FROM OLD.currency THEN
+    RAISE EXCEPTION 'household currency is immutable';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER households_currency_immutable
+BEFORE UPDATE ON public.households
+FOR EACH ROW EXECUTE FUNCTION prevent_household_currency_update();
 
 CREATE TRIGGER household_members_updated_at BEFORE UPDATE ON public.household_members
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

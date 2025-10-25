@@ -186,16 +186,16 @@ serve(async (req) => {
       );
     }
 
-    // Calculate totals
+    // Calculate totals (treat ALL rows in expenses table as expenses)
+    // We sum absolute values to be robust whether rows were inserted as negative or positive.
     const totalExpensesCents = expenses
-      ?.filter(e => (e.amount_cents || 0) < 0)
-      .reduce((sum, t) => sum + Math.abs(t.amount_cents || 0), 0) || 0;
+      ?.reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0) || 0;
 
-    const totalIncomeCents = expenses
-      ?.filter(e => (e.amount_cents || 0) > 0)
-      .reduce((sum, e) => sum + (e.amount_cents || 0), 0) || 0;
+    // Income is not tracked here; if ever added, it should be in a different table
+    const totalIncomeCents = 0;
 
-    const netCents = totalIncomeCents - totalExpensesCents;
+    // Net = 0 - expenses (negative number)
+    const netCents = -totalExpensesCents;
 
     // Calculate member contributions
     const memberContributionsMap = new Map<string, MemberContribution>();
@@ -345,7 +345,7 @@ serve(async (req) => {
       let spentCents = 0;
 
       if (budget.budget_type === 'household') {
-        // Household budget: use total household spending
+        // Household budget: use total household spending (absolute)
         spentCents = totalExpensesCents;
       } else if (budget.budget_type === 'personal') {
         // Personal budget with split awareness
@@ -353,9 +353,9 @@ serve(async (req) => {
           // Use user's actual spending (calculated above with split portions)
           spentCents = userActualSpending;
         } else {
-          // Use full transaction amounts (even if split)
+          // Use all user's expenses (absolute), regardless of sign
           const userExpenseTotal = expenses
-            ?.filter(e => e.user_id === user.id && (e.amount_cents || 0) < 0)
+            ?.filter(e => e.user_id === user.id)
             .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0) || 0;
           spentCents = userExpenseTotal;
         }
