@@ -153,6 +153,19 @@ Deno.serve(async (req: Request) => {
 
     console.log('[save-expense] Expense saved:', expense.id);
 
+    // Resolve actor display name for notification title
+    let actorName = 'Someone';
+    try {
+      const { data: appUser } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', body.userId)
+        .maybeSingle();
+      if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
+        actorName = appUser.full_name as string;
+      }
+    } catch (_) {}
+
     // If householdId provided, create household split
     if (body.householdId) {
       console.log('[save-expense] Creating household split for household:', body.householdId);
@@ -377,10 +390,11 @@ Deno.serve(async (req: Request) => {
         p_actor_user_id: body.userId,
         p_event_type: 'expense_added',
         p_expense_data: {
-          amount: body.amount,
-          category: body.category,
+          actor_name: actorName,
+          amount_cents: amountCents,
           currency: currency,
-          description: body.description,
+          category: body.category,
+          note: body.description || '',
         },
       });
 

@@ -1,9 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const iosBundleId = Deno.env.get('IOS_BUNDLE_ID') || 'com.moneko.mobile';
 
 // Firebase Cloud Messaging V1 API - Modern approach (2025)
 // Requires Service Account JSON from Firebase Console
@@ -11,6 +13,27 @@ const firebaseServiceAccount = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
 const firebaseProjectId = Deno.env.get('FIREBASE_PROJECT_ID');
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+const firebaseProjectIdEnv = firebaseProjectId || '';
+
+function redact(v?: string) {
+  if (!v) return v;
+  if (v.length <= 6) return '***';
+  return v.slice(0, 4) + '***' + v.slice(-4);
+}
+
+function getServiceAccountMeta() {
+  try {
+    if (!firebaseServiceAccount) return null;
+    const sa = JSON.parse(firebaseServiceAccount);
+    return {
+      project_id: sa.project_id as string | undefined,
+      client_email: sa.client_email as string | undefined,
+      private_key_id: sa.private_key_id as string | undefined,
+    };
+  } catch {
+    return null;
+  }
+}
 
 interface NotificationPayload {
   notification_event_id: string;
@@ -26,6 +49,7 @@ interface FCMv1Message {
     notification: {
       title: string;
       body: string;
+      image?: string;
     };
     data?: Record<string, string>;
     android?: {
@@ -35,14 +59,55 @@ interface FCMv1Message {
       };
     };
     apns?: {
+      headers?: Record<string, string>;
       payload: {
         aps: {
           sound: string;
+          ['mutable-content']?: number;
           badge?: number;
         };
       };
     };
   };
+}
+
+type RecipientSplitContext = {
+  isSplitForRecipient: boolean;
+  shareCents: number | null;
+  totalCents: number | null;
+  currency: string | null;
+};
+
+async function getRecipientSplitContext(expenseId: string, targetUserId: string): Promise<RecipientSplitContext> {
+  try {
+    // Get split group id and expense totals
+    const { data: group } = await supabase
+      .from('expense_split_groups')
+      .select('id, currency, total_amount_cents, expense_id')
+      .eq('expense_id', expenseId)
+      .maybeSingle();
+
+    if (!group) {
+      return { isSplitForRecipient: false, shareCents: null, totalCents: null, currency: null };
+    }
+
+    const { data: line } = await supabase
+      .from('expense_split_lines')
+      .select('amount_cents')
+      .eq('split_group_id', group.id)
+      .eq('user_id', targetUserId)
+      .maybeSingle();
+
+    const share = line?.amount_cents ?? 0;
+    return {
+      isSplitForRecipient: share > 0,
+      shareCents: share,
+      totalCents: group.total_amount_cents ?? null,
+      currency: group.currency ?? null,
+    };
+  } catch (_) {
+    return { isSplitForRecipient: false, shareCents: null, totalCents: null, currency: null };
+  }
 }
 
 /**
@@ -84,16 +149,22 @@ async function getAccessToken(): Promise<string | null> {
     const encodedClaims = btoa(JSON.stringify(claims)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
     const unsignedToken = `${encodedHeader}.${encodedClaims}`;
 
-    // Import private key
-    const privateKeyPem = serviceAccount.private_key;
-    const pemHeader = '-----BEGIN PRIVATE KEY-----';
-    const pemFooter = '-----END PRIVATE KEY-----';
-    const pemContents = privateKeyPem.substring(
-      pemHeader.length,
-      privateKeyPem.length - pemFooter.length
-    ).replace(/\s/g, '');
+    // Import private key (robustly handle escaped newlines and PEM parsing)
+    let privateKeyPem: string = serviceAccount.private_key as string;
+    if (!privateKeyPem) {
+      console.error('[fcm-v1] Service account missing private_key');
+      return null;
+    }
+    // Convert literal \n to real newlines if needed
+    privateKeyPem = privateKeyPem.replace(/\\n/g, '\n').trim();
 
-    const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+    const match = privateKeyPem.match(/-----BEGIN PRIVATE KEY-----([\s\S]*?)-----END PRIVATE KEY-----/);
+    if (!match || !match[1]) {
+      console.error('[fcm-v1] Invalid private key format');
+      return null;
+    }
+    const pemBody = match[1].replace(/\r|\n/g, '');
+    const binaryKey = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
 
     const key = await crypto.subtle.importKey(
       'pkcs8',
@@ -152,7 +223,8 @@ async function sendFCMv1Notification(
   title: string,
   body: string,
   data: Record<string, string>,
-  accessToken: string
+  accessToken: string,
+  imageUrl?: string
 ): Promise<boolean> {
   if (!firebaseProjectId) {
     console.error('[fcm-v1] FIREBASE_PROJECT_ID not configured');
@@ -165,7 +237,8 @@ async function sendFCMv1Notification(
         token: deviceToken,
         notification: {
           title,
-          body
+          body,
+          ...(imageUrl ? { image: imageUrl } : {})
         },
         data,
         android: {
@@ -175,9 +248,15 @@ async function sendFCMv1Notification(
           }
         },
         apns: {
+          headers: {
+            'apns-topic': iosBundleId,
+            'apns-push-type': 'alert',
+            'apns-priority': '10'
+          },
           payload: {
             aps: {
-              sound: 'default'
+              sound: 'default',
+              ...(imageUrl ? { ['mutable-content']: 1 } : {})
             }
           }
         }
@@ -202,10 +281,21 @@ async function sendFCMv1Notification(
     } else {
       const errorText = await response.text();
       console.error('[fcm-v1] FCM API error:', response.status, errorText);
+      if (response.status === 401 && errorText.includes('APNS')) {
+        console.error('[fcm-v1] Hint: Verify APNs auth key (p8) + Key ID + Team ID, bundle id/topic', iosBundleId, 'and iOS entitlements (aps-environment). Ensure the device token belongs to this Firebase project.');
+      }
 
       // Handle specific errors
       if (errorText.includes('UNREGISTERED') || errorText.includes('INVALID_ARGUMENT')) {
-        console.warn('[fcm-v1] Invalid or expired device token - should be cleaned up');
+        console.warn('[fcm-v1] Invalid or expired device token - deactivating');
+        try {
+          await supabase
+            .from('devices')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq('push_token', deviceToken);
+        } catch (e) {
+          console.error('[fcm-v1] Failed to deactivate device token:', e);
+        }
       }
 
       return false;
@@ -217,12 +307,21 @@ async function sendFCMv1Notification(
 }
 
 serve(async (req) => {
+  const url = new URL(req.url);
   const origin = req.headers.get('origin') || '';
   const corsHeaders = getCorsHeaders(origin);
 
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  // Health check endpoint for quick verification
+  if (req.method === 'GET' && url.pathname.endsWith('/health')) {
+    return new Response(
+      JSON.stringify({ ok: true, service: 'households-send-push-notification', ts: new Date().toISOString() }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -237,11 +336,43 @@ serve(async (req) => {
       );
     }
 
-    // Parse request body
-    const body: NotificationPayload = await req.json();
+    // Parse request body (support both custom payload and Database Webhooks envelope)
+    const raw = await req.json();
+
+    // Database Webhooks envelope detection
+    const isDbWebhook = raw && typeof raw === 'object' && 'type' in raw && 'record' in raw;
+
+    const body: NotificationPayload = isDbWebhook
+      ? {
+          notification_event_id: raw.record?.id,
+          household_id: raw.record?.household_id,
+          user_id: raw.record?.user_id,
+          event_type: raw.record?.event_type,
+          payload: raw.record?.payload ?? {},
+        }
+      : raw;
+
     const { notification_event_id, household_id, user_id, event_type, payload } = body;
 
-    console.log('[send-push] Processing notification:', notification_event_id, 'for user:', user_id);
+    console.log('[send-push] Incoming request', {
+      method: req.method,
+      path: url.pathname,
+      source: isDbWebhook ? 'database-webhook' : 'direct',
+      id: notification_event_id,
+      user: user_id,
+      household: household_id,
+      type: event_type,
+    });
+
+    // Diagnostic: environment alignment
+    const saMeta = getServiceAccountMeta();
+    console.log('[send-push] Config diag', {
+      firebaseProjectId: firebaseProjectIdEnv,
+      serviceAccountProjectId: saMeta?.project_id,
+      serviceAccountEmail: redact(saMeta?.client_email),
+      serviceAccountKeyId: redact(saMeta?.private_key_id),
+      apnsTopic: iosBundleId,
+    });
 
     // Validate required fields
     if (!notification_event_id || !user_id || !event_type) {
@@ -252,6 +383,25 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
+    }
+
+    // Idempotency: if this event is already marked sent, skip to avoid duplicates (e.g., pg_net + webhook)
+    try {
+      const { data: existingEvent } = await supabase
+        .from('notification_events')
+        .select('is_sent')
+        .eq('id', notification_event_id)
+        .single();
+
+      if (existingEvent?.is_sent) {
+        console.log('[send-push] Event already sent; skipping duplicate delivery', notification_event_id);
+        return new Response(
+          JSON.stringify({ success: true, skipped: 'already_sent' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (_) {
+      // Continue; inability to read shouldn’t block delivery
     }
 
     // Check if FCM is configured
@@ -299,6 +449,8 @@ serve(async (req) => {
       );
     }
 
+    const isExpenseEvent = event_type === 'expense_added' || event_type === 'expense_edited';
+
     // Get user's notification preferences
     const { data: prefs } = await supabase
       .from('sharing_prefs')
@@ -324,8 +476,8 @@ serve(async (req) => {
       );
     }
 
-    // Check quiet hours
-    if (prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
+    // Check quiet hours (skip for expense events to ensure immediate delivery)
+    if (!isExpenseEvent && prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
       const now = new Date();
       const currentTime = now.getHours() * 60 + now.getMinutes();
 
@@ -386,8 +538,33 @@ serve(async (req) => {
       );
     }
 
-    // Build notification message based on event type
-    const notificationMessage = buildNotificationMessage(event_type, payload);
+    console.log('[send-push] Sending to devices:', devices.length, {
+      tokens: devices.map(d => (d.push_token ? `${d.push_token.slice(0,8)}...${d.push_token.slice(-6)}` : 'null')),
+      platform: devices.map(d => d.platform)
+    });
+
+    // Fetch household image (cover)
+    let imageUrl: string | undefined = undefined;
+    if (household_id) {
+      try {
+        const { data: hh } = await supabase
+          .from('households')
+          .select('cover_image_url')
+          .eq('id', household_id)
+          .maybeSingle();
+        if (hh?.cover_image_url && /^https?:\/\//i.test(hh.cover_image_url)) {
+          imageUrl = hh.cover_image_url as string;
+        }
+      } catch (_) {}
+    }
+
+    // Build notification message based on event type (with per-recipient split context)
+    let recipientSplit: RecipientSplitContext | undefined = undefined;
+    if (event_type === 'expense_added' && (payload.expense_id || payload?.expense_data?.expense_id)) {
+      const expId = (payload.expense_id || payload?.expense_data?.expense_id) as string;
+      recipientSplit = await getRecipientSplitContext(expId, user_id);
+    }
+    const notificationMessage = buildNotificationMessage(event_type, payload, recipientSplit);
 
     // Send push notification to all active devices using FCM V1 API
     let sentCount = 0;
@@ -404,7 +581,8 @@ serve(async (req) => {
           notification_id: notification_event_id,
           ...notificationMessage.data
         },
-        accessToken
+        accessToken,
+        imageUrl
       );
 
       if (success) {
@@ -423,6 +601,8 @@ serve(async (req) => {
         delivery_error: failedCount > 0 ? `Sent to ${sentCount}/${devices.length} devices` : null
       })
       .eq('id', notification_event_id);
+
+    console.log('[send-push] Result', { sent: sentCount, failed: failedCount, total: devices.length });
 
     return new Response(
       JSON.stringify({
@@ -468,31 +648,93 @@ serve(async (req) => {
 /**
  * Build notification message based on event type
  */
-function buildNotificationMessage(eventType: string, payload: Record<string, any>): {
+function buildNotificationMessage(
+  eventType: string,
+  payload: Record<string, any>,
+  recipientSplit?: RecipientSplitContext
+): {
   title: string;
   body: string;
   data: Record<string, string>;
 } {
+  const actor = (payload.expense_data?.actor_name || payload.actor_name || 'Someone') as string;
   switch (eventType) {
-    case 'expense_added':
+    case 'expense_added': {
+      const note = (payload.expense_data?.note || '').toString().trim();
+      const code = (recipientSplit?.currency || payload.expense_data?.currency) as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const cents = Number(recipientSplit?.shareCents ?? payload.expense_data?.amount_cents ?? 0);
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      const isSplit = recipientSplit?.isSplitForRecipient === true;
+      const title = isSplit ? `💸 ${actor} split an expense with you` : `💸 ${actor} added an expense`;
+      const body = note.length > 0 ? note : amount;
       return {
-        title: '💸 New Expense Added',
-        body: `${payload.expense_data?.currency || ''} ${payload.expense_data?.amount || '0.00'} • ${payload.expense_data?.category || 'Uncategorized'}`,
+        title,
+        body,
         data: {
           expense_id: payload.expense_id || '',
           household_id: payload.household_id || ''
         }
       };
+    }
 
-    case 'expense_edited':
+    case 'expense_edited': {
+      const fields: string[] = (payload.expense_data?.updated_fields || []) as string[];
+      const code = (payload.expense_data?.currency || payload.currency || payload.expense_data?.new_currency) as string | undefined;
+      const symbol = getCurrencySymbol(code);
+
+      let body = 'Updated';
+      if (fields.includes('amount_cents')) {
+        const oldC = Number(payload.expense_data?.old_amount_cents ?? 0);
+        const newC = Number(payload.expense_data?.new_amount_cents ?? 0);
+        body = `${symbol}${(oldC / 100).toFixed(2)} -> ${symbol}${(newC / 100).toFixed(2)}`;
+      } else if (fields.includes('category')) {
+        const oldCat = String(payload.expense_data?.old_category ?? '');
+        const newCat = String(payload.expense_data?.new_category ?? '');
+        body = `${oldCat} -> ${newCat}`;
+      } else if (fields.includes('currency')) {
+        const oldCur = String(payload.expense_data?.old_currency ?? '');
+        const newCur = String(payload.expense_data?.new_currency ?? '');
+        body = `${oldCur} -> ${newCur}`;
+      } else if (fields.includes('date')) {
+        const oldDate = String(payload.expense_data?.old_date ?? '');
+        const newDate = String(payload.expense_data?.new_date ?? '');
+        body = `${oldDate} -> ${newDate}`;
+      } else if (fields.includes('created_at')) {
+        const toTime = (v?: string) => {
+          try { return new Date(v || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return String(v || ''); }
+        };
+        body = `${toTime(payload.expense_data?.old_created_at)} -> ${toTime(payload.expense_data?.new_created_at)}`;
+      } else if (fields.includes('raw_text')) {
+        const oldN = String(payload.expense_data?.old_note ?? '').trim();
+        const newN = String(payload.expense_data?.new_note ?? '').trim();
+        body = `${oldN} -> ${newN}`;
+      }
+
       return {
-        title: '✏️ Expense Updated',
-        body: `An expense was modified in your household`,
+        title: `✏️ ${actor} edited an expense`,
+        body,
         data: {
           expense_id: payload.expense_id || '',
           household_id: payload.household_id || ''
         }
       };
+    }
+
+    case 'expense_deleted': {
+      const code = payload.expense_data?.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const cents = Number(payload.expense_data?.amount_cents ?? 0);
+      const body = `${symbol}${(cents / 100).toFixed(2)}`;
+      return {
+        title: `🗑️ ${actor} deleted an expense`,
+        body,
+        data: {
+          expense_id: payload.expense_id || '',
+          household_id: payload.household_id || ''
+        }
+      };
+    }
 
     case 'budget_warn':
       return {
@@ -533,7 +775,7 @@ function buildNotificationMessage(eventType: string, payload: Record<string, any
 
     case 'split_created':
       return {
-        title: '🧾 Expense Split',
+        title: '🧮 Expense Split',
         body: `You have a new expense to split`,
         data: {
           split_id: payload.split_id || ''

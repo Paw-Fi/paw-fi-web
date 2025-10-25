@@ -4,6 +4,7 @@ import { getCorsHeaders } from "../shared/cors.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const iosBundleId = Deno.env.get('IOS_BUNDLE_ID') || 'com.moneko.mobile';
 
 // Firebase Cloud Messaging V1 API - Modern approach (2025)
 // Requires Service Account JSON from Firebase Console
@@ -11,6 +12,27 @@ const firebaseServiceAccount = Deno.env.get('FIREBASE_SERVICE_ACCOUNT_JSON');
 const firebaseProjectId = Deno.env.get('FIREBASE_PROJECT_ID');
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+const firebaseProjectIdEnv = firebaseProjectId || '';
+
+function redact(v?: string) {
+  if (!v) return v;
+  if (v.length <= 6) return '***';
+  return v.slice(0, 4) + '***' + v.slice(-4);
+}
+
+function getServiceAccountMeta() {
+  try {
+    if (!firebaseServiceAccount) return null;
+    const sa = JSON.parse(firebaseServiceAccount);
+    return {
+      project_id: sa.project_id as string | undefined,
+      client_email: sa.client_email as string | undefined,
+      private_key_id: sa.private_key_id as string | undefined,
+    };
+  } catch {
+    return null;
+  }
+}
 
 interface ProcessNotificationsResponse {
   success: boolean;
@@ -55,15 +77,19 @@ async function getAccessToken(): Promise<string | null> {
     const encodedClaims = btoa(JSON.stringify(claims)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
     const unsignedToken = `${encodedHeader}.${encodedClaims}`;
 
-    const privateKeyPem = serviceAccount.private_key;
-    const pemHeader = '-----BEGIN PRIVATE KEY-----';
-    const pemFooter = '-----END PRIVATE KEY-----';
-    const pemContents = privateKeyPem.substring(
-      pemHeader.length,
-      privateKeyPem.length - pemFooter.length
-    ).replace(/\s/g, '');
-
-    const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+    let privateKeyPem: string = serviceAccount.private_key as string;
+    if (!privateKeyPem) {
+      console.error('[fcm-v1] Service account missing private_key');
+      return null;
+    }
+    privateKeyPem = privateKeyPem.replace(/\\n/g, '\n').trim();
+    const match = privateKeyPem.match(/-----BEGIN PRIVATE KEY-----([\s\S]*?)-----END PRIVATE KEY-----/);
+    if (!match || !match[1]) {
+      console.error('[fcm-v1] Invalid private key format');
+      return null;
+    }
+    const pemBody = match[1].replace(/\r|\n/g, '');
+    const binaryKey = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
 
     const key = await crypto.subtle.importKey(
       'pkcs8',
@@ -120,7 +146,8 @@ async function sendFCMv1Notification(
   title: string,
   body: string,
   data: Record<string, string>,
-  accessToken: string
+  accessToken: string,
+  imageUrl?: string
 ): Promise<boolean> {
   if (!firebaseProjectId) {
     console.error('[fcm-v1] FIREBASE_PROJECT_ID not configured');
@@ -133,7 +160,8 @@ async function sendFCMv1Notification(
         token: deviceToken,
         notification: {
           title,
-          body
+          body,
+          ...(imageUrl ? { image: imageUrl } : {})
         },
         data,
         android: {
@@ -143,9 +171,15 @@ async function sendFCMv1Notification(
           }
         },
         apns: {
+          headers: {
+            'apns-topic': iosBundleId,
+            'apns-push-type': 'alert',
+            'apns-priority': '10'
+          },
           payload: {
             aps: {
               sound: 'default',
+              ...(imageUrl ? { ['mutable-content']: 1 } : {}),
               badge: 1
             }
           }
@@ -171,9 +205,20 @@ async function sendFCMv1Notification(
     } else {
       const errorText = await response.text();
       console.error('[fcm-v1] FCM API error:', response.status, errorText);
+      if (response.status === 401 && errorText.includes('APNS')) {
+        console.error('[fcm-v1] Hint: Verify APNs auth key (p8) + Key ID + Team ID, bundle id/topic', iosBundleId, 'and iOS entitlements (aps-environment). Ensure the device token belongs to this Firebase project.');
+      }
 
       if (errorText.includes('UNREGISTERED') || errorText.includes('INVALID_ARGUMENT')) {
-        console.warn('[fcm-v1] Invalid or expired device token - should be cleaned up');
+        console.warn('[fcm-v1] Invalid or expired device token - deactivating');
+        try {
+          await supabase
+            .from('devices')
+            .update({ is_active: false, updated_at: new Date().toISOString() })
+            .eq('push_token', deviceToken);
+        } catch (e) {
+          console.error('[fcm-v1] Failed to deactivate device token:', e);
+        }
       }
 
       return false;
@@ -284,6 +329,14 @@ serve(async (req) => {
     }
 
     // Get OAuth access token for FCM V1 API (valid for 1 hour)
+    const saMeta = getServiceAccountMeta();
+    console.log('[process-notifications] Config diag', {
+      firebaseProjectId: firebaseProjectIdEnv,
+      serviceAccountProjectId: saMeta?.project_id,
+      serviceAccountEmail: redact(saMeta?.client_email),
+      serviceAccountKeyId: redact(saMeta?.private_key_id),
+      apnsTopic: iosBundleId,
+    });
     const accessToken = await getAccessToken();
     if (!accessToken) {
       console.error('[process-notifications] Failed to obtain FCM access token');
@@ -343,6 +396,18 @@ serve(async (req) => {
           case 'split_settled':
             title = '✅ Split Settled';
             body = `An expense split has been marked as settled`;
+            break;
+
+          case 'expense_added':
+            title = '💸 New Expense Added';
+            body = `A new expense was added in your household`;
+            targetUserId = null; // Broadcast to all members except actor
+            break;
+
+          case 'expense_edited':
+            title = '✏️ Expense Updated';
+            body = `An expense was modified in your household`;
+            targetUserId = null; // Broadcast to all members except actor
             break;
 
           case 'budget_warn':
@@ -407,7 +472,9 @@ serve(async (req) => {
           .select('user_id, enable_nudges, nudge_quiet_hours_start, nudge_quiet_hours_end')
           .in('user_id', userIds);
 
-        // Filter users by quiet hours
+        const isExpenseEvent = event.event_type === 'expense_added' || event.event_type === 'expense_edited';
+
+        // Filter users by quiet hours (skip for expense events)
         const eligibleUserIds = userIds.filter(userId => {
           const prefs = preferences?.find(p => p.user_id === userId);
 
@@ -416,8 +483,8 @@ serve(async (req) => {
             return false;
           }
 
-          // Check quiet hours
-          if (prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
+          // Check quiet hours unless expense event (immediate delivery)
+          if (!isExpenseEvent && prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
             const [startHour, startMinute] = prefs.nudge_quiet_hours_start.split(':').map(Number);
             const [endHour, endMinute] = prefs.nudge_quiet_hours_end.split(':').map(Number);
 
@@ -464,6 +531,21 @@ serve(async (req) => {
           continue;
         }
 
+        // Fetch household cover image for richer notifications
+        let imageUrl: string | undefined = undefined;
+        if (event.household_id) {
+          try {
+            const { data: hh } = await supabase
+              .from('households')
+              .select('cover_image_url')
+              .eq('id', event.household_id)
+              .maybeSingle();
+            if (hh?.cover_image_url && /^https?:\/\//i.test(hh.cover_image_url)) {
+              imageUrl = hh.cover_image_url as string;
+            }
+          } catch (_) {}
+        }
+
         // Send push notifications using FCM V1 API
         let eventSentCount = 0;
         let eventFailedCount = 0;
@@ -484,7 +566,8 @@ serve(async (req) => {
                 {}
               )
             },
-            accessToken
+            accessToken,
+            imageUrl
           );
 
           return { device, success };

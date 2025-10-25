@@ -948,3 +948,53 @@ USING (
   bucket_id = 'public'
   AND auth.uid()::text = (storage.foldername(name))[1]
 );
+
+-- ====================
+-- NOTIFICATION HELPERS & REALTIME TRIGGER (Included in baseline)
+-- ====================
+
+-- Create helper function to notify household members on expense events
+CREATE OR REPLACE FUNCTION public.notify_household_members_expense(
+  p_household_id UUID,
+  p_expense_id UUID,
+  p_actor_user_id UUID,
+  p_event_type notification_event_type,
+  p_expense_data JSONB DEFAULT '{}'::JSONB
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_member RECORD;
+BEGIN
+  FOR v_member IN
+    SELECT user_id
+    FROM public.household_members
+    WHERE household_id = p_household_id
+      AND user_id <> p_actor_user_id
+  LOOP
+    INSERT INTO public.notification_events (
+      household_id,
+      user_id,
+      event_type,
+      payload,
+      created_at
+    ) VALUES (
+      p_household_id,
+      v_member.user_id,
+      p_event_type,
+      jsonb_build_object(
+        'expense_id', p_expense_id,
+        'actor_user_id', p_actor_user_id,
+        'expense_data', p_expense_data
+      ),
+      NOW()
+    );
+  END LOOP;
+END;
+$$;
+
+COMMENT ON FUNCTION public.notify_household_members_expense IS 'Creates notification events for all household members except the actor on expense add/edit';
+

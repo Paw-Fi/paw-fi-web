@@ -16,6 +16,7 @@ interface RegisterDeviceRequest {
   locale?: string;
   timezone?: string;
   is_active?: boolean; // optional: allow deactivation on logout
+  delete_device?: boolean; // optional: explicitly delete device on logout
 }
 
 interface RegisterDeviceResponse {
@@ -82,7 +83,8 @@ serve(async (req) => {
       app_version,
       locale = 'en',
       timezone,
-      is_active
+      is_active,
+      delete_device
     } = body;
 
     // Validate required fields
@@ -122,6 +124,34 @@ serve(async (req) => {
         JSON.stringify({ error: 'push_token cannot be empty' }),
         {
           status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Handle device deletion (logout scenario)
+    if (delete_device === true) {
+      const { error: deleteError } = await supabase
+        .from('devices')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('push_token', push_token);
+
+      if (deleteError) {
+        console.error('Error deleting device:', deleteError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to delete device' }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Device deleted successfully' }),
+        {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
