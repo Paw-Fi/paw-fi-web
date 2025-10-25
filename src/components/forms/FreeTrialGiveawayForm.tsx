@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
 import { type EarlyAccessClaim } from "@/lib/early-access";
-import { useClaimEarlyAccess, useUserHasClaimed } from "@/hooks/use-early-access";
+import { useUserHasClaimed } from "@/hooks/use-early-access";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,30 @@ import { earlyAccessKeys } from "@/hooks/use-early-access";
 
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/Q9rNbkN5"
 
-export function FreeTrialGiveawayForm() {
+export type SelectOption = { value: string; label: string };
+export type MultiOption = { id: string; label: string };
+
+export type FreeTrialQuestions = {
+  budgetingMethodOptions: SelectOption[];
+  mobileAppPriorities: MultiOption[];
+  mobileFeatureOptions: MultiOption[];
+  referralOptions: SelectOption[];
+};
+
+export type FreeTrialGiveawayFormProps = {
+  questions: FreeTrialQuestions;
+  onSubmit: (
+    claim: EarlyAccessClaim
+  ) => Promise<{ success: boolean; message?: string; error?: string }>;
+};
+
+export function FreeTrialGiveawayForm({ questions, onSubmit }: FreeTrialGiveawayFormProps) {
   const { getCookie, setCookie } = useCookie();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [hasClaimed, setHasClaimed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -43,43 +61,6 @@ export function FreeTrialGiveawayForm() {
 
   // Use TanStack Query hooks
   const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
-  const claimMutation = useClaimEarlyAccess();
-
-  const budgetingMethodOptions = [
-    { value: "manual-tracking", label: "Manual tracking (pen and paper)" },
-    { value: "spreadsheets", label: "Spreadsheets (Excel, Google Sheets)" },
-    { value: "other-apps", label: "Other budgeting apps" },
-    { value: "no-system", label: "No organized system currently" },
-    { value: "bank-tools", label: "Bank's budgeting tools" },
-  ];
-
-  const mobileAppPriorities = [
-    { id: "quick-expense-tracking", label: "Quick expense entry on-the-go" },
-    { id: "budget-notifications", label: "Push notifications for budget alerts" },
-    { id: "goal-progress", label: "Real-time goal progress tracking" },
-    { id: "offline-access", label: "Offline budget access" },
-    { id: "receipt-scanning", label: "Photo receipt capture" },
-    { id: "biometric-security", label: "Secure biometric login" },
-  ];
-
-  const mobileFeatureOptions = [
-    { id: "push-notifications", label: "Smart push notifications" },
-    { id: "photo-receipts", label: "AI-powered receipt scanning" },
-    { id: "biometric-login", label: "Face ID / Touch ID login" },
-    { id: "watch-integration", label: "Apple Watch / Wear OS integration" },
-    { id: "offline-mode", label: "Full offline functionality" },
-    { id: "widget-support", label: "Home screen budget widgets" },
-  ];
-
-  const referralOptions = [
-    { value: "search", label: "Search Engine (Google, Bing, etc.)" },
-    { value: "social", label: "Social Media (TikTok, Instagram, etc.)" },
-    { value: "friend", label: "Friend or family recommendation" },
-    { value: "blog", label: "Blog or news article" },
-    { value: "youtube", label: "YouTube" },
-    { value: "podcast", label: "Podcast" },
-    { value: "other", label: "Other" },
-  ];
 
   // Helper to auto-detect device type from the browser
   function detectDeviceType(): "ios" | "android" | "desktop" {
@@ -251,41 +232,34 @@ export function FreeTrialGiveawayForm() {
       ].filter(Boolean),
     };
 
-    claimMutation.mutate(claim, {
-      onSuccess: (response) => {
-        if (response.success) {
-          setResult({
-            success: true,
-            message: "🎉 Welcome to the community! You've joined the mobile app waitlist. Check your email for development updates and launch notifications!"
-          });
-          
-          // No need to set cookie anymore - database check will handle this
-          // The hook will automatically update when the mutation succeeds
-          setHasClaimed(true);
-          
-          // Clear form data
-          setFormData({
-            email: "",
-            firstName: "",
-            lastName: "",
-            referralSource: "",
-            budgetingMethod: "",
-            mobileAppPriorities: [],
-            interestedMobileFeatures: [],
-            devicePreference: "",
-          });
-          window.location.href = TESTFLIGHT_URL;
-        } else {
-          setResult(response);
-        }
-      },
-      onError: () => {
+    try {
+      setIsSubmitting(true);
+      const response = await onSubmit(claim);
+      if (response.success) {
         setResult({
-          success: false,
-          error: 'An unexpected error occurred. Please try again.'
+          success: true,
+          message: "🎉 Welcome to the community! You've joined the mobile app waitlist. Check your email for development updates and launch notifications!"
         });
+        setHasClaimed(true);
+        setFormData({
+          email: "",
+          firstName: "",
+          lastName: "",
+          referralSource: "",
+          budgetingMethod: "",
+          mobileAppPriorities: [],
+          interestedMobileFeatures: [],
+          devicePreference: "",
+        });
+        window.location.href = TESTFLIGHT_URL;
+      } else {
+        setResult(response);
       }
-    });
+    } catch (err) {
+      setResult({ success: false, error: 'An unexpected error occurred. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -431,7 +405,7 @@ export function FreeTrialGiveawayForm() {
                   How do you currently manage your budget?
                 </label>
                 <CustomSelect
-                  options={budgetingMethodOptions}
+                  options={questions.budgetingMethodOptions}
                   value={formData.budgetingMethod}
                   onChange={(value) => setFormData(prev => ({ ...prev, budgetingMethod: value }))}
                   placeholder="Select your current method"
@@ -441,7 +415,7 @@ export function FreeTrialGiveawayForm() {
               {/* Mobile App Priorities */}
               <div className="mb-6">
                 <MultiSelectDropdown
-                  options={mobileAppPriorities}
+                  options={questions.mobileAppPriorities}
                   selectedValues={formData.mobileAppPriorities}
                   onChange={(value) => handleMultiSelectChange(value, 'mobileAppPriorities')}
                   placeholder="Select your mobile app priorities"
@@ -452,7 +426,7 @@ export function FreeTrialGiveawayForm() {
               {/* Interested Mobile Features */}
               <div className="mb-6">
                 <MultiSelectDropdown
-                  options={mobileFeatureOptions}
+                  options={questions.mobileFeatureOptions}
                   selectedValues={formData.interestedMobileFeatures}
                   onChange={(value) => handleMultiSelectChange(value, 'interestedMobileFeatures')}
                   placeholder="Select mobile features you want"
@@ -468,7 +442,7 @@ export function FreeTrialGiveawayForm() {
                   How did you hear about us?
                 </label>
                 <CustomSelect
-                  options={referralOptions}
+                  options={questions.referralOptions}
                   value={formData.referralSource}
                   onChange={(value) => setFormData(prev => ({ ...prev, referralSource: value }))}
                   placeholder="Select how you found us"
@@ -485,7 +459,7 @@ export function FreeTrialGiveawayForm() {
                   whileTap={{ scale: 0.99 }}
 
                 >
-                  {claimMutation.isPending ? (
+                  {isSubmitting ? (
                     <>
                       <div className="mr-3 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       Processing...
