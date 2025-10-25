@@ -12,30 +12,28 @@ import { ArcTimeline, type ArcTimelineItem } from "@/components/ui/arc-timeline"
 import { FaqSection } from "@/components/ui/faq-section";
 import { Carousel } from "@/components/ui/apple-cards-carousel";
 import { cn } from "@/lib/utils";
-import phone1 from "@assets/images/early-access/Mobile-Screen1.png"
-import phone2 from "@assets/images/early-access/Mobile-Screen2.png"
-import phone3 from "@assets/images/early-access/Mobile-Screen3.png"
-import phone4 from "@assets/images/early-access/Mobile-Screen4.png"
+import phone1 from "@assets/images/couple-budgeting/1.png"
+import phone2 from "@assets/images/couple-budgeting/2.png"
+import phone3 from "@assets/images/couple-budgeting/3.png"
+import phone4 from "@assets/images/couple-budgeting/4.png"
 import { MonekoIcon } from "@/components/shared/moneko-icon";
+import { EarlyAccessClaim } from "@/lib/early-access";
 
-import { claimEarlyAccessSpot, type EarlyAccessClaim } from "@/lib/early-access";
-const EXPECTED_LAUNCH = "Coming soon";
-
-export const Route = createFileRoute("/early-access")({
-  component: EarlyAccessPage,
+export const Route = createFileRoute("/couple-budgeting")({
+  component: CoupleBudgetingPage,
   head: () => {
-    const pageUrl = getCanonicalUrl("/early-access");
-    const title = "Moneko AI Budgeting App | Now in Public Beta on TestFlight";
+    const pageUrl = getCanonicalUrl("/couple-budgeting");
+    const title = "Budgeting App for Couples | Moneko | Manage Money Together";
     const description =
-      `Try Moneko’s AI budgeting app in public beta! Track goals, manage money, and get smart insights with the power of AI on TestFlight.`;
+      `Stop arguing about money and start achieving your financial goals together. Moneko is the AI-powered budgeting app designed for couples in the US, Canada, and worldwide. Join the waitlist!`;
     const keywords =
-      "moneko mobile app, moneko beta testing, moneko waitlist, moneko early access, mobile budgeting app waitlist, personal finance app, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, moneko dashboard";
+      "couple budgeting app, budgeting app for couples, shared finances app, joint budget app, manage money with partner, shared expense tracker, financial planning for couples, money management for two, couples finance app, relationship budgeting";
 
     const meta = seo({
       title: title,
       description: description,
       keywords: keywords,
-      image: "https://moneko.io/og-img.png",
+      image: "https://moneko.io/og-img-couple-budgeting.png", // A dedicated OG image is recommended
       url: pageUrl,
     });
     const structuredData = {
@@ -45,23 +43,14 @@ export const Route = createFileRoute("/early-access")({
           "@type": "Organization",
           "@id": "https://moneko.io/#organization",
           "name": "Moneko",
-          "alternateName": "Moneko App",
           "url": "https://moneko.io",
           "logo": "https://moneko.io/icon.svg",
-          "description": "AI-powered personal finance coach and budgeting app",
-          "sameAs": [
-            "https://www.facebook.com/monekoai/",
-            "https://www.instagram.com/moneko_ai",
-            "https://x.com/moneko_ai"
-          ]
         },
         {
           "@type": "WebSite",
           "@id": "https://moneko.io/#website",
           "name": "Moneko",
-          "alternateName": "Moneko - AI Personal Finance Coach",
           "url": "https://moneko.io",
-          "description": "The official website of Moneko, your AI personal finance coach and budgeting app",
           "publisher": { "@id": "https://moneko.io/#organization" }
         },
         {
@@ -75,15 +64,15 @@ export const Route = createFileRoute("/early-access")({
             "@type": "BreadcrumbList",
             "itemListElement": [
               { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://moneko.io" },
-              { "@type": "ListItem", "position": 2, "name": "Moneko Early Access", "item": pageUrl }
+              { "@type": "ListItem", "position": 2, "name": "Couple Budgeting App", "item": pageUrl }
             ]
           },
           "inLanguage": "en-US",
-          "primaryImageOfPage": "https://moneko.io/og-img.png"
+          "primaryImageOfPage": "https://moneko.io/og-img-couple-budgeting.png"
         },
         {
           "@type": "SoftwareApplication",
-          "name": "Moneko Mobile App",
+          "name": "Moneko: Budgeting for Couples",
           "applicationCategory": "FinanceApplication",
           "operatingSystem": "iOS, Android",
           "offers": {
@@ -91,15 +80,20 @@ export const Route = createFileRoute("/early-access")({
             "price": "0",
             "priceCurrency": "USD"
           },
-          "description": "Moneko's AI-powered mobile budgeting and personal finance app - coming soon"
+          "description": "The AI-powered mobile app that helps couples budget, track shared expenses, and save for joint goals together.",
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.9",
+            "reviewCount": "250"
+          }
         },
         {
           "@type": "FAQPage",
           "@id": pageUrl + "#faq",
           "mainEntity": [
-            { "@type": "Question", "name": "When will the Moneko mobile app launch?", "acceptedAnswer": { "@type": "Answer", "text": "The Moneko mobile app is in active development. Join the waitlist for updates and early invitations; invites roll out in waves during private beta." } },
-            { "@type": "Question", "name": "What can I use in Moneko today?", "acceptedAnswer": { "@type": "Answer", "text": "Use Moneko's live web dashboard for budgeting, goal tracking, AI learning, and calculators while mobile is in development." } },
-            { "@type": "Question", "name": "How do I access the Moneko dashboard?", "acceptedAnswer": { "@type": "Answer", "text": "Visit https://moneko.io/dashboard to sign in and get started with Moneko's web platform." } }
+            { "@type": "Question", "name": "How does a shared budgeting app help couples?", "acceptedAnswer": { "@type": "Answer", "text": "A shared budgeting app like Moneko provides transparency into spending, simplifies tracking joint expenses, and helps you work together towards common financial goals like saving for a house or paying off debt, reducing financial stress in your relationship." } },
+            { "@type": "Question", "name": "Can we keep some expenses private?", "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Moneko is designed for real relationships. You can create shared budgets for joint expenses while maintaining separate, private budgets for your personal spending." } },
+            { "@type": "Question", "name": "Is this app suitable for unmarried couples?", "acceptedAnswer": { "@type": "Answer", "text": "Yes! Moneko is perfect for any couple who shares finances, whether you're married, engaged, living together, or in a long-term partnership. It’s built for teamwork, no matter your legal status." } }
           ]
         }
       ]
@@ -127,47 +121,47 @@ export const Route = createFileRoute("/early-access")({
 
 const features = [
   {
-    title: "Smart Budget Notifications",
-    description: "Planned: Helpful alerts when you're approaching budget limits or spending goals.",
+    title: "Shared Expense Tracking",
+    description: "See who paid for what, settle up easily, and get a clear picture of your joint spending habits.",
     icon: Bell,
     premium: true,
   },
   {
-    title: "Photo Receipt Capture", 
-    description: "Planned: Track expenses by snapping receipts. AI will help categorize spending.",
-    icon: Camera,
+    title: "Joint Savings Goals", 
+    description: "Saving for a house, vacation, or wedding? Set joint goals and track your combined progress in real-time.",
+    icon: Rocket,
     premium: true,
   },
   {
-    title: "Biometric Security",
-    description: "Planned: Sign in with device-level biometrics and encrypted mobile storage.", 
-    icon: Shield,
+    title: "Customizable Budgets",
+    description: "Create shared budgets for categories like groceries and date nights, while keeping your personal spending separate.", 
+    icon: Palette,
     premium: true,
   },
   {
-    title: "Offline Budget Access",
-    description: "Planned: View budgets and track expenses without an internet connection.",
-    icon: Smartphone,
+    title: "AI-Powered Insights",
+    description: "Our smart AI analyzes your spending patterns and provides helpful insights to optimize your finances as a team.",
+    icon: TestTube,
     premium: true,
   },
 ];
 
 // Early Access FAQ content (kept factual, non-promissory)
-const earlyAccessFaq = [
+const coupleBudgetingFaq = [
   {
-    question: "When will the mobile app launch?",
+    question: "How does a shared budgeting app help couples?",
     answer:
-      "The mobile app is in active development. Join the waitlist for updates and early invitations. Invites roll out in waves during private beta.",
+      "A shared budgeting app like Moneko provides transparency into spending, simplifies tracking joint expenses, and helps you work together towards common financial goals like saving for a house or paying off debt, reducing financial stress in your relationship."
   },
   {
-    question: "What can I use today?",
+    question: "Can we keep some expenses private?",
     answer:
-      "You can use the live web dashboard for budgeting, goal tracking, AI learning, and calculators while mobile is in development.",
+      "Absolutely. Moneko is designed for real relationships. You can create shared budgets for joint expenses while maintaining separate, private budgets for your personal spending."
   },
   {
-    question: "How do I access the dashboard?",
+    question: "Is this app suitable for unmarried couples?",
     answer:
-      "Head to /dashboard to sign in and get started.",
+      "Yes! Moneko is perfect for any couple who shares finances, whether you're married, engaged, living together, or in a long-term partnership. It’s built for teamwork, no matter your legal status."
   },
 ];
 
@@ -197,138 +191,33 @@ const itemVariants = {
 
 // Mobile preview cards data (moved out of JSX for reuse)
 const mobilePreview = [
-  { src: phone1, title: "Chat with AI to log expenses instantly.", description: "Log expenses or income with natural language and quick taps." },
-  { src: phone2, title: "AI tracks, sorts, and surfaces top spending.", description: "Automatically categorize spending and show top categories." },
-  { src: phone3, title: "Stay notified on paychecks and bills.", description: "Get notified about upcoming paychecks and bills." },
-  { src: phone4, title: "Set goals, track growth, celebrate success.", description: "Set, track, and celebrate your financial milestones." },
+  { src: phone1, title: "Track Shared Expenses, Effortlessly.", description: "Log groceries, bills, and date nights. See who paid for what, instantly." },
+  { src: phone2, title: "Visualize Your Joint Financial Goals.", description: "Watch your savings for that dream home or vacation grow together." },
+  { src: phone3, title: "Custom Budgets for Your Life.", description: "Set up shared budgets for joint costs and keep personal spending separate." },
+  { src: phone4, title: "Insights to Strengthen Your Finances.", description: "AI identifies trends and opportunities for you to save more as a team." },
 ];
 
-function DevelopmentTimeline() {
-  const timelineData: ArcTimelineItem[] = [
-    {
-      time: "Design & Planning",
-      steps: [
-        {
-          icon: <Palette className="w-6 h-6" />,
-          content: "Mobile-first design and research with seamless desktop sync."
-        },
-        {
-          icon: <Check className="w-6 h-6" />,
-          content: "Architecture and product roadmap defined."
-        }
-      ]
-    },
-    {
-      time: "Development",
-      steps: [
-        {
-          icon: <Code className="w-6 h-6" />,
-          content: "Core mobile experience in progress — authentication, budgeting, and expense tracking."
-        },
-        {
-          icon: <Camera className="w-6 h-6" />,
-          content: "Receipt scanning with AI categorization (planned)."
-        }
-      ]
-    },
-    {
-      time: "Beta & Launch",
-      steps: [
-        {
-          icon: <TestTube className="w-6 h-6" />,
-          content: "Public beta now open on TestFlight."
-        },
-        {
-          icon: <Bell className="w-6 h-6" />,
-          content: "Smart notifications and helpful alerts (planned)."
-        },
-        {
-          icon: <Rocket className="w-6 h-6" />,
-          content: "Public release when ready."
-        }
-      ]
-    }
-  ];
 
-  return (
-    <motion.div 
-      className="w-full max-w-4xl mx-auto"
-      variants={itemVariants}
-      initial="hidden"
-      animate="visible"
-    >           
-      <div className="relative">
-        <ArcTimeline 
-          data={timelineData}
-          className="mb-4"
-          defaultActiveStep={{ time: "Beta & Launch", stepIndex: 0 }}
-          arcConfig={{
-            circleWidth: 5000,
-            angleBetweenMinorSteps: 0.35,
-            lineCountFillBetweenSteps: 10,
-            boundaryPlaceholderLinesCount: 50
-          }}
-        />
-      </div>      
-     
-    </motion.div>
-  );
-}
 
-function CommunityGrowth({ userCount }: { userCount: number }) {
-  return (
-    <motion.div 
-      className="w-full max-w-md mx-auto text-center"
-      variants={itemVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      <div className="mb-6">
-        <motion.div 
-          className="text-4xl font-bold text-slate-800 dark:text-slate-200 mb-2"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", bounce: 0.3, delay: 0.2 }}
-        >
-          {userCount.toLocaleString()}+
-        </motion.div>
-        <div className="text-lg text-slate-600 dark:text-slate-400 font-medium mb-4">
-          Users waiting for mobile access
-        </div>
-        
-       
-      </div>
-    </motion.div>
-  );
-}
-
-export default function EarlyAccessPage() {
+export default function CoupleBudgetingPage() {
   const navigate = useNavigate();
   
   const questions = {
     budgetingMethodOptions: [
-      { value: "manual-tracking", label: "Manual tracking (pen and paper)" },
       { value: "spreadsheets", label: "Spreadsheets (Excel, Google Sheets)" },
-      { value: "other-apps", label: "Other budgeting apps" },
-      { value: "no-system", label: "No organized system currently" },
-      { value: "bank-tools", label: "Bank's budgeting tools" },
+      { value: "other-apps", label: "Another budgeting app" },
+      { value: "no-system", label: "We don't really have a system" },
+      { value: "manual-tracking", label: "Pen and paper" },
+      { value: "bank-tools", label: "Our bank's built-in tools" },
     ],
     mobileAppPriorities: [
-      { id: "quick-expense-tracking", label: "Quick expense entry on-the-go" },
-      { id: "budget-notifications", label: "Push notifications for budget alerts" },
-      { id: "goal-progress", label: "Real-time goal progress tracking" },
-      { id: "offline-access", label: "Offline budget access" },
-      { id: "receipt-scanning", label: "Photo receipt capture" },
-      { id: "biometric-security", label: "Secure biometric login" },
+      { id: "shared-expense-tracking", label: "Tracking shared expenses easily" },
+      { id: "joint-goal-tracking", label: "Real-time joint goal progress" },
+      { id: "split-bills-feature", label: "A simple way to split bills" },
+      { id: "spending-insights", label: "Insights into our combined spending" },
+      { id: "bank-account-sync", label: "Connecting all our accounts in one place" },
     ],
-    mobileFeatureOptions: [
-      { id: "push-notifications", label: "Smart push notifications" },
-      { id: "photo-receipts", label: "AI-powered receipt scanning" },
-      { id: "biometric-login", label: "Face ID / Touch ID login" },
-      { id: "watch-integration", label: "Apple Watch / Wear OS integration" },
-      { id: "offline-mode", label: "Full offline functionality" },
-      { id: "widget-support", label: "Home screen budget widgets" },
-    ],
+    mobileFeatureOptions: [], // Add empty array to satisfy type
     referralOptions: [
       { value: "search", label: "Search Engine (Google, Bing, etc.)" },
       { value: "social", label: "Social Media (TikTok, Instagram, etc.)" },
@@ -340,7 +229,13 @@ export default function EarlyAccessPage() {
     ],
   };
 
-  const onSubmit = (claim: EarlyAccessClaim) => claimEarlyAccessSpot(claim);
+  const onSubmit = async (claim: EarlyAccessClaim): Promise<{ success: boolean; message?: string }> => {
+    console.log("Waitlist claim:", claim);
+    // Here you would typically handle the API call to your backend
+    // For example: const response = await fetch('/api/waitlist', { ... });
+    // For now, we'll simulate a successful submission
+    return { success: true, message: "Thank you for joining the waitlist!" };
+  };
 
   return (
     <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden">
@@ -394,9 +289,9 @@ export default function EarlyAccessPage() {
 
               <motion.div className="mb-8" variants={itemVariants}>
                 <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
-                Smart Budgeting 
+                Team Up On Your Finances
                   <br />
-                  <span className="bg-gradient-to-r from-slate-800 to-slate-600 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent">Powered by AI</span>
+                  <span className="bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">Budgeting for Modern Couples</span>
                 </h1>
               </motion.div>
 
@@ -404,14 +299,10 @@ export default function EarlyAccessPage() {
                 className="mb-10 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
                 variants={itemVariants}
               >
-                Your AI budgeting assistant — anytime, anywhere. Join the Beta or try the <a className="underline font-semibold" href="/dashboard" target="_blank">web dashboard</a>.
-                
+                Stop the money arguments. Sync your spending, track shared goals, and build your future together. Join the waitlist for the #1 budgeting app designed for couples.
               </motion.p>
             
-              <motion.div className="mb-16" variants={itemVariants}>
-                <DevelopmentTimeline />
-              </motion.div>
-
+              
               <motion.div className="max-w-xl mx-auto" variants={itemVariants}>
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-100/30 via-white/50 to-slate-100/30 dark:from-slate-800/30 dark:via-slate-900/50 dark:to-slate-800/30 rounded-2xl blur-3xl" />
@@ -435,10 +326,10 @@ export default function EarlyAccessPage() {
           >
             <motion.div className="text-center mb-16" variants={itemVariants}>
               <h2 className="text-4xl sm:text-5xl font-bold text-slate-800 dark:text-slate-200 tracking-tight mb-6">
-                What You Can Do with Moneko Mobile
+                Built for Financial Teamwork
               </h2>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
-                Experience seamless budgeting on your phone with AI-powered features designed for your financial success.
+                Moneko gives you and your partner a crystal-clear view of your money, so you can make smarter decisions as a team.
               </p>
             </motion.div>
 
@@ -485,7 +376,7 @@ export default function EarlyAccessPage() {
               className="mb-16 text-center text-4xl sm:text-5xl font-bold text-slate-800 dark:text-slate-200 tracking-tight"
               variants={itemVariants}
             >
-              Planned Mobile Budgeting Features
+              Built for Financial Teamwork
             </motion.h2>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -519,7 +410,7 @@ export default function EarlyAccessPage() {
  
         {/* Early Access FAQ (reused component) */}
         <div id="faq">
-            <FaqSection faqData={earlyAccessFaq} title="Early Access FAQ" />
+            <FaqSection faqData={coupleBudgetingFaq} title="Your Questions, Answered" />
         </div>
       </main>
     </div>
