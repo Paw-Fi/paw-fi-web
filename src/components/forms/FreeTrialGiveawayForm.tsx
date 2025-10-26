@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle } from "lucide-react";
-import { type EarlyAccessClaim } from "@/lib/early-access";
-import { useUserHasClaimed } from "@/hooks/use-early-access";
+import { type CoupleBudgetingClaim } from "@/lib/couple-budgeting-waitlist";
+import { useCoupleBudgetingUserClaimed } from "@/hooks/use-couple-budgeting-waitlist";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { MultiSelectDropdown } from "@/components/ui/multi-select-dropdown";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { earlyAccessKeys } from "@/hooks/use-early-access";
+import { coupleBudgetingKeys } from "@/hooks/use-couple-budgeting-waitlist";
 
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/Q9rNbkN5"
 
@@ -31,11 +31,13 @@ export type FreeTrialQuestions = {
 export type FreeTrialGiveawayFormProps = {
   questions: FreeTrialQuestions;
   onSubmit: (
-    claim: EarlyAccessClaim
+    claim: CoupleBudgetingClaim
   ) => Promise<{ success: boolean; message?: string; error?: string }>;
+  userHasClaimedFromDB: boolean;
+  claimStatusLoading: boolean;
 };
 
-export function FreeTrialGiveawayForm({ questions, onSubmit }: FreeTrialGiveawayFormProps) {
+export function FreeTrialGiveawayForm({ questions, onSubmit, userHasClaimedFromDB, claimStatusLoading }: FreeTrialGiveawayFormProps) {
   const { getCookie, setCookie } = useCookie();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -58,9 +60,6 @@ export function FreeTrialGiveawayForm({ questions, onSubmit }: FreeTrialGiveaway
     error?: string 
   }>({});
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-
-  // Use TanStack Query hooks
-  const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
 
   // Helper to auto-detect device type from the browser
   function detectDeviceType(): "ios" | "android" | "desktop" {
@@ -88,7 +87,7 @@ export function FreeTrialGiveawayForm({ questions, onSubmit }: FreeTrialGiveaway
     if (user?.id) {
       console.log('🗑️ Invalidating claim status cache for user:', user.id);
       queryClient.invalidateQueries({
-        queryKey: earlyAccessKeys.userClaimed(user.id),
+        queryKey: coupleBudgetingKeys.userClaimed(user.id),
       });
     }
   }, []); // Empty deps = runs once on mount
@@ -121,7 +120,7 @@ export function FreeTrialGiveawayForm({ questions, onSubmit }: FreeTrialGiveaway
     if (user?.id) {
       console.log('👤 User loaded - invalidating cache for user:', user.id);
       queryClient.invalidateQueries({
-        queryKey: earlyAccessKeys.userClaimed(user.id),
+        queryKey: coupleBudgetingKeys.userClaimed(user.id),
       });
     }
   }, [user?.id]); // Runs when user ID changes
@@ -214,22 +213,16 @@ export function FreeTrialGiveawayForm({ questions, onSubmit }: FreeTrialGiveaway
     }
 
     const detectedDevice = formData.devicePreference || detectDeviceType();
-    const claim: EarlyAccessClaim = {
+    const claim: CoupleBudgetingClaim = {
       email: formData.email,
       firstName: formData.firstName || undefined,
       lastName: formData.lastName || undefined,
       referralSource: formData.referralSource || undefined,
-      experienceLevel: formData.budgetingMethod || undefined,
-      financialGoals: formData.mobileAppPriorities.length > 0 ? formData.mobileAppPriorities : undefined,
-      interestedFeatures: formData.interestedMobileFeatures.length > 0 ? formData.interestedMobileFeatures : undefined,
-      userId: user.id, // Add user ID to the claim
-      // For backward compatibility, combine all interests
-      interests: [
-        formData.budgetingMethod,
-        detectedDevice,
-        ...formData.mobileAppPriorities,
-        ...formData.interestedMobileFeatures,
-      ].filter(Boolean),
+      budgetingMethod: formData.budgetingMethod || undefined,
+      mobileAppPriorities: formData.mobileAppPriorities.length > 0 ? formData.mobileAppPriorities : undefined,
+      interestedMobileFeatures: formData.interestedMobileFeatures.length > 0 ? formData.interestedMobileFeatures : undefined,
+      devicePreference: detectedDevice,
+      userId: user.id,
     };
 
     try {

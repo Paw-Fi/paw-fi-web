@@ -38,7 +38,7 @@ export default function HeroSection({ data }: HeroSectionProps) {
       <div className="mx-auto max-w-6xl text-center w-full">
         {/* Early Access Pill Button with Gradient */}
         <div className="mb-8 sm:mt-4 lg:mt-0">
-          <Link to="/early-access">
+          <Link to="/couple-budgeting">
             <div className="relative group ">
               <button className="relative bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full px-6 py-3 text-sm font-semibold inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
                 Early Access

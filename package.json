@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "deploy:functions:dev": "node scripts/deploy-functions.js dev",
     "deploy:functions:prod": "node scripts/deploy-functions.js prod",
-    "upgrade:lifetime": "node scripts/upgrade-to-lifetime.js"
+    "upgrade:lifetime": "node scripts/upgrade-to-lifetime.js",
+    "upgrade:annual": "node scripts/upgrade-to-annual.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
