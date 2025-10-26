@@ -19,6 +19,8 @@ import phone4 from "@assets/images/early-access/Mobile-Screen4.png"
 import { MonekoIcon } from "@/components/shared/moneko-icon";
 
 import { claimEarlyAccessSpot, type EarlyAccessClaim } from "@/lib/early-access";
+import { useUserHasClaimed } from "@/hooks/use-early-access";
+import { useAuth } from "@/contexts/auth-context";
 const EXPECTED_LAUNCH = "Coming soon";
 
 export const Route = createFileRoute("/early-access")({
@@ -341,6 +343,10 @@ export default function EarlyAccessPage() {
   };
 
   const onSubmit = (claim: EarlyAccessClaim) => claimEarlyAccessSpot(claim);
+    const { user, isAuthenticated } = useAuth();
+
+  const { data: userHasClaimedFromDB = false, isLoading: claimStatusLoading } = useUserHasClaimed(user?.id);
+
 
   return (
     <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden">
@@ -416,7 +422,7 @@ export default function EarlyAccessPage() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-100/30 via-white/50 to-slate-100/30 dark:from-slate-800/30 dark:via-slate-900/50 dark:to-slate-800/30 rounded-2xl blur-3xl" />
                   <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-slate-200/50 dark:border-slate-700/50">
-                    <FreeTrialGiveawayForm questions={questions} onSubmit={onSubmit} />
+                    <FreeTrialGiveawayForm questions={questions} onSubmit={onSubmit} userHasClaimedFromDB={userHasClaimedFromDB} claimStatusLoading={claimStatusLoading} />
                   </div>
                 </div>
               </motion.div>

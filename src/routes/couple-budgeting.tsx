@@ -16,8 +16,13 @@ import phone1 from "@assets/images/couple-budgeting/1.png"
 import phone2 from "@assets/images/couple-budgeting/2.png"
 import phone3 from "@assets/images/couple-budgeting/3.png"
 import phone4 from "@assets/images/couple-budgeting/4.png"
+import phone5 from "@assets/images/couple-budgeting/5.png"
+
 import { MonekoIcon } from "@/components/shared/moneko-icon";
-import { EarlyAccessClaim } from "@/lib/early-access";
+import { CoupleBudgetingClaim } from "@/lib/couple-budgeting-waitlist";
+import { useCoupleBudgetingUserClaimed, useJoinCoupleBudgetingWaitlist } from "@/hooks/use-couple-budgeting-waitlist";
+import { useAuth } from "@/contexts/auth-context";
+import { useState } from "react";
 
 export const Route = createFileRoute("/couple-budgeting")({
   component: CoupleBudgetingPage,
@@ -191,10 +196,11 @@ const itemVariants = {
 
 // Mobile preview cards data (moved out of JSX for reuse)
 const mobilePreview = [
-  { src: phone1, title: "Track Shared Expenses, Effortlessly.", description: "Log groceries, bills, and date nights. See who paid for what, instantly." },
-  { src: phone2, title: "Visualize Your Joint Financial Goals.", description: "Watch your savings for that dream home or vacation grow together." },
-  { src: phone3, title: "Custom Budgets for Your Life.", description: "Set up shared budgets for joint costs and keep personal spending separate." },
-  { src: phone4, title: "Insights to Strengthen Your Finances.", description: "AI identifies trends and opportunities for you to save more as a team." },
+  { src: phone1, title: "Link accounts, view, and manage together", description: "Log groceries, bills, and date nights. See who paid for what, instantly." },
+  { src: phone2, title: "Add expenses, split bills fast and fair", description: "Watch your savings for that dream home or vacation grow together." },
+  { src: phone3, title: "Get notified, confirm, and stay aligned", description: "Set up shared budgets for joint costs and keep personal spending separate." },
+  { src: phone4, title: "Set goals, track, and celebrate together", description: "AI identifies trends and opportunities for you to save more as a team." },
+  { src: phone5, title: "Scan receipts in WhatsApp, log automatically", description: "AI identifies trends and opportunities for you to save more as a team." },
 ];
 
 
@@ -204,37 +210,62 @@ export default function CoupleBudgetingPage() {
   
   const questions = {
     budgetingMethodOptions: [
-      { value: "spreadsheets", label: "Spreadsheets (Excel, Google Sheets)" },
-      { value: "other-apps", label: "Another budgeting app" },
-      { value: "no-system", label: "We don't really have a system" },
-      { value: "manual-tracking", label: "Pen and paper" },
-      { value: "bank-tools", label: "Our bank's built-in tools" },
+      { value: "separate-accounts", label: "We keep our money completely separate" },
+      { value: "shared-account", label: "We share one joint account for everything" },
+      { value: "split-bills", label: "We split bills and track who owes what" },
+      { value: "allowance-system", label: "One person manages money and gives allowance" },
+      { value: "no-system", label: "We don't have a clear system" },
+      { value: "apps-currently", label: "We use another budgeting app" },
     ],
     mobileAppPriorities: [
-      { id: "shared-expense-tracking", label: "Tracking shared expenses easily" },
-      { id: "joint-goal-tracking", label: "Real-time joint goal progress" },
-      { id: "split-bills-feature", label: "A simple way to split bills" },
-      { id: "spending-insights", label: "Insights into our combined spending" },
-      { id: "bank-account-sync", label: "Connecting all our accounts in one place" },
+      { id: "expense-splitting", label: "Automatically split shared expenses and bills" },
+      { id: "joint-goals", label: "Set and track shared savings goals together" },
+      { id: "spending-limits", label: "Set spending limits and get alerts" },
+      { id: "fairness-check", label: "See who spends more on what categories" },
+      { id: "date-night-budget", label: "Plan and budget for date nights and fun" },
+      { id: "emergency-fund", label: "Build emergency fund as a team" },
     ],
-    mobileFeatureOptions: [], // Add empty array to satisfy type
+    mobileFeatureOptions: [
+      { id: "expense-categories", label: "Custom categories for our lifestyle (date nights, shared hobbies)" },
+      { id: "bill-reminders", label: "Joint bill payment reminders and tracking" },
+      { id: "financial-dates", label: "Schedule regular money discussions and check-ins" },
+      { id: "spending-comparison", label: "Compare spending patterns without judgment" },
+      { id: "goal-celebrations", label: "Celebrate when we reach shared milestones" },
+      { id: "financial-compatibility", label: "Assess our financial compatibility and habits" },
+    ],
     referralOptions: [
-      { value: "search", label: "Search Engine (Google, Bing, etc.)" },
-      { value: "social", label: "Social Media (TikTok, Instagram, etc.)" },
-      { value: "friend", label: "Friend or family recommendation" },
-      { value: "blog", label: "Blog or news article" },
-      { value: "youtube", label: "YouTube" },
-      { value: "podcast", label: "Podcast" },
+      { value: "couple-friends", label: "Friends or other couples recommended it" },
+      { value: "relationship-advice", label: "Relationship or marriage counselor suggested" },
+      { value: "money-arguments", label: "We keep arguing about money" },
+      { value: "financial-planning", label: "Planning for marriage, house, or kids" },
+      { value: "social-media", label: "Social media (TikTok, Instagram, Reddit)" },
+      { value: "search-engine", label: "Search engine (Google, Bing, etc.)" },
+      { value: "financial-blog", label: "Financial blog or podcast" },
       { value: "other", label: "Other" },
     ],
   };
+  const { user, isAuthenticated } = useAuth();
 
-  const onSubmit = async (claim: EarlyAccessClaim): Promise<{ success: boolean; message?: string }> => {
-    console.log("Waitlist claim:", claim);
-    // Here you would typically handle the API call to your backend
-    // For example: const response = await fetch('/api/waitlist', { ... });
-    // For now, we'll simulate a successful submission
-    return { success: true, message: "Thank you for joining the waitlist!" };
+  // Couple budgeting waitlist hooks
+  const { data: userHasClaimed, isLoading: claimStatusLoading } = useCoupleBudgetingUserClaimed(user?.id);
+  const joinWaitlistMutation = useJoinCoupleBudgetingWaitlist();
+  const onSubmit = async (claim: CoupleBudgetingClaim): Promise<{ success: boolean; message?: string; error?: string }> => {
+    console.log("Couple budgeting waitlist claim:", claim);
+
+    try {
+      const result = await joinWaitlistMutation.mutateAsync(claim);
+      return {
+        success: result.success,
+        message: result.message,
+        error: result.error
+      };
+    } catch (error) {
+      console.error("Error joining couple budgeting waitlist:", error);
+      return {
+        success: false,
+        error: "Failed to join waitlist. Please try again."
+      };
+    }
   };
 
   return (
@@ -289,17 +320,17 @@ export default function CoupleBudgetingPage() {
 
               <motion.div className="mb-8" variants={itemVariants}>
                 <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
-                Team Up On Your Finances
+                Shared Finances, 
                   <br />
-                  <span className="bg-gradient-to-r from-purple-600 to-indigo-600 dark:from-purple-400 dark:to-indigo-400 bg-clip-text text-transparent">Budgeting for Modern Couples</span>
-                </h1>
+Simplified by AI                </h1>
               </motion.div>
 
               <motion.p 
                 className="mb-10 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
                 variants={itemVariants}
               >
-                Stop the money arguments. Sync your spending, track shared goals, and build your future together. Join the waitlist for the #1 budgeting app designed for couples.
+                Your AI-powered couple budgeting assistant — anytime, anywhere. Join the Beta or try the <a className="underline font-semibold" href="/dashboard" target="_blank">web dashboard</a>.
+                
               </motion.p>
             
               
@@ -307,7 +338,7 @@ export default function CoupleBudgetingPage() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-100/30 via-white/50 to-slate-100/30 dark:from-slate-800/30 dark:via-slate-900/50 dark:to-slate-800/30 rounded-2xl blur-3xl" />
                   <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-slate-200/50 dark:border-slate-700/50">
-                    <FreeTrialGiveawayForm questions={questions} onSubmit={onSubmit} />
+                    <FreeTrialGiveawayForm questions={questions} onSubmit={onSubmit} userHasClaimedFromDB={userHasClaimed || false} claimStatusLoading={claimStatusLoading} />
                   </div>
                 </div>
               </motion.div>
@@ -326,7 +357,7 @@ export default function CoupleBudgetingPage() {
           >
             <motion.div className="text-center mb-16" variants={itemVariants}>
               <h2 className="text-4xl sm:text-5xl font-bold text-slate-800 dark:text-slate-200 tracking-tight mb-6">
-                Built for Financial Teamwork
+                Smarter couple budgeting with AI
               </h2>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                 Moneko gives you and your partner a crystal-clear view of your money, so you can make smarter decisions as a team.
