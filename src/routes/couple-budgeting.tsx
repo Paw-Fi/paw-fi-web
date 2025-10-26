@@ -320,7 +320,7 @@ export default function CoupleBudgetingPage() {
 
               <motion.div className="mb-8" variants={itemVariants}>
                 <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight">
-                Shared Finances, 
+                Shared Finances
                   <br />
 Simplified by AI                </h1>
               </motion.div>
