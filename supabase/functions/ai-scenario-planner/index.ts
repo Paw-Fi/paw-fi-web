@@ -20,6 +20,120 @@ interface ScenarioRequestBody {
   question?: string; // e.g., "Can I buy a $1,200 laptop?"
   targetDate?: string; // YYYY-MM-DD
   userId?: string; // ignored for auth, we derive from JWT
+  language?: string; // ISO 639-1 or language tag, e.g., "en" or "zh-CN"
+}
+
+// Convert locale-specific digits (Arabic-Indic, Eastern-Arabic, Thai, etc.) to ASCII
+function toAsciiDigits(s: string): string {
+  const maps: Record<string, string> = {
+    // Arabic-Indic ٠١٢٣٤٥٦٧٨٩
+    "\u0660": "0", "\u0661": "1", "\u0662": "2", "\u0663": "3", "\u0664": "4",
+    "\u0665": "5", "\u0666": "6", "\u0667": "7", "\u0668": "8", "\u0669": "9",
+    // Eastern Arabic (Persian) ۰۱۲۳۴۵۶۷۸۹
+    "\u06F0": "0", "\u06F1": "1", "\u06F2": "2", "\u06F3": "3", "\u06F4": "4",
+    "\u06F5": "5", "\u06F6": "6", "\u06F7": "7", "\u06F8": "8", "\u06F9": "9",
+    // Thai ๐๑๒๓๔๕๖๗๘๙
+    "\u0E50": "0", "\u0E51": "1", "\u0E52": "2", "\u0E53": "3", "\u0E54": "4",
+    "\u0E55": "5", "\u0E56": "6", "\u0E57": "7", "\u0E58": "8", "\u0E59": "9",
+  };
+  return s.replace(/[\u0660-\u0669\u06F0-\u06F9\u0E50-\u0E59]/g, (d) => maps[d] || d);
+}
+
+// Decide numeric date order for a locale
+function dateOrderFor(lang: string): 'YMD' | 'DMY' | 'MDY' {
+  const lc = (lang || 'en').toLowerCase();
+  const ymd = new Set(['zh', 'ja', 'ko']);
+  const mdy = new Set(['en', 'en-us']);
+  if (ymd.has(lc)) return 'YMD';
+  if (mdy.has(lc)) return 'MDY';
+  return 'DMY';
+}
+
+function isValidYMD(y: number, m: number, d: number): boolean {
+  if (!y || !m || !d) return false;
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
+function normalizeYear(year: number, lang: string): number {
+  // Handle Thai Buddhist Era years ~256x → Gregorian
+  if (year > 2200 && (lang.startsWith('th') || lang === 'th')) return year - 543;
+  if (year < 100) return 2000 + year; // assume near future
+  return year;
+}
+
+function parseLocalizedDate(input: string, lang: string): { date: Date; iso: string } | null {
+  if (!input) return null;
+  let s = toAsciiDigits(input.trim());
+
+  // Keep only digits and common separators
+  s = s.replace(/[^0-9\-./]/g, '');
+
+  // Try ISO quickly: YYYY-MM-DD (or with / or .)
+  let m = s.match(/^(\d{4})[\-\/.](\d{1,2})[\-\/.](\d{1,2})$/);
+  if (m) {
+    let y = normalizeYear(parseInt(m[1], 10), lang);
+    const mo = parseInt(m[2], 10);
+    const da = parseInt(m[3], 10);
+    if (isValidYMD(y, mo, da)) {
+      const iso = `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`;
+      return { date: new Date(iso), iso };
+    }
+  }
+
+  // Patterns like 01/02/2025 or 01-02-25
+  m = s.match(/^(\d{1,2})[\-\/.](\d{1,2})[\-\/.](\d{2,4})$/);
+  if (m) {
+    const a = parseInt(m[1], 10);
+    const b = parseInt(m[2], 10);
+    let y = normalizeYear(parseInt(m[3], 10), lang);
+    const order = dateOrderFor(lang);
+    // DMY vs MDY
+    const [dd, mm] = order === 'MDY' ? [b, a] : [a, b];
+    if (isValidYMD(y, mm, dd)) {
+      const iso = `${y}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+      return { date: new Date(iso), iso };
+    }
+  }
+
+  // Compact digits 8 chars: YYYYMMDD or DDMMYYYY or MMDDYYYY (locale guided)
+  m = s.match(/^(\d{8})$/);
+  if (m) {
+    const raw = m[1];
+    const order = dateOrderFor(lang);
+    // Prefer YYYYMMDD if starts with 19xx/20xx/21xx/25xx
+    const yCandidate = parseInt(raw.slice(0, 4), 10);
+    if (yCandidate >= 1900) {
+      const y = normalizeYear(yCandidate, lang);
+      const mo = parseInt(raw.slice(4, 6), 10);
+      const da = parseInt(raw.slice(6, 8), 10);
+      if (isValidYMD(y, mo, da)) {
+        const iso = `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`;
+        return { date: new Date(iso), iso };
+      }
+    }
+    // Fall back by locale order
+    if (order === 'MDY') {
+      const mo = parseInt(raw.slice(0, 2), 10);
+      const da = parseInt(raw.slice(2, 4), 10);
+      const y = normalizeYear(parseInt(raw.slice(4, 8), 10), lang);
+      if (isValidYMD(y, mo, da)) {
+        const iso = `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`;
+        return { date: new Date(iso), iso };
+      }
+    } else {
+      const da = parseInt(raw.slice(0, 2), 10);
+      const mo = parseInt(raw.slice(2, 4), 10);
+      const y = normalizeYear(parseInt(raw.slice(4, 8), 10), lang);
+      if (isValidYMD(y, mo, da)) {
+        const iso = `${y}-${String(mo).padStart(2, '0')}-${String(da).padStart(2, '0')}`;
+        return { date: new Date(iso), iso };
+      }
+    }
+  }
+
+  return null;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -51,23 +165,27 @@ serve(async (req: Request): Promise<Response> => {
 
     const body: ScenarioRequestBody = await req.json();
     const question = (body.question || "").trim();
-    const targetDateStr = (body.targetDate || "").trim();
+    const targetDateInput = (body.targetDate || "").trim();
+    const languageRaw = (body.language || "").trim();
+    const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageRaw) ? languageRaw : "en";
 
-    if (!question || !question.toLowerCase().startsWith("can i")) {
-      return new Response(JSON.stringify({ error: "Please provide a question starting with 'Can I...'." }), {
+    // Accept non-English and various word orders; only require non-empty content
+    if (!question) {
+      return new Response(JSON.stringify({ error: "Please provide a non-empty question." }), {
         status: 400,
         headers: { ...getCorsHeaders(req.headers.get('Origin') || undefined), "Content-Type": "application/json" },
       });
     }
 
-    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(targetDateStr)) {
-      return new Response(JSON.stringify({ error: "Invalid targetDate. Use YYYY-MM-DD format." }), {
+    const parsed = parseLocalizedDate(targetDateInput, language.toLowerCase());
+    if (!parsed) {
+      return new Response(JSON.stringify({ error: "Invalid targetDate. Supply a valid date in your locale (e.g., YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, or YYYY/MM/DD)." }), {
         status: 400,
         headers: { ...getCorsHeaders(req.headers.get('Origin') || undefined), "Content-Type": "application/json" },
       });
     }
-
-    const targetDate = new Date(targetDateStr);
+    const targetDate = parsed.date;
+    const targetDateStr = parsed.iso;
 
     // Get the user's contact (to map to expenses/budgets contact_id, handle duplicates by getting most recent)
     const contactResult = await supabaseClient
@@ -230,9 +348,11 @@ USER_DATA:
 - Goals: ${JSON.stringify(goals || [], null, 2)}
 - FinancialHealthProfile: ${JSON.stringify(finProfiles && finProfiles[0] || null, null, 2)}
 
-Now analyze deeply and provide a comprehensive advisory response.`;
+Now analyze deeply and provide a comprehensive advisory response.
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+Important language requirement: Reply strictly in ${language}. Use that language consistently for all headings, lists, and content. Do not mix languages.`;
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     const generationConfig = {
       responseMimeType: "text/plain",
       maxOutputTokens: 2000,
@@ -251,6 +371,7 @@ Now analyze deeply and provide a comprehensive advisory response.`;
       meta: {
         currency,
         targetDate: targetDateStr,
+        language,
         stats: {
           windowFrom: fromStr,
           windowTo: toStr,

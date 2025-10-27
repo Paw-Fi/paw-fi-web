@@ -56,6 +56,8 @@ interface FCMv1Message {
       priority: string;
       notification: {
         sound: string;
+        click_action?: string;
+        channel_id?: string;
       };
     };
     apns?: {
@@ -65,7 +67,17 @@ interface FCMv1Message {
           sound: string;
           ['mutable-content']?: number;
           badge?: number;
+          category?: string;
+          alert?: {
+            title: string;
+            body: string;
+          };
         };
+        deep_link?: string;
+        click_action?: string;
+      };
+      fcm_options?: {
+        link?: string;
       };
     };
   };
@@ -215,8 +227,62 @@ async function getAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Build deep link URL based on notification type and data
+ * Follows moneko:// custom scheme for in-app navigation
+ */
+function buildDeepLink(eventType: string, data: Record<string, string>): string | undefined {
+  switch (eventType) {
+    case 'expense_added':
+    case 'expense_edited':
+    case 'expense_deleted':
+      // Navigate to expense detail sheet
+      if (data.expense_id) {
+        return `moneko://expense/${data.expense_id}`;
+      }
+      // Fallback to household view if expense_id missing
+      if (data.household_id) {
+        return `moneko://household/${data.household_id}`;
+      }
+      break;
+    
+    case 'budget_warn':
+    case 'budget_alert':
+      // Navigate to budget detail
+      if (data.budget_id) {
+        return `moneko://budget/${data.budget_id}`;
+      }
+      break;
+    
+    case 'split_created':
+      // Navigate to splits view
+      if (data.split_id) {
+        return `moneko://split/${data.split_id}`;
+      }
+      if (data.household_id) {
+        return `moneko://household/${data.household_id}/splits`;
+      }
+      break;
+    
+    case 'member_joined':
+    case 'invite_accepted':
+      // Navigate to household view
+      if (data.household_id) {
+        return `moneko://household/${data.household_id}`;
+      }
+      break;
+    
+    default:
+      // Default to home
+      return 'moneko://home';
+  }
+  
+  return 'moneko://home';
+}
+
+/**
  * Send push notification using Firebase Cloud Messaging API V1
  * Modern API endpoint: https://fcm.googleapis.com/v1/projects/{project_id}/messages:send
+ * Includes deep linking for direct navigation to specific screens
  */
 async function sendFCMv1Notification(
   deviceToken: string,
@@ -232,6 +298,16 @@ async function sendFCMv1Notification(
   }
 
   try {
+    // Build deep link for navigation
+    const deepLink = buildDeepLink(data.event_type, data);
+    
+    // Enhanced data payload with deep link and click action
+    const enhancedData = {
+      ...data,
+      click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      deep_link: deepLink || 'moneko://home',
+    };
+
     const message: FCMv1Message = {
       message: {
         token: deviceToken,
@@ -240,11 +316,15 @@ async function sendFCMv1Notification(
           body,
           ...(imageUrl ? { image: imageUrl } : {})
         },
-        data,
+        data: enhancedData,
         android: {
           priority: 'high',
           notification: {
-            sound: 'default'
+            sound: 'default',
+            // Android: click_action triggers intent filter in AndroidManifest
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+            // channel_id for notification channels (Android 8+)
+            channel_id: 'household_updates',
           }
         },
         apns: {
@@ -256,9 +336,23 @@ async function sendFCMv1Notification(
           payload: {
             aps: {
               sound: 'default',
-              ...(imageUrl ? { ['mutable-content']: 1 } : {})
-            }
-          }
+              // iOS: category for notification actions
+              category: 'EXPENSE_NOTIFICATION',
+              ...(imageUrl ? { ['mutable-content']: 1 } : {}),
+              // Alert dictionary for rich notifications
+              alert: {
+                title,
+                body,
+              }
+            },
+            // Custom data for deep linking (accessible in Flutter)
+            deep_link: deepLink || 'moneko://home',
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+          },
+          // FCM options for iOS Universal Links (if configured)
+          fcm_options: deepLink ? {
+            link: deepLink
+          } : undefined
         }
       }
     };
@@ -683,36 +777,43 @@ function buildNotificationMessage(
       const code = (payload.expense_data?.currency || payload.currency || payload.expense_data?.new_currency) as string | undefined;
       const symbol = getCurrencySymbol(code);
 
-      let body = 'Updated';
-      if (fields.includes('amount_cents')) {
-        const oldC = Number(payload.expense_data?.old_amount_cents ?? 0);
-        const newC = Number(payload.expense_data?.new_amount_cents ?? 0);
-        body = `${symbol}${(oldC / 100).toFixed(2)} -> ${symbol}${(newC / 100).toFixed(2)}`;
-      } else if (fields.includes('category')) {
-        const oldCat = String(payload.expense_data?.old_category ?? '');
-        const newCat = String(payload.expense_data?.new_category ?? '');
-        body = `${oldCat} -> ${newCat}`;
-      } else if (fields.includes('currency')) {
-        const oldCur = String(payload.expense_data?.old_currency ?? '');
-        const newCur = String(payload.expense_data?.new_currency ?? '');
-        body = `${oldCur} -> ${newCur}`;
-      } else if (fields.includes('date')) {
-        const oldDate = String(payload.expense_data?.old_date ?? '');
-        const newDate = String(payload.expense_data?.new_date ?? '');
-        body = `${oldDate} -> ${newDate}`;
-      } else if (fields.includes('created_at')) {
-        const toTime = (v?: string) => {
-          try { return new Date(v || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return String(v || ''); }
-        };
-        body = `${toTime(payload.expense_data?.old_created_at)} -> ${toTime(payload.expense_data?.new_created_at)}`;
-      } else if (fields.includes('raw_text')) {
-        const oldN = String(payload.expense_data?.old_note ?? '').trim();
-        const newN = String(payload.expense_data?.new_note ?? '').trim();
-        body = `${oldN} -> ${newN}`;
+      let body = 'Modified the expense';
+      
+      // If multiple fields were edited, use general message to avoid confusion
+      if (fields.length > 1) {
+        body = 'Modified the expense';
+      } else if (fields.length === 1) {
+        // Show specific change for single field edits
+        if (fields.indexOf('amount_cents') !== -1) {
+          const oldC = Number(payload.expense_data?.old_amount_cents ?? 0);
+          const newC = Number(payload.expense_data?.new_amount_cents ?? 0);
+          body = `${symbol}${(oldC / 100).toFixed(2)} → ${symbol}${(newC / 100).toFixed(2)}`;
+        } else if (fields.indexOf('category') !== -1) {
+          const oldCat = String(payload.expense_data?.old_category ?? '');
+          const newCat = String(payload.expense_data?.new_category ?? '');
+          body = `${oldCat} → ${newCat}`;
+        } else if (fields.indexOf('currency') !== -1) {
+          const oldCur = String(payload.expense_data?.old_currency ?? '');
+          const newCur = String(payload.expense_data?.new_currency ?? '');
+          body = `${oldCur} → ${newCur}`;
+        } else if (fields.indexOf('date') !== -1) {
+          const oldDate = String(payload.expense_data?.old_date ?? '');
+          const newDate = String(payload.expense_data?.new_date ?? '');
+          body = `${oldDate} → ${newDate}`;
+        } else if (fields.indexOf('created_at') !== -1) {
+          const toTime = (v?: string) => {
+            try { return new Date(v || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return String(v || ''); }
+          };
+          body = `${toTime(payload.expense_data?.old_created_at)} → ${toTime(payload.expense_data?.new_created_at)}`;
+        } else if (fields.indexOf('raw_text') !== -1) {
+          const oldN = String(payload.expense_data?.old_note ?? '').trim();
+          const newN = String(payload.expense_data?.new_note ?? '').trim();
+          body = `${oldN} → ${newN}`;
+        }
       }
 
       return {
-        title: `✏️ ${actor} edited an expense`,
+        title: `✏️ ${actor} modified an expense`,
         body,
         data: {
           expense_id: payload.expense_id || '',
