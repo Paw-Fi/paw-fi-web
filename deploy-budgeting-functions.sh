@@ -82,6 +82,11 @@ supabase functions deploy ai-scenario-planner --project-ref $PROJECT_REF
 echo "✅ ai-scenario-planner deployed"
 echo ""
 
+echo "📦 [6/5] Deploying update-preferred-language function..."
+supabase functions deploy update-preferred-language --project-ref $PROJECT_REF
+echo "✅ update-preferred-language deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All budgeting functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

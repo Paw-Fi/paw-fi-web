@@ -1,7 +1,7 @@
 // Currency validation utilities
 // Provides security validation for currency codes to prevent injection attacks
 
-import { CURRENCY_SYMBOLS } from "./currency-symbols";
+import { CURRENCY_SYMBOLS } from "./currency-symbols.ts";
 
 export const VALID_CURRENCIES = Object.keys( CURRENCY_SYMBOLS);
 
