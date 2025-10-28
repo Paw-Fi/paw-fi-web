@@ -256,12 +256,12 @@ Deno.serve(async (req: Request) => {
             );
           }
         } else if (splitType === 'shares') {
-          const invalidShares = customSplits.memberSplits.some(s => !s.shares || s.shares <= 0);
-          if (invalidShares) {
-            console.error('[save-expense] Invalid shares detected');
+          const totalShares = customSplits.memberSplits.reduce((sum, s) => sum + (s.shares || 0), 0);
+          if (totalShares <= 0) {
+            console.error('[save-expense] Invalid shares: total shares must be > 0');
             return new Response(
               JSON.stringify({
-                error: 'All members must have at least 1 share',
+                error: 'At least one member must have a share greater than 0',
               }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
@@ -337,6 +337,17 @@ Deno.serve(async (req: Request) => {
       } else if (splitType === 'shares' && customSplits) {
         // Shares split: calculate amount from shares
         const totalShares = customSplits.memberSplits.reduce((sum, s) => sum + (s.shares || 0), 0);
+        if (totalShares <= 0) {
+          console.error('[save-expense] Cannot create split lines: total shares is 0');
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: expense,
+              warning: 'Expense saved but split lines creation failed due to invalid shares',
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         splitLines = customSplits.memberSplits.map((split) => ({
           split_group_id: splitGroup.id,
           user_id: split.userId,

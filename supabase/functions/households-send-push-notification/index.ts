@@ -76,8 +76,18 @@ interface FCMv1Message {
         deep_link?: string;
         click_action?: string;
       };
+      // Note: apns.fcm_options does NOT support `link`. Use WebPush only.
+      // Keeping type for allowed fields per FCM v1 schema.
       fcm_options?: {
-        link?: string;
+        analytics_label?: string;
+        image?: string;
+      };
+    };
+    webpush?: {
+      headers?: Record<string, string>;
+      data?: Record<string, string>;
+      fcm_options?: {
+        link?: string; // Only WebPush supports link
       };
     };
   };
@@ -237,11 +247,11 @@ function buildDeepLink(eventType: string, data: Record<string, string>): string 
     case 'expense_deleted':
       // Navigate to expense detail sheet
       if (data.expense_id) {
-        return `moneko://expense/${data.expense_id}`;
+        return `/expense/${data.expense_id}`;
       }
       // Fallback to household view if expense_id missing
       if (data.household_id) {
-        return `moneko://household/${data.household_id}`;
+        return `/household/${data.household_id}`;
       }
       break;
     
@@ -249,17 +259,17 @@ function buildDeepLink(eventType: string, data: Record<string, string>): string 
     case 'budget_alert':
       // Navigate to budget detail
       if (data.budget_id) {
-        return `moneko://budget/${data.budget_id}`;
+        return `/budget/${data.budget_id}`;
       }
       break;
     
     case 'split_created':
       // Navigate to splits view
       if (data.split_id) {
-        return `moneko://split/${data.split_id}`;
+        return `/split/${data.split_id}`;
       }
       if (data.household_id) {
-        return `moneko://household/${data.household_id}/splits`;
+        return `/household/${data.household_id}/splits`;
       }
       break;
     
@@ -267,16 +277,16 @@ function buildDeepLink(eventType: string, data: Record<string, string>): string 
     case 'invite_accepted':
       // Navigate to household view
       if (data.household_id) {
-        return `moneko://household/${data.household_id}`;
+        return `/household/${data.household_id}`;
       }
       break;
     
     default:
       // Default to home
-      return 'moneko://home';
+      return '/home';
   }
   
-  return 'moneko://home';
+  return '/home';
 }
 
 /**
@@ -290,7 +300,8 @@ async function sendFCMv1Notification(
   body: string,
   data: Record<string, string>,
   accessToken: string,
-  imageUrl?: string
+  imageUrl?: string,
+  platform?: string
 ): Promise<boolean> {
   if (!firebaseProjectId) {
     console.error('[fcm-v1] FIREBASE_PROJECT_ID not configured');
@@ -300,12 +311,13 @@ async function sendFCMv1Notification(
   try {
     // Build deep link for navigation
     const deepLink = buildDeepLink(data.event_type, data);
+    const isWeb = typeof platform === 'string' && /^(web|webpush|web_push|browser)$/i.test(platform);
     
     // Enhanced data payload with deep link and click action
     const enhancedData = {
       ...data,
       click_action: 'FLUTTER_NOTIFICATION_CLICK',
-      deep_link: deepLink || 'moneko://home',
+      deep_link: deepLink || '/home',
     };
 
     const message: FCMv1Message = {
@@ -346,14 +358,21 @@ async function sendFCMv1Notification(
               }
             },
             // Custom data for deep linking (accessible in Flutter)
-            deep_link: deepLink || 'moneko://home',
+            deep_link: deepLink || '/home',
             click_action: 'FLUTTER_NOTIFICATION_CLICK',
           },
-          // FCM options for iOS Universal Links (if configured)
-          fcm_options: deepLink ? {
-            link: deepLink
-          } : undefined
-        }
+          // iOS: Only allowed fields; no `link`. Use image if provided and set mutable-content above.
+          fcm_options: imageUrl ? { image: imageUrl } : undefined,
+        },
+        // WebPush only: safe to set link
+        ...(isWeb ? {
+          webpush: {
+            data: enhancedData,
+            fcm_options: {
+              link: deepLink || '/home'
+            }
+          }
+        } : {})
       }
     };
 
@@ -380,16 +399,31 @@ async function sendFCMv1Notification(
       }
 
       // Handle specific errors
-      if (errorText.includes('UNREGISTERED') || errorText.includes('INVALID_ARGUMENT')) {
-        console.warn('[fcm-v1] Invalid or expired device token - deactivating');
-        try {
-          await supabase
-            .from('devices')
-            .update({ is_active: false, updated_at: new Date().toISOString() })
-            .eq('push_token', deviceToken);
-        } catch (e) {
-          console.error('[fcm-v1] Failed to deactivate device token:', e);
+      // Deactivate token ONLY for actual token issues (UNREGISTERED/NOT_FOUND), not for generic INVALID_ARGUMENT
+      try {
+        const parsed = JSON.parse(errorText);
+        const status = parsed?.error?.status || '';
+        const message = parsed?.error?.message || '';
+        const details = parsed?.error?.details || [];
+        const hasUnregistered =
+          status === 'NOT_FOUND' ||
+          details?.some((d: any) => d?.errorCode === 'UNREGISTERED') ||
+          /UNREGISTERED/i.test(message) ||
+          /No matching registration token/i.test(message) ||
+          /Requested entity was not found/i.test(message);
+        if (hasUnregistered) {
+          console.warn('[fcm-v1] Invalid or expired device token - deactivating');
+          try {
+            await supabase
+              .from('devices')
+              .update({ is_active: false, updated_at: new Date().toISOString() })
+              .eq('push_token', deviceToken);
+          } catch (e) {
+            console.error('[fcm-v1] Failed to deactivate device token:', e);
+          }
         }
+      } catch (_) {
+        // If parsing fails, do not deactivate blindly
       }
 
       return false;
@@ -606,20 +640,28 @@ serve(async (req) => {
       }
     }
 
-    // Get active devices for this user
+    // Get active devices for this user (treat NULL as active to avoid legacy rows being skipped)
     const { data: devices, error: devicesError } = await supabase
       .from('devices')
-      .select('push_token, platform')
+      .select('push_token, platform, is_active')
       .eq('user_id', user_id)
-      .eq('is_active', true);
+      .or('is_active.is.true,is_active.is.null');
 
     if (devicesError || !devices || devices.length === 0) {
-      console.log('[send-push] No active devices found for user:', user_id);
+      // Debug: check if user has devices but all inactive
+      const { data: existingDevices } = await supabase
+        .from('devices')
+        .select('id, is_active, platform')
+        .eq('user_id', user_id);
+
+      const inactiveCount = existingDevices?.length ? existingDevices.filter(d => d && d.is_active === false).length : 0;
+      console.log('[send-push] No active devices found for user:', user_id, 'existing:', existingDevices?.length || 0, 'inactive:', inactiveCount);
+
       await supabase
         .from('notification_events')
         .update({
           is_sent: true,
-          delivery_error: 'No active devices'
+          delivery_error: existingDevices?.length ? `No active devices (inactive: ${inactiveCount}/${existingDevices.length})` : 'No active devices'
         })
         .eq('id', notification_event_id);
 
@@ -676,7 +718,8 @@ serve(async (req) => {
           ...notificationMessage.data
         },
         accessToken,
-        imageUrl
+        imageUrl,
+        device.platform
       );
 
       if (success) {
@@ -837,23 +880,48 @@ function buildNotificationMessage(
       };
     }
 
-    case 'budget_warn':
-      return {
-        title: '⚠️ Budget Warning',
-        body: `You've reached 80% of your budget limit`,
-        data: {
-          budget_id: payload.budget_id || ''
-        }
-      };
+    case 'budget_warn': {
+      const budgetName = (payload.budget_name || 'Budget') as string;
+      const code = payload.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const budgetAmount = Number(payload.budget_cents ?? 0) / 100;
+      const spentAmount = Number(payload.spent_cents ?? 0) / 100;
+      const percentage = Number(payload.percentage_used ?? 0).toFixed(0);
 
-    case 'budget_alert':
       return {
-        title: '🚨 Budget Alert',
-        body: `You've exceeded your budget limit!`,
+        title: `⚠️ ${budgetName} Budget Warning`,
+        body: `${percentage}% used (${symbol}${spentAmount.toFixed(2)} of ${symbol}${budgetAmount.toFixed(2)})`,
         data: {
-          budget_id: payload.budget_id || ''
+          budget_id: payload.budget_id || '',
+          budget_name: budgetName,
+          spent_cents: String(payload.spent_cents ?? 0),
+          budget_cents: String(payload.budget_cents ?? 0),
+          percentage_used: String(percentage),
         }
       };
+    }
+
+    case 'budget_alert': {
+      const budgetName = (payload.budget_name || 'Budget') as string;
+      const code = payload.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const budgetAmount = Number(payload.budget_cents ?? 0) / 100;
+      const spentAmount = Number(payload.spent_cents ?? 0) / 100;
+      const percentage = Number(payload.percentage_used ?? 0).toFixed(0);
+      const overAmount = (spentAmount - budgetAmount).toFixed(2);
+
+      return {
+        title: `🚨 ${budgetName} Budget Alert`,
+        body: `${percentage}% used (${symbol}${overAmount} over budget!)`,
+        data: {
+          budget_id: payload.budget_id || '',
+          budget_name: budgetName,
+          spent_cents: String(payload.spent_cents ?? 0),
+          budget_cents: String(payload.budget_cents ?? 0),
+          percentage_used: String(percentage),
+        }
+      };
+    }
 
     case 'invite_accepted':
       return {
