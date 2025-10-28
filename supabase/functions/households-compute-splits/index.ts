@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { BudgetNudgeEvaluator } from "../shared/budget-nudge-evaluator.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -424,6 +425,35 @@ serve(async (req) => {
           participant_count: splits.length
         }
       });
+
+    // Evaluate budgets after split creation (non-blocking)
+    // This is critical for personal budgets with count_split_portion_only
+    try {
+      // Get expense details for budget evaluation
+      const { data: expense } = await supabase
+        .from('expenses')
+        .select('date')
+        .eq('id', transaction_id)
+        .single();
+
+      if (expense) {
+        const evaluator = new BudgetNudgeEvaluator(supabaseUrl, supabaseServiceRoleKey);
+        await evaluator.evaluateBudgets(
+          household_id,
+          currency,
+          expense.date.split('T')[0], // Extract date only (YYYY-MM-DD)
+          {
+            type: 'update',
+            old_cents: 0, // Treat as adding split allocation (no old state for splits)
+            new_cents: total_amount_cents, // New split allocation affecting personal budgets
+          }
+        );
+        console.log('[households-compute-splits] Budget evaluation complete');
+      }
+    } catch (budgetError) {
+      // Log but don't fail the split creation
+      console.error('[households-compute-splits] Budget evaluation error (non-blocking):', budgetError);
+    }
 
     const response: ComputeSplitsResponse = {
       success: true,

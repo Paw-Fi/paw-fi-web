@@ -5,6 +5,7 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { BudgetNudgeEvaluator } from "../shared/budget-nudge-evaluator.ts";
 
 interface MemberSplit {
   userId: string;
@@ -417,6 +418,27 @@ Deno.serve(async (req: Request) => {
       }
 
       console.log('[save-expense] Household expense split created successfully');
+    }
+
+    // Evaluate budget thresholds (async, non-blocking)
+    if (body.householdId) {
+      try {
+        console.log('[save-expense] Evaluating budget thresholds...');
+        const evaluator = new BudgetNudgeEvaluator(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const nudgesSent = await evaluator.evaluateBudgets(
+          body.householdId,
+          currency,
+          body.date.split('T')[0], // Extract date only (YYYY-MM-DD)
+          {
+            type: 'create',
+            new_cents: amountCents, // New expense amount
+          }
+        );
+        console.log(`[save-expense] Budget evaluation complete: ${nudgesSent} nudges sent`);
+      } catch (budgetError) {
+        // Log but don't fail the request
+        console.error('[save-expense] Budget evaluation error (non-blocking):', budgetError);
+      }
     }
 
     // Return saved expense

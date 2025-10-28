@@ -3,6 +3,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { BudgetNudgeEvaluator } from "../shared/budget-nudge-evaluator.ts";
 
 interface DeleteExpenseRequest {
   userId: string;
@@ -61,6 +62,29 @@ Deno.serve(async (req: Request) => {
       .delete()
       .eq('id', expenseId);
     if (delError) return errorResponse('Failed to delete expense', 500);
+
+    // Evaluate budget thresholds after deletion (expense removed, spending decreased)
+    // Note: Budget nudges only sent on UPWARD threshold crossings, so deletion won't trigger nudges
+    // However, we still call the evaluator to keep the logic consistent and for potential future features
+    if (expense.household_id) {
+      try {
+        console.log('[delete-expense] Evaluating budget thresholds after deletion...');
+        const evaluator = new BudgetNudgeEvaluator(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        // Note: Since we're deleting, this will decrease spending and won't cross thresholds upward
+        // But we keep the call for consistency and future downward notification support
+        await evaluator.evaluateBudgets(
+          expense.household_id,
+          (expense as any)?.currency ?? 'USD',
+          (expense as any)?.date?.split('T')[0] ?? new Date().toISOString().split('T')[0],
+          {
+            type: 'delete',
+            old_cents: Math.abs((expense as any)?.amount_cents ?? 0), // Amount being removed
+          }
+        );
+      } catch (budgetError) {
+        console.error('[delete-expense] Budget evaluation error (non-blocking):', budgetError);
+      }
+    }
 
     // If household expense, notify members
     if (expense.household_id) {

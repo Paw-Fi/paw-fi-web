@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { BudgetNudgeEvaluator } from "../shared/budget-nudge-evaluator.ts";
 
 interface UpdateExpenseRequest {
   userId: string;
@@ -263,8 +264,34 @@ Deno.serve(async (req: Request) => {
       } else {
         console.log('[update-expense] Notifications created for household members');
       }
+
+      // Evaluate budget thresholds if amount or date changed (async, non-blocking)
+      if (updates.amount_cents !== undefined || updates.date !== undefined) {
+        try {
+          console.log('[update-expense] Evaluating budget thresholds after update...');
+          const evaluator = new BudgetNudgeEvaluator(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+          const newAmountCents = updates.amount_cents ?? oldAmountCents ?? 0;
+          const newDate = (updates.date ?? oldDate ?? new Date().toISOString().split('T')[0]).split('T')[0];
+          const newCurrency = updates.currency ?? oldCurrency ?? 'USD';
+
+          const nudgesSent = await evaluator.evaluateBudgets(
+            expense.household_id,
+            newCurrency,
+            newDate,
+            {
+              type: 'update',
+              old_cents: Math.abs(oldAmountCents ?? 0),
+              new_cents: Math.abs(newAmountCents),
+            }
+          );
+          console.log(`[update-expense] Budget evaluation complete: ${nudgesSent} nudges sent`);
+        } catch (budgetError) {
+          // Log but don't fail the request
+          console.error('[update-expense] Budget evaluation error (non-blocking):', budgetError);
+        }
+      }
     }
-    
+
     return jsonResponse({
       success: true,
       data: updatedExpense,

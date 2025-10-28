@@ -464,6 +464,31 @@ serve(async (req) => {
       );
     }
 
+    // SECURITY: Verify authorization (Database Webhook or service role)
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.warn('[send-push] Unauthorized request: missing Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    if (token !== supabaseServiceRoleKey) {
+      console.warn('[send-push] Unauthorized request: invalid service role key');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Invalid service role key' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     // Parse request body (support both custom payload and Database Webhooks envelope)
     const raw = await req.json();
 
@@ -604,10 +629,43 @@ serve(async (req) => {
       );
     }
 
+    // Get active devices for this user (needed for timezone in quiet hours check)
+    const { data: devices, error: devicesError } = await supabase
+      .from('devices')
+      .select('push_token, platform, is_active, timezone')
+      .eq('user_id', user_id)
+      .or('is_active.is.true,is_active.is.null');
+
     // Check quiet hours (skip for expense events to ensure immediate delivery)
+    // Use recipient's timezone: device timezone > household timezone > UTC
     if (!isExpenseEvent && prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
-      const now = new Date();
-      const currentTime = now.getHours() * 60 + now.getMinutes();
+      // Determine recipient's timezone (fallback chain)
+      let recipientTimezone = 'UTC';
+
+      // Try device timezone first (most accurate)
+      if (devices && devices.length > 0 && devices[0].timezone) {
+        recipientTimezone = devices[0].timezone;
+      } else {
+        // Fallback to household timezone
+        const { data: household } = await supabase
+          .from('households')
+          .select('timezone')
+          .eq('id', household_id)
+          .single();
+
+        if (household?.timezone) {
+          recipientTimezone = household.timezone;
+        }
+      }
+
+      // Get current time in recipient's timezone
+      const nowInRecipientTz = new Date().toLocaleString('en-US', {
+        timeZone: recipientTimezone,
+        hour12: false
+      });
+      const [datePart, timePart] = nowInRecipientTz.split(', ');
+      const [hours, minutes] = timePart.split(':').map(Number);
+      const currentTime = hours * 60 + minutes;
 
       const startParts = prefs.nudge_quiet_hours_start.split(':');
       const endParts = prefs.nudge_quiet_hours_end.split(':');
@@ -621,7 +679,11 @@ serve(async (req) => {
           : currentTime >= startMinutes || currentTime < endMinutes;
 
       if (inQuietHours) {
-        console.log('[send-push] Currently in quiet hours, will retry later');
+        console.log('[send-push] Currently in quiet hours (recipient timezone)', {
+          timezone: recipientTimezone,
+          currentTime: `${hours}:${minutes.toString().padStart(2, '0')}`,
+          quietHours: `${prefs.nudge_quiet_hours_start}-${prefs.nudge_quiet_hours_end}`,
+        });
         await supabase
           .from('notification_events')
           .update({
@@ -640,13 +702,7 @@ serve(async (req) => {
       }
     }
 
-    // Get active devices for this user (treat NULL as active to avoid legacy rows being skipped)
-    const { data: devices, error: devicesError } = await supabase
-      .from('devices')
-      .select('push_token, platform, is_active')
-      .eq('user_id', user_id)
-      .or('is_active.is.true,is_active.is.null');
-
+    // Validate devices query result (devices query already executed above for timezone)
     if (devicesError || !devices || devices.length === 0) {
       // Debug: check if user has devices but all inactive
       const { data: existingDevices } = await supabase
