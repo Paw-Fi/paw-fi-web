@@ -8,11 +8,13 @@ create table if not exists public.user_contacts (
   user_id uuid references public.users(id) on delete set null,
   verified boolean default false,
   preferred_currency text,
+  preferred_language text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
 comment on table public.user_contacts is 'Maps WhatsApp/phone contacts to users for syncing later';
+comment on column public.user_contacts.preferred_language is 'Preferred language code (e.g., en, zh). Used by clients to personalize UI and communications.';
 
 -- 2) Daily budgets per contact
 create table if not exists public.daily_budgets (

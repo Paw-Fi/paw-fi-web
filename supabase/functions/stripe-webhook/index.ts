@@ -277,6 +277,20 @@ async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
       return
     }
 
+    // CRITICAL: Cascade cancellation to all household members bound to this lifetime subscription
+    try {
+      const { data: cascadeResult, error: cascadeError } = await supabase
+        .rpc('cascade_subscription_cancellation', { p_owner_user_id: userId });
+
+      if (cascadeError) {
+        console.error('Error cascading lifetime refund cancellation to household members:', cascadeError);
+      } else {
+        console.log(`✅ Cascaded lifetime refund cancellation to ${cascadeResult} household members`);
+      }
+    } catch (error) {
+      console.error('Unexpected error during lifetime refund cascade cancellation:', error);
+    }
+
     // Notify user of revocation
     const { data: userData } = await supabase
       .from('users')
@@ -443,6 +457,20 @@ async function handleSubscriptionUpdated(
 
       if (downgradeError) {
         console.error('Error downgrading subscription:', downgradeError)
+      } else {
+        // CRITICAL: Cascade cancellation to all bound household members
+        try {
+          const { data: cascadeResult, error: cascadeError } = await supabase
+            .rpc('cascade_subscription_cancellation', { p_owner_user_id: userId });
+
+          if (cascadeError) {
+            console.error('Error cascading downgrade to household members:', cascadeError);
+          } else {
+            console.log(`✅ Cascaded downgrade to ${cascadeResult} household members`);
+          }
+        } catch (error) {
+          console.error('Unexpected error during downgrade cascade:', error);
+        }
       }
 
       // Send email notification
@@ -541,6 +569,27 @@ async function handleSubscriptionUpdated(
     }
     
     console.log('Subscription updated successfully for user:', userId)
+    
+    // CRITICAL: Cascade ALL subscription changes to bound household members
+    // Bound members must stay in EXACT sync with owner's subscription lifecycle
+    // This includes: active, trialing, past_due, etc.
+    // Note: canceled/incomplete_expired/unpaid are handled separately above
+    try {
+      const { data: cascadeResult, error: cascadeError } = await supabase
+        .rpc('cascade_subscription_upgrade', { 
+          p_owner_user_id: userId,
+          p_new_plan: finalPlan,
+          p_new_status: status
+        });
+
+      if (cascadeError) {
+        console.error('Error cascading subscription update to household members:', cascadeError);
+      } else if (cascadeResult && cascadeResult > 0) {
+        console.log(`✅ Cascaded subscription update to ${cascadeResult} household members (status: ${status})`);
+      }
+    } catch (error) {
+      console.error('Unexpected error during subscription update cascade:', error);
+    }
     
     // Prepare email notification - use safe extraction
     const productId = subscription.items?.data?.length > 0
@@ -678,6 +727,20 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, even
       console.error('Error updating subscription status:', updateError)
     } else {
       console.log('User downgraded to free plan:', userId)
+      
+      // CRITICAL: Cascade cancellation to all household members bound to this subscription
+      try {
+        const { data: cascadeResult, error: cascadeError } = await supabase
+          .rpc('cascade_subscription_cancellation', { p_owner_user_id: userId });
+
+        if (cascadeError) {
+          console.error('Error cascading subscription cancellation to household members:', cascadeError);
+        } else {
+          console.log(`✅ Cascaded cancellation to ${cascadeResult} household members`);
+        }
+      } catch (error) {
+        console.error('Unexpected error during cascade cancellation:', error);
+      }
       
       // Send cancellation email if we have user info
       if (user) {

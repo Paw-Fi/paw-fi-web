@@ -144,7 +144,17 @@ export async function processFreeFormTextExpense(params: {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools });
   const systemInstruction =
     'You are a budgeting assistant. Decide whether the user is setting a budget or logging expenses. '
-    + 'Always infer and attach clear categories for each expense item (e.g., groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other). '
+    + 'Always infer and attach clear categories for each expense item. '
+    + '\n\nVALID CATEGORIES (use ONLY these exact category names):\n'
+    + 'transfers, shopping, utilities, entertainment, entertainment_subscriptions, restaurants, food, groceries, '
+    + 'transport, transportation, travel, flights, vacation, health, medical, text, education, tuition, '
+    + 'subscriptions, services, housing, rent, mortgage, bills, insurance, savings, investment, investments, '
+    + 'income, salary, bonus, pets, kids, family, gifts, charity, fees, loan, loans, debt, personal care, '
+    + 'beauty, misc, uncategorized'
+    + '\n\nCATEGORY SELECTION RULES:\n'
+    + '- Choose the MOST SPECIFIC category that matches the expense\n'
+    + '- Use "uncategorized" only if no other category fits\n'
+    + '- Use lowercase and exact spelling as listed above\n'
     + '\n\nCURRENCY HANDLING (STRICT PRIORITY):\n'
     + '1. FIRST: Look for currency explicitly mentioned by user (e.g., "50 USD", "€100", "100 RM", "75 SAR")\n'
     + '   - If found, use THAT currency code (EUR for €, MYR for RM, SAR for ر.س, etc.)\n'
@@ -369,10 +379,24 @@ CRITICAL INSTRUCTIONS:
 1. Find the FINAL TOTAL amount at the bottom of the receipt (after all taxes, service charges, tips, etc.)
 2. Create a SINGLE expense entry with this total amount
 3. For the note field, list the main items purchased (e.g., "Burrata, Solomillo, Chocolate fondat, etc.")
-4. Determine the appropriate category based on the items (food, drink, groceries, transport, shopping, entertainment, etc.)
-5. If multiple categories apply (food + drinks), choose the primary one or use "dining"
+4. Determine the appropriate category based on the items using ONLY the valid categories listed below
+5. If multiple categories apply (food + drinks), choose the primary one
 6. Do NOT create separate expenses for each line item - only ONE expense with the total
 7. CAREFULLY look for any date information on the receipt (transaction date, order date, etc.)
+
+VALID CATEGORIES (use ONLY these exact category names):
+transfers, shopping, utilities, entertainment, entertainment_subscriptions, restaurants, food, groceries, 
+transport, transportation, travel, flights, vacation, health, medical, text, education, tuition, 
+subscriptions, services, housing, rent, mortgage, bills, insurance, savings, investment, investments, 
+income, salary, bonus, pets, kids, family, gifts, charity, fees, loan, loans, debt, personal care, 
+beauty, misc, uncategorized
+
+CATEGORY SELECTION RULES:
+- Choose the MOST SPECIFIC category that matches the receipt items
+- For restaurant/dining receipts, use "restaurants"
+- For grocery store receipts, use "groceries"
+- Use "uncategorized" only if no other category fits
+- Use lowercase and exact spelling as listed above
 
 CURRENCY HANDLING (STRICT PRIORITY):
 Priority 1: DETECT currency on receipt

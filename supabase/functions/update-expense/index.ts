@@ -157,10 +157,10 @@ Deno.serve(async (req: Request) => {
       global: { headers: { 'X-Client-Info': 'moneko-update-expense' } },
     });
 
-    // Fetch expense with contact information to verify ownership
+    // Fetch expense with contact information to verify ownership and capture old values
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
-      .select('id, contact_id, user_contacts!inner(user_id)')
+      .select('id, contact_id, household_id, amount_cents, currency, raw_text, category, date, created_at, user_contacts!inner(user_id)')
       .eq('id', expenseId)
       .single();
 
@@ -183,6 +183,14 @@ Deno.serve(async (req: Request) => {
       return errorResponse('You do not have permission to edit this expense', 'UNAUTHORIZED', 403);
     }
 
+    // Capture old values for notification payload
+    const oldAmountCents: number | null = (expense as any)?.amount_cents ?? null;
+    const oldCurrency: string | null = (expense as any)?.currency ?? null;
+    const oldNote: string | null = (expense as any)?.raw_text ?? null;
+    const oldCategory: string | null = (expense as any)?.category ?? null;
+    const oldDate: string | null = (expense as any)?.date ?? null;
+    const oldCreatedAt: string | null = (expense as any)?.created_at ?? null;
+
     // Update expense
     const { data: updatedExpense, error: updateError } = await supabase
       .from('expenses')
@@ -200,6 +208,62 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(`[update-expense] Successfully updated expense ${expenseId} for user ${userId}`);
+
+    // If expense is shared with a household, notify other members
+    if (expense.household_id) {
+      console.log(`[update-expense] Notifying household members about edit for household ${expense.household_id}`);
+      // Resolve actor display name
+      let actorName = 'Someone';
+      try {
+        const { data: appUser } = await supabase
+          .from('users')
+          .select('full_name')
+          .eq('id', userId)
+          .maybeSingle();
+        if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
+          actorName = appUser.full_name as string;
+        }
+      } catch (_) {}
+
+      // Compute new values
+      const newAmountCents: number | null = (updates as any).amount_cents ?? (updatedExpense as any)?.amount_cents ?? null;
+      const newCurrency: string | null = (updates as any).currency ?? (updatedExpense as any)?.currency ?? oldCurrency;
+      const newNote: string | null = (updates as any).raw_text ?? (updatedExpense as any)?.raw_text ?? null;
+      const newCategory: string | null = (updates as any).category ?? (updatedExpense as any)?.category ?? null;
+      const newDate: string | null = (updates as any).date ?? (updatedExpense as any)?.date ?? null;
+      const newCreatedAt: string | null = (updates as any).created_at ?? (updatedExpense as any)?.created_at ?? null;
+      
+      const { error: notifyError } = await supabase.rpc('notify_household_members_expense', {
+        p_household_id: expense.household_id,
+        p_expense_id: expenseId,
+        p_actor_user_id: userId,
+        p_event_type: 'expense_edited',
+        p_expense_data: {
+          actor_name: actorName,
+          old_amount_cents: oldAmountCents,
+          new_amount_cents: newAmountCents,
+          currency: newCurrency ?? oldCurrency,
+          old_note: oldNote,
+          new_note: newNote,
+          old_category: oldCategory,
+          new_category: newCategory,
+          old_currency: oldCurrency,
+          new_currency: newCurrency,
+          old_date: oldDate,
+          new_date: newDate,
+          old_created_at: oldCreatedAt,
+          new_created_at: newCreatedAt,
+          updated_fields: Object.keys(updates),
+        },
+      });
+
+      if (notifyError) {
+        console.error('[update-expense] Error creating notifications:', notifyError);
+        // Don't fail the request, just log the error
+      } else {
+        console.log('[update-expense] Notifications created for household members');
+      }
+    }
     
     return jsonResponse({
       success: true,

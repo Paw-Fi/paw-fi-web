@@ -1,0 +1,1169 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Moneko Expense Actions",
+    "version": "1.3.0",
+    "description": "Supabase Edge actions for saving, listing, budgeting, and analyzing expenses. GPT calls are identified via OpenAI conversation headers; no explicit userId required.",
+    "x-openai-privacy-policy-url": "https://moneko.io/privacy-policy"
+  },
+  "servers": [
+    {
+      "url": "https://qbuynyxyemigtnvdujts.supabase.co/functions/v1",
+      "description": "Supabase Edge Functions base URL"
+    }
+  ],
+  "paths": {
+    "/save-expense": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+          }
+        },
+        "operationId": "saveExpense",
+        "summary": "Save an expense entry",
+        "description": "Stores an expense for the identified user. GPT callers rely on OpenAI headers for identity; no userId parameter is needed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveExpenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expense stored successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveExpenseSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing fields, invalid splits, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User contact not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed (must use POST)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while saving the expense or creating splits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/list-expenses": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+          }
+        },
+        "operationId": "listExpenses",
+        "summary": "Fetch recent expenses",
+        "description": "Returns recent personal and household expenses. GPT callers rely on OpenAI headers for identity.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListExpensesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expenses fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListExpensesSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (missing filters, unresolved identity, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User is not a member of the requested household",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed (must use POST)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while fetching expenses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analyze-expense": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+          }
+        },
+        "operationId": "analyzeExpense",
+        "summary": "Analyze text or image for expense details",
+        "description": "Parses expense information from raw text or receipt imagery without saving to the database. GPT callers rely on OpenAI headers for identity.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeExpenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expense content analyzed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeExpenseSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (missing input or unsupported combination)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while analyzing the expense",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/expenses-summary": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+          }
+        },
+        "operationId": "summarizeExpenses",
+        "summary": "Summarize expenses for charting",
+        "description": "Returns category-level spend totals grouped by currency for a given window so the assistant can render donut or bar charts.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpensesSummaryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aggregated totals ready for visualization",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpensesSummarySuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or identity mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User is not permitted to view the requested household data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while generating the summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/set-budget": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+          }
+        },
+        "operationId": "setBudget",
+        "summary": "Set the user's daily budget",
+        "description": "Creates or updates the caller's daily budget for a specific date. GPT callers must include a date so the backend can align with the user's timezone without relying on server time.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetBudgetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Budget stored. GPT callers receive a plain-text confirmation message.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetBudgetSuccessResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing identifiers, invalid amount, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed (must use POST)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while saving the budget",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/get-budget": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+          }
+        },
+        "operationId": "getBudget",
+        "summary": "Retrieve the user's daily budget and projections",
+        "description": "Fetches the most recent daily budget in a currency and reports spend-to-date against the requested day. GPT callers must send the date they want totals for so calculations match the user's timezone.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetBudgetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Budget retrieved. GPT callers receive a plain-text summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBudgetSuccessResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request (unable to resolve identity, invalid dates, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed (must use POST)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while retrieving budgets or computing totals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SaveExpenseRequest": {
+        "type": "object",
+        "required": [
+          "amount",
+          "category",
+          "currency",
+          "date"
+        ],
+        "properties": {
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "description": "Expense amount in major currency units (e.g., 5.25). Must be greater than 0."
+          },
+          "category": {
+            "type": "string",
+            "description": "Expense category label."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code (e.g., USD, EUR)."
+          },
+          "date": {
+            "type": "string",
+            "description": "ISO date (YYYY-MM-DD) or datetime."
+          },
+          "clientCreatedAt": {
+            "type": "string",
+            "description": "Optional client-side timestamp with timezone (ISO)."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional note or raw text."
+          },
+          "receiptImageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional receipt image URL."
+          },
+          "householdId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Household UUID to share the expense with."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Expense": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount_cents": {
+            "type": "integer"
+          },
+          "category": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "raw_text": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "receipt_image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "household_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "split_group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+        },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "SaveExpenseSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Expense"
+          },
+          "shared": {
+            "type": "boolean",
+            "description": "True when a household split was created."
+          },
+          "warning": {
+            "type": "string",
+            "description": "Optional warning if the household split or notifications could not be completed."
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID the backend ultimately used (helpful when GPT created a guest user)."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Additional metadata about identity resolution, including guest creation flags."
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "shared"
+        ]
+      },
+      "AnalyzeExpenseRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Free-form description that may contain expense details."
+          },
+          "image": {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded image payload."
+              },
+              "contentType": {
+                "type": "string",
+                "description": "Image MIME type such as image/jpeg."
+              }
+            },
+            "required": [
+              "data",
+              "contentType"
+            ],
+            "additionalProperties": false
+          },
+          "date": {
+            "type": "string",
+            "description": "Optional ISO date (defaults to today)."
+          },
+          "currency": {
+            "type": "string",
+            "description": "Caller preferred currency code for fallback."
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "text"
+            ]
+          },
+          {
+            "required": [
+              "image"
+            ]
+          }
+        ]
+      },
+      "AnalyzeExpenseSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExpenseAnalysisItem"
+                }
+              },
+              "isAnalyzed": {
+                "type": "boolean",
+                "description": "Flag indicating the expense was parsed but not persisted."
+              }
+            }
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID the backend used for analysis (guest or authenticated)."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Identity metadata including conversationId and guest creation flags."
+          }
+        }
+      },
+      "SetBudgetRequest": {
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "E.164 formatted phone number. Required for non-GPT callers when userId is absent."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User UUID. Optional for GPT callers because identity is derived from headers."
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "description": "Daily budget amount in major currency units (e.g., 25.50). Must be positive."
+          },
+          "date": {
+            "type": "string",
+            "description": "YYYY-MM-DD date to apply the budget. Required for GPT callers; non-GPT requests default to today's date when omitted."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO currency code. Defaults to the contact's preferred currency or USD."
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetBudgetSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "results": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string",
+                "description": "Date the budget applies to (YYYY-MM-DD)."
+              },
+              "currency": {
+                "type": "string"
+              },
+              "budget_set": {
+                "type": "object",
+                "properties": {
+                  "amount_cents": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                }
+              },
+              "totals": {
+                "type": "object",
+                "properties": {
+                  "budget_cents": {
+                    "type": "integer"
+                  },
+                  "spent_cents": {
+                    "type": "integer"
+                  },
+                  "remaining_cents": {
+                    "type": "integer"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "reply": {
+            "type": "string",
+            "description": "Human-readable summary returned to non-GPT callers."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Identity metadata (conversationId, guest flags, etc.)."
+          }
+        }
+      },
+      "GetBudgetRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "description": "E.164 formatted phone number. Required for non-GPT callers when userId is absent."
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User UUID. Optional for GPT callers because identity is derived from headers."
+          },
+          "date": {
+            "type": "string",
+            "description": "ISO date (YYYY-MM-DD) to report totals through. Required for GPT callers; non-GPT requests default to today's date when omitted."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO currency filter. Defaults to the contact's preferred currency or USD."
+          },
+          "day": {
+            "type": "integer",
+            "description": "Optional explicit day-of-month for the projection window."
+          }
+        },
+        "additionalProperties": false
+      },
+      "GetBudgetSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "results": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string"
+              },
+              "currency": {
+                "type": "string"
+              },
+              "dayRequested": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "dayApplied": {
+                "type": "integer"
+              },
+              "daysInMonth": {
+                "type": "integer"
+              },
+              "dailyBudgetCents": {
+                "type": "integer"
+              },
+              "totals": {
+                "type": "object",
+                "properties": {
+                  "monthBudgetCents": {
+                    "type": "integer"
+                  },
+                  "toDateBudgetCents": {
+                    "type": "integer"
+                  },
+                  "spentToDateCents": {
+                    "type": "integer"
+                  },
+                  "remainingToDateCents": {
+                    "type": "integer"
+                  },
+                  "projectedMonthRemainingCents": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "description": "Identity metadata (conversationId, guest flags, etc.)."
+          }
+        }
+      },
+      "ExpenseAnalysisItem": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number"
+          },
+          "category": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "currencySymbol": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "ListExpensesRequest": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Supabase UUID for an authenticated user. GPT callers typically omit this and rely on header-based resolution."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 50
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Lower bound in ISO date format."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Upper bound in ISO date format."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code to filter expenses (e.g., USD, EUR, GBP)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExpenseSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "amountMajor": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "receiptImageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ListExpensesSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpenseSummary"
+            }
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID used for the lookup (useful when GPT created the user)."
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "includePersonal": {
+                    "type": "boolean"
+                  },
+                  "householdId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "startDate": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "endDate": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "identity": {
+                "type": "object",
+                "description": "Information about how the user identity was resolved (includes conversationId for GPT guests)."
+              }
+            }
+          }
+        }
+      },
+      "ExpensesSummaryRequest": {
+        "type": "object",
+        "properties": {
+      "startDate": {
+        "type": "string",
+        "description": "Lower bound in ISO date format. Defaults to the first day of the month containing endDate."
+      },
+      "endDate": {
+        "type": "string",
+        "description": "Upper bound in ISO date format. Required for GPT callers; non-GPT requests default to today's date when omitted."
+      },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code to filter expenses (e.g., USD, EUR, GBP)."
+          },
+      "maxRows": {
+        "type": "integer",
+        "description": "Upper bound on rows pulled for aggregation (default 5000, hard cap 20000)."
+      }
+        },
+        "additionalProperties": false
+      },
+      "ExpensesSummarySuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "breakdown": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExpenseCurrencyBreakdown"
+                }
+              },
+              "totalsByCurrency": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExpenseCurrencyTotal"
+                }
+              },
+              "timeWindow": {
+                "type": "object",
+                "properties": {
+                  "startDate": {
+                    "type": "string"
+                  },
+                  "endDate": {
+                    "type": "string"
+                  }
+                }
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "includePersonal": {
+                    "type": "boolean"
+                  },
+                  "includeHousehold": {
+                    "type": "boolean"
+                  },
+                  "householdId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "currency": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              },
+              "sampleSize": {
+                "type": "integer",
+                "description": "Number of expense rows included in the aggregation."
+              }
+            }
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID used for the aggregation (guest or authenticated)."
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "conversationId": {
+                "type": "string"
+              },
+              "ephemeralUserId": {
+                "type": "string"
+              },
+              "guest": {
+                "type": "object",
+                "properties": {
+                  "contactId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "createdUser": {
+                    "type": "boolean"
+                  },
+                  "createdContact": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "windowDays": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "ExpenseCurrencyBreakdown": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "totalAmountMajor": {
+            "type": "number"
+          },
+          "totals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpenseCategoryShare"
+            }
+          }
+        }
+      },
+      "ExpenseCurrencyTotal": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "amountMajor": {
+            "type": "number"
+          }
+        }
+      },
+      "ExpenseCategoryShare": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "amountMajor": {
+            "type": "number"
+          },
+          "share": {
+            "type": "number",
+            "description": "Proportion of the currency total represented by this category (0-1)."
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID used when the error occurred (if resolved)."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Additional diagnostic data."
+          }
+        }
+      }
+    }
+  }
+}

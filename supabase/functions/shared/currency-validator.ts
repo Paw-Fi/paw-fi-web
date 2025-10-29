@@ -1,12 +1,9 @@
 // Currency validation utilities
 // Provides security validation for currency codes to prevent injection attacks
 
-export const VALID_CURRENCIES = [
-  'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CNY', 'HKD', 'SGD', 
-  'NZD', 'CZK', 'CHF', 'KRW', 'INR', 'RUB', 'BRL', 'MXN', 'ZAR',
-  'SEK', 'NOK', 'DKK', 'PLN', 'THB', 'IDR', 'MYR', 'PHP', 'TRY',
-  'AED', 'SAR', 'EGP', 'NGN', 'PKR', 'KES', 'GHS', 'VND', 'DOP'
-] as const;
+import { CURRENCY_SYMBOLS } from "./currency-symbols.ts";
+
+export const VALID_CURRENCIES = Object.keys( CURRENCY_SYMBOLS);
 
 /**
  * Validates and normalizes currency code

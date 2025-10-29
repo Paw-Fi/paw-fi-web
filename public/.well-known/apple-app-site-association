@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "G779AVFRMK.com.moneko.mobile",
+        "appID": "GW28HYRJ9H.com.moneko.mobile",
         "paths": [
           "/invites/*"
         ]
@@ -12,7 +12,7 @@
   },
   "webcredentials": {
     "apps": [
-      "G779AVFRMK.com.moneko.mobile"
+      "GW28HYRJ9H.com.moneko.mobile"
     ]
   }
 }
