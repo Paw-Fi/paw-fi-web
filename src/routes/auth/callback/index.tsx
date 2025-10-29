@@ -6,8 +6,9 @@ import { useAvatar } from '@/hooks/use-avatar'
 export const Route = createFileRoute('/auth/callback/')({
   component: AuthCallback,
   validateSearch: (search: Record<string, unknown>) => {
+    const next = search.next as string
     return {
-      next: (search.next as string) || '/dashboard',
+      next: next ? decodeURIComponent(next) : '/dashboard',
     }
   },
 })

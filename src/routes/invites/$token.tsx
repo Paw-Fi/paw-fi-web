@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'react-toastify'
@@ -34,23 +35,40 @@ function InvitePage() {
   const [isAccepting, setIsAccepting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isAccepted, setIsAccepted] = useState(false)
+  const [showTimeout, setShowTimeout] = useState(false)
 
-  // Validate invite on mount
+  // Wait for auth check, then validate invite or redirect to login
   useEffect(() => {
-    validateInvite()
-  }, [token])
+    // Don't do anything until auth check is complete
+    if (authLoading) return
 
-  // Handle auth redirect after validation
-  useEffect(() => {
-    if (!authLoading && !user && inviteData) {
-      // Not authenticated but invite is valid - redirect to login
-      const currentUrl = encodeURIComponent(window.location.pathname)
+    // If not authenticated, redirect to login/register with current URL
+    if (!user) {
       navigate({
         to: '/login',
-        search: { redirect: currentUrl },
+        search: { redirect: window.location.pathname },
       })
+      return
     }
-  }, [authLoading, user, inviteData, navigate])
+
+    // User is authenticated, validate the invite if we haven't already
+    if (user && !inviteData && !error && !isValidating) {
+      validateInvite()
+    }
+  }, [authLoading, user, token, inviteData, error, isValidating])
+
+  // 7-second timeout for validation
+  useEffect(() => {
+    if (!isValidating) return
+
+    const timeoutId = setTimeout(() => {
+      if (isValidating && !inviteData && !error) {
+        setShowTimeout(true)
+      }
+    }, 7000)
+
+    return () => clearTimeout(timeoutId)
+  }, [isValidating, inviteData, error])
 
   const validateInvite = async () => {
     setIsValidating(true)
@@ -211,12 +229,46 @@ function InvitePage() {
   // Loading state
   if (isValidating || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moneko-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">
-            {isValidating ? 'Validating invitation...' : 'Loading...'}
-          </p>
+      <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4">
+        <div className="text-center max-w-md">
+          {!showTimeout ? (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+              <p className="text-muted-foreground">
+                {isValidating ? 'Validating invitation...' : 'Loading...'}
+              </p>
+            </>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.4,
+                ease: [0.25, 0.46, 0.45, 0.94],
+              }}
+              className="bg-moneko-background rounded-3xl p-8"
+            >
+              <div className="mb-8">
+                <div className="mx-auto h-12 w-12 rounded-full bg-amber-50/50 dark:bg-amber-950/30 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-light text-foreground mb-3">
+                Taking longer than expected
+              </h2>
+              <p className="text-muted-foreground mb-8">
+                The invitation validation is taking longer than usual. Please refresh the page to try again.
+              </p>
+              <motion.button
+                onClick={() => window.location.reload()}
+                className="w-full bg-primary text-primary-foreground px-6 py-4 rounded-full font-medium hover:shadow-md transition-all duration-200"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                Refresh Page
+              </motion.button>
+            </motion.div>
+          )}
         </div>
       </div>
     )
