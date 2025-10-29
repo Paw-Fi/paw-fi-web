@@ -5,6 +5,15 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function sanitizeUuid(value?: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
 
 interface MemberSplit {
   userId: string;
@@ -19,7 +28,7 @@ interface CustomSplits {
 }
 
 interface RequestBody {
-  userId: string; // User ID (required)
+  userId?: string; // User ID (optional when request originates from GPT)
   amount: number; // Amount in major units
   category: string; // Category name
   currency: string; // ISO currency code
@@ -49,8 +58,25 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const body: RequestBody = await req.json();
 
-    // Validate required fields
-    if (!body.userId) {
+    const headerSnapshot: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headerSnapshot[key] = value;
+    });
+    console.log('[save-expense] Incoming headers:', headerSnapshot);
+    console.log('[save-expense] Incoming body:', body);
+
+    const detection = detectGptRequest(req);
+
+    let userId = sanitizeUuid(body.userId ?? null);
+
+    if (body.userId && !userId) {
+      console.warn('[save-expense] Ignoring invalid userId provided in payload', {
+        provided: body.userId,
+        conversationId: detection.conversationId,
+      });
+    }
+
+    if (!userId && !detection.isGpt) {
       return new Response(
         JSON.stringify({ error: 'userId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -91,9 +117,16 @@ Deno.serve(async (req: Request) => {
 
     // Validate and normalize currency
     const currency = validateCurrency(body.currency || 'USD');
+    const resolvedUserMetadata: Record<string, unknown> = {};
+    if (detection.conversationId) {
+      resolvedUserMetadata.conversationId = detection.conversationId;
+    }
+    if (detection.ephemeralUserId) {
+      resolvedUserMetadata.ephemeralUserId = detection.ephemeralUserId;
+    }
 
     console.log('[save-expense] Saving expense:', {
-      userId: body.userId,
+      userId,
       amount: body.amount,
       category: body.category,
       currency,
@@ -105,16 +138,67 @@ Deno.serve(async (req: Request) => {
       global: { headers: { 'X-Client-Info': 'moneko-save-expense' } },
     });
 
-    // Get user's contact_id
-    const { data: contact } = await supabase
-      .from('user_contacts')
-      .select('id')
-      .eq('user_id', body.userId)
-      .order('id', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    let contactId: string | null = null;
 
-    if (!contact) {
+    if (userId) {
+      const { data: contact, error: contactError } = await supabase
+        .from('user_contacts')
+        .select('id, preferred_currency')
+        .eq('user_id', userId)
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (contactError) {
+        console.error('[save-expense] Failed to look up user contact:', contactError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to resolve user contact' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (contact) {
+        contactId = contact.id;
+        if (!contact.preferred_currency && currency) {
+          const { error: updateCurrencyError } = await supabase
+            .from('user_contacts')
+            .update({ preferred_currency: currency })
+            .eq('id', contact.id);
+          if (updateCurrencyError) {
+            console.error('[save-expense] Failed to update contact currency:', updateCurrencyError);
+          }
+        }
+      }
+    }
+
+    if (!contactId && detection.isGpt && detection.conversationId) {
+      try {
+        const guestIdentity = await ensureGuestIdentity({
+          supabase,
+          conversationId: detection.conversationId,
+          currency,
+        });
+        userId = guestIdentity.userId;
+        contactId = guestIdentity.contactId;
+        console.log('[save-expense] Resolved GPT guest identity', {
+          conversationId: detection.conversationId,
+          userId,
+          contactId,
+        });
+        resolvedUserMetadata.guest = {
+          createdUser: guestIdentity.createdUser,
+          createdContact: guestIdentity.createdContact,
+        };
+      } catch (guestError) {
+        console.error('[save-expense] Failed to resolve GPT guest identity:', guestError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to prepare GPT guest user' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (!contactId || !userId) {
       return new Response(
         JSON.stringify({ error: 'User contact not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -125,19 +209,17 @@ Deno.serve(async (req: Request) => {
     const amountCents = Math.round(body.amount * 100);
 
     // Insert expense into expenses table
-    // NOTE: No share_scope column - all household expenses are visible to all members
     const { data: expense, error: expenseError } = await supabase
       .from('expenses')
       .insert({
-        contact_id: contact.id,
-        user_id: body.userId,
+        contact_id: contactId,
+        user_id: userId,
         amount_cents: amountCents,
         category: body.category,
         date: body.date,
         raw_text: body.description || '',
         currency: currency,
         receipt_image_url: body.receiptImageUrl || null,
-        household_id: body.householdId || null,
         created_at: body.clientCreatedAt || new Date().toISOString(),
       })
       .select()
@@ -153,13 +235,28 @@ Deno.serve(async (req: Request) => {
 
     console.log('[save-expense] Expense saved:', expense.id);
 
+    // GPT requests do not support household functionality
+    if (detection.isGpt) {
+      console.log('[save-expense] GPT request - household features disabled');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: expense,
+          shared: false,
+          resolvedUserId: userId,
+          meta: resolvedUserMetadata,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Resolve actor display name for notification title
     let actorName = 'Someone';
     try {
       const { data: appUser } = await supabase
         .from('users')
         .select('full_name')
-        .eq('id', body.userId)
+        .eq('id', userId)
         .maybeSingle();
       if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
         actorName = appUser.full_name as string;
@@ -175,7 +272,7 @@ Deno.serve(async (req: Request) => {
         .from('household_members')
         .select('id, role')
         .eq('household_id', body.householdId)
-        .eq('user_id', body.userId)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (!membership) {
@@ -186,6 +283,8 @@ Deno.serve(async (req: Request) => {
             success: true,
             data: expense,
             warning: 'Expense saved but not shared (not a household member)',
+            resolvedUserId: userId,
+            meta: resolvedUserMetadata,
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -200,14 +299,16 @@ Deno.serve(async (req: Request) => {
       if (!members || members.length === 0) {
         console.error('[save-expense] No active members in household');
         return new Response(
-          JSON.stringify({
-            success: true,
-            data: expense,
-            warning: 'Expense saved but not shared (no active members)',
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+            JSON.stringify({
+              success: true,
+              data: expense,
+              warning: 'Expense saved but not shared (no active members)',
+              resolvedUserId: userId,
+              meta: resolvedUserMetadata,
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
       // Determine split type and validate custom splits
       const splitType = body.customSplits?.splitType || 'equal';
@@ -275,7 +376,7 @@ Deno.serve(async (req: Request) => {
         .insert({
           household_id: body.householdId,
           expense_id: expense.id,
-          payer_user_id: body.userId,
+          payer_user_id: userId,
           split_type: splitType,
           currency: currency,
           total_amount_cents: amountCents,
@@ -288,14 +389,16 @@ Deno.serve(async (req: Request) => {
       if (splitGroupError) {
         console.error('[save-expense] Error creating split group:', splitGroupError);
         return new Response(
-          JSON.stringify({
-            success: true,
-            data: expense,
-            warning: 'Expense saved but split group creation failed',
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+            JSON.stringify({
+              success: true,
+              data: expense,
+              warning: 'Expense saved but split group creation failed',
+              resolvedUserId: userId,
+              meta: resolvedUserMetadata,
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
       console.log('[save-expense] Split group created:', splitGroup.id, 'with type:', splitType);
 
@@ -344,6 +447,8 @@ Deno.serve(async (req: Request) => {
               success: true,
               data: expense,
               warning: 'Expense saved but split lines creation failed due to invalid shares',
+              resolvedUserId: userId,
+              meta: resolvedUserMetadata,
             }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
@@ -377,14 +482,16 @@ Deno.serve(async (req: Request) => {
       if (splitLinesError) {
         console.error('[save-expense] Error creating split lines:', splitLinesError);
         return new Response(
-          JSON.stringify({
-            success: true,
-            data: expense,
-            warning: 'Expense saved but split lines creation failed',
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+            JSON.stringify({
+              success: true,
+              data: expense,
+              warning: 'Expense saved but split lines creation failed',
+              resolvedUserId: userId,
+              meta: resolvedUserMetadata,
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
       console.log('[save-expense] Split lines created for', members.length, 'members');
 
@@ -398,7 +505,7 @@ Deno.serve(async (req: Request) => {
       const { error: notifyError } = await supabase.rpc('notify_household_members_expense', {
         p_household_id: body.householdId,
         p_expense_id: expense.id,
-        p_actor_user_id: body.userId,
+        p_actor_user_id: userId,
         p_event_type: 'expense_added',
         p_expense_data: {
           actor_name: actorName,
@@ -425,6 +532,8 @@ Deno.serve(async (req: Request) => {
         success: true,
         data: expense,
         shared: !!body.householdId,
+        resolvedUserId: userId,
+        meta: resolvedUserMetadata,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

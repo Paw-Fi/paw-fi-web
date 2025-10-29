@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -27,6 +28,10 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
+  const detection = detectGptRequest(req);
+  const conversationId = detection.conversationId ?? null;
+  const ephemeralUserId = detection.ephemeralUserId ?? null;
+
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   
@@ -41,10 +46,16 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { phone, userId, amount, date: inputDate, currency: inputCurrency } = payload || {};
-  
-  // Validate: either phone or userId must be provided
-  if (!phone && !userId) {
+  const {
+    phone,
+    userId,
+    amount,
+    date: inputDate,
+    currency: inputCurrency,
+  } = payload || {};
+
+  // Validate: either phone or userId must be provided unless this is a GPT request
+  if (!phone && !userId && !detection.isGpt) {
     return errorResponse("Either 'phone' or 'userId' must be provided", 400);
   }
   if (phone && typeof phone !== "string") {
@@ -57,8 +68,11 @@ Deno.serve(async (req: Request) => {
     return errorResponse("'amount' must be a positive number", 400);
   }
 
+  if (detection.isGpt && !inputDate) {
+    return errorResponse("'date' is required for GPT requests", 400);
+  }
   const date = inputDate ? new Date(inputDate) : new Date();
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -69,11 +83,42 @@ Deno.serve(async (req: Request) => {
     global: { headers: { "X-Client-Info": "moneko-set-budget" } },
   });
 
-  // Find or create contact - search by phone if provided, otherwise by userId
+  let identityMeta: Record<string, unknown> = {};
+  let resolvedUserId = userId?.trim() || null;
+  let contactId: string | null = null;
   let contact: any = null;
+
+  if (detection.isGpt && !phone && !resolvedUserId) {
+    if (!conversationId) {
+      return errorResponse("Unable to resolve session identity", 400);
+    }
+    try {
+      const identity = await ensureGuestIdentity({
+        supabase,
+        conversationId,
+        currency: providedCurrency,
+      });
+      resolvedUserId = identity.userId;
+      contactId = identity.contactId;
+      identityMeta = {
+        conversationId,
+        ephemeralUserId,
+        guest: {
+          contactId: identity.contactId,
+          createdUser: identity.createdUser,
+          createdContact: identity.createdContact,
+        },
+      };
+    } catch (identityError) {
+      console.error("set-budget identity error", identityError);
+      return errorResponse("Failed to resolve GPT session", 500);
+    }
+  }
+
+  // Find or create contact - search by phone if provided, otherwise by userId
   let contactErr: any = null;
-  
-  if (phone) {
+
+  if (!contactId && phone) {
     // Search by phone number (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
@@ -83,26 +128,50 @@ Deno.serve(async (req: Request) => {
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
-  } else if (userId) {
+    contactId = contact?.id ?? contactId;
+    resolvedUserId = resolvedUserId ?? (contact?.user_id ?? null);
+  } else if (!contactId && resolvedUserId) {
     // Search by user_id (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_currency, phone_e164")
-      .eq("user_id", userId)
+      .eq("user_id", resolvedUserId)
       .order('id', { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
+    contactId = contact?.id ?? contactId;
   }
 
-  let contactId: string | null = contact?.id ?? null;
   if (contactErr) {
     console.error("contact select error", contactErr);
     return errorResponse("Failed to fetch contact", 500);
   }
 
   // FIX: Prioritize incoming currency over contact's preferred (for per-currency budgets)
+  // If we have a contact id from identity but no contact details yet, fetch the row for preferred currency and user link.
+  if (!contact && contactId) {
+    const { data: contactRow, error: contactFetchErr } = await supabase
+      .from("user_contacts")
+      .select("id, user_id, preferred_currency, phone_e164")
+      .eq("id", contactId)
+      .single();
+    if (!contactFetchErr) {
+      contact = contactRow;
+      resolvedUserId = resolvedUserId ?? (contactRow?.user_id ?? null);
+    }
+  }
+
   const budgetCurrency = providedCurrency || validateCurrency(contact?.preferred_currency as string | null);
+
+  if (!contactId) {
+    console.error("set-budget could not resolve contact id", { phone, resolvedUserId, conversationId });
+    return errorResponse("Failed to resolve contact", 500);
+  }
+
+  if (resolvedUserId) {
+    identityMeta.userId = resolvedUserId;
+  }
 
   if (!contactId) {
     // Create new contact using UPSERT to prevent duplicates
@@ -111,7 +180,7 @@ Deno.serve(async (req: Request) => {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: userId || null, preferred_currency: budgetCurrency, updated_at: new Date().toISOString() },
+          { phone_e164: phone, user_id: resolvedUserId || null, preferred_currency: budgetCurrency, updated_at: new Date().toISOString() },
           { onConflict: 'phone_e164' }
         )
         .select("id")
@@ -121,11 +190,11 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Failed to create contact", 500);
       }
       contactId = upserted.id;
-    } else if (userId) {
+    } else if (resolvedUserId) {
       // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, preferred_currency: budgetCurrency })
+        .insert({ user_id: resolvedUserId, preferred_currency: budgetCurrency })
         .select("id")
         .single();
       if (insertErr) {
@@ -191,5 +260,16 @@ Deno.serve(async (req: Request) => {
   const toMoney = (cents: number) => (cents / 100).toFixed(2);
   const reply = `Budget set to ${sym}${toMoney(budgetCents)}. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${toMoney(budgetCents)}. Remaining: ${sym}${toMoney(remainingCents)}.`;
 
-  return jsonResponse({ ok: true, results, reply });
+  if (detection.isGpt) {
+    return new Response(reply, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
+  return jsonResponse({ ok: true, results, reply, meta: identityMeta });
 });

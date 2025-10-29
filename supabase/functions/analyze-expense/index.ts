@@ -6,9 +6,19 @@ import { corsHeaders } from "../shared/cors.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function sanitizeUuid(value?: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
 
 interface RequestBody {
-  userId: string; // User ID (required for mobile app)
+  userId?: string; // User ID (required for mobile app, optional for GPT)
   text?: string;
   image?: {
     data: string; // base64 encoded image
@@ -45,8 +55,81 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const body: RequestBody = await req.json();
 
-    // Validate required fields
-    if (!body.userId) {
+    const detection = detectGptRequest(req);
+    const conversationId = detection.conversationId ?? null;
+
+    let userId = sanitizeUuid(body.userId ?? null);
+
+    if (body.userId && !userId) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid userId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const callerCurrency = validateCurrency(body.currency);
+    let resolvedIdentityMeta: Record<string, unknown> | undefined;
+
+    if (!userId && detection.isGpt) {
+      if (!conversationId) {
+        return new Response(
+          JSON.stringify({ error: 'conversationId is required for GPT requests' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+      const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+        return new Response(
+          JSON.stringify({ error: 'Server configuration error' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+        global: { headers: { 'X-Client-Info': 'moneko-analyze-expense' } },
+      });
+
+      try {
+        const guestIdentity = await ensureGuestIdentity({
+          supabase,
+          conversationId,
+          currency: callerCurrency,
+        });
+
+        userId = guestIdentity.userId;
+        resolvedIdentityMeta = {
+          conversationId,
+          guest: {
+            contactId: guestIdentity.contactId,
+            createdUser: guestIdentity.createdUser,
+            createdContact: guestIdentity.createdContact,
+          },
+        };
+        if (detection.ephemeralUserId) {
+          resolvedIdentityMeta.ephemeralUserId = detection.ephemeralUserId;
+        }
+
+        console.log('[analyze-expense] Resolved GPT guest identity', {
+          conversationId,
+          userId,
+          contactId: guestIdentity.contactId,
+          createdUser: guestIdentity.createdUser,
+          createdContact: guestIdentity.createdContact,
+        });
+      } catch (guestError) {
+        console.error('[analyze-expense] Failed to resolve GPT guest identity:', guestError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to prepare GPT guest user' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (!userId) {
       return new Response(
         JSON.stringify({ error: 'userId is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -79,13 +162,14 @@ Deno.serve(async (req: Request) => {
 
     // Set defaults
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
-    const callerCurrency = body.currency ? validateCurrency(body.currency) : 'USD';
 
     console.log('[analyze-expense] Analysis request:', { 
-      userId: body.userId, 
+      userId, 
+      conversationId,
       hasText: !!body.text, 
       hasImage: !!body.image,
-      callerCurrency 
+      callerCurrency,
+      identity: resolvedIdentityMeta ?? null,
     });
 
     // Initialize Gemini AI
