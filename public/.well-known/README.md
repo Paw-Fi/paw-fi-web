@@ -17,7 +17,7 @@ This directory contains domain verification files required for iOS Universal Lin
    - Example: `9JA89QQLNQ.io.moneko.app`
 
 3. **Deploy to your web server**:
-   - This file MUST be served from `https://moneko.app/.well-known/apple-app-site-association`
+   - This file MUST be served from `https://moneko.io/.well-known/apple-app-site-association`
    - Content-Type: `application/json`
    - No file extension (must be exactly `apple-app-site-association`)
    - Must be accessible over HTTPS
@@ -25,7 +25,7 @@ This directory contains domain verification files required for iOS Universal Lin
 
 4. **Verify deployment**:
 ```bash
-curl -I https://moneko.app/.well-known/apple-app-site-association
+curl -I https://moneko.io/.well-known/apple-app-site-association
 # Should return 200 OK with Content-Type: application/json
 ```
 
@@ -65,14 +65,14 @@ keytool -list -v -keystore /path/to/your/release.keystore \
    - You can have multiple fingerprints in the array (debug, release, etc.)
 
 3. **Deploy to your web server**:
-   - This file MUST be served from `https://moneko.app/.well-known/assetlinks.json`
+   - This file MUST be served from `https://moneko.io/.well-known/assetlinks.json`
    - Content-Type: `application/json`
    - Must be accessible over HTTPS
    - No redirects allowed
 
 4. **Verify deployment**:
 ```bash
-curl -I https://moneko.app/.well-known/assetlinks.json
+curl -I https://moneko.io/.well-known/assetlinks.json
 # Should return 200 OK with Content-Type: application/json
 ```
 
@@ -80,7 +80,7 @@ curl -I https://moneko.app/.well-known/assetlinks.json
 ```bash
 # Test using ADB (Android Debug Bridge)
 adb shell am start -a android.intent.action.VIEW \
-  -d "https://moneko.app/invites/test-token"
+  -d "https://moneko.io/invites/test-token"
 
 # Check if your app opens (not the browser)
 ```
@@ -115,7 +115,7 @@ adb shell am start -a android.intent.action.VIEW \
 
 1. **Check file accessibility**:
 ```bash
-curl https://moneko.app/.well-known/apple-app-site-association
+curl https://moneko.io/.well-known/apple-app-site-association
 ```
 
 2. **Common issues**:
@@ -134,7 +134,7 @@ curl https://moneko.app/.well-known/apple-app-site-association
 
 1. **Check file accessibility**:
 ```bash
-curl https://moneko.app/.well-known/assetlinks.json
+curl https://moneko.io/.well-known/assetlinks.json
 ```
 
 2. **Common issues**:

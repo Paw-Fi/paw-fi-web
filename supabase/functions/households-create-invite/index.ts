@@ -4,7 +4,7 @@ import { getCorsHeaders } from "../shared/cors.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const appUrl = Deno.env.get('APP_URL') || 'https://moneko.app';
+const appUrl = Deno.env.get('APP_URL') || 'https://moneko.io';
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 

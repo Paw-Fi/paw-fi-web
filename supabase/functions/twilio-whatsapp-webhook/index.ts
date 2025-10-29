@@ -496,7 +496,7 @@ Deno.serve(async (req: Request) => {
       if (!templateResult.success) {
         console.error('[verification] Failed to send template:', templateResult.error);
         // Fallback to plain text if template fails
-        const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.app';
+        const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.io';
         const verificationUrl = `${appUrl}/verify-whatsapp?otp=${code}`;
         return {
           text: `🔗 *Account Verification*\n\nClick this link to verify your account:\n${verificationUrl}\n\nOr enter code: *${code}*\n\nValid for 10 minutes.`

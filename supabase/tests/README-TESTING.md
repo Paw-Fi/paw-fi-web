@@ -96,7 +96,7 @@ test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 2. **Create Invite** (Web)
    - Click "Invite Member"
    - Enter email or generate link
-   - Copy invite URL: `https://moneko.app/invites/{token}`
+   - Copy invite URL: `https://moneko.io/invites/{token}`
 
 3. **Validate Invite** (Mobile)
    - Login as User B (different device/account)

@@ -97,7 +97,7 @@ Deno.serve(async (req: Request) => {
     const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
     
     // Get the app URL for the verification link
-    const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.app';
+    const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.io';
     const verificationUrl = `${appUrl}/verify-whatsapp?otp=${code}`;
 
     // Use Messaging Service SID if available (for WhatsApp Business Account)
