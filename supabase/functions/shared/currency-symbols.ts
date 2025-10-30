@@ -44,6 +44,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'USD': '\$',
   'VND': '₫',
   'ZAR': 'R',
+  'HUF': 'Ft',
 };
 
 /**

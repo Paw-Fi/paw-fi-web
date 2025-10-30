@@ -4,9 +4,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+import { normalizeCategory, getAllCategories } from "../shared/category-colors.ts";
 
 interface UpdateExpenseRequest {
-  userId: string;
   expenseId: string;
   updates: {
     amount_cents?: number;
@@ -26,6 +27,8 @@ interface ErrorResponse {
 interface SuccessResponse {
   success: true;
   data: any;
+  resolvedUserId?: string;
+  meta?: Record<string, unknown>;
 }
 
 type ApiResponse = ErrorResponse | SuccessResponse;
@@ -42,10 +45,16 @@ function errorResponse(message: string, code: ErrorResponse['code'], status: num
 }
 
 // Allowed categories (must match frontend categories)
-const ALLOWED_CATEGORIES = [
-  'food', 'transport', 'shopping', 'entertainment', 'bills', 
-  'health', 'education', 'travel', 'groceries', 'other', null
-];
+// Using getAllCategories() for consistency with other functions
+const ALLOWED_CATEGORIES = getAllCategories();
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function sanitizeUuid(value?: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -67,13 +76,68 @@ Deno.serve(async (req: Request) => {
   try {
     // Parse request body
     const body: UpdateExpenseRequest = await req.json();
-    const { userId, expenseId, updates } = body;
+    const { expenseId, updates } = body;
 
-    // Validate required fields
-    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
-      return errorResponse('userId is required and must be a non-empty string', 'VALIDATION_ERROR');
+    const detection = detectGptRequest(req);
+    const conversationId = detection.conversationId ?? null;
+
+    let userId: string | null = null;
+
+    // For non-GPT requests, userId should be in body (legacy client support)
+    if (!detection.isGpt && 'userId' in body && (body as any).userId) {
+      userId = sanitizeUuid((body as any).userId);
+      if (!userId) {
+        return errorResponse('Invalid userId format', 'VALIDATION_ERROR');
+      }
     }
 
+    let resolvedIdentityMeta: Record<string, unknown> | undefined;
+
+    if (!userId && detection.isGpt) {
+      if (!conversationId) {
+        return errorResponse('conversationId is required for GPT requests', 'VALIDATION_ERROR');
+      }
+
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+        global: { headers: { 'X-Client-Info': 'moneko-update-expense' } },
+      });
+
+      try {
+        const guestIdentity = await ensureGuestIdentity({
+          supabase,
+          conversationId,
+        });
+
+        userId = guestIdentity.userId;
+        resolvedIdentityMeta = {
+          conversationId,
+          guest: {
+            contactId: guestIdentity.contactId,
+            createdUser: guestIdentity.createdUser,
+            createdContact: guestIdentity.createdContact,
+          },
+        };
+        if (detection.ephemeralUserId) {
+          resolvedIdentityMeta.ephemeralUserId = detection.ephemeralUserId;
+        }
+
+        console.log('[update-expense] Resolved GPT guest identity', {
+          conversationId,
+          userId,
+          contactId: guestIdentity.contactId,
+        });
+      } catch (guestError) {
+        console.error('[update-expense] Failed to resolve GPT guest identity:', guestError);
+        return errorResponse('Failed to prepare GPT guest user', 'SERVER_ERROR', 500);
+      }
+    }
+
+    if (!userId) {
+      return errorResponse('userId is required for non-GPT requests', 'VALIDATION_ERROR');
+    }
+
+    // Validate required fields
     if (!expenseId || typeof expenseId !== 'string' || expenseId.trim().length === 0) {
       return errorResponse('expenseId is required and must be a non-empty string', 'VALIDATION_ERROR');
     }
@@ -96,13 +160,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (updates.category !== undefined) {
-      const normalizedCategory = updates.category?.toLowerCase().trim() || null;
-      if (!ALLOWED_CATEGORIES.includes(normalizedCategory)) {
-        return errorResponse(
-          `Invalid category. Allowed: ${ALLOWED_CATEGORIES.filter(c => c !== null).join(', ')}`,
-          'VALIDATION_ERROR'
-        );
-      }
+      const normalizedCategory = normalizeCategory(updates.category || 'other');
       updates.category = normalizedCategory;
     }
 
@@ -157,10 +215,10 @@ Deno.serve(async (req: Request) => {
       global: { headers: { 'X-Client-Info': 'moneko-update-expense' } },
     });
 
-    // Fetch expense with contact information to verify ownership and capture old values
+    // Fetch expense to verify ownership and obtain household info
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
-      .select('id, contact_id, household_id, amount_cents, currency, raw_text, category, date, created_at, user_contacts!inner(user_id)')
+      .select('id, user_id, household_id, amount_cents, currency, raw_text, category, date, created_at')
       .eq('id', expenseId)
       .single();
 
@@ -176,11 +234,31 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Expense not found', 'NOT_FOUND', 404);
     }
 
-    // Verify ownership
-    const expenseUserId = (expense.user_contacts as any)?.user_id;
-    if (!expenseUserId || expenseUserId !== userId) {
-      console.warn(`[update-expense] Unauthorized: User ${userId} attempted to update expense ${expenseId} owned by ${expenseUserId}`);
-      return errorResponse('You do not have permission to edit this expense', 'UNAUTHORIZED', 403);
+    // For GPT requests, only allow personal expenses (no household_id)
+    if (detection.isGpt && expense.household_id) {
+      console.warn(`[update-expense] GPT attempt to update household expense: ${expenseId}`);
+      return errorResponse('GPT cannot update household expenses', 'UNAUTHORIZED', 403);
+    }
+
+    // For non-GPT requests, verify ownership through user_contacts join
+    if (!detection.isGpt) {
+      const { data: expenseWithContact } = await supabase
+        .from('expenses')
+        .select('id, user_contacts!inner(user_id)')
+        .eq('id', expenseId)
+        .single();
+      
+      const expenseUserId = (expenseWithContact as any)?.user_contacts?.user_id;
+      if (!expenseUserId || expenseUserId !== userId) {
+        console.warn(`[update-expense] Unauthorized: User ${userId} attempted to update expense ${expenseId} owned by ${expenseUserId}`);
+        return errorResponse('You do not have permission to edit this expense', 'UNAUTHORIZED', 403);
+      }
+    } else {
+      // For GPT, verify by user_id field directly
+      if (expense.user_id !== userId) {
+        console.warn(`[update-expense] Unauthorized: User ${userId} attempted to update expense ${expenseId} owned by ${expense.user_id}`);
+        return errorResponse('You do not have permission to edit this expense', 'UNAUTHORIZED', 403);
+      }
     }
 
     // Capture old values for notification payload
@@ -209,8 +287,8 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[update-expense] Successfully updated expense ${expenseId} for user ${userId}`);
 
-    // If expense is shared with a household, notify other members
-    if (expense.household_id) {
+    // For non-GPT requests, notify household members if this was a shared expense
+    if (!detection.isGpt && expense.household_id) {
       console.log(`[update-expense] Notifying household members about edit for household ${expense.household_id}`);
       // Resolve actor display name
       let actorName = 'Someone';
@@ -265,10 +343,19 @@ Deno.serve(async (req: Request) => {
       }
     }
     
-    return jsonResponse({
+    const responseData: any = {
       success: true,
       data: updatedExpense,
-    }, 200);
+      resolvedUserId: userId,
+      meta: resolvedIdentityMeta,
+    };
+
+    // For non-GPT requests, include shared flag
+    if (!detection.isGpt) {
+      responseData.shared = !!expense.household_id;
+    }
+    
+    return jsonResponse(responseData, 200);
 
   } catch (error) {
     console.error('[update-expense] Unexpected error:', error);

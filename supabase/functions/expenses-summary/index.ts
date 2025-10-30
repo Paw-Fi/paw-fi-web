@@ -8,7 +8,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
-import { ALLOWED_CATEGORIES, resolveCategoryColor } from "../shared/category-colors.ts";
+import { ALLOWED_CATEGORIES, resolveCategoryColor, normalizeCategory } from "../shared/category-colors.ts";
 import { getDaysInMonth } from "../shared/date-utils.ts";
 
 // ---------- Types ----------
@@ -35,18 +35,15 @@ const MAX_ROWS_HARD_LIMIT = 20000;
 
 const USE_MOCK_CHART = false; // TODO: set to false when ready to serve live summaries
 
+// Add test to ensure "other" categories are included in debug mode
+const DEBUG_OTHER_CATEGORIES = false;
+
 // ---------- Utils ----------
 function normalizeDateInput(value: string | undefined, fallback: Date): Date {
   if (!value) return fallback;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return fallback;
   return parsed;
-}
-
-function normalizeCategory(raw: string | null): string {
-  if (!raw) return "other";
-  const normalized = raw.trim().toLowerCase();
-  return ALLOWED_CATEGORIES.has(normalized) ? normalized : "other";
 }
 
 function centsToMajor(cents: number): number {
@@ -507,6 +504,17 @@ Deno.serve(async (req) => {
     for (const exp of expenses) {
       const currency = validateCurrency(exp.currency || "USD");
       const category = normalizeCategory(exp.category);
+      
+      // Debug logging to ensure "other" categories are being processed
+      if (category === "other") {
+        console.log(`[expenses-summary] Processing "other" category expense:`, {
+          id: exp.id,
+          originalCategory: exp.category,
+          normalizedCategory: category,
+          amount: exp.amount_cents / 100
+        });
+      }
+      
       totalsByCurrency.set(
         currency,
         (totalsByCurrency.get(currency) ?? 0) + exp.amount_cents,

@@ -5,11 +5,13 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { validateCurrency } from "../shared/currency-validator.ts";
-import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { ALLOWED_CATEGORIES, resolveCategoryColor, normalizeCategory, getAllCategories } from "../shared/category-colors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
@@ -26,6 +28,7 @@ interface RequestBody {
   };
   date?: string; // ISO date (YYYY-MM-DD), defaults to today
   currency?: string; // ISO currency code, defaults to USD
+  currencySymbol?: string; // Currency symbol based on user location, optional
 }
 
 interface ExpenseItem {
@@ -162,6 +165,7 @@ Deno.serve(async (req: Request) => {
 
     // Set defaults
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
+    const callerCurrencySymbol = body.currencySymbol || getCurrencySymbol(callerCurrency);
 
     console.log('[analyze-expense] Analysis request:', { 
       userId, 
@@ -189,7 +193,11 @@ Deno.serve(async (req: Request) => {
                   type: 'OBJECT',
                   properties: {
                     amount: { type: 'NUMBER', nullable: false },
-                    category: { type: 'STRING', nullable: false, description: 'Category: groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other' },
+                    category: { 
+                      type: 'STRING', 
+                      nullable: false, 
+                      description: `Category from: ${getAllCategories().join(', ')}. Use best match for the expense type. When unsure, use "other".` 
+                    },
                     currency: { type: 'STRING', nullable: true },
                     date: { type: 'STRING', nullable: true },
                     description: { type: 'STRING', nullable: true, description: 'Brief description of the expense' },
@@ -214,7 +222,9 @@ Deno.serve(async (req: Request) => {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp', tools });
       const systemInstruction =
         'You are an expense analyzer. Extract expense details from user input. '
-        + 'Always infer and attach clear categories for each expense (groceries, food, transport, housing, utilities, entertainment, healthcare, education, shopping, travel, income, other). '
+        + `Always infer and attach clear categories for each expense (${getAllCategories().join(', ')}). `
+        + 'Use intelligent matching - for example: "gym membership" → "gym membership", "uber" → "transport", "netflix" → "entertainment", "coffee" → "food". '
+        + 'When uncertain, use "other" rather than making up categories. '
         + '\n\nCURRENCY HANDLING:\n'
         + '1. Look for currency explicitly mentioned (e.g., "50 USD", "€100", "100 RM")\n'
         + '2. If found, use that currency code (EUR for €, MYR for RM, SAR for ر.س)\n'
@@ -232,11 +242,12 @@ Deno.serve(async (req: Request) => {
         const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
         items = rawItems.map((it) => {
           const itemCurrency = it.currency || callerCurrency;
+          const normalizedCategory = normalizeCategory(it.category || 'other');
           return {
             amount: Number(it.amount),
-            category: it.category || 'other',
+            category: normalizedCategory,
             currency: itemCurrency,
-            currencySymbol: getCurrencySymbol(itemCurrency),
+            currencySymbol: callerCurrencySymbol, // Use the provided or generated symbol
             date: it.date || callerDate,
             description: it.description || body.text,
           };
@@ -315,11 +326,12 @@ Deno.serve(async (req: Request) => {
         const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
         items = rawItems.map((it) => {
           const itemCurrency = it.currency || callerCurrency;
+          const normalizedCategory = normalizeCategory(it.category || 'other');
           return {
             amount: Number(it.amount),
-            category: it.category || 'other',
+            category: normalizedCategory,
             currency: itemCurrency,
-            currencySymbol: getCurrencySymbol(itemCurrency),
+            currencySymbol: callerCurrencySymbol, // Use the provided or generated symbol
             date: it.date || callerDate,
             description: it.description || 'Receipt expense',
           };

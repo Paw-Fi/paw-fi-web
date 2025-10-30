@@ -4,10 +4,12 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+import { normalizeCategory } from "../shared/category-colors.ts";
+import { validateCurrency } from "../shared/currency-validator.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const USE_MOCK_DATA = true;
-
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
@@ -79,9 +81,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const limit = Math.max(1, Math.min(body.limit ?? DEFAULT_LIMIT, MAX_LIMIT));
+    let supabase
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
@@ -93,7 +95,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(
+     supabase = createClient(
       SUPABASE_URL,
       SUPABASE_SERVICE_ROLE_KEY,
       {
@@ -156,88 +158,56 @@ Deno.serve(async (req: Request) => {
       resolvedMeta.ephemeralUserId = detection.ephemeralUserId;
     }
 
-    if (USE_MOCK_DATA) {
-      console.log("[list-expenses] Returning mock data for testing");
-      const mockItems = [
-        {
-          id: "mock-expense-1",
-          date: new Date().toISOString().slice(0, 10),
-          category: "food",
-          description: "Mock lunch expense",
-          amountMajor: 12.5,
-          currency: "USD",
-          receiptImageUrl: null,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "mock-expense-2",
-          date: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
-          category: "transport",
-          description: "Mock ride expense",
-          amountMajor: 8,
-          currency: "USD",
-          receiptImageUrl: null,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
-        JSON.stringify({
-          success: true,
-          data: mockItems,
-          resolvedUserId: userId,
-          meta: {
-            count: mockItems.length,
-            limit,
-            filters: {
-              startDate: body.startDate ?? null,
-              endDate: body.endDate ?? null,
-              currency: body.currency ?? null,
-            },
-            identity: resolvedMeta,
-            mocked: true,
-          },
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const now = new Date();
-    const data = [
-      {
-        id: crypto.randomUUID(),
-        date: now.toISOString().slice(0, 10),
-        category: "food",
-        description: "Lunch at Green Bowl",
-        amountMajor: 14.25,
-        currency: "USD",
-        receiptImageUrl: null,
-        createdAt: now.toISOString(),
-      },
-      {
-        id: crypto.randomUUID(),
-        date: new Date(now.getTime() - 86400000).toISOString().slice(0, 10),
-        category: "transport",
-        description: "Metro pass",
-        amountMajor: 45,
-        currency: "USD",
-        receiptImageUrl: null,
-        createdAt: now.toISOString(),
-      },
-      {
-        id: crypto.randomUUID(),
-        date: new Date(now.getTime() - 172800000).toISOString().slice(0, 10),
-        category: "groceries",
-        description: "WholeFoods grocery run",
-        amountMajor: 62.87,
-        currency: "USD",
-        receiptImageUrl: null,
-        createdAt: now.toISOString(),
-      },
-    ].slice(0, limit);
+     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { "X-Client-Info": "moneko-list-expenses" } },
+    });
+
+    let query = supabase
+      .from("expenses")
+      .select("id, date, category, raw_text, amount_cents, currency, receipt_image_url, created_at")
+      .eq("user_id", userId)
+      .is("household_id", null) // GPT only supports personal expenses
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    // Apply date filters if provided
+    if (body.startDate) {
+      query = query.gte("date", body.startDate);
+    }
+    if (body.endDate) {
+      query = query.lte("date", body.endDate);
+    }
+
+    const { data: expenses, error } = await query;
+
+    if (error) {
+      console.error("[list-expenses] Database error:", error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch expenses' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Transform and normalize data
+    const data = expenses.map(expense => ({
+      id: expense.id,
+      date: expense.date,
+      category: normalizeCategory(expense.category),
+      description: expense.raw_text,
+      amountMajor: expense.amount_cents / 100,
+      currency: validateCurrency(expense.currency || "USD"),
+      receiptImageUrl: expense.receipt_image_url,
+      createdAt: expense.created_at,
+    }));
 
     return new Response(
       JSON.stringify({
@@ -248,18 +218,14 @@ Deno.serve(async (req: Request) => {
           count: data.length,
           limit,
           filters: {
-            startDate: body.startDate ?? null,
-            endDate: body.endDate ?? null,
-            currency: body.currency ?? null,
+            startDate: body.startDate || null,
+            endDate: body.endDate || null,
+            currency: body.currency || null,
           },
           identity: resolvedMeta,
-          mocked: true,
         },
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error("[list-expenses] Error:", error);

@@ -10,6 +10,8 @@ export const CATEGORY_COLOR_MAP: Record<string, string> = {
   transportation: "#EF4444",
   health: "#14B8A6",
   medical: "#0EA5E9",
+  healthcare: "#14B8A6",
+  fitness: "#14B8A6",
   text: "#22D3EE",
   education: "#A855F7",
   tuition: "#A855F7",
@@ -53,4 +55,157 @@ const FALLBACK_COLOR = CATEGORY_COLOR_MAP.other ?? "#9CA3AF";
 export function resolveCategoryColor(category: string): string {
   const key = category.trim().toLowerCase();
   return CATEGORY_COLOR_MAP[key] ?? FALLBACK_COLOR;
+}
+
+/**
+ * Smart category normalization with robust fallback handling
+ * Maps various category inputs to standardized categories with intelligent matching
+ */
+export function normalizeCategory(raw: string | null): string {
+  if (!raw) return "other";
+  
+  const normalized = raw.trim().toLowerCase();
+  
+  // Direct match first
+  if (ALLOWED_CATEGORIES.has(normalized)) {
+    return normalized;
+  }
+  
+  // Smart matching for common variations and typos
+  const categoryMappings: Record<string, string> = {
+    // Food & Dining
+    "restaurant": "restaurants",
+    "dining": "restaurants", 
+    "cafe": "restaurants",
+    "coffee": "food",
+    "takeout": "food",
+    "delivery": "food",
+    
+    // Transportation
+    "uber": "transport",
+    "lyft": "transport", 
+    "taxi": "transport",
+    "gas": "transport",
+    "fuel": "transport",
+    "parking": "transport",
+    "car": "transport",
+    
+    // Health & Fitness
+    "gym": "gym",
+    "fitness": "gym",
+    "workout": "gym",
+    "health club": "gym",
+    "gym membership": "gym membership",
+    "yoga": "gym",
+    "pilates": "gym",
+    "doctor": "healthcare",
+    "hospital": "healthcare",
+    "pharmacy": "healthcare",
+    "medicine": "healthcare",
+    
+    // Shopping
+    "clothes": "shopping",
+    "clothing": "shopping",
+    "electronics": "shopping",
+    "amazon": "shopping",
+    "retail": "shopping",
+    
+    // Housing
+    "rent": "rent",
+    "mortgage": "mortgage",
+    "apartment": "housing",
+    "home": "housing",
+    "maintenance": "housing",
+    
+    // Utilities
+    "electric": "utilities",
+    "water": "utilities",
+    "gas bill": "utilities",
+    "internet": "utilities",
+    "phone": "utilities",
+    "mobile": "utilities",
+    
+    // Entertainment
+    "movies": "entertainment",
+    "cinema": "entertainment",
+    "streaming": "entertainment",
+    "netflix": "entertainment",
+    "spotify": "entertainment",
+    "games": "entertainment",
+    
+    // Education
+    "school": "education",
+    "course": "education",
+    "books": "education",
+    "learning": "education",
+    
+    // Financial
+    "bank": "fees",
+    "atm": "fees",
+    "interest": "fees",
+    "credit card": "fees",
+    
+    // Travel
+    "hotel": "travel",
+    "airbnb": "travel",
+    "flight": "flights",
+    "airline": "flights",
+    
+    // Personal Care
+    "haircut": "personal care",
+    "salon": "personal care",
+    "spa": "personal care",
+    
+    // Common typos and variations
+    "grocery": "groceries",
+    "utilties": "utilities",
+    "entertainement": "entertainment",
+    "transportation": "transport",
+    "helathcare": "healthcare",
+    "fitnes": "fitness",
+  };
+  
+  // Check smart mappings
+  if (categoryMappings[normalized]) {
+    return categoryMappings[normalized];
+  }
+  
+  // Partial matching for compound categories
+  for (const [pattern, target] of Object.entries(categoryMappings)) {
+    if (normalized.includes(pattern) || pattern.includes(normalized)) {
+      return target;
+    }
+  }
+  
+  // Fallback: check if any allowed category is a substring
+  for (const allowedCategory of ALLOWED_CATEGORIES) {
+    if (normalized.includes(allowedCategory) || allowedCategory.includes(normalized)) {
+      return allowedCategory;
+    }
+  }
+  
+  // Final fallback to "other"
+  console.warn(`[normalizeCategory] Unknown category "${raw}" mapped to "other"`);
+  return "other";
+}
+
+/**
+ * Validates if a category is supported, returns fallback if not
+ */
+export function validateCategory(category: string): string {
+  return normalizeCategory(category);
+}
+
+/**
+ * Gets all available categories for UI/selection purposes
+ */
+export function getAllCategories(): string[] {
+  return Array.from(ALLOWED_CATEGORIES).sort();
+}
+
+/**
+ * Checks if a category exists in the allowed categories
+ */
+export function isCategoryAllowed(category: string): boolean {
+  return ALLOWED_CATEGORIES.has(category.trim().toLowerCase());
 }

@@ -77,37 +77,53 @@ export async function ensureGuestIdentity(
   let userId = existingContact?.user_id ?? null;
 
   if (!userId) {
-    const { data: existingUser, error: existingUserError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", guestEmail)
-      .maybeSingle();
+    // For GPT guests, we don't use email authentication - conversationId is the only identifier
+    // We create a simple auth user entry using the conversationId directly
+    try {
+      // Use conversationId as the unique identifier for auth users
+      const guestId = `gpt-${conversationId}`;
+      
+      // Check if auth user already exists by looking for users with this conversation_id in metadata
+      const { data: existingUsers, error: authUserError } = await supabase.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
 
-    if (existingUserError) {
-      throw new Error(`Failed to check for existing guest user: ${existingUserError.message}`);
-    }
-
-    if (existingUser) {
-      userId = existingUser.id;
-    } else {
-      const timestamp = new Date().toISOString();
-      const { data: insertedUser, error: insertUserError } = await supabase
-        .from("users")
-        .insert({
-          email: guestEmail,
-          full_name: "GPT Guest",
-          created_at: timestamp,
-          updated_at: timestamp,
-        })
-        .select("id")
-        .single();
-
-      if (insertUserError) {
-        throw new Error(`Failed to create guest user: ${insertUserError.message}`);
+      if (authUserError) {
+        throw new Error(`Failed to check auth user: ${authUserError.message}`);
       }
 
-      userId = insertedUser.id;
-      createdUser = true;
+      const existingAuthUser = existingUsers.users.find(user => 
+        user.user_metadata?.conversation_id === conversationId
+      );
+      
+      if (existingAuthUser) {
+        userId = existingAuthUser.id;
+        console.log(`[ensureGuestIdentity] Found existing auth user for conversation ${conversationId}`);
+      } else {
+        // Create auth user for GPT guest with conversationId as the primary identifier
+        const { data: createdAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
+          email: `${guestId}@guest.moneko`, // Required field but not used for authentication
+          email_confirm: true,
+          user_metadata: {
+            full_name: "GPT Guest",
+            conversation_id: conversationId,
+            is_guest: true,
+            phone_e164: guestPhone,
+          },
+        });
+
+        if (createAuthError) {
+          throw new Error(`Failed to create auth guest user: ${createAuthError.message}`);
+        }
+
+        userId = createdAuthUser.user.id;
+        createdUser = true;
+        console.log(`[ensureGuestIdentity] Created new auth user for conversation ${conversationId}`);
+      }
+    } catch (authError) {
+      console.error(`[ensureGuestIdentity] Auth operation failed for conversation ${conversationId}:`, authError);
+      throw new Error(`Auth system error: ${authError.message}`);
     }
   }
 

@@ -8,8 +8,8 @@
   },
   "servers": [
     {
-      "url": "https://qbuynyxyemigtnvdujts.supabase.co/functions/v1",
-      "description": "Supabase Edge Functions base URL"
+      "url": "https://budgeting.moneko.io",
+      "description": "BE Functions base URL"
     }
   ],
   "paths": {
@@ -17,9 +17,10 @@
       "post": {
         "x-openai-defaults": {
           "headers": {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
+        "x-openai-isConsequential": false,
         "operationId": "saveExpense",
         "summary": "Save an expense entry",
         "description": "Stores an expense for the identified user. GPT callers rely on OpenAI headers for identity; no userId parameter is needed.",
@@ -91,12 +92,13 @@
       "post": {
         "x-openai-defaults": {
           "headers": {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
+        "x-openai-isConsequential": false,
         "operationId": "listExpenses",
         "summary": "Fetch recent expenses",
-        "description": "Returns recent personal and household expenses. GPT callers rely on OpenAI headers for identity.",
+        "description": "Returns recent personal expenses. GPT callers rely on OpenAI headers for identity.",
         "requestBody": {
           "required": true,
           "content": {
@@ -129,7 +131,7 @@
             }
           },
           "403": {
-            "description": "User is not a member of the requested household",
+            "description": "Permission denied (expense belongs to different user)",
             "content": {
               "application/json": {
                 "schema": {
@@ -165,9 +167,10 @@
       "post": {
         "x-openai-defaults": {
           "headers": {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
+         "x-openai-isConsequential": false,
         "operationId": "analyzeExpense",
         "summary": "Analyze text or image for expense details",
         "description": "Parses expense information from raw text or receipt imagery without saving to the database. GPT callers rely on OpenAI headers for identity.",
@@ -219,9 +222,10 @@
       "post": {
         "x-openai-defaults": {
           "headers": {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
+        "x-openai-isConsequential": false,
         "operationId": "summarizeExpenses",
         "summary": "Summarize expenses for charting",
         "description": "Returns category-level spend totals grouped by currency for a given window so the assistant can render donut or bar charts.",
@@ -257,7 +261,7 @@
             }
           },
           "403": {
-            "description": "User is not permitted to view the requested household data",
+            "description": "Permission denied (expense belongs to different user)",
             "content": {
               "application/json": {
                 "schema": {
@@ -283,9 +287,10 @@
       "post": {
         "x-openai-defaults": {
           "headers": {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
+         "x-openai-isConsequential": false,
         "operationId": "setBudget",
         "summary": "Set the user's daily budget",
         "description": "Creates or updates the caller's daily budget for a specific date. GPT callers must include a date so the backend can align with the user's timezone without relying on server time.",
@@ -352,9 +357,10 @@
       "post": {
         "x-openai-defaults": {
           "headers": {
-            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFidXlueXh5ZW1pZ3RudmR1anRzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NzkxNzI4MiwiZXhwIjoyMDYzNDkzMjgyfQ.IlupdrXONYkkV2_75q5V8M7-MY_b5MU_-3fiMtR5XAM"
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
+         "x-openai-isConsequential": false,
         "operationId": "getBudget",
         "summary": "Retrieve the user's daily budget and projections",
         "description": "Fetches the most recent daily budget in a currency and reports spend-to-date against the requested day. GPT callers must send the date they want totals for so calculations match the user's timezone.",
@@ -416,6 +422,176 @@
           }
         }
       }
+    },
+    "/delete-expense": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
+          }
+        },
+         "x-openai-isConsequential": false,
+        "operationId": "deleteExpense",
+        "summary": "Delete an expense entry",
+        "description": "Permanently removes an expense from the user's personal budget. GPT callers rely on OpenAI headers for identity; no userId parameter is needed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteExpenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expense deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteExpenseSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing expenseId, invalid userId format, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (expense belongs to different user)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expense not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed (must use POST)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while deleting the expense",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/update-expense": {
+      "post": {
+        "x-openai-defaults": {
+          "headers": {
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
+          }
+        },
+        "x-openai-isConsequential": false,
+        "operationId": "updateExpense",
+        "summary": "Update an expense entry",
+        "description": "Modifies individual fields of an existing expense. GPT callers rely on OpenAI headers for identity; no userId parameter is needed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExpenseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expense updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateExpenseSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (missing expenseId, invalid updates, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (expense belongs to different user)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expense not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed (must use POST)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error while updating the expense",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -458,11 +634,6 @@
             "type": "string",
             "format": "uri",
             "description": "Optional receipt image URL."
-          },
-          "householdId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Household UUID to share the expense with."
           }
         },
         "additionalProperties": false
@@ -503,20 +674,6 @@
               "null"
             ]
           },
-          "household_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "split_group_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-        },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -545,11 +702,8 @@
           },
           "shared": {
             "type": "boolean",
-            "description": "True when a household split was created."
-          },
-          "warning": {
-            "type": "string",
-            "description": "Optional warning if the household split or notifications could not be completed."
+            "enum": [false],
+            "description": "Always false for personal budgeting."
           },
           "resolvedUserId": {
             "type": "string",
@@ -599,6 +753,10 @@
           "currency": {
             "type": "string",
             "description": "Caller preferred currency code for fallback."
+          },
+          "currencySymbol": {
+            "type": "string",
+            "description": "Optional currency symbol based on user location (e.g., '$', '€', 'RM'). If not provided, will be inferred from currency."
           }
         },
         "additionalProperties": false,
@@ -943,16 +1101,6 @@
               "filters": {
                 "type": "object",
                 "properties": {
-                  "includePersonal": {
-                    "type": "boolean"
-                  },
-                  "householdId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "format": "uuid"
-                  },
                   "startDate": {
                     "type": [
                       "string",
@@ -1163,6 +1311,114 @@
             "description": "Additional diagnostic data."
           }
         }
+      },
+      "DeleteExpenseRequest": {
+        "type": "object",
+        "required": [
+          "expenseId"
+        ],
+        "properties": {
+          "expenseId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Expense UUID to delete."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeleteExpenseSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID the backend ultimately used (helpful when GPT created a guest user)."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Additional metadata about identity resolution, including guest creation flags."
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "UpdateExpenseRequest": {
+        "type": "object",
+        "required": [
+          "expenseId",
+          "updates"
+        ],
+        "properties": {
+          "expenseId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Expense UUID to update."
+          },
+          "updates": {
+            "type": "object",
+            "description": "Fields to update in the expense.",
+            "properties": {
+              "amount_cents": {
+                "type": "integer",
+                "description": "Amount in cents (e.g., 500 for $5.00)."
+              },
+              "category": {
+                "type": "string",
+                "description": "Expense category."
+              },
+              "raw_text": {
+                "type": "string",
+                "description": "Description or note about the expense."
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "Expense date in YYYY-MM-DD format."
+              },
+              "currency": {
+                "type": "string",
+                "description": "ISO currency code (e.g., USD, EUR)."
+              }
+            },
+            "minProperties": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpdateExpenseSuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "The updated expense record."
+          },
+          "resolvedUserId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "User ID the backend ultimately used (helpful when GPT created a guest user)."
+          },
+          "meta": {
+            "type": "object",
+            "description": "Additional metadata about identity resolution, including guest creation flags."
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
       }
     }
   }

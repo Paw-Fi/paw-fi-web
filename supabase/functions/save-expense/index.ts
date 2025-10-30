@@ -189,8 +189,8 @@ Deno.serve(async (req: Request) => {
           createdUser: guestIdentity.createdUser,
           createdContact: guestIdentity.createdContact,
         };
-      } catch (guestError) {
-        console.error('[save-expense] Failed to resolve GPT guest identity:', guestError);
+      } catch (identityError) {
+        console.error('[save-expense] Failed to resolve GPT guest identity:', identityError);
         return new Response(
           JSON.stringify({ error: 'Failed to prepare GPT guest user' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
