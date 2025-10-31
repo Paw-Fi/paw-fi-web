@@ -81,6 +81,12 @@ supabase functions deploy households-process-notifications --project-ref $PROJEC
 echo "✅ households-process-notifications deployed"
 echo ""
 
+# Step 11: Deploy households-remind-member (SERVICE ROLE - called by cron)
+echo "📦 [11/11] Deploying households-remind-member function..."
+supabase functions deploy households-remind-member --project-ref $PROJECT_REF
+echo "✅ households-remind-member deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All Households functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

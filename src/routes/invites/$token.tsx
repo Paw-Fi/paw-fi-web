@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 import { Clock } from 'lucide-react'
@@ -36,6 +36,9 @@ function InvitePage() {
   const [error, setError] = useState<string | null>(null)
   const [isAccepted, setIsAccepted] = useState(false)
   const [showTimeout, setShowTimeout] = useState(false)
+  
+  // Ref to prevent multiple validation calls
+  const hasValidatedRef = useRef(false)
 
   // Wait for auth check, then validate invite or redirect to login
   useEffect(() => {
@@ -52,10 +55,11 @@ function InvitePage() {
     }
 
     // User is authenticated, validate the invite if we haven't already
-    if (user && !inviteData && !error && !isValidating) {
+    if (user && !inviteData && !error && !hasValidatedRef.current) {
+      hasValidatedRef.current = true
       validateInvite()
     }
-  }, [authLoading, user, token, inviteData, error, isValidating])
+  }, [authLoading, user, token, inviteData, error])
 
   // 10-second timeout for validation
   useEffect(() => {

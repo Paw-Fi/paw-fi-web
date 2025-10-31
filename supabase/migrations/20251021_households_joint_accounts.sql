@@ -37,7 +37,8 @@ CREATE TYPE notification_event_type AS ENUM (
   'split_created',
   'split_settled',
   'expense_added',
-  'expense_edited'
+  'expense_edited',
+  'member_reminded'
 );
 
 -- ====================

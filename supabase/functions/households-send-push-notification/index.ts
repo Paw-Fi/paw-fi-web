@@ -280,7 +280,14 @@ function buildDeepLink(eventType: string, data: Record<string, string>): string 
         return `/household/${data.household_id}`;
       }
       break;
-    
+
+    case 'member_reminded':
+      // Navigate to household view
+      if (data.household_id) {
+        return `/household/${data.household_id}`;
+      }
+      break;
+
     default:
       // Default to home
       return '/home';
@@ -950,6 +957,25 @@ function buildNotificationMessage(
           split_id: payload.split_id || ''
         }
       };
+
+    case 'member_reminded': {
+      const senderName = (payload.sender_name || 'A member') as string;
+      const customMessage = payload.message as string | undefined;
+      const householdName = (payload.household_name || 'your household') as string;
+
+      const body = customMessage && customMessage.trim().length > 0
+        ? customMessage
+        : `${senderName} is reminding you to watch your spending in ${householdName}`;
+
+      return {
+        title: `🔔 Spending reminder from ${senderName}`,
+        body,
+        data: {
+          sender_id: payload.sender_id || '',
+          household_id: payload.household_id || ''
+        }
+      };
+    }
 
     default:
       return {

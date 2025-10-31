@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 
-export const Route = createFileRoute('/reset-password')({
+export const Route = createFileRoute('/reset-password/')({
   component: ResetPassword,
   head: () => {
     const pageUrl = getCanonicalUrl('/reset-password');

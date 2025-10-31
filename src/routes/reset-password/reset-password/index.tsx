@@ -4,7 +4,7 @@ import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
 import ResetPassword from '..';
 
-export const Route = createFileRoute('/reset-password')({
+export const Route = createFileRoute('/reset-password/reset-password/')({
   component: ResetPassword,
   head: () => {
     const pageUrl = getCanonicalUrl('/reset-password');
