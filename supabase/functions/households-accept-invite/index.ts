@@ -324,44 +324,130 @@ serve(async (req) => {
     }
 
     // 4. Notify ALL household members about new member joining
-    // Get household name and all members for notification
-    const { data: household } = await supabase
+    console.log('[accept-invite] Step 4: Preparing notifications');
+
+    // Get household name
+    const { data: household, error: householdNameError } = await supabase
       .from('households')
-      .select('name')
+      .select('name, owner_id')
       .eq('id', invite.household_id)
       .single();
 
-    const { data: allMembers } = await supabase
+    if (householdNameError) {
+      console.error('[accept-invite] Error fetching household name:', householdNameError);
+    }
+
+    // Get joining member's full name from users table
+    const { data: joiningUser, error: userError } = await supabase
+      .from('users')
+      .select('id, email, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (userError) {
+      console.error('[accept-invite] Error fetching joining user data:', userError);
+    }
+
+    // Determine member name (prefer full_name, fallback to email local part)
+    let memberName = joiningUser?.full_name?.trim();
+    if (!memberName || memberName === '') {
+      const email = joiningUser?.email || user.email;
+      memberName = email ? email.split('@')[0] : 'Someone';
+    }
+
+    console.log('[accept-invite] Joining member name:', memberName);
+
+    // Get all household members for member_joined notification
+    const { data: allMembers, error: membersError } = await supabase
       .from('household_members')
       .select('user_id')
       .eq('household_id', invite.household_id);
 
+    if (membersError) {
+      console.error('[accept-invite] Error fetching household members:', membersError);
+    }
+
+    const notifications: Array<{
+      household_id: string;
+      user_id: string;
+      event_type: string;
+      payload: Record<string, any>;
+      is_sent: boolean;
+    }> = [];
+
+    // 4a. Create member_joined notifications for all existing members (exclude new member)
     if (allMembers && allMembers.length > 0) {
-      // Create notification events for ALL members EXCEPT the new member
-      const notificationPayload = {
+      const memberJoinedPayload = {
         member_id: newMember.id,
         member_email: user.email,
+        member_name: memberName,
+        household_id: invite.household_id,
         household_name: household?.name || 'your household'
       };
 
-      // Create notification for each existing member
-      const notificationEvents = allMembers
+      const memberJoinedEvents = allMembers
         .filter(m => m.user_id !== user.id) // Exclude the new member themselves
         .map(member => ({
           household_id: invite.household_id,
           user_id: member.user_id,
           event_type: 'member_joined',
-          payload: notificationPayload,
+          payload: memberJoinedPayload,
           is_sent: false
         }));
 
-      if (notificationEvents.length > 0) {
-        await supabase
-          .from('notification_events')
-          .insert(notificationEvents);
+      notifications.push(...memberJoinedEvents);
+      console.log(`[accept-invite] Prepared ${memberJoinedEvents.length} member_joined notifications`);
+    }
 
-        console.log(`[accept-invite] Created ${notificationEvents.length} member_joined notifications`);
+    // 4b. Create invite_accepted notification for the inviter (if not the new member)
+    if (invite.inviter_user_id && invite.inviter_user_id !== user.id) {
+      const inviteAcceptedPayload = {
+        invite_id: invite.id,
+        member_id: newMember.id,
+        member_email: user.email,
+        member_name: memberName,
+        household_id: invite.household_id,
+        household_name: household?.name || 'your household',
+        inviter_user_id: invite.inviter_user_id
+      };
+
+      notifications.push({
+        household_id: invite.household_id,
+        user_id: invite.inviter_user_id,
+        event_type: 'invite_accepted',
+        payload: inviteAcceptedPayload,
+        is_sent: false
+      });
+
+      console.log(`[accept-invite] Prepared invite_accepted notification for inviter ${invite.inviter_user_id}`);
+    }
+
+    // 4c. Insert all notifications with error handling
+    if (notifications.length > 0) {
+      console.log(`[accept-invite] Inserting ${notifications.length} total notifications into notification_events table`);
+      console.log('[accept-invite] Notification events:', JSON.stringify(notifications, null, 2));
+
+      const { data: insertedEvents, error: notificationError } = await supabase
+        .from('notification_events')
+        .insert(notifications)
+        .select();
+
+      if (notificationError) {
+        console.error('[accept-invite] ❌ CRITICAL: Failed to insert notification events!');
+        console.error('[accept-invite] Error:', notificationError);
+        console.error('[accept-invite] Error details:', {
+          message: notificationError.message,
+          code: notificationError.code,
+          details: notificationError.details,
+          hint: notificationError.hint
+        });
+        // Don't fail the invite acceptance, but log the error for investigation
+      } else {
+        console.log(`[accept-invite] ✅ Successfully inserted ${insertedEvents?.length || 0} notification events`);
+        console.log('[accept-invite] Inserted events:', JSON.stringify(insertedEvents, null, 2));
       }
+    } else {
+      console.log('[accept-invite] No notifications to send (possibly inviting self or no other members)');
     }
 
     const response: AcceptInviteResponse = {

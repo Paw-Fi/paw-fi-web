@@ -791,6 +791,7 @@ serve(async (req) => {
 
 /**
  * Build notification message based on event type
+ * Format: Title = Sender Name, Body = Descriptive action message
  */
 function buildNotificationMessage(
   eventType: string,
@@ -802,6 +803,8 @@ function buildNotificationMessage(
   data: Record<string, string>;
 } {
   const actor = (payload.expense_data?.actor_name || payload.actor_name || 'Someone') as string;
+  const householdName = (payload.household_name || 'your household') as string;
+
   switch (eventType) {
     case 'expense_added': {
       const note = (payload.expense_data?.note || '').toString().trim();
@@ -810,10 +813,13 @@ function buildNotificationMessage(
       const cents = Number(recipientSplit?.shareCents ?? payload.expense_data?.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
       const isSplit = recipientSplit?.isSplitForRecipient === true;
-      const title = isSplit ? `💸 ${actor} split an expense with you` : `💸 ${actor} added an expense`;
-      const body = note.length > 0 ? note : amount;
+
+      const body = isSplit
+        ? `split ${amount} expense with you${note ? `: ${note}` : ` in ${householdName}`}`
+        : `added ${amount} expense${note ? `: ${note}` : ` to ${householdName}`}`;
+
       return {
-        title,
+        title: actor,
         body,
         data: {
           expense_id: payload.expense_id || '',
@@ -827,43 +833,31 @@ function buildNotificationMessage(
       const code = (payload.expense_data?.currency || payload.currency || payload.expense_data?.new_currency) as string | undefined;
       const symbol = getCurrencySymbol(code);
 
-      let body = 'Modified the expense';
-      
-      // If multiple fields were edited, use general message to avoid confusion
-      if (fields.length > 1) {
-        body = 'Modified the expense';
-      } else if (fields.length === 1) {
-        // Show specific change for single field edits
+      let body = `modified an expense in ${householdName}`;
+
+      // Show specific change for single field edits
+      if (fields.length === 1) {
         if (fields.indexOf('amount_cents') !== -1) {
           const oldC = Number(payload.expense_data?.old_amount_cents ?? 0);
           const newC = Number(payload.expense_data?.new_amount_cents ?? 0);
-          body = `${symbol}${(oldC / 100).toFixed(2)} → ${symbol}${(newC / 100).toFixed(2)}`;
+          body = `changed expense amount from ${symbol}${(oldC / 100).toFixed(2)} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf('category') !== -1) {
-          const oldCat = String(payload.expense_data?.old_category ?? '');
           const newCat = String(payload.expense_data?.new_category ?? '');
-          body = `${oldCat} → ${newCat}`;
+          body = `changed expense category to ${newCat}`;
         } else if (fields.indexOf('currency') !== -1) {
-          const oldCur = String(payload.expense_data?.old_currency ?? '');
           const newCur = String(payload.expense_data?.new_currency ?? '');
-          body = `${oldCur} → ${newCur}`;
+          body = `changed expense currency to ${newCur}`;
         } else if (fields.indexOf('date') !== -1) {
-          const oldDate = String(payload.expense_data?.old_date ?? '');
           const newDate = String(payload.expense_data?.new_date ?? '');
-          body = `${oldDate} → ${newDate}`;
-        } else if (fields.indexOf('created_at') !== -1) {
-          const toTime = (v?: string) => {
-            try { return new Date(v || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return String(v || ''); }
-          };
-          body = `${toTime(payload.expense_data?.old_created_at)} → ${toTime(payload.expense_data?.new_created_at)}`;
+          body = `changed expense date to ${newDate}`;
         } else if (fields.indexOf('raw_text') !== -1) {
-          const oldN = String(payload.expense_data?.old_note ?? '').trim();
           const newN = String(payload.expense_data?.new_note ?? '').trim();
-          body = `${oldN} → ${newN}`;
+          body = newN ? `updated expense note: ${newN}` : `removed expense note`;
         }
       }
 
       return {
-        title: `✏️ ${actor} modified an expense`,
+        title: actor,
         body,
         data: {
           expense_id: payload.expense_id || '',
@@ -876,9 +870,11 @@ function buildNotificationMessage(
       const code = payload.expense_data?.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
       const cents = Number(payload.expense_data?.amount_cents ?? 0);
-      const body = `${symbol}${(cents / 100).toFixed(2)}`;
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      const body = `deleted ${amount} expense from ${householdName}`;
+
       return {
-        title: `🗑️ ${actor} deleted an expense`,
+        title: actor,
         body,
         data: {
           expense_id: payload.expense_id || '',
@@ -896,8 +892,8 @@ function buildNotificationMessage(
       const percentage = Number(payload.percentage_used ?? 0).toFixed(0);
 
       return {
-        title: `⚠️ ${budgetName} Budget Warning`,
-        body: `${percentage}% used (${symbol}${spentAmount.toFixed(2)} of ${symbol}${budgetAmount.toFixed(2)})`,
+        title: `${budgetName} Budget`,
+        body: `⚠️ ${percentage}% used - ${symbol}${spentAmount.toFixed(2)} of ${symbol}${budgetAmount.toFixed(2)} spent in ${householdName}`,
         data: {
           budget_id: payload.budget_id || '',
           budget_name: budgetName,
@@ -918,8 +914,8 @@ function buildNotificationMessage(
       const overAmount = (spentAmount - budgetAmount).toFixed(2);
 
       return {
-        title: `🚨 ${budgetName} Budget Alert`,
-        body: `${percentage}% used (${symbol}${overAmount} over budget!)`,
+        title: `${budgetName} Budget`,
+        body: `🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
         data: {
           budget_id: payload.budget_id || '',
           budget_name: budgetName,
@@ -930,45 +926,56 @@ function buildNotificationMessage(
       };
     }
 
-    case 'invite_accepted':
+    case 'invite_accepted': {
+      const memberName = (payload.member_name || payload.member_email || 'Someone') as string;
       return {
-        title: '✅ Invitation Accepted',
-        body: `Someone accepted your household invitation`,
+        title: memberName,
+        body: `accepted your invitation and joined ${householdName}`,
         data: {
-          invite_id: payload.invite_id || ''
+          invite_id: payload.invite_id || '',
+          household_id: payload.household_id || ''
         }
       };
+    }
 
-    case 'member_joined':
+    case 'member_joined': {
+      const memberName = (payload.member_name || payload.member_email || 'Someone') as string;
       return {
-        title: '👥 New Member Joined',
-        body: `${payload.member_email || 'Someone'} joined ${payload.household_name || 'your household'}`,
+        title: memberName,
+        body: `joined ${householdName}`,
         data: {
           member_id: payload.member_id || '',
           household_id: payload.household_id || ''
         }
       };
+    }
 
-    case 'split_created':
+    case 'split_created': {
+      const code = payload.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const cents = Number(payload.amount_cents ?? 0);
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+
       return {
-        title: '🧮 Expense Split',
-        body: `You have a new expense to split`,
+        title: actor,
+        body: `created a ${amount} expense split for you in ${householdName}`,
         data: {
-          split_id: payload.split_id || ''
+          split_id: payload.split_id || '',
+          household_id: payload.household_id || ''
         }
       };
+    }
 
     case 'member_reminded': {
       const senderName = (payload.sender_name || 'A member') as string;
       const customMessage = payload.message as string | undefined;
-      const householdName = (payload.household_name || 'your household') as string;
 
       const body = customMessage && customMessage.trim().length > 0
         ? customMessage
-        : `${senderName} is reminding you to watch your spending in ${householdName}`;
+        : `sent you a spending reminder for ${householdName}`;
 
       return {
-        title: `🔔 Spending reminder from ${senderName}`,
+        title: senderName,
         body,
         data: {
           sender_id: payload.sender_id || '',
@@ -979,8 +986,8 @@ function buildNotificationMessage(
 
     default:
       return {
-        title: '🔔 Household Notification',
-        body: 'You have a new notification',
+        title: 'Moneko',
+        body: `New activity in ${householdName}`,
         data: {}
       };
   }

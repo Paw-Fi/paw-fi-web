@@ -197,29 +197,10 @@ serve(async (req) => {
     // Net = 0 - expenses (negative number)
     const netCents = -totalExpensesCents;
 
-    // Calculate member contributions
-    const memberContributionsMap = new Map<string, MemberContribution>();
-
-    for (const expense of expenses || []) {
-      const userId = expense.user_id;
-
-      if (!memberContributionsMap.has(userId)) {
-        memberContributionsMap.set(userId, {
-          user_id: userId,
-          total_spent_cents: 0,
-          transaction_count: 0,
-          split_count: 0,
-          balance_cents: 0
-        });
-      }
-
-      const contribution = memberContributionsMap.get(userId)!;
-      contribution.total_spent_cents += Math.abs(expense.amount_cents || 0);
-      contribution.transaction_count += 1;
-    }
-
-    // Fetch splits for balance calculations
-    const { data: splitGroups } = await supabase
+    // Fetch splits FIRST for accurate member contribution calculations
+    // CRITICAL: Do NOT filter splits by date - we need ALL splits for ANY expense in the household
+    // The expense date filtering is sufficient - splits just need to match expense IDs
+    const { data: splitGroups, error: splitGroupsError } = await supabase
       .from('expense_split_groups')
       .select(`
         id,
@@ -233,9 +214,73 @@ serve(async (req) => {
           is_settled
         )
       `)
-      .eq('household_id', household_id)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+      .eq('household_id', household_id);
+
+    if (splitGroupsError) {
+      console.error('Error fetching split groups:', splitGroupsError);
+    }
+
+    // Create a map of expense IDs to their split groups for quick lookup
+    const expenseSplitMap = new Map<string, typeof splitGroups[0]>();
+    for (const splitGroup of splitGroups || []) {
+      if (splitGroup.expense_id) {
+        expenseSplitMap.set(splitGroup.expense_id, splitGroup);
+      }
+    }
+
+    // Calculate member contributions with CORRECT split handling
+    const memberContributionsMap = new Map<string, MemberContribution>();
+
+    for (const expense of expenses || []) {
+      const expenseId = expense.id;
+      const payerId = expense.user_id;
+      const expenseAmount = Math.abs(expense.amount_cents || 0);
+
+      // Check if this expense has a split
+      const splitGroup = expenseSplitMap.get(expenseId);
+
+      if (splitGroup && splitGroup.expense_split_lines && splitGroup.expense_split_lines.length > 0) {
+        // EXPENSE HAS A SPLIT: Each user should be credited with their split portion only
+        for (const splitLine of splitGroup.expense_split_lines) {
+          const userId = splitLine.user_id;
+          const userSplitAmount = Math.abs(splitLine.amount_cents || 0);
+
+          if (!memberContributionsMap.has(userId)) {
+            memberContributionsMap.set(userId, {
+              user_id: userId,
+              total_spent_cents: 0,
+              transaction_count: 0,
+              split_count: 0,
+              balance_cents: 0
+            });
+          }
+
+          const contribution = memberContributionsMap.get(userId)!;
+          // Add only the user's split portion to their total_spent_cents
+          contribution.total_spent_cents += userSplitAmount;
+
+          // Only increment transaction_count for the payer
+          if (userId === payerId) {
+            contribution.transaction_count += 1;
+          }
+        }
+      } else {
+        // EXPENSE HAS NO SPLIT: The payer is credited with the full amount
+        if (!memberContributionsMap.has(payerId)) {
+          memberContributionsMap.set(payerId, {
+            user_id: payerId,
+            total_spent_cents: 0,
+            transaction_count: 0,
+            split_count: 0,
+            balance_cents: 0
+          });
+        }
+
+        const contribution = memberContributionsMap.get(payerId)!;
+        contribution.total_spent_cents += expenseAmount;
+        contribution.transaction_count += 1;
+      }
+    }
 
     const balances: Record<string, number> = {};
 
