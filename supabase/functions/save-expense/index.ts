@@ -495,10 +495,13 @@ Deno.serve(async (req: Request) => {
 
       console.log('[save-expense] Split lines created for', members.length, 'members');
 
-      // Update expense with split_group_id
+      // Update expense with split_group_id AND household_id
       await supabase
         .from('expenses')
-        .update({ split_group_id: splitGroup.id })
+        .update({
+          split_group_id: splitGroup.id,
+          household_id: body.householdId,
+        })
         .eq('id', expense.id);
 
       // Create notifications for all household members EXCEPT the adder

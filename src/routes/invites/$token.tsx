@@ -57,7 +57,7 @@ function InvitePage() {
     }
   }, [authLoading, user, token, inviteData, error, isValidating])
 
-  // 7-second timeout for validation
+  // 10-second timeout for validation
   useEffect(() => {
     if (!isValidating) return
 
@@ -65,7 +65,7 @@ function InvitePage() {
       if (isValidating && !inviteData && !error) {
         setShowTimeout(true)
       }
-    }, 7000)
+    }, 10000)
 
     return () => clearTimeout(timeoutId)
   }, [isValidating, inviteData, error])
