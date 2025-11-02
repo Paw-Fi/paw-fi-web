@@ -177,7 +177,7 @@ serve(async (req) => {
       .insert({
         household_id: invite.household_id,
         user_id: user.id,
-        role: 'member'
+        role: 'admin'
       })
       .select()
       .single();

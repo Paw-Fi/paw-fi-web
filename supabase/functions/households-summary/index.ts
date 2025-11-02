@@ -220,11 +220,15 @@ serve(async (req) => {
       console.error('Error fetching split groups:', splitGroupsError);
     }
 
-    // Create a map of expense IDs to their split groups for quick lookup
-    const expenseSplitMap = new Map<string, typeof splitGroups[0]>();
+    // Create lookup maps for quick access
+    const expenseIdToSplitGroup = new Map<string, typeof splitGroups[0]>();
+    const splitGroupIdToSplitGroup = new Map<string, typeof splitGroups[0]>();
     for (const splitGroup of splitGroups || []) {
+      if (splitGroup.id) {
+        splitGroupIdToSplitGroup.set(splitGroup.id, splitGroup);
+      }
       if (splitGroup.expense_id) {
-        expenseSplitMap.set(splitGroup.expense_id, splitGroup);
+        expenseIdToSplitGroup.set(splitGroup.expense_id, splitGroup);
       }
     }
 
@@ -237,7 +241,26 @@ serve(async (req) => {
       const expenseAmount = Math.abs(expense.amount_cents || 0);
 
       // Check if this expense has a split
-      const splitGroup = expenseSplitMap.get(expenseId);
+      let splitGroup = undefined as undefined | typeof splitGroups[0];
+
+      // 1) Prefer linking via expense.split_group_id (authoritative)
+      if (expense.split_group_id) {
+        splitGroup = splitGroupIdToSplitGroup.get(expense.split_group_id);
+      }
+
+      // 2) Fallback: link by expense_id on split group
+      if (!splitGroup) {
+        splitGroup = expenseIdToSplitGroup.get(expenseId);
+      }
+
+      // Fallback matching for legacy records missing expense_id linkage
+      if (!splitGroup && (splitGroups?.length || 0) > 0) {
+        splitGroup = (splitGroups || []).find((sg) => {
+          if (sg.expense_id === expenseId) return true;
+          const diff = Math.abs((sg.total_amount_cents || 0) - expenseAmount);
+          return diff < 100; // within $1 difference in cents
+        });
+      }
 
       if (splitGroup && splitGroup.expense_split_lines && splitGroup.expense_split_lines.length > 0) {
         // EXPENSE HAS A SPLIT: Each user should be credited with their split portion only
@@ -353,10 +376,16 @@ serve(async (req) => {
 
     for (const expense of userExpenses) {
       // Check if this expense has a split
-      const expenseSplit = splitGroups?.find(sg =>
-        sg.expense_id === expense.id ||
-        (sg.created_at && Math.abs(sg.total_amount_cents - Math.abs(expense.amount_cents)) < 100)
-      );
+      let expenseSplit = undefined as undefined | typeof splitGroups[0];
+      if (expense.split_group_id) {
+        expenseSplit = splitGroupIdToSplitGroup.get(expense.split_group_id);
+      }
+      if (!expenseSplit) {
+        expenseSplit = splitGroups?.find(sg =>
+          sg.expense_id === expense.id ||
+          (sg.created_at && Math.abs((sg.total_amount_cents || 0) - Math.abs(expense.amount_cents || 0)) < 100)
+        );
+      }
 
       if (expenseSplit) {
         // Find user's portion from split lines
