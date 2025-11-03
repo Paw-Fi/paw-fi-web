@@ -402,6 +402,29 @@ async function getPlanNameFromProductId(productId) {
   }
 }
 
+// Helper function to create lifetime subscription payload
+// Reduces code duplication for referral system and lifetime upgrades
+function createLifetimeSubscriptionPayload(
+  userId: string,
+  customerId: string | null | undefined,
+  eventId: string
+) {
+  return {
+    user_id: userId,
+    plan: 'lifetime' as const,
+    status: 'active' as const,
+    stripe_customer_id: customerId || `manual_lifetime_${userId}`,
+    stripe_subscription_id: null,
+    billing_interval: null,
+    current_period_end: null,
+    cancel_at_period_end: false,
+    trial_start: null,
+    trial_end: null,
+    last_event_id: eventId,
+    updated_at: new Date().toISOString(),
+  }
+}
+
 // Handler for subscription created or updated events
 async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
@@ -1350,21 +1373,12 @@ async function handleCheckoutSessionCompleted(
         })
 
         // Create or update subscription record for Lifetime plan
-        // Lifetime has no Stripe subscription ID (one-time payment)
-        const lifetimeSubscriptionData = {
-          user_id: userId,
-          plan: 'lifetime',
-          status: 'active', // Lifetime is always active (no expiry)
-          stripe_customer_id: customerId,
-          stripe_subscription_id: null, // Lifetime has no subscription ID
-          billing_interval: null, // One-time payment
-          current_period_end: null, // Lifetime never expires
-          cancel_at_period_end: false,
-          trial_start: null,
-          trial_end: null,
-          last_event_id: eventId,
-          updated_at: new Date().toISOString(),
-        }
+        // Use helper function to create consistent lifetime payload
+        const lifetimeSubscriptionData = createLifetimeSubscriptionPayload(
+          userId,
+          customerId,
+          eventId
+        )
 
         console.log('Upserting Lifetime subscription with data:', lifetimeSubscriptionData)
 
@@ -1389,6 +1403,160 @@ async function handleCheckoutSessionCompleted(
         }
 
         console.log('✅ Lifetime subscription created successfully for user:', userId)
+
+        // REFERRAL HANDLING: Check if this is a referral acceptance
+        const checkoutType = session.metadata?.checkout_type as string | undefined
+        const referralCodeId = session.metadata?.referral_code_id as string | undefined
+        const referrerUserId = session.metadata?.referrer_user_id as string | undefined
+        const refereeUserId = session.metadata?.referee_user_id as string | undefined
+
+        if (checkoutType === 'referral_acceptance' && referralCodeId && referrerUserId && refereeUserId) {
+          console.log('🎉 Referral acceptance detected:', {
+            referralCodeId,
+            referrerUserId,
+            refereeUserId,
+          })
+
+          // IDEMPOTENCY CHECK: Verify this referral hasn't already been processed
+          const { data: existingAcceptance, error: checkError } = await supabase
+            .from('referral_acceptances')
+            .select('status')
+            .eq('referral_code_id', referralCodeId)
+            .eq('referee_user_id', refereeUserId)
+            .maybeSingle()
+
+          if (checkError && checkError.code && checkError.code !== 'PGRST116') {
+            console.error('Error checking referral acceptance status:', checkError)
+          }
+
+          if (existingAcceptance && existingAcceptance.status === 'completed') {
+            console.log('-> Referral acceptance already processed. Skipping duplicate processing.')
+          } else {
+            console.log('-> Processing referral acceptance (first time)...')
+
+            try {
+            // 1. Upgrade REFERRER to lifetime as well
+            const { data: referrerOldSub } = await supabase
+              .from('subscriptions')
+              .select('stripe_subscription_id, plan')
+              .eq('user_id', referrerUserId)
+              .maybeSingle()
+
+            const referrerOldStripeSubId = referrerOldSub?.stripe_subscription_id
+
+            // Get referrer's Stripe customer ID
+            const { data: referrerMapping } = await supabase
+              .from('user_stripe_mapping')
+              .select('stripe_customer_id')
+              .eq('user_id', referrerUserId)
+              .maybeSingle()
+
+            // Use helper function to create consistent lifetime payload
+            const referrerLifetimeData = createLifetimeSubscriptionPayload(
+              referrerUserId,
+              referrerMapping?.stripe_customer_id,
+              eventId
+            )
+
+            const { error: referrerUpgradeError } = await supabase
+              .from('subscriptions')
+              .upsert(referrerLifetimeData, {
+                onConflict: 'user_id',
+                ignoreDuplicates: false,
+              })
+
+            if (referrerUpgradeError) {
+              console.error('Error upgrading referrer to lifetime:', referrerUpgradeError)
+            } else {
+              console.log('✅ Referrer upgraded to lifetime successfully')
+
+              // Cancel referrer's old Stripe subscription if exists
+              if (referrerOldStripeSubId && referrerOldStripeSubId !== 'null' && referrerOldStripeSubId.startsWith('sub_')) {
+                try {
+                  await stripe.subscriptions.cancel(referrerOldStripeSubId, { prorate: false })
+                  console.log(`✅ Referrer's old subscription ${referrerOldStripeSubId} canceled`)
+                } catch (cancelError) {
+                  console.error(`Warning: Could not cancel referrer's old subscription:`, cancelError.message)
+                }
+              }
+            }
+
+            // 2. Mark referral acceptance as completed (idempotent upsert)
+            const completedAtIso = new Date().toISOString()
+            const { error: acceptanceUpsertError } = await supabase
+              .from('referral_acceptances')
+              .upsert({
+                referral_code_id: referralCodeId,
+                referrer_user_id: referrerUserId,
+                referee_user_id: refereeUserId,
+                referral_code_text: (session.metadata?.referral_code as string) || '',
+                status: 'completed',
+                completed_at: completedAtIso,
+                stripe_checkout_session_id: session.id,
+              }, { onConflict: 'referee_user_id,referral_code_id' })
+
+            if (acceptanceUpsertError) {
+              console.error('Error upserting referral acceptance status:', acceptanceUpsertError)
+            } else {
+              console.log('✅ Referral acceptance marked as completed')
+            }
+
+            // 3. Send email to referrer
+            const { data: referrerData } = await supabase
+              .from('users')
+              .select('email, full_name')
+              .eq('id', referrerUserId)
+              .single()
+
+            const { data: refereeData } = await supabase
+              .from('users')
+              .select('email, full_name')
+              .eq('id', refereeUserId)
+              .single()
+
+            if (referrerData) {
+              const referrerName = referrerData.full_name || 'there'
+              const refereeName = refereeData?.full_name || 'A friend'
+
+              // Send referral success email to referrer
+              const { error: emailError } = await supabase.functions.invoke('send-email', {
+                body: {
+                  type: 'direct',
+                  to: referrerData.email,
+                  subject: '🎉 Your friend accepted your Moneko invitation!',
+                  html: `
+                    <p>Hi ${referrerName},</p>
+                    <p>Great news! <strong>${refereeName}</strong> has accepted your Moneko referral invitation.</p>
+                    <p>As promised, you both now have <strong>lifetime access</strong> to all Moneko premium features! 🎊</p>
+                    <p>You can now enjoy unlimited access to:</p>
+                    <ul>
+                      <li>AI-powered financial coaching</li>
+                      <li>Advanced budgeting tools</li>
+                      <li>Personalized financial insights</li>
+                      <li>Goal tracking and planning</li>
+                      <li>And much more!</li>
+                    </ul>
+                    <p><a href="${DASHBOARD_URL}/dashboard" style="background-color:#7458FF;color:#ffffff;padding:12px 24px;border-radius:9999px;text-decoration:none;display:inline-block;">Go to Dashboard</a></p>
+                    <p>Thank you for sharing Moneko with your friends! 💜</p>
+                    <p>— The Moneko Team</p>
+                  `,
+                  text: `Hi ${referrerName},\n\nGreat news! ${refereeName} has accepted your Moneko referral invitation.\n\nAs promised, you both now have lifetime access to all Moneko premium features!\n\nThank you for sharing Moneko with your friends!\n\n— The Moneko Team`,
+                  replyTo: 'hello@moneko.io',
+                },
+              })
+
+              if (emailError) {
+                console.error('Error sending referrer notification email:', emailError)
+              } else {
+                console.log(`✅ Referral success email sent to referrer: ${referrerData.email}`)
+              }
+            }
+            } catch (referralError) {
+              console.error('Error processing referral:', referralError)
+              // Don't throw - referee's lifetime is already granted
+            }
+          }
+        }
 
         // CRITICAL FIX: Cancel the old Stripe subscription to prevent webhook conflicts
         // If user had an active trial/paid subscription, it must be canceled immediately

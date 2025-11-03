@@ -10,11 +10,12 @@ import { MonekoIcon } from '@/components/shared/moneko-icon';
 import { StructuredData } from '@/components/seo/structured-data';
 import { OptimizedImage } from '@/components/seo/optimized-image';
 
-export const Route = createFileRoute('/register/')({  
+export const Route = createFileRoute('/register/')({
   component: Register,
   validateSearch: (search: Record<string, unknown>) => {
     return {
       redirect: (search.redirect as string) || undefined,
+      code: (search.code as string) || undefined,
     };
   },
   head: () => {
@@ -86,8 +87,8 @@ export const Route = createFileRoute('/register/')({
 });
 
 export function Register() {
-  const { redirect } = Route.useSearch();
-  
+  const { redirect, code } = Route.useSearch();
+
   return (
     <>
       {/* GEO-Optimized FAQ Schema for Registration Process */}
@@ -128,16 +129,38 @@ export function Register() {
           </div>
           <div className="flex-1 flex items-center">
             <div className="w-full max-w-md mx-auto px-6 py-8">
-            
+
+              {/* Referral Code Badge (if present) */}
+              {code && (
+                <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="secondary" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                      Referral Invitation
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-slate-700 dark:text-slate-300">
+                    You've been invited! Complete registration to accept this invitation and get lifetime premium access.
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 font-mono">
+                    Code: {code}
+                  </p>
+                </div>
+              )}
 
               {/* Header */}
               <div className="mb-8">
-                <h1 className="text-3xl font-semibold tracking-tight text-moneko-foreground">Start Your Financial Journey</h1>
-                <p className="text-muted-foreground mt-1">Create your free account to access personalized financial education, AI coaching, and wealth-building tools.</p>
+                <h1 className="text-3xl font-semibold tracking-tight text-moneko-foreground">
+                  {code ? 'Accept Your Invitation' : 'Start Your Financial Journey'}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  {code
+                    ? 'Create your account to accept this referral and unlock lifetime premium access.'
+                    : 'Create your free account to access personalized financial education, AI coaching, and wealth-building tools.'}
+                </p>
               </div>
             {/* Sign Up Form */}
             <ShadcnSignUpForm
-              redirectUrl={redirect}
+              redirectUrl={code ? `/referral?code=${code}` : redirect}
               hideBottomLink
               variant="plain"
               hideHeader

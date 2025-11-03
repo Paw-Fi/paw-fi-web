@@ -5,7 +5,7 @@
  * Handles transient errors and rate limiting
  */
 
-import Stripe from 'https://esm.sh/stripe@13.10.0';
+import Stripe from 'https://esm.sh/stripe@14.21.0';
 
 interface RetryConfig {
   maxRetries?: number;
