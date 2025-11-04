@@ -220,7 +220,7 @@ export function baseTemplate(content: string, footer?: string): string {
     <div class="container">
       <div class="header">
         <h1 class="logo">
-          <img src="https://moneko.io/logo192.png" alt="Moneko Logo" />
+          <img src="https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/icon-transparent.png" alt="Moneko Logo" style="height: 60px; margin-right: 5px;" />
           Moneko
         </h1>
       </div>
