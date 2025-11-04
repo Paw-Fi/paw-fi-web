@@ -36,6 +36,67 @@ function errorResponse(message: string, status = 400, details?: unknown) {
   return jsonResponse({ error: message, details }, status);
 }
 
+/**
+ * Find effective budget for a contact, with fallback to other currencies
+ * Returns both the budget in the requested currency (if found) and any budget in other currencies
+ */
+async function findEffectiveBudget(
+  supabase: any,
+  contactId: string,
+  date: string,
+  primaryCurrency: string
+): Promise<{ effectiveBudget: any | null; otherCurrencyBudget: any | null }> {
+  // 1. Try to find budget for exact date in primary currency
+  const { data: exactBudget } = await supabase
+    .from("daily_budgets")
+    .select("amount_cents, currency, date")
+    .eq("contact_id", contactId)
+    .eq("date", date)
+    .eq("currency", primaryCurrency)
+    .maybeSingle();
+
+  if (exactBudget) {
+    return { effectiveBudget: exactBudget, otherCurrencyBudget: null };
+  }
+
+  // 2. Try to find most recent budget before this date in primary currency
+  const { data: recentBudget } = await supabase
+    .from("daily_budgets")
+    .select("amount_cents, currency, date")
+    .eq("contact_id", contactId)
+    .eq("currency", primaryCurrency)
+    .lt("date", date)
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (recentBudget) {
+    return { effectiveBudget: recentBudget, otherCurrencyBudget: null };
+  }
+
+  // 3. No budget found in primary currency - look for budgets in other currencies
+  const { data: otherBudgets } = await supabase
+    .from("daily_budgets")
+    .select("amount_cents, currency, date")
+    .eq("contact_id", contactId)
+    .neq("currency", primaryCurrency)
+    .lte("date", date)
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (otherBudgets) {
+    console.log('[findEffectiveBudget] Found budget in different currency:', {
+      requestedCurrency: primaryCurrency,
+      foundCurrency: otherBudgets.currency,
+      amount: otherBudgets.amount_cents,
+      date: otherBudgets.date
+    });
+  }
+
+  return { effectiveBudget: null, otherCurrencyBudget: otherBudgets };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
@@ -338,32 +399,15 @@ Rules:
       currencyTotals.set(curr, current + (r.amount_cents || 0));
     });
 
-    // Get budget for the calculation currency
-    const { data: budgetRow } = await supabase
-      .from("daily_budgets")
-      .select("amount_cents,currency")
-      .eq("contact_id", contactId)
-      .eq("date", dateStr)
-      .eq("currency", calculationCurrency)
-      .maybeSingle();
+    // Get budget for the calculation currency (with fallback to other currencies)
+    const { effectiveBudget, otherCurrencyBudget } = await findEffectiveBudget(
+      supabase,
+      contactId,
+      dateStr,
+      calculationCurrency
+    );
 
-    // If no budget for today, fetch the most recent budget in that currency
-    let effectiveBudgetRow = budgetRow;
-    if (!budgetRow) {
-      const { data: recentBudget } = await supabase
-        .from("daily_budgets")
-        .select("amount_cents,currency")
-        .eq("contact_id", contactId)
-        .eq("currency", calculationCurrency)
-        .lt("date", dateStr)
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      effectiveBudgetRow = recentBudget;
-    }
-    
-    const budgetCents = effectiveBudgetRow?.amount_cents || 0;
+    const budgetCents = effectiveBudget?.amount_cents || 0;
     const totalCents = currencyTotals.get(calculationCurrency) || 0;
     const remainingCents = Math.max(budgetCents - totalCents, 0);
 
@@ -374,6 +418,11 @@ Rules:
       currency: calculationCurrency,
       all_currencies: Object.fromEntries(currencyTotals),  // Include breakdown for multi-currency support
     };
+
+    // Store other currency budget info for helpful error messages
+    if (otherCurrencyBudget) {
+      results.otherCurrencyBudget = otherCurrencyBudget;
+    }
   }
 
   // Simple text reply for bots to display
@@ -415,31 +464,15 @@ Rules:
       currencyTotals.set(curr, current + (r.amount_cents || 0));
     });
 
-    // Get budget for the calculation currency
-    const { data: budgetRow } = await supabase
-      .from("daily_budgets")
-      .select("amount_cents,currency")
-      .eq("contact_id", contactId)
-      .eq("date", dateForTotals)
-      .eq("currency", calculationCurrency)
-      .maybeSingle();
+    // Get budget for the calculation currency (with fallback to other currencies)
+    const { effectiveBudget: effectiveBudgetForDate, otherCurrencyBudget: otherCurrencyBudgetForDate } = await findEffectiveBudget(
+      supabase,
+      contactId,
+      dateForTotals,
+      calculationCurrency
+    );
 
-    let effectiveBudgetRow = budgetRow;
-    if (!budgetRow) {
-      const { data: recentBudget } = await supabase
-        .from("daily_budgets")
-        .select("amount_cents,currency")
-        .eq("contact_id", contactId)
-        .eq("currency", calculationCurrency)
-        .lt("date", dateForTotals)
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      effectiveBudgetRow = recentBudget;
-    }
-    
-    const budgetCents = effectiveBudgetRow?.amount_cents || 0;
+    const budgetCents = effectiveBudgetForDate?.amount_cents || 0;
     const totalCents = currencyTotals.get(calculationCurrency) || 0;
     const remainingCents = Math.max(budgetCents - totalCents, 0);
 
@@ -450,7 +483,12 @@ Rules:
       currency: calculationCurrency,
       all_currencies: Object.fromEntries(currencyTotals),
     };
-    
+
+    // Store other currency budget info for helpful error messages
+    if (otherCurrencyBudgetForDate) {
+      results.otherCurrencyBudget = otherCurrencyBudgetForDate;
+    }
+
     // CRITICAL: Update top-level currency to match totals currency
     // This ensures response.currency matches the actual calculations
     results.currency = calculationCurrency;
@@ -471,9 +509,22 @@ Rules:
     
     // Check if budget is zero due to currency mismatch
     const budgetMismatch = results.totals.budget_cents === 0 && results.totals.spent_cents > 0;
-    
+
     if (budgetMismatch) {
-      reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
+      // Check if we found budget in another currency
+      if (results.otherCurrencyBudget) {
+        const otherCode = results.otherCurrencyBudget.currency;
+        const otherSym = getCurrencySymbol(otherCode);
+        const otherAmount = toMoney(results.otherCurrencyBudget.amount_cents);
+        reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)}.\n\n` +
+          `💡 Your currency is set to *${code}* but you don't have a budget in ${code} yet.\n\n` +
+          `You have a budget in *${otherCode}* (${otherSym}${otherAmount}).\n\n` +
+          `• Use */setCurrency ${otherCode}* to switch back\n` +
+          `• Or use */setBudget <amount>* to create a budget in ${code}`;
+      } else {
+        // No budget in any currency
+        reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
+      }
     } else {
       reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} / budget ${sym}${toMoney(results.totals.budget_cents)}. Remaining: ${sym}${toMoney(results.totals.remaining_cents)}.`;
     }

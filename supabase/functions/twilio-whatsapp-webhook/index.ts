@@ -5,7 +5,6 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { buildHelpMessage, buildVerificationPrompt, sendWhatsAppTemplate, WHATSAPP_COMMANDS, type WhatsAppReply } from "../shared/whatsapp-helpers.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
-import { uploadReceiptImage } from "../shared/storage-helper.ts";
 import { processFreeFormTextExpense, processReceiptImage, type ProcessResult } from "../shared/expense-processors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
@@ -583,12 +582,11 @@ Deno.serve(async (req: Request) => {
           response += `${index + 1}. ${currencySymbol}${amount} - ${cat}\n`;
         });
         
-        // Add separator and currency-specific totals
+        // Add separator and compute totals
         response += `\n━━━━━━━━━━━━━━━━\n\n`;
         const totalCents = rows.reduce((s: number, r: any) => s + (r.amount_cents || 0), 0);
-        response += `💰 *Total:* ${currencySymbol}${toMoney(totalCents)}`;
         
-        // Group by currency to avoid mixed-currency summation
+        // Group by currency to avoid mixed-currency summation (defensive if filter changes)
         const currencyGroups = new Map<string, number>();
         rows.forEach((r: any) => {
           const currency = (r.currency || 'USD').toUpperCase();
