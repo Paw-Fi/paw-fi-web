@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { UserPlus, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface InviteeRegisterCardProps {
   code?: string;
@@ -12,29 +14,28 @@ export function InviteeRegisterCard({ code }: InviteeRegisterCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-8 shadow-sm border border-slate-200/50 dark:border-slate-700/50"
     >
-      <div className="flex items-start gap-4">
-        <div className="bg-slate-100 dark:bg-slate-700 rounded-2xl p-3 shrink-0">
-          <UserPlus className="w-6 h-6 text-moneko-foreground" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-moneko-foreground mb-2">
-            Step 1: Create Your Account
-          </h3>
-          <p className="text-moneko-muted-foreground mb-4">
-            Register to accept this invitation and unlock lifetime premium access
-          </p>
-          <Link
-            to="/register"
-            search={code ? ({ code } as any) : undefined}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 rounded-full font-medium hover:opacity-90 transition-opacity"
-          >
-            Create Account
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-      </div>
+      <Card className="rounded-3xl border-subtle-border">
+        <CardContent className="p-8">
+          <div className="flex items-start gap-4">
+            <div className="bg-subtle-background rounded-2xl p-3 shrink-0">
+              <UserPlus className="w-6 h-6 text-foreground" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-medium text-foreground mb-2">Step 1: Create Your Account</h3>
+              <p className="text-muted-foreground mb-4">
+                Register to accept this invitation and unlock lifetime premium access
+              </p>
+              <Button asChild size="lg" className="rounded-full">
+                <Link to="/register" search={code ? ({ code } as any) : undefined}>
+                  Create Account
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

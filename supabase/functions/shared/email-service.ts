@@ -9,6 +9,11 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 // Constants
 const DEFAULT_FROM = 'Moneko <noreply@moneko.io>';
 
+// Rate limiting: Resend allows 2 requests per second
+// We'll be conservative and ensure at least 600ms between sends
+const MIN_DELAY_BETWEEN_EMAILS_MS = 600;
+let lastEmailSentAt = 0;
+
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -19,6 +24,19 @@ export interface EmailOptions {
   cc?: string | string[];
   bcc?: string | string[];
   attachments?: any[];
+}
+
+// Helper to enforce rate limiting
+async function waitForRateLimit() {
+  const now = Date.now();
+  const timeSinceLastEmail = now - lastEmailSentAt;
+  
+  if (timeSinceLastEmail < MIN_DELAY_BETWEEN_EMAILS_MS) {
+    const delayNeeded = MIN_DELAY_BETWEEN_EMAILS_MS - timeSinceLastEmail;
+    await new Promise(resolve => setTimeout(resolve, delayNeeded));
+  }
+  
+  lastEmailSentAt = Date.now();
 }
 
 export async function sendEmail({
@@ -42,30 +60,61 @@ export async function sendEmail({
       return { success: true, id: 'test-mode-email', test: true };
     }
 
-    // Send the actual email
-    const result = await resend.emails.send({
-      from,
-      to,
-      subject,
-      html,
-      text,
-      reply_to: replyTo,
-      cc,
-      bcc,
-      attachments,
-      // CRITICAL: Disable click tracking to prevent breaking Supabase auth URLs
-      tags: [],
-      headers: {},
-    });
+    // Enforce rate limiting before sending
+    await waitForRateLimit();
 
-    if (result.error) {
-      throw new Error(`Failed to send email: ${result.error.message}`);
+    // Send the actual email with retry logic for rate limit errors
+    let attempt = 0;
+    const maxAttempts = 3;
+    
+    while (attempt < maxAttempts) {
+      try {
+        const result = await resend.emails.send({
+          from,
+          to,
+          subject,
+          html,
+          text,
+          reply_to: replyTo,
+          cc,
+          bcc,
+          attachments,
+          // CRITICAL: Disable click tracking to prevent breaking Supabase auth URLs
+          tags: [],
+          headers: {},
+        });
+
+        if (result.error) {
+          // Check if it's a rate limit error
+          if (result.error.message?.includes('Too many requests') || result.error.message?.includes('rate limit')) {
+            attempt++;
+            if (attempt < maxAttempts) {
+              const backoffDelay = 1000 * attempt;
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+              continue;
+            }
+          }
+          throw new Error(`Failed to send email: ${result.error.message}`);
+        }
+
+        return { success: true, id: result.data?.id };
+      } catch (sendError) {
+        // Check if it's a rate limit error from exception
+        const errorMsg = (sendError as any)?.message || '';
+        if ((errorMsg.includes('Too many requests') || errorMsg.includes('rate limit')) && attempt < maxAttempts - 1) {
+          attempt++;
+          const backoffDelay = 1000 * attempt;
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          continue;
+        }
+        throw sendError;
+      }
     }
 
-    return { success: true, id: result.data?.id };
+    throw new Error('Failed to send email after maximum retry attempts');
   } catch (error) {
     console.error('Error sending email:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: (error as any).message };
   }
 }
 

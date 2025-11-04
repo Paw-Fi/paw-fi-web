@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 import { getCorsHeaders } from '../shared/cors.ts'
 import { authenticateUser } from '../shared/auth.ts'
+// Trial eligibility is determined by presence of an existing subscription row
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
@@ -59,6 +60,37 @@ serve(async (req) => {
       })
     }
 
+    // Trial info (Stripe-managed). Eligible if no subscription row exists.
+    let trialStart: string | null = null
+    let trialEnd: string | null = null
+    let isTrialing = false
+    let trialEligible = false
+
+    const { data: existingSub, error: subError } = await supabase
+      .from('subscriptions')
+      .select('id, plan, status, trial_start, trial_end, current_period_end')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (subError) {
+      console.error('Error reading subscriptions:', subError)
+    }
+
+    // Do not create or modify subscriptions here. Stripe will manage trials.
+    if (!existingSub) {
+      trialEligible = true
+    } else {
+      const plan = (existingSub as any).plan
+      const status = (existingSub as any).status
+      trialStart = (existingSub as any).trial_start || null
+      trialEnd = (existingSub as any).trial_end || null
+      isTrialing = status === 'trialing'
+      // Eligible if the only record is a free placeholder (no prior paid/trial)
+      trialEligible = plan === 'free'
+    }
+
     // Get detailed list of acceptances
     const { data: acceptances, error: acceptancesError } = await supabase
       .from('referral_acceptances')
@@ -108,9 +140,15 @@ serve(async (req) => {
       JSON.stringify({
         code: codeData.code,
         createdAt: codeData.created_at,
-        acceptanceCount: Number(codeData.acceptance_count || 0),
+        // Total invitations = all acceptance rows (pending + completed)
+        acceptanceCount: Array.isArray(acceptances) ? acceptances.length : acceptedBy.length,
+        // Completed = those finalized by webhook after checkout success
         completedCount: acceptedBy.filter(a => a.status === 'completed').length,
         acceptedBy,
+        trialStart,
+        trialEnd,
+        isTrialing,
+        trialEligible,
       }),
       {
         status: 200,

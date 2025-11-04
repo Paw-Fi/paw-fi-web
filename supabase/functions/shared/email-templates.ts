@@ -142,6 +142,17 @@ const baseTemplate = (content: string, footerContent?: string) => `
 </html>
 `;
 
+// Reusable CTA: Download on TestFlight (Apple‑style button)
+const APPLE_LOGO_URL = 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/apple-logo.png'
+const testFlightCtaHtml = () => `
+  <a href="https://testflight.apple.com/join/Q9rNbkN5" class="button" style="display:inline-block;background-color:#000000 !important;color:#ffffff !important;padding:14px 24px;border-radius:9999px;font-weight:600;font-size:16px;text-decoration:none !important;margin:24px 0;">
+    <span style="display:inline-flex;align-items:center;gap:10px;">
+      <img src="${APPLE_LOGO_URL}" alt="Apple" width="18" height="18" style="vertical-align:middle;display:inline-block;border:none;outline:none;" />
+      Download TestFlight
+    </span>
+  </a>
+`;
+
 // Subscription created email template
 export const subscriptionCreatedTemplate = (data: {
   name: string;
@@ -158,7 +169,7 @@ export const subscriptionCreatedTemplate = (data: {
     <h1 class="title">Welcome to ${data.planName}</h1>
     <p class="subtitle">Thank you for joining Moneko. ${subscriptionMessage}</p>
     <p>You now have full access to all premium features included in your plan.</p>
-    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Go to Dashboard</a>
+    ${testFlightCtaHtml()}
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
@@ -198,7 +209,7 @@ export const subscriptionUpdatedTemplate = (data: {
     <h1 class="title">${title}</h1>
     <p class="subtitle">${subtitle}</p>
     <p>Your subscription will automatically renew on ${data.endDate}.</p>
-    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Go to Dashboard</a>
+    ${testFlightCtaHtml()}
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
   `;
@@ -231,7 +242,7 @@ export const subscriptionCanceledTemplate = (data: {
     <h1 class="title">${title}</h1>
     <p class="subtitle">${subtitle}</p>
     <p>We're sorry to see you go. If you change your mind, you can resubscribe anytime.</p>
-    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Manage Membership</a>
+    ${testFlightCtaHtml()}
     <p>We'd love to hear your feedback about why you canceled. Your input helps us improve.</p>
     <p>The Moneko Team</p>
   `;
@@ -240,6 +251,37 @@ export const subscriptionCanceledTemplate = (data: {
     html: baseTemplate(content),
     text: htmlToText(baseTemplate(content)),
     subject: title,
+  };
+};
+
+// Referral accepted email template (to referrer)
+export const referralAcceptedTemplate = (data: {
+  referrerName: string
+  refereeName: string
+}) => {
+  const content = `
+    <h1 class="title">Your Friend Joined Moneko 🎉</h1>
+    <p class="subtitle">Great news! <strong>${data.refereeName}</strong> accepted your invitation.</p>
+    <p>As promised, you both now have <strong>lifetime access</strong> to all Moneko premium features. Thank you for sharing Moneko with your friends!</p>
+    <ul>
+      <li>AI‑powered financial coaching</li>
+      <li>Advanced budgeting tools</li>
+      <li>Personalized financial insights</li>
+      <li>Goal tracking and planning</li>
+    </ul>
+    <a href="https://testflight.apple.com/join/Q9rNbkN5" class="button" style="display: inline-block; background-color: #000000 !important; color: #ffffff !important; padding: 14px 24px; border-radius: 9999px; font-weight: 600; font-size: 16px; text-decoration: none !important; margin: 24px 0;">
+      <span style="display:inline-flex; align-items:center;">
+        <img src="https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/apple-logo.png" alt="Apple" height="18" style="vertical-align:middle; display:inline-block; border:none; outline:none; margin-right: 5px;" />
+        Download on TestFlight
+      </span>
+    </a>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content),
+    text: htmlToText(baseTemplate(content)),
+    subject: '🎉 Your friend accepted your Moneko invitation!'
   };
 };
 
@@ -523,7 +565,7 @@ export const courseCompletionTemplate = (data: {
     <p>You've taken an important step in your financial education journey. We're proud of your dedication to learning.</p>
     ${data.certificateUrl ? `<a href="${data.certificateUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">Download Certificate</a>` : ''}
     ${data.nextCourseUrl ? `<p>Ready for your next challenge? <a href="${data.nextCourseUrl}">Check out recommended courses</a> to continue your learning journey.</p>` : ''}
-    <a href="${data.dashboardUrl}" class="button" style="display: inline-block; background-color: #7458FF !important; color: #ffffff !important; padding: 14px 28px; border-radius: 9999px; font-weight: 500; font-size: 16px; text-decoration: none !important; margin: 24px 0;">View Dashboard</a>
+    ${testFlightCtaHtml()}
     <p>Keep up the great work.</p>
     <p>The Moneko Team</p>
   `;

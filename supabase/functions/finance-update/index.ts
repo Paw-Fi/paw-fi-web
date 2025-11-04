@@ -257,8 +257,13 @@ Rules:
         }
       }
       
+      // Ensure user_id is set so RLS policies (which rely on user_id) include this row
+      // Prefer contact.user_id (from DB); fallback to provided userId when available
+      const expenseUserId = (contact?.user_id as string | null) || (userId as string | null) || null;
+
       return {
         contact_id: contactId!,
+        user_id: expenseUserId,
         date: expenseDate,
         amount_cents: Math.round((e.amount || 0) * 100),
         currency: (e.currency || preferredCurrency).toUpperCase(),

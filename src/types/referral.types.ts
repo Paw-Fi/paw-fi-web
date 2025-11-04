@@ -62,6 +62,10 @@ export interface GetReferralCodeResponse {
   acceptanceCount: number
   completedCount: number
   acceptedBy: ReferralUser[]
+  trialStart?: string | null
+  trialEnd?: string | null
+  isTrialing?: boolean
+  trialEligible?: boolean
 }
 
 /**
@@ -123,6 +127,10 @@ export interface UseReferralCodeState {
   acceptanceCount: number
   completedCount: number
   acceptedBy: ReferralUser[]
+  trialStart: string | null
+  trialEnd: string | null
+  isTrialing: boolean
+  trialEligible: boolean
   isLoading: boolean
   error: Error | null
   refetch: () => Promise<void>

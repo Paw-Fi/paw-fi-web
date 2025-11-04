@@ -111,24 +111,6 @@ serve(async (req) => {
       )
     }
 
-    // Global guard: prevent multiple acceptances per user (pending/completed)
-    const { data: anyAcceptance } = await supabase
-      .from('referral_acceptances')
-      .select('id, status')
-      .eq('referee_user_id', refereeUserId)
-      .in('status', ['pending', 'completed'])
-      .maybeSingle()
-
-    if (anyAcceptance) {
-      const message = anyAcceptance.status === 'pending'
-        ? 'You already have a pending referral. Please complete the checkout.'
-        : 'You have already used a referral.'
-      return new Response(
-        JSON.stringify({ error: message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     // Get referee details
     const { data: referee, error: refereeError } = await supabase
       .from('users')
@@ -144,7 +126,7 @@ serve(async (req) => {
       })
     }
 
-    // Get or create Stripe customer for referee
+    // Get or create Stripe customer for referee (verify mapping and existence)
     const { data: mappingData } = await supabase
       .from('user_stripe_mapping')
       .select('stripe_customer_id')
@@ -152,6 +134,23 @@ serve(async (req) => {
       .maybeSingle()
 
     let customerId = mappingData?.stripe_customer_id
+
+    // If we have a mapped customer, ensure it still exists in Stripe
+    if (customerId) {
+      try {
+        const existing = await stripe.customers.retrieve(customerId)
+        // If Stripe returns a deleted customer object, treat as missing
+        // deno-lint-ignore no-explicit-any
+        if ((existing as any)?.deleted) {
+          console.warn('Mapped Stripe customer is deleted. Will recreate:', customerId)
+          customerId = undefined
+        }
+      } catch (e) {
+        // Handle resource missing -> recreate below
+        console.warn('Mapped Stripe customer not found. Will recreate:', customerId)
+        customerId = undefined
+      }
+    }
 
     if (!customerId) {
       console.log('Creating new Stripe customer for referee:', refereeUserId)
@@ -175,6 +174,28 @@ serve(async (req) => {
           },
           { onConflict: 'user_id' }
         )
+    }
+
+    // Prevent same email between referrer and referee (even if different user IDs)
+    const { data: referrerUser, error: referrerUserError } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('id', referrerUserId)
+      .maybeSingle()
+
+    if (referrerUserError) {
+      console.error('Error fetching referrer:', referrerUserError)
+      return new Response(JSON.stringify({ error: 'Referrer not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (referrerUser?.email && referee.email && referrerUser.email.trim().toLowerCase() === referee.email.trim().toLowerCase()) {
+      return new Response(JSON.stringify({ error: 'You cannot accept an invite using the same email as the inviter' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // Get lifetime price ID
@@ -203,7 +224,6 @@ serve(async (req) => {
       mode: 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
-      allow_promotion_codes: true,
       // Enable invoice creation
       invoice_creation: {
         enabled: true,
@@ -238,25 +258,56 @@ serve(async (req) => {
       ],
     }
 
-    const session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+    // Create checkout session with retry. If stored customer is stale (deleted), recreate and retry.
+    let session
+    try {
+      session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+    } catch (sessionError) {
+      // Handle missing customer (stale mapping) by recreating customer and retrying
+      // Stripe error shape: { code: 'resource_missing', message: 'No such customer: ...' }
+      // Using message includes check for robustness across SDK versions
+      // deno-lint-ignore no-explicit-any
+      const err: any = sessionError
+      if (err?.code === 'resource_missing' && typeof err?.message === 'string' && err.message.includes('customer')) {
+        console.log('Customer not found during referral checkout, recreating customer for user:', refereeUserId)
+        const newCustomer = await stripe.customers.create({
+          email: referee.email,
+          name: referee.full_name || undefined,
+          metadata: { userId: refereeUserId },
+        })
+        customerId = newCustomer.id
+        await supabase
+          .from('user_stripe_mapping')
+          .upsert({ user_id: refereeUserId, stripe_customer_id: customerId }, { onConflict: 'user_id' })
+        // Update config with new customer and retry
+        sessionConfig.customer = customerId
+        session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+      } else {
+        throw sessionError
+      }
+    }
 
     console.log('Checkout session created:', session.id)
 
-    // Create referral acceptance record
+    // Create referral acceptance record using UPSERT for idempotency
     const { error: acceptanceError } = await supabase
       .from('referral_acceptances')
-      .insert({
+      .upsert({
         referral_code_id: referralCode.id,
         referrer_user_id: referrerUserId,
         referee_user_id: refereeUserId,
         referral_code_text: code.toUpperCase(),
         status: 'pending',
         stripe_checkout_session_id: session.id,
+        created_at: new Date().toISOString(),
+      }, {
+        onConflict: 'referee_user_id,referral_code_id',
+        ignoreDuplicates: false,
       })
 
     if (acceptanceError) {
       console.error('Error creating referral acceptance:', acceptanceError)
-      // Don't fail the request - session is already created
+      // Don't fail - session is already created
     }
 
     return new Response(
