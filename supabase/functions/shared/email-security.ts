@@ -2,12 +2,12 @@
 export const LINKS = {
   moneko: 'https://moneko.io',
   dashboard: 'https://moneko.io/dashboard',
-  support: 'mailto:support@moneko.io',
-  privacy: 'https://moneko.io/privacy',
-  terms: 'https://moneko.io/terms',
-  testflight: 'https://testflight.apple.com/join/xQxYzZ',
-  appStore: 'https://apps.apple.com/app/moneko/id123456789',
-  appleLogo: 'https://moneko.io/apple-logo.png',
+  support: 'mailto:hello@moneko.io',
+  privacy: 'https://moneko.io/privacy-policy',
+  terms: 'https://moneko.io/terms-of-service',
+  testflight: 'https://testflight.apple.com/join/Q9rNbkN5',
+  appStore: 'https://testflight.apple.com/join/Q9rNbkN5',
+  appleLogo: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/apple-logo.png',
   stripe: 'https://stripe.com',
 } as const;
 
@@ -16,9 +16,9 @@ const ALLOWED_HOSTS = [
   'moneko.io',
   'testflight.apple.com',
   'apps.apple.com',
-  'pawfi.app',
   'stripe.com',
   'supabase.co',
+  'upload.wikimedia.org',
 ];
 
 // Enhanced URL sanitizer with allowlist and protocol validation

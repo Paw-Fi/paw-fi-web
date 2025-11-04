@@ -1,5 +1,5 @@
 // Email template rendering utilities
-import { sanitizeUrl } from './email-security.ts';
+import { sanitizeUrl, LINKS } from './email-security.ts';
 import { escapeHtml } from './email-utils.ts';
 
 // Base email template with modern design and dark mode support
@@ -46,6 +46,15 @@ export function baseTemplate(content: string, footer?: string): string {
       font-weight: 700;
       margin: 0;
       letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    
+    .logo img {
+      height: 40px;
+      width: auto;
     }
     
     /* Content */
@@ -210,7 +219,10 @@ export function baseTemplate(content: string, footer?: string): string {
   <div class="email-body">
     <div class="container">
       <div class="header">
-        <h1 class="logo">Moneko</h1>
+        <h1 class="logo">
+          <img src="https://moneko.io/logo192.png" alt="Moneko Logo" />
+          Moneko
+        </h1>
       </div>
       <div class="content">
         ${content}
@@ -232,16 +244,16 @@ export function renderButton(text: string, url: string, variant: 'primary' | 'se
     case 'apple':
       const appleLogoUrl = sanitizeUrl(LINKS.appleLogo);
       const appleLogoImg = appleLogoUrl !== '#' 
-        ? `<img src="${appleLogoUrl}" alt="Apple" width="18" height="18" style="vertical-align:middle;display:inline-block;border:none;outline:none;" />`
-        : 'Apple'; // Fallback to text if image is blocked
+        ? `<img src="${appleLogoUrl}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />`
+        : ''; // Fallback to text if image is blocked
       
       return `
-        <a href="${safeUrl}" class="button apple" style="display:inline-block;background-color:#000000 !important;color:#ffffff !important;padding:14px 24px;border:1px solid #333333;border-radius:9999px;font-weight:600;font-size:16px;text-decoration:none !important;margin:24px 0;">
-          <span style="display:inline-flex;align-items:center;gap:10px;">
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
             ${appleLogoImg}
             ${safeText}
-          </span>
-        </a>
+          </a>
+        </div>
       `;
     case 'secondary':
       return `
@@ -289,14 +301,17 @@ export function renderFooter(options: {
   return footerContent;
 }
 
+// Shared Apple button style
+const appleButtonStyle = 'display: inline-flex; align-items: center; gap: 12px; background-color: #000000; color: #ffffff; padding: 16px 24px; border-radius: 16px; font-size: 16px; font-weight: 600; text-decoration: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); transition: opacity 0.2s ease;';
+
 // TestFlight CTA helper
 export function testFlightCtaHtml(): string {
   return `
-    <p style="text-align: center; margin: 32px 0;">
-      <a href="${sanitizeUrl(LINKS.testflight)}" style="display: inline-flex; align-items: center; gap: 8px; color: #7458FF; text-decoration: none; font-weight: 500;">
-        <span style="font-size: 18px;">🧪</span>
-        Join our TestFlight beta for iOS
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${sanitizeUrl(LINKS.testflight)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/3/31/Apple_logo_white.svg" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />
+        Download on TestFlight
       </a>
-    </p>
+    </div>
   `;
 }

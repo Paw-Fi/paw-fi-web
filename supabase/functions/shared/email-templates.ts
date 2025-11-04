@@ -22,7 +22,6 @@ export const subscriptionCreatedTemplate = (data: {
     <h1 class="title">Welcome to ${escapeHtml(data.planName)}</h1>
     <p class="subtitle">Thank you for joining Moneko. ${escapeHtml(subscriptionMessage)}</p>
     <p>You now have full access to all premium features included in your plan.</p>
-    ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
     ${testFlightCtaHtml()}
     <p>If you have any questions, our support team is here to help.</p>
     <p>The Moneko Team</p>
@@ -106,6 +105,36 @@ export const subscriptionCanceledTemplate = (data: {
   };
 };
 
+// Payment failed template
+export const paymentFailedTemplate = (data: {
+  name: string;
+  planName: string;
+  dashboardUrl: string;
+  updatePaymentUrl?: string;
+  isDowngraded?: boolean;
+  resubscribeUrl?: string;
+}) => {
+  const content = `
+    <h1 class="title">Payment Failed</h1>
+    <p class="subtitle">We were unable to process your payment for ${escapeHtml(data.planName)}.</p>
+    <p>Your payment method was declined. Please update your payment information to continue enjoying your premium benefits.</p>
+    ${data.isDowngraded ? 
+      `<p><strong>Important:</strong> Your account has been downgraded to the free plan due to the payment failure.</p>` : 
+      `<p><strong>Warning:</strong> Your subscription will be downgraded if payment is not updated soon.</p>`}
+    ${data.updatePaymentUrl ? renderButton('Update Payment Method', sanitizeUrl(data.updatePaymentUrl)) : ''}
+    ${data.resubscribeUrl ? renderButton('Resubscribe', sanitizeUrl(data.resubscribeUrl)) : ''}
+    ${renderButton('Manage Membership', sanitizeUrl(data.dashboardUrl))}
+    <p>If you believe this is an error, please contact our support team for assistance.</p>
+    <p>The Moneko Team</p>
+  `;
+  
+  return {
+    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your subscription payment failed.' })),
+    text: htmlToText(content),
+    subject: sanitizeSubject('Payment Failed — Action Required'),
+  };
+};
+
 // Trial ending email template
 export const trialEndingTemplate = (data: {
   name: string;
@@ -138,7 +167,7 @@ export const referralAcceptedTemplate = (data: {
     <h1 class="title">Your Friend Joined Moneko 🎉</h1>
     <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${escapeHtml(data.refereeName)} has accepted your invitation and joined Moneko!</p>
     <p>Thank you for helping grow our community. Your support means a lot to us.</p>
-    ${renderButton('Go to Dashboard', sanitizeUrl(LINKS.dashboard))}
+    ${renderButton('Download on TestFlight', sanitizeUrl(LINKS.testflight), 'apple')}
     <p>Keep sharing the love - you'll earn rewards for each friend who subscribes to a premium plan.</p>
     <p>The Moneko Team</p>
   `;
