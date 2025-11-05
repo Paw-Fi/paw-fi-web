@@ -141,7 +141,7 @@ serve(async (req) => {
     // Bound users cannot create their own subscriptions - they must unbind first
     const { data: existingSub } = await supabase
       .from('subscriptions')
-      .select('id, bound_to_user_id, bound_to_household_id')
+      .select('id, bound_to_user_id, bound_to_household_id, plan, status')
       .eq('user_id', userId)
       .maybeSingle()
     
@@ -165,7 +165,7 @@ serve(async (req) => {
     // A user is eligible for trial ONLY if no subscription row exists at all
     // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
     // Simple and secure: Only new users (no row) get trials
-    const isEligibleForTrial = !existingSub
+    const isEligibleForTrial = !existingSub || (existingSub as any).plan === 'free'
     
     console.log('Trial eligibility check:', {
       hasExistingRow: !!existingSub,
@@ -367,6 +367,7 @@ serve(async (req) => {
         mode: 'subscription',
         success_url: finalSuccessUrl,
         cancel_url: finalCancelUrl,
+        // Default: allow promotions; overridden for trial flows below
         allow_promotion_codes: true,
         // Subscription metadata - persists on the subscription object
         subscription_data: {
@@ -396,10 +397,20 @@ serve(async (req) => {
             missing_payment_method: 'pause' // Pause subscription if no payment method when trial ends
           }
         }
+        // Reduce visual noise on the page for trials
+        sessionConfig.allow_promotion_codes = false
+        // Add reassurance copy only for trial checkout
+        sessionConfig.custom_text = {
+          submit: {
+            message:
+              'No credit card required. You will not be charged and access pauses automatically after the 30‑day trial.',
+          },
+        }
       } else {
         console.log('User is NOT eligible for trial - require payment immediately')
         sessionConfig.payment_method_collection = 'always' // Always require payment method
         sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // CRITICAL: Checkout Sessions require 'allow_incomplete' for proper 3DS/failed payment handling
+        sessionConfig.allow_promotion_codes = true
       }
 
       // Create checkout session with retry

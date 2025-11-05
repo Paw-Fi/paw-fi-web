@@ -265,13 +265,14 @@ export function useSubscription(userId: string | undefined) {
   
   // The subscription data is in the first element of the array
   const subscriptionData = Array.isArray(data?.subscription) ? data?.subscription[0] : data?.subscription;
-
-
-  // Check if user has an active subscription
-  const isActive = subscriptionData && (subscriptionData.plan !== "free");
   
+
   // Check if user's subscription is expired
   const isExpired = subscriptionData && subscriptionData.status === "canceled";
+
+  // Check if user has an active subscription
+  const isActive = subscriptionData && (subscriptionData.plan !== "free") && !isExpired;
+  
   
   
   return {
