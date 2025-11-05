@@ -10,7 +10,7 @@
  */
 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { HelpCircle, ArrowLeft } from 'lucide-react';
+import { HelpCircle, ArrowLeft, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { seo } from '@/utils/seo';
 import { getCanonicalUrl } from '@/utils/canonical';
