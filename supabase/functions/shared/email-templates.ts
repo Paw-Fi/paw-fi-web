@@ -165,7 +165,7 @@ export const referralAcceptedTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Your Friend Joined Moneko 🎉</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${escapeHtml(data.refereeName)} has accepted your invitation and joined Moneko!</p>
+    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${data.refereeName ? escapeHtml(data.refereeName)+" " : ''}has accepted your invitation and joined Moneko!</p>
     <p>Thank you for helping grow our community. Your support means a lot to us.</p>
     ${renderButton('Download on TestFlight', sanitizeUrl(LINKS.testflight), 'apple')}
     <p>Keep sharing the love - you'll earn rewards for each friend who subscribes to a premium plan.</p>

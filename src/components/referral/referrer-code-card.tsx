@@ -54,7 +54,7 @@ export function ReferrerCodeCard({ code, acceptanceCount, completedCount, trialE
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/referral?code=${code}`);
+                  navigator.clipboard.writeText(`${window.location.origin}/referral/${code}`);
                   toast.success('Referral link copied to clipboard!');
                 }}
                 className="rounded-full"
