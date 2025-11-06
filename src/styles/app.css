@@ -807,4 +807,23 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Anchor tag text color utilities */
+@layer utilities {
+  .text-dark-white {
+    @apply text-white dark:text-white;
+  }
+  
+  .text-dark-foreground {
+    @apply text-foreground dark:text-foreground;
+  }
+  
+  .text-dark-muted {
+    @apply text-muted-foreground dark:text-muted-foreground;
+  }
+  
+  .text-dark-primary {
+    @apply text-primary dark:text-primary;
+  }
 } 

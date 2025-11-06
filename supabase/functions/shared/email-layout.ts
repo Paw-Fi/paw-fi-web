@@ -242,19 +242,7 @@ export function renderButton(text: string, url: string, variant: 'primary' | 'se
   
   switch (variant) {
     case 'apple':
-      const appleLogoUrl = sanitizeUrl(LINKS.appleLogo);
-      const appleLogoImg = appleLogoUrl !== '#' 
-        ? `<img src="${appleLogoUrl}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />`
-        : ''; // Fallback to text if image is blocked
-      
-      return `
-        <div style="text-align: center; margin: 24px 0;">
-          <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
-            ${appleLogoImg}
-            ${safeText}
-          </a>
-        </div>
-      `;
+      return testFlightCtaHtml();
     case 'secondary':
       return `
         <a href="${safeUrl}" class="button secondary" style="display:inline-block;background-color:transparent !important;color:#7458FF !important;padding:14px 24px;border:2px solid #7458FF;border-radius:9999px;font-weight:500;font-size:16px;text-decoration:none !important;margin:24px 0;">
@@ -309,7 +297,7 @@ export function testFlightCtaHtml(): string {
   return `
     <div style="text-align: center; margin: 32px 0;">
       <a href="${sanitizeUrl(LINKS.testflight)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/3/31/Apple_logo_white.svg" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />
+        <img src="${sanitizeUrl(LINKS.appleLogo)}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />
         Download on TestFlight
       </a>
     </div>

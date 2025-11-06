@@ -35,6 +35,10 @@ import phone2 from '@assets/images/couple-budgeting/2.png'
 import phone3 from '@assets/images/couple-budgeting/3.png'
 import phone4 from '@assets/images/couple-budgeting/4.png'
 import phone5 from '@assets/images/couple-budgeting/5.png'
+import { AppleDownloadButton } from '@/components/ui/apple-download-button';
+import { faDiscord } from '@fortawesome/free-brands-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { DISCORD_URL } from '..';
 
 // Route search params type
 type ReferralSearch = {
@@ -123,7 +127,6 @@ const mobilePreview = [
 ];
 
 function ReferralPage() {
-  const { status, session_id, flow } = Route.useSearch();
   const { user, isLoading: userLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -133,16 +136,13 @@ function ReferralPage() {
   // Fetch referral code for authenticated users
   const {
     code: referralCode,
-    createdAt,
     acceptanceCount,
     completedCount,
     acceptedBy,
     isLoading: referralLoading,
     error: referralError,
-    trialStart,
     trialEnd,
     isTrialing,
-    trialEligible,
   } = useReferralCode({ enabled: !!user });
 
   // Use subscription as source-of-truth for trial state/eligibility
@@ -151,39 +151,8 @@ function ReferralPage() {
   const subTrialEnd = subIsTrialing ? (subscription?.current_period_end ?? null) : null;
   const subTrialEligible = !subscription || subscription.plan === 'free';
 
-  // Trial starter centralized so both card link and minimal link use the same flow
-  const handleStartTrial = async (e?: React.MouseEvent<HTMLAnchorElement>) => {
-    if (e) e.preventDefault();
-    try {
-      if (startingTrial) return;
-      setStartingTrial(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate({ to: '/register', search: { redirect: '/referral?flow=trial' } });
-        return;
-      }
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          plan: 'plus',
-          billingInterval: 'monthly',
-          successUrl: `${window.location.origin}/referral?status=success&flow=trial&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/referral?status=canceled`,
-        }),
-      });
-      if (!res.ok) {
-        // swallow details in UI; logs on server will have more context
-        return;
-      }
-      const json = await res.json();
-      if (json.checkoutUrl) window.location.href = json.checkoutUrl as string;
-    } finally {
-      setStartingTrial(false);
-    }
+  const openTestFlight =  () => {
+    window.open('https://testflight.apple.com/join/Q9rNbkN5', '_blank');
   };
 
   // Determine which view to show
@@ -220,7 +189,9 @@ function ReferralPage() {
       />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-5xl px-0 sm:px-8 lg:px-8 py-20">
+      <div className="relative z-10 mx-auto  px-0 sm:px-8 lg:px-8 py-20 flex flex-col items-center">
+
+        <section className='flex flex-col items-center max-w-5xl'>
         {/* Header */}
         <motion.div className="text-center mb-12">
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground leading-tight tracking-tight mb-4">
@@ -237,9 +208,24 @@ function ReferralPage() {
           </Button>
         </motion.div>
 
+        {/* Loading skeleton - show immediately while checking auth */}
+        {userLoading && (
+          <div className="space-y-6 w-full">
+            <div className="bg-card rounded-3xl p-8 shadow-sm border border-subtle-border animate-pulse">
+              <div className="h-6 bg-subtle-background rounded w-1/3 mb-6" />
+              <div className="h-16 bg-subtle-background rounded w-full mb-6" />
+              <div className="h-10 bg-subtle-background rounded w-full mb-4" />
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                <div className="h-10 bg-subtle-background rounded" />
+                <div className="h-10 bg-subtle-background rounded" />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Visitor Flow - unauthenticated user without invite code */}
         {isVisitor && (
-          <div className="space-y-6">
+          <div className="space-y-6 ">
             <ReferralAuthPrompt
               redirectTo="/referral"
               title="Create your account to get your referral link"
@@ -250,7 +236,7 @@ function ReferralPage() {
 
         {/* Referrer Flow */}
         {isReferrer && (
-          <div className="space-y-6">
+          <div className="space-y-6 w-full" >
             {referralError && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -274,8 +260,9 @@ function ReferralPage() {
               </motion.div>
             )}
 
+            {/* Show loading skeleton while data loads */}
             {referralLoading && (
-              <div className="bg-card rounded-3xl p-8 shadow-sm border border-subtle-border animate-pulse">
+              <div className="bg-card rounded-3xl p-8 shadow-sm border border-subtle-border animate-pulse max-w-5xl">
                 <div className="h-6 bg-subtle-background rounded w-1/3 mb-6" />
                 <div className="h-16 bg-subtle-background rounded w-full mb-6" />
                 <div className="h-10 bg-subtle-background rounded w-full mb-4" />
@@ -286,8 +273,9 @@ function ReferralPage() {
               </div>
             )}
 
+            {/* Show card with data when loaded */}
             {referralCode && !referralLoading && (
-              <>
+              <div>
                 <ReferrerCodeCard
                   code={referralCode}
                   acceptanceCount={acceptanceCount}
@@ -295,13 +283,79 @@ function ReferralPage() {
                   trialEnd={subTrialEnd ?? trialEnd}
                   isTrialing={subIsTrialing || isTrialing}
                   trialEligible={subTrialEligible}
-                  onStartTrial={handleStartTrial}
+                  onStartTrial={openTestFlight}
                 />
                 <ReferralAcceptanceList acceptances={acceptedBy} />
-              </>
+              </div>
             )}
           </div>
         )}
+
+</section>
+      {/* Full-bleed Mobile App Preview Section (wider) */}
+  {(
+    <section className="px-4 sm:px-8 lg:px-8 py-20 relative z-10 overflow-hidden flex flex-col items-center">
+      <motion.div
+        className="mx-auto"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, margin: '-50px' }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.div
+              className="text-center mb-16 flex flex-col items-center "
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              <h2 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight mb-6">
+                Try the Moneko App Today
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                Explore Moneko while your friend joins. You’ll both get lifetime access once they accept.
+              </p>
+
+              <AppleDownloadButton className='mt-6 mb-4'/>
+              <motion.a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              aria-label="Connect on Discord"
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 text-dark-foreground"
+            >
+              <FontAwesomeIcon icon={faDiscord} className="h-3 w-3 sm:h-4 sm:w-4" />
+             Join Discord for instant support
+            </motion.a>
+            </motion.div>
+
+            <Carousel
+              className="h-[560px] md:h-[640px] lg:h-[640px] xl:h-[680px] 2xl:h-[720px] w-screen"
+              items={mobilePreview.map((mockup, index) => (
+                <motion.div
+                  key={index}
+                  className="relative flex flex-col items-center"
+                >
+                  <h3 className="text-lg font-medium text-foreground -translate-y-8 w-[70%]">
+                    {mockup.title}
+                  </h3>
+                </motion.div>
+              ))}
+              iphoneMockups={mobilePreview.map((mockup) => (
+                <motion.div
+                  key={(mockup as any).title}
+                  className="w-full h-[80%] flex items-end justify-center"
+                >
+                  <img src={mockup.src} className="h-full w-auto" />
+                </motion.div>
+              ))}
+            />
+          </motion.div>
+    </section>
+  )}
+
 
              {/* How It Works Section (moved from modal) */}
         {(
@@ -326,13 +380,13 @@ function ReferralPage() {
                           <span className="text-xs font-medium text-muted-foreground">Step {num}</span>
                           <h3 className="text-lg font-medium text-foreground mt-1 mb-1">
                             {num === 1 && 'Share your referral link'}
-                            {num === 2 && 'Start a free trial'}
+                            {num === 2 && 'Download the app'}
                             {num === 3 && 'Friend joins with your link'}
                             {num === 4 && 'Both get lifetime premium'}
                           </h3>
                           <p className="text-muted-foreground">
                             {num === 1 && 'Copy your referral link and share it by text, WhatsApp, email, or anywhere your friend prefers.'}
-                            {num === 2 && <span className="font-semibold text-primary underline cursor-pointer" onClick={handleStartTrial}>Start a free 1-month trial</span>}
+                            {num === 2 && <span className="font-semibold text-primary underline cursor-pointer" onClick={openTestFlight}>Download the app</span>}
                             {num === 2 && ' to explore Moneko today while your friend joins.'}
                             {num === 3 && 'Your friend signs up with your link and accepts the invitation.'}
                             {num === 4 && 'After they join, you both receive lifetime premium access automatically.'}
@@ -384,57 +438,7 @@ function ReferralPage() {
         )}
   </div>
 
-      {/* Full-bleed Mobile App Preview Section (wider) */}
-  {(
-    <section className="px-4 sm:px-8 lg:px-8 py-20 relative z-10 overflow-hidden">
-      <motion.div
-        className="max-w-7xl mx-auto"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true, margin: '-50px' }}
-            transition={{ duration: 0.6 }}
-          >
-            <motion.div
-              className="text-center mb-16"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-            >
-              <h2 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight mb-6">
-                See Moneko in action
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                Preview the couples budgeting experience on mobile
-              </p>
-            </motion.div>
-
-            <Carousel
-              className="h-[560px] md:h-[640px] lg:h-[640px] xl:h-[680px] 2xl:h-[720px]"
-              items={mobilePreview.map((mockup, index) => (
-                <motion.div
-                  key={index}
-                  className="relative flex flex-col items-center"
-                >
-                  <h3 className="text-lg font-medium text-foreground -translate-y-8 w-[70%]">
-                    {mockup.title}
-                  </h3>
-                </motion.div>
-              ))}
-              iphoneMockups={mobilePreview.map((mockup) => (
-                <motion.div
-                  key={(mockup as any).title}
-                  className="w-full h-[80%] flex items-end justify-center"
-                >
-                  <img src={mockup.src} className="h-full w-auto" />
-                </motion.div>
-              ))}
-            />
-          </motion.div>
-    </section>
-  )}
-
-  {/* FAQ Section after carousel (same width as main content) */}
+  {/* FAQ Section */}
   {(
     <section id="faq" className="pb-20 relative z-10">
       <div className="mx-auto max-w-5xl px-0 sm:px-8 lg:px-8">

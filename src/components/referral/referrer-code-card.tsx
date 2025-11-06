@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import AppleLogo from '@/assets/images/shared/apple-logo.png';
 
 interface ReferrerCodeCardProps {
   code: string;
@@ -26,11 +25,7 @@ export function ReferrerCodeCard({ code, acceptanceCount, completedCount, trialE
       : null
   )?.toLocaleDateString() ?? null;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
+    <div>
       <Card className="rounded-3xl border-subtle-border">
         <CardContent className="p-8">
           {trialActive && (
@@ -42,53 +37,58 @@ export function ReferrerCodeCard({ code, acceptanceCount, completedCount, trialE
             </div>
           )}        
           <div className="text-center mb-6">
-            <h3 className="text-2xl font-medium text-foreground mb-2">Your Referral Code</h3>
+            <h3 className="text-2xl font-medium text-foreground mb-2">Your Referral Link</h3>
             {trialActive && (
               <p className="text-sm text-muted-foreground mb-4">
                 Temporary access {trialEndLabel ? `ends ${trialEndLabel}` : 'is active'} · Lifetime upgrades automatically when a friend accepts.
               </p>
             )}
             <div className="bg-subtle-background rounded-2xl p-6 mb-4">
-              <p className="text-4xl font-mono font-semibold text-foreground mb-3">{code}</p>
-              <Button
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  readOnly
+                  value={`${window.location.origin}/referral/${code}`}
+                  className="w-full px-4 line-clamp-1 overflow-ellipsis py-3 lg:pr-12 text-sm md:text-base font-mono text-foreground bg-card border border-subtle-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-default overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent"
+                  style={{
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'thin',
+                  }}
+                />
+                 <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}/referral/${code}`);
                   toast.success('Referral link copied to clipboard!');
                 }}
-                className="rounded-full"
+                className="hidden lg:flex rounded-full absolute right-4 top-1/2 -translate-y-1/2 font-bold text-sm"
               >
-                <Copy className="w-4 h-4" />
+                <Copy className="w-4 h-4 font-bold" />
                 Copy Referral Link
               </Button>
+              </div>
+                  <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/referral/${code}`);
+                  toast.success('Referral link copied to clipboard!');
+                }}
+                className="flex lg:hidden rounded-full mx-auto font-bold"
+              >
+                <Copy className="w-4 h-4 font-bold" />
+                Copy Referral Link
+              </Button>
+             
             </div>
-            <div className="space-y-2">          
-              {trialActive && (
-                <div className="flex items-center justify-center">
-                  <a
-                    href="https://testflight.apple.com/join/Q9rNbkN5"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-3 rounded-2xl bg-black text-white dark:bg-white dark:text-black px-6 py-4 md:px-8 md:py-5 text-base md:text-lg font-semibold shadow-sm hover:opacity-90 transition"
-                  >
-                    <img src={AppleLogo} alt="Apple" className="h-5" />
-                    Download on TestFlight
-                  </a>
-                </div>
-              )}
+            <div className="space-y-3">             
+
+              {/* Trial CTA - Only show if not trialing and eligible */}
               {!trialActive && trialEligible && (
                 <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    While you wait,
-                    <a
-                      href="#"
-                      onClick={onStartTrial}
-                      className="text-primary underline underline-offset-4 hover:opacity-90 mx-1"
-                    >
-                      claim a 1‑month free trial
-                    </a>
-                    to get temporary access to explore our app (no card required; you won’t be charged)
+                  <p className="text-lg text-muted-foreground">
+                   Spread the word! Share your referral link — every friend who joins helps you earn lifetime access
                   </p>
                 </div>
               )}
@@ -107,6 +107,6 @@ export function ReferrerCodeCard({ code, acceptanceCount, completedCount, trialE
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }
