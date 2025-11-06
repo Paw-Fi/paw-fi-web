@@ -133,7 +133,7 @@ VALUES (
   0,      -- Start at 0% rollout, increase gradually (e.g., 10%, 25%, 50%, 100%)
   'all',  -- Available in all environments when enabled
   jsonb_build_object(
-    'documentation_url', 'https://docs.moneko.app/features/households',
+    'documentation_url', 'https://docs.moneko.io/features/households',
     'release_date', '2025-10-21',
     'requires_migration', '20251021_households_joint_accounts.sql'
   )

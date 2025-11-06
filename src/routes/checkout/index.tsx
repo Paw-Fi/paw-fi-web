@@ -35,7 +35,7 @@ declare module "@tanstack/react-router" {
   }
 }
 
-export const Route = createFileRoute("/checkout")({
+export const Route = createFileRoute("/checkout/")({
   component: CheckoutPage,
   loader: () => {
     return {

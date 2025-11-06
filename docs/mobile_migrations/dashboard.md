@@ -1018,7 +1018,6 @@ Accessibility/localization/timezone
 - Websocket/Realtime: Supabase channel as shown
 - Push notifications (future): firebase_messaging; deep links can open chat or dashboard view
 - Background fetch/sync: Workmanager to periodically refresh activities; respect battery/OS policies
-- Deep links: Use go_router + uni_links; handle auth redirects if needed
 
 6. Testing, CI/CD, and observability
 - Unit tests

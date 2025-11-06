@@ -463,6 +463,78 @@ async function handleSubscriptionUpdated(
       : null
     const cancelAtPeriodEnd = subscription.cancel_at_period_end
 
+    // HANDLE PAUSED STATUS - Log and preserve subscription data
+    // NOTE: After fixing checkout to use 'create_invoice', paused status should be rare
+    // If it occurs, preserve subscription data and don't auto-downgrade
+    if (status === 'paused') {
+      console.log(`⚠️ Subscription ${subscription.id} is paused - preserving subscription data`)
+
+      // Check if subscription has active discount for monitoring
+      const hasDiscount = subscription.discount || (subscription.discounts && subscription.discounts.length > 0)
+
+      if (hasDiscount) {
+        console.log(`🎫 Paused subscription has discount - checking if 100% off`)
+
+        let isFullDiscount = false
+        try {
+          // CRITICAL: Re-retrieve subscription with expanded discounts to get full objects
+          // The webhook event only contains discount IDs (di_*), not full objects
+          // Per Stripe API 2025 docs: Use expand parameter to get discount objects with coupon data
+          const expandedSubscription = await stripe.subscriptions.retrieve(
+            subscription.id,
+            { expand: ['discounts.coupon'] }
+          )
+
+          // Check subscription.discount (single discount object - deprecated but may exist)
+          if (expandedSubscription.discount && typeof expandedSubscription.discount === 'object') {
+            const coupon = expandedSubscription.discount.coupon
+            if (typeof coupon === 'object' && coupon !== null) {
+              isFullDiscount = coupon.percent_off === 100
+              console.log(`Single discount detected: ${coupon.percent_off}% off (${coupon.id})`)
+            }
+          }
+
+          // Check subscription.discounts array (current Stripe API standard)
+          if (!isFullDiscount && expandedSubscription.discounts && Array.isArray(expandedSubscription.discounts)) {
+            console.log(`Checking ${expandedSubscription.discounts.length} discount(s) in array`)
+            
+            for (const discountItem of expandedSubscription.discounts) {
+              // After expansion, discountItem is a full Discount object with nested coupon
+              if (typeof discountItem === 'object' && discountItem !== null) {
+                const coupon = discountItem.coupon
+                if (typeof coupon === 'object' && coupon !== null) {
+                  const percentOff = coupon.percent_off || 0
+                  console.log(`Discount ${discountItem.id}: ${percentOff}% off (coupon: ${coupon.id})`)
+                  
+                  if (percentOff === 100) {
+                    isFullDiscount = true
+                    console.log(`✅ Found 100% discount: ${coupon.id}`)
+                    break
+                  }
+                } else {
+                  console.log(`⚠️ Discount ${discountItem.id} has no expanded coupon`)
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching expanded subscription discounts:', error)
+        }
+
+        if (isFullDiscount) {
+          console.log(`✅ 100% discount confirmed - user should maintain plan access`)
+        } else {
+          console.log(`⚠️ Partial discount or no 100% discount detected`)
+        }
+      } else {
+        console.log(`⚠️ No discount found on paused subscription`)
+      }
+
+      // IMPORTANT: Don't downgrade, don't clear stripe_subscription_id, don't cascade
+      // Fall through to normal upsert below to preserve plan and subscription data
+      // User can add payment method later to resume, or we handle via other events
+    }
+
     // Handle incomplete_expired and unpaid statuses - downgrade to free
     if (status === 'incomplete_expired' || status === 'unpaid') {
       console.log(`Subscription ${subscription.id} is ${status}, downgrading user to free plan`)

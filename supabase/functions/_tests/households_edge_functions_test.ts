@@ -323,7 +323,7 @@ Deno.test("CORS: all functions support OPTIONS preflight", async () => {
   }
 });
 
-Deno.test("CORS: allows moneko.app origin", async () => {
+Deno.test("CORS: allows moneko.io origin", async () => {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/households-validate-invite`, {
     method: 'OPTIONS',
     headers: {
@@ -332,7 +332,7 @@ Deno.test("CORS: allows moneko.app origin", async () => {
   });
 
   const corsHeader = response.headers.get('Access-Control-Allow-Origin');
-  assertEquals(corsHeader, 'https://moneko.io', 'Should allow moneko.app origin');
+  assertEquals(corsHeader, 'https://moneko.io', 'Should allow moneko.io origin');
 });
 
 // ====================

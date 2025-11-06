@@ -162,19 +162,6 @@ serve(async (req) => {
       );
     }
 
-    // Create notification event
-    await supabase
-      .from('notification_events')
-      .insert({
-        household_id,
-        user_id: user.id,
-        event_type: 'invite_sent',
-        payload: {
-          invite_id: invite.id,
-          invited_email
-        }
-      });
-
     const inviteUrl = `${appUrl}/invites/${token}`;
 
     const response: CreateInviteResponse = {

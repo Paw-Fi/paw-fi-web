@@ -124,7 +124,7 @@ function CookiePolicy() {
             If you have any questions about our Cookie Policy, please contact us at:
           </p>
           <p className="mt-2">
-            <strong>Email:</strong> privacy@moneko.io
+            <strong>Email:</strong> hello@moneko.io
           </p>
         </div>
         

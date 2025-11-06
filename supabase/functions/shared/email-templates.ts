@@ -23,7 +23,7 @@ export const subscriptionCreatedTemplate = (data: {
     <p class="subtitle">Thank you for joining Moneko. ${escapeHtml(subscriptionMessage)}</p>
     <p>You now have full access to all premium features included in your plan.</p>
     ${testFlightCtaHtml()}
-    <p>If you have any questions, our support team is here to help.</p>
+    <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
 
@@ -58,7 +58,7 @@ export const subscriptionUpdatedTemplate = (data: {
     <p>Your subscription will automatically renew on ${formatDate(data.endDate)}.</p>
     ${renderButton('Manage Subscription', sanitizeUrl(data.dashboardUrl))}
     ${testFlightCtaHtml()}
-    <p>If you have any questions, our support team is here to help.</p>
+    <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -147,7 +147,7 @@ export const trialEndingTemplate = (data: {
     <p class="subtitle">Your ${escapeHtml(data.planName)} trial will end on ${formatDate(data.trialEndDate)}.</p>
     <p>To continue enjoying all the benefits without interruption, please ensure your payment method is up to date.</p>
     ${renderButton('Manage Membership', sanitizeUrl(data.dashboardUrl))}
-    <p>If you have any questions, our support team is here to help.</p>
+    <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -165,7 +165,7 @@ export const referralAcceptedTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Your Friend Joined Moneko 🎉</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${escapeHtml(data.refereeName)} has accepted your invitation and joined Moneko!</p>
+    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${data.refereeName ? escapeHtml(data.refereeName)+" " : ''}has accepted your invitation and joined Moneko!</p>
     <p>Thank you for helping grow our community. Your support means a lot to us.</p>
     ${renderButton('Download on TestFlight', sanitizeUrl(LINKS.testflight), 'apple')}
     <p>Keep sharing the love - you'll earn rewards for each friend who subscribes to a premium plan.</p>
@@ -191,7 +191,7 @@ export const referralSuccessfulTemplate = (data: {
     <p>You're all set up and ready to start your financial journey with us. We're excited to have you on board!</p>
     ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
     ${testFlightCtaHtml()}
-    <p>If you have any questions getting started, our support team is here to help.</p>
+    <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -215,7 +215,7 @@ export const welcomeTemplate = (data: {
     <p>Start your journey to better financial health by exploring your personalized dashboard:</p>
     ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
     ${testFlightCtaHtml()}
-    <p>If you have any questions getting started, our support team is here to help.</p>
+    <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
   
@@ -429,7 +429,7 @@ export const invoiceFinalizedTemplate = (data: {
     ${renderButton('View Invoice', sanitizeUrl(data.invoiceUrl))}
     ${data.invoicePdfUrl ? `<p>You can also <a href="${sanitizeUrl(data.invoicePdfUrl)}">download the PDF version</a>.</p>` : ''}
     <p>If you have automatic payments enabled, your payment method will be charged automatically.</p>
-    <p>If you have any questions about this invoice, our support team is here to help.</p>
+    <p>If you have any questions about this invoice, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
 
@@ -586,7 +586,7 @@ export const invoicePaymentSucceededTemplate = (data: {
     ${data.invoicePdfUrl ? `<p>You can also <a href="${sanitizeUrl(data.invoicePdfUrl)}">download your receipt (PDF)</a> for your records.</p>` : ''}
     <p>This receipt confirms your payment has been processed successfully. Your subscription remains active and you continue to have full access to all premium features.</p>
     <p><a href="${sanitizeUrl(data.dashboardUrl)}">Manage Your Subscription</a></p>
-    <p>If you have any questions about this payment, our support team is here to help.</p>
+    <p>If you have any questions about this payment, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
 

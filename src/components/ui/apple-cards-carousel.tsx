@@ -169,7 +169,7 @@ export function Carousel({
       </div>
 
       {showArrows && (
-        <div className="absolute bottom-2 right-2 z-30 flex gap-2">
+        <div className="absolute bottom-2 right-3 lg:right-20 z-30 flex gap-2">
           <button
             type="button"
             aria-label="Scroll left"

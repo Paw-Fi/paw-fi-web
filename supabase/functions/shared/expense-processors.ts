@@ -371,7 +371,7 @@ export async function processReceiptImage(params: {
     ],
   }];
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', tools: toolsForVision });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite', tools: toolsForVision });
 
   const prompt = `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\n\nYou are a budgeting assistant analyzing a receipt image.
 

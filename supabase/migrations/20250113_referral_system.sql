@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.referral_codes (
     code TEXT NOT NULL UNIQUE,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     -- Each user can only have one ACTIVE referral code at a time (see partial unique index below)
 );
 

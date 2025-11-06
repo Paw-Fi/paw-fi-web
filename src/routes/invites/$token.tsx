@@ -36,14 +36,48 @@ function InvitePage() {
   const [error, setError] = useState<string | null>(null)
   const [isAccepted, setIsAccepted] = useState(false)
   const [showTimeout, setShowTimeout] = useState(false)
-  
+  const [attemptedAppOpen, setAttemptedAppOpen] = useState(false)
+  const [isMobileDevice, setIsMobileDevice] = useState(false)
+
   // Ref to prevent multiple validation calls
   const hasValidatedRef = useRef(false)
+  const appOpenAttemptedRef = useRef(false)
+
+  // Detect if user is on mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
+      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+        userAgent.toLowerCase()
+      )
+      setIsMobileDevice(isMobile)
+    }
+    checkMobile()
+  }, [])
+
+  // Try to open app automatically if on mobile BEFORE auth check
+  useEffect(() => {
+    // Only attempt once, only on mobile, regardless of auth status
+    if (
+      !appOpenAttemptedRef.current &&
+      isMobileDevice
+    ) {
+      appOpenAttemptedRef.current = true
+      console.log('[InvitePage] Mobile detected, attempting to open app first (before auth check)')
+      tryOpenApp()
+    }
+  }, [isMobileDevice, token])
 
   // Wait for auth check, then validate invite or redirect to login
   useEffect(() => {
     // Don't do anything until auth check is complete
     if (authLoading) return
+
+    // Skip auth check if still attempting to open app
+    if (attemptedAppOpen) {
+      console.log('[InvitePage] Still attempting to open app, skipping auth check')
+      return
+    }
 
     // If not authenticated, redirect to login/register with current URL
     if (!user) {
@@ -55,11 +89,12 @@ function InvitePage() {
     }
 
     // User is authenticated, validate the invite if we haven't already
-    if (user && !inviteData && !error && !hasValidatedRef.current) {
+    // But only if not attempting to open app (wait for app open to fail first)
+    if (user && !inviteData && !error && !hasValidatedRef.current && !attemptedAppOpen) {
       hasValidatedRef.current = true
       validateInvite()
     }
-  }, [authLoading, user, token, inviteData, error])
+  }, [authLoading, user, token, inviteData, error, attemptedAppOpen])
 
   // 10-second timeout for validation
   useEffect(() => {
@@ -212,22 +247,61 @@ function InvitePage() {
     }
   }
 
-  const handleOpenApp = () => {
+  const tryOpenApp = () => {
+    console.log('[InvitePage] Attempting to open app with deep link')
+    setAttemptedAppOpen(true)
+
     const deepLink = `moneko://households/join?token=${token}`
-    window.location.href = deepLink
 
-    // Fallback to app stores after a delay if app didn't open
-    setTimeout(() => {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      const isAndroid = /Android/.test(navigator.userAgent)
+    // Create an invisible iframe to attempt opening the app
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.src = deepLink
+    document.body.appendChild(iframe)
 
-      if (isIOS) {
-        window.location.href = 'https://apps.apple.com/app/moneko'
-      } else if (isAndroid) {
-        window.location.href =
-          'https://play.google.com/store/apps/details?id=com.moneko.app'
+    // Track if page becomes hidden (app opened)
+    let appOpened = false
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        appOpened = true
+        console.log('[InvitePage] App likely opened (page hidden)')
       }
-    }, 2000)
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    // Fallback: Check if app opened after 2 seconds
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      document.body.removeChild(iframe)
+
+      // If app didn't open and we're still on mobile, show continue button
+      if (!appOpened && !document.hidden) {
+        console.log('[InvitePage] App did not open, showing web flow')
+        setAttemptedAppOpen(false) // Allow user to continue on web
+        // Trigger validation now that we know app isn't available
+        if (!hasValidatedRef.current) {
+          hasValidatedRef.current = true
+          validateInvite()
+        }
+      }
+    }, 2500)
+
+    // Fallback to app store after longer delay if really didn't work
+    setTimeout(() => {
+      if (!appOpened && !document.hidden) {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+        const isAndroid = /Android/.test(navigator.userAgent)
+
+        // Only show app store link, don't force redirect
+        console.log(
+          '[InvitePage] App not installed, user can download from app store links'
+        )
+      }
+    }, 3000)
+  }
+
+  const handleOpenApp = () => {
+    tryOpenApp()
   }
 
   // Loading state
@@ -426,6 +500,38 @@ function InvitePage() {
 
   // Confirmation state (before accepting)
   if (!inviteData) return null
+
+  // Show "Opening app..." state while attempting to open
+  if (attemptedAppOpen && isMobileDevice) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4">
+        <motion.div
+          className="max-w-md w-full bg-card rounded-3xl shadow-sm p-8 text-center"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="mb-6">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
+          </div>
+          <h2 className="text-2xl font-light text-foreground mb-3">
+            Opening Moneko App...
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            If the app doesn't open automatically, you can continue on the web.
+          </p>
+          <motion.button
+            onClick={() => setAttemptedAppOpen(false)}
+            className="w-full bg-subtle-background text-foreground px-6 py-4 rounded-full font-medium hover:bg-muted transition-all duration-200"
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+          >
+            Continue on Web
+          </motion.button>
+        </motion.div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4 py-8">

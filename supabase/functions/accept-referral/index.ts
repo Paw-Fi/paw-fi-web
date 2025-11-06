@@ -208,8 +208,8 @@ serve(async (req) => {
     })
 
     // Create Stripe checkout session with 100% promo code
-    const successUrl = `${APP_URL}/referral?status=success&session_id={CHECKOUT_SESSION_ID}`
-    const cancelUrl = `${APP_URL}/referral?status=canceled&code=${code}`
+    const successUrl = `${APP_URL}/referral/${code}?status=success&session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${APP_URL}/referral/${code}?status=canceled`
 
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,

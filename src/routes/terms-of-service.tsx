@@ -124,7 +124,7 @@ function TermsOfService() {
             If you have any questions about these Terms of Service, please contact us at:
           </p>
           <p className="mt-2">
-            <strong>Email:</strong> legal@moneko.io
+            <strong>Email:</strong> hello@moneko.io
           </p>
         </div>
         

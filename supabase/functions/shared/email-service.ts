@@ -7,7 +7,7 @@ import { Resend } from "https://esm.sh/resend@3.2.0";
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 // Constants
-const DEFAULT_FROM = 'Moneko <noreply@moneko.io>';
+const DEFAULT_FROM = 'Moneko Team <hello@moneko.io>';
 
 // Rate limiting: Resend allows 2 requests per second
 // We'll be conservative and ensure at least 600ms between sends
