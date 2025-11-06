@@ -75,7 +75,7 @@ const itemVariants: Variants = {
 function CheckoutPage() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const navigate = useNavigate();
-  const searchParams = useSearch({ strict: false });
+  const searchParams = useSearch({ strict: false }) as CheckoutSearchParams;
   const { 
     plan, 
     billing, 

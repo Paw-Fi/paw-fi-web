@@ -17,14 +17,20 @@ function CheckoutCancelRedirect() {
     const params = new URLSearchParams(window.location.search);
     const flow = params.get('flow');
 
-    // Mobile app trial flow - redirect to deep link
+    console.log('🔗 Checkout Cancel: flow=', flow);
+
+    // Mobile app trial flow - redirect to deep link IMMEDIATELY
     if (flow === 'trial') {
       const deepLink = `moneko://payment?status=canceled&flow=trial`;
-      window.location.href = deepLink;
+      console.log('🔗 Redirecting to deep link:', deepLink);
+      
+      // Use window.location.replace to prevent back button and ensure immediate redirect
+      window.location.replace(deepLink);
       return;
     }
 
     // Web flow - redirect to checkout page with status
+    console.log('🌐 Web flow: redirecting to checkout');
     const checkoutParams = new URLSearchParams();
     checkoutParams.set('status', 'canceled');
 
