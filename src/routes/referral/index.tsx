@@ -56,9 +56,9 @@ export const Route = createFileRoute('/referral/')({
   }),
   head: () => {
     const pageUrl = getCanonicalUrl('/referral');
-    const title = 'Invite Friends to Moneko | Get Lifetime Premium Access';
+    const title = 'Invite Friends to Moneko | Earn Lifetime Access';
     const description =
-      'Invite a friend to Moneko, the couples budgeting app, and you’ll both unlock lifetime premium access. Share your referral link to start budgeting better together.';
+      'Invite a friend to Moneko, the couples budgeting app, and you’ll both unlock lifetime access. Share your referral link to start budgeting better together.';
 
     const meta = seo({
       title,
@@ -195,7 +195,7 @@ function ReferralPage() {
         {/* Header */}
         <motion.div className="text-center mb-12">
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground leading-tight tracking-tight mb-4">
-            Invite a Friend — Get Lifetime Premium Access
+            Share Moneko,<br/> Get Lifetime Access
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-6">
             Share your referral link. When a friend joins Moneko, you both unlock lifetime premium access for smarter couples budgeting.
