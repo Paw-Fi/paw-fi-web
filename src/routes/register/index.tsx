@@ -160,7 +160,7 @@ export function Register() {
               </div>
             {/* Sign Up Form */}
             <ShadcnSignUpForm
-              redirectUrl={code ? `/referral?code=${code}` : redirect}
+              redirectUrl={code ? `/referral/${code}` : redirect}
               hideBottomLink
               variant="plain"
               hideHeader
