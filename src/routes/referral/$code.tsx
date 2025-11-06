@@ -191,7 +191,7 @@ function InviteePage() {
               </div>
             </div>
                <AppleDownloadButton/>
-            </div>
+          </div>
           </motion.div>
         )}
 

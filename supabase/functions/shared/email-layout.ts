@@ -297,7 +297,7 @@ export function testFlightCtaHtml(): string {
   return `
     <div style="text-align: center; margin: 32px 0;">
       <a href="${sanitizeUrl(LINKS.testflight)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
-        <img src="${sanitizeUrl(LINKS.appleLogo)}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />
+        <img src="${LINKS.appleLogo}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />
         Download on TestFlight
       </a>
     </div>
