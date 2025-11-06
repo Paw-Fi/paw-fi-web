@@ -27,6 +27,7 @@ import { AcceptInvitationCard } from '@/components/referral/accept-invitation-ca
 import { MonekoIcon } from '@/components/shared/moneko-icon';
 import { ReferralAuthPrompt } from '@/components/auth/referral-auth-prompt';
 import AppleLogo from '@assets/images/shared/apple-logo.png';
+import { AppleDownloadButton } from '@/components/ui/apple-download-button';
 
 // Route search params type
 type InviteeSearch = {
@@ -177,6 +178,7 @@ function InviteePage() {
             transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="bg-card rounded-3xl p-8 shadow-sm border border-subtle-border mb-8 "
           >
+            <div className="flex flex-col gap-4">
             <div className="flex items-start gap-4">
               <div className="bg-subtle-background rounded-2xl p-3 shrink-0">
                 <Download className="w-6 h-6 text-foreground" />
@@ -186,16 +188,9 @@ function InviteePage() {
                 <p className="text-muted-foreground mb-4">
                   Get started with Moneko on your iPhone or iPad
                 </p>
-                <a
-                  href="https://testflight.apple.com/join/Q9rNbkN5"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-3 rounded-2xl bg-black text-white dark:bg-white dark:text-black px-6 py-4 md:px-8 md:py-5 text-base md:text-lg font-semibold shadow-sm hover:opacity-90 transition"
-                >
-                  <img src={AppleLogo} className="h-5" alt="Apple" />
-                  Download on TestFlight
-                </a>
               </div>
+            </div>
+               <AppleDownloadButton/>
             </div>
           </motion.div>
         )}
@@ -242,7 +237,7 @@ function InviteePage() {
                   code={code}
                   redirectTo={`/referral/${code}`}
                   title="Join to accept your invite"
-                  description="Sign in or create an account to accept the invitation and start your free trial."
+                  description="Sign in or create an account to accept the invitation and claim your lifetime premium access."
                 />
               )}
 
