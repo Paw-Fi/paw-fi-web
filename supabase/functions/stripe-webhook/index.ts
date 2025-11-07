@@ -530,9 +530,12 @@ async function handleSubscriptionUpdated(
         console.log(`⚠️ No discount found on paused subscription`)
       }
 
-      // IMPORTANT: Don't downgrade, don't clear stripe_subscription_id, don't cascade
-      // Fall through to normal upsert below to preserve plan and subscription data
-      // User can add payment method later to resume, or we handle via other events
+      // TEMPORARY FIX: Exit early to prevent paused status from being written to database
+      // TODO: Remove this early return after fixing checkout flow to use payment collection 'charge_automatically'
+      console.log(`🚨 EARLY EXIT: Paused status will NOT be written to database`)
+      console.log(`   Existing subscription data preserved in database`)
+      console.log(`   User: ${userId}, Stripe Sub ID: ${subscription.id}`)
+      return
     }
 
     // Handle incomplete_expired and unpaid statuses - downgrade to free

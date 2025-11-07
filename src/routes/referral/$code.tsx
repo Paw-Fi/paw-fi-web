@@ -128,7 +128,7 @@ function InviteePage() {
   return (
     <div className="min-h-screen bg-moneko-background relative overflow-hidden px-5 pt-4">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-xl border-b border-subtle-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-xl border-b border-subtle-border" style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
           <div className="flex items-center justify-between">
             <MonekoIcon />
@@ -136,6 +136,7 @@ function InviteePage() {
               variant="ghost"
               size="sm"
               className="rounded-full"
+              style={{ position: 'relative', zIndex: 1 }}
               onClick={() => navigate({ to: '/' })}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -146,7 +147,7 @@ function InviteePage() {
       </header>
 
       {/* Background Beams */}
-      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen" />
+      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen pointer-events-none" />
 
       {/* Dotted grid pattern overlay */}
       <DotPattern
@@ -157,7 +158,7 @@ function InviteePage() {
       />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto max-w-5xl px-0 sm:px-8 lg:px-8 py-20">
+      <div className="relative z-10 mx-auto max-w-5xl px-0 sm:px-8 lg:px-8 py-20" style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}>
         {/* Success Banner */}
         {status === 'success' && (
           <motion.div
@@ -289,5 +290,3 @@ function InviteePage() {
     </div>
   );
 }
-
-export default InviteePage;

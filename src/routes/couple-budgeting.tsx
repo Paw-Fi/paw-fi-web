@@ -23,6 +23,7 @@ import { CoupleBudgetingClaim } from "@/lib/couple-budgeting-waitlist";
 import { useCoupleBudgetingUserClaimed, useJoinCoupleBudgetingWaitlist } from "@/hooks/use-couple-budgeting-waitlist";
 import { useAuth } from "@/contexts/auth-context";
 import { useState } from "react";
+import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 
 export const Route = createFileRoute("/couple-budgeting")({
   component: CoupleBudgetingPage,
@@ -329,7 +330,7 @@ Simplified by AI                </h1>
                 className="mb-10 text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto"
                 variants={itemVariants}
               >
-                Your AI-powered couple budgeting assistant — anytime, anywhere. Join the Beta or try the <a className="underline font-semibold" href="/dashboard" target="_blank">web dashboard</a>.
+                Your AI-powered couple budgeting assistant — anytime, anywhere.
                 
               </motion.p>
             
@@ -362,6 +363,7 @@ Simplified by AI                </h1>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                 Moneko gives you and your partner a crystal-clear view of your money, so you can make smarter decisions as a team.
               </p>
+              <AppleDownloadButton className="mt-6"/>
             </motion.div>
 
             {/* Carousel rendering: preserve exact item styles; phone mockup is injected via prop */}

@@ -166,11 +166,11 @@ function ReferralPage() {
   return (
     <div className="min-h-screen bg-moneko-background relative overflow-hidden px-4 pt-2">
       {/* Header - same as couple-budgeting */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-xl border-b border-subtle-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-card/70 backdrop-blur-xl border-b border-subtle-border" style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-4">
           <div className="flex items-center justify-between">
             <MonekoIcon />
-            <Button variant="ghost" size="sm" className="rounded-full" onClick={() => navigate({ to: '/' })}>
+            <Button variant="ghost" size="sm" className="rounded-full" style={{ position: 'relative', zIndex: 1 }} onClick={() => navigate({ to: '/' })}>
               <ArrowLeft className="w-4 h-4" />
               Back to Moneko
             </Button>
@@ -178,7 +178,7 @@ function ReferralPage() {
         </div>
       </header>
       {/* Background Beams with Collision - match couple-budgeting (fixed to viewport) */}
-      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen" />
+      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen pointer-events-none" />
 
       {/* Dotted grid pattern overlay - same style as couple-budgeting */}
       <DotPattern
@@ -189,7 +189,7 @@ function ReferralPage() {
       />
 
       {/* Content */}
-      <div className="relative z-10 mx-auto  px-0 sm:px-8 lg:px-8 py-20 flex flex-col items-center">
+      <div className="relative z-10 mx-auto  px-0 sm:px-8 lg:px-8 py-20 flex flex-col items-center" style={{ transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}>
 
         <section className='flex flex-col items-center max-w-5xl'>
         {/* Header */}
