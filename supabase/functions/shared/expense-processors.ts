@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { uploadReceiptImage } from "./storage-helper.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
+import { normalizeCurrencyCode } from "./currency-normalize.ts";
 
 // Retry helper for critical operations
 async function retryOperation<T>(
@@ -159,7 +160,10 @@ export async function processFreeFormTextExpense(params: {
     + '1. FIRST: Look for currency explicitly mentioned by user (e.g., "50 USD", "€100", "100 RM", "75 SAR")\n'
     + '   - If found, use THAT currency code (EUR for €, MYR for RM, SAR for ر.س, etc.)\n'
     + '2. FALLBACK: If NO currency is mentioned, use the Caller Currency provided below\n'
-    + '3. NEVER leave currency field empty - always provide currency code\n\n'
+    + '3. ALWAYS output currency as a 3-letter ISO-4217 code in the JSON. Never output symbols or aliases (e.g., $, R, US$, RM).\n'
+    + '   Map common symbols/aliases to ISO codes: $, US$, U$ => USD; R or RJ => ZAR; RM => MYR; A$ => AUD; C$ => CAD; S$ => SGD; HK$ => HKD; NZ$ => NZD; MX$ => MXN; R$ => BRL; KSH/KSHS => KES; د.إ => AED; ر.س => SAR; £ => GBP; € => EUR.\n'
+    + '   If ambiguous (e.g., ¥), omit the currency so the caller currency applies.\n'
+    + '4. NEVER leave currency empty after all fallbacks.\n\n'
     + 'Use the provided functions to perform updates, including category fields. Keep replies short and human-friendly.';
 
   const response = await model.generateContent({
@@ -173,7 +177,7 @@ export async function processFreeFormTextExpense(params: {
     if (tool.name === 'set_budget') {
       const amount = Number(tool.args?.amount);
       const date = String(tool.args?.date || callerDate);
-      const currency = tool.args?.currency || callerCurrency;
+      const currency = normalizeCurrencyCode(tool.args?.currency) || callerCurrency;
 
       const { data, error } = await supabase.functions.invoke('finance-update', {
         body: { userId, phone, text: `/setBudget ${amount}`, date, currency },
@@ -206,8 +210,8 @@ export async function processFreeFormTextExpense(params: {
 
       const composed = items
         .map((it: any) => {
-          const currencyCode = it.currency || callerCurrency;
-          const currencySymbol = getCurrencySymbol(currencyCode);
+          const normalized = normalizeCurrencyCode(it.currency) || callerCurrency;
+          const currencySymbol = getCurrencySymbol(normalized);
           return `I spent ${currencySymbol}${it.amount}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`;
         })
         .join(', ');
@@ -253,7 +257,7 @@ export async function processFreeFormTextExpense(params: {
       return {
         type: 'expense',
         items: items.map(it => {
-          const itemCurrency = it.currency || callerCurrency;
+          const itemCurrency = normalizeCurrencyCode(it.currency) || callerCurrency;
           return {
             amount: it.amount,
             category: it.category || 'expense',
@@ -410,6 +414,12 @@ Priority 2: FALLBACK to Caller Currency
 Priority 3: NEVER leave empty
 - You MUST always provide a currency code - either detected OR ${callerCurrency}
 
+STRICT OUTPUT FORMAT FOR CURRENCY:
+- In all JSON tool outputs, ALWAYS provide currency as a 3-letter ISO-4217 code (e.g., ZAR, USD, MYR).
+- NEVER output symbols or aliases (e.g., $, R, RJ, RM) in the currency field.
+- Map symbols/aliases to ISO codes: $, US$, U$ => USD; R or RJ => ZAR; RM => MYR; A$ => AUD; C$ => CAD; S$ => SGD; HK$ => HKD; NZ$ => NZD; MX$ => MXN; R$ => BRL; KSH/KSHS => KES; د.إ => AED; ر.س => SAR; £ => GBP; € => EUR.
+- If ambiguous (e.g., '¥'), omit the currency so the caller currency applies.
+
 Use the add_expenses tool with a single item containing:
 - amount: the final total (e.g., 61.95)
 - category: appropriate category (e.g., "dining", "food", "groceries")
@@ -483,8 +493,8 @@ Use the add_expenses tool with a single item containing:
 
       const composed = items
         .map((it: any) => {
-          const currencyCode = it.currency || callerCurrency;
-          const currencySymbol = getCurrencySymbol(currencyCode);
+          const normalized = normalizeCurrencyCode(it.currency) || callerCurrency;
+          const currencySymbol = getCurrencySymbol(normalized);
           return `I spent ${currencySymbol}${it.amount}${it.category ? ' on ' + it.category : ''}${it.date ? ' at ' + it.date : ''}${it.note ? ' (' + it.note + ')' : ''}`;
         })
         .join(', ');
@@ -544,7 +554,7 @@ Use the add_expenses tool with a single item containing:
         type: 'expense',
         isReceipt: true,  // Mark as receipt for special formatting
         items: items.map(it => {
-          const itemCurrency = it.currency || callerCurrency;
+          const itemCurrency = normalizeCurrencyCode(it.currency) || callerCurrency;
           return {
             amount: it.amount,
             category: it.category || 'expense',
