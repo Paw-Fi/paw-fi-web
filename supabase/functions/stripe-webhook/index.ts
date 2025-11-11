@@ -305,7 +305,7 @@ async function handleChargeRefunded(charge: Stripe.Charge, eventId: string) {
         name,
         planName: 'Lifetime',
         endDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         immediateCancel: true,
       })
       await sendUserEmail(userData.email, name, emailTemplate)
@@ -584,7 +584,7 @@ async function handleSubscriptionUpdated(
         planName,
         endDate: null,
         immediateCancel: true,
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
       })
 
       await sendUserEmail(user.email, user.full_name || '', emailTemplate)
@@ -719,7 +719,7 @@ async function handleSubscriptionUpdated(
         name,
         planName,
         endDate: isLifetime ? undefined : endDate, // Lifetime has no end date
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         isLifetime
       })
 
@@ -732,7 +732,7 @@ async function handleSubscriptionUpdated(
         name,
         planName,
         endDate, // Show when access will end
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         immediateCancel: false, // They keep access until period end
       })
       
@@ -751,7 +751,7 @@ async function handleSubscriptionUpdated(
         name,
         planName,
         endDate,
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         changeType
       })
       
@@ -867,7 +867,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, even
           name,
           planName,
           endDate,
-          dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+          dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
           immediateCancel: true, // subscription.deleted always means immediate end
         });
         
@@ -950,9 +950,9 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
         currency: invoice.currency.toUpperCase(),
         invoiceNumber: invoice.number || invoice.id,
         paymentDate,
-        invoiceUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/membership`,
+        invoiceUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         invoicePdfUrl: invoice.invoice_pdf || undefined,
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
       })
       
       await sendUserEmail(user.email, user.full_name || '', emailTemplate)
@@ -1100,6 +1100,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
                   .eq('user_id', referrerUserId)
                   .maybeSingle()
 
+                // Cancel any old subscription FIRST (to match manual lifetime upgrade behavior)
+                const oldId = referrerOldSub?.stripe_subscription_id
+                if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
+                  try {
+                    await stripe.subscriptions.cancel(oldId, { prorate: false })
+                  } catch (cancelErr) {
+                    console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
+                  }
+                }
+
+                // Wait 5 seconds to let Stripe process cancellation/webhooks
+                await new Promise((resolve) => setTimeout(resolve, 5000))
+
+                // Then upsert referrer to lifetime
                 const referrerLifetimeData = createLifetimeSubscriptionPayload(
                   referrerUserId,
                   referrerMapping?.stripe_customer_id,
@@ -1114,15 +1128,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
                   console.error('Error upserting referrer lifetime:', referrerUpsertError)
                 } else {
                   console.log('Referrer upgraded to lifetime')
-                  // Cancel any old subscription if present
-                  const oldId = referrerOldSub?.stripe_subscription_id
-                  if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
-                    try {
-                      await stripe.subscriptions.cancel(oldId, { prorate: false })
-                    } catch (cancelErr) {
-                      console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
-                    }
-                  }
                 }
 
                 // Mark acceptance as completed
@@ -1188,6 +1193,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
                 .eq('user_id', referrerUserId)
                 .maybeSingle()
 
+              // Cancel old subscription FIRST (if any)
+              const oldId = referrerOldSub?.stripe_subscription_id
+              if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
+                try {
+                  await stripe.subscriptions.cancel(oldId, { prorate: false })
+                } catch (cancelErr) {
+                  console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
+                }
+              }
+
+              // Wait 5 seconds to let Stripe process cancellation/webhooks
+              await new Promise((resolve) => setTimeout(resolve, 5000))
+
+              // Then upsert referrer to lifetime
               const referrerLifetimeData = createLifetimeSubscriptionPayload(
                 referrerUserId,
                 referrerMapping?.stripe_customer_id,
@@ -1200,15 +1219,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
 
               if (referrerUpsertError) {
                 console.error('Error upserting referrer lifetime (fallback):', referrerUpsertError)
-              } else {
-                const oldId = referrerOldSub?.stripe_subscription_id
-                if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
-                  try {
-                    await stripe.subscriptions.cancel(oldId, { prorate: false })
-                  } catch (cancelErr) {
-                    console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
-                  }
-                }
               }
 
               await supabase
@@ -1298,7 +1308,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
             const emailTemplate = subscriptionCreatedTemplate({
               name: userData.full_name || '',
               planName: 'Lifetime',
-              dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+              dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
               isLifetime: true
             })
             await sendUserEmail(userData.email, userData.full_name || '', emailTemplate)
@@ -1463,8 +1473,8 @@ async function handleInvoicePaymentActionRequired(invoice: Stripe.Invoice) {
       planName,
       amount: (invoice.amount_due / 100).toFixed(2),
       currency: invoice.currency.toUpperCase(),
-      authenticationUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/membership?tab=payment`,
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+      authenticationUrl: invoice.hosted_invoice_url || `${DASHBOARD_URL}/dashboard/user-settings/membership?tab=payment`,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     })
 
     await sendUserEmail(userData.email, name, emailTemplate)
@@ -1522,7 +1532,7 @@ async function handleSubscriptionTrialEnding(subscription: Stripe.Subscription) 
       name,
       planName,
       trialEndDate,
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`
     })
     
     await sendUserEmail(user.email, name, emailTemplate)
@@ -1703,6 +1713,19 @@ async function handleCheckoutSessionCompleted(
               .maybeSingle()
 
             // Use helper function to create consistent lifetime payload
+            // Cancel referrer's Stripe subscription FIRST (if any)
+            if (referrerOldStripeSubId && referrerOldStripeSubId !== 'null' && referrerOldStripeSubId.startsWith('sub_')) {
+              try {
+                await stripe.subscriptions.cancel(referrerOldStripeSubId, { prorate: false })
+              } catch (cancelError) {
+                console.error(`Warning: Could not cancel referrer's old subscription:`, (cancelError as any)?.message)
+              }
+            }
+
+            // Wait 5 seconds to let Stripe process cancellation/webhooks
+            await new Promise((resolve) => setTimeout(resolve, 5000))
+
+            // Then upsert referrer to lifetime
             const referrerLifetimeData = createLifetimeSubscriptionPayload(
               referrerUserId,
               referrerMapping?.stripe_customer_id,
@@ -1718,15 +1741,6 @@ async function handleCheckoutSessionCompleted(
 
             if (referrerUpgradeError) {
               console.error('Error upgrading referrer to lifetime:', referrerUpgradeError)
-            } else {
-              // Cancel referrer's old Stripe subscription if exists
-              if (referrerOldStripeSubId && referrerOldStripeSubId !== 'null' && referrerOldStripeSubId.startsWith('sub_')) {
-                try {
-                  await stripe.subscriptions.cancel(referrerOldStripeSubId, { prorate: false })
-                } catch (cancelError) {
-                  console.error(`Warning: Could not cancel referrer's old subscription:`, (cancelError as any)?.message)
-                }
-              }
             }
 
             // Mark referral acceptance as completed
@@ -1805,7 +1819,7 @@ async function handleCheckoutSessionCompleted(
           const emailTemplate = subscriptionCreatedTemplate({
             name,
             planName: 'Lifetime',
-            dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+            dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
             isLifetime: true // No end date, permanent access
           })
 
@@ -1872,7 +1886,7 @@ async function handleCheckoutSessionAsyncPaymentFailed(
       const emailTemplate = paymentFailedTemplate({
         name,
         planName: session.metadata?.plan || 'Premium',
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         updatePaymentUrl: `${DASHBOARD_URL}/checkout?plan=${session.metadata?.plan}`
       })
       
@@ -1939,7 +1953,7 @@ async function handleInvoiceFinalized(invoice: Stripe.Invoice) {
       invoiceUrl: invoice.hosted_invoice_url || '#',
       invoicePdfUrl: invoice.invoice_pdf || undefined,
       dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toLocaleDateString() : undefined,
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     })
 
     await sendUserEmail(userData.email, name, emailTemplate)
@@ -2077,8 +2091,8 @@ async function handleInvoiceUpcoming(invoice: Stripe.Invoice) {
         day: 'numeric' 
       }),
       daysUntil: daysUntil,
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
-      updatePaymentUrl: `${DASHBOARD_URL}/dashboard/membership?tab=payment`,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
+      updatePaymentUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership?tab=payment`,
     })
 
     await sendUserEmail(userData.email, name, emailTemplate)
@@ -2150,7 +2164,7 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
       name,
       paymentMethodType,
       paymentMethodDetails,
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
     })
 
     await sendUserEmail(userData.email, name, emailTemplate)
@@ -2239,7 +2253,7 @@ async function handleSubscriptionPendingUpdateApplied(
             day: 'numeric'
           }).format(new Date(itemPeriodEnd * 1000))
         : 'N/A',
-      dashboardUrl: `${DASHBOARD_URL}/dashboard/membership`,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
       changeType,
     })
 

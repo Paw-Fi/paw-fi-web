@@ -269,7 +269,7 @@ async function upgradeToLifetime() {
       
       try {
         const greetingName = userData.full_name || 'there'
-        const dashboardUrl = `${APP_URL}/dashboard/membership`
+        const dashboardUrl = `${APP_URL}/dashboard/user-settings/membership`
 
         const htmlBody = `
           <p>Hi ${greetingName},</p>

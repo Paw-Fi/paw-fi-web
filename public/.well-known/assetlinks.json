@@ -7,9 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.moneko.mobile",
       "sha256_cert_fingerprints": [
-        "GET_DEBUG_SHA256_WITH: cd moneko-mobile/android && ./gradlew signingReport",
-        "GET_RELEASE_SHA256_WITH: keytool -list -v -keystore your-release-key.keystore",
-        "IMPORTANT: Replace these placeholder strings with actual SHA256 fingerprints (64-character hex strings)"
+        "A7:40:E1:42:47:FE:5A:30:7D:7F:EB:EB:AF:79:AA:4A:EC:D1:15:2B:1B:11:1D:3A:20:37:4A:38:8E:2A:8C:FB",
+        "5B:3D:0E:4C:AE:1A:75:01:11:F2:A5:FB:D9:77:27:5D:F1:9D:2B:05:5C:07:56:35:7D:1E:B6:D8:C9:FF:62:06"
       ]
     }
   }
