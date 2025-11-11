@@ -1100,6 +1100,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
                   .eq('user_id', referrerUserId)
                   .maybeSingle()
 
+                // Cancel any old subscription FIRST (to match manual lifetime upgrade behavior)
+                const oldId = referrerOldSub?.stripe_subscription_id
+                if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
+                  try {
+                    await stripe.subscriptions.cancel(oldId, { prorate: false })
+                  } catch (cancelErr) {
+                    console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
+                  }
+                }
+
+                // Wait 5 seconds to let Stripe process cancellation/webhooks
+                await new Promise((resolve) => setTimeout(resolve, 5000))
+
+                // Then upsert referrer to lifetime
                 const referrerLifetimeData = createLifetimeSubscriptionPayload(
                   referrerUserId,
                   referrerMapping?.stripe_customer_id,
@@ -1114,15 +1128,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
                   console.error('Error upserting referrer lifetime:', referrerUpsertError)
                 } else {
                   console.log('Referrer upgraded to lifetime')
-                  // Cancel any old subscription if present
-                  const oldId = referrerOldSub?.stripe_subscription_id
-                  if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
-                    try {
-                      await stripe.subscriptions.cancel(oldId, { prorate: false })
-                    } catch (cancelErr) {
-                      console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
-                    }
-                  }
                 }
 
                 // Mark acceptance as completed
@@ -1188,6 +1193,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
                 .eq('user_id', referrerUserId)
                 .maybeSingle()
 
+              // Cancel old subscription FIRST (if any)
+              const oldId = referrerOldSub?.stripe_subscription_id
+              if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
+                try {
+                  await stripe.subscriptions.cancel(oldId, { prorate: false })
+                } catch (cancelErr) {
+                  console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
+                }
+              }
+
+              // Wait 5 seconds to let Stripe process cancellation/webhooks
+              await new Promise((resolve) => setTimeout(resolve, 5000))
+
+              // Then upsert referrer to lifetime
               const referrerLifetimeData = createLifetimeSubscriptionPayload(
                 referrerUserId,
                 referrerMapping?.stripe_customer_id,
@@ -1200,15 +1219,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, eventId: s
 
               if (referrerUpsertError) {
                 console.error('Error upserting referrer lifetime (fallback):', referrerUpsertError)
-              } else {
-                const oldId = referrerOldSub?.stripe_subscription_id
-                if (oldId && oldId !== 'null' && oldId.startsWith('sub_')) {
-                  try {
-                    await stripe.subscriptions.cancel(oldId, { prorate: false })
-                  } catch (cancelErr) {
-                    console.error('Warning: Could not cancel referrer old sub:', (cancelErr as any)?.message)
-                  }
-                }
               }
 
               await supabase
@@ -1703,6 +1713,19 @@ async function handleCheckoutSessionCompleted(
               .maybeSingle()
 
             // Use helper function to create consistent lifetime payload
+            // Cancel referrer's Stripe subscription FIRST (if any)
+            if (referrerOldStripeSubId && referrerOldStripeSubId !== 'null' && referrerOldStripeSubId.startsWith('sub_')) {
+              try {
+                await stripe.subscriptions.cancel(referrerOldStripeSubId, { prorate: false })
+              } catch (cancelError) {
+                console.error(`Warning: Could not cancel referrer's old subscription:`, (cancelError as any)?.message)
+              }
+            }
+
+            // Wait 5 seconds to let Stripe process cancellation/webhooks
+            await new Promise((resolve) => setTimeout(resolve, 5000))
+
+            // Then upsert referrer to lifetime
             const referrerLifetimeData = createLifetimeSubscriptionPayload(
               referrerUserId,
               referrerMapping?.stripe_customer_id,
@@ -1718,15 +1741,6 @@ async function handleCheckoutSessionCompleted(
 
             if (referrerUpgradeError) {
               console.error('Error upgrading referrer to lifetime:', referrerUpgradeError)
-            } else {
-              // Cancel referrer's old Stripe subscription if exists
-              if (referrerOldStripeSubId && referrerOldStripeSubId !== 'null' && referrerOldStripeSubId.startsWith('sub_')) {
-                try {
-                  await stripe.subscriptions.cancel(referrerOldStripeSubId, { prorate: false })
-                } catch (cancelError) {
-                  console.error(`Warning: Could not cancel referrer's old subscription:`, (cancelError as any)?.message)
-                }
-              }
             }
 
             // Mark referral acceptance as completed
