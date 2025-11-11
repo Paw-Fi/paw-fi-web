@@ -29,6 +29,7 @@ interface RequestBody {
   date?: string; // ISO date (YYYY-MM-DD), defaults to today
   currency?: string; // ISO currency code, defaults to USD
   currencySymbol?: string; // Currency symbol based on user location, optional
+  language?: string; // ISO language tag like en or zh-CN
 }
 
 interface ExpenseItem {
@@ -72,6 +73,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const callerCurrency = validateCurrency(body.currency);
+    const languageRaw = (body.language || '').trim();
+    const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageRaw) ? languageRaw : 'en';
     let resolvedIdentityMeta: Record<string, unknown> | undefined;
 
     if (!userId && detection.isGpt) {
@@ -174,6 +177,7 @@ Deno.serve(async (req: Request) => {
       hasText: !!body.text, 
       hasImage: !!body.image,
       callerCurrency,
+      language,
       identity: resolvedIdentityMeta ?? null,
     });
 
@@ -204,7 +208,7 @@ Deno.serve(async (req: Request) => {
                     },
                     currency: { type: 'STRING', description: 'ISO 4217 code. Use explicit currency on the input/receipt; otherwise use Caller Currency.' },
                     date: { type: 'STRING', description: 'YYYY-MM-DD when date is known; fallback to Caller Date.' },
-                    description: { type: 'STRING', description: 'Short natural-language description for UI.' },
+                    description: { type: 'STRING', description: 'Natural, conversational note about the transaction - as if casually mentioning it to a friend. Use currency symbols (€, $, ¥, £) NOT currency names. For multi-item: "Lunch €25, coffee €5". Keep it brief and memorable.' },
                     merchant: { type: 'STRING', description: 'Merchant or employer when available.' },
                     party: { type: 'STRING', description: 'Counterparty (e.g., from/to person or institution).'},
                     method: { type: 'STRING', enum: ['card','cash','bank_transfer','wallet','unknown'], description: 'Payment method if identifiable.' },
@@ -241,14 +245,28 @@ Deno.serve(async (req: Request) => {
         'Currency & date policy:',
         '- Detect explicit currency symbol or code; else use Caller Currency.',
         '- Detect explicit date; else use Caller Date.',
+        'Description policy:',
+        '- Write natural, conversational notes about what happened - as if casually mentioning it to a friend.',
+        '- Include context: where (merchant/location), what (items), or why when relevant.',
+        '- Use currency symbols (€, $, ¥, £) NOT currency names in words. Good: "€50", Bad: "50 euros" or "50欧元".',
+        '- For multiple items, use symbols naturally: "Lunch €25, coffee €5" or "买菜 €50, 买鞋 €30".',
+        '- Keep it brief and conversational - focus on what makes the transaction memorable.',
         'Output policy:',
         '- Round to 2 decimals. Use positive amount.',
-        '- Provide a short description and optional rationale/confidence.',
-        'Examples:',
-        '1) "received 100 today from my parents" → type: income, amount: 100, category: gift, description: "Gift from parents"',
-        '2) "got paid salary 2500 EUR" → type: income, amount: 2500, currency: EUR, category: salary',
-        '3) "coffee 3.50" → type: expense, amount: 3.5, category: food or restaurants',
-        '4) "refund 45 for returned shoes" → type: income, amount: 45, category: refund',
+        '- Provide rationale/confidence when useful.',
+        '- Do NOT output a separate line for subtotal/total/grand total; only return line items. If only a total is present and no itemized amounts are present, return a single item for the total.',
+        'Transaction examples:',
+        '1) "received 100 from my parents" → description: "Gift from parents"',
+        '2) "got paid 2500 EUR salary" → description: "Monthly salary"',
+        '3) "coffee 3.50" → description: "Morning coffee"',
+        '4) "groceries 50, shoes 30" → description: "Groceries €50, shoes €30" (use symbols, not "50 euros")',
+        '5) "lunch at olive garden with tip" → description: "Lunch at Olive Garden"',
+        `CRITICAL language requirement:`,
+        `- Return all free-text fields (description, rationale) strictly in ${language}.`,
+        `- Use natural, conversational language that native speakers would actually use.`,
+        `- Focus on real human expressions, NOT direct dictionary translations.`,
+        `- Write as if you're casually telling a friend about the transaction.`,
+        `- Do not mix languages. All text must be in ${language}.`,
       ].join('\n');
 
       const response = await model.generateContent({
@@ -276,6 +294,15 @@ Deno.serve(async (req: Request) => {
         });
         // Filter out any items without a definitive type
         items = items.filter((it) => it.type === 'income' || it.type === 'expense');
+        // Remove duplicated totals when line items exist
+        if (items.length > 1) {
+          const isTotalLike = (s?: string) => !!s && /(sub\s*total|subtotal|grand\s*total|total)/i.test(s);
+          const withoutTotals = items.filter((it) => !isTotalLike(it.description));
+          if (withoutTotals.length > 0) items = withoutTotals;
+          // Additional check: if one item equals sum of others, remove that item
+          const sums = items.map((_, i) => items.filter((__, j) => i !== j).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0));
+          items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+        }
       }
 
     } else if (body.image) {
@@ -327,6 +354,20 @@ Deno.serve(async (req: Request) => {
         '- expense: purchase receipts, invoices, utility bills, debit/outbound transfers.',
         `Category policy is the same as for text. Expense categories: ${expenseCategories.join(', ')}. Income categories: ${incomeCategories.join(', ')}. Prefer gift/salary/refund for typical income sources. Do not choose family for incomes.`,
         'Currency: detect, else use Caller Currency. Date: detect, else use Caller Date.',
+        'Description policy for receipts:',
+        '- List out all items from the receipt with their amounts naturally - speak casually like telling a friend.',
+        '- Use currency symbols (€, $, ¥, £) NOT currency names. Good: "€15", Bad: "15 euros" or "15欧元".',
+        '- Format: "Item1 €amount, item2 €amount, item3 €amount" - list all visible items.',
+        '- Examples: "Coffee €5, sandwich €8, water €2" or "买菜 €50, 买肉 €30, 买水果 €20".',
+        '- Mention store/merchant at the beginning if visible: "Walmart: milk €3, bread €2, eggs €4".',
+        '- Keep it conversational and natural - as if you\'re telling someone what you bought.',
+        'Do NOT output a separate line for subtotal/total/grand total; only return line items. If only a total is present and no itemized amounts are present, return a single item for the total.',
+        `CRITICAL language requirement:`,
+        `- Return all free-text fields (description, rationale) strictly in ${language}.`,
+        `- Use natural, conversational language that native speakers would actually use.`,
+        `- Focus on real human expressions, NOT direct dictionary translations.`,
+        `- Write as if you're casually telling a friend about what you bought.`,
+        `- Do not mix languages. All text must be in ${language}.`,
       ].join('\n');
 
       const response = await model.generateContent({
@@ -349,20 +390,28 @@ Deno.serve(async (req: Request) => {
       const tool = response.response.functionCalls()?.[0];
       if (tool && tool.name === 'add_transactions') {
         const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
-        items = rawItems.map((it) => {
+        const tempItems = rawItems.map((it) => {
           const itemCurrency = it.currency || callerCurrency;
           const normalizedCategory = normalizeCategory(it.category || 'other');
+          const txType = String(it.type || '').toLowerCase();
           return {
-            type: (String(it.type || '').toLowerCase() === 'income') ? 'income' : (String(it.type || '').toLowerCase() === 'expense' ? 'expense' : undefined),
+            type: (txType === 'income' || txType === 'expense') ? txType : undefined,
             amount: Number(it.amount),
             category: normalizedCategory,
             currency: itemCurrency,
-            currencySymbol: callerCurrencySymbol, // Use the provided or generated symbol
+            currencySymbol: callerCurrencySymbol,
             date: it.date || callerDate,
             description: it.description || 'Receipt transaction',
           };
         });
-        items = items.filter((it) => it.type === 'income' || it.type === 'expense');
+        items = tempItems.filter((it): it is ExpenseItem => it.type === 'income' || it.type === 'expense');
+        if (items.length > 1) {
+          const isTotalLike = (s?: string) => !!s && /(sub\s*total|subtotal|grand\s*total|total)/i.test(s);
+          const withoutTotals = items.filter((it) => !isTotalLike(it.description));
+          if (withoutTotals.length > 0) items = withoutTotals;
+          const sums = items.map((_, i) => items.filter((__, j) => i !== j).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0));
+          items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+        }
       }
     }
 
@@ -385,6 +434,7 @@ Deno.serve(async (req: Request) => {
         data: {
           items, // Array of parsed expenses
           isAnalyzed: true, // Flag indicating this is NOT saved yet
+          language,
         },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

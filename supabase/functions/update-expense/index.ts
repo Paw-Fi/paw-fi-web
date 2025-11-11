@@ -15,6 +15,19 @@ interface UpdateExpenseRequest {
     raw_text?: string;
     date?: string;
     currency?: string;
+    is_recurring?: boolean;
+    recurrence_rule?: {
+      frequency: string;
+      anchor_date: string;
+      end_date?: string;
+      interval?: number;
+      reminder?: {
+        enabled: boolean;
+        value: number;
+        unit: string;
+      };
+    };
+    source?: string;
   };
 }
 
@@ -207,6 +220,67 @@ Deno.serve(async (req: Request) => {
       }
       // Validate and normalize currency using existing validator
       updates.currency = validateCurrency(updates.currency);
+    }
+
+    if (updates.is_recurring !== undefined) {
+      if (typeof updates.is_recurring !== 'boolean') {
+        return errorResponse('is_recurring must be a boolean', 'VALIDATION_ERROR');
+      }
+    }
+
+    if (updates.recurrence_rule !== undefined) {
+      if (updates.recurrence_rule !== null && typeof updates.recurrence_rule !== 'object') {
+        return errorResponse('recurrence_rule must be an object or null', 'VALIDATION_ERROR');
+      }
+      
+      // Validate recurrence_rule structure if provided
+      if (updates.recurrence_rule !== null) {
+        if (!updates.recurrence_rule.frequency || typeof updates.recurrence_rule.frequency !== 'string') {
+          return errorResponse('recurrence_rule.frequency is required and must be a string', 'VALIDATION_ERROR');
+        }
+        
+        if (!updates.recurrence_rule.anchor_date || typeof updates.recurrence_rule.anchor_date !== 'string') {
+          return errorResponse('recurrence_rule.anchor_date is required and must be a string', 'VALIDATION_ERROR');
+        }
+        
+        // Validate anchor_date is in ISO format (can include time)
+        try {
+          new Date(updates.recurrence_rule.anchor_date);
+        } catch {
+          return errorResponse('recurrence_rule.anchor_date must be a valid ISO date', 'VALIDATION_ERROR');
+        }
+        
+        // Validate end_date if provided
+        if (updates.recurrence_rule.end_date !== undefined && updates.recurrence_rule.end_date !== null) {
+          if (typeof updates.recurrence_rule.end_date !== 'string') {
+            return errorResponse('recurrence_rule.end_date must be a string', 'VALIDATION_ERROR');
+          }
+          try {
+            new Date(updates.recurrence_rule.end_date);
+          } catch {
+            return errorResponse('recurrence_rule.end_date must be a valid ISO date', 'VALIDATION_ERROR');
+          }
+        }
+        
+        // Validate interval if provided
+        if (updates.recurrence_rule.interval !== undefined && updates.recurrence_rule.interval !== null) {
+          if (typeof updates.recurrence_rule.interval !== 'number' || !Number.isInteger(updates.recurrence_rule.interval)) {
+            return errorResponse('recurrence_rule.interval must be an integer', 'VALIDATION_ERROR');
+          }
+          if (updates.recurrence_rule.interval <= 0) {
+            return errorResponse('recurrence_rule.interval must be greater than 0', 'VALIDATION_ERROR');
+          }
+        }
+      }
+    }
+
+    if (updates.source !== undefined) {
+      if (updates.source !== null && typeof updates.source !== 'string') {
+        return errorResponse('source must be a string or null', 'VALIDATION_ERROR');
+      }
+      if (updates.source !== null && updates.source.length > 500) {
+        return errorResponse('source must be less than 500 characters', 'VALIDATION_ERROR');
+      }
     }
 
     // Create Supabase client

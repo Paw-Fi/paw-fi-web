@@ -19,9 +19,19 @@ function sanitizeUuid(value?: string | null): string | null {
 interface RequestBody {
   userId?: string;
   limit?: number;
+  offset?: number; // NEW: For pagination
   startDate?: string;
   endDate?: string;
   currency?: string;
+  householdId?: string; // If provided, fetch household expenses
+  
+  // Recurring filters (NEW - for proper data separation)
+  includeRecurring?: boolean;   // If true, ONLY fetch recurring transactions
+  excludeRecurring?: boolean;   // If true, EXCLUDE recurring transactions
+  
+  // Household filters (NEW - for proper data separation)
+  personalOnly?: boolean;       // If true, only fetch personal (split_group_id IS NULL)
+  householdOnly?: boolean;      // If true, only fetch household (split_group_id IS NOT NULL)
 }
 
 interface ExpenseRecord {
@@ -170,14 +180,38 @@ Deno.serve(async (req: Request) => {
       global: { headers: { "X-Client-Info": "moneko-list-expenses" } },
     });
 
+    const offset = body.offset || 0;
+
+    // Start building query
     let query = supabase
       .from("expenses")
-      .select("id, date, category, raw_text, amount_cents, currency, receipt_image_url, created_at")
+      .select("id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, is_recurring, recurrence_rule, attachments, created_at", { count: 'exact' })
       .eq("user_id", userId)
-      .is("household_id", null) // GPT only supports personal expenses
+      .eq("type", "expense") // CRITICAL: Only fetch expenses (not income)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1); // Pagination support
+
+    // Apply recurring filters (NEW)
+    if (body.includeRecurring === true) {
+      // ONLY recurring transactions
+      query = query.eq("is_recurring", true);
+    } else if (body.excludeRecurring === true) {
+      // EXCLUDE recurring transactions (for home page)
+      query = query.or("is_recurring.is.false,is_recurring.is.null");
+    }
+    
+    // Apply household filters (NEW)
+    if (body.personalOnly === true) {
+      // ONLY personal expenses (split_group_id IS NULL)
+      query = query.is("split_group_id", null);
+    } else if (body.householdOnly === true) {
+      // ONLY household expenses (split_group_id IS NOT NULL)
+      query = query.not("split_group_id", "is", null);
+    } else if (body.householdId) {
+      // Specific household
+      query = query.eq("household_id", body.householdId);
+    }
 
     // Apply date filters if provided
     if (body.startDate) {
@@ -186,8 +220,13 @@ Deno.serve(async (req: Request) => {
     if (body.endDate) {
       query = query.lte("date", body.endDate);
     }
+    
+    // Apply currency filter if provided
+    if (body.currency) {
+      query = query.eq("currency", validateCurrency(body.currency));
+    }
 
-    const { data: expenses, error } = await query;
+    const { data: expenses, error, count } = await query;
 
     if (error) {
       console.error("[list-expenses] Database error:", error);
@@ -197,15 +236,22 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log(`[list-expenses] Fetched ${expenses.length} expenses, total: ${count}`);
+
     // Transform and normalize data
     const data = expenses.map(expense => ({
       id: expense.id,
+      type: expense.type || 'expense', // IMPORTANT: Include type field
       date: expense.date,
       category: normalizeCategory(expense.category),
       description: expense.raw_text,
       amountMajor: expense.amount_cents / 100,
       currency: validateCurrency(expense.currency || "USD"),
       receiptImageUrl: expense.receipt_image_url,
+      splitGroupId: expense.split_group_id,
+      isRecurring: expense.is_recurring || false,
+      recurrenceRule: expense.recurrence_rule,
+      attachments: expense.attachments || [],
       createdAt: expense.created_at,
     }));
 
@@ -215,12 +261,19 @@ Deno.serve(async (req: Request) => {
         data,
         resolvedUserId: userId,
         meta: {
-          count: data.length,
+          count: data.length,          // Items in this response
+          total: count || 0,            // Total matching items (NEW)
           limit,
+          offset: offset,               // Current offset (NEW)
+          hasMore: (offset + data.length) < (count || 0), // Has more pages (NEW)
           filters: {
             startDate: body.startDate || null,
             endDate: body.endDate || null,
             currency: body.currency || null,
+            includeRecurring: body.includeRecurring || false,
+            excludeRecurring: body.excludeRecurring || false,
+            personalOnly: body.personalOnly || false,
+            householdOnly: body.householdOnly || false,
           },
           identity: resolvedMeta,
         },

@@ -164,7 +164,6 @@ export function normalizeCategory(raw: string | null): string {
     "tips": "income",
     "dividend": "investment",
     "dividends": "investment",
-    "interest": "investment",
     "refund": "refund",
     "chargeback": "refund",
     "gift": "gift",

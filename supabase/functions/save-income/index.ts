@@ -30,11 +30,16 @@ interface RequestBody {
   idempotencyKey?: string; // Optional idempotency key for deduplication
   attachments?: Array<{url: string, type: string, name: string, size: number}>; // Optional attachments
   isRecurring?: boolean; // Whether this is a recurring income (v1.5)
-  recurrenceRule?: { // Recurrence configuration (v1.5)
+  recurrence_rule?: { // Recurrence configuration (v1.5)
     frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom';
     anchor_date: string;
     end_date?: string;
     interval?: number;
+    reminder?: { // Optional reminder configuration (v1.6)
+      enabled: boolean;
+      value: number; // How many days/hours before
+      unit: 'days' | 'hours';
+    };
   };
 }
 
@@ -56,12 +61,18 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const body: RequestBody = await req.json();
 
+    console.log('[save-income] Full request body:', JSON.stringify(body, null, 2));
+    console.log('[save-income] isRecurring:', body.isRecurring);
+    console.log('[save-income] recurrence_rule:', body.recurrence_rule);
+
     console.log('[save-income] Incoming request:', {
       userId: body.userId,
       amount: body.amount,
       category: body.category,
       householdId: body.householdId,
       privacyScope: body.privacyScope,
+      isRecurring: body.isRecurring,
+      hasRecurrenceRule: !!body.recurrence_rule,
     });
 
     // Validate required fields
@@ -187,8 +198,10 @@ Deno.serve(async (req: Request) => {
       created_at: body.clientCreatedAt || new Date().toISOString(),
       attachments: body.attachments ? JSON.stringify(body.attachments) : '[]',
       is_recurring: body.isRecurring || false,
-      recurrence_rule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
+      recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
     };
+
+    console.log('[save-income] incomeRecord being inserted:', JSON.stringify(incomeRecord, null, 2));
 
     // Add household reference if provided
     if (body.householdId) {
