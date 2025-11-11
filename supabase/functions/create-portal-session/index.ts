@@ -140,7 +140,7 @@ serve(async (req) => {
     }
 
     // Determine return URL
-    const finalReturnUrl = returnUrl || `${env.appUrl}/dashboard/membership`;
+    const finalReturnUrl = returnUrl || `${env.appUrl}/dashboard/user-settings/membership`;
 
     // Create portal session with idempotency key
     const idempotencyKey = generateIdempotencyKey('portal_session', customerId);

@@ -474,7 +474,7 @@ The Moneko Team
           name: userData.full_name || '',
           title: 'Subscription Activated!',
           message: `Welcome to your new ${webhook.record.plan || 'Premium'} subscription! Your subscription is now active and ready to use.`,
-          actionUrl: 'https://moneko.io/dashboard/membership',
+          actionUrl: 'https://moneko.io/dashboard/user-settings/membership',
           actionText: 'View Membership',
           priority: 'high'
         })
@@ -527,7 +527,7 @@ The Moneko Team
           name: userData.full_name || '',
           title,
           message,
-          actionUrl: 'https://moneko.io/dashboard/membership',
+          actionUrl: 'https://moneko.io/dashboard/user-settings/membership',
           actionText: 'View Membership',
           priority
         })

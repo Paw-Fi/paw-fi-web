@@ -294,7 +294,7 @@ serve(async (req) => {
         // This allows customers to manage their subscription, payment methods, and billing history
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: subscription.stripe_customer_id,
-          return_url: `${req.headers.get('origin') || 'https://moneko.io'}/dashboard/membership`,
+          return_url: `${req.headers.get('origin') || 'https://moneko.io'}/dashboard/user-settings/membership`,
         })
 
         return new Response(JSON.stringify({

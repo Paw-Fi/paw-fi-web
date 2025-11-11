@@ -6,7 +6,7 @@ import { getCanonicalUrl } from '@/utils/canonical';
 export const Route = createFileRoute("/dashboard/user-settings/membership/")({
   component: MembershipPage,
   head: () => {
-    const pageUrl = getCanonicalUrl('/dashboard/membership');
+    const pageUrl = getCanonicalUrl('/dashboard/user-settings/membership');
     const meta = seo({
       title: 'Membership - Subscription & Premium Features | Moneko',
       description: 'Manage Moneko membership, subscription status & explore premium AI financial features.',
