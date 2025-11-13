@@ -1,3 +1,4 @@
+-- IMPORTANT: NOT DEPLOY TO PRODUCTION YET!
 -- Extend financial goals for household support, privacy, and savings/paydown types
 -- Following existing pattern from income feature (type-based extension)
 

@@ -430,8 +430,8 @@ Deno.serve(async (req: Request) => {
           split_group_id: splitGroup.id,
           user_id: member.user_id,
           amount_cents: amountPerMember,
-          is_settled: true, // AUTO-ACCEPT
-          settled_at: new Date().toISOString(),
+          is_settled: false,
+          settled_at: null,
           created_at: new Date().toISOString(),
         }));
       } else if (splitType === 'amount' && customSplits) {
@@ -440,8 +440,8 @@ Deno.serve(async (req: Request) => {
           split_group_id: splitGroup.id,
           user_id: split.userId,
           amount_cents: Math.round((split.amount || 0) * 100),
-          is_settled: true, // AUTO-ACCEPT
-          settled_at: new Date().toISOString(),
+          is_settled: false,
+          settled_at: null,
           created_at: new Date().toISOString(),
         }));
       } else if (splitType === 'percentage' && customSplits) {
@@ -451,8 +451,8 @@ Deno.serve(async (req: Request) => {
           user_id: split.userId,
           amount_cents: Math.round(amountCents * (split.percentage || 0) / 100),
           percentage: split.percentage,
-          is_settled: true, // AUTO-ACCEPT
-          settled_at: new Date().toISOString(),
+          is_settled: false,
+          settled_at: null,
           created_at: new Date().toISOString(),
         }));
       } else if (splitType === 'shares' && customSplits) {
@@ -476,8 +476,8 @@ Deno.serve(async (req: Request) => {
           user_id: split.userId,
           amount_cents: Math.round(amountCents * (split.shares || 0) / totalShares),
           shares: split.shares,
-          is_settled: true, // AUTO-ACCEPT
-          settled_at: new Date().toISOString(),
+          is_settled: false,
+          settled_at: null,
           created_at: new Date().toISOString(),
         }));
       } else {
@@ -487,8 +487,8 @@ Deno.serve(async (req: Request) => {
           split_group_id: splitGroup.id,
           user_id: member.user_id,
           amount_cents: amountPerMember,
-          is_settled: true, // AUTO-ACCEPT
-          settled_at: new Date().toISOString(),
+          is_settled: false,
+          settled_at: null,
           created_at: new Date().toISOString(),
         }));
       }

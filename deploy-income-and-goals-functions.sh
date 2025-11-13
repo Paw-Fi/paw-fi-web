@@ -7,7 +7,7 @@
 
 set -euo pipefail  # Exit on error, undefined vars are errors, and pipefail
 
-PROJECT_REF="${1:-qbuynyxyemigtnvdujts}"  # Override with first arg
+PROJECT_REF="${1:-pbopcsmrcykdzbilpilf}"  # Override with first arg
 
 # Ensure Supabase CLI exists
 if ! command -v supabase >/dev/null 2>&1; then

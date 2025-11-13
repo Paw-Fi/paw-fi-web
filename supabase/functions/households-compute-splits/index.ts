@@ -17,7 +17,7 @@ interface SplitLine {
 }
 
 interface ComputeSplitsRequest {
-  transaction_id: string;
+  expense_id: string;
   household_id: string;
   payer_user_id: string;
   split_type: SplitType;
@@ -86,7 +86,7 @@ serve(async (req) => {
     // Parse request body
     const body: ComputeSplitsRequest = await req.json();
     const {
-      transaction_id,
+      expense_id,
       household_id,
       payer_user_id,
       split_type,
@@ -97,7 +97,7 @@ serve(async (req) => {
     } = body;
 
     // Validate required fields
-    if (!transaction_id || !household_id || !payer_user_id || !split_type || !currency || !total_amount_cents || !splits) {
+    if (!expense_id || !household_id || !payer_user_id || !split_type || !currency || !total_amount_cents || !splits) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         {
@@ -313,7 +313,7 @@ serve(async (req) => {
     const { data: existingSplitGroup } = await supabase
       .from('expense_split_groups')
       .select('id')
-      .eq('expense_id', transaction_id)
+      .eq('expense_id', expense_id)
       .single();
 
     if (existingSplitGroup) {
@@ -331,7 +331,7 @@ serve(async (req) => {
       .from('expense_split_groups')
       .insert({
         household_id,
-        expense_id: transaction_id,
+        expense_id: expense_id,
         payer_user_id,
         split_type,
         currency,
@@ -389,7 +389,7 @@ serve(async (req) => {
     await supabase
       .from('expenses')
       .update({ split_group_id: splitGroup.id })
-      .eq('id', transaction_id);
+      .eq('id', expense_id);
 
     // Calculate balances (who owes whom)
     const balances: Record<string, number> = {};
@@ -417,7 +417,7 @@ serve(async (req) => {
         event_type: 'split_created',
         payload: {
           split_group_id: splitGroup.id,
-          transaction_id,
+          expense_id,
           payer_user_id,
           split_type,
           total_amount_cents,

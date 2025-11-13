@@ -7,7 +7,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="${1:-qbuynyxyemigtnvdujts}"  # Allow override via first arg
+PROJECT_REF="${1:-pbopcsmrcykdzbilpilf}"  # Allow override via first arg
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🎁 Deploying Referral-related Functions"

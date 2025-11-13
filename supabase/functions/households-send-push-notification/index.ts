@@ -340,6 +340,8 @@ async function sendFCMv1Notification(
           priority: 'high',
           notification: {
             sound: 'default',
+            // Brand accent color (affects small icon/accents on many Android versions)
+            color: '#7458FF',
             // Android: click_action triggers intent filter in AndroidManifest
             click_action: 'FLUTTER_NOTIFICATION_CLICK',
             // channel_id for notification channels (Android 8+)
