@@ -28,6 +28,11 @@ export const CATEGORY_COLOR_MAP: Record<string, string> = {
   income: "#16A34A",
   salary: "#15803D",
   bonus: "#0F766E",
+  refund: "#10B981",
+  gift: "#34D399",
+  gifts: "#34D399",
+  rental: "#059669",
+  freelance: "#10B981",
   travel: "#0EA5E9",
   flights: "#0284C7",
   vacation: "#0EA5E9",
@@ -151,6 +156,24 @@ export function normalizeCategory(raw: string | null): string {
     "flight": "flights",
     "airline": "flights",
     
+    // Income (map common words to canonical income categories)
+    "payroll": "salary",
+    "wage": "salary",
+    "wages": "salary",
+    "tip": "income",
+    "tips": "income",
+    "dividend": "investment",
+    "dividends": "investment",
+    "refund": "refund",
+    "chargeback": "refund",
+    "gift": "gift",
+    "present": "gift",
+    "rental": "rental",
+    "rent income": "rental",
+    "freelance": "freelance",
+    "contract": "freelance",
+    "contracting": "freelance",
+    
     // Personal Care
     "haircut": "personal care",
     "salon": "personal care",
@@ -201,6 +224,30 @@ export function validateCategory(category: string): string {
  */
 export function getAllCategories(): string[] {
   return Array.from(ALLOWED_CATEGORIES).sort();
+}
+
+// Income-only canonical categories used for prompts and UI guidance
+export const INCOME_CATEGORIES = [
+  'salary',
+  'freelance',
+  'investment',
+  'refund',
+  'gift',
+  'bonus',
+  'rental',
+  'other',
+] as const;
+
+export function getIncomeCategories(): string[] {
+  return [...INCOME_CATEGORIES];
+}
+
+// Expense-only canonical categories (excludes income-focused categories and umbrella 'income')
+export function getExpenseCategories(): string[] {
+  const incomeCategories = [...INCOME_CATEGORIES, 'income'];
+  return Array.from(ALLOWED_CATEGORIES)
+    .filter((category: string) => incomeCategories.indexOf(category) === -1)
+    .sort();
 }
 
 /**

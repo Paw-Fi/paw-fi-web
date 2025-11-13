@@ -19,14 +19,20 @@ function CheckoutSuccessRedirect() {
     const flow = params.get('flow');
     const sessionId = params.get('session_id');
 
-    // Mobile app trial flow - redirect to deep link
+    console.log('🔗 Checkout Success: flow=', flow, 'sessionId=', sessionId);
+
+    // Mobile app trial flow - redirect to deep link IMMEDIATELY
     if (flow === 'trial') {
       const deepLink = `moneko://payment?status=success&flow=trial${sessionId ? `&session_id=${sessionId}` : ''}`;
-      window.location.href = deepLink;
+      console.log('🔗 Redirecting to deep link:', deepLink);
+      
+      // Use window.location.replace to prevent back button and ensure immediate redirect
+      window.location.replace(deepLink);
       return;
     }
 
     // Web flow - redirect to checkout page with status
+    console.log('🌐 Web flow: redirecting to checkout');
     const checkoutParams = new URLSearchParams();
     checkoutParams.set('status', 'success');
     if (sessionId) checkoutParams.set('session_id', sessionId);

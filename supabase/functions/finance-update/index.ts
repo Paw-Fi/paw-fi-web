@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { normalizeCurrencyCode } from "../shared/currency-normalize.ts";
 
 
 
@@ -34,6 +35,35 @@ const DEBUG = Deno.env.get('DEBUG_LOG') === 'true';
 
 function errorResponse(message: string, status = 400, details?: unknown) {
   return jsonResponse({ error: message, details }, status);
+}
+
+// Decide which currency to persist when both a recognized currency
+// (from LLM parsing) and a preferred/caller currency are available.
+// For receipt-based flows we prefer the caller's preferred currency
+// unless the recognized currency is clearly non-ambiguous and differs.
+function chooseEffectiveCurrency(
+  recognized: string | null,
+  preferred: string,
+  isReceipt: boolean,
+): string {
+  const pref = (preferred || 'USD').toUpperCase();
+  const rec = (recognized || '').toUpperCase();
+
+  if (!rec) return pref;
+  if (rec === pref) return rec;
+
+  // Treat these as ambiguous (symbols commonly confused or generic)
+  const AMBIGUOUS = new Set(['USD', 'JPY', 'CNY']);
+
+  if (!isReceipt) {
+    // For text we allow explicit overrides as recognized
+    return rec;
+  }
+
+  // For receipts: only override if recognized is clearly distinct
+  // and not in the ambiguous set.
+  if (AMBIGUOUS.has(rec)) return pref;
+  return rec;
 }
 
 /**
@@ -140,7 +170,8 @@ Deno.serve(async (req: Request) => {
   // 2. inputCurrency from request (user's selected currency for this transaction)
   // 3. preferred_currency from user_contacts table
   // 4. 'USD' as final fallback
-  const providedCurrency = inputCurrency ? inputCurrency.toUpperCase() : null;
+  // Canonicalize provided currency (may be symbol/alias)
+  const providedCurrency = (normalizeCurrencyCode(inputCurrency) || inputCurrency || '').toUpperCase() || null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
@@ -183,7 +214,8 @@ Deno.serve(async (req: Request) => {
   // Layer 2: User's selected currency (from request)
   // Layer 3: User's preferred_currency (from database)
   // Layer 4: 'USD' (final fallback)
-  const preferredCurrency = providedCurrency || (contact?.preferred_currency as string | null) || 'USD';
+  const dbPreferred = normalizeCurrencyCode(contact?.preferred_currency) || contact?.preferred_currency || null;
+  const preferredCurrency = (providedCurrency || dbPreferred || 'USD').toUpperCase();
   
   console.log('[finance-update] Currency fallback applied:', {
     layer: providedCurrency ? '2-inputCurrency' : contact?.preferred_currency ? '3-preferred_currency' : '4-USD',
@@ -290,7 +322,7 @@ Rules:
       }
     }
     
-    const budgetCurrency = (actions.set_budget.currency || preferredCurrency).toUpperCase();
+    const budgetCurrency = (normalizeCurrencyCode(actions.set_budget.currency) || preferredCurrency).toUpperCase();
 
     const { error: upsertErr } = await supabase
       .from("daily_budgets")
@@ -322,12 +354,14 @@ Rules:
       // Prefer contact.user_id (from DB); fallback to provided userId when available
       const expenseUserId = (contact?.user_id as string | null) || (userId as string | null) || null;
 
+      const recognized = normalizeCurrencyCode(e.currency);
+      const finalCurrency = chooseEffectiveCurrency(recognized, preferredCurrency, !!receipt_image_url);
       return {
         contact_id: contactId!,
         user_id: expenseUserId,
         date: expenseDate,
         amount_cents: Math.round((e.amount || 0) * 100),
-        currency: (e.currency || preferredCurrency).toUpperCase(),
+        currency: finalCurrency,
         category: e.category || null,
         raw_text: userText,
         receipt_image_url: receipt_image_url || null,

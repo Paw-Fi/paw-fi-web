@@ -190,8 +190,8 @@ async function upgradeToLifetime() {
         // Wait for Stripe to process the cancellation and send webhooks
         // This reduces (but doesn't eliminate) the webhook race condition
         // The webhook handler now has protection against overwriting lifetime plans
-        console.log('   Waiting 3 seconds for Stripe to process cancellation...')
-        await new Promise(resolve => setTimeout(resolve, 3000))
+        console.log('   Waiting 5 seconds for Stripe to process cancellation...')
+        await new Promise(resolve => setTimeout(resolve, 5000))
         
       } catch (stripeError) {
         console.error(`⚠️  Warning: Could not cancel Stripe subscription: ${stripeError.message}`)

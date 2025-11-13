@@ -38,6 +38,18 @@ interface RequestBody {
   receiptImageUrl?: string; // Optional receipt image URL
   householdId?: string; // If provided, share with this household
   customSplits?: CustomSplits; // Custom split configuration (optional)
+  isRecurring?: boolean; // Whether this is a recurring expense (v1.5)
+  recurrence_rule?: { // Recurrence configuration (v1.5)
+    frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom';
+    anchor_date: string;
+    end_date?: string;
+    interval?: number;
+    reminder?: { // Optional reminder configuration (v1.6)
+      enabled: boolean;
+      value: number; // How many days/hours before
+      unit: 'days' | 'hours';
+    };
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -208,6 +220,10 @@ Deno.serve(async (req: Request) => {
     // Convert amount to cents
     const amountCents = Math.round(body.amount * 100);
 
+    console.log('[save-expense] Full request body:', JSON.stringify(body, null, 2));
+    console.log('[save-expense] isRecurring:', body.isRecurring);
+    console.log('[save-expense] recurrence_rule:', body.recurrence_rule);
+
     // Insert expense into expenses table
     const { data: expense, error: expenseError } = await supabase
       .from('expenses')
@@ -221,6 +237,8 @@ Deno.serve(async (req: Request) => {
         currency: currency,
         receipt_image_url: body.receiptImageUrl || null,
         created_at: body.clientCreatedAt || new Date().toISOString(),
+        is_recurring: body.isRecurring || false,
+        recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
       })
       .select()
       .single();

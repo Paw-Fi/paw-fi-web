@@ -984,6 +984,49 @@ function buildNotificationMessage(
       };
     }
 
+    case 'recurring_reminder': {
+      const transactionType = (payload.type || 'expense') as string;
+      const code = payload.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const cents = Number(payload.amount_cents ?? 0);
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      const category = (payload.category || '') as string;
+      const occurrenceDate = new Date(payload.occurrence_date as string);
+      const reminderValue = Number(payload.reminder_value ?? 1);
+      const reminderUnit = (payload.reminder_unit || 'days') as string;
+      
+      // Calculate time until due
+      const now = new Date();
+      const daysUntil = Math.ceil((occurrenceDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      let timeframe = '';
+      if (daysUntil === 0) {
+        timeframe = 'today';
+      } else if (daysUntil === 1) {
+        timeframe = 'tomorrow';
+      } else if (daysUntil > 1) {
+        timeframe = `in ${daysUntil} days`;
+      } else {
+        timeframe = 'soon'; // Shouldn't happen but just in case
+      }
+      
+      const transactionLabel = transactionType === 'income' ? 'payment' : 'expense';
+      const emoji = transactionType === 'income' ? '💰' : '📅';
+      
+      return {
+        title: `${emoji} Recurring ${transactionLabel.charAt(0).toUpperCase() + transactionLabel.slice(1)} Reminder`,
+        body: `${category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Transaction'} of ${amount} is due ${timeframe}`,
+        data: {
+          expense_id: payload.expense_id || '',
+          type: transactionType,
+          category: category,
+          amount: String(cents),
+          currency: code || '',
+          deep_link: `moneko://recurring/${payload.expense_id || ''}`,
+        }
+      };
+    }
+
     default:
       return {
         title: 'Moneko',
@@ -992,3 +1035,4 @@ function buildNotificationMessage(
       };
   }
 }
+
