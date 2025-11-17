@@ -112,12 +112,12 @@ export const HomeHeader = () => {
                             <Button
                                 onClick={() => {
                                     setIsOpen(false)
-                                    navigate({ to: "/onboarding", search: { q: undefined } })
+                                    navigate({ to: "/referral"})
                                 }}
                                 className="w-full font-medium text-base px-4 py-3 touch-manipulation active:scale-95 rounded-2xl dark:text-white"
                                 size="default"
                             >
-                                Get Started for Free
+                               Join Early Access
                             </Button>
                         )}
                     </nav>
@@ -134,22 +134,22 @@ export const HomeHeader = () => {
                             className="cursor-pointer"
                         />
                         <Button
-                            onClick={() => navigate({ to: "/dashboard" })}
+                            onClick={() => navigate({ to: "/couple-budgeting" })}
                             className="font-medium text-sm sm:text-base px-3 sm:px-4 py-2 touch-manipulation active:scale-95"
                             size="sm"
                         >
-                            Dashboard
+                          Join Early Access
                         </Button>
                     </div>
                 ) : (
                     <div className="flex flex-col items-end gap-1">
                       
                         <Button
-                            onClick={() => navigate({ to: "/onboarding", search: { q: undefined } })}
+                            onClick={() => navigate({ to: "/referral"})}
                             className="font-medium px-4 sm:px-6 py-2 inline-flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base touch-manipulation active:scale-95 dark:text-white"
                             size="default"
                         >
-                            Get Started for Free
+                           Join Early Access
                         </Button>
                     </div>
                 )}

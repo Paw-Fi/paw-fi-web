@@ -130,7 +130,7 @@ export default function ThreeStepsSection({ data }: ThreeStepsSectionProps) {
               size="lg"
               className="px-8 py-3 text-lg font-semibold dark:text-white"
             >
-              <Link to="/onboarding" search={{ q: undefined }}>
+              <Link to="/couple-budgeting" search={{ q: undefined }}>
                 Try Moneko for free
               </Link>
             </Button>

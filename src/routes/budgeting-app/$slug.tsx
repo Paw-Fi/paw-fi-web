@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { HomeHeader } from "@/components/index/header";
@@ -132,7 +132,8 @@ export const Route = createFileRoute("/budgeting-app/$slug")({
           "@id": pageUrl,
           url: pageUrl,
           name: "Moneko | AI-Powered Budgeting App for Smart Financial Planning",
-          description: "Discover how Moneko's AI-powered budgeting app delivers personalized financial education, smart budgeting tools, and investing courses tailored to your specific needs.",
+          description:
+            "Discover how Moneko's AI-powered budgeting app delivers personalized financial education, smart budgeting tools, and investing courses tailored to your specific needs.",
           isPartOf: {
             "@id": "https://moneko.io/#website"
           },
@@ -391,12 +392,6 @@ export const Route = createFileRoute("/budgeting-app/$slug")({
     return {
       title: "Moneko | AI-Powered Budgeting App for Smart Financial Planning",
       meta,
-      link: [
-        {
-          rel: "canonical",
-          href: pageUrl,
-        },
-      ],
       script: [
         {
           type: "application/ld+json",
@@ -409,7 +404,10 @@ export const Route = createFileRoute("/budgeting-app/$slug")({
 
 function BudgetingApp() {
   const params = Route.useParams();
-  const pageData = passiveIncomeVariants[params.slug as keyof typeof passiveIncomeVariants];
+  const pageData =
+    passiveIncomeVariants[
+      params.slug as keyof typeof passiveIncomeVariants
+    ] as any;
   const pageUrl = getCanonicalUrl(`/budgeting-app/${params.slug}`);
 
     // Create comprehensive structured data with enhanced SEO
@@ -509,8 +507,8 @@ function BudgetingApp() {
           "@type": "WebPage",
           "@id": pageUrl,
           url: pageUrl,
-          name: "Moneko | AI-Powered Budgeting App for Smart Financial Planning",
-          description: "Discover how Moneko's AI-powered budgeting app delivers personalized financial education, smart budgeting tools, and investing courses tailored to your specific needs.",
+          name: pageData.meta.title,
+          description: pageData.meta.description,
           isPartOf: {
             "@id": "https://moneko.io/#website"
           },
@@ -765,6 +763,31 @@ function BudgetingApp() {
         }
       ]
     };
+    const articleStructuredData = pageData.article
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          mainEntityOfPage: {
+            "@type": "WebPage",
+            "@id": pageUrl,
+          },
+          headline: pageData.article.title,
+          description: pageData.meta.description,
+          articleBody: pageData.article.body,
+          keywords: pageData.article.tags,
+          author: {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization",
+          },
+          publisher: {
+            "@type": "Organization",
+            "@id": "https://moneko.io/#organization",
+          },
+          image: "https://moneko.io/og-img.png",
+          datePublished: "2024-01-01",
+          dateModified: "2025-09-08T00:00:00Z",
+        }
+      : undefined;
   return (
     <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
@@ -773,7 +796,15 @@ function BudgetingApp() {
         <meta name="keywords" content={pageData.meta.keywords} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+        <link rel="canonical" href={pageUrl} />
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+        {pageData.article && articleStructuredData && (
+          <script type="application/ld+json">
+            {JSON.stringify(articleStructuredData)}
+          </script>
+        )}
       </Helmet>
 
       <AmbientHalo />
@@ -806,21 +837,148 @@ function BudgetingApp() {
 <section className="relative bg-section-bg-light">        <ThreeStepsSection data={pageData} />
       </section>
 
-      {/* Testimonials Section */}
-      {/* <TestimonialsSection /> */}
-
       {/* Expert-Led Lessons Section */}
-<section className="relative bg-section-bg-light">        <ExpertLessonsSection data={pageData} />
+      <section className="relative bg-section-bg-light">
+        <ExpertLessonsSection data={pageData} />
       </section>
 
       {/* FAQ Section */}
-      <section className="relative ">
+      <section className="relative">
         <FAQSection />
       </section>
 
+      {/* Competitor Article Section */}
+      <CompetitorArticleSection article={pageData.article} />
+
+    
+
       {/* Footer */}
       <Footer />
-    </div>)
+    </div>
+  );
+};
+
+interface CompetitorArticleSectionProps {
+  article?: {
+    title: string;
+    tags?: string[];
+    body: string;
+  };
+}
+
+function CompetitorArticleSection({ article }: CompetitorArticleSectionProps) {
+  if (!article) {
+    return null;
+  }
+
+  const paragraphs = article.body.split("\n\n");
+
+  return (
+    <section className="relative bg-section-bg-light">
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-semibold tracking-tight text-gray-900">
+          {article.title}
+        </h2>
+        {article.tags && article.tags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {article.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-moneko-soft px-3 py-1 text-xs font-medium text-moneko-dark"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="prose prose-slate mt-6 max-w-none">
+          {paragraphs.map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+interface RelatedAlternativesSectionProps {
+  currentSlug: string;
+}
+
+function RelatedAlternativesSection({
+  currentSlug,
+}: RelatedAlternativesSectionProps) {
+  const competitorSlugs = [
+    "pocketguard-alternative",
+    "ynab-alternative",
+    "goodbudget-alternative",
+    "monarch-money-alternative",
+    "plum-alternative",
+    "everydollar-alternative",
+    "snoop-alternative",
+    "fudget-alternative",
+    "nerdwallet-alternative",
+    "mobills-alternative",
+    "mint-legacy-alternative",
+    "expense-iq-alternative",
+    "bluecoins-alternative",
+    "andromoney-alternative",
+    "bills-reminder-alternative",
+    "budget-planner-alternative",
+  ];
+
+  if (!competitorSlugs.includes(currentSlug)) {
+    return null;
+  }
+
+  const related = competitorSlugs
+    .filter((slug) => slug !== currentSlug)
+    .map((slug) => {
+      const data =
+        passiveIncomeVariants[slug as keyof typeof passiveIncomeVariants] as any;
+      return {
+        slug,
+        title: data?.meta?.title as string | undefined,
+      };
+    })
+    .filter((item) => item.title)
+    .slice(0, 4);
+
+  if (related.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="relative bg-section-bg-light">
+      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+          More budgeting app alternatives
+        </h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Explore other comparisons to see how Moneko stacks up against popular
+          budgeting apps.
+        </p>
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {related.map((item) => (
+            <Link
+              key={item.slug}
+              to="/budgeting-app/$slug"
+              params={{ slug: item.slug }}
+              className="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-moneko-primary hover:shadow-md"
+            >
+              <h3 className="text-sm font-medium text-gray-900 group-hover:text-moneko-primary">
+                {item.title}
+              </h3>
+              <p className="mt-1 text-xs text-gray-600">
+                Read the full comparison and see why Moneko is a strong
+                alternative.
+              </p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default BudgetingApp;

@@ -1498,5 +1498,1397 @@
       "Dividend growth over time",
       "Lower portfolio volatility"
     ]
+  },
+  "pocketguard-alternative": {
+    "meta": {
+      "title": "Best PocketGuard Alternative (2025) – Moneko AI Budgeting App",
+      "description": "Looking for the best PocketGuard alternative? See how Moneko’s AI-powered budgeting, modern UX, and education-first design give you deeper insights than traditional budgeting apps.",
+      "keywords": "best PocketGuard alternative, PocketGuard vs Moneko, PocketGuard replacement, AI budgeting app, expense tracker, zero-based budgeting alternative"
+    },
+    "hero": {
+      "title": "Best PocketGuard Alternative for AI-Powered Budgeting",
+      "subtitle": "PocketGuard is great for quick insights, but Moneko goes further with AI coaching, rich calculators, and an education-first experience that helps you actually change your money habits.",
+      "ctaText": "Try Moneko Free",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "I’m switching from PocketGuard – how can Moneko help?",
+        "How does Moneko compare to PocketGuard?",
+        "Can Moneko track my bills and savings automatically?",
+        "Show me a smarter budget than my current PocketGuard setup."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Connect & Understand",
+          "description": "Like PocketGuard, you can connect accounts and categorize spending – but Moneko also explains patterns and tradeoffs in plain language."
+        },
+        {
+          "title": "Build an AI-Guided Plan",
+          "description": "Use Moneko’s AI budgeting tools and calculators to design a monthly plan that balances bills, debt payoff, and savings goals."
+        },
+        {
+          "title": "Upgrade Your Habits",
+          "description": "Turn insights into daily decisions with learning modules, goal tracking, and projections that show the long-term impact of small changes."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See Why Budgeters Switch from PocketGuard to Moneko",
+      "subtitle": "Walk through a side-by-side experience: from simple transaction tracking to AI-guided planning, educational content, and long-term wealth tools."
+    },
+    "features": [
+      {
+        "title": "AI Budget Coach",
+        "description": "Move beyond static category limits. Moneko’s AI coach helps you create realistic plans, adjust mid-month, and understand the “why” behind each suggestion.",
+        "icon": "🤖",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Deep-Dive Calculators",
+        "description": "Where PocketGuard focuses on day-to-day cash flow, Moneko adds net worth tracking, savings goal calculators, debt payoff tools, and retirement planning.",
+        "icon": "📊",
+        "route": "/calculators"
+      },
+      {
+        "title": "Education-First Design",
+        "description": "Short lessons explain concepts like envelopes, zero-based budgeting, and cash flow so you know exactly what your plan is doing.",
+        "icon": "📘",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "PocketGuard vs AI Budgeting",
+        "description": "See how a traditional tracker compares to a modern AI budgeting coach – and when each approach works best.",
+        "icon": "⚖️"
+      },
+      {
+        "title": "From Tracking to Planning",
+        "description": "Learn how to move from simply watching your spending to proactively designing a budget you can actually follow.",
+        "icon": "🧭"
+      }
+    ],
+    "benefits": [
+      "Smarter insights than standard PocketGuard reports",
+      "AI guidance instead of static categories",
+      "Rich calculators for long-term planning",
+      "Modern, educational UX that teaches as you go"
+    ],
+    "article": {
+      "title": "Best PocketGuard Alternative in 2025: Why Moneko Is Different",
+      "tags": [
+        "best PocketGuard alternative",
+        "PocketGuard vs Moneko",
+        "PocketGuard replacement",
+        "AI budgeting app alternative"
+      ],
+      "body": "PocketGuard is a popular budgeting app for quickly seeing how much you have left to spend after bills. It offers account syncing, spending categorization, bill tracking, and savings goals – all in a straightforward interface. But many users eventually want more than a snapshot of “what’s left.” They want coaching, education, and tools that help them change their behavior, not just track it.\n\nThat’s where Moneko comes in. Moneko combines an AI-powered budgeting engine with interactive calculators and education-first content. Like PocketGuard, you can connect accounts and categorize transactions. Beyond that, Moneko helps you design a realistic monthly plan, compare different payoff strategies, and understand how your decisions affect net worth, not just this month’s cash flow.\n\nCompared with other major budgeting tools – including YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, Budget Planner and similar apps – Moneko focuses on three things: usable AI, modern UX, and clear education. Instead of forcing you into a single method, it adapts to your situation and explains concepts in plain language. If you’ve outgrown simple trackers like PocketGuard and want a budgeting app that helps you think and plan like a financial coach would, Moneko is built for you."
+    }
+  },
+  "ynab-alternative": {
+    "meta": {
+      "title": "Best YNAB Alternative (2025) – Moneko AI vs You Need A Budget",
+      "description": "Looking for a YNAB alternative with AI guidance and a smoother UX? Compare Moneko’s AI budgeting, calculators, and education-first approach with YNAB’s zero-based budgeting.",
+      "keywords": "best YNAB alternative, YNAB vs Moneko, You Need A Budget alternative, zero-based budgeting app, AI budgeting coach"
+    },
+    "hero": {
+      "title": "A Modern AI Alternative to YNAB",
+      "subtitle": "YNAB is powerful for zero-based budgeting. Moneko keeps the intention of “giving every dollar a job” but adds AI coaching, interactive tools, and a friendlier learning curve.",
+      "ctaText": "Start with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to YNAB?",
+        "Can Moneko help me switch from YNAB?",
+        "I like zero-based budgeting – can I do that in Moneko?",
+        "Show me a beginner-friendly YNAB alternative."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Set Intentional Categories",
+          "description": "Create categories that reflect your real life. Keep YNAB-style granularity or start with simpler buckets – Moneko adapts either way."
+        },
+        {
+          "title": "Give Every Dollar a Smarter Job",
+          "description": "Instead of manual rule-building, use AI to suggest how to split income between bills, debt payoff, savings, and investing."
+        },
+        {
+          "title": "Review, Learn, and Adjust",
+          "description": "See projections, get explanations in plain language, and refine your plan over time without feeling overwhelmed by rules."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "YNAB vs Moneko: Which Fits Your Budgeting Style?",
+      "subtitle": "Watch how YNAB’s rule-driven approach compares to Moneko’s AI-guided, education-first design for different types of budgeters."
+    },
+    "features": [
+      {
+        "title": "AI-Powered Zero-Based Planning",
+        "description": "Keep the spirit of zero-based budgeting without building every rule by hand. Let Moneko’s AI propose allocations and scenarios.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Built-In Calculators & Projections",
+        "description": "Go beyond the monthly budget. Run savings, debt, retirement, and net worth scenarios without leaving your dashboard.",
+        "icon": "📈",
+        "route": "/calculators"
+      },
+      {
+        "title": "Guided Lessons for New Budgeters",
+        "description": "If YNAB felt intimidating, Moneko’s short lessons and contextual tips help you understand concepts step by step.",
+        "icon": "🎓",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Zero-Based Budgeting, Explained",
+        "description": "Understand YNAB’s core philosophy and how to apply it inside Moneko with fewer rules and more guidance.",
+        "icon": "📘"
+      },
+      {
+        "title": "Choosing the Right Budgeting Method",
+        "description": "Compare zero-based budgeting, envelopes, and percentage-based methods so you can pick what fits your brain and lifestyle.",
+        "icon": "🧩"
+      }
+    ],
+    "benefits": [
+      "YNAB-style intentionality with less friction",
+      "AI suggestions instead of manual rule-building",
+      "Deeper long-term planning tools",
+      "Education-focused UX for faster mastery"
+    ],
+    "article": {
+      "title": "Best YNAB Alternative in 2025: Moneko vs You Need A Budget",
+      "tags": [
+        "best YNAB alternative",
+        "YNAB vs Moneko",
+        "You Need A Budget alternative",
+        "zero-based budgeting alternative"
+      ],
+      "body": "You Need A Budget (YNAB) is one of the most respected budgeting tools on the market. It champions zero-based budgeting and proactive money management, and many users credit YNAB with transforming their finances. But it also comes with a steep learning curve and a rule-heavy workflow that doesn’t work for everyone.\n\nMoneko approaches the same goal – intentional spending aligned with your values – through an AI-first and education-heavy experience. Instead of manually deciding how every new dollar should be assigned, you can ask Moneko to propose a plan based on your income, bills, savings targets, and debt priorities. Interactive calculators for debt payoff, emergency funds, net worth, and retirement are built into the same experience, so your monthly plan is always connected to long-term goals.\n\nWhen you compare Moneko with other big names – PocketGuard, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, Budget Planner – you’ll notice the same pattern: most tools either track spending or enforce a framework. Moneko focuses on teaching you how money works while AI helps you apply the ideas. If you like YNAB’s intentionality but want a more modern, guided experience, Moneko is a compelling alternative."
+    }
+  },
+  "goodbudget-alternative": {
+    "meta": {
+      "title": "Best Goodbudget Alternative (2025) – AI Envelope Budgeting with Moneko",
+      "description": "Love envelopes but want more automation? See how Moneko’s AI-powered budgeting and calculators make it a top Goodbudget alternative for modern savers.",
+      "keywords": "best Goodbudget alternative, Goodbudget vs Moneko, envelope budgeting app alternative, AI budgeting app, cash envelope replacement"
+    },
+    "hero": {
+      "title": "An AI Upgrade to Goodbudget’s Envelope System",
+      "subtitle": "Goodbudget brings envelopes to your phone. Moneko keeps the envelope mindset but adds AI guidance, projections, and calculators that help you grow beyond tracking envelopes.",
+      "ctaText": "Explore Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Goodbudget?",
+        "Can I use envelope-style budgeting with Moneko?",
+        "What’s a smarter envelope alternative for 2025?",
+        "Help me move my Goodbudget plan into Moneko."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Create Digital Envelopes",
+          "description": "Set up categories that mirror your Goodbudget envelopes – but tie them to real goals and timelines."
+        },
+        {
+          "title": "Let AI Fill the Envelopes",
+          "description": "Instead of manually allocating every dollar, ask Moneko to suggest how much to add to each envelope based on your income and priorities."
+        },
+        {
+          "title": "Track Progress and Net Worth",
+          "description": "See not just envelope balances but also how your decisions affect debt, savings, and long-term wealth."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Goodbudget vs Moneko: Envelopes with AI",
+      "subtitle": "Watch how Moneko keeps the clarity of envelopes while adding automation, education, and long-term planning tools."
+    },
+    "features": [
+      {
+        "title": "AI Envelope Allocations",
+        "description": "Tell Moneko your goals and constraints; it suggests envelope targets that fit your real life, not just a percentage rule.",
+        "icon": "✉️",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Goal-Linked Envelopes",
+        "description": "Tie envelopes directly to savings goals, debt payoff timelines, and emergency fund targets.",
+        "icon": "🎯",
+        "route": "/dashboard/goals"
+      },
+      {
+        "title": "Beyond Envelopes: Net Worth & Investing",
+        "description": "Use built-in calculators and trackers to see how envelope decisions roll up into net worth and long-term investing.",
+        "icon": "📈",
+        "route": "/dashboard/net-worth-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Modern Envelope Budgeting",
+        "description": "Learn how to translate physical envelopes into a digital, AI-assisted system that still feels grounded and real.",
+        "icon": "🪙"
+      },
+      {
+        "title": "From Envelopes to Wealth Plan",
+        "description": "Connect day-to-day envelope decisions to long-term goals like debt freedom and retirement.",
+        "icon": "🏗️"
+      }
+    ],
+    "benefits": [
+      "Envelope-style clarity with less manual work",
+      "AI-powered allocations based on your goals",
+      "Integrated calculators for goals and debt",
+      "Smooth path from basic budgeting to full financial planning"
+    ],
+    "article": {
+      "title": "Best Goodbudget Alternative in 2025: Moneko for Envelope Fans",
+      "tags": [
+        "best Goodbudget alternative",
+        "Goodbudget vs Moneko",
+        "envelope budgeting alternative",
+        "AI envelope budgeting app"
+      ],
+      "body": "Goodbudget modernized the classic envelope system by letting you assign digital envelopes on your phone. It’s simple, effective, and great for people who like seeing every dollar given a job. But as your finances become more complex, you might want more automation, deeper insights, and help connecting envelopes to long-term goals.\n\nMoneko is designed for people who love the structure of envelopes but want AI-level support. You can keep envelope-style categories while asking Moneko to recommend how much to put into each one based on your income, bills, savings goals, and debt payoff strategy. Built-in calculators for emergency funds, debt payoff, compound interest, and retirement turn your envelope plan into a true financial roadmap.\n\nCompared with other apps like PocketGuard, YNAB, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, Moneko’s focus is on bridging the gap between simple envelope tracking and full wealth planning. If you started with Goodbudget and now want a smarter, AI-assisted envelope system, Moneko is one of the strongest alternatives available."
+    }
+  },
+  "monarch-money-alternative": {
+    "meta": {
+      "title": "Best Monarch Money Alternative (2025) – Moneko for AI Coaching & Education",
+      "description": "Comparing Monarch Money vs Moneko? Learn why Moneko’s AI budgeting, calculators, and education-first content make it a strong Monarch Money alternative for long-term planners.",
+      "keywords": "best Monarch Money alternative, Monarch Money vs Moneko, collaborative budgeting alternative, AI budgeting app, net worth tracking app"
+    },
+    "hero": {
+      "title": "A Monarch Money Alternative Built Around AI Coaching",
+      "subtitle": "Monarch Money shines at flexible, collaborative budgeting. Moneko adds AI coaching, rich calculators, and education so your household can plan, learn, and grow together.",
+      "ctaText": "Discover Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Monarch Money?",
+        "Can Moneko help my partner and me budget together?",
+        "What’s a good Monarch Money alternative with AI?",
+        "Show me how Moneko handles joint goals and net worth."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Connect Accounts & Partners",
+          "description": "Link your accounts and invite a partner to see a complete picture of income, bills, savings, and debt."
+        },
+        {
+          "title": "Design AI-Guided Shared Budgets",
+          "description": "Ask Moneko to suggest joint budgets, runway estimates, and goal contributions that work for both of you."
+        },
+        {
+          "title": "Track Net Worth & Learn Together",
+          "description": "Use net worth tracking, calculators, and lessons to grow your financial literacy as a team."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Monarch Money vs Moneko: Collaborative Budgeting with AI",
+      "subtitle": "See how Moneko combines collaborative tools with AI, calculators, and educational content for couples and families."
+    },
+    "features": [
+      {
+        "title": "Shared, AI-Guided Budgets",
+        "description": "Build flexible household budgets that adapt as your income, goals, and life stages change.",
+        "icon": "👥",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Household Net Worth Tracking",
+        "description": "See both partners’ assets and debts in one place and measure progress over time.",
+        "icon": "🏠",
+        "route": "/dashboard/net-worth-tracker"
+      },
+      {
+        "title": "Learning Paths for Couples",
+        "description": "Take short lessons on communication, shared budgeting, and long-term planning designed specifically for couples.",
+        "icon": "💬",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Collaborative Budgeting 101",
+        "description": "Learn how to design a household budget that balances fairness, flexibility, and shared goals.",
+        "icon": "🤝"
+      },
+      {
+        "title": "Joint Net Worth Tracking",
+        "description": "Understand how to track combined net worth and use it as a shared scoreboard for progress.",
+        "icon": "📊"
+      }
+    ],
+    "benefits": [
+      "Collaborative budgeting with AI support",
+      "Integrated calculators and learning content",
+      "Household net worth tracking and projections",
+      "Designed for couples and families, not just individuals"
+    ],
+    "article": {
+      "title": "Best Monarch Money Alternative in 2025: Moneko for Collaborative Planners",
+      "tags": [
+        "best Monarch Money alternative",
+        "Monarch Money vs Moneko",
+        "collaborative budgeting app alternative",
+        "AI budgeting for couples"
+      ],
+      "body": "Monarch Money has become a favorite for households that want flexible, collaborative budgeting with detailed views of cash flow and net worth. It’s a strong choice if you and a partner like to plan together. However, some users want more AI guidance, richer calculators, and educational content baked into the same experience – not scattered across blogs and spreadsheets.\n\nMoneko is built for that next layer. Alongside account aggregation and tracking, it offers AI-guided budgeting, interactive calculators for debt, savings, retirement, and runway, plus bite-sized learning modules you can complete together. Instead of just showing what happened last month, Moneko focuses on what you can change next month – and how those choices affect your long-term wealth.\n\nAgainst other big-name tools – PocketGuard, YNAB, Goodbudget, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, Budget Planner – Moneko stands out for its combination of AI, calculators, and education-first design. If you like Monarch Money’s collaborative feel but want an AI-powered coach that helps your household learn and plan together, Moneko is a strong alternative."
+    }
+  },
+  "plum-alternative": {
+    "meta": {
+      "title": "Best Plum Alternative (2025) – Automated Saving Meets AI Budgeting with Moneko",
+      "description": "Plum automates savings and analyzes spending. See how Moneko combines automation with AI budgeting, deep calculators, and education to become a top Plum alternative.",
+      "keywords": "best Plum alternative, Plum vs Moneko, automated savings app alternative, AI budgeting coach, spending analysis"
+    },
+    "hero": {
+      "title": "A Plum Alternative for People Who Want More Than Auto-Saving",
+      "subtitle": "Plum uses AI to move spare cash into savings. Moneko goes further by helping you build a full plan for budgeting, debt, and long-term goals – not just auto-transfers.",
+      "ctaText": "Start Planning with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Plum?",
+        "Can Moneko automate my savings too?",
+        "I want more control than Plum – what can Moneko do?",
+        "Help me build a plan, not just auto-save."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Understand Your Full Picture",
+          "description": "Connect accounts and see income, bills, savings, and debt in one place – not just spare cash."
+        },
+        {
+          "title": "Design a Plan with AI",
+          "description": "Use Moneko’s AI to propose how much to save, where to cut spending, and how to prioritize goals."
+        },
+        {
+          "title": "Automate with Intention",
+          "description": "Set up transfers and contributions that align with your plan, then monitor progress with calculators and trackers."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Plum vs Moneko: Auto-Saving vs Full-Stack Planning",
+      "subtitle": "See how Moneko’s AI budgeting and educational content complement automated saving and help you go beyond spare-change transfers."
+    },
+    "features": [
+      {
+        "title": "AI Budget & Savings Suggestions",
+        "description": "Get recommendations for how much to save, where to cut, and which goals to prioritize based on your data.",
+        "icon": "💡",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Goal-Based Calculators",
+        "description": "Plan emergency funds, big purchases, debt payoff, and retirement inside the same app that tracks your budget.",
+        "icon": "🎯",
+        "route": "/calculators"
+      },
+      {
+        "title": "Education for Confident Decisions",
+        "description": "Short lessons explain why certain savings strategies work so you’re not relying on a “black box” algorithm.",
+        "icon": "📚",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Smart Automated Saving",
+        "description": "Learn how to blend automation with intentional planning so you never feel out of control.",
+        "icon": "⚙️"
+      },
+      {
+        "title": "From Auto-Save to Full Plan",
+        "description": "Connect your automated savings to clear goals, timelines, and investment strategies.",
+        "icon": "🧭"
+      }
+    ],
+    "benefits": [
+      "More context than simple auto-saving",
+      "AI-driven budgeting plus calculators",
+      "Education that explains the “why”",
+      "Designed for long-term planning, not just spare change"
+    ],
+    "article": {
+      "title": "Best Plum Alternative in 2025: Why Moneko Gives You More Control",
+      "tags": [
+        "best Plum alternative",
+        "Plum vs Moneko",
+        "automated savings app alternative",
+        "AI budgeting and saving"
+      ],
+      "body": "Plum is known for its automated savings: it analyzes your spending, identifies spare cash, and moves small amounts into savings for you. For many users, this is a painless way to save more without thinking about it. But if you want a fuller picture of your finances – including debt, investing, and long-term goals – you may feel limited by a savings-only experience.\n\nMoneko tackles the broader problem: how to design a complete financial plan you can actually follow. You still get guidance on how much to save, but it’s rooted in a real budget, debt payoff strategy, and long-term projections. With calculators for compound interest, emergency funds, debt payoff, and retirement, Moneko helps you see how today’s savings choices affect your future net worth.\n\nCompared with Plum and other tools like PocketGuard, YNAB, Goodbudget, Monarch Money, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, Moneko emphasizes transparency and education. You’re never left guessing why the app is making a recommendation. If you like automation but also want to understand and control the bigger picture, Moneko is a powerful Plum alternative."
+    }
+  },
+  "everydollar-alternative": {
+    "meta": {
+      "title": "Best EveryDollar Alternative (2025) – Moneko vs Dave Ramsey’s Budget App",
+      "description": "EveryDollar is simple and rule-based. See how Moneko’s AI budgeting, calculators, and modern UX make it a powerful EveryDollar alternative for long-term planners.",
+      "keywords": "best EveryDollar alternative, EveryDollar vs Moneko, Dave Ramsey budget app alternative, zero-based budgeting alternative, Christian budgeting apps"
+    },
+    "hero": {
+      "title": "A Smarter EveryDollar Alternative with AI Guidance",
+      "subtitle": "EveryDollar is great for basic zero-based budgets. Moneko keeps things simple while adding AI coaching, calculators, and education so you can connect today’s budget to tomorrow’s wealth.",
+      "ctaText": "Start Planning with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to EveryDollar?",
+        "Can I use a zero-based budget inside Moneko?",
+        "Show me a more flexible EveryDollar alternative.",
+        "Help me move my EveryDollar categories into Moneko."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Import Your Budget Style",
+          "description": "Recreate your EveryDollar-like categories in Moneko, then let AI suggest tweaks based on your actual data."
+        },
+        {
+          "title": "Tie Your Budget to Real Goals",
+          "description": "Connect categories to savings goals, debt payoff plans, and long-term targets like retirement or home ownership."
+        },
+        {
+          "title": "Learn While You Budget",
+          "description": "Use lessons and calculators to understand how each line of your budget affects future net worth and cash flow."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "EveryDollar vs Moneko: Simple Rules vs AI Coaching",
+      "subtitle": "See how Moneko extends basic zero-based budgeting with AI, calculators, and education for a more complete money plan."
+    },
+    "features": [
+      {
+        "title": "AI-Assisted Zero-Based Budgeting",
+        "description": "Design budgets that give every dollar a job without building every rule by hand.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Goal & Debt Calculators",
+        "description": "Plan emergency funds, sinking funds, debt payoff, and retirement using integrated calculators.",
+        "icon": "📊",
+        "route": "/calculators"
+      },
+      {
+        "title": "Education-First UX",
+        "description": "Short, practical lessons explain key concepts so you’re not just following rules – you understand them.",
+        "icon": "📘",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Zero-Based Budgeting for Real Life",
+        "description": "Learn how to apply zero-based budgeting in a flexible way that works month-to-month.",
+        "icon": "📐"
+      },
+      {
+        "title": "From Monthly Budget to Lifetime Plan",
+        "description": "Connect your EveryDollar-style plan to long-term wealth building.",
+        "icon": "🏗️"
+      }
+    ],
+    "benefits": [
+      "EveryDollar-style simplicity with more flexibility",
+      "AI suggestions instead of rigid rules",
+      "Built-in calculators for savings and debt",
+      "Modern, educational interface"
+    ],
+    "article": {
+      "title": "Best EveryDollar Alternative in 2025: Moneko for Modern Budgeters",
+      "tags": [
+        "best EveryDollar alternative",
+        "EveryDollar vs Moneko",
+        "Dave Ramsey budget app alternative",
+        "zero-based budgeting alternative"
+      ],
+      "body": "EveryDollar, created by the Dave Ramsey team, is intentionally simple. It focuses on a clear zero-based budget: assign every dollar, follow the plan, repeat. That structure can be powerful, especially if you’re getting started or following the Baby Steps. But as your finances grow more complex, you may want more flexible tools, deeper calculators, and explanations that go beyond simple rules.\n\nMoneko offers a similar sense of structure with more intelligence and context. You can build a zero-based or envelope-style budget, then use AI to suggest category amounts, simulate debt payoff strategies, and project how changes impact your net worth over time. Instead of separate spreadsheets for emergencies, retirement, or investing, Moneko’s calculators live inside your budgeting experience.\n\nCompared with other budgeting tools like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, Moneko stands out for its combination of AI, education, and long-term planning. If you appreciate EveryDollar’s clarity but want more guidance and flexibility, Moneko is a strong alternative."
+    }
+  },
+  "snoop-alternative": {
+    "meta": {
+      "title": "Best Snoop Alternative (2025) – Moneko AI Budgeting vs Snoop Spending Tracker",
+      "description": "Snoop is great at auto-categorizing and tracking spend. See how Moneko adds AI budgeting, calculators, and education to become a top Snoop alternative.",
+      "keywords": "best Snoop alternative, Snoop vs Moneko, spending tracker alternative, UK budgeting apps, AI budgeting coach"
+    },
+    "hero": {
+      "title": "A Snoop Alternative for Deeper Planning",
+      "subtitle": "Snoop helps you see what you spend. Moneko helps you decide what to do next – with AI-generated budgets, debt plans, and savings strategies.",
+      "ctaText": "Try Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Snoop?",
+        "Can Moneko track subscriptions and bills like Snoop?",
+        "I want more than charts – help me build a plan.",
+        "Show me a Snoop alternative with AI budgeting."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Track & Analyze",
+          "description": "Connect accounts and categorize spending so you get the same level of visibility you’d expect from Snoop."
+        },
+        {
+          "title": "Ask AI for a Plan",
+          "description": "Use Moneko’s AI to turn spending insights into a realistic budget and prioritized goal list."
+        },
+        {
+          "title": "Simulate Outcomes",
+          "description": "Run debt, savings, and retirement scenarios so you can see the impact of small changes before you make them."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Snoop vs Moneko: Insights vs Actionable Plans",
+      "subtitle": "See how Moneko complements Snoop-style tracking with AI-generated plans and educational content."
+    },
+    "features": [
+      {
+        "title": "AI Money Coaching",
+        "description": "Get plain-language guidance on where to cut, what to prioritize, and how to build a sustainable plan.",
+        "icon": "🧭",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Scenario Calculators",
+        "description": "Test different payoff speeds, savings rates, and investment contributions to choose the best path.",
+        "icon": "📈",
+        "route": "/calculators"
+      },
+      {
+        "title": "Education Layer",
+        "description": "Learn the “why” behind recommendations so you’re never just following a chart.",
+        "icon": "📚",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "From Spend Tracking to Strategy",
+        "description": "Turn spending data into a step-by-step game plan for the next 3, 6, and 12 months.",
+        "icon": "🎯"
+      },
+      {
+        "title": "Choosing the Right Budgeting Tool",
+        "description": "Compare Snoop-style trackers, rule-based apps, and AI coaches so you can pick the best fit.",
+        "icon": "⚖️"
+      }
+    ],
+    "benefits": [
+      "Everything you expect from a modern tracker",
+      "AI-generated budgets and strategies",
+      "Integrated calculators and projections",
+      "Education built into the experience"
+    ],
+    "article": {
+      "title": "Best Snoop Alternative in 2025: Moneko for Strategy-First Budgeting",
+      "tags": [
+        "best Snoop alternative",
+        "Snoop vs Moneko",
+        "spending tracker alternative",
+        "AI budgeting coach"
+      ],
+      "body": "Snoop is widely praised for its ability to auto-categorize transactions, track budgets, and surface subscription and bill insights. It’s ideal if your primary goal is awareness: what you’re spending, where, and when. But awareness alone doesn’t always translate to a concrete plan for paying off debt, building savings, or investing for the future.\n\nMoneko picks up where simple trackers stop. After connecting your accounts, you can ask Moneko’s AI to create a custom budget, identify quick wins, and prioritize goals. Built-in calculators for debt payoff, compound growth, emergency funds, and retirement sit right alongside your budget. Instead of jumping between apps and spreadsheets, you design, test, and adjust one integrated plan.\n\nWhen you evaluate Moneko against Snoop and other budgeting tools like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, the difference is clear: Moneko is not just a tracker. It’s a planning layer that uses AI and education to help you act on what your data is telling you."
+    }
+  },
+  "fudget-alternative": {
+    "meta": {
+      "title": "Best Fudget Alternative (2025) – Simple Budgeting with AI Help",
+      "description": "Fudget is a minimal budgeting app for quick lists. See how Moneko keeps things simple while adding AI, calculators, and education for users who have outgrown basic lists.",
+      "keywords": "best Fudget alternative, Fudget vs Moneko, simple budgeting app alternative, minimal budgeting apps, AI budgeting app"
+    },
+    "hero": {
+      "title": "A Fudget Alternative When You’re Ready for the Next Step",
+      "subtitle": "If you like Fudget’s simplicity but want more structure, insights, and guidance, Moneko adds AI budgeting and calculators without overwhelming you.",
+      "ctaText": "Upgrade from Lists to a Plan",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Fudget?",
+        "I just track lists – can Moneko stay simple?",
+        "Help me move from basic lists to a real budget.",
+        "Show me a Fudget alternative that won’t overwhelm me."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Start with a Simple Template",
+          "description": "Use Moneko’s starter budgets to move from free-form lists to clear categories without losing simplicity."
+        },
+        {
+          "title": "Let AI Suggest Improvements",
+          "description": "Ask Moneko where to trim, where to save, and how to prioritize goals – all based on your income and habits."
+        },
+        {
+          "title": "Grow into Calculators & Goals",
+          "description": "When you’re ready, use calculators to plan debt payoff, emergency funds, and long-term investing."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Fudget vs Moneko: From Lists to a Real Plan",
+      "subtitle": "See how Moneko preserves the spirit of simple budgeting while giving you more tools to actually reach your goals."
+    },
+    "features": [
+      {
+        "title": "Beginner-Friendly Setup",
+        "description": "Move from ad-hoc lists to a clear monthly budget in minutes.",
+        "icon": "📝",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "AI Suggestions",
+        "description": "Get guidance on where to cut spending and how to redirect money toward goals.",
+        "icon": "💡",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Built-In Calculators",
+        "description": "Plan beyond this month with goal, debt, and net worth tools.",
+        "icon": "📊",
+        "route": "/calculators"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "From Tracking to Planning",
+        "description": "Learn how to transform simple income/expense lists into a proactive budget.",
+        "icon": "🧭"
+      },
+      {
+        "title": "Beginner Budgeting Mistakes",
+        "description": "Avoid the most common pitfalls people face when moving beyond basic tracking.",
+        "icon": "⚠️"
+      }
+    ],
+    "benefits": [
+      "Gentle upgrade from simple lists",
+      "AI guidance without complexity",
+      "Tools that grow with your skills",
+      "Education built into the product"
+    ],
+    "article": {
+      "title": "Best Fudget Alternative in 2025: Moneko for When You’re Ready to Level Up",
+      "tags": [
+        "best Fudget alternative",
+        "Fudget vs Moneko",
+        "simple budgeting app alternative",
+        "beginner budgeting upgrade"
+      ],
+      "body": "Fudget is intentionally minimal: no account connections, just simple lists of income and expenses. That’s perfect when you’re starting out or want a no-frills approach. But over time, many Fudget users want to understand more: how quickly they can pay off debt, how much to save, or how today’s choices affect their future net worth.\n\nMoneko is built as a path forward for those users. You can keep things simple – a few categories, a clear overview – while letting AI suggest how to allocate income, where to trim, and which goals to prioritize. When you’re ready, you can gradually adopt calculators for debt payoff, emergency funds, investing, and retirement without leaving the app.\n\nCompared with Fudget and other tools like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, Moneko’s strength is that it grows with you. It doesn’t force complexity on day one, but it’s ready with AI and education when you’re ready to go deeper."
+    }
+  },
+  "nerdwallet-alternative": {
+    "meta": {
+      "title": "Best NerdWallet Alternative (2025) – Moneko for Focused Budgeting & Learning",
+      "description": "NerdWallet combines tools with financial product recommendations. Learn why Moneko is a strong NerdWallet alternative if you want focused budgeting, AI coaching, and education.",
+      "keywords": "best NerdWallet alternative, NerdWallet vs Moneko, budgeting app alternative, financial education app, AI budgeting coach"
+    },
+    "hero": {
+      "title": "A NerdWallet Alternative Focused on Your Budget, Not Products",
+      "subtitle": "NerdWallet is a great research hub. Moneko is where you build and follow a plan – with AI budgeting, calculators, and teaching designed around your actual numbers.",
+      "ctaText": "Build Your Plan in Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to NerdWallet tools?",
+        "Can Moneko help me turn advice into a plan?",
+        "I’m overwhelmed by options – help me pick a path.",
+        "Show me a NerdWallet alternative focused on my budget."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Bring Your Research",
+          "description": "Take what you’ve learned from sites like NerdWallet and plug your actual numbers into Moneko."
+        },
+        {
+          "title": "Ask AI to Turn It into a Plan",
+          "description": "Let Moneko synthesize advice, your goals, and your constraints into a concrete budget and action list."
+        },
+        {
+          "title": "Track & Learn Over Time",
+          "description": "Review progress, adjust assumptions, and deepen your knowledge with lessons and calculators."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "NerdWallet vs Moneko: Research vs Implementation",
+      "subtitle": "See how Moneko helps you move from reading about strategies to actually executing them."
+    },
+    "features": [
+      {
+        "title": "AI Planning Engine",
+        "description": "Convert scattered tips into a cohesive monthly budget and long-term plan.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Integrated Calculators",
+        "description": "Run all your important numbers – from net worth to retirement – in one place.",
+        "icon": "📊",
+        "route": "/calculators"
+      },
+      {
+        "title": "Action-Oriented Lessons",
+        "description": "Short modules show you how to apply concepts in your own budget, step by step.",
+        "icon": "🎓",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Turning Advice into Action",
+        "description": "Learn a repeatable process for taking general advice and translating it into your budget.",
+        "icon": "🧱"
+      },
+      {
+        "title": "Avoiding Decision Overload",
+        "description": "Cut through the noise of too many options and focus on a few high-impact moves.",
+        "icon": "🎯"
+      }
+    ],
+    "benefits": [
+      "Less content overwhelm, more clarity",
+      "AI that helps you pick a path",
+      "One home for your actual plan",
+      "Education tuned to your situation"
+    ],
+    "article": {
+      "title": "Best NerdWallet Alternative in 2025: Moneko for Doing, Not Just Reading",
+      "tags": [
+        "best NerdWallet alternative",
+        "NerdWallet vs Moneko",
+        "budgeting app alternative",
+        "financial education and budgeting"
+      ],
+      "body": "NerdWallet is a powerhouse for research: comparisons of credit cards, loans, bank accounts, and more, plus general budgeting and investing articles. It’s a great place to learn about options. But it’s not primarily built as a day-to-day budgeting coach or planning environment. Many people read about strategies and still struggle to turn them into a concrete, personalized plan.\n\nMoneko is designed to be that plan-building environment. You can start with whatever you’ve learned – from NerdWallet or elsewhere – then plug your real income, expenses, debts, and goals into Moneko. The AI engine helps you prioritize, build a budget, and choose payoff and savings strategies. Calculators and lessons live alongside your numbers, not in a separate tab, so learning and doing happen in the same place.\n\nAlongside NerdWallet and other apps like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, Moneko’s niche is clear: it’s the operating system for your money plan. If you want fewer open tabs and more focused execution, it’s a compelling alternative."
+    }
+  },
+  "mobills-alternative": {
+    "meta": {
+      "title": "Best Mobills Alternative (2025) – Moneko AI Budgeting & Analytics",
+      "description": "Mobills offers solid analytics and planning tools. Discover why Moneko is a strong Mobills alternative with AI guidance, deep calculators, and modern UX.",
+      "keywords": "best Mobills alternative, Mobills vs Moneko, budget planner alternative, spending analytics apps, AI budgeting coach"
+    },
+    "hero": {
+      "title": "A Mobills Alternative with AI and Education Built In",
+      "subtitle": "Mobills gives you spending analytics. Moneko adds AI planning, richer calculators, and educational content designed to help you act on the data.",
+      "ctaText": "Explore Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Mobills?",
+        "Can Moneko help me analyze and plan at the same time?",
+        "Show me a Mobills alternative with AI.",
+        "Help me turn analytics into a specific payoff plan."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Understand Your Spending",
+          "description": "Connect accounts and categorize transactions to get the same clear analytics you expect from Mobills."
+        },
+        {
+          "title": "Build AI-Guided Budgets",
+          "description": "Use Moneko’s AI to propose budgets, goal contributions, and payoff strategies based on that data."
+        },
+        {
+          "title": "Simulate and Learn",
+          "description": "Use calculators and lessons to test what happens if you increase payments, change savings rates, or adjust timelines."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Mobills vs Moneko: Analytics vs AI Planning",
+      "subtitle": "See how Moneko combines spending analytics with coaching, calculators, and education."
+    },
+    "features": [
+      {
+        "title": "AI Budget & Goal Suggestions",
+        "description": "Turn analytics into an actionable monthly plan in minutes.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Comprehensive Calculators",
+        "description": "Use debt, savings, and investment calculators to connect daily spending to long-term outcomes.",
+        "icon": "📈",
+        "route": "/calculators"
+      },
+      {
+        "title": "Education Layer",
+        "description": "Understand what the charts mean and what to do about them.",
+        "icon": "📚",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Reading Your Spending Data",
+        "description": "Learn how to interpret common analytics and avoid misreading trends.",
+        "icon": "🔍"
+      },
+      {
+        "title": "From Analytics to Action",
+        "description": "Use a simple framework to turn insights into specific, time-bound actions.",
+        "icon": "🧭"
+      }
+    ],
+    "benefits": [
+      "Visual analytics plus AI planning",
+      "Less guesswork, more clarity",
+      "Integrated tools instead of scattered ones",
+      "Education to make you independent over time"
+    ],
+    "article": {
+      "title": "Best Mobills Alternative in 2025: Moneko for Analytics + AI Planning",
+      "tags": [
+        "best Mobills alternative",
+        "Mobills vs Moneko",
+        "budget planner alternative",
+        "AI budget analytics"
+      ],
+      "body": "Mobills offers a robust mix of spending analytics, budgets, and reminders. It’s ideal if you like charts and want visibility into where your money is going. But visibility alone doesn’t always answer the question: what should I do next? How fast can I pay off this debt? How much should I save each month?\n\nMoneko pairs analytics with AI and structured learning. Connect your accounts, review your spending, and then ask Moneko to build a budget and goal plan tailored to you. Integrated calculators help you test payoff speeds, emergency fund targets, and investment contributions. Lessons explain what’s happening and why, so you can eventually make decisions without relying solely on the app.\n\nCompared with Mobills and other tools – PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, Bills Reminder, Budget Planner – Moneko’s strength is turning data into a guided, learnable plan. If you love analytics but want more direction, it’s a compelling alternative."
+    }
+  },
+  "mint-legacy-alternative": {
+    "meta": {
+      "title": "Best Mint Alternative (2025) – Moneko as a Modern Mint.com Replacement",
+      "description": "Mint (legacy) was a favorite for tracking bills, budgets, and net worth. Learn why Moneko is a modern Mint alternative with AI, calculators, and education-first design.",
+      "keywords": "best Mint alternative, Mint.com replacement, Mint vs Moneko, legacy Mint app alternative, net worth tracking app"
+    },
+    "hero": {
+      "title": "A Modern Mint Alternative Built for 2025 and Beyond",
+      "subtitle": "Mint (legacy) helped a generation start tracking money. Moneko takes the next step with AI budgeting, deeper calculators, and a design built for learning and long-term planning.",
+      "ctaText": "Move from Mint to Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "I’m looking for a Mint replacement – how does Moneko compare?",
+        "Can Moneko track bills and net worth like Mint?",
+        "Help me rebuild my Mint setup in Moneko.",
+        "Show me a Mint alternative with AI features."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Reconnect Your Accounts",
+          "description": "Link the same bank, credit, and investment accounts you used in Mint to get an updated picture."
+        },
+        {
+          "title": "Rebuild Your Budgets with AI Help",
+          "description": "Let Moneko analyze your historical patterns and help recreate or improve your old Mint budgets."
+        },
+        {
+          "title": "Go Beyond Tracking",
+          "description": "Use calculators and lessons to create payoff strategies, savings plans, and retirement projections Mint never fully supported."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Mint vs Moneko: From Legacy Tracking to AI Planning",
+      "subtitle": "See how Moneko builds on what Mint started, with more intelligence and education."
+    },
+    "features": [
+      {
+        "title": "Familiar Dashboards, Smarter Insights",
+        "description": "See spending, budgets, and net worth at a glance – but with AI commentary and suggestions.",
+        "icon": "📊",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Deeper Planning Tools",
+        "description": "Plan beyond next month with payoff, savings, and retirement calculators.",
+        "icon": "🧮",
+        "route": "/calculators"
+      },
+      {
+        "title": "Education Layer",
+        "description": "Learn how to use your new Mint replacement to actually change your financial trajectory.",
+        "icon": "📚",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Migrating from Mint",
+        "description": "Follow a step-by-step guide to rebuilding your Mint setup in Moneko.",
+        "icon": "📦"
+      },
+      {
+        "title": "Mint-Style Tracking + AI Planning",
+        "description": "Learn how to layer planning tools on top of the familiar dashboards you’re used to.",
+        "icon": "🧠"
+      }
+    ],
+    "benefits": [
+      "Smooth transition from Mint (legacy)",
+      "More intelligence and calculators",
+      "Education to maximize your new setup",
+      "Built for the next decade, not the last"
+    ],
+    "article": {
+      "title": "Best Mint (Legacy) Alternative in 2025: Why Moneko Is a Natural Successor",
+      "tags": [
+        "best Mint alternative",
+        "Mint.com replacement",
+        "Mint vs Moneko",
+        "legacy Mint budget app alternative"
+      ],
+      "body": "For years, Mint was the default personal finance dashboard: link accounts, see spending by category, track bills, and monitor net worth. As the legacy Mint app has wound down, users have been searching for a replacement that feels familiar but more modern and aligned with today’s needs.\n\nMoneko is built for that moment. It retains what people loved about Mint – an at-a-glance view of cash flow and net worth – while adding AI budgeting, powerful calculators, and an education-first design. Instead of just showing what happened, Moneko helps you design what should happen next month, next year, and over the next decade.\n\nAgainst other Mint alternatives like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Expense IQ, Bluecoins, AndroMoney, Bills Reminder, and Budget Planner, Moneko’s differentiator is how it combines planning, calculators, and lessons into one coherent experience. It’s not just a new dashboard – it’s a better operating system for your money."
+    }
+  },
+  "expense-iq-alternative": {
+    "meta": {
+      "title": "Best Expense IQ Alternative (2025) – Moneko for Privacy-Conscious Budgeters",
+      "description": "Expense IQ is known for privacy-focused money management. Learn how Moneko balances data security with AI budgeting, calculators, and a modern UX.",
+      "keywords": "best Expense IQ alternative, Expense IQ vs Moneko, privacy-focused budgeting app, Android budgeting apps, AI budgeting coach"
+    },
+    "hero": {
+      "title": "A Privacy-Aware Expense IQ Alternative with AI Support",
+      "subtitle": "Expense IQ Money Manager emphasizes control and privacy. Moneko takes a similar respect for data and layers on AI budgeting, calculators, and education.",
+      "ctaText": "Try Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Expense IQ?",
+        "Can I control what data Moneko sees?",
+        "Show me a secure Expense IQ alternative with AI.",
+        "Help me move my manual tracking into Moneko."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Choose Your Data Setup",
+          "description": "Decide whether to link accounts, import data, or track manually – Moneko adapts to your comfort level."
+        },
+        {
+          "title": "Build an AI-Assisted Budget",
+          "description": "Use Moneko’s AI engine to propose budgets and strategies while keeping you in control of the inputs."
+        },
+        {
+          "title": "Plan with Privacy in Mind",
+          "description": "Use calculators and lessons to plan without needing to overshare data if you don’t want to."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Expense IQ vs Moneko: Privacy and Planning",
+      "subtitle": "See how Moneko respects your data choices while still giving you powerful planning tools."
+    },
+    "features": [
+      {
+        "title": "Flexible Data Options",
+        "description": "Choose between full connection, partial imports, or manual tracking.",
+        "icon": "🔐",
+        "route": "/dashboard/settings"
+      },
+      {
+        "title": "AI Budgeting on Your Terms",
+        "description": "Get suggestions based on the data you’re comfortable sharing.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Offline-Friendly Planning",
+        "description": "Use calculators and frameworks even for manually-entered budgets.",
+        "icon": "📝",
+        "route": "/calculators"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Budgeting with Privacy in Mind",
+        "description": "Learn how to get the benefits of modern tools without oversharing data.",
+        "icon": "🛡️"
+      },
+      {
+        "title": "Hybrid Manual + AI Workflows",
+        "description": "Combine manual inputs with AI analysis in a way that feels safe for you.",
+        "icon": "⚙️"
+      }
+    ],
+    "benefits": [
+      "Data control and transparency",
+      "AI planning even with limited data",
+      "Support for manual and connected workflows",
+      "Education to help you set boundaries confidently"
+    ],
+    "article": {
+      "title": "Best Expense IQ Alternative in 2025: Moneko for Secure, Smart Budgeting",
+      "tags": [
+        "best Expense IQ alternative",
+        "Expense IQ vs Moneko",
+        "privacy-focused budgeting app",
+        "Android budget app alternative"
+      ],
+      "body": "Expense IQ Money Manager has earned a following among privacy-conscious Android users who want comprehensive money management without feeling forced into cloud-heavy ecosystems. It’s a solid choice if control and privacy are top priorities. That said, some users still want AI planning, calculators, and a more modern interface while preserving a sense of control over their data.\n\nMoneko is designed to strike that balance. You can choose how much to connect and how much to track manually, then use AI to analyze whatever data you share. From there, you can build budgets, payoff strategies, and savings plans with the help of calculators and lessons. You stay in charge of the inputs; Moneko helps with the analysis and planning.\n\nAlongside Expense IQ and other privacy-focused tools like Bluecoins, AndroMoney, Bills Reminder, Budget Planner – as well as mainstream apps like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy) – Moneko’s role is to be a flexible AI budgeting layer. If you value privacy but don’t want to give up modern planning tools, it’s a strong alternative."
+    }
+  },
+  "bluecoins-alternative": {
+    "meta": {
+      "title": "Best Bluecoins Alternative (2025) – Moneko for Modern, AI-Driven Budgeting",
+      "description": "Bluecoins Finance & Budget is a feature-rich, privacy-minded app. See how Moneko offers a modern Bluecoins alternative with AI budgeting, calculators, and cross-platform UX.",
+      "keywords": "best Bluecoins alternative, Bluecoins vs Moneko, finance and budget app alternative, privacy budget apps, AI budgeting"
+    },
+    "hero": {
+      "title": "A Bluecoins Alternative with Cross-Platform AI Budgeting",
+      "subtitle": "Bluecoins is powerful on mobile. Moneko brings AI budgeting, calculators, and modern design across web and future mobile experiences.",
+      "ctaText": "Plan with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Bluecoins?",
+        "Can I get Bluecoins-style detail with AI help?",
+        "Show me a cross-platform Bluecoins alternative.",
+        "Help me move from spreadsheet-style tracking to an AI budget."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Bring Your Categories",
+          "description": "Recreate your Bluecoins categories and structure inside Moneko with minimal friction."
+        },
+        {
+          "title": "Layer on AI Planning",
+          "description": "Ask Moneko to recommend budgets, goal contributions, and payoff timelines based on your structure."
+        },
+        {
+          "title": "Use Calculators for Long-Term Clarity",
+          "description": "Connect your detailed tracking to big-picture goals using debt, savings, and retirement calculators."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Bluecoins vs Moneko: Detail + AI Planning",
+      "subtitle": "See how Moneko builds on detail-oriented tracking with AI and education."
+    },
+    "features": [
+      {
+        "title": "Detailed Budgets with AI Assistance",
+        "description": "Keep the granular control you love while letting AI help with allocation decisions.",
+        "icon": "⚙️",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Cross-Platform Experience",
+        "description": "Use Moneko on desktop today, with an early-access mobile roadmap designed for seamless use.",
+        "icon": "💻",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Powerful Calculators",
+        "description": "Plug your detailed data into calculators to see future outcomes.",
+        "icon": "📈",
+        "route": "/calculators"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Advanced Budget Structuring",
+        "description": "Learn best practices for structuring complex budgets without losing clarity.",
+        "icon": "🏗️"
+      },
+      {
+        "title": "Linking Micro Decisions to Macro Goals",
+        "description": "See how detailed category changes affect long-term wealth.",
+        "icon": "🔍"
+      }
+    ],
+    "benefits": [
+      "Detail without losing the big picture",
+      "AI that respects your structure",
+      "Cross-platform roadmap",
+      "Education for advanced users"
+    ],
+    "article": {
+      "title": "Best Bluecoins Alternative in 2025: Moneko for Detailed, AI-Guided Budgeting",
+      "tags": [
+        "best Bluecoins alternative",
+        "Bluecoins vs Moneko",
+        "finance and budget app alternative",
+        "AI budgeting for power users"
+      ],
+      "body": "Bluecoins Finance & Budget is known for its depth: detailed categories, strong reporting, and a privacy-aware philosophy. It’s a great fit for power users who love granularity. Over time, though, some users want more help connecting that level of detail to specific payoff dates, savings milestones, and retirement targets.\n\nMoneko is built for exactly that translation. You can keep a detailed budget structure while letting AI help with allocation and prioritization. Then, you can feed those numbers into calculators that show when you’ll be debt-free, how fast your net worth can grow, and what it will take to hit specific savings goals.\n\nAlongside Bluecoins and other privacy-aware tools like Expense IQ, AndroMoney, Bills Reminder, and Budget Planner – plus mainstream apps like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy) – Moneko’s differentiation is AI planning plus education. It’s ideal when you want power without losing clarity."
+    }
+  },
+  "andromoney-alternative": {
+    "meta": {
+      "title": "Best AndroMoney Alternative (2025) – Moneko for Android Users Who Want AI Planning",
+      "description": "AndroMoney is a classic Android budgeting app with strong privacy. See how Moneko offers an AndroMoney alternative with AI budgeting, calculators, and a modern interface.",
+      "keywords": "best AndroMoney alternative, AndroMoney vs Moneko, Android budgeting app alternative, privacy budgeting, AI budgeting"
+    },
+    "hero": {
+      "title": "An AndroMoney Alternative When You Want AI and Modern UX",
+      "subtitle": "AndroMoney has helped millions track expenses. Moneko keeps that spirit while adding AI planning, calculators, and a polished, education-first design.",
+      "ctaText": "Plan with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to AndroMoney?",
+        "Will Moneko support mobile budgeting?",
+        "Show me an AndroMoney alternative with AI.",
+        "Help me go from manual Android tracking to a full plan."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Recreate Your Categories",
+          "description": "Bring over your AndroMoney-style structure to Moneko."
+        },
+        {
+          "title": "Use AI for Planning",
+          "description": "Ask Moneko to turn your categories and history into a forward-looking budget."
+        },
+        {
+          "title": "Connect to Calculators",
+          "description": "Use debt, savings, and retirement tools to understand the long-term impact of your choices."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "AndroMoney vs Moneko: From Legacy Android App to AI Coach",
+      "subtitle": "See how Moneko helps long-time Android budgeters step into a modern planning experience."
+    },
+    "features": [
+      {
+        "title": "Familiar Structure, Modern Tools",
+        "description": "Keep your existing mental model while upgrading the toolkit.",
+        "icon": "🧱",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "AI Planning and Projections",
+        "description": "Get guidance on how to allocate, pay off, and save based on your actual data.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Education for Long-Time Budgeters",
+        "description": "Short lessons help even experienced users see new angles on their money.",
+        "icon": "📚",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Upgrading a Legacy Workflow",
+        "description": "Learn how to modernize your AndroMoney-style process without losing control.",
+        "icon": "🛠️"
+      },
+      {
+        "title": "From Manual to AI-Assisted Budgeting",
+        "description": "Get comfortable letting AI assist you while staying firmly in charge.",
+        "icon": "🤝"
+      }
+    ],
+    "benefits": [
+      "Respect for existing Android workflows",
+      "AI planning layered on top",
+      "Tools for both beginners and veterans",
+      "Education to support the transition"
+    ],
+    "article": {
+      "title": "Best AndroMoney Alternative in 2025: Moneko for Android Budgeters",
+      "tags": [
+        "best AndroMoney alternative",
+        "AndroMoney vs Moneko",
+        "Android budgeting app alternative",
+        "AI budgeting for Android users"
+      ],
+      "body": "AndroMoney is a long-standing favorite among Android users who want a reliable, privacy-aware budgeting app. It’s powerful for manual tracking and category-based planning. But as your financial life becomes more complex, you may want richer planning tools, calculators, and educational content that go beyond traditional mobile-only interfaces.\n\nMoneko gives you that next layer while respecting what made AndroMoney appealing. You can recreate your structure, then use AI to help set budgets, prioritize goals, and test strategies. Calculators for debt payoff, emergency funds, net worth, and retirement provide clarity that’s hard to achieve with manual spreadsheets alone.\n\nCompared with AndroMoney, expense-focused apps like Expense IQ and Bluecoins, and mainstream tools like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Bills Reminder, and Budget Planner, Moneko is a bridge between manual control and AI-powered planning."
+    }
+  },
+  "bills-reminder-alternative": {
+    "meta": {
+      "title": "Best Bills Reminder Alternative (2025) – Moneko for Bill Tracking + Full Planning",
+      "description": "Bills Reminder helps you avoid late payments. See how Moneko combines bill tracking with AI budgeting, calculators, and long-term planning.",
+      "keywords": "best Bills Reminder alternative, bill reminder app alternative, Bills Reminder vs Moneko, bill tracking and budgeting"
+    },
+    "hero": {
+      "title": "A Bills Reminder Alternative that Plans Beyond Due Dates",
+      "subtitle": "Bills Reminder focuses on not missing payments. Moneko makes sure those payments fit into a bigger financial strategy.",
+      "ctaText": "Plan Your Bills with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to Bills Reminder?",
+        "Can Moneko help me schedule and plan for bills?",
+        "Show me a bill reminder alternative that also helps me save.",
+        "Help me integrate bill tracking into my budget."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "List and Schedule Bills",
+          "description": "Enter your recurring bills, due dates, and amounts, just like a bill reminder app."
+        },
+        {
+          "title": "Integrate into Your Budget",
+          "description": "Ask Moneko to build a budget that ensures bills are covered while leaving room for savings and debt payoff."
+        },
+        {
+          "title": "Use Projections to Avoid Surprises",
+          "description": "See how upcoming bills affect cash flow, savings goals, and net worth over time."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Bills Reminder vs Moneko: Reminders plus Strategy",
+      "subtitle": "Learn how to turn a list of due dates into a full financial plan."
+    },
+    "features": [
+      {
+        "title": "Bill Tracking inside Your Budget",
+        "description": "Track bills and budgets in one view instead of separate apps.",
+        "icon": "📆",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Cash Flow Forecasting",
+        "description": "Look ahead to see which months will be tight and how to smooth them.",
+        "icon": "📊",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Goal-Friendly Scheduling",
+        "description": "Design a bill schedule that still leaves room for savings and debt reduction.",
+        "icon": "🎯",
+        "route": "/dashboard/"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Building a Bill-First Budget",
+        "description": "Learn how to build your budget around fixed obligations without feeling constrained.",
+        "icon": "🏠"
+      },
+      {
+        "title": "Managing Irregular Bills",
+        "description": "Handle annual, quarterly, and irregular expenses with sinking funds.",
+        "icon": "📦"
+      }
+    ],
+    "benefits": [
+      "Never miss a bill while still hitting goals",
+      "Better visibility into upcoming cash flow",
+      "Integrated bill and budget planning",
+      "Education for handling irregular expenses"
+    ],
+    "article": {
+      "title": "Best Bills Reminder Alternative in 2025: Moneko for Bill Tracking Plus Strategy",
+      "tags": [
+        "best Bills Reminder alternative",
+        "Bills Reminder vs Moneko",
+        "bill reminder app alternative",
+        "bill tracking and budgeting"
+      ],
+      "body": "Bills Reminder and similar apps focus on one job: making sure you don’t miss payments. That’s an essential foundation, but it doesn’t answer bigger questions like how much you can safely save, how quickly you can pay down debt, or whether your current bill load is sustainable.\n\nMoneko integrates bill tracking directly into your budgeting and planning experience. You can list all your recurring obligations, then ask Moneko to design a budget that keeps them covered while still making progress toward savings and debt goals. Cash flow projections show how upcoming bills line up against paychecks and targets.\n\nCompared with Bills Reminder, other privacy-focused utilities like Expense IQ, Bluecoins, AndroMoney, Budget Planner, and mainstream budgeting apps like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Moneko’s value is turning due dates into a strategy. It’s built for people who want to be proactive, not just punctual."
+    }
+  },
+  "budget-planner-alternative": {
+    "meta": {
+      "title": "Best Budget Planner Alternative (2025) – Moneko for AI-First Budgeting",
+      "description": "Generic budget planner apps help you track categories. Learn why Moneko – with AI budgeting, calculators, and learning – is one of the best budget planner alternatives in 2025.",
+      "keywords": "best Budget Planner alternative, budget planner app alternative, budgeting tools, AI budgeting coach, modern budget planner"
+    },
+    "hero": {
+      "title": "A Budget Planner Alternative that Actually Teaches You",
+      "subtitle": "Traditional budget planner apps give you templates. Moneko combines templates with AI coaching, calculators, and education so you can understand and improve your plan over time.",
+      "ctaText": "Start with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How does Moneko compare to generic budget planner apps?",
+        "Help me replace my paper or spreadsheet budget.",
+        "Show me a smarter budget planner with AI.",
+        "I want a budget planner that teaches me as I go."
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Pick a Starting Template",
+          "description": "Start with a simple 50/30/20, zero-based, or envelope-style template."
+        },
+        {
+          "title": "Customize with AI Help",
+          "description": "Ask Moneko to adjust categories, amounts, and goals based on your income and priorities."
+        },
+        {
+          "title": "Add Calculators and Lessons",
+          "description": "Use tools and education to connect your monthly budget to long-term wealth building."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Budget Planner Apps vs Moneko",
+      "subtitle": "See why an AI-first budget planner helps you move from templates to transformation."
+    },
+    "features": [
+      {
+        "title": "AI-Enhanced Templates",
+        "description": "Stop staring at empty cells; get a realistic starting plan in minutes.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Rich Calculator Suite",
+        "description": "Plan savings, debt payoff, net worth, and retirement inside the same app.",
+        "icon": "📊",
+        "route": "/calculators"
+      },
+      {
+        "title": "Continuous Education",
+        "description": "Learn new concepts and update your plan as your life changes.",
+        "icon": "🎓",
+        "route": "/dashboard/learning"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Choosing a Budgeting Framework",
+        "description": "Understand the pros and cons of percentage-based, zero-based, and envelope methods.",
+        "icon": "⚖️"
+      },
+      {
+        "title": "Maintaining Your Budget Over Time",
+        "description": "Build a monthly review routine that feels sustainable.",
+        "icon": "📅"
+      }
+    ],
+    "benefits": [
+      "More than just a template library",
+      "AI coaching built in",
+      "Deep planning tools for the future",
+      "Education to reduce money anxiety"
+    ],
+    "article": {
+      "title": "Best Budget Planner Alternative in 2025: Why Moneko Stands Out",
+      "tags": [
+        "best Budget Planner alternative",
+        "budget planner app alternative",
+        "AI budgeting app",
+        "modern budget planner"
+      ],
+      "body": "“Budget planner” can mean anything from a paper worksheet to a basic app with a few templates. These tools are useful, but they rarely help you understand why a plan works or how to adapt it to your specific situation. They also seldom connect your monthly budget to debt payoff, emergency funds, investing, or retirement in a meaningful way.\n\nMoneko is built to be the next generation of budget planner: AI-first, calculator-rich, and education-driven. You can start with familiar templates, then let AI adjust them based on your income, debts, and goals. From there, calculators show you how fast you can reach your targets, and lessons explain each concept so you can eventually budget confidently on your own.\n\nCompared with generic budget planners and specific apps like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, and Bills Reminder, Moneko is focused on transformation, not just tracking. It’s built for people who want their budget to be a learning tool as much as a ledger."
+    }
   }
 }
