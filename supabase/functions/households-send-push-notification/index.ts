@@ -288,6 +288,13 @@ function buildDeepLink(eventType: string, data: Record<string, string>): string 
       }
       break;
 
+    case 'settlement_completed':
+      // Navigate to household overview for settlement context
+      if (data.household_id) {
+        return `/household/${data.household_id}`;
+      }
+      break;
+
     default:
       // Default to home
       return '/home';
@@ -1029,6 +1036,29 @@ function buildNotificationMessage(
       };
     }
 
+    case 'settlement_completed': {
+      const actorName = (payload.actor_name || 'Someone') as string;
+      const code = payload.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const youOweCents = Number(payload.amounts_before?.you_owe_cents ?? payload.amount_cents ?? 0);
+      const youAreOwedCents = Number(payload.amounts_before?.you_are_owed_cents ?? 0);
+      const netPayCents = Number(payload.amounts_before?.net_pay_cents ?? Math.max(youOweCents - youAreOwedCents, 0));
+
+      // First-person toward the recipient: actor settled with you
+      const title = actorName;
+      const body = netPayCents > 0
+        ? `settled ${symbol}${(netPayCents / 100).toFixed(2)} with you in ${householdName}`
+        : `settled up with you in ${householdName}`;
+
+      return {
+        title,
+        body,
+        data: {
+          household_id: payload.household_id || '',
+        }
+      };
+    }
+
     default:
       return {
         title: 'Moneko',
@@ -1037,4 +1067,3 @@ function buildNotificationMessage(
       };
   }
 }
-

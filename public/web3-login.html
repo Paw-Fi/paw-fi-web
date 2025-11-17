@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web3 Login · Moneko</title>
+    <style>
+      :root { color-scheme: light dark }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Cantarell, Noto Sans, Ubuntu, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 0; padding: 24px; }
+      .card { max-width: 560px; margin: 0 auto; padding: 20px; border: 1px solid rgba(0,0,0,.1); border-radius: 12px; }
+      .muted { opacity: .7 }
+      .error { color: #EF4444 }
+      .success { color: #10B981 }
+      pre { white-space: pre-wrap; word-break: break-word; }
+      button { padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(0,0,0,.15); background: transparent; cursor: pointer }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Sign in with Web3</h2>
+      <p class="muted">This page is opened inside your wallet's in-app browser to complete Web3 authentication.</p>
+      <div id="status" class="muted">Preparing login…</div>
+      <div id="details" class="muted"></div>
+      <div style="margin-top:12px">
+        <button id="retry" style="display:none">Try again</button>
+      </div>
+    </div>
+
+    <script>
+      (async () => {
+        const qs = new URLSearchParams(location.search)
+        const projectUrl = qs.get('projectUrl')
+        const anonKey = qs.get('anonKey')
+        const chain = (qs.get('chain') || 'ethereum').toLowerCase()
+        const statement = qs.get('statement') || 'I accept the Terms of Service.'
+        const redirect = qs.get('redirect')
+
+        const statusEl = document.getElementById('status')
+        const detailsEl = document.getElementById('details')
+        const retryBtn = document.getElementById('retry')
+
+        function showError(msg, err) {
+          statusEl.textContent = msg
+          statusEl.className = 'error'
+          if (err) {
+            detailsEl.innerHTML = '<pre>' + (err?.message || String(err)) + '</pre>'
+          }
+          retryBtn.style.display = 'inline-block'
+        }
+
+        retryBtn.addEventListener('click', () => location.reload())
+
+        if (!projectUrl || !anonKey || !redirect) {
+          return showError('Missing required parameters. Please update the app and try again.')
+        }
+
+        const { createClient } = window.supabase
+        const supabase = createClient(projectUrl, anonKey)
+
+        try {
+          // Ensure wallet provider is present (MetaMask/Phantom in-app browsers)
+          if (chain === 'ethereum') {
+            if (!window.ethereum) {
+              return showError('No Ethereum wallet detected. Please open this page in your wallet\'s in-app browser (e.g., MetaMask).')
+            }
+          } else if (chain === 'solana') {
+            if (!window.solana) {
+              return showError('No Solana wallet detected. Please open this page in your wallet\'s in-app browser (e.g., Phantom).')
+            }
+          }
+
+          statusEl.textContent = 'Requesting wallet signature…'
+          detailsEl.textContent = ''
+
+          const { data, error } = await supabase.auth.signInWithWeb3({
+            chain,
+            statement,
+          })
+          if (error) throw error
+
+          const session = data?.session
+          if (!session) {
+            return showError('No session returned from Supabase. Please try again.')
+          }
+
+          statusEl.textContent = 'Signing in…'
+          statusEl.className = 'success'
+
+          // Deep link back to the app using Supabase token fragment format
+          const frag = new URLSearchParams({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            token_type: 'bearer',
+            expires_in: String(session.expires_in ?? 3600),
+            provider: 'web3'
+          }).toString()
+
+          const target = redirect + '#' + frag
+          location.href = target
+        } catch (err) {
+          console.error('Web3 sign-in failed', err)
+          showError('Web3 sign-in failed. Please ensure you approved the request in your wallet.', err)
+        }
+      })()
+    </script>
+  </body>
+  </html>
+

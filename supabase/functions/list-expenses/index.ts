@@ -185,7 +185,7 @@ Deno.serve(async (req: Request) => {
     // Start building query
     let query = supabase
       .from("expenses")
-      .select("id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, is_recurring, recurrence_rule, attachments, created_at", { count: 'exact' })
+      .select("id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at", { count: 'exact' })
       .eq("user_id", userId)
       .eq("type", "expense") // CRITICAL: Only fetch expenses (not income)
       .order("date", { ascending: false })
@@ -249,6 +249,7 @@ Deno.serve(async (req: Request) => {
       currency: validateCurrency(expense.currency || "USD"),
       receiptImageUrl: expense.receipt_image_url,
       splitGroupId: expense.split_group_id,
+      householdId: expense.household_id,
       isRecurring: expense.is_recurring || false,
       recurrenceRule: expense.recurrence_rule,
       attachments: expense.attachments || [],

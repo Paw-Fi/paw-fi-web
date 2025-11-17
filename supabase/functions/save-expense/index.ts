@@ -50,6 +50,7 @@ interface RequestBody {
       unit: 'days' | 'hours';
     };
   };
+  payerUserId?: string; // Optional explicit payer for household split
 }
 
 Deno.serve(async (req: Request) => {
@@ -388,13 +389,28 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // Resolve payer for split group: default current user unless explicit payerUserId provided and valid
+      let payerUserId = sanitizeUuid(body.payerUserId ?? null) || userId;
+      if (payerUserId && body.householdId) {
+        const { data: validPayer } = await supabase
+          .from('household_members')
+          .select('user_id')
+          .eq('household_id', body.householdId)
+          .eq('user_id', payerUserId)
+          .maybeSingle();
+        if (!validPayer) {
+          console.warn('[save-expense] Provided payerUserId is not a member of the household; falling back to current user', { payerUserId });
+          payerUserId = userId;
+        }
+      }
+
       // Create expense split group
       const { data: splitGroup, error: splitGroupError } = await supabase
         .from('expense_split_groups')
         .insert({
           household_id: body.householdId,
           expense_id: expense.id,
-          payer_user_id: userId,
+          payer_user_id: payerUserId,
           split_type: splitType,
           currency: currency,
           total_amount_cents: amountCents,

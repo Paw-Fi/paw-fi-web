@@ -194,32 +194,65 @@ BEGIN
           WHERE expense_id = v_expense.id
             AND occurrence_date = v_next_occurrence
         ) THEN
-          -- Create notification event
-          INSERT INTO public.notification_events (
-            household_id,
-            user_id,
-            event_type,
-            payload,
-            is_sent,
-            created_at
-          ) VALUES (
-            NULL, -- Personal reminder, not household
-            v_expense.user_id,
-            'recurring_reminder',
-            jsonb_build_object(
-              'expense_id', v_expense.id,
-              'category', v_expense.category,
-              'amount_cents', v_expense.amount_cents,
-              'currency', v_expense.currency,
-              'type', v_expense.type,
-              'occurrence_date', v_next_occurrence,
-              'reminder_value', v_reminder_value,
-              'reminder_unit', v_reminder_unit,
-              'frequency', v_expense.frequency
-            ),
-            false,
-            NOW()
-          ) RETURNING id INTO v_notification_id;
+          -- Personal vs household notifications:
+          -- - Personal (household_id IS NULL): single notification to owner
+          -- - Household: same notification payload to every household member (including the creator)
+          IF v_expense.household_id IS NULL THEN
+            INSERT INTO public.notification_events (
+              household_id,
+              user_id,
+              event_type,
+              payload,
+              is_sent,
+              created_at
+            ) VALUES (
+              NULL,
+              v_expense.user_id,
+              'recurring_reminder',
+              jsonb_build_object(
+                'expense_id', v_expense.id,
+                'category', v_expense.category,
+                'amount_cents', v_expense.amount_cents,
+                'currency', v_expense.currency,
+                'type', v_expense.type,
+                'occurrence_date', v_next_occurrence,
+                'reminder_value', v_reminder_value,
+                'reminder_unit', v_reminder_unit,
+                'frequency', v_expense.frequency
+              ),
+              false,
+              NOW()
+            ) RETURNING id INTO v_notification_id;
+          ELSE
+            -- Household recurring reminder: notify every household member
+            INSERT INTO public.notification_events (
+              household_id,
+              user_id,
+              event_type,
+              payload,
+              is_sent,
+              created_at
+            )
+            SELECT
+              v_expense.household_id,
+              hm.user_id,
+              'recurring_reminder',
+              jsonb_build_object(
+                'expense_id', v_expense.id,
+                'category', v_expense.category,
+                'amount_cents', v_expense.amount_cents,
+                'currency', v_expense.currency,
+                'type', v_expense.type,
+                'occurrence_date', v_next_occurrence,
+                'reminder_value', v_reminder_value,
+                'reminder_unit', v_reminder_unit,
+                'frequency', v_expense.frequency
+              ),
+              false,
+              NOW()
+            FROM public.household_members hm
+            WHERE hm.household_id = v_expense.household_id;
+          END IF;
 
           -- Mark as reminded
           INSERT INTO public.recurring_transaction_reminders_sent (

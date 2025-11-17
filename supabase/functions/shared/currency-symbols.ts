@@ -32,6 +32,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'NZD': 'NZ\$',
   'PHP': '₱',
   'PLN': 'zł',
+  'PKR': '₨',
   'PYG': '₲',
   'RSD': 'Дин.',
   'RUB': '₽',
