@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Rocket, Loader2, Sparkles } from "lucide-react";
-import { FaDiscord } from "react-icons/fa";
+
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
 import { FaqSection } from "@/components/ui/faq-section";

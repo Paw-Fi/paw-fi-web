@@ -19,6 +19,7 @@ import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
+import TestimonialsSection from "@/components/homepage/new/testimonials-section";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -200,7 +201,9 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials Section */}
-      {/* <TestimonialsSection /> */}
+      <section className="relative bg-section-bg-light">
+        <TestimonialsSection />
+      </section>
 
       {/* Expert-Led Lessons Section */}
       <section className="relative bg-section-bg-light">
