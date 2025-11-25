@@ -34,6 +34,7 @@ const DEBUG = Deno.env.get('DEBUG_LOG') === 'true';
 
 
 function errorResponse(message: string, status = 400, details?: unknown) {
+  console.error(`[finance-update] Error ${status}: ${message}`, details);
   return jsonResponse({ error: message, details }, status);
 }
 

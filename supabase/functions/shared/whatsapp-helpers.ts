@@ -52,6 +52,56 @@ export function buildVerificationPrompt(): string {
 }
 
 /**
+ * Send a plain WhatsApp message (optionally with media) via Twilio REST API.
+ */
+export async function sendWhatsAppMessage(
+  accountSid: string,
+  authToken: string,
+  from: string,
+  to: string,
+  body: string,
+  mediaUrl?: string
+): Promise<{ success: boolean; messageSid?: string; error?: string }> {
+  try {
+    const fromNumber = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+    const toNumber = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
+
+    const formData = new URLSearchParams();
+    formData.append("From", fromNumber);
+    formData.append("To", toNumber);
+    formData.append("Body", body);
+    if (mediaUrl) {
+      formData.append("MediaUrl", mediaUrl);
+    }
+
+    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[sendWhatsAppMessage] Twilio API error:", errorText);
+      return { success: false, error: `Twilio API error: ${response.status}` };
+    }
+
+    const result = await response.json();
+    console.log("[sendWhatsAppMessage] Message sent successfully:", result.sid);
+    return { success: true, messageSid: result.sid };
+  } catch (error) {
+    console.error("[sendWhatsAppMessage] Error:", error);
+    return { success: false, error: String(error) };
+  }
+}
+
+/**
  * Send a WhatsApp message using Twilio Content Template (ContentSid)
  * @param accountSid - Twilio Account SID
  * @param authToken - Twilio Auth Token
