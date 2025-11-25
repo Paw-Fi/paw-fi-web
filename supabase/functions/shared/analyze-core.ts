@@ -5,12 +5,20 @@ import { getCurrencySymbol } from "./currency-symbols.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function b64encode(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
 export interface AnalyzeRequestBody {
   userId?: string | null;
   text?: string;
   image?: {
     data: string;
     contentType: string;
+    // Optional raw bytes to avoid double-encoding issues (preferred when available)
+    bytes?: Uint8Array;
   };
   date?: string;
   currency?: string;
@@ -180,19 +188,23 @@ export async function runAnalyzeExpense(
       if (!body.image.contentType || !body.image.contentType.startsWith("image/")) {
         return { success: false, error: "Invalid image content type", status: 400, language };
       }
-      const base64Data = body.image.data.replace(/^data:image\/\w+;base64,/, "");
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      // Prefer raw bytes if provided; otherwise decode base64
+      let bytes: Uint8Array;
+      if (body.image.bytes instanceof Uint8Array) {
+        bytes = body.image.bytes;
+      } else {
+        const base64Data = body.image.data.replace(/^data:image\/\w+;base64,/, "");
+        const binaryString = atob(base64Data);
+        bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
       }
+
       if (bytes.length > 10 * 1024 * 1024) {
         return { success: false, error: "Image too large. Maximum 10MB", status: 400, language };
       }
-
-      let binary = "";
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const base64Image = btoa(binary);
+      const base64Image = b64encode(bytes);
 
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
       const systemInstruction = [
@@ -202,6 +214,10 @@ export async function runAnalyzeExpense(
         "- income: deposit/credit slips, payroll notifications, refunds to card/bank, inbound transfers.",
         "- expense: purchase receipts, invoices, utility bills, debit/outbound transfers.",
         `Category policy: Expense categories: ${expenseCategories.join(", ")}. Income categories: ${incomeCategories.join(", ")}.`,
+        "Totals (CRITICAL):",
+        "- Use the FINAL TOTAL / AMOUNT DUE that already INCLUDES taxes, fees, tips, and service charges.",
+        "- If multiple totals exist (subtotal, tax, total, balance), choose the amount that represents the amount to pay after tax/fees.",
+        "- If a balance line is present, prefer the balance/amount due over subtotal.",
         "Currency: detect, else use Caller Currency. Date: detect, else use Caller Date.",
         "Description policy for receipts: list items conversationally with currency symbols, include store if visible.",
         "Do NOT output subtotal/total lines; only line items. If only a total exists, return a single item for that total.",

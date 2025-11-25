@@ -314,6 +314,7 @@ export async function processReceiptImage(params: {
   geminiApiKey: string;
   callerDate?: string;
   callerCurrency?: string;  // DEFAULT currency if not detected on receipt (should already be: inputCurrency || preferred_currency || 'USD')
+  skipFinanceUpdate?: boolean;
 }): Promise<ProcessResult> {
   const {
     userId,
@@ -325,6 +326,7 @@ export async function processReceiptImage(params: {
     geminiApiKey,
     callerDate = new Date().toISOString().slice(0, 10),
     callerCurrency = 'USD',  // Final fallback if caller doesn't provide
+    skipFinanceUpdate = false,
   } = params;
 
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
@@ -500,6 +502,26 @@ Use the add_expenses tool with a single item containing:
         .join(', ');
 
       console.log('[add_expenses] Composed text for finance-update:', composed);
+
+      if (skipFinanceUpdate) {
+        return {
+          type: 'expense',
+          isReceipt: true,
+          items: items.map((it) => {
+            const itemCurrency = normalizeCurrencyCode(it.currency) || callerCurrency;
+            return {
+              amount: it.amount,
+              category: it.category || 'expense',
+              currency: itemCurrency,
+              currencySymbol: getCurrencySymbol(itemCurrency),
+              date: it.date || callerDate,
+              note: it.note,
+              receipt_image_url: receiptImageUrl,
+            };
+          }),
+          reply: 'Receipt parsed (finance-update skipped for testing)',
+        };
+      }
 
       // ROBUST: Retry receipt processing with exponential backoff
       let data: any, error: any;

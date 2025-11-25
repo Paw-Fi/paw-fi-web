@@ -17,7 +17,7 @@ import { fetchExpensesDirect, saveExpenseDirect, deleteExpenseDirect } from "../
 import { createOrUpdateBudget, upsertEnvelope, upsertEnvelopeAllocation, upsertEnvelopeCategoryLink, getBudgetStatusDirect } from "../shared/budgets-helpers.ts";
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
-import { debugLog, formatInvokeError, normalizeExpensesForTool, buildCategoryChart, formatExpensesSummary, CATEGORY_GUIDE } from "../shared/formatting-helpers.ts";
+import { debugLog, formatInvokeError, normalizeExpensesForTool, buildCategoryChart, formatExpensesSummary, CATEGORY_GUIDE, formatAmount } from "../shared/formatting-helpers.ts";
 import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 
 // --- Constants & Types ---
@@ -257,25 +257,36 @@ Deno.serve(async (req: Request) => {
     const mediaType = formData.get("MediaContentType0")?.toString();
     
     if (mediaUrl && mediaType?.startsWith("image/")) {
-       // Download image and run local analysis to avoid JWT issues
-       const imgRes = await fetch(mediaUrl);
-       const imgBuf = await imgRes.arrayBuffer();
-       const base64Data = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
-
-       const analysis = await runAnalyzeExpense(
-         {
-           userId,
-           image: { data: base64Data, contentType: mediaType },
-           currency: userCurrency,
-         },
-         GEMINI_API_KEY
-       );
-
-       if (!analysis.success || !analysis.items) {
-         if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis.error || "unknown"}`);
-         userMessageContent = `[User uploaded an image, but analysis failed: ${analysis.error || "analysis failed"}]`;
+       // Download image with Twilio Basic auth (matches legacy webhook), then run local analyze-core
+       const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
+       const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
+       const imgRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
+       if (!imgRes.ok) {
+         if (WHATSAPP_DEBUG) debugNotes.push(`media fetch failed status=${imgRes.status}`);
+         userMessageContent = `[User uploaded an image, but download failed status=${imgRes.status}]`;
        } else {
-         userMessageContent = `[User uploaded an image. Analysis Result: ${JSON.stringify(analysis.items)}]`;
+         const contentType = imgRes.headers.get("content-type") || mediaType || "";
+         if (!/^image\/(jpeg|jpg|png|gif|bmp|webp)$/i.test(contentType)) {
+           if (WHATSAPP_DEBUG) debugNotes.push(`unsupported image type ${contentType}`);
+           userMessageContent = `[User sent unsupported image type: ${contentType}]`;
+         } else {
+           const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
+           const base64Data = btoa(String.fromCharCode(...imgBuf));
+           const analysis = await runAnalyzeExpense(
+             {
+               userId,
+               image: { data: base64Data, contentType, bytes: imgBuf },
+               currency: userCurrency,
+             },
+             GEMINI_API_KEY
+           );
+           if (!analysis.success || !analysis.items) {
+             if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis.error || "unknown"}`);
+             userMessageContent = `[User uploaded an image, but analysis failed: ${analysis.error || "analysis failed"}]`;
+           } else {
+             userMessageContent = `[User uploaded an image. Analysis Result: ${JSON.stringify(analysis.items)}]`;
+           }
+         }
        }
     } else {
         userMessageContent = `[User sent a file: ${mediaUrl}]`;
@@ -489,6 +500,8 @@ let mediaUrl: string | undefined;
 let generatedChartText: string | undefined;
 let listSummaryOverride: string | undefined;
 let persistedContent: string | undefined;
+let postAddBudgetNote: string | undefined;
+let budgetChartUrl: string | undefined;
 
   // Loop for tool calls (handle sequential calls)
   // For simplicity, we handle one batch of calls then get final text.
@@ -534,6 +547,32 @@ let persistedContent: string | undefined;
                 const formatted = formatInvokeError(error);
                 if (WHATSAPP_DEBUG) debugNotes.push(`save-expense error: ${formatted}`);
                 console.error("[twilio-whatsapp-ai-bot] save-expense error", { error, formatted });
+              } else {
+                // Fetch budget status to inform user about remaining budget/pockets
+                const dateStr = (call.args.date || new Date().toISOString().split("T")[0]).slice(0, 10);
+                const period_month = dateStr.slice(0, 7) + "-01";
+                const budgetStatus = await getBudgetStatusDirect(
+                  supabase,
+                  userId,
+                  householdId || null,
+                  period_month,
+                  call.args.currency || userCurrency
+                );
+                if (budgetStatus && !budgetStatus.error && budgetStatus.totals) {
+                  const remainingMajor = (budgetStatus.totals.remaining_cents || 0) / 100;
+                  const allocMajor = (budgetStatus.totals.budget_cents || 0) / 100;
+                  const remainingText = formatAmount(remainingMajor, call.args.currency || userCurrency);
+                  const totalText = formatAmount(allocMajor, call.args.currency || userCurrency);
+                  const pocketNotes: string[] = [];
+                  if (Array.isArray(budgetStatus.envelopes) && budgetStatus.envelopes.length) {
+                    budgetStatus.envelopes.slice(0, 3).forEach((env: any) => {
+                      const rem = ((env.remaining_cents ?? 0) as number) / 100;
+                      pocketNotes.push(`${env.name}: ${formatAmount(rem, call.args.currency || userCurrency)} left`);
+                    });
+                  }
+                  const pocketsText = pocketNotes.length ? ` Pockets — ${pocketNotes.join("; ")}.` : "";
+                  postAddBudgetNote = `💡 Budget check: ${remainingText} left this month out of ${totalText}.${pocketsText} Want tips to stay on track? 😊`;
+                }
               }
             } else if (call.name === "update_transaction") {
               let householdId = call.args.household_id;
@@ -626,7 +665,12 @@ let persistedContent: string | undefined;
                      console.error("[twilio-whatsapp-ai-bot] get-budget direct error", { error: res.error, formatted });
                      toolResult = { error: res.error };
                    } else {
-                     toolResult = { budget: res.budget, envelopes: res.envelopes, totals: res.totals };
+                     if (res.chart) {
+                       budgetChartUrl = res.chart;
+                       mediaUrl = res.chart;
+                       generatedChartText = finalResponseText;
+                     }
+                     toolResult = { budget: res.budget, envelopes: res.envelopes, totals: res.totals, chart: res.chart };
                   }
             } else if (call.name === "set_currency") {
                   const currency = (call.args.currency || "").toString().toUpperCase();
@@ -765,6 +809,21 @@ let persistedContent: string | undefined;
   }
 
   // 7. Finalize Response
+  // If we have a mediaUrl, strip any URLs/placeholders to keep the text clean; keep markdown.
+  if (mediaUrl) {
+    finalResponseText = finalResponseText
+      .replace(mediaUrl, "")
+      .replace(/https?:\/\/\S*quickchart\.io\S*/gi, "")
+      .replace(/\[media\].*/gi, "")
+      .replace(/Chart attached\. 🔍/gi, "")
+      .replace(/\n{2,}/g, "\n")
+      .trim();
+    // Ensure async media send uses the cleaned text
+    generatedChartText = finalResponseText;
+  }
+  if (postAddBudgetNote) {
+    finalResponseText += `\n\n${postAddBudgetNote}`;
+  }
   if (WHATSAPP_DEBUG && debugNotes.length > 0) {
     finalResponseText += `\n\n[debug]\n${debugNotes.join("\n")}`;
   }
