@@ -13,8 +13,12 @@ import {
   isFreeUser,
 } from "../shared/is-free-user.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
-import { CATEGORY_COLOR_MAP, normalizeCategory } from "../shared/category-colors.ts";
-import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { fetchExpensesDirect, saveExpenseDirect, deleteExpenseDirect } from "../shared/expenses-helpers.ts";
+import { createOrUpdateBudget, upsertEnvelope, upsertEnvelopeAllocation, upsertEnvelopeCategoryLink, getBudgetStatusDirect } from "../shared/budgets-helpers.ts";
+import { insertChatMessage } from "../shared/chat-helpers.ts";
+import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
+import { debugLog, formatInvokeError, normalizeExpensesForTool, buildCategoryChart, formatExpensesSummary, CATEGORY_GUIDE } from "../shared/formatting-helpers.ts";
+import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 
 // --- Constants & Types ---
 
@@ -58,10 +62,6 @@ CURRENT CONTEXT:
 `;
 
 // --- Helper Functions ---
-const CATEGORY_GUIDE = Object.entries(CATEGORY_COLOR_MAP)
-  .map(([name, color]) => `${name} (${color})`)
-  .join("; ");
-
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -74,482 +74,6 @@ function xmlResponse(xml: string, status = 200) {
     status,
     headers: { "Content-Type": "text/xml" },
   });
-}
-
-function formatInvokeError(err: unknown): string {
-  if (!err) return "unknown error";
-  try {
-    const e = err as Record<string, any>;
-    const parts: string[] = [];
-    if (e.name) parts.push(`name=${e.name}`);
-    if (e.message) parts.push(`message=${e.message}`);
-    if (e.context) {
-      const ctx = e.context as Record<string, any>;
-      const ctxParts: string[] = [];
-      if (ctx.status) ctxParts.push(`status=${ctx.status}`);
-      if (ctx.body) ctxParts.push(`body=${JSON.stringify(ctx.body)}`);
-      if (ctx.response) {
-        const resp = ctx.response as Record<string, any>;
-        if (resp.status) ctxParts.push(`respStatus=${resp.status}`);
-        if (resp.statusText) ctxParts.push(`respStatusText=${resp.statusText}`);
-      }
-      if (ctxParts.length > 0) parts.push(`context(${ctxParts.join(",")})`);
-    }
-    if (parts.length === 0) return JSON.stringify(err);
-    return parts.join(" | ");
-  } catch {
-    return String(err);
-  }
-}
-
-function debugLog(enabled: boolean, note: string, data?: unknown) {
-  if (!enabled) return;
-  if (data !== undefined) {
-    console.log(`[whatsapp-ai-bot][debug] ${note}`, data);
-  } else {
-    console.log(`[whatsapp-ai-bot][debug] ${note}`);
-  }
-}
-
-function asCurrencySymbol(iso?: string | null): string {
-  if (!iso) return "";
-  return getCurrencySymbol(iso) || iso;
-}
-
-function formatAmount(amount: number, currency: string): string {
-  const sym = asCurrencySymbol(currency);
-  return `${sym}${amount.toFixed(2)}`;
-}
-
-type NormalizedExpense = {
-  id?: string;
-  date?: string;
-  category?: string | null;
-  description?: string | null;
-  amountMajor: number;
-  currency: string;
-  currency_symbol: string;
-  formatted_amount: string;
-};
-
-function normalizeExpensesForTool(raw: any[] | undefined, defaultCurrency: string): NormalizedExpense[] {
-  if (!raw) return [];
-  return raw.map((e) => {
-    const currency = e.currency || defaultCurrency;
-    const amountMajor = e.amountMajor ?? (typeof e.amount_cents === "number" ? e.amount_cents / 100 : Number(e.amount) || 0);
-    const currencySymbol = asCurrencySymbol(currency);
-    return {
-      id: e.id,
-      date: e.date,
-      category: e.category,
-      description: e.description ?? e.raw_text ?? null,
-      amountMajor,
-      currency,
-      currency_symbol: currencySymbol,
-      formatted_amount: formatAmount(amountMajor, currency),
-    };
-  });
-}
-
-function buildCategoryChart(expenses: NormalizedExpense[]) {
-  if (!expenses.length) return undefined;
-  const totals = new Map<string, number>();
-  expenses.forEach((e) => {
-    const cat = (e.category || "uncategorized").toString().toLowerCase();
-    totals.set(cat, (totals.get(cat) || 0) + (e.amountMajor || 0));
-  });
-  const labels = Array.from(totals.keys());
-  const data = Array.from(totals.values());
-  if (!data.some((v) => v > 0)) return undefined;
-  const chartConfig = {
-    type: "doughnut",
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"],
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        title: { display: true, text: "Spending by Category" },
-        legend: { position: "bottom" },
-      },
-    },
-  };
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
-}
-
-function sanitizeText(str?: string | null): string {
-  if (!str) return "";
-  return str.replace(/\*/g, "").trim();
-}
-
-function formatExpensesSummary(
-  expenses: NormalizedExpense[],
-  includeChartNote: boolean,
-  opts?: { limit?: number; startDate?: string; endDate?: string }
-): string {
-  if (!expenses.length) return "I couldn't find any expenses for that range.";
-  const lines: string[] = [];
-  const limit = opts?.limit || expenses.length;
-  const header = opts?.startDate || opts?.endDate
-    ? `Here are transactions${opts?.startDate ? ` from ${opts.startDate}` : ""}${opts?.endDate ? ` to ${opts.endDate}` : ""}:`
-    : `Here are your ${Math.min(expenses.length, limit)} most recent transactions:`;
-  lines.push(header);
-
-  let total = 0;
-  expenses.slice(0, limit).forEach((e, idx) => {
-    const cat = sanitizeText(e.category || "other");
-    const amount = e.amountMajor ?? 0;
-    total += amount;
-    const amountText = e.formatted_amount;
-    const date = e.date ? ` (${e.date})` : "";
-    const note = sanitizeText(e.description || "");
-    const notePart = note ? ` - ${note}` : "";
-    lines.push(`${idx + 1}. *${cat}*: ${amountText}${date}${notePart}`);
-  });
-
-  const currency = expenses[0]?.currency || "";
-  lines.push("", `Total shown (${Math.min(expenses.length, limit)} items): ${formatAmount(total, currency)}`);
-  if (includeChartNote) {
-    lines.push("Chart attached. 🔍");
-  }
-  lines.push("Need a monthly total, budget, or recurring setup? I can help! 🎯");
-  return lines.join("\n");
-}
-
-async function createOrUpdateBudget(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  householdId: string | null,
-  period_month: string,
-  currency: string,
-  total_budget_cents: number
-) {
-  const payload: any = {
-    user_id: userId,
-    household_id: householdId,
-    period_month,
-    currency,
-    total_budget_cents,
-    updated_at: new Date().toISOString(),
-  };
-  return supabase.from("budgets").upsert(payload, { onConflict: "user_id,household_id,currency,period_month" }).select().maybeSingle();
-}
-
-async function upsertEnvelope(
-  supabase: ReturnType<typeof createClient>,
-  budgetId: string,
-  userId: string,
-  householdId: string | null,
-  name: string,
-  percentage: number,
-  currency: string
-) {
-  const payload: any = {
-    budget_id: budgetId,
-    user_id: userId,
-    household_id: householdId,
-    name,
-    budget_percentage: percentage,
-    currency,
-    updated_at: new Date().toISOString(),
-  };
-  return supabase.from("budget_envelopes").upsert(payload, { onConflict: "budget_id,name" }).select().maybeSingle();
-}
-
-async function upsertEnvelopeAllocation(
-  supabase: ReturnType<typeof createClient>,
-  envelopeId: string,
-  period_month: string,
-  amount_cents: number
-) {
-  return supabase.from("envelope_allocations").upsert({
-    envelope_id: envelopeId,
-    period_month,
-    amount_cents,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "envelope_id,period_month" });
-}
-
-async function upsertEnvelopeCategoryLink(
-  supabase: ReturnType<typeof createClient>,
-  envelopeId: string,
-  category: string
-) {
-  return supabase.from("envelope_category_links").upsert({
-    envelope_id: envelopeId,
-    category: category.toLowerCase(),
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "envelope_id,category" });
-}
-
-async function getBudgetStatusDirect(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  householdId: string | null,
-  period_month: string,
-  currency: string
-) {
-  // Fetch budget
-  const { data: budget, error: budgetErr } = await supabase
-    .from("budgets")
-    .select("id, total_budget_cents, currency, period_month")
-    .eq("user_id", userId)
-    .eq("currency", currency)
-    .eq("period_month", period_month)
-    .eq("household_id", householdId)
-    .maybeSingle();
-  if (budgetErr) return { error: budgetErr };
-  if (!budget) return { budget: null };
-
-  // Fetch envelopes
-  const { data: envelopes, error: envErr } = await supabase
-    .from("budget_envelopes")
-    .select("id, name, budget_percentage, currency")
-    .eq("budget_id", budget.id);
-  if (envErr) return { error: envErr };
-
-  const envIds = (envelopes || []).map((e: any) => e.id);
-
-  // Fetch allocations
-  const { data: allocs, error: allocErr } = envIds.length
-    ? await supabase
-        .from("envelope_allocations")
-        .select("envelope_id, amount_cents, period_month")
-        .in("envelope_id", envIds)
-        .eq("period_month", period_month)
-    : { data: [], error: null };
-  if (allocErr) return { error: allocErr };
-
-  // Fetch spent per envelope
-  const { data: spentRows, error: spentErr } = envIds.length
-    ? await supabase
-        .from("v_envelope_monthly_spend")
-        .select("envelope_id, period_month, spent_cents")
-        .in("envelope_id", envIds)
-        .eq("period_month", period_month)
-    : { data: [], error: null };
-  if (spentErr) return { error: spentErr };
-
-  const allocMap = new Map<string, number>();
-  for (const a of allocs || []) allocMap.set(a.envelope_id as string, Number(a.amount_cents) || 0);
-  const spentMap = new Map<string, number>();
-  for (const s of spentRows || []) spentMap.set(s.envelope_id as string, Number(s.spent_cents) || 0);
-
-  const envelopeStatus = (envelopes || []).map((e: any) => {
-    const alloc = allocMap.get(e.id) ?? Math.round((e.budget_percentage || 0) / 100 * (budget.total_budget_cents || 0));
-    const spent = spentMap.get(e.id) ?? 0;
-    return {
-      id: e.id,
-      name: e.name,
-      allocated_cents: alloc,
-      spent_cents: spent,
-      remaining_cents: Math.max(alloc - spent, 0),
-    };
-  });
-
-  const totalAllocated = envelopeStatus.reduce((s, e) => s + e.allocated_cents, 0);
-  const totalSpent = envelopeStatus.reduce((s, e) => s + e.spent_cents, 0);
-
-  return {
-    budget,
-    envelopes: envelopeStatus,
-    totals: {
-      budget_cents: budget.total_budget_cents || 0,
-      allocated_cents: totalAllocated,
-      spent_cents: totalSpent,
-      remaining_cents: Math.max((budget.total_budget_cents || 0) - totalSpent, 0),
-    },
-  };
-}
-
-async function updatePreferredCurrency(
-  supabase: ReturnType<typeof createClient>,
-  contactId: string,
-  currency: string
-) {
-  return supabase
-    .from("user_contacts")
-    .update({ preferred_currency: currency, updated_at: new Date().toISOString() })
-    .eq("id", contactId)
-    .select("preferred_currency")
-    .single();
-}
-
-async function fetchExpensesDirect(
-  supabase: ReturnType<typeof createClient>,
-  contactId: string,
-  opts: { limit?: number; startDate?: string; endDate?: string; householdId?: string | null; type?: "expense" | "income"; currency?: string }
-) {
-  let query = supabase
-    .from("expenses")
-    .select(
-      "id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at",
-      { count: "exact" },
-    )
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(opts.limit ?? 5);
-
-  if (opts.type) query = query.eq("type", opts.type);
-
-  if (opts.householdId) {
-    query = query.eq("household_id", opts.householdId);
-  } else {
-    query = query.eq("contact_id", contactId).is("household_id", null);
-  }
-
-  if (opts.startDate) query = query.gte("date", opts.startDate);
-  if (opts.endDate) query = query.lte("date", opts.endDate);
-  if (opts.currency) query = query.eq("currency", opts.currency);
-
-  return query;
-}
-
-async function insertChatMessage(
-  supabase: ReturnType<typeof createClient>,
-  chat_session_id: string,
-  role: "user" | "assistant",
-  content: string,
-  debugNotes: string[],
-  debugEnabled: boolean
-) {
-  const { error } = await supabase.from("chat_messages").insert({
-    chat_session_id,
-    role,
-    content,
-    timestamp: new Date().toISOString()
-  });
-  if (error) {
-    const formatted = formatInvokeError(error);
-    if (debugEnabled) debugNotes.push(`chat_messages insert error (${role}): ${formatted}`);
-    console.error("[twilio-whatsapp-ai-bot] chat_messages insert error", { role, error, formatted });
-  }
-}
-
-async function saveExpenseDirect(
-  supabase: ReturnType<typeof createClient>,
-  contactId: string,
-  userId: string,
-  params: {
-    expenseId?: string;
-    amount: number;
-    category: string;
-    date?: string;
-    currency: string;
-    description?: string;
-    householdId?: string | null;
-    isRecurring?: boolean;
-    recurrence_rule?: Record<string, unknown>;
-    type?: "expense" | "income";
-  }
-) {
-  const amount_cents = Math.round((params.amount || 0) * 100);
-  const date = params.date || new Date().toISOString().split("T")[0];
-  const category = normalizeCategory(params.category || "other");
-  const payload: Record<string, unknown> = {
-    contact_id: contactId,
-    user_id: userId,
-    household_id: params.householdId || null,
-    type: params.type || "expense",
-    amount_cents,
-    currency: params.currency,
-    category,
-    date,
-    raw_text: params.description || null,
-    is_recurring: params.isRecurring || false,
-    recurrence_rule: params.recurrence_rule || null,
-  };
-  if (params.expenseId) {
-    return supabase.from("expenses").update(payload).eq("id", params.expenseId).select().single();
-  }
-  return supabase.from("expenses").insert(payload).select().single();
-}
-
-async function deleteExpenseDirect(
-  supabase: ReturnType<typeof createClient>,
-  contactId: string,
-  expenseId: string
-) {
-  return supabase.from("expenses").delete().eq("id", expenseId).eq("contact_id", contactId);
-}
-
-async function invokeFunctionWithFallback(
-  functionsClient: ReturnType<typeof createClient>,
-  supabaseUrl: string,
-  functionKey: string,
-  name: string,
-  payload: Record<string, unknown>,
-  debugNotes: string[],
-  debugEnabled: boolean,
-) {
-  const invokeOpts = {
-    body: payload,
-    headers: {
-      Authorization: `Bearer ${functionKey}`,
-      apikey: functionKey,
-    },
-  };
-  const firstAttempt = await functionsClient.functions.invoke(name, invokeOpts);
-  if (debugEnabled) {
-    debugNotes.push(`${name} key prefix: ${functionKey.slice(0, 12)}..., len=${functionKey.length}`);
-  }
-  if (!firstAttempt.error) {
-    return firstAttempt;
-  }
-
-  if (debugEnabled) {
-    debugNotes.push(`${name} invoke error: ${formatInvokeError(firstAttempt.error)}`);
-  }
-  console.error(`[twilio-whatsapp-ai-bot] ${name} invoke error`, firstAttempt.error);
-
-  // Fallback: direct fetch to functions endpoint to capture response body/status
-  try {
-    const url = `${supabaseUrl.replace(/\/$/, "")}/functions/v1/${name}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${functionKey}`,
-        apikey: functionKey,
-      },
-      body: JSON.stringify(payload),
-    });
-    const text = await res.text();
-    let parsed: unknown;
-    try {
-      parsed = text ? JSON.parse(text) : undefined;
-    } catch {
-      parsed = text;
-    }
-
-    if (res.ok) {
-      return { data: parsed, error: null as null };
-    }
-
-    const fallbackError = {
-      name: "ManualFetchError",
-      message: `Fallback fetch failed with status ${res.status}`,
-      context: { status: res.status, body: parsed },
-    };
-    if (debugEnabled) {
-      debugNotes.push(`${name} fallback error: ${formatInvokeError(fallbackError)}`);
-    }
-    console.error(`[twilio-whatsapp-ai-bot] ${name} fallback error`, fallbackError);
-    return { data: null as null, error: fallbackError };
-  } catch (fetchError) {
-    const errObj = {
-      name: "ManualFetchException",
-      message: String(fetchError),
-    };
-    if (debugEnabled) debugNotes.push(`${name} fetch exception: ${formatInvokeError(errObj)}`);
-    console.error(`[twilio-whatsapp-ai-bot] ${name} fetch exception`, fetchError);
-    return { data: null as null, error: errObj };
-  }
 }
 
 // Twilio Signature Validation
@@ -596,11 +120,12 @@ Deno.serve(async (req: Request) => {
   const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
   const WHATSAPP_DEBUG = (Deno.env.get("WHATSAPP_DEBUG") || "").toUpperCase() === "TRUE";
+  const EDGE_FUNCTION_KEY = (SECRET_API_KEY || "").trim();
 
-  if (!TWILIO_AUTH_TOKEN || !TWILIO_ACCOUNT_SID || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY) {
+  if (!TWILIO_AUTH_TOKEN || !TWILIO_ACCOUNT_SID || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY || !EDGE_FUNCTION_KEY) {
     console.error("Missing environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
@@ -620,20 +145,7 @@ Deno.serve(async (req: Request) => {
   if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  // Use service role for cross-function calls (matches legacy webhook behavior with --no-verify-jwt).
-  const functionsKey = (SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY || "").trim();
-  if (!functionsKey) {
-    console.error("No Supabase functions key available");
-    return jsonResponse({ error: "Server configuration error" }, 500);
-  }
-  const supabaseFunctions = createClient(SUPABASE_URL, functionsKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${functionsKey}`,
-        apikey: functionsKey,
-      },
-    },
-  });
+
   const whatsappSessionId = `whatsapp:${from}`;
   const debugNotes: string[] = [];
   debugLog(WHATSAPP_DEBUG, "incoming form data", { from, to, body, numMedia, whatsappSessionId });
@@ -745,32 +257,25 @@ Deno.serve(async (req: Request) => {
     const mediaType = formData.get("MediaContentType0")?.toString();
     
     if (mediaUrl && mediaType?.startsWith("image/")) {
-       // Invoke analyze-expense
-       // Download image first? analyze-expense takes base64 or URL? 
-       // analyze-expense takes base64.
+       // Download image and run local analysis to avoid JWT issues
        const imgRes = await fetch(mediaUrl);
        const imgBuf = await imgRes.arrayBuffer();
        const base64Data = btoa(String.fromCharCode(...new Uint8Array(imgBuf)));
 
-       const { data: analysis, error: analysisError } = await invokeFunctionWithFallback(
-         supabaseFunctions,
-         SUPABASE_URL,
-         functionsKey,
-         "analyze-expense",
+       const analysis = await runAnalyzeExpense(
          {
            userId,
            image: { data: base64Data, contentType: mediaType },
-           currency: userCurrency
+           currency: userCurrency,
          },
-         debugNotes,
-         WHATSAPP_DEBUG
+         GEMINI_API_KEY
        );
 
-       if (analysisError || !analysis?.success) {
-         if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${JSON.stringify(analysisError || analysis?.error || null)}`);
-         userMessageContent = `[User uploaded an image, but analysis failed: ${analysisError || analysis?.error}]`;
+       if (!analysis.success || !analysis.items) {
+         if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis.error || "unknown"}`);
+         userMessageContent = `[User uploaded an image, but analysis failed: ${analysis.error || "analysis failed"}]`;
        } else {
-         userMessageContent = `[User uploaded an image. Analysis Result: ${JSON.stringify(analysis.data.items)}]`;
+         userMessageContent = `[User uploaded an image. Analysis Result: ${JSON.stringify(analysis.items)}]`;
        }
     } else {
         userMessageContent = `[User sent a file: ${mediaUrl}]`;
@@ -895,7 +400,8 @@ const tools = [
           type: "OBJECT",
           properties: {
               date: { type: "STRING", description: "YYYY-MM-DD" },
-              household_id: { type: "STRING", description: "Optional: Check household budget" }
+              household_id: { type: "STRING", description: "Optional: Check household budget" },
+              household_name: { type: "STRING", description: "Optional: Household name" }
           }
       }
     },
@@ -908,6 +414,7 @@ const tools = [
               amount: { type: "NUMBER" },
               date: { type: "STRING", description: "YYYY-MM-DD" },
               household_id: { type: "STRING", description: "Optional: household scope" },
+              household_name: { type: "STRING", description: "Optional: household name" },
               pockets: {
                 type: "ARRAY",
                 items: {
@@ -923,6 +430,17 @@ const tools = [
               }
           },
           required: ["amount"]
+      }
+    },
+    {
+      name: "set_currency",
+      description: "Update the user's preferred currency (user_contacts.preferred_currency).",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          currency: { type: "STRING", description: "ISO currency code, e.g. USD, EUR, GBP" }
+        },
+        required: ["currency"]
       }
     },
     {
@@ -1053,13 +571,14 @@ let persistedContent: string | undefined;
               if (!householdId && householdName && householdMap.has(householdName)) {
                 householdId = householdMap.get(householdName);
               }
+              const type = call.args.type || "expense";
                   const listPayload = {
                     limit: call.args.limit || 50,
                     startDate: call.args.start_date,
                     endDate: call.args.end_date,
                     householdId,
                     currency: call.args.currency || undefined,
-                    type: call.args.type || undefined,
+                    type,
                   };
               debugLog(WHATSAPP_DEBUG, "list-expenses payload", listPayload);
               const { data, error } = await fetchExpensesDirect(
@@ -1089,7 +608,11 @@ let persistedContent: string | undefined;
             } else if (call.name === "get_budget") {
                    const dateStr = (call.args.date || new Date().toISOString().split('T')[0]).slice(0,10);
                    const period_month = dateStr.slice(0,7) + "-01";
-                   const householdId = call.args.household_id || null;
+                   let householdId = call.args.household_id || null;
+                   const householdName = (call.args.household_name || "").toString().toLowerCase();
+                   if (!householdId && householdName && householdMap.has(householdName)) {
+                     householdId = householdMap.get(householdName) || null;
+                   }
                    const res = await getBudgetStatusDirect(
                      supabase,
                      userId,
@@ -1118,7 +641,11 @@ let persistedContent: string | undefined;
                    // Create or update budget + envelopes/pockets
                    const period_month = (call.args.date || new Date().toISOString().slice(0, 7) + "-01").slice(0,10);
                    const total_cents = Math.round((call.args.amount || 0) * 100);
-                   const householdId = call.args.household_id || null;
+                   let householdId = call.args.household_id || null;
+                   const householdName = (call.args.household_name || "").toString().toLowerCase();
+                   if (!householdId && householdName && householdMap.has(householdName)) {
+                     householdId = householdMap.get(householdName) || null;
+                   }
 
                    const { data: budgetRow, error: budgetErr } = await createOrUpdateBudget(
                      supabase,
