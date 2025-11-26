@@ -19,6 +19,9 @@ import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
 import { debugLog, formatInvokeError, normalizeExpensesForTool, buildCategoryChart, formatExpensesSummary, CATEGORY_GUIDE, formatAmount } from "../shared/formatting-helpers.ts";
 import { runAnalyzeExpense } from "../shared/analyze-core.ts";
+import { sendWhatsAppInteractiveButtons } from "../shared/whatsapp-helpers.ts";
+// XLSX parser for spreadsheet previews
+import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 
 // --- Constants & Types ---
 
@@ -45,6 +48,9 @@ CRITICAL RULES:
 12. **Tooling discipline**: For add/update/delete/recurring/budget/envelope requests, call the appropriate tool. For recurring requests without a frequency, default to monthly. For incomes, set type="income".
 13. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to households by name only; if multiple, offer names, not IDs.
 14. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
+15. **Buttons**: When offering up to 3 choices (households, pockets, budgets, follow-up options), prefer the send_quick_replies tool to present tappable buttons instead of long text lists.
+16. **Financial snapshot**: For asks like “current financial situation/health/status”: provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
+17. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
 
 COMMON USER INTENTS (answer directly, propose next steps):
 - Spending clarity: where money goes, why cash runs out, breakdowns by category, spot leaks, compare to norms.
@@ -75,6 +81,25 @@ function xmlResponse(xml: string, status = 200) {
     headers: { "Content-Type": "text/xml" },
   });
 }
+
+function decodeBase64(data: string): Uint8Array {
+  const cleaned = data.replace(/^data:.*;base64,/, "");
+  const bin = atob(cleaned);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+
+type FinancialSnapshot = {
+  totalExpense: number;
+  totalIncome: number;
+  net: number;
+  startDate: string;
+  endDate: string;
+  categories: { category: string; amount_cents: number }[];
+  budget_cents: number | null;
+  chart_url?: string;
+};
 
 // Twilio Signature Validation
 async function validateTwilioRequest(req: Request, authToken: string): Promise<boolean> {
@@ -120,12 +145,13 @@ Deno.serve(async (req: Request) => {
   const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
   const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
   const WHATSAPP_DEBUG = (Deno.env.get("WHATSAPP_DEBUG") || "").toUpperCase() === "TRUE";
   const EDGE_FUNCTION_KEY = (SECRET_API_KEY || "").trim();
 
-  if (!TWILIO_AUTH_TOKEN || !TWILIO_ACCOUNT_SID || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY || !EDGE_FUNCTION_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY || !EDGE_FUNCTION_KEY) {
     console.error("Missing environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
@@ -142,9 +168,260 @@ Deno.serve(async (req: Request) => {
   const numMedia = parseInt(formData.get("NumMedia")?.toString() || "0");
   const to = formData.get("To")?.toString() || ""; // Our number
 
-  if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
+  // App channel (JSON + JWT): bypass Twilio handling
+  const contentType = req.headers.get("content-type") || "";
+  const authHeader = req.headers.get("Authorization") || "";
+  const isJsonApp = contentType.includes("application/json") && !!authHeader;
 
+  // --- Supabase clients ---
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const supabaseAuthed = SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      })
+    : null;
+
+  if (isJsonApp) {
+    // App mode: expects JSON { session_id?, message?, attachments?: [{filename, contentType, data(base64)}] }
+    let payload: any;
+    try {
+      payload = await req.json();
+    } catch (e) {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    if (!supabaseAuthed) {
+      return jsonResponse({ error: "Auth client not configured" }, 500);
+    }
+    const { data: userData, error: userErr } = await supabaseAuthed.auth.getUser();
+    if (userErr || !userData?.user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const userId = userData.user.id;
+
+    // Resolve contact_id for this user (fallback to userId)
+    const { data: contactRow } = await supabase
+      .from("user_contacts")
+    .select("id, preferred_currency, preferred_language")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const contactId = contactRow?.id || userId;
+    const userCurrency = contactRow?.preferred_currency || "USD";
+    const userLang = contactRow?.preferred_language || "en";
+
+    const sessionId = payload.session_id || `app:${userId}`;
+    const messageText = payload.message?.toString() || "";
+    const attachments: any[] = Array.isArray(payload.attachments) ? payload.attachments : [];
+    const debugNotes: string[] = [];
+
+    // Ensure chat session
+    let { data: session } = await supabase
+      .from("chat_sessions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("session_id", sessionId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!session) {
+      const { data: newSession, error: sessionError } = await supabase
+        .from("chat_sessions")
+        .insert({ user_id: userId, session_id: sessionId, model: MODEL_NAME })
+        .select()
+        .single();
+      if (sessionError || !newSession) {
+        return jsonResponse({ error: "Failed to initialize chat session" }, 500);
+      }
+      session = newSession;
+    }
+
+    // Handle attachments: store to storage bucket "chat-attachments" (best-effort)
+    const attachmentNotes: string[] = [];
+    if (attachments.length) {
+      const bucket = "chat-attachments";
+      for (const att of attachments.slice(0, 5)) {
+        if (!att?.data || !att?.filename) continue;
+        try {
+          const dataBytes = decodeBase64(att.data.toString());
+          const path = `${userId}/${Date.now()}_${att.filename}`;
+          const { data: upRes, error: upErr } = await supabase.storage
+            .from(bucket)
+            .upload(path, dataBytes, { contentType: att.contentType || "application/octet-stream", upsert: false });
+          if (upErr) {
+            attachmentNotes.push(`Upload failed for ${att.filename}`);
+            continue;
+          }
+          const { data: publicUrl } = supabase.storage.from(bucket).getPublicUrl(path);
+          attachmentNotes.push(`Stored ${att.filename}: ${publicUrl.publicUrl}`);
+        } catch (e) {
+          attachmentNotes.push(`Upload exception for ${att.filename}`);
+        }
+      }
+    }
+
+    // Build user content text
+    const userMessageContent = [messageText, attachmentNotes.join("\n")].filter(Boolean).join("\n");
+
+    await insertChatMessage(supabase, session.id, "user", userMessageContent, debugNotes, WHATSAPP_DEBUG);
+
+    // History
+    const { data: history } = await supabase
+      .from("chat_messages")
+      .select("role, content")
+      .eq("chat_session_id", session.id)
+      .order("timestamp", { ascending: false })
+      .limit(20);
+    const rawHistory = (history || []).reverse().map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
+    while (rawHistory.length > 0 && rawHistory[0].role === "model") rawHistory.shift();
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction: SYSTEM_INSTRUCTION
+        .replace("{{DATE}}", new Date().toISOString().split("T")[0])
+        .replace("{{CURRENCY}}", userCurrency)
+        .replace("{{HOUSEHOLDS}}", "None")
+        .replace("{{CATEGORIES}}", CATEGORY_GUIDE)
+        .replace("{{LANGUAGE}}", userLang),
+    });
+
+    const toolsApp = [
+      {
+        name: "add_transaction",
+        description: "Add an expense or income transaction. Use this for both personal and household transactions.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            type: { type: "STRING", enum: ["expense", "income"] },
+            amount: { type: "NUMBER", description: "Amount in major units (e.g. 10.50)" },
+            category: { type: "STRING", description: "Category name" },
+            description: { type: "STRING", description: "Description/Note" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            currency: { type: "STRING", description: "ISO Currency Code" },
+            household_id: { type: "STRING", description: "Optional: Household ID if it is a group expense" },
+            household_name: { type: "STRING", description: "Optional: Household name if user provided it" },
+            is_recurring: { type: "BOOLEAN", description: "True if this is a recurring transaction" },
+            frequency: { type: "STRING", description: "Frequency for recurring (monthly, weekly, etc.)" }
+          },
+          required: ["type", "amount", "category"]
+        }
+      },
+      {
+        name: "list_expenses",
+        description: "List recent transactions (expenses or income).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+              type: { type: "STRING", enum: ["expense", "income"] },
+              currency: { type: "STRING", description: "Optional: filter by currency" },
+              limit: { type: "NUMBER" },
+              start_date: { type: "STRING" },
+              end_date: { type: "STRING" },
+              household_id: { type: "STRING", description: "Optional: Filter by household" },
+              household_name: { type: "STRING", description: "Optional: Household name filter" }
+          }
+        }
+      },
+      {
+        name: "generate_chart_url",
+        description: "Generate a URL for a chart (bar/pie/donut/radar) to visualize expenses.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                chart_type: { type: "STRING", enum: ["bar", "pie", "donut", "radar"] },
+                labels: { type: "ARRAY", items: { type: "STRING" } },
+                data: { type: "ARRAY", items: { type: "NUMBER" } },
+                title: { type: "STRING" }
+            },
+            required: ["chart_type", "labels", "data"]
+        }
+      },
+      {
+        name: "financial_insight",
+        description: "Generate a financial health snapshot with verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Use when the user asks about financial situation/health/status.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            scope: { type: "STRING", description: "Optional scope (e.g., month)" }
+          }
+        }
+      }
+    ];
+
+    const chat = model.startChat({ history: rawHistory, tools: [{ function_declarations: toolsApp }] });
+    const result = await chat.sendMessage(userMessageContent);
+    const response = await result.response;
+    let functionCalls = response.functionCalls();
+    let finalResponseText = response.text();
+    let mediaUrl: string | undefined;
+    let listSummaryOverride: string | undefined;
+
+    if (functionCalls && functionCalls.length > 0) {
+      const toolResponses = [];
+      for (const call of functionCalls) {
+        let toolResult = {};
+        try {
+          if (call.name === "list_expenses") {
+            const { data, error } = await fetchExpensesDirect(supabase, contactId, {
+              limit: call.args.limit || 50,
+              startDate: call.args.start_date,
+              endDate: call.args.end_date,
+              householdId: call.args.household_id || null,
+              currency: call.args.currency || undefined,
+              type: call.args.type || undefined,
+            });
+            if (error) {
+              toolResult = { error };
+            } else {
+              const normalized = normalizeExpensesForTool(data || [], userCurrency);
+              const chartUrl = buildCategoryChart(normalized);
+              if (chartUrl) mediaUrl = chartUrl;
+              listSummaryOverride = formatExpensesSummary(normalized, !!chartUrl, {
+                limit: call.args.limit,
+                startDate: call.args.start_date,
+                endDate: call.args.end_date,
+              });
+              toolResult = { expenses: normalized, chart_url: chartUrl };
+            }
+          } else if (call.name === "add_transaction") {
+            const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
+              type: call.args.type || "expense",
+              amount: call.args.amount,
+              category: call.args.category,
+              date: call.args.date || new Date().toISOString().split("T")[0],
+              currency: call.args.currency || userCurrency,
+              description: call.args.description,
+              householdId: call.args.household_id || null,
+              isRecurring: call.args.is_recurring,
+              recurrence_rule: call.args.is_recurring
+                ? { frequency: (call.args.frequency || "MONTHLY").toUpperCase(), interval: 1, anchor_date: call.args.date || new Date().toISOString().split("T")[0] }
+                : undefined,
+            });
+            toolResult = error ? { error } : { success: true, data };
+          } else {
+            toolResult = { error: "Tool not supported in app mode" };
+          }
+        } catch (e) {
+          toolResult = { error: String(e) };
+        }
+        toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+      }
+      const finalResult = await chat.sendMessage(toolResponses);
+      finalResponseText = finalResult.response.text();
+      if (listSummaryOverride) finalResponseText = listSummaryOverride;
+    }
+
+    await insertChatMessage(supabase, session.id, "assistant", finalResponseText, debugNotes, WHATSAPP_DEBUG);
+
+    return jsonResponse({ text: finalResponseText, mediaUrl });
+  }
+
+  if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
 
   const whatsappSessionId = `whatsapp:${from}`;
   const debugNotes: string[] = [];
@@ -154,7 +431,7 @@ Deno.serve(async (req: Request) => {
   // Check if user exists and is verified
   const { data: contact, error: contactError } = await supabase
     .from("user_contacts")
-    .select("id, user_id, verified, preferred_currency")
+    .select("id, user_id, verified, preferred_currency, preferred_language")
     .eq("phone_e164", from)
     .maybeSingle();
   debugLog(WHATSAPP_DEBUG, "contact lookup", { contact, contactError });
@@ -213,6 +490,7 @@ Deno.serve(async (req: Request) => {
 
   const userId = contact.user_id;
   const userCurrency = contact.preferred_currency || "USD";
+  const userLang = contact.preferred_language || "en";
   const contactId = contact.id;
 
   // 3. Session Management
@@ -250,6 +528,7 @@ Deno.serve(async (req: Request) => {
 
   // 4. Handle Input (Text vs Image)
   let userMessageContent = body;
+  const caption = (body || "").trim();
 
   // If Image is present
   if (numMedia > 0) {
@@ -282,16 +561,158 @@ Deno.serve(async (req: Request) => {
            );
            if (!analysis.success || !analysis.items) {
              if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis.error || "unknown"}`);
-             userMessageContent = `[User uploaded an image, but analysis failed: ${analysis.error || "analysis failed"}]`;
+             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but analysis failed: ${analysis.error || "analysis failed"}]`;
            } else {
-             userMessageContent = `[User uploaded an image. Analysis Result: ${JSON.stringify(analysis.items)}]`;
+             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}. Analysis Result: ${JSON.stringify(analysis.items)}]`;
            }
          }
        }
     } else {
-        userMessageContent = `[User sent a file: ${mediaUrl}]`;
+        // Non-image file: fetch and include a small preview so AI keeps context
+        const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
+        const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
+      const fileRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
+      if (!fileRes.ok) {
+        if (WHATSAPP_DEBUG) debugNotes.push(`file fetch failed status=${fileRes.status}`);
+        userMessageContent = `[User sent a file but download failed status=${fileRes.status}${caption ? ` | caption: "${caption}"` : ""}]`;
+        } else {
+          const contentType = fileRes.headers.get("content-type") || mediaType || "";
+          const buf = new Uint8Array(await fileRes.arrayBuffer());
+          let preview = "";
+          let parsed = false;
+          const textLike = /^(text\/|application\/(json|csv|xml|javascript))/i.test(contentType) || /\.(csv|txt|json|xml)$/i.test(mediaUrl || "");
+          const isXlsx = /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(contentType) || /\.xlsx$/i.test(mediaUrl || "");
+          const isPdf = /application\/pdf/i.test(contentType) || /\.pdf$/i.test(mediaUrl || "");
+          if (textLike) {
+            try {
+              preview = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, 12000));
+              parsed = true;
+            } catch {
+              parsed = false;
+            }
+          } else if (isXlsx) {
+            const xlsxPreview = buildXlsxPreview(buf);
+            if (xlsxPreview) {
+              preview = xlsxPreview;
+              parsed = true;
+            }
+          } else if (isPdf) {
+            const base64Data = btoa(String.fromCharCode(...buf));
+            const pdfSummary = await summarizePdfWithGemini(base64Data, "application/pdf", GEMINI_API_KEY);
+            if (pdfSummary) {
+              preview = `PDF summary:\n${pdfSummary}`;
+              parsed = true;
+            }
+          }
+          if (parsed) {
+            userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Preview: ${preview}]`;
+          } else {
+            userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Content not parsed (binary).]`;
+          }
+        }
     }
   }
+
+function buildXlsxPreview(buf: Uint8Array): string | null {
+  try {
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheetName = wb.SheetNames[0];
+    if (!sheetName) return null;
+    const sheet = wb.Sheets[sheetName];
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const limited = rows.slice(0, 20).map((r) => (Array.isArray(r) ? r.slice(0, 8) : r));
+    const previewLines = limited.map((r) => JSON.stringify(r));
+    return `Sheet "${sheetName}" preview (first ${limited.length} rows):\n${previewLines.join("\n")}`;
+  } catch (e) {
+    console.error("XLSX parse error", e);
+    return null;
+  }
+}
+
+async function summarizePdfWithGemini(base64Data: string, mimeType: string, geminiKey: string): Promise<string | null> {
+  try {
+    const ai = new GoogleGenerativeAI(geminiKey);
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const resp = await model.generateContent({
+      contents: [
+        { role: "user", parts: [{ text: "Summarize this PDF. Extract key amounts, dates, and any tabular transaction data. Keep it concise for WhatsApp." }] },
+        { role: "user", parts: [{ inlineData: { mimeType, data: base64Data } }] },
+      ],
+    });
+    return resp.response.text() || null;
+  } catch (e) {
+    console.error("PDF summary via Gemini failed", e);
+    return null;
+  }
+}
+
+async function buildFinancialSnapshot(
+  supabase: ReturnType<typeof createClient>,
+  contactId: string,
+  userId: string,
+  currency: string
+): Promise<FinancialSnapshot | { error: unknown }> {
+  const start = new Date();
+  start.setUTCDate(1);
+  const startDate = start.toISOString().slice(0, 10);
+  const endDate = new Date().toISOString().slice(0, 10);
+
+  // Expenses and incomes
+  const { data: rows, error } = await supabase
+    .from("expenses")
+    .select("amount_cents, type, category, date, currency")
+    .gte("date", startDate)
+    .lte("date", endDate)
+    .eq("currency", currency)
+    .eq("contact_id", contactId);
+  if (error) return { error };
+
+  let totalExpense = 0;
+  let totalIncome = 0;
+  const catMap = new Map<string, number>();
+  for (const r of rows || []) {
+    const amt = Number(r.amount_cents) || 0;
+    if ((r.type || "expense") === "income") {
+      totalIncome += amt;
+    } else {
+      totalExpense += amt;
+      const cat = (r.category || "other").toString().toLowerCase();
+      catMap.set(cat, (catMap.get(cat) || 0) + amt);
+    }
+  }
+  const catEntries = Array.from(catMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const catLabels = catEntries.map(([c]) => c);
+  const catData = catEntries.map(([, v]) => Math.round(v / 100));
+
+  const { data: budgetRows } = await supabase
+    .from("budgets")
+    .select("total_budget_cents")
+    .eq("user_id", userId)
+    .eq("currency", currency)
+    .gte("period_month", startDate.slice(0, 7) + "-01")
+    .lt(startDate.slice(0, 7) + "-01")
+    .limit(1);
+  const budgetCents = budgetRows?.[0]?.total_budget_cents || null;
+
+  const chartConfig = {
+    type: "radar",
+    data: { labels: catLabels, datasets: [{ label: "Spend", data: catData, backgroundColor: "rgba(75,192,192,0.3)", borderColor: "#4BC0C0" }] },
+    options: { plugins: { legend: { display: false }, title: { display: true, text: "Top spending categories" } } },
+  };
+  const chartUrl = catData.length ? `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}` : undefined;
+
+  return {
+    totalExpense,
+    totalIncome,
+    net: totalIncome - totalExpense,
+    startDate,
+    endDate,
+    categories: catEntries.map(([cat, v]) => ({ category: cat, amount_cents: v })),
+    budget_cents: budgetCents,
+    chart_url: chartUrl,
+  };
+}
 
   // Save User Message
   await insertChatMessage(supabase, sessionId, "user", userMessageContent, debugNotes, WHATSAPP_DEBUG);
@@ -335,6 +756,7 @@ Deno.serve(async (req: Request) => {
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", householdContext)
         .replace("{{CATEGORIES}}", CATEGORY_GUIDE)
+        .replace("{{LANGUAGE}}", userLang)
   });
 
   // Define Tools
@@ -456,17 +878,39 @@ const tools = [
     },
     {
       name: "generate_chart_url",
-      description: "Generate a URL for a chart (bar/pie) to visualize expenses.",
+      description: "Generate a URL for a chart (bar/pie/donut/radar) to visualize expenses.",
       parameters: {
           type: "OBJECT",
             properties: {
-                chart_type: { type: "STRING", enum: ["bar", "pie", "donut"] },
+                chart_type: { type: "STRING", enum: ["bar", "pie", "donut", "radar"] },
                 labels: { type: "ARRAY", items: { type: "STRING" } },
                 data: { type: "ARRAY", items: { type: "NUMBER" } },
                 title: { type: "STRING" }
             },
             required: ["chart_type", "labels", "data"]
         }
+    },
+    {
+      name: "financial_insight",
+      description: "Generate a financial health snapshot with verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Use when the user asks about financial situation/health/status.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          scope: { type: "STRING", description: "Optional scope (e.g., month)" }
+        }
+      }
+    },
+    {
+      name: "send_quick_replies",
+      description: "Offer up to 3 quick-reply buttons to the user for fast selection (household, pocket, budgets, follow-ups).",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          body: { type: "STRING", description: "Prompt text to show above the buttons" },
+          options: { type: "ARRAY", items: { type: "STRING" }, description: "Up to 3 button labels" }
+        },
+        required: ["body", "options"]
+      }
     },
     {
         name: "manage_recurring",
@@ -665,11 +1109,6 @@ let budgetChartUrl: string | undefined;
                      console.error("[twilio-whatsapp-ai-bot] get-budget direct error", { error: res.error, formatted });
                      toolResult = { error: res.error };
                    } else {
-                     if (res.chart) {
-                       budgetChartUrl = res.chart;
-                       mediaUrl = res.chart;
-                       generatedChartText = finalResponseText;
-                     }
                      toolResult = { budget: res.budget, envelopes: res.envelopes, totals: res.totals, chart: res.chart };
                   }
             } else if (call.name === "set_currency") {
@@ -681,7 +1120,7 @@ let budgetChartUrl: string | undefined;
                     if (WHATSAPP_DEBUG) debugNotes.push(`set-currency error: ${formatted}`);
                     console.error("[twilio-whatsapp-ai-bot] set-currency error", { error, formatted });
                   }
-              } else if (call.name === "set_budget") {
+                  } else if (call.name === "set_budget") {
                    // Create or update budget + envelopes/pockets
                    const period_month = (call.args.date || new Date().toISOString().slice(0, 7) + "-01").slice(0,10);
                    const total_cents = Math.round((call.args.amount || 0) * 100);
@@ -737,7 +1176,7 @@ let budgetChartUrl: string | undefined;
                      }
                      toolResult = { success: true, budget: budgetRow, envelopes: created };
                    }
-              } else if (call.name === "generate_chart_url") {
+            } else if (call.name === "generate_chart_url") {
                    // Generate QuickChart URL
                    const chartConfig = {
                        type: call.args.chart_type,
@@ -755,39 +1194,80 @@ let budgetChartUrl: string | undefined;
                    mediaUrl = url; // Set global mediaUrl for TwiML
                    toolResult = { url };
             } else if (call.name === "manage_recurring") {
-                 // Use update-expense or save-expense
-                   if (call.args.action === "add") {
-                        const recurrenceRule = {
-                            frequency: (call.args.frequency || "MONTHLY").toUpperCase(),
-                            interval: 1,
-                            anchor_date: new Date().toISOString().split("T")[0]
-                        };
-                      const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
-                            amount: call.args.amount,
-                            category: call.args.category,
-                            date: new Date().toISOString().split('T')[0],
-                            currency: userCurrency,
-                            isRecurring: true,
-                            recurrence_rule: recurrenceRule,
-                            type: call.args.type || "expense",
-                      });
-                      toolResult = error ? { error } : { success: true, data };
-                       if (error) {
-                         const formatted = formatInvokeError(error);
-                         if (WHATSAPP_DEBUG) debugNotes.push(`save-expense (recurring add) error: ${formatted}`);
-                          console.error("[twilio-whatsapp-ai-bot] save-expense recurring add error", { error, formatted });
-                        }
-                   } else {
-                        // delete
-                        const { error } = await deleteExpenseDirect(supabase, contactId, call.args.expense_id);
-                        toolResult = error ? { error } : { success: true };
-                        if (error) {
-                          const formatted = formatInvokeError(error);
-                          if (WHATSAPP_DEBUG) debugNotes.push(`delete-expense error: ${formatted}`);
-                          console.error("[twilio-whatsapp-ai-bot] delete-expense error", { error, formatted });
-                        }
-                   }
+              // Use update-expense or save-expense
+              if (call.args.action === "add") {
+                const recurrenceRule = {
+                  frequency: (call.args.frequency || "MONTHLY").toUpperCase(),
+                  interval: 1,
+                  anchor_date: new Date().toISOString().split("T")[0],
+                };
+                const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
+                  amount: call.args.amount,
+                  category: call.args.category,
+                  date: new Date().toISOString().split("T")[0],
+                  currency: userCurrency,
+                  isRecurring: true,
+                  recurrence_rule: recurrenceRule,
+                  type: call.args.type || "expense",
+                });
+                toolResult = error ? { error } : { success: true, data };
+                if (error) {
+                  const formatted = formatInvokeError(error);
+                  if (WHATSAPP_DEBUG) debugNotes.push(`save-expense (recurring add) error: ${formatted}`);
+                  console.error("[twilio-whatsapp-ai-bot] save-expense recurring add error", { error, formatted });
+                }
+              } else {
+                const { error } = await deleteExpenseDirect(supabase, contactId, call.args.expense_id);
+                toolResult = error ? { error } : { success: true };
+                if (error) {
+                  const formatted = formatInvokeError(error);
+                  if (WHATSAPP_DEBUG) debugNotes.push(`delete-expense error: ${formatted}`);
+                  console.error("[twilio-whatsapp-ai-bot] delete-expense error", { error, formatted });
+                }
               }
+            } else if (call.name === "financial_insight") {
+              const snap = await buildFinancialSnapshot(supabase, contactId, userId, userCurrency);
+              if ("error" in snap) {
+                toolResult = { error: snap.error };
+              } else {
+                let summary = `Snapshot ${snap.startDate} to ${snap.endDate}\n`;
+                const income = snap.totalIncome / 100;
+                const expense = snap.totalExpense / 100;
+                const net = snap.net / 100;
+                summary += `Income: ${formatAmount(income, userCurrency)}\n`;
+                summary += `Spending: ${formatAmount(expense, userCurrency)}\n`;
+                summary += `Net: ${formatAmount(net, userCurrency)}\n\nTop categories:\n`;
+                snap.categories.forEach((c, idx) => {
+                  summary += `${idx + 1}. ${c.category}: ${formatAmount(c.amount_cents / 100, userCurrency)}\n`;
+                });
+                if (snap.budget_cents) {
+                  const remain = (snap.budget_cents - snap.totalExpense) / 100;
+                  summary += `\nBudget: ${formatAmount(snap.budget_cents / 100, userCurrency)} | Remaining: ${formatAmount(remain, userCurrency)}`;
+                }
+                if (snap.chart_url) {
+                  mediaUrl = snap.chart_url;
+                  generatedChartText = summary;
+                }
+                toolResult = { snapshot: snap, chart_url: snap.chart_url, summary };
+              }
+            } else if (call.name === "send_quick_replies") {
+                   const opts: string[] = Array.isArray(call.args.options) ? call.args.options.filter((o: any) => !!o).map((o: any) => String(o)) : [];
+                   const trimmed = opts.slice(0, 3);
+                   if (trimmed.length === 0) {
+                     toolResult = { error: "No options provided" };
+                   } else {
+                     const body = String(call.args.body || "Choose an option:");
+                     const sendRes = await sendWhatsAppInteractiveButtons(
+                       TWILIO_ACCOUNT_SID,
+                       TWILIO_AUTH_TOKEN,
+                       to,
+                       from,
+                       body,
+                       trimmed
+                     );
+                     toolResult = sendRes.success ? { success: true } : { error: sendRes.error || "Failed to send quick replies" };
+                   }
+             }
           } catch (e) {
               toolResult = { error: String(e) };
               if (WHATSAPP_DEBUG) debugNotes.push(`tool exception (${call.name}): ${String(e)}`);
