@@ -201,9 +201,9 @@ export default function HomePage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="relative bg-section-bg-light">
+      {/* <section className="relative bg-section-bg-light">
         <TestimonialsSection />
-      </section>
+      </section> */}
 
       {/* Expert-Led Lessons Section */}
       <section className="relative bg-section-bg-light">
