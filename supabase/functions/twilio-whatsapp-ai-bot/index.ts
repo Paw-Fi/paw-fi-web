@@ -150,30 +150,19 @@ Deno.serve(async (req: Request) => {
   const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
   const WHATSAPP_DEBUG = (Deno.env.get("WHATSAPP_DEBUG") || "").toUpperCase() === "TRUE";
   const EDGE_FUNCTION_KEY = (SECRET_API_KEY || "").trim();
+  const TWILIO_SKIP_SIGNATURE = (Deno.env.get("TWILIO_SKIP_SIGNATURE") || "").toLowerCase() === "true";
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY || !EDGE_FUNCTION_KEY) {
     console.error("Missing environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
-  // 1. Validate Request
-  // Note: Validation can be tricky with proxies/NGROK. Disable if strictly needed for dev, enable for prod.
-  // For now, we proceed but log warning if fails? No, strictly enforce for security if possible.
-  // const isValid = await validateTwilioRequest(req, TWILIO_AUTH_TOKEN);
-  // if (!isValid) return jsonResponse({ error: "Invalid signature" }, 403);
-
-  const formData = await req.formData();
-  const from = formData.get("From")?.toString().replace("whatsapp:", "") || "";
-  const body = formData.get("Body")?.toString() || "";
-  const numMedia = parseInt(formData.get("NumMedia")?.toString() || "0");
-  const to = formData.get("To")?.toString() || ""; // Our number
-
-  // App channel (JSON + JWT): bypass Twilio handling
+  // 1. Determine channel and optionally validate Twilio signature
   const contentType = req.headers.get("content-type") || "";
   const authHeader = req.headers.get("Authorization") || "";
   const isJsonApp = contentType.includes("application/json") && !!authHeader;
 
-  // --- Supabase clients ---
+  // --- Supabase clients (used by both channels) ---
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const supabaseAuthed = SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -421,6 +410,28 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ text: finalResponseText, mediaUrl });
   }
 
+  // Twilio form-encoded webhooks (WhatsApp) should be validated when signature is present
+  const isFormUrlEncoded = contentType.includes("application/x-www-form-urlencoded");
+  const hasTwilioSignature = !!(req.headers.get("X-Twilio-Signature") || req.headers.get("x-twilio-signature"));
+
+  if (!TWILIO_SKIP_SIGNATURE && TWILIO_AUTH_TOKEN && isFormUrlEncoded && hasTwilioSignature) {
+    const isValid = await validateTwilioRequest(req, TWILIO_AUTH_TOKEN);
+    if (!isValid) {
+      console.error("[twilio-whatsapp-ai-bot] Invalid Twilio signature. Check TWILIO_WEBHOOK_URL configuration.", {
+        requestUrl: req.url,
+        configuredWebhookUrl: Deno.env.get("TWILIO_WEBHOOK_URL") || "unset",
+      });
+      return jsonResponse({ error: "Invalid signature" }, 403);
+    }
+  }
+
+  // Safe to consume body after optional validation
+  const formData = await req.formData();
+  const from = formData.get("From")?.toString().replace("whatsapp:", "") || "";
+  const body = formData.get("Body")?.toString() || "";
+  const numMedia = parseInt(formData.get("NumMedia")?.toString() || "0");
+  const to = formData.get("To")?.toString() || ""; // Our number
+
   if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
 
   const whatsappSessionId = `whatsapp:${from}`;
@@ -461,16 +472,19 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!contact || !contact.verified || !contact.user_id) {
-    // Not verified: Send prompt
-    await sendWhatsAppTemplate(
-        TWILIO_ACCOUNT_SID, 
-        TWILIO_AUTH_TOKEN, 
-        to, 
-        from, 
-        TWILIO_TEMPLATES.VERIFICATION_PROMPT
+    // Not verified: Send prompt template, fallback only if it fails
+    const templateResult = await sendWhatsAppTemplate(
+      TWILIO_ACCOUNT_SID,
+      TWILIO_AUTH_TOKEN,
+      to,
+      from,
+      TWILIO_TEMPLATES.VERIFICATION_PROMPT,
     );
-    // Fallback if template fails (simplified)
-    return xmlResponse(`<Response><Message>${buildVerificationPrompt()}</Message></Response>`);
+    if (!templateResult.success) {
+      console.error("[twilio-whatsapp-ai-bot] verification template failed", templateResult.error);
+      return xmlResponse(`<Response><Message>${buildVerificationPrompt()}</Message></Response>`);
+    }
+    return xmlResponse("<Response></Response>");
   }
 
   // Check Subscription (Free vs Paid)
@@ -1303,6 +1317,10 @@ let budgetChartUrl: string | undefined;
   }
   if (postAddBudgetNote) {
     finalResponseText += `\n\n${postAddBudgetNote}`;
+  }
+  if (!finalResponseText || !finalResponseText.trim()) {
+    finalResponseText = "I couldn't generate a response right now. Please try again in a few seconds.";
+    if (WHATSAPP_DEBUG) debugNotes.push("finalResponseText was empty; sent fallback message");
   }
   if (WHATSAPP_DEBUG && debugNotes.length > 0) {
     finalResponseText += `\n\n[debug]\n${debugNotes.join("\n")}`;
