@@ -826,4 +826,45 @@
   .text-dark-primary {
     @apply text-primary dark:text-primary;
   }
-} 
+}
+
+/* Plaid redirect page theming */
+@layer components {
+  .plaid-redirect-bg {
+    background:
+      radial-gradient(circle at 15% 20%, rgba(116, 88, 255, 0.16), transparent 35%),
+      radial-gradient(circle at 80% 70%, rgba(22, 205, 162, 0.12), transparent 32%);
+    animation: plaid-glow 16s ease-in-out infinite;
+  }
+
+  .plaid-redirect-spinner {
+    animation: plaid-spin 1.2s linear infinite;
+  }
+}
+
+@keyframes plaid-glow {
+  0% {
+    background-position: 0% 0%, 100% 100%;
+    filter: brightness(1);
+  }
+  50% {
+    background-position: 20% 10%, 90% 80%;
+    filter: brightness(1.05);
+  }
+  100% {
+    background-position: 0% 0%, 100% 100%;
+    filter: brightness(1);
+  }
+}
+
+@keyframes plaid-spin {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.05);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}

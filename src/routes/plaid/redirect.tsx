@@ -8,15 +8,35 @@ export const Route = createFileRoute('/plaid/redirect')({
 })
 
 function PlaidRedirectPage() {
-  const params = useMemo(() => collectPlaidParams(), [])
-  const deepLink = useMemo(() => buildDeepLink(params), [params])
+  const [params, setParams] = useState<URLSearchParams | null>(null)
+  const deepLink = useMemo(() => (params ? buildDeepLink(params) : APP_SCHEME), [params])
   const [manualNeeded, setManualNeeded] = useState(false)
+  const [cooldown, setCooldown] = useState(5)
 
   const redirect = useCallback(() => {
+    if (typeof window === 'undefined') return
     window.location.href = deepLink
   }, [deepLink])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    setParams(collectPlaidParams())
+  }, [])
+
+  useEffect(() => {
+    if (!params) return
+
+    setCooldown(5)
+    const countdown = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdown)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
     const timer = setTimeout(() => {
       try {
         redirect()
@@ -30,29 +50,50 @@ function PlaidRedirectPage() {
     return () => {
       clearTimeout(timer)
       clearTimeout(fallback)
+      clearInterval(countdown)
     }
-  }, [redirect])
+  }, [params, redirect])
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-50 flex flex-col items-center justify-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold mb-4">Finishing bank connection…</h1>
-      <p className="max-w-lg text-slate-300 mb-8">
-        We&apos;re sending you back to the Moneko app with your Plaid status. If you&apos;re
-        not redirected automatically, tap the button below.
-      </p>
-      <button
-        type="button"
-        onClick={redirect}
-        className="px-6 py-3 rounded-full bg-emerald-400 text-slate-900 font-semibold shadow-lg shadow-emerald-500/30 hover:bg-emerald-300"
-      >
-        Return to Moneko
-      </button>
-      {manualNeeded && (
-        <p className="mt-6 text-sm text-slate-400 break-words">
-          If this keeps happening, copy and open: <br />
-          <code className="text-emerald-300">{deepLink}</code>
+    <main className="plaid-redirect-bg relative min-h-screen bg-background text-foreground flex items-center justify-center px-6 py-16">
+      <div className="absolute inset-0 pointer-events-none" aria-hidden />
+      <div className="relative max-w-xl w-full bg-card/80 backdrop-blur rounded-2xl border border-border shadow-2xl shadow-primary/20 px-6 sm:px-10 py-10 text-center">
+        <div className="plaid-redirect-spinner inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/15 text-primary mb-6">
+          <svg
+            className="h-6 w-6 text-primary"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth="1.5"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 3v3m0 12v3m9-9h-3M6 12H3m13.364 6.364L16 16m-8 0-1.364 2.364M16 8l1.364-2.364M8 8 6.636 5.636"
+            />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight mb-3">Finishing bank connection…</h1>
+        <p className="text-muted-foreground leading-relaxed mb-8">
+          If you&apos;re not redirected automatically, use the button below.
         </p>
-      )}
+        <button
+          type="button"
+          onClick={redirect}
+          disabled={!params || cooldown > 0}
+          className="inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {cooldown > 0 ? `Return to Moneko (${cooldown})` : 'Return to Moneko'}
+        </button>
+        {manualNeeded && (
+          <p className="mt-6 text-sm text-muted-foreground break-words">
+            If this keeps happening, copy and open:
+            <br />
+            <code className="text-primary">{deepLink}</code>
+          </p>
+        )}
+      </div>
     </main>
   )
 }
@@ -93,4 +134,3 @@ function buildDeepLink(params: URLSearchParams) {
   const query = params.toString()
   return query ? `${APP_SCHEME}?${query}` : APP_SCHEME
 }
-

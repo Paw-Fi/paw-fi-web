@@ -223,7 +223,7 @@ This directory contains SQL files that define the database schema in an incremen
     ```
 2.  **Environment Variables:**
     - Copy `.env.example` to `.env.local`.
-    - Populate `.env.local` with your Supabase URL, anon key, Stripe / Google Gemini keys, **and Plaid credentials** (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`, `PLAID_PRODUCTS`, `PLAID_COUNTRY_CODES`, optional redirect/webhook overrides, and `PLAID_ENCRYPTION_KEY`). Set `PLAID_REDIRECT_URI` to `https://<your-domain>/plaid/redirect` so OAuth-based institutions can hand control back to the native app. See `docs/plaid-runbook.md` for a full checklist.
+    - Populate `.env.local` with your Supabase URL, anon key, Stripe / Google Gemini keys, **and Plaid credentials** (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`, `PLAID_PRODUCTS`, `PLAID_COUNTRY_CODES`, optional webhook overrides, and `PLAID_ENCRYPTION_KEY`). Plaid redirect values are hardcoded to `https://moneko.io/plaid/redirect` (iOS/web OAuth) and `com.moneko.mobile` (Android) in the backend. See `docs/plaid-runbook.md` for a full checklist.
 3.  **Run Frontend:**
     ```bash
     npm run dev

@@ -15,6 +15,7 @@ interface CreateLinkTokenRequest {
   connectionId?: string;
   transactionsDaysRequested?: number;
   countryCode?: string;
+  platform?: string;
 }
 
 Deno.serve(async (req) => {
@@ -86,6 +87,7 @@ Deno.serve(async (req) => {
       accessToken,
       transactionsDaysRequested: body.transactionsDaysRequested,
       countryCodes: body.countryCode ? [body.countryCode] : undefined,
+      platform: body.platform,
     });
 
     return new Response(
@@ -100,4 +102,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-

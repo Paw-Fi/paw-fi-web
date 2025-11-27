@@ -14,7 +14,8 @@ Configure these secrets locally (`.env.local` / `supabase/.env`) and in Supabase
 | `PLAID_PRODUCTS` | Comma-separated product list (default `transactions`). |
 | `PLAID_COUNTRY_CODES` | Comma-separated ISO country codes (default `US,CA`). |
 | `PLAID_CLIENT_NAME` | Display name shown inside Link (default `Moneko`). |
-| `PLAID_REDIRECT_URI` | Optional redirect URI (needed for European/OAuth flows). |
+| `PLAID_REDIRECT_URI` | Hardcoded in code to `https://moneko.io/plaid/redirect` (used for OAuth handoff). |
+| `PLAID_ANDROID_PACKAGE_NAME` | Hardcoded in code to `com.moneko.mobile` for Android OAuth/App-to-App. |
 | `PLAID_WEBHOOK_URL` | Optional webhook URL for Plaid events. |
 | `PLAID_LINK_CUSTOMIZATION_NAME` | Optional Link customization key. |
 | `PLAID_ENCRYPTION_KEY` | 32-byte base64 key used for AES-GCM encryption of access tokens. |

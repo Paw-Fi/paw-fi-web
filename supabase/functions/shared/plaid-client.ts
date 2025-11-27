@@ -18,7 +18,8 @@ interface PlaidConfig {
   products: string[];
   countryCodes: string[];
   clientName: string;
-  redirectUri?: string;
+  redirectUri: string;
+  androidPackageName: string;
   webhook?: string;
   linkCustomizationName?: string;
 }
@@ -27,6 +28,8 @@ let cachedConfig: PlaidConfig | null = null;
 
 export function getPlaidConfig(): PlaidConfig {
   if (cachedConfig) return cachedConfig;
+  const redirectUri = "https://moneko.io/plaid/redirect";
+  const androidPackageName = "com.moneko.mobile";
   const clientId = Deno.env.get("PLAID_CLIENT_ID")?.trim();
   const secret = Deno.env.get("PLAID_SECRET")?.trim();
   const env = (Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() || "sandbox") as PlaidEnv;
@@ -49,7 +52,8 @@ export function getPlaidConfig(): PlaidConfig {
     products,
     countryCodes,
     clientName: Deno.env.get("PLAID_CLIENT_NAME")?.trim() || "Moneko",
-    redirectUri: Deno.env.get("PLAID_REDIRECT_URI")?.trim() || undefined,
+    redirectUri,
+    androidPackageName,
     webhook: Deno.env.get("PLAID_WEBHOOK_URL")?.trim() || undefined,
     linkCustomizationName: Deno.env.get("PLAID_LINK_CUSTOMIZATION_NAME")?.trim() || undefined,
   };
@@ -99,6 +103,7 @@ export interface CreateLinkTokenParams {
   language?: string;
   countryCodes?: string[];
   transactionsDaysRequested?: number;
+  platform?: "android" | "ios" | string;
 }
 
 export interface CreateLinkTokenResponse {
@@ -113,6 +118,8 @@ export async function createPlaidLinkToken(
   const countryCodes = params.countryCodes && params.countryCodes.length > 0
     ? params.countryCodes.map((code) => code.trim().toUpperCase()).filter(Boolean)
     : config.countryCodes;
+
+  const platform = params.platform?.toLowerCase();
   const request: Record<string, unknown> = {
     user: { client_user_id: params.userId },
     client_name: config.clientName,
@@ -120,7 +127,13 @@ export async function createPlaidLinkToken(
     language: params.language || "en",
     products: params.products && params.products.length > 0 ? params.products : config.products,
   };
-  if (config.redirectUri) request.redirect_uri = config.redirectUri;
+
+  if (platform === "android") {
+    request.android_package_name = config.androidPackageName;
+  } else {
+    request.redirect_uri = config.redirectUri;
+  }
+
   if (config.webhook) request.webhook = config.webhook;
   if (config.linkCustomizationName) request.link_customization_name = config.linkCustomizationName;
   if (params.accessToken) request.access_token = params.accessToken;
@@ -322,4 +335,3 @@ function guessFrequency(detailedCategory: string): RecurrenceFrequency {
   }
   return "monthly";
 }
-
