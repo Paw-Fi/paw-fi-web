@@ -1,22 +1,36 @@
 import * as m from "framer-motion/m";
 import { useDeviceType } from "@/hooks/use-device-type";
+import { Marquee } from "@/components/ui/marquee";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Rating, RatingButton } from "@/components/ui/shadcn-io/rating";
+import { useHomepageTestimonials, HomepageTestimonial } from "@/hooks/use-homepage-testimonials";
 
 // Testimonials data from the mockup
-const testimonialsData = [
+const testimonialsData: HomepageTestimonial[] = [
   {
+    id: "mock-1",
     name: "Martin Gooby",
-    text: "From signing up and watching your first video to diving into investing 401k and becoming really focused on wealth building, this app has been really helpful for my journey!",
-    image: "/testimonials/martin-1.jpg"
+    quote:
+      "From signing up and watching your first video to diving into investing 401k and becoming really focused on wealth building, this app has been really helpful for my journey!",
+    avatar_url: undefined,
+    rating: 5,
   },
   {
+    id: "mock-2",
     name: "Martin Gooby",
-    text: "From signing up and watching your first video to diving into investing 401k and becoming really focused on wealth building, this app has been really helpful for my journey!",
-    image: "/testimonials/martin-2.jpg"
-  }
+    quote:
+      "From signing up and watching your first video to diving into investing 401k and becoming really focused on wealth building, this app has been really helpful for my journey!",
+    avatar_url: undefined,
+    rating: 5,
+  },
 ];
 
 export default function TestimonialsSection() {
   const { isMobile } = useDeviceType();
+  const { data, isLoading } = useHomepageTestimonials();
+
+  const testimonials: HomepageTestimonial[] =
+    data && data.length > 0 ? data : testimonialsData;
 
   return (
     <section className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-background/80">
@@ -41,39 +55,64 @@ export default function TestimonialsSection() {
         </div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {testimonialsData.map((testimonial, index) => (
-            <m.div
-              key={index}
-              className="p-8 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg border border-border"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              viewport={{ once: true }}
-            >
-              {/* Testimonial Text */}
-              <p className="text-muted-foreground leading-relaxed text-lg mb-6 font-lato">
-                "{testimonial.text}"
-              </p>
-
-              {/* Author Info */}
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center">
-                  <span className="text-primary font-semibold text-lg">
-                    {testimonial.name.split(' ').map(n => n[0]).join('')}
-                  </span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-foreground font-lato">
-                    {testimonial.name}
-                  </h4>
-                  <p className="text-sm text-muted-foreground font-lato">
-                    Verified User
+        <div className="mt-8">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : (
+            <Marquee pauseOnHover className="[--duration:40s]">
+              {testimonials.map((testimonial) => (
+                <m.div
+                  key={testimonial.id}
+                  className="mx-4 max-w-md p-6 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg border border-border flex flex-col gap-4"
+                >
+                  <p className="text-muted-foreground leading-relaxed text-lg font-lato">
+                    "{testimonial.quote}"
                   </p>
-                </div>
-              </div>
-            </m.div>
-          ))}
+                  {typeof testimonial.rating === "number" && testimonial.rating > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Rating
+                        value={testimonial.rating}
+                        readOnly
+                      >
+                        {Array.from({ length: 5 }).map((_, index) => (
+                          <RatingButton key={index} />
+                        ))}
+                      </Rating>
+                      <span className="text-sm text-muted-foreground font-lato">
+                        {testimonial.rating}/5
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-4">
+                    <Avatar className="w-12 h-12">
+                      {testimonial.avatar_url ? (
+                        <AvatarImage
+                          src={testimonial.avatar_url}
+                          alt={testimonial.name}
+                        />
+                      ) : null}
+                      <AvatarFallback>
+                        {testimonial.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h4 className="font-semibold text-foreground font-lato">
+                        {testimonial.name}
+                      </h4>
+                      <p className="text-sm text-muted-foreground font-lato">
+                        Verified User
+                      </p>
+                    </div>
+                  </div>
+                </m.div>
+              ))}
+            </Marquee>
+          )}
         </div>
 
         {/* Social Proof Metrics */}

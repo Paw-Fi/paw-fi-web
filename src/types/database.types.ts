@@ -45,6 +45,41 @@ export type Database = {
           updated_at?: string
         }
       }
+      homepage_testimonials: {
+        Row: {
+          id: string
+          name: string
+          quote: string
+          avatar_url: string | null
+          rating: number | null
+          display_order: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          quote: string
+          avatar_url?: string | null
+          rating?: number | null
+          display_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          quote?: string
+          avatar_url?: string | null
+          rating?: number | null
+          display_order?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       // Add other tables as needed
     }
   }
