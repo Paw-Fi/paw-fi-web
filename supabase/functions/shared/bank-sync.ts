@@ -38,6 +38,26 @@ export interface PersistTransactionsResult {
   inserted: number;
   updated: number;
   skipped: number;
+  insertedRecords: ExpensePreview[];
+}
+
+export interface ExpensePreview {
+  id: string;
+  provider_transaction_id: string;
+  amount_cents: number;
+  currency: string;
+  date: string;
+  type: "expense" | "income";
+  category: string | null;
+  raw_text: string | null;
+  is_recurring: boolean;
+  recurrence_rule: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string | null;
+  bank_account_id: string;
+  user_id?: string | null;
+  household_id?: string | null;
+  contact_id?: string | null;
 }
 
 export async function upsertPlaidAccounts(
@@ -80,7 +100,7 @@ export async function persistPlaidTransactions(
   params: PersistTransactionsParams,
 ): Promise<PersistTransactionsResult> {
   if (!params.transactions.length) {
-    return { inserted: 0, updated: 0, skipped: 0 };
+    return { inserted: 0, updated: 0, skipped: 0, insertedRecords: [] };
   }
 
   const mapped = params.transactions
@@ -95,54 +115,88 @@ export async function persistPlaidTransactions(
     );
 
   if (!mapped.length) {
-    return { inserted: 0, updated: 0, skipped: params.transactions.length };
+    return { inserted: 0, updated: 0, skipped: params.transactions.length, insertedRecords: [] };
   }
 
-  const providerIds = mapped.map((record) => record.provider_transaction_id);
+  // Build lookup keys for both posted IDs and pending IDs to merge transitions
+  const postedIds = mapped.map((record) => record.provider_transaction_id);
+  const pendingIds = params.transactions
+    .map((t) => t.pending_transaction_id)
+    .filter((id): id is string => Boolean(id));
+
+  const lookupIds = Array.from(new Set([...postedIds, ...pendingIds]));
+
   const { data: existingRows, error: selectError } = await params.supabase
     .from("expenses")
     .select("id, provider_transaction_id")
     .eq("user_id", params.userId)
     .eq("provider", PLAID_PROVIDER)
-    .in("provider_transaction_id", providerIds);
+    .in("provider_transaction_id", lookupIds);
 
   if (selectError) {
     throw selectError;
   }
 
-  const existingMap = new Map<string, string>();
+  const existingByProviderId = new Map<string, string>();
   (existingRows || []).forEach((row) => {
     if (row.provider_transaction_id) {
-      existingMap.set(row.provider_transaction_id, row.id);
+      existingByProviderId.set(row.provider_transaction_id, row.id);
     }
   });
 
-  const newRecords = mapped.filter((record) => !existingMap.has(record.provider_transaction_id));
-  const updateRecords = mapped
-    .filter((record) => existingMap.has(record.provider_transaction_id))
-    .map((record) => ({ ...record, id: existingMap.get(record.provider_transaction_id)! }));
+  const updates: typeof mapped = [];
+  const inserts: typeof mapped = [];
 
-  if (newRecords.length) {
-    const { error: insertError } = await params.supabase
+  for (const record of mapped) {
+    const transaction = params.transactions.find((t) => t.transaction_id === record.provider_transaction_id);
+    const pendingId = transaction?.pending_transaction_id;
+
+    // If this is the posted version of a pending transaction, merge into the pending row
+    if (pendingId && existingByProviderId.has(pendingId)) {
+      const targetId = existingByProviderId.get(pendingId)!;
+      existingByProviderId.set(record.provider_transaction_id, targetId);
+      updates.push({ ...record, id: targetId });
+      continue;
+    }
+
+    // If we already have this posted ID, update it
+    if (existingByProviderId.has(record.provider_transaction_id)) {
+      updates.push({ ...record, id: existingByProviderId.get(record.provider_transaction_id)! });
+      continue;
+    }
+
+    inserts.push(record);
+  }
+
+  let insertedRecords: ExpensePreview[] = [];
+
+  if (inserts.length) {
+    const { data: insertedRows, error: insertError } = await params.supabase
       .from("expenses")
-      .insert(newRecords);
+      .insert(inserts)
+      .select(
+        "id, provider_transaction_id, amount_cents, currency, date, type, category, raw_text, is_recurring, recurrence_rule, created_at, updated_at, bank_account_id, user_id, household_id, contact_id",
+      );
     if (insertError) {
       throw insertError;
     }
+    insertedRecords = (insertedRows || []) as ExpensePreview[];
   }
 
-  if (updateRecords.length) {
+  if (updates.length) {
+    // Use onConflict to avoid races when sync runs twice
     const { error: updateError } = await params.supabase
       .from("expenses")
-      .upsert(updateRecords, { onConflict: "id" });
+      .upsert(updates, { onConflict: "id" });
     if (updateError) {
       throw updateError;
     }
   }
 
   return {
-    inserted: newRecords.length,
-    updated: updateRecords.length,
+    inserted: inserts.length,
+    updated: updates.length,
     skipped: params.transactions.length - mapped.length,
+    insertedRecords,
   };
 }

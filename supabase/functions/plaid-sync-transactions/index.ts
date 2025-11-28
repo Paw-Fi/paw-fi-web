@@ -3,7 +3,7 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { PLAID_PROVIDER, PlaidTransaction, syncPlaidTransactions } from "../shared/plaid-client.ts";
-import { persistPlaidTransactions } from "../shared/bank-sync.ts";
+import { persistPlaidTransactions, type ExpensePreview } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -27,6 +27,7 @@ interface SyncSummary {
   accountsProcessed: number;
   status: "succeeded" | "error";
   error?: string;
+  addedTransactions: ExpensePreview[];
 }
 
 Deno.serve(async (req) => {
@@ -139,6 +140,7 @@ Deno.serve(async (req) => {
     let totalInserted = 0;
     let totalUpdated = 0;
     let totalRemoved = 0;
+    const allAdded: ExpensePreview[] = [];
 
     for (const connection of connections) {
       const summary = await syncConnection({
@@ -153,6 +155,7 @@ Deno.serve(async (req) => {
       totalInserted += summary.inserted;
       totalUpdated += summary.updated;
       totalRemoved += summary.removed;
+      allAdded.push(...summary.addedTransactions);
     }
 
     return new Response(
@@ -165,6 +168,7 @@ Deno.serve(async (req) => {
           removed: totalRemoved,
         },
         connections: summaries,
+        addedTransactions: allAdded,
       }),
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
     );
@@ -193,6 +197,7 @@ async function syncConnection(params: {
     skipped: 0,
     accountsProcessed: 0,
     status: "succeeded",
+    addedTransactions: [],
   };
 
   const auditInsert = await params.supabase
@@ -241,6 +246,7 @@ async function syncConnection(params: {
         summary.inserted += result.inserted;
         summary.updated += result.updated;
         summary.skipped += result.skipped;
+        summary.addedTransactions.push(...result.insertedRecords);
         processedAccounts.add(account.id);
       }
 
@@ -321,4 +327,3 @@ interface BankConnectionRow {
   plaid_cursor: string | null;
   status?: string;
 }
-
