@@ -90,6 +90,66 @@ function decodeBase64(data: string): Uint8Array {
   return arr;
 }
 
+function getDatePartsInTimeZone(tz: string | null | undefined, date = new Date()) {
+  const timezone = (tz || "UTC").trim();
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const map = new Map(parts.map((p) => [p.type, p.value]));
+    return {
+      year: Number(map.get("year")),
+      month: Number(map.get("month")),
+      day: Number(map.get("day")),
+    };
+  } catch {
+    const match = timezone.toUpperCase().match(/^UTC([+-])(\d{1,2})(?::?(\d{2}))?$/);
+    if (match) {
+      const sign = match[1] === "-" ? -1 : 1;
+      const hours = Number(match[2]);
+      const minutes = Number(match[3] || "0");
+      const offsetMinutes = sign * (hours * 60 + minutes);
+      const shifted = new Date(date.getTime() + offsetMinutes * 60 * 1000);
+      return {
+        year: shifted.getUTCFullYear(),
+        month: shifted.getUTCMonth() + 1,
+        day: shifted.getUTCDate(),
+      };
+    }
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+    };
+  }
+}
+
+function pad2(n: number) {
+  return n.toString().padStart(2, "0");
+}
+
+function formatDateInTimeZone(tz: string | null | undefined, date = new Date()) {
+  const { year, month, day } = getDatePartsInTimeZone(tz, date);
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+function formatMonthStartInTimeZone(tz: string | null | undefined, date = new Date()) {
+  const { year, month } = getDatePartsInTimeZone(tz, date);
+  return `${year}-${pad2(month)}-01`;
+}
+
+function nextMonthStart(dateStr: string) {
+  const [yearStr, monthStr] = dateStr.split("-").slice(0, 2);
+  const year = Number(yearStr);
+  const month = Number(monthStr) - 1; // JS months 0-based
+  const dt = new Date(Date.UTC(year, month, 1));
+  dt.setUTCMonth(dt.getUTCMonth() + 1);
+  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-01`;
+}
+
 type FinancialSnapshot = {
   totalExpense: number;
   totalIncome: number;
@@ -191,7 +251,7 @@ Deno.serve(async (req: Request) => {
     // Resolve contact_id for this user (fallback to userId)
     const { data: contactRow } = await supabase
       .from("user_contacts")
-    .select("id, preferred_currency, preferred_language")
+    .select("id, preferred_currency, preferred_language, preferred_timezone")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -199,6 +259,7 @@ Deno.serve(async (req: Request) => {
     const contactId = contactRow?.id || userId;
     const userCurrency = contactRow?.preferred_currency || "USD";
     const userLang = contactRow?.preferred_language || "en";
+    const userTimezone = contactRow?.preferred_timezone || "UTC";
 
     const sessionId = payload.session_id || `app:${userId}`;
     const messageText = payload.message?.toString() || "";
@@ -272,7 +333,7 @@ Deno.serve(async (req: Request) => {
     const model = genAI.getGenerativeModel({
       model: MODEL_NAME,
       systemInstruction: SYSTEM_INSTRUCTION
-        .replace("{{DATE}}", new Date().toISOString().split("T")[0])
+        .replace("{{DATE}}", formatDateInTimeZone(userTimezone))
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", "None")
         .replace("{{CATEGORIES}}", CATEGORY_GUIDE)
@@ -382,13 +443,13 @@ Deno.serve(async (req: Request) => {
               type: call.args.type || "expense",
               amount: call.args.amount,
               category: call.args.category,
-              date: call.args.date || new Date().toISOString().split("T")[0],
+              date: call.args.date || formatDateInTimeZone(userTimezone),
               currency: call.args.currency || userCurrency,
               description: call.args.description,
               householdId: call.args.household_id || null,
               isRecurring: call.args.is_recurring,
               recurrence_rule: call.args.is_recurring
-                ? { frequency: (call.args.frequency || "MONTHLY").toUpperCase(), interval: 1, anchor_date: call.args.date || new Date().toISOString().split("T")[0] }
+                ? { frequency: (call.args.frequency || "MONTHLY").toUpperCase(), interval: 1, anchor_date: call.args.date || formatDateInTimeZone(userTimezone) }
                 : undefined,
             });
             toolResult = error ? { error } : { success: true, data };
@@ -438,14 +499,23 @@ Deno.serve(async (req: Request) => {
   const debugNotes: string[] = [];
   debugLog(WHATSAPP_DEBUG, "incoming form data", { from, to, body, numMedia, whatsappSessionId });
 
-  // 2. Check User Binding
-  // Check if user exists and is verified
-  const { data: contact, error: contactError } = await supabase
-    .from("user_contacts")
-    .select("id, user_id, verified, preferred_currency, preferred_language")
-    .eq("phone_e164", from)
-    .maybeSingle();
-  debugLog(WHATSAPP_DEBUG, "contact lookup", { contact, contactError });
+  // 2. Fetch all user context in a single optimized call
+  const { data: contextData, error: contextError } = await supabase
+    .rpc('get_whatsapp_context', { p_phone_e164: from })
+    .single();
+  
+  debugLog(WHATSAPP_DEBUG, "context lookup", { contextData, contextError });
+  
+  // Map the context data to maintain backward compatibility
+  const contact = contextData ? {
+    id: contextData.contact_id,
+    user_id: contextData.user_id,
+    verified: contextData.verified,
+    preferred_currency: contextData.preferred_currency,
+    preferred_language: contextData.preferred_language,
+    preferred_timezone: contextData.preferred_timezone,
+  } : null;
+  const contactError = contextError;
 
   // Handle "Start Verification" command (Unauthenticated flow)
   if (body.trim().toLowerCase() === "start verification") {
@@ -487,12 +557,11 @@ Deno.serve(async (req: Request) => {
     return xmlResponse("<Response></Response>");
   }
 
-  // Check Subscription (Free vs Paid)
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("plan, status")
-    .eq("user_id", contact.user_id)
-    .maybeSingle();
+  // Use subscription data from context
+  const subscription = contextData ? {
+    plan: contextData.subscription_plan,
+    status: contextData.subscription_status
+  } : null;
   debugLog(WHATSAPP_DEBUG, "subscription", { subscription });
 
   if (isFreeUser(subscription)) {
@@ -505,19 +574,12 @@ Deno.serve(async (req: Request) => {
   const userId = contact.user_id;
   const userCurrency = contact.preferred_currency || "USD";
   const userLang = contact.preferred_language || "en";
+  const userTimezone = contact.preferred_timezone || "UTC";
   const contactId = contact.id;
 
-  // 3. Session Management
-  // Retrieve or create chat session
-  let { data: session } = await supabase
-    .from("chat_sessions")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("session_id", whatsappSessionId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  debugLog(WHATSAPP_DEBUG, "session fetch", { session });
+  // 3. Session Management - use session from context or create new
+  let session = contextData?.chat_session_id ? { id: contextData.chat_session_id } : null;
+  debugLog(WHATSAPP_DEBUG, "session from context", { session });
 
   if (!session) {
     const { data: newSession, error: sessionError } = await supabase
@@ -537,7 +599,11 @@ Deno.serve(async (req: Request) => {
     session = newSession;
   }
   
-  const sessionId = session.id;
+  const sessionId = session?.id;
+  if (!sessionId) {
+    console.error("Session ID is missing");
+    return jsonResponse({ error: "Failed to get session ID" }, 500);
+  }
   debugLog(WHATSAPP_DEBUG, "session ready", { sessionId });
 
   // 4. Handle Input (Text vs Image)
@@ -565,19 +631,47 @@ Deno.serve(async (req: Request) => {
          } else {
            const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
            const base64Data = btoa(String.fromCharCode(...imgBuf));
-           const analysis = await runAnalyzeExpense(
-             {
-               userId,
-               image: { data: base64Data, contentType, bytes: imgBuf },
-               currency: userCurrency,
-             },
-             GEMINI_API_KEY
-           );
-           if (!analysis.success || !analysis.items) {
-             if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis.error || "unknown"}`);
-             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but analysis failed: ${analysis.error || "analysis failed"}]`;
+           
+           // Don't send immediate acknowledgment - let the AI handle all responses
+           // to avoid duplicate messages
+           
+           // Attempt analysis with timeout and retry
+           let analysis: any = null;
+           try {
+             // Set a maximum timeout for the entire analysis process
+             const analysisPromise = runAnalyzeExpense(
+               {
+                 userId,
+                 image: { data: base64Data, contentType, bytes: imgBuf },
+                 currency: userCurrency,
+               },
+               GEMINI_API_KEY
+             );
+             
+             // Add a hard timeout of 30 seconds for the entire process
+             const timeoutPromise = new Promise<typeof analysis>((_, reject) => 
+               setTimeout(() => reject(new Error("Receipt analysis timed out after 30 seconds")), 30000)
+             );
+             
+             analysis = await Promise.race([analysisPromise, timeoutPromise]);
+           } catch (timeoutError) {
+             console.error("[twilio-whatsapp-ai-bot] Analysis timeout:", timeoutError);
+             analysis = {
+               success: false,
+               error: "The image is taking longer than expected to process. Please try again with a clearer photo.",
+               language: "en"
+             };
+           }
+           
+           if (!analysis || !analysis.success || !analysis.items) {
+             if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis?.error || "unknown"}`);
+             
+             // Don't send error directly - let AI handle the response to maintain context
+             // Include the error details in the message content for the AI
+             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but analysis failed: ${analysis?.error || "Could not extract expense information. The image may be unclear or have poor lighting."}. Please help the user by suggesting they try again with better lighting, holding camera steady, ensuring text is in focus, avoiding shadows/glare, or typing the expense manually like "Spent 45 on groceries"]`;
            } else {
-             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}. Analysis Result: ${JSON.stringify(analysis.items)}]`;
+             // Success - let AI handle the response with the extracted data
+             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}. Successfully extracted from receipt: ${JSON.stringify(analysis.items!)}. Please confirm with the user and ask if they want to save these transactions.]`;
            }
          }
        }
@@ -585,7 +679,7 @@ Deno.serve(async (req: Request) => {
         // Non-image file: fetch and include a small preview so AI keeps context
         const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
         const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
-      const fileRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
+      const fileRes = await fetch(mediaUrl || "", { headers: { Authorization: authHeader } });
       if (!fileRes.ok) {
         if (WHATSAPP_DEBUG) debugNotes.push(`file fetch failed status=${fileRes.status}`);
         userMessageContent = `[User sent a file but download failed status=${fileRes.status}${caption ? ` | caption: "${caption}"` : ""}]`;
@@ -611,7 +705,7 @@ Deno.serve(async (req: Request) => {
               parsed = true;
             }
           } else if (isPdf) {
-            const base64Data = btoa(String.fromCharCode(...buf));
+            const base64Data = btoa(String.fromCharCode.apply(null, Array.from(buf)));
             const pdfSummary = await summarizePdfWithGemini(base64Data, "application/pdf", GEMINI_API_KEY);
             if (pdfSummary) {
               preview = `PDF summary:\n${pdfSummary}`;
@@ -636,7 +730,7 @@ function buildXlsxPreview(buf: Uint8Array): string | null {
     const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
     if (!Array.isArray(rows) || rows.length === 0) return null;
     const limited = rows.slice(0, 20).map((r) => (Array.isArray(r) ? r.slice(0, 8) : r));
-    const previewLines = limited.map((r) => JSON.stringify(r));
+    const previewLines = limited.map((r: any) => JSON.stringify(r));
     return `Sheet "${sheetName}" preview (first ${limited.length} rows):\n${previewLines.join("\n")}`;
   } catch (e) {
     console.error("XLSX parse error", e);
@@ -665,12 +759,11 @@ async function buildFinancialSnapshot(
   supabase: ReturnType<typeof createClient>,
   contactId: string,
   userId: string,
-  currency: string
+  currency: string,
+  timezone?: string | null
 ): Promise<FinancialSnapshot | { error: unknown }> {
-  const start = new Date();
-  start.setUTCDate(1);
-  const startDate = start.toISOString().slice(0, 10);
-  const endDate = new Date().toISOString().slice(0, 10);
+  const startDate = formatMonthStartInTimeZone(timezone);
+  const endDate = formatDateInTimeZone(timezone);
 
   // Expenses and incomes
   const { data: rows, error } = await supabase
@@ -705,7 +798,7 @@ async function buildFinancialSnapshot(
     .eq("user_id", userId)
     .eq("currency", currency)
     .gte("period_month", startDate.slice(0, 7) + "-01")
-    .lt(startDate.slice(0, 7) + "-01")
+    .lt(nextMonthStart(startDate))
     .limit(1);
   const budgetCents = budgetRows?.[0]?.total_budget_cents || null;
 
@@ -731,11 +824,12 @@ async function buildFinancialSnapshot(
   // Save User Message
   await insertChatMessage(supabase, sessionId, "user", userMessageContent, debugNotes, WHATSAPP_DEBUG);
 
-  // 5. Prepare Context & History
-  const { data: households } = await supabase
-    .from("household_members")
-    .select("household_id, households(name)")
-    .eq("user_id", userId);
+  // 5. Prepare Context & History - use households from context
+  const households = contextData?.households ? 
+    contextData.households.map((h: any) => ({
+      household_id: h.household_id,
+      households: { name: h.name }
+    })) : [];
   debugLog(WHATSAPP_DEBUG, "households", { households });
 
   const householdContext = households?.map((h: any) => `${h.households?.name || "Household"}`).join("; ") || "None";
@@ -766,7 +860,7 @@ async function buildFinancialSnapshot(
   const model = genAI.getGenerativeModel({ 
       model: MODEL_NAME,
       systemInstruction: SYSTEM_INSTRUCTION
-        .replace("{{DATE}}", new Date().toISOString().split('T')[0])
+        .replace("{{DATE}}", formatDateInTimeZone(userTimezone))
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", householdContext)
         .replace("{{CATEGORIES}}", CATEGORY_GUIDE)
@@ -950,8 +1044,39 @@ const tools = [
       tools: [{ function_declarations: tools }]
   });
 
-  const result = await chat.sendMessage(userMessageContent);
-  const response = await result.response;
+  // Send message with timeout and error handling
+  let response;
+  try {
+    const messagePromise = chat.sendMessage(userMessageContent);
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error("AI response timed out after 25 seconds")), 25000)
+    );
+    
+    const result = await Promise.race([messagePromise, timeoutPromise]);
+    response = await result.response;
+  } catch (e) {
+    console.error("[twilio-whatsapp-ai-bot] Initial AI call failed:", e);
+    const errorMessage = "I'm having trouble processing your request right now. Please try again in a moment.";
+    
+    // Send error message directly to user
+    try {
+      await sendWhatsAppMessage(
+        TWILIO_ACCOUNT_SID,
+        TWILIO_AUTH_TOKEN,
+        to,
+        from,
+        errorMessage
+      );
+    } catch (sendErr) {
+      console.error("[twilio-whatsapp-ai-bot] Failed to send error message:", sendErr);
+    }
+    
+    // Return TwiML with error message as fallback
+    const textEsc = errorMessage.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
+    return xmlResponse(twiml);
+  }
+  
 let functionCalls = response.functionCalls();
 let finalResponseText = response.text();
 let mediaUrl: string | undefined;
@@ -969,7 +1094,7 @@ let budgetChartUrl: string | undefined;
           let toolResult = {};
           debugLog(WHATSAPP_DEBUG, "tool call", { name: call.name, args: call.args });
           try {
-            if (call.name === "add_transaction") {
+              if (call.name === "add_transaction") {
               let householdId = call.args.household_id;
               const householdName = (call.args.household_name || call.args.householdName || "").toString().toLowerCase();
               if (!householdId && householdName && householdMap.has(householdName)) {
@@ -981,7 +1106,7 @@ let budgetChartUrl: string | undefined;
 
               let recurrenceRule = undefined;
               if (call.args.is_recurring) {
-              const anchor = (call.args.date || new Date().toISOString().split("T")[0]);
+              const anchor = (call.args.date || formatDateInTimeZone(userTimezone));
                 recurrenceRule = {
                     frequency: (call.args.frequency || "MONTHLY").toUpperCase(),
                     interval: 1,
@@ -993,7 +1118,7 @@ let budgetChartUrl: string | undefined;
                 type: call.args.type || "expense",
                 amount: call.args.amount,
                 category: call.args.category,
-                date: call.args.date || new Date().toISOString().split('T')[0],
+                date: call.args.date || formatDateInTimeZone(userTimezone),
                 currency: call.args.currency || userCurrency,
                 description: call.args.description,
                 householdId,
@@ -1007,7 +1132,7 @@ let budgetChartUrl: string | undefined;
                 console.error("[twilio-whatsapp-ai-bot] save-expense error", { error, formatted });
               } else {
                 // Fetch budget status to inform user about remaining budget/pockets
-                const dateStr = (call.args.date || new Date().toISOString().split("T")[0]).slice(0, 10);
+                const dateStr = (call.args.date || formatDateInTimeZone(userTimezone)).slice(0, 10);
                 const period_month = dateStr.slice(0, 7) + "-01";
                 const budgetStatus = await getBudgetStatusDirect(
                   supabase,
@@ -1103,7 +1228,7 @@ let budgetChartUrl: string | undefined;
                 toolResult = { expenses: normalized, chart_url: chartUrl };
               }
             } else if (call.name === "get_budget") {
-                   const dateStr = (call.args.date || new Date().toISOString().split('T')[0]).slice(0,10);
+                   const dateStr = (call.args.date || formatDateInTimeZone(userTimezone)).slice(0,10);
                    const period_month = dateStr.slice(0,7) + "-01";
                    let householdId = call.args.household_id || null;
                    const householdName = (call.args.household_name || "").toString().toLowerCase();
@@ -1213,12 +1338,12 @@ let budgetChartUrl: string | undefined;
                 const recurrenceRule = {
                   frequency: (call.args.frequency || "MONTHLY").toUpperCase(),
                   interval: 1,
-                  anchor_date: new Date().toISOString().split("T")[0],
+                  anchor_date: formatDateInTimeZone(userTimezone),
                 };
                 const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
                   amount: call.args.amount,
                   category: call.args.category,
-                  date: new Date().toISOString().split("T")[0],
+                  date: formatDateInTimeZone(userTimezone),
                   currency: userCurrency,
                   isRecurring: true,
                   recurrence_rule: recurrenceRule,
@@ -1240,7 +1365,7 @@ let budgetChartUrl: string | undefined;
                 }
               }
             } else if (call.name === "financial_insight") {
-              const snap = await buildFinancialSnapshot(supabase, contactId, userId, userCurrency);
+              const snap = await buildFinancialSnapshot(supabase, contactId, userId, userCurrency, userTimezone);
               if ("error" in snap) {
                 toolResult = { error: snap.error };
               } else {
@@ -1294,11 +1419,17 @@ let budgetChartUrl: string | undefined;
           });
       }
       
-      // Send tool outputs back to Gemini
-      const finalResult = await chat.sendMessage(toolResponses);
-      finalResponseText = finalResult.response.text();
-      if (listSummaryOverride) {
-        finalResponseText = listSummaryOverride;
+      // Send tool outputs back to Gemini with error handling
+      try {
+        const finalResult = await chat.sendMessage(toolResponses);
+        finalResponseText = finalResult.response.text();
+        if (listSummaryOverride) {
+          finalResponseText = listSummaryOverride;
+        }
+      } catch (e) {
+        console.error("[twilio-whatsapp-ai-bot] Failed to get final AI response:", e);
+        finalResponseText = "I processed your request but encountered an issue generating a response. Please try again.";
+        if (WHATSAPP_DEBUG) debugNotes.push(`AI response error: ${String(e)}`);
       }
   }
 

@@ -369,7 +369,9 @@ async function upgradeToAnnual() {
       billing_interval: 'yearly',
       status: fullSubscription.status,
       current_period_end: currentPeriodEnd,
-      cancel_at_period_end: false,
+      trial_start: new Date().toISOString(),
+      trial_end: currentPeriodEnd,
+      cancel_at_period_end: true,
       updated_at: new Date().toISOString(),
     }
     

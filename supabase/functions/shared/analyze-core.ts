@@ -59,6 +59,87 @@ function isTotalLike(s?: string) {
   return !!s && /(sub\s*total|subtotal|grand\s*total|total)/i.test(s);
 }
 
+async function attemptAnalysis(
+  genAI: GoogleGenerativeAI,
+  modelName: string,
+  systemInstruction: string,
+  body: AnalyzeRequestBody,
+  base64Image: string,
+  callerCurrency: string,
+  callerCurrencySymbol: string,
+  callerDate: string,
+  language: string,
+  expenseCategories: string[],
+  incomeCategories: string[],
+  tools: any,
+  timeoutMs: number = 15000
+): Promise<{ success: boolean; items?: ExpenseItem[]; error?: string }> {
+  const timeoutPromise = new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error(`Model ${modelName} timed out after ${timeoutMs}ms`)), timeoutMs)
+  );
+
+  try {
+    const model = genAI.getGenerativeModel({ model: modelName, tools });
+    
+    const responsePromise = model.generateContent({
+      systemInstruction,
+      contents: [{
+        role: "user",
+        parts: [
+          { text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract expense details from this receipt:` },
+          {
+            inline_data: {
+              mime_type: body.image?.contentType || "image/jpeg",
+              data: base64Image,
+            },
+          },
+        ],
+      }],
+      generationConfig: { maxOutputTokens: 512 },
+    });
+
+    const response = await Promise.race([responsePromise, timeoutPromise]);
+    
+    const tool = response.response.functionCalls()?.[0];
+    if (tool && tool.name === "add_transactions") {
+      const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
+      const tempItems = rawItems.map((it) => {
+        const itemCurrency = it.currency || callerCurrency;
+        const normalizedCategory = normalizeCategory(it.category || "other");
+        const txType = String(it.type || "").toLowerCase();
+        return {
+          type: (txType === "income" || txType === "expense") ? txType : undefined,
+          amount: Number(it.amount),
+          category: normalizedCategory,
+          currency: itemCurrency,
+          currencySymbol: callerCurrencySymbol,
+          date: it.date || callerDate,
+          description: it.description || "Receipt transaction",
+        };
+      }).filter((it) => it.type === "income" || it.type === "expense") as ExpenseItem[];
+      
+      let items = tempItems;
+      if (items.length > 1) {
+        const withoutTotals = items.filter((it) => !isTotalLike(it.description));
+        if (withoutTotals.length > 0) items = withoutTotals;
+        const sums = items.map((_, i) => items.filter((__, j) => i !== j).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0));
+        items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+      }
+      
+      if (items.length > 0) {
+        return { success: true, items };
+      }
+    }
+    
+    return { success: false, error: `${modelName} could not extract valid transactions` };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('timed out')) {
+      throw error; // Re-throw timeout errors
+    }
+    return { success: false, error: `${modelName} failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
 export async function runAnalyzeExpense(
   body: AnalyzeRequestBody,
   geminiApiKey: string
@@ -88,6 +169,7 @@ export async function runAnalyzeExpense(
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const expenseCategories = getExpenseCategories();
     const incomeCategories = getIncomeCategories();
+    let lastError = "";
 
     const tools = [{
       function_declarations: [
@@ -176,7 +258,14 @@ export async function runAnalyzeExpense(
             date: it.date || callerDate,
             description: it.description || body.text,
           };
-        }).filter((it): it is ExpenseItem => it.type === "income" || it.type === "expense");
+        }).filter((it) => {
+          return (it.type === "income" || it.type === "expense") && 
+                 typeof it.amount === 'number' &&
+                 typeof it.category === 'string' &&
+                 typeof it.currency === 'string' &&
+                 typeof it.currencySymbol === 'string' &&
+                 typeof it.date === 'string';
+        }) as ExpenseItem[];
         if (items.length > 1) {
           const withoutTotals = items.filter((it) => !isTotalLike(it.description));
           if (withoutTotals.length > 0) items = withoutTotals;
@@ -206,7 +295,6 @@ export async function runAnalyzeExpense(
       }
       const base64Image = b64encode(bytes);
 
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
       const systemInstruction = [
         "You are a professional receipt analyzer.",
         "Task: Extract one or more transactions from the image and return ONLY via add_transactions. Every item MUST include a type (expense|income).",
@@ -224,52 +312,63 @@ export async function runAnalyzeExpense(
         `CRITICAL language requirement: return all free-text fields strictly in ${language}.`,
       ].join("\n");
 
-      const response = await model.generateContent({
-        systemInstruction,
-        contents: [{
-          role: "user",
-          parts: [
-            { text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract expense details from this receipt:` },
-            {
-              inline_data: {
-                mime_type: body.image.contentType,
-                data: base64Image,
-              },
-            },
-          ],
-        }],
-        generationConfig: { maxOutputTokens: 512 },
-      });
+      // Model progression: fast model first, then more capable one as fallback
+      const modelAttempts = [
+         { name: "gemini-2.5-flash", timeout: 5000 },
+        { name: "gemini-3-pro-preview", timeout: 13000 },
+      ];
 
-      const tool = response.response.functionCalls()?.[0];
-      if (tool && tool.name === "add_transactions") {
-        const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
-        const tempItems = rawItems.map((it) => {
-          const itemCurrency = it.currency || callerCurrency;
-          const normalizedCategory = normalizeCategory(it.category || "other");
-          const txType = String(it.type || "").toLowerCase();
-          return {
-            type: (txType === "income" || txType === "expense") ? txType : undefined,
-            amount: Number(it.amount),
-            category: normalizedCategory,
-            currency: itemCurrency,
-            currencySymbol: callerCurrencySymbol,
-            date: it.date || callerDate,
-            description: it.description || "Receipt transaction",
-          };
-        }).filter((it): it is ExpenseItem => it.type === "income" || it.type === "expense");
-        items = tempItems;
-        if (items.length > 1) {
-          const withoutTotals = items.filter((it) => !isTotalLike(it.description));
-          if (withoutTotals.length > 0) items = withoutTotals;
-          const sums = items.map((_, i) => items.filter((__, j) => i !== j).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0));
-          items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+      let lastError = "";
+      let items: ExpenseItem[] = [];
+
+      for (const { name, timeout } of modelAttempts) {
+        console.log(`[analyze-expense] Attempting with model: ${name}`);
+        
+        try {
+          const result = await attemptAnalysis(
+            genAI,
+            name,
+            systemInstruction,
+            body,
+            base64Image,
+            callerCurrency,
+            callerCurrencySymbol,
+            callerDate,
+            language,
+            expenseCategories,
+            incomeCategories,
+            tools,
+            timeout
+          );
+
+          if (result.success && result.items && result.items.length > 0) {
+            console.log(`[analyze-expense] Success with ${name}: extracted ${result.items.length} items`);
+            items = result.items;
+            break;
+          } else {
+            lastError = result.error || `${name} returned no items`;
+            console.log(`[analyze-expense] ${name} failed: ${lastError}`);
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('timed out')) {
+            lastError = error.message;
+            console.log(`[analyze-expense] ${name} timed out after ${timeout}ms`);
+          } else {
+            lastError = error instanceof Error ? error.message : String(error);
+            console.log(`[analyze-expense] ${name} error: ${lastError}`);
+          }
         }
       }
     }
 
     if (items.length === 0) {
-      return { success: false, error: "Could not extract expense information. Please try a clearer input.", status: 400, language };
+      console.log("[analyze-expense] All models failed to extract items");
+      return { 
+        success: false, 
+        error: lastError || "Could not extract expense information. Please try a clearer photo with better lighting.", 
+        status: 400, 
+        language 
+      };
     }
 
     return {
