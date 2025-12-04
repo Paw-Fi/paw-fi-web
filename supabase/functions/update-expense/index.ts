@@ -7,6 +7,18 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { normalizeCategory, getAllCategories } from "../shared/category-colors.ts";
 
+interface MemberSplitPayload {
+  userId: string;
+  amount?: number;
+  percentage?: number;
+  shares?: number;
+}
+
+interface CustomSplitsPayload {
+  splitType: "equal" | "amount" | "percentage" | "shares";
+  memberSplits: MemberSplitPayload[];
+}
+
 interface UpdateExpenseRequest {
   expenseId: string;
   updates: {
@@ -28,7 +40,11 @@ interface UpdateExpenseRequest {
       };
     };
     source?: string;
+    split_group_id?: string;
   };
+  householdId?: string;
+  customSplits?: CustomSplitsPayload;
+  payerUserId?: string;
 }
 
 interface ErrorResponse {
@@ -292,7 +308,7 @@ Deno.serve(async (req: Request) => {
     // Fetch expense to verify ownership and obtain household info
     const { data: expense, error: fetchError } = await supabase
       .from('expenses')
-      .select('id, user_id, household_id, amount_cents, currency, raw_text, category, date, created_at')
+      .select('id, user_id, household_id, split_group_id, amount_cents, currency, raw_text, category, date, created_at')
       .eq('id', expenseId)
       .single();
 
@@ -342,6 +358,186 @@ Deno.serve(async (req: Request) => {
     const oldCategory: string | null = (expense as any)?.category ?? null;
     const oldDate: string | null = (expense as any)?.date ?? null;
     const oldCreatedAt: string | null = (expense as any)?.created_at ?? null;
+
+    // Optionally create initial household split group when requested and none exists yet
+    const expenseHouseholdId: string | null = (expense as any)?.household_id ?? null;
+    const existingSplitGroupId: string | null = (expense as any)?.split_group_id ?? null;
+
+    const bodyHouseholdIdRaw = (body as any).householdId as string | undefined;
+    const bodyHouseholdId = bodyHouseholdIdRaw ? sanitizeUuid(bodyHouseholdIdRaw) : null;
+    const customSplits = (body as any).customSplits as CustomSplitsPayload | undefined;
+    const payerUserIdRaw = (body as any).payerUserId as string | undefined;
+
+    const shouldCreateSplitGroup =
+      !!expenseHouseholdId &&
+      !existingSplitGroupId &&
+      !!bodyHouseholdId &&
+      bodyHouseholdId === expenseHouseholdId &&
+      !!customSplits &&
+      !!customSplits.memberSplits &&
+      customSplits.memberSplits.length > 0;
+
+    let createdSplitGroupId: string | null = null;
+
+    if (shouldCreateSplitGroup) {
+      const splitType = customSplits!.splitType || "equal";
+
+      const { data: members } = await supabase
+        .from('household_members')
+        .select('user_id')
+        .eq('household_id', expenseHouseholdId);
+
+      if (members && members.length > 0) {
+        const effectiveAmountCents =
+          typeof updates.amount_cents === 'number'
+            ? updates.amount_cents
+            : ((expense as any)?.amount_cents as number | null) ?? 0;
+
+        const customUserIds = customSplits!.memberSplits.map((s) => s.userId).sort();
+        const allUserIds = members.map((m: any) => m.user_id as string).sort();
+
+        if (JSON.stringify(customUserIds) === JSON.stringify(allUserIds)) {
+          if (splitType === 'amount') {
+            const totalSplit = customSplits!.memberSplits.reduce(
+              (sum, s) => sum + (s.amount || 0),
+              0,
+            );
+            const totalSplitCents = Math.round(totalSplit * 100);
+            if (Math.abs(totalSplitCents - effectiveAmountCents) > 1) {
+              return errorResponse(
+                'Custom amount splits must equal total expense amount',
+                'VALIDATION_ERROR',
+              );
+            }
+          } else if (splitType === 'percentage') {
+            const totalPercent = customSplits!.memberSplits.reduce(
+              (sum, s) => sum + (s.percentage || 0),
+              0,
+            );
+            if (Math.abs(totalPercent - 100) > 0.01) {
+              return errorResponse(
+                'Custom percentage splits must total 100%',
+                'VALIDATION_ERROR',
+              );
+            }
+          } else if (splitType === 'shares') {
+            const totalShares = customSplits!.memberSplits.reduce(
+              (sum, s) => sum + (s.shares || 0),
+              0,
+            );
+            if (totalShares <= 0) {
+              return errorResponse(
+                'At least one member must have a share greater than 0',
+                'VALIDATION_ERROR',
+              );
+            }
+          }
+
+          let payerUserId = payerUserIdRaw ? sanitizeUuid(payerUserIdRaw) : null;
+          if (!payerUserId) {
+            payerUserId = userId;
+          }
+
+          if (payerUserId) {
+            const { data: validPayer } = await supabase
+              .from('household_members')
+              .select('user_id')
+              .eq('household_id', expenseHouseholdId)
+              .eq('user_id', payerUserId)
+              .maybeSingle();
+            if (!validPayer) {
+              payerUserId = userId;
+            }
+          }
+
+          const newCurrency = updates.currency || ((expense as any)?.currency as string | null) || null;
+
+          const { data: splitGroup, error: splitGroupError } = await supabase
+            .from('expense_split_groups')
+            .insert({
+              household_id: expenseHouseholdId,
+              expense_id: expense.id,
+              payer_user_id: payerUserId,
+              split_type: splitType,
+              currency: newCurrency,
+              total_amount_cents: effectiveAmountCents,
+              description: updates.raw_text || (expense as any)?.raw_text || null,
+              created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (!splitGroupError && splitGroup) {
+            createdSplitGroupId = (splitGroup as any).id as string;
+
+            let splitLines: any[] = [];
+
+            if (splitType === 'equal') {
+              const amountPerMember = members.length > 0
+                ? Math.floor(effectiveAmountCents / members.length)
+                : 0;
+              splitLines = members.map((member: any) => ({
+                split_group_id: createdSplitGroupId,
+                user_id: member.user_id,
+                amount_cents: amountPerMember,
+                is_settled: false,
+                settled_at: null,
+                created_at: new Date().toISOString(),
+              }));
+            } else if (splitType === 'amount') {
+              splitLines = customSplits!.memberSplits.map((split) => ({
+                split_group_id: createdSplitGroupId,
+                user_id: split.userId,
+                amount_cents: Math.round((split.amount || 0) * 100),
+                is_settled: false,
+                settled_at: null,
+                created_at: new Date().toISOString(),
+              }));
+            } else if (splitType === 'percentage') {
+              splitLines = customSplits!.memberSplits.map((split) => ({
+                split_group_id: createdSplitGroupId,
+                user_id: split.userId,
+                amount_cents: Math.round(
+                  effectiveAmountCents * (split.percentage || 0) / 100,
+                ),
+                percentage: split.percentage,
+                is_settled: false,
+                settled_at: null,
+                created_at: new Date().toISOString(),
+              }));
+            } else if (splitType === 'shares') {
+              const totalShares = customSplits!.memberSplits.reduce(
+                (sum, s) => sum + (s.shares || 0),
+                0,
+              );
+              if (totalShares > 0) {
+                splitLines = customSplits!.memberSplits.map((split) => ({
+                  split_group_id: createdSplitGroupId,
+                  user_id: split.userId,
+                  amount_cents: Math.round(
+                    effectiveAmountCents * (split.shares || 0) / totalShares,
+                  ),
+                  shares: split.shares,
+                  is_settled: false,
+                  settled_at: null,
+                  created_at: new Date().toISOString(),
+                }));
+              }
+            }
+
+            if (splitLines.length > 0) {
+              const { error: splitLinesError } = await supabase
+                .from('expense_split_lines')
+                .insert(splitLines);
+
+              if (!splitLinesError) {
+                updates.split_group_id = createdSplitGroupId;
+              }
+            }
+          }
+        }
+      }
+    }
 
     // Update expense
     const { data: updatedExpense, error: updateError } = await supabase
