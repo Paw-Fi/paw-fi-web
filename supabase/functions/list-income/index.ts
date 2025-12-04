@@ -131,7 +131,6 @@ Deno.serve(async (req: Request) => {
         updated_at
       `, { count: 'exact' })
       .eq("type", "income") // CRITICAL: Filter for income only
-      .eq("user_id", userId)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1); // Pagination support
@@ -146,15 +145,20 @@ Deno.serve(async (req: Request) => {
     }
     
     // Apply household filters (NEW)
+    // CRITICAL: In household mode, fetch ALL income for the household (any member)
+    // In personal mode, filter by user_id AND ensure household_id is null
     if (body.personalOnly === true) {
       // ONLY personal income (split_group_id IS NULL)
-      query = query.is("split_group_id", null);
+      query = query.eq("user_id", userId).is("split_group_id", null);
     } else if (body.householdOnly === true) {
       // ONLY household income (split_group_id IS NOT NULL)
       query = query.not("split_group_id", "is", null);
     } else if (body.householdId) {
-      // Specific household
+      // Specific household - fetch ALL income for this household (any member)
       query = query.eq("household_id", body.householdId);
+    } else {
+      // Default personal mode: filter by user_id and exclude household income
+      query = query.eq("user_id", userId).is("household_id", null);
     }
 
     // Apply filters

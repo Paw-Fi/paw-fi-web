@@ -186,7 +186,6 @@ Deno.serve(async (req: Request) => {
     let query = supabase
       .from("expenses")
       .select("id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at", { count: 'exact' })
-      .eq("user_id", userId)
       .eq("type", "expense") // CRITICAL: Only fetch expenses (not income)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -202,15 +201,20 @@ Deno.serve(async (req: Request) => {
     }
     
     // Apply household filters (NEW)
+    // CRITICAL: In household mode, fetch ALL expenses for the household (any member)
+    // In personal mode, filter by user_id AND ensure household_id is null
     if (body.personalOnly === true) {
       // ONLY personal expenses (split_group_id IS NULL)
-      query = query.is("split_group_id", null);
+      query = query.eq("user_id", userId).is("split_group_id", null);
     } else if (body.householdOnly === true) {
       // ONLY household expenses (split_group_id IS NOT NULL)
       query = query.not("split_group_id", "is", null);
     } else if (body.householdId) {
-      // Specific household
+      // Specific household - fetch ALL expenses for this household (any member)
       query = query.eq("household_id", body.householdId);
+    } else {
+      // Default personal mode: filter by user_id and exclude household expenses
+      query = query.eq("user_id", userId).is("household_id", null);
     }
 
     // Apply date filters if provided
