@@ -105,7 +105,12 @@ async function attemptAnalysis(
       const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
       const tempItems = rawItems.map((it) => {
         const itemCurrency = it.currency || callerCurrency;
-        const normalizedCategory = normalizeCategory(it.category || "other");
+        const rawCategory = it.category || "other";
+        const normalizedCategory = normalizeCategory(rawCategory);
+        
+        // Debug: Log category normalization
+        console.log(`[analyze-expense] Category normalization: "${rawCategory}" -> "${normalizedCategory}"`);
+        
         const txType = String(it.type || "").toLowerCase();
         return {
           type: (txType === "income" || txType === "expense") ? txType : undefined,
@@ -169,6 +174,13 @@ export async function runAnalyzeExpense(
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const expenseCategories = getExpenseCategories();
     const incomeCategories = getIncomeCategories();
+    
+    // Debug: Log categories being passed to AI
+    console.log(`[analyze-expense] Expense categories count: ${expenseCategories.length}`);
+    console.log(`[analyze-expense] Income categories count: ${incomeCategories.length}`);
+    console.log(`[analyze-expense] Expense categories include 'food': ${expenseCategories.includes('food')}`);
+    console.log(`[analyze-expense] Expense categories include 'food & drinks': ${expenseCategories.includes('food & drinks')}`);
+    
     let lastError = "";
 
     const tools = [{
@@ -247,7 +259,12 @@ export async function runAnalyzeExpense(
         const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
         items = rawItems.map((it) => {
           const itemCurrency = it.currency || callerCurrency;
-          const normalizedCategory = normalizeCategory(it.category || "other");
+          const rawCategory = it.category || "other";
+          const normalizedCategory = normalizeCategory(rawCategory);
+          
+          // Debug: Log category normalization for text analysis
+          console.log(`[analyze-expense] Text analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`);
+          
           const txType = String(it.type || "").toLowerCase();
           return {
             type: (txType === "income" || txType === "expense") ? txType : undefined,

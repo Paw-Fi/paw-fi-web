@@ -87,6 +87,11 @@ supabase functions deploy update-preferred-language --project-ref $PROJECT_REF
 echo "✅ update-preferred-language deployed"
 echo ""
 
+echo "📦 [6/5] Deploying update-preferred-timezone function..."
+supabase functions deploy update-preferred-timezone --project-ref $PROJECT_REF
+echo "✅ update-preferred-timezone deployed"
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All budgeting functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"

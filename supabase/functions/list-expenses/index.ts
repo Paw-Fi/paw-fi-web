@@ -239,21 +239,24 @@ Deno.serve(async (req: Request) => {
     console.log(`[list-expenses] Fetched ${expenses.length} expenses, total: ${count}`);
 
     // Transform and normalize data
+    // IMPORTANT: Use snake_case keys to match mobile ExpenseEntry.fromJson expectations
     const data = expenses.map(expense => ({
       id: expense.id,
-      type: expense.type || 'expense', // IMPORTANT: Include type field
+      type: expense.type || 'expense',
       date: expense.date,
       category: normalizeCategory(expense.category),
-      description: expense.raw_text,
-      amountMajor: expense.amount_cents / 100,
+      raw_text: expense.raw_text,
+      amount_cents: expense.amount_cents, // Keep as cents, mobile divides by 100
       currency: validateCurrency(expense.currency || "USD"),
-      receiptImageUrl: expense.receipt_image_url,
-      splitGroupId: expense.split_group_id,
-      householdId: expense.household_id,
-      isRecurring: expense.is_recurring || false,
-      recurrenceRule: expense.recurrence_rule,
+      receipt_image_url: expense.receipt_image_url,
+      split_group_id: expense.split_group_id,
+      household_id: expense.household_id,
+      is_recurring: expense.is_recurring || false,
+      recurrence_rule: expense.recurrence_rule,
       attachments: expense.attachments || [],
-      createdAt: expense.created_at,
+      created_at: expense.created_at,
+      contact_id: expense.contact_id,
+      user_id: expense.user_id,
     }));
 
     return new Response(

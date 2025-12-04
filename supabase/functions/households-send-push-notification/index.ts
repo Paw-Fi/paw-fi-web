@@ -289,6 +289,7 @@ function buildDeepLink(eventType: string, data: Record<string, string>): string 
       break;
 
     case 'settlement_completed':
+    case 'split_settled':
       // Navigate to household overview for settlement context
       if (data.household_id) {
         return `/household/${data.household_id}`;
@@ -1036,7 +1037,8 @@ function buildNotificationMessage(
       };
     }
 
-    case 'settlement_completed': {
+    case 'settlement_completed':
+    case 'split_settled': {
       const actorName = (payload.actor_name || 'Someone') as string;
       const code = payload.currency as string | undefined;
       const symbol = getCurrencySymbol(code);

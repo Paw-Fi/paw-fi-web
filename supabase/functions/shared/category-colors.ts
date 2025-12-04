@@ -266,9 +266,14 @@ export function normalizeCategory(raw: string | null): string {
 
   const normalized = raw.trim().toLowerCase();
 
+  // Direct match - category is already in our allowed list
   if (ALLOWED_CATEGORIES.has(normalized)) {
     return normalized;
   }
+
+  // Debug: Log what we're trying to match (only for first few unknown categories)
+  // console.log(`[normalizeCategory] Checking: "${normalized}" (original: "${raw}")`);
+  // console.log(`[normalizeCategory] ALLOWED_CATEGORIES size: ${ALLOWED_CATEGORIES.size}`);
 
   // Plaid detailed category codes mapping to our plain-language categories
   const plaidMappings: Record<string, string> = {

@@ -1020,6 +1020,12 @@
             "maximum": 200,
             "default": 50
           },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0,
+            "description": "Number of records to skip for pagination."
+          },
           "startDate": {
             "type": "string",
             "description": "Lower bound in ISO date format."
@@ -1031,6 +1037,27 @@
           "currency": {
             "type": "string",
             "description": "ISO 4217 currency code to filter expenses (e.g., USD, EUR, GBP)."
+          },
+          "householdId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional household identifier. When provided, only expenses for this household are returned."
+          },
+          "includeRecurring": {
+            "type": "boolean",
+            "description": "If true, only recurring transactions are returned."
+          },
+          "excludeRecurring": {
+            "type": "boolean",
+            "description": "If true, recurring transactions are excluded."
+          },
+          "personalOnly": {
+            "type": "boolean",
+            "description": "If true, only personal expenses (not part of a household split group) are returned."
+          },
+          "householdOnly": {
+            "type": "boolean",
+            "description": "If true, only household expenses (with a split group) are returned."
           }
         },
         "additionalProperties": false
@@ -1042,32 +1069,91 @@
             "type": "string",
             "format": "uuid"
           },
+          "type": {
+            "type": "string",
+            "description": "Transaction type. This endpoint only returns records where type is 'expense'."
+          },
           "date": {
-            "type": "string"
+            "type": "string",
+            "description": "Transaction date in ISO format (YYYY-MM-DD)."
           },
           "category": {
-            "type": "string"
+            "type": "string",
+            "description": "Normalized category label."
           },
-          "description": {
-            "type": "string"
-          },
-          "amountMajor": {
-            "type": "number"
-          },
-          "currency": {
-            "type": "string"
-          },
-          "receiptImageUrl": {
+          "raw_text": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Original raw text associated with the expense, when available."
           },
-          "createdAt": {
+          "amount_cents": {
+            "type": "integer",
+            "description": "Expense amount in minor units (cents). Divide by 100 for major units."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code."
+          },
+          "receipt_image_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional receipt image URL."
+          },
+          "split_group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Split group identifier when this expense is part of a household split."
+          },
+          "household_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Household identifier when this expense belongs to a household."
+          },
+          "is_recurring": {
+            "type": "boolean",
+            "description": "Whether this expense is part of a recurring series."
+          },
+          "recurrence_rule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Recurrence rule for recurring expenses, when defined."
+          },
+          "attachments": {
+            "type": "array",
+            "description": "Optional attachment metadata.",
+            "items": {
+              "type": "object"
+            }
+          },
+          "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "contact_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
           }
-        }
+        },
+        "additionalProperties": true
       },
       "ListExpensesSuccessResponse": {
         "type": "object",
@@ -1093,10 +1179,24 @@
             "type": "object",
             "properties": {
               "count": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Number of expenses included in this response page."
+              },
+              "total": {
+                "type": "integer",
+                "description": "Total number of matching expenses across all pages."
               },
               "limit": {
-                "type": "integer"
+                "type": "integer",
+                "description": "Page size requested."
+              },
+              "offset": {
+                "type": "integer",
+                "description": "Offset used for this page."
+              },
+              "hasMore": {
+                "type": "boolean",
+                "description": "Whether additional pages of results are available."
               },
               "filters": {
                 "type": "object",
@@ -1112,6 +1212,24 @@
                       "string",
                       "null"
                     ]
+                  },
+                  "currency": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "includeRecurring": {
+                    "type": "boolean"
+                  },
+                  "excludeRecurring": {
+                    "type": "boolean"
+                  },
+                  "personalOnly": {
+                    "type": "boolean"
+                  },
+                  "householdOnly": {
+                    "type": "boolean"
                   }
                 }
               },
@@ -1126,22 +1244,22 @@
       "ExpensesSummaryRequest": {
         "type": "object",
         "properties": {
-      "startDate": {
-        "type": "string",
-        "description": "Lower bound in ISO date format. Defaults to the first day of the month containing endDate."
-      },
-      "endDate": {
-        "type": "string",
-        "description": "Upper bound in ISO date format. Required for GPT callers; non-GPT requests default to today's date when omitted."
-      },
+          "startDate": {
+            "type": "string",
+            "description": "Lower bound in ISO date format. Defaults to the first day of the month containing endDate."
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Upper bound in ISO date format. Required for GPT callers; non-GPT requests default to today's date when omitted."
+          },
           "currency": {
             "type": "string",
             "description": "ISO 4217 currency code to filter expenses (e.g., USD, EUR, GBP)."
           },
-      "maxRows": {
-        "type": "integer",
-        "description": "Upper bound on rows pulled for aggregation (default 5000, hard cap 20000)."
-      }
+          "maxRows": {
+            "type": "integer",
+            "description": "Upper bound on rows pulled for aggregation (default 5000, hard cap 20000)."
+          }
         },
         "additionalProperties": false
       },

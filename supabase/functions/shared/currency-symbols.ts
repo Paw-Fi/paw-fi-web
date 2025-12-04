@@ -3,7 +3,8 @@
  * Maps ISO 4217 currency codes to their common symbols
  */
 export const CURRENCY_SYMBOLS: Record<string, string> = {
-'AED': 'د.إ',
+  'AED': 'د.إ',
+  'ARS': 'ARS\$',
   'AUD': 'A\$',
   'BRL': 'R\$',
   'CAD': 'C\$',

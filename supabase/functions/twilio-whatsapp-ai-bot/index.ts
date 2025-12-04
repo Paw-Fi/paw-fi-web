@@ -1194,19 +1194,21 @@ let budgetChartUrl: string | undefined;
                 householdId = householdMap.get(householdName);
               }
               const type = call.args.type || "expense";
-                  const listPayload = {
-                    limit: call.args.limit || 50,
-                    startDate: call.args.start_date,
-                    endDate: call.args.end_date,
-                    householdId,
-                    currency: call.args.currency || undefined,
-                    type,
-                  };
+              const listPayload = {
+                limit: call.args.limit || 50,
+                startDate: call.args.start_date,
+                endDate: call.args.end_date,
+                householdId,
+                currency: call.args.currency || undefined,
+                type,
+              };
               debugLog(WHATSAPP_DEBUG, "list-expenses payload", listPayload);
+              // fetchExpensesDirect returns snake_case fields from DB (amount_cents, raw_text, etc.)
+              // normalizeExpensesForTool handles both snake_case and camelCase field names
               const { data, error } = await fetchExpensesDirect(
                 supabase,
                 contactId,
-                { ...listPayload, householdId },
+                listPayload,
               );
               if (error) {
                 const formatted = formatInvokeError(error);
