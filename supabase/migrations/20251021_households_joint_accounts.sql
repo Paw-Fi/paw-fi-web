@@ -242,6 +242,8 @@ CREATE TABLE IF NOT EXISTS public.expense_split_lines (
   -- Settlement tracking (auto-accepted by default for better UX)
   is_settled BOOLEAN DEFAULT true,
   settled_at TIMESTAMPTZ DEFAULT NOW(),
+  settled_by_user_id UUID REFERENCES auth.users(id),
+  settlement_note TEXT,
 
   -- Metadata
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -401,6 +403,7 @@ CREATE INDEX IF NOT EXISTS idx_split_groups_currency ON public.expense_split_gro
 -- Expense Split Lines
 CREATE INDEX IF NOT EXISTS idx_split_lines_split_group_id ON public.expense_split_lines(split_group_id);
 CREATE INDEX IF NOT EXISTS idx_split_lines_user_id ON public.expense_split_lines(user_id);
+CREATE INDEX IF NOT EXISTS idx_split_lines_settled_by ON public.expense_split_lines(settled_by_user_id) WHERE settled_by_user_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_split_lines_unsettled ON public.expense_split_lines(user_id, is_settled) WHERE is_settled = false;
 
 -- Shared Budgets
@@ -645,6 +648,16 @@ CREATE POLICY "Users can view their split lines" ON public.expense_split_lines
 -- Users can update their own split lines (for settlement)
 CREATE POLICY "Users can update their split lines" ON public.expense_split_lines
   FOR UPDATE USING (user_id = auth.uid());
+
+-- Payers can also settle split lines they paid (express netting)
+CREATE POLICY "Payers can settle split lines they paid" ON public.expense_split_lines
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.expense_split_groups esg
+      WHERE esg.id = expense_split_lines.split_group_id
+        AND esg.payer_user_id = auth.uid()
+    )
+  );
 
 -- ========== SHARED BUDGETS RLS ==========
 

@@ -10,9 +10,18 @@ create table if not exists public.budgets (
   currency text not null default 'USD',
   total_budget_cents bigint not null default 0 check (total_budget_cents >= 0),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  constraint budgets_scope_unique unique (user_id, household_id, currency, period_month)
+  updated_at timestamptz not null default now()
 );
+
+-- Enforce uniqueness per user/currency/month for personal budgets (no household)
+create unique index if not exists budgets_personal_unique
+  on public.budgets(user_id, currency, period_month)
+  where household_id is null;
+
+-- Enforce uniqueness per household/currency/month for shared budgets
+create unique index if not exists budgets_household_unique
+  on public.budgets(household_id, currency, period_month)
+  where household_id is not null;
 
 comment on table public.budgets is 'Top-level monthly budget per user/household and currency';
 comment on column public.budgets.total_budget_cents is 'Total budget for the month in cents';
