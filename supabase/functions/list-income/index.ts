@@ -201,6 +201,28 @@ Deno.serve(async (req: Request) => {
       if (!isOwner && record.privacy_scope === 'balances_only') {
         privacyRedacted = true;
       }
+      
+      // Parse recurrence_rule if it's a string (JSONB sometimes comes as string)
+      let recurrenceRule = record.recurrence_rule;
+      if (typeof recurrenceRule === 'string') {
+        try {
+          recurrenceRule = JSON.parse(recurrenceRule);
+        } catch (e) {
+          console.warn('[list-income] Failed to parse recurrence_rule:', e);
+          recurrenceRule = null;
+        }
+      }
+      
+      // Parse attachments if it's a string
+      let attachments = record.attachments || [];
+      if (typeof attachments === 'string') {
+        try {
+          attachments = JSON.parse(attachments);
+        } catch (e) {
+          console.warn('[list-income] Failed to parse attachments:', e);
+          attachments = [];
+        }
+      }
 
       return {
         id: record.id,
@@ -221,9 +243,9 @@ Deno.serve(async (req: Request) => {
         baseCurrency: record.base_currency,
         fxRate: record.fx_rate,
         isRecurring: record.is_recurring || false,
-        recurrenceRule: record.recurrence_rule,
+        recurrenceRule: recurrenceRule,
         parentRecurringId: record.parent_recurring_id,
-        attachments: record.attachments || [],
+        attachments: attachments,
         createdAt: record.created_at,
         updatedAt: record.updated_at,
         privacyRedacted: privacyRedacted,

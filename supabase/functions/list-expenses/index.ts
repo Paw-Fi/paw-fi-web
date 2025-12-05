@@ -244,24 +244,48 @@ Deno.serve(async (req: Request) => {
 
     // Transform and normalize data
     // IMPORTANT: Use snake_case keys to match mobile ExpenseEntry.fromJson expectations
-    const data = expenses.map(expense => ({
-      id: expense.id,
-      type: expense.type || 'expense',
-      date: expense.date,
-      category: normalizeCategory(expense.category),
-      raw_text: expense.raw_text,
-      amount_cents: expense.amount_cents, // Keep as cents, mobile divides by 100
-      currency: validateCurrency(expense.currency || "USD"),
-      receipt_image_url: expense.receipt_image_url,
-      split_group_id: expense.split_group_id,
-      household_id: expense.household_id,
-      is_recurring: expense.is_recurring || false,
-      recurrence_rule: expense.recurrence_rule,
-      attachments: expense.attachments || [],
-      created_at: expense.created_at,
-      contact_id: expense.contact_id,
-      user_id: expense.user_id,
-    }));
+    const data = expenses.map(expense => {
+      // Parse recurrence_rule if it's a string (JSONB sometimes comes as string)
+      let recurrenceRule = expense.recurrence_rule;
+      if (typeof recurrenceRule === 'string') {
+        try {
+          recurrenceRule = JSON.parse(recurrenceRule);
+        } catch (e) {
+          console.warn('[list-expenses] Failed to parse recurrence_rule:', e);
+          recurrenceRule = null;
+        }
+      }
+      
+      // Parse attachments if it's a string
+      let attachments = expense.attachments || [];
+      if (typeof attachments === 'string') {
+        try {
+          attachments = JSON.parse(attachments);
+        } catch (e) {
+          console.warn('[list-expenses] Failed to parse attachments:', e);
+          attachments = [];
+        }
+      }
+      
+      return {
+        id: expense.id,
+        type: expense.type || 'expense',
+        date: expense.date,
+        category: normalizeCategory(expense.category),
+        raw_text: expense.raw_text,
+        amount_cents: expense.amount_cents, // Keep as cents, mobile divides by 100
+        currency: validateCurrency(expense.currency || "USD"),
+        receipt_image_url: expense.receipt_image_url,
+        split_group_id: expense.split_group_id,
+        household_id: expense.household_id,
+        is_recurring: expense.is_recurring || false,
+        recurrence_rule: recurrenceRule,
+        attachments: attachments,
+        created_at: expense.created_at,
+        contact_id: expense.contact_id,
+        user_id: expense.user_id,
+      };
+    });
 
     return new Response(
       JSON.stringify({

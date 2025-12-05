@@ -41,6 +41,8 @@ interface UpdateExpenseRequest {
     };
     source?: string;
     split_group_id?: string;
+    payer_user_id?: string;
+    payerUserId?: string;
   };
   householdId?: string;
   customSplits?: CustomSplitsPayload;
@@ -236,6 +238,19 @@ Deno.serve(async (req: Request) => {
       }
       // Validate and normalize currency using existing validator
       updates.currency = validateCurrency(updates.currency);
+    }
+
+    // Normalize payer user ID from either field
+    let normalizedPayerUserId: string | null = null;
+    if ((updates as any).payer_user_id !== undefined || (updates as any).payerUserId !== undefined) {
+      const payer = sanitizeUuid((updates as any).payer_user_id ?? (updates as any).payerUserId);
+      if (!payer) {
+        return errorResponse('Invalid payer user id', 'VALIDATION_ERROR');
+      }
+      normalizedPayerUserId = payer;
+      // Remove from updates to avoid touching non-existent expense columns
+      delete (updates as any).payer_user_id;
+      delete (updates as any).payerUserId;
     }
 
     if (updates.is_recurring !== undefined) {
@@ -539,6 +554,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Update payer on existing split group if requested
+    const targetSplitGroupId = createdSplitGroupId ?? existingSplitGroupId;
+    if (normalizedPayerUserId && targetSplitGroupId) {
+      const { error: payerUpdateError } = await supabase
+        .from('expense_split_groups')
+        .update({ payer_user_id: normalizedPayerUserId })
+        .eq('id', targetSplitGroupId);
+      if (payerUpdateError) {
+        console.error('[update-expense] Failed to update payer_user_id on split group:', payerUpdateError);
+        return errorResponse('Failed to update expense payer', 'SERVER_ERROR', 500);
+      }
+    }
+
     // Update expense
     const { data: updatedExpense, error: updateError } = await supabase
       .from('expenses')
@@ -626,7 +654,6 @@ Deno.serve(async (req: Request) => {
     }
     
     return jsonResponse(responseData, 200);
-
   } catch (error) {
     console.error('[update-expense] Unexpected error:', error);
     return errorResponse(
