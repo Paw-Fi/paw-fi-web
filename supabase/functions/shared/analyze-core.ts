@@ -22,7 +22,6 @@ export interface AnalyzeRequestBody {
   };
   date?: string;
   currency?: string;
-  currencySymbol?: string;
   language?: string;
 }
 
@@ -66,11 +65,7 @@ async function attemptAnalysis(
   body: AnalyzeRequestBody,
   base64Image: string,
   callerCurrency: string,
-  callerCurrencySymbol: string,
   callerDate: string,
-  language: string,
-  expenseCategories: string[],
-  incomeCategories: string[],
   tools: any,
   timeoutMs: number = 15000
 ): Promise<{ success: boolean; items?: ExpenseItem[]; error?: string }> {
@@ -86,7 +81,7 @@ async function attemptAnalysis(
       contents: [{
         role: "user",
         parts: [
-          { text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract expense details from this receipt:` },
+          { text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract transaction details from this image (receipt, bank statement, or transaction notification):` },
           {
             inline_data: {
               mime_type: body.image?.contentType || "image/jpeg",
@@ -112,16 +107,20 @@ async function attemptAnalysis(
         console.log(`[analyze-expense] Category normalization: "${rawCategory}" -> "${normalizedCategory}"`);
         
         const txType = String(it.type || "").toLowerCase();
+        
+        // Use correct symbol for the detected currency
+        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+
         return {
           type: (txType === "income" || txType === "expense") ? txType : undefined,
           amount: Number(it.amount),
           category: normalizedCategory,
           currency: itemCurrency,
-          currencySymbol: callerCurrencySymbol,
+          currencySymbol: itemCurrencySymbol,
           date: it.date || callerDate,
-          description: it.description || "Receipt transaction",
+          description: it.description || "",
         };
-      }).filter((it) => it.type === "income" || it.type === "expense") as ExpenseItem[];
+      }).filter((it) => it.type && (it.type === "income" || it.type === "expense") && Number.isFinite(it.amount) && it.amount > 0) as ExpenseItem[];
       
       let items = tempItems;
       if (items.length > 1) {
@@ -167,7 +166,6 @@ export async function runAnalyzeExpense(
     }
 
     const callerCurrency = validateCurrency(body.currency);
-    const callerCurrencySymbol = body.currencySymbol || getCurrencySymbol(callerCurrency);
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
     const language = normalizeLanguage(body.language);
 
@@ -184,7 +182,7 @@ export async function runAnalyzeExpense(
     let lastError = "";
 
     const tools = [{
-      function_declarations: [
+      functionDeclarations: [
         {
           name: "add_transactions",
           description: "Extract structured transactions (income or expense) with clear classification and rationale. Always include a type for every item.",
@@ -224,28 +222,33 @@ export async function runAnalyzeExpense(
       const systemInstruction = [
         "You are a professional transaction extraction and classification system.",
         "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
-        "Classification policy:",
-        "- income: money received (earned salary, bonus, tips, refunds, transfers into account, repayments, gifts).",
-        "- expense: money spent (purchases, bills, fees, subscriptions, transfers out).",
-        "Category policy:",
-        `- choose a canonical category from these lists. Expense categories: ${expenseCategories.join(", ")}. Income categories: ${incomeCategories.join(", ")}.`,
-        "- For money received from relatives or friends use gift (income). For salary/payroll use salary (income). For card/bank returns use refund (income). Do NOT use vague categories such as family for incomes.",
-        "Currency & date policy:",
-        "- Detect explicit currency symbol or code; else use Caller Currency.",
-        "- Date parsing: Look for ANY date reference in the text - absolute (Jan 15, 2024-01-15) or relative (yesterday, last Monday, 3 days ago, last week).",
-        "- Convert relative dates to YYYY-MM-DD format based on Caller Date as today.",
-        "- Examples: \"yesterday\" → subtract 1 day from Caller Date; \"last Monday\" → find previous Monday; \"3 days ago\" → subtract 3 days.",
-        "- Only use Caller Date if NO date is mentioned in the text.",
-        "Description policy:",
-        "- Write natural, conversational notes about what happened - as if casually mentioning it to a friend.",
-        "- Include context: where (merchant/location), what (items), or why when relevant.",
-        "- Use currency symbols (€, $, ¥, £) NOT currency names in words. Good: \"€50\", Bad: \"50 euros\" or \"50欧元\".",
-        "- For multiple items, use symbols naturally: \"Lunch €25, coffee €5\" or \"买菜 €50, 买鞋 €30\".",
-        "- Keep it brief and conversational - focus on what makes the transaction memorable.",
-        "Output policy:",
-        "- Round to 2 decimals. Use positive amount.",
-        "- Do NOT output a separate line for subtotal/total/grand total; only return line items. If only a total is present and no itemized amounts are present, return a single item for the total.",
-        `CRITICAL language requirement: return all free-text fields strictly in ${language}.`,
+        
+        "### 1. QUANTITY & AMOUNT STRATEGY",
+        "- **Single Receipt/Bill**: If the text represents a single receipt with line items and a total, return **ONE** transaction for the Grand Total.",
+        "- **Bank Feed / List**: If the text lists multiple distinct transactions, return them as **SEPARATE** items.",
+        "- Do NOT output a separate transaction for subtotal/total/grand total lines.",
+
+        "### 2. CLASSIFICATION (Type & Category)",
+        "- **Type**: 'expense' (spending, debit, payment) vs 'income' (deposit, salary, refund).",
+        "- **Bank/Notification Context**: 'Credited', 'Deposit', 'Received', 'Top up' -> INCOME. 'Debited', 'Paid', 'Purchase', 'Sent to', 'Withdrawal' -> EXPENSE.",
+        `   - **Expense Categories**: ${expenseCategories.join(", ")}.`,
+        `   - **Income Categories**: ${incomeCategories.join(", ")}.`,
+        "- **Fallback**: If unrecognizable, choose the closest generic category from the provided lists (for example an 'other'/'misc' style expense category or a generic income category). Never invent category names that are not present in the provided lists.",
+        "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
+
+        "### 3. CURRENCY & DATE",
+        "- Detect explicit currency symbol/code; else use Caller Currency.",
+        "- If text clearly indicates a different currency, use that currency (no conversion).",
+        "- Date parsing: Look for ANY date reference (absolute or relative like 'yesterday').",
+        "- Convert relative dates to YYYY-MM-DD based on Caller Date.",
+        "- Only use Caller Date if NO date is mentioned.",
+        "- **Amount policy**: Always return amounts as positive numbers (no minus signs). A negative or red value in the source indicates 'expense' vs 'income' type, not a negative amount.",
+
+        "### 4. DESCRIPTION & LANGUAGE",
+        "- Write natural, conversational notes generally matching the user's intent.",
+        `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
+        
+        "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
       ].join("\n");
 
       const response = await model.generateContent({
@@ -266,18 +269,22 @@ export async function runAnalyzeExpense(
           console.log(`[analyze-expense] Text analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`);
           
           const txType = String(it.type || "").toLowerCase();
+          // Use correct symbol for the detected currency
+          const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+          
           return {
             type: (txType === "income" || txType === "expense") ? txType : undefined,
             amount: Number(it.amount),
             category: normalizedCategory,
             currency: itemCurrency,
-            currencySymbol: callerCurrencySymbol,
+            currencySymbol: itemCurrencySymbol,
             date: it.date || callerDate,
             description: it.description || body.text,
           };
         }).filter((it) => {
-          return (it.type === "income" || it.type === "expense") && 
-                 typeof it.amount === 'number' &&
+          return it.type && (it.type === "income" || it.type === "expense") && 
+                 Number.isFinite(it.amount) &&
+                 it.amount > 0 &&
                  typeof it.category === 'string' &&
                  typeof it.currency === 'string' &&
                  typeof it.currencySymbol === 'string' &&
@@ -313,30 +320,58 @@ export async function runAnalyzeExpense(
       const base64Image = b64encode(bytes);
 
       const systemInstruction = [
-        "You are a professional receipt analyzer.",
-        "Task: Extract one or more transactions from the image and return ONLY via add_transactions. Every item MUST include a type (expense|income).",
-        "Classification hints (do not guess wildly):",
-        "- income: deposit/credit slips, payroll notifications, refunds to card/bank, inbound transfers.",
-        "- expense: purchase receipts, invoices, utility bills, debit/outbound transfers.",
-        `Category policy: Expense categories: ${expenseCategories.join(", ")}. Income categories: ${incomeCategories.join(", ")}.`,
-        "Totals (CRITICAL):",
-        "- Use the FINAL TOTAL / AMOUNT DUE that already INCLUDES taxes, fees, tips, and service charges.",
-        "- If multiple totals exist (subtotal, tax, total, balance), choose the amount that represents the amount to pay after tax/fees.",
-        "- If a balance line is present, prefer the balance/amount due over subtotal.",
-        "Currency: detect, else use Caller Currency. Date: detect, else use Caller Date.",
-        "Description policy for receipts: list items conversationally with currency symbols, include store if visible.",
-        "Do NOT output subtotal/total lines; only line items. If only a total exists, return a single item for that total.",
-        `CRITICAL language requirement: return all free-text fields strictly in ${language}.`,
+        "You are an expert Financial OCR Analyst for Moneko.",
+        "OBJECTIVE: Analyze the image to extract transaction data. Minimize noise, maximize accuracy.",
+        "OUTPUT: Call `add_transactions` with the extracted items. Under no circumstances output plain text or JSON.",
+
+        "### 0. NOTIFICATION / SINGLE TRANSACTION SCREENS",
+        "- If the image is a notification or single-transaction view (e.g. 'You spent $15 at Starbucks'), return exactly ONE transaction.",
+        "- **Merchant**: App/Merchant name (e.g. 'Revolut • Starbucks' -> 'Starbucks').",
+        "- **Type**: 'expense' if 'spent', 'debited', 'paid', 'purchase'; 'income' if 'credited', 'received', 'deposit', 'refund'.",
+        "- **Amount**: Prominent numeric value.",
+        "- **Description**: Short summary like 'Coffee at Starbucks'.",
+
+        "### 1. QUANTITY & AMOUNT STRATEGY",
+        "- **Single Receipt/Bill**: If the image is a receipt with a list of items and a final total, return **ONE** transaction.",
+        "   - **Amount**: Must be the **Grand Total** (Balance Due) at the bottom, including tax/tip.",
+        "   - **Description**: Summarize the items ('Walmart: Milk, Bread, Eggs').",
+        "   - **Rule**: Never output one item per receipt line. For receipts, you must output exactly one transaction with the grand total.",
+        "- **Bank Feed / List**: If the image shows multiple *distinct, unrelated* transactions (e.g. a bank statement list), extract them as **SEPARATE** items.",
+        "- **Ambiguity**: If unsure, prefer returning a single Item with the largest 'Total' amount found.",
+        "- **Amount policy**: Always return amounts as positive numbers (no minus signs). Negative or red values in the UI indicate 'expense' vs 'income' type, not a negative amount.",
+
+        "### 2. CLASSIFICATION (Type & Category)",
+        "- **Type**: 'expense' vs 'income'.",
+        "   - Visual Cues: Red/- = Expense. Green/+ = Income.",
+        "   - Text Cues: 'Credit', 'Deposit', 'Refund', 'Top up' -> Income. 'Debit', 'Purchase', 'Payment', 'Sent to' -> Expense.",
+        `   - **Expense Categories**: ${expenseCategories.join(", ")}.`,
+        `   - **Income Categories**: ${incomeCategories.join(", ")}.`,
+        "- **Fallback**: If unrecognizable, choose the closest generic category from the provided lists (for example an 'other'/'misc' style expense category or a generic income category). Never invent category names that are not present in the provided lists.",
+        "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
+
+        "### 3. DATA REFINEMENT",
+        "- **Merchant**: Clean up raw text (e.g., 'Uber *Trip 4920' -> 'Uber').",
+        "- **Date**: Parse absolute dates or relative ('Yesterday'). Default to Caller Date if not found.",
+        "- **Currency**: Trust symbol in image ($/€/£) over Caller Currency. Defaults to Caller Currency.",
+        "- **Noise**: Ignore loyalty points, barcodes, IDs, tax numbers unless needed for context.",
+        
+        "### 4. DESCRIPTION & LANGUAGE",
+        "- Create a natural, short conclusion of the image.",
+        "- Pattern: '[Merchant] [Short Summary of Items]'",
+        `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
+
+        "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
       ].join("\n");
 
       // Model progression: fast model first, then more capable one as fallback
       const modelAttempts = [
-         { name: "gemini-2.5-flash", timeout: 5000 },
-        { name: "gemini-3-pro-preview", timeout: 13000 },
+ { name: "gemini-2.5-flash-lite", timeout: 5000 },
+{ name: "gemini-3-pro-preview", timeout: 10000 },
       ];
 
-      let lastError = "";
-      let items: ExpenseItem[] = [];
+      // Removed shadowing variables
+      // let lastError = "";
+      // let items: ExpenseItem[] = [];
 
       for (const { name, timeout } of modelAttempts) {
         console.log(`[analyze-expense] Attempting with model: ${name}`);
@@ -349,11 +384,7 @@ export async function runAnalyzeExpense(
             body,
             base64Image,
             callerCurrency,
-            callerCurrencySymbol,
             callerDate,
-            language,
-            expenseCategories,
-            incomeCategories,
             tools,
             timeout
           );
@@ -376,13 +407,53 @@ export async function runAnalyzeExpense(
           }
         }
       }
+
+      if (!items.length) {
+        console.log("[analyze-expense] No items from standard image prompts, trying handwriting-focused fallback");
+        const handwritingInstruction = [
+          "You are an expert Financial OCR Analyst for Moneko.",
+          "OBJECTIVE: The image is likely a handwritten list of expenses or income on paper.",
+          "OUTPUT: Call `add_transactions` with the extracted items. Under no circumstances output plain text or JSON.",
+          "",
+          "### HANDWRITTEN LIST PATTERN",
+          "- Treat each readable line that looks like \"<label> <amount>\" (e.g. \"gym $45\", \"grocery $120\") as a separate transaction.",
+          "- Prioritize darker, thicker handwriting lines over faint background print or noise.",
+          "- If you can reasonably infer a transaction from partial handwriting, include it with best-effort classification.",
+        ].join("\n");
+
+        try {
+          const fallback = await attemptAnalysis(
+            genAI,
+            "gemini-2.5-flash-lite",
+            handwritingInstruction,
+            body,
+            base64Image,
+            callerCurrency,
+            callerDate,
+            tools,
+            8000,
+          );
+
+          if (fallback.success && fallback.items && fallback.items.length > 0) {
+            console.log(`[analyze-expense] Handwriting fallback succeeded: extracted ${fallback.items.length} items`);
+            items = fallback.items;
+          } else {
+            lastError = fallback.error || lastError || "Handwriting fallback returned no items";
+            console.log("[analyze-expense] Handwriting fallback failed:", lastError);
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          lastError = msg || lastError;
+          console.log("[analyze-expense] Handwriting fallback error:", msg);
+        }
+      }
     }
 
     if (items.length === 0) {
       console.log("[analyze-expense] All models failed to extract items");
       return { 
         success: false, 
-        error: lastError || "Could not extract expense information. Please try a clearer photo with better lighting.", 
+        error: lastError || "Could not extract transaction information. Please try clearer text, a screenshot, or a photo.", 
         status: 400, 
         language 
       };

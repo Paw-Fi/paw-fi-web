@@ -90,6 +90,17 @@ function decodeBase64(data: string): Uint8Array {
   return arr;
 }
 
+// Safe Uint8Array -> base64 encoder that avoids spreading large buffers into String.fromCharCode
+function uint8ToBase64(buf: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000; // 32k chunk to avoid large argument lists
+  for (let i = 0; i < buf.length; i += chunkSize) {
+    const subarray = buf.subarray(i, Math.min(i + chunkSize, buf.length));
+    binary += String.fromCharCode.apply(null, Array.from(subarray));
+  }
+  return btoa(binary);
+}
+
 function getDatePartsInTimeZone(tz: string | null | undefined, date = new Date()) {
   const timezone = (tz || "UTC").trim();
   try {
@@ -493,6 +504,14 @@ Deno.serve(async (req: Request) => {
   const numMedia = parseInt(formData.get("NumMedia")?.toString() || "0");
   const to = formData.get("To")?.toString() || ""; // Our number
 
+  // Basic visibility log so we can confirm WhatsApp webhooks are hitting this function
+  console.log("[twilio-whatsapp-ai-bot] Incoming WhatsApp webhook", {
+    from,
+    to,
+    hasBody: !!body,
+    numMedia,
+  });
+
   if (!from) return jsonResponse({ error: "Missing 'From' number" }, 400);
 
   const whatsappSessionId = `whatsapp:${from}`;
@@ -610,114 +629,190 @@ Deno.serve(async (req: Request) => {
   let userMessageContent = body;
   const caption = (body || "").trim();
 
+  // If we only have text (no media), attempt direct transaction extraction via analyze-core
+  if (numMedia === 0 && caption) {
+    console.log("[twilio-whatsapp-ai-bot] Text-only message, attempting analyze-core extraction", {
+      from,
+      preview: caption.slice(0, 120),
+    });
+    let analysis: any = null;
+    try {
+      const analysisPromise = runAnalyzeExpense(
+        {
+          userId,
+          text: caption,
+          currency: userCurrency,
+        },
+        GEMINI_API_KEY
+      );
+
+      const timeoutPromise: any = new (globalThis as any).Promise(
+        (_: unknown, reject: (reason?: unknown) => void) => {
+          setTimeout(
+            () => reject(new Error("Text analysis timed out after 30 seconds")),
+            30000,
+          );
+        },
+      );
+
+      analysis = await (globalThis as any).Promise.race([analysisPromise, timeoutPromise]);
+    } catch (timeoutError) {
+      console.error("[twilio-whatsapp-ai-bot] Text analysis timeout:", timeoutError);
+      analysis = {
+        success: false,
+        error: "The text is taking longer than expected to process. Please try again or shorten the message.",
+        language: "en",
+      };
+    }
+
+    if (!analysis || !analysis.success || !analysis.items) {
+      if (WHATSAPP_DEBUG) debugNotes.push(`text analyze-expense error: ${analysis?.error || "unknown"}`);
+      userMessageContent = `[User message: "${caption}". Transaction analysis failed: ${
+        analysis?.error ||
+        "Could not extract transaction information. Please try again with a clearer description, for example: \"Spent 45 on groceries yesterday\"."
+      } ]`;
+    } else {
+      userMessageContent = `[User message: "${caption}". Successfully extracted from text: ${JSON.stringify(
+        analysis.items!
+      )}. Please confirm with the user and ask if they want to save these transactions.]`;
+    }
+  }
+
   // If Image is present
   if (numMedia > 0) {
+    console.log("[twilio-whatsapp-ai-bot] Media message detected", { from, numMedia });
     const mediaUrl = formData.get("MediaUrl0")?.toString();
     const mediaType = formData.get("MediaContentType0")?.toString();
-    
-    if (mediaUrl && mediaType?.startsWith("image/")) {
-       // Download image with Twilio Basic auth (matches legacy webhook), then run local analyze-core
-       const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
-       const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
-       const imgRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
-       if (!imgRes.ok) {
-         if (WHATSAPP_DEBUG) debugNotes.push(`media fetch failed status=${imgRes.status}`);
-         userMessageContent = `[User uploaded an image, but download failed status=${imgRes.status}]`;
-       } else {
-         const contentType = imgRes.headers.get("content-type") || mediaType || "";
-         if (!/^image\/(jpeg|jpg|png|gif|bmp|webp)$/i.test(contentType)) {
-           if (WHATSAPP_DEBUG) debugNotes.push(`unsupported image type ${contentType}`);
-           userMessageContent = `[User sent unsupported image type: ${contentType}]`;
-         } else {
-           const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
-           const base64Data = btoa(String.fromCharCode(...imgBuf));
-           
-           // Don't send immediate acknowledgment - let the AI handle all responses
-           // to avoid duplicate messages
-           
-           // Attempt analysis with timeout and retry
-           let analysis: any = null;
-           try {
-             // Set a maximum timeout for the entire analysis process
-             const analysisPromise = runAnalyzeExpense(
-               {
-                 userId,
-                 image: { data: base64Data, contentType, bytes: imgBuf },
-                 currency: userCurrency,
-               },
-               GEMINI_API_KEY
-             );
-             
-             // Add a hard timeout of 30 seconds for the entire process
-             const timeoutPromise = new Promise<typeof analysis>((_, reject) => 
-               setTimeout(() => reject(new Error("Receipt analysis timed out after 30 seconds")), 30000)
-             );
-             
-             analysis = await Promise.race([analysisPromise, timeoutPromise]);
-           } catch (timeoutError) {
-             console.error("[twilio-whatsapp-ai-bot] Analysis timeout:", timeoutError);
-             analysis = {
-               success: false,
-               error: "The image is taking longer than expected to process. Please try again with a clearer photo.",
-               language: "en"
-             };
-           }
-           
-           if (!analysis || !analysis.success || !analysis.items) {
-             if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis?.error || "unknown"}`);
-             
-             // Don't send error directly - let AI handle the response to maintain context
-             // Include the error details in the message content for the AI
-             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but analysis failed: ${analysis?.error || "Could not extract expense information. The image may be unclear or have poor lighting."}. Please help the user by suggesting they try again with better lighting, holding camera steady, ensuring text is in focus, avoiding shadows/glare, or typing the expense manually like "Spent 45 on groceries"]`;
-           } else {
-             // Success - let AI handle the response with the extracted data
-             userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}. Successfully extracted from receipt: ${JSON.stringify(analysis.items!)}. Please confirm with the user and ask if they want to save these transactions.]`;
-           }
-         }
-       }
-    } else {
-        // Non-image file: fetch and include a small preview so AI keeps context
-        const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
-        const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
-      const fileRes = await fetch(mediaUrl || "", { headers: { Authorization: authHeader } });
+
+    if (mediaUrl && /^image\//i.test(mediaType || "")) {
+      // Download image with Twilio Basic auth (matches legacy webhook), then run local analyze-core
+      const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
+      const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
+      const imgRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
+
+      if (!imgRes.ok) {
+        if (WHATSAPP_DEBUG) debugNotes.push(`media fetch failed status=${imgRes.status}`);
+        userMessageContent = `[User uploaded an image, but download failed status=${imgRes.status}]`;
+      } else {
+        const contentType = imgRes.headers.get("content-type") || mediaType || "";
+
+        if (!/^image\/(jpeg|jpg|png|gif|bmp|webp)$/i.test(contentType)) {
+          if (WHATSAPP_DEBUG) debugNotes.push(`unsupported image type ${contentType}`);
+          userMessageContent = `[User sent unsupported image type: ${contentType}]`;
+        } else {
+          const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
+          const base64Data = uint8ToBase64(imgBuf);
+
+          // Don't send immediate acknowledgment - let the AI handle all responses
+          // to avoid duplicate messages
+
+          // Attempt analysis with timeout and retry
+          let analysis: any = null;
+          try {
+            // Set a maximum timeout for the entire analysis process
+            const analysisPromise = runAnalyzeExpense(
+              {
+                userId,
+                image: { data: base64Data, contentType, bytes: imgBuf },
+                currency: userCurrency,
+              },
+              GEMINI_API_KEY,
+            );
+
+            // Add a hard timeout of 30 seconds for the entire process
+            const timeoutPromise = new (globalThis as any).Promise(
+              (_: unknown, reject: (reason?: unknown) => void) => {
+                setTimeout(
+                  () => reject(new Error("Receipt analysis timed out after 30 seconds")),
+                  30000,
+                );
+              },
+            );
+
+            analysis = await (globalThis as any).Promise.race([analysisPromise, timeoutPromise]);
+          } catch (timeoutError) {
+            console.error("[twilio-whatsapp-ai-bot] Analysis timeout:", timeoutError);
+            analysis = {
+              success: false,
+              error: "The image is taking longer than expected to process. Please try again with a clearer photo.",
+              language: "en",
+            };
+          }
+
+          if (!analysis || !analysis.success || !analysis.items) {
+            if (WHATSAPP_DEBUG) debugNotes.push(`analyze-expense error: ${analysis?.error || "unknown"}`);
+
+            // Don't send error directly - let AI handle the response to maintain context
+            // Include the error details in the message content for the AI
+            userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but analysis failed: ${
+              analysis?.error ||
+              "Could not extract expense information. The image may be unclear or have poor lighting."
+            }. Please help the user by suggesting they try again with better lighting, holding camera steady, ensuring text is in focus, avoiding shadows/glare, or typing the expense manually like "Spent 45 on groceries"]`;
+          } else {
+            // Success - let AI handle the response with the extracted data
+            userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}. Successfully extracted from receipt: ${JSON.stringify(
+              analysis.items!,
+            )}. Please confirm with the user and ask if they want to save these transactions.]`;
+          }
+        }
+      }
+    } else if (mediaUrl) {
+      // Non-image file: fetch and include a small preview so AI keeps context
+      console.log("[twilio-whatsapp-ai-bot] Non-image media detected, building preview", {
+        from,
+        mediaUrl,
+        mediaType,
+      });
+
+      const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
+      const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
+      const fileRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
+
       if (!fileRes.ok) {
         if (WHATSAPP_DEBUG) debugNotes.push(`file fetch failed status=${fileRes.status}`);
         userMessageContent = `[User sent a file but download failed status=${fileRes.status}${caption ? ` | caption: "${caption}"` : ""}]`;
-        } else {
-          const contentType = fileRes.headers.get("content-type") || mediaType || "";
-          const buf = new Uint8Array(await fileRes.arrayBuffer());
-          let preview = "";
-          let parsed = false;
-          const textLike = /^(text\/|application\/(json|csv|xml|javascript))/i.test(contentType) || /\.(csv|txt|json|xml)$/i.test(mediaUrl || "");
-          const isXlsx = /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(contentType) || /\.xlsx$/i.test(mediaUrl || "");
-          const isPdf = /application\/pdf/i.test(contentType) || /\.pdf$/i.test(mediaUrl || "");
-          if (textLike) {
-            try {
-              preview = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, 12000));
-              parsed = true;
-            } catch {
-              parsed = false;
-            }
-          } else if (isXlsx) {
-            const xlsxPreview = buildXlsxPreview(buf);
-            if (xlsxPreview) {
-              preview = xlsxPreview;
-              parsed = true;
-            }
-          } else if (isPdf) {
-            const base64Data = btoa(String.fromCharCode.apply(null, Array.from(buf)));
-            const pdfSummary = await summarizePdfWithGemini(base64Data, "application/pdf", GEMINI_API_KEY);
-            if (pdfSummary) {
-              preview = `PDF summary:\n${pdfSummary}`;
-              parsed = true;
-            }
+      } else {
+        const contentType = fileRes.headers.get("content-type") || mediaType || "";
+        const buf = new Uint8Array(await fileRes.arrayBuffer());
+        let preview = "";
+        let parsed = false;
+
+        const textLike =
+          /^(text\/|application\/(json|csv|xml|javascript))/i.test(contentType) ||
+          /\.(csv|txt|json|xml)$/i.test(mediaUrl || "");
+        const isXlsx =
+          /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(contentType) ||
+          /\.xlsx$/i.test(mediaUrl || "");
+        const isPdf = /application\/pdf/i.test(contentType) || /\.pdf$/i.test(mediaUrl || "");
+
+        if (textLike) {
+          try {
+            preview = new TextDecoder("utf-8", { fatal: false }).decode(buf.slice(0, 12000));
+            parsed = true;
+          } catch {
+            parsed = false;
           }
-          if (parsed) {
-            userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Preview: ${preview}]`;
-          } else {
-            userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Content not parsed (binary).]`;
+        } else if (isXlsx) {
+          const xlsxPreview = buildXlsxPreview(buf);
+          if (xlsxPreview) {
+            preview = xlsxPreview;
+            parsed = true;
+          }
+        } else if (isPdf) {
+          const base64Data = uint8ToBase64(buf);
+          const pdfSummary = await summarizePdfWithGemini(base64Data, "application/pdf", GEMINI_API_KEY);
+          if (pdfSummary) {
+            preview = `PDF summary:\n${pdfSummary}`;
+            parsed = true;
           }
         }
+
+        if (parsed) {
+          userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Preview: ${preview}]`;
+        } else {
+          userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Content not parsed (binary).]`;
+        }
+      }
     }
   }
 
