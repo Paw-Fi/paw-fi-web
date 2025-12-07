@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url'
 import { VitePluginRadar } from 'vite-plugin-radar'
 import compression from 'vite-plugin-compression'
 import tailwindcss from '@tailwindcss/vite'
-import { nitro } from 'nitro/vite'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -55,7 +54,6 @@ export default defineConfig({
         },
       }
     }),
-    nitro(),
     viteReact(),
     tailwindcss(),
     VitePluginRadar({
