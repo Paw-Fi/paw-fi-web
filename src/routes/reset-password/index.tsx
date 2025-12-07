@@ -43,25 +43,42 @@ export function ResetPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if we have a valid recovery session
-    const checkSession = async () => {
+    const initializeRecoverySession = async () => {
       try {
-        // Supabase should have already processed the recovery hash by now
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get('code');
+
+        if (code) {
+          // For PKCE-based recovery links, exchange the code for a session first
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (error || !data?.session?.user) {
+            console.error('Error exchanging code for session:', error);
+            setIsValidSession(false);
+            return;
+          }
+
+          // Clean up the URL so the code param isn't kept around
+          window.history.replaceState({}, document.title, url.pathname + url.hash);
+          setIsValidSession(true);
+          return;
+        }
+
+        // Fallback: check if we already have a valid session
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (session?.user) {
           setIsValidSession(true);
         } else {
-          // No valid session found
           setIsValidSession(false);
         }
       } catch (err) {
-        console.error('Error checking session:', err);
+        console.error('Error initializing recovery session:', err);
         setIsValidSession(false);
       }
     };
 
-    checkSession();
+    initializeRecoverySession();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

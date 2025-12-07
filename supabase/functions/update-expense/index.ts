@@ -47,6 +47,7 @@ interface UpdateExpenseRequest {
   householdId?: string;
   customSplits?: CustomSplitsPayload;
   payerUserId?: string;
+  splitUpdate?: CustomSplitsPayload;
 }
 
 interface ErrorResponse {
@@ -345,23 +346,57 @@ Deno.serve(async (req: Request) => {
       return errorResponse('GPT cannot update household expenses', 'UNAUTHORIZED', 403);
     }
 
-    // For non-GPT requests, verify ownership through user_contacts join
+    // For non-GPT requests, enforce different rules for personal vs household expenses:
+    // - Personal expenses: only the creator can edit.
+    // - Household expenses: any member of the household can edit.
     if (!detection.isGpt) {
-      const { data: expenseWithContact } = await supabase
-        .from('expenses')
-        .select('id, user_contacts!inner(user_id)')
-        .eq('id', expenseId)
-        .single();
-      
-      const expenseUserId = (expenseWithContact as any)?.user_contacts?.user_id;
-      if (!expenseUserId || expenseUserId !== userId) {
-        console.warn(`[update-expense] Unauthorized: User ${userId} attempted to update expense ${expenseId} owned by ${expenseUserId}`);
-        return errorResponse('You do not have permission to edit this expense', 'UNAUTHORIZED', 403);
+      const expenseHouseholdIdForAuth: string | null = (expense as any)?.household_id ?? null;
+
+      if (!expenseHouseholdIdForAuth) {
+        // Personal expense: require that the caller is the creator via user_contacts join
+        const { data: expenseWithContact } = await supabase
+          .from('expenses')
+          .select('id, user_contacts!inner(user_id)')
+          .eq('id', expenseId)
+          .single();
+
+        const expenseUserId = (expenseWithContact as any)?.user_contacts?.user_id;
+        if (!expenseUserId || expenseUserId !== userId) {
+          console.warn(
+            `[update-expense] Unauthorized personal edit: User ${userId} attempted to update expense ${expenseId} owned by ${expenseUserId}`,
+          );
+          return errorResponse(
+            'You do not have permission to edit this expense',
+            'UNAUTHORIZED',
+            403,
+          );
+        }
+      } else {
+        // Household expense: require that the caller is a member of the household
+        const { data: membership } = await supabase
+          .from('household_members')
+          .select('user_id')
+          .eq('household_id', expenseHouseholdIdForAuth)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (!membership) {
+          console.warn(
+            `[update-expense] Unauthorized household edit: User ${userId} attempted to update household expense ${expenseId} for household ${expenseHouseholdIdForAuth}`,
+          );
+          return errorResponse(
+            'You do not have permission to edit this household expense',
+            'UNAUTHORIZED',
+            403,
+          );
+        }
       }
     } else {
-      // For GPT, verify by user_id field directly
+      // For GPT, verify by user_id field directly (household edits are already blocked above)
       if (expense.user_id !== userId) {
-        console.warn(`[update-expense] Unauthorized: User ${userId} attempted to update expense ${expenseId} owned by ${expense.user_id}`);
+        console.warn(
+          `[update-expense] Unauthorized: User ${userId} attempted to update expense ${expenseId} owned by ${expense.user_id}`,
+        );
         return errorResponse('You do not have permission to edit this expense', 'UNAUTHORIZED', 403);
       }
     }
@@ -382,6 +417,7 @@ Deno.serve(async (req: Request) => {
     const bodyHouseholdId = bodyHouseholdIdRaw ? sanitizeUuid(bodyHouseholdIdRaw) : null;
     const customSplits = (body as any).customSplits as CustomSplitsPayload | undefined;
     const payerUserIdRaw = (body as any).payerUserId as string | undefined;
+    const splitUpdate = (body as any).splitUpdate as CustomSplitsPayload | undefined;
 
     const shouldCreateSplitGroup =
       !!expenseHouseholdId &&
@@ -550,6 +586,228 @@ Deno.serve(async (req: Request) => {
               }
             }
           }
+        }
+      }
+    }
+
+    // Optionally update an existing household split group when requested.
+    // This is separate from initial split group creation and is only allowed
+    // when the expense already has a split_group_id and no lines have been
+    // settled yet (to preserve settlement history correctness).
+    const wantsSplitUpdate =
+      !!expenseHouseholdId &&
+      !!existingSplitGroupId &&
+      !!splitUpdate &&
+      !!splitUpdate.memberSplits &&
+      splitUpdate.memberSplits.length > 0;
+
+    if (wantsSplitUpdate) {
+      if (!splitUpdate) {
+        return errorResponse('Invalid split update payload', 'VALIDATION_ERROR');
+      }
+
+      // Safety guard: split updates only make sense for household expenses
+      if (!expenseHouseholdId) {
+        return errorResponse('Cannot update splits for personal expenses', 'VALIDATION_ERROR');
+      }
+
+      // Load current split group with its lines to verify state and settled lines
+      const { data: existingGroup, error: splitGroupFetchError } = await supabase
+        .from('expense_split_groups')
+        .select('id, household_id, total_amount_cents, currency, split_type, expense_split_lines(is_settled)')
+        .eq('id', existingSplitGroupId)
+        .maybeSingle();
+
+      if (splitGroupFetchError) {
+        console.error('[update-expense] Failed to load existing split group for update:', splitGroupFetchError);
+        return errorResponse('Failed to load existing split group for update', 'SERVER_ERROR', 500);
+      }
+
+      if (!existingGroup) {
+        console.error('[update-expense] Split group not found for update:', existingSplitGroupId);
+        return errorResponse('Split group not found for update', 'NOT_FOUND', 404);
+      }
+
+      if ((existingGroup as any).household_id !== expenseHouseholdId) {
+        console.warn('[update-expense] Split group household mismatch during update', {
+          expenseHouseholdId,
+          splitGroupHouseholdId: (existingGroup as any).household_id,
+        });
+        return errorResponse('Split group does not belong to this household', 'UNAUTHORIZED', 403);
+      }
+
+      const existingLines = ((existingGroup as any).expense_split_lines || []) as { is_settled?: boolean }[];
+      const hasSettledLines = existingLines.some((line) => line && line.is_settled === true);
+
+      if (hasSettledLines) {
+        // Once any line has been settled, we must not change the split structure,
+        // otherwise settlement history would no longer match actual payments.
+        return errorResponse('Cannot change splits after any lines have been settled', 'VALIDATION_ERROR');
+      }
+
+      // Load current household members for validation and equal-split fallback
+      const { data: members } = await supabase
+        .from('household_members')
+        .select('user_id')
+        .eq('household_id', expenseHouseholdId);
+
+      if (!members || members.length === 0) {
+        console.error('[update-expense] No active members found when updating splits');
+        return errorResponse('Cannot update splits: no active household members', 'SERVER_ERROR', 500);
+      }
+
+      const effectiveAmountCents =
+        typeof updates.amount_cents === 'number'
+          ? updates.amount_cents
+          : ((expense as any)?.amount_cents as number | null) ?? 0;
+
+      const splitType = splitUpdate.splitType || ((existingGroup as any).split_type as CustomSplitsPayload['splitType']);
+
+      // Validate user IDs match all household members (same rule as initial creation)
+      const updateUserIds = splitUpdate.memberSplits.map((s) => s.userId).sort();
+      const allUserIds = members.map((m: any) => m.user_id as string).sort();
+
+      if (JSON.stringify(updateUserIds) !== JSON.stringify(allUserIds)) {
+        console.error('[update-expense] Split update members do not match household members');
+        return errorResponse('Custom splits must include all household members', 'VALIDATION_ERROR');
+      }
+
+      // Reuse the same validation logic as for creation
+      if (splitType === 'amount') {
+        const totalSplit = splitUpdate.memberSplits.reduce(
+          (sum, s) => sum + (s.amount || 0),
+          0,
+        );
+        const totalSplitCents = Math.round(totalSplit * 100);
+        if (Math.abs(totalSplitCents - effectiveAmountCents) > 1) {
+          return errorResponse(
+            'Custom amount splits must equal total expense amount',
+            'VALIDATION_ERROR',
+          );
+        }
+      } else if (splitType === 'percentage') {
+        const totalPercent = splitUpdate.memberSplits.reduce(
+          (sum, s) => sum + (s.percentage || 0),
+          0,
+        );
+        if (Math.abs(totalPercent - 100) > 0.01) {
+          return errorResponse(
+            'Custom percentage splits must total 100%',
+            'VALIDATION_ERROR',
+          );
+        }
+      } else if (splitType === 'shares') {
+        const totalShares = splitUpdate.memberSplits.reduce(
+          (sum, s) => sum + (s.shares || 0),
+          0,
+        );
+        if (totalShares <= 0) {
+          return errorResponse(
+            'At least one member must have a share greater than 0',
+            'VALIDATION_ERROR',
+          );
+        }
+      }
+
+      // Delete existing lines before inserting the new configuration
+      const { error: deleteLinesError } = await supabase
+        .from('expense_split_lines')
+        .delete()
+        .eq('split_group_id', existingSplitGroupId);
+
+      if (deleteLinesError) {
+        console.error('[update-expense] Failed to delete existing split lines for update:', deleteLinesError);
+        return errorResponse('Failed to update splits', 'SERVER_ERROR', 500);
+      }
+
+      // Build replacement split lines based on the updated configuration
+      let updatedSplitLines: any[] = [];
+
+      if (splitType === 'equal') {
+        const amountPerMember = members.length > 0
+          ? Math.floor(effectiveAmountCents / members.length)
+          : 0;
+        updatedSplitLines = members.map((member: any) => ({
+          split_group_id: existingSplitGroupId,
+          user_id: member.user_id,
+          amount_cents: amountPerMember,
+          is_settled: false,
+          settled_at: null,
+          created_at: new Date().toISOString(),
+        }));
+      } else if (splitType === 'amount') {
+        updatedSplitLines = splitUpdate.memberSplits.map((split) => ({
+          split_group_id: existingSplitGroupId,
+          user_id: split.userId,
+          amount_cents: Math.round((split.amount || 0) * 100),
+          is_settled: false,
+          settled_at: null,
+          created_at: new Date().toISOString(),
+        }));
+      } else if (splitType === 'percentage') {
+        updatedSplitLines = splitUpdate.memberSplits.map((split) => ({
+          split_group_id: existingSplitGroupId,
+          user_id: split.userId,
+          amount_cents: Math.round(
+            effectiveAmountCents * (split.percentage || 0) / 100,
+          ),
+          percentage: split.percentage,
+          is_settled: false,
+          settled_at: null,
+          created_at: new Date().toISOString(),
+        }));
+      } else if (splitType === 'shares') {
+        const totalShares = splitUpdate.memberSplits.reduce(
+          (sum, s) => sum + (s.shares || 0),
+          0,
+        );
+        if (totalShares > 0) {
+          updatedSplitLines = splitUpdate.memberSplits.map((split) => ({
+            split_group_id: existingSplitGroupId,
+            user_id: split.userId,
+            amount_cents: Math.round(
+              effectiveAmountCents * (split.shares || 0) / totalShares,
+            ),
+            shares: split.shares,
+            is_settled: false,
+            settled_at: null,
+            created_at: new Date().toISOString(),
+          }));
+        }
+      }
+
+      if (updatedSplitLines.length > 0) {
+        const { error: insertUpdatedLinesError } = await supabase
+          .from('expense_split_lines')
+          .insert(updatedSplitLines);
+
+        if (insertUpdatedLinesError) {
+          console.error('[update-expense] Failed to insert updated split lines:', insertUpdatedLinesError);
+          return errorResponse('Failed to update splits', 'SERVER_ERROR', 500);
+        }
+      }
+
+      // Keep split group metadata in sync with any amount/currency changes
+      const splitGroupUpdates: Record<string, unknown> = {};
+      if (typeof updates.amount_cents === 'number') {
+        splitGroupUpdates.total_amount_cents = updates.amount_cents;
+      }
+
+      const newGroupCurrency =
+        updates.currency || ((existingGroup as any).currency as string | null) || null;
+      if (newGroupCurrency) {
+        splitGroupUpdates.currency = newGroupCurrency;
+      }
+
+      if (Object.keys(splitGroupUpdates).length > 0) {
+        const { error: splitGroupUpdateError } = await supabase
+          .from('expense_split_groups')
+          .update(splitGroupUpdates)
+          .eq('id', existingSplitGroupId);
+
+        if (splitGroupUpdateError) {
+          console.error('[update-expense] Failed to update split group metadata:', splitGroupUpdateError);
+          return errorResponse('Failed to update expense splits', 'SERVER_ERROR', 500);
         }
       }
     }

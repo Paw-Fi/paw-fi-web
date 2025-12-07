@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public.goal_contributions (
   household_id UUID REFERENCES public.households(id) ON DELETE CASCADE,
 
   -- Transaction details
-  amount_cents INTEGER NOT NULL,
+  amount_cents BIGINT NOT NULL,
   currency TEXT DEFAULT 'USD',
   contribution_type TEXT NOT NULL, -- 'contribution', 'withdrawal', 'interest', 'adjustment'
 
@@ -245,7 +245,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 7) Database function: Normalize goal amounts
 CREATE OR REPLACE FUNCTION normalize_goal_amount(
   p_goal_id UUID,
-  p_amount_cents INTEGER,
+  p_amount_cents BIGINT,
   p_currency TEXT,
   p_household_id UUID
 )

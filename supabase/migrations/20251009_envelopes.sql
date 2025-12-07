@@ -55,7 +55,7 @@ create table if not exists public.envelope_allocations (
   id uuid primary key default gen_random_uuid(),
   envelope_id uuid not null references public.budget_envelopes(id) on delete cascade,
   period_month date not null, -- first day of month (YYYY-MM-01)
-  amount_cents integer not null,
+  amount_cents bigint not null,
   carryover_policy text not null default 'carryover', -- 'none' | 'carryover'
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
