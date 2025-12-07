@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'fs'
-import { resolve } from 'path'
+import { existsSync, createReadStream } from 'fs'
+import { resolve, extname } from 'path'
 import { spawn } from 'child_process'
 import { pathToFileURL } from 'url'
+import { stat } from 'fs/promises'
 import { serve as serveNode } from 'srvx/node'
 
 const __dirname = new URL('.', import.meta.url).pathname
@@ -13,6 +14,8 @@ const projectRoot = resolve(__dirname, '..')
 const nitroServer = resolve(projectRoot, '.output/server/index.mjs')
 // Check for dist/server/server.js (TanStack Start server bundle exporting a fetch handler)
 const defaultServer = resolve(projectRoot, 'dist/server/server.js')
+// Directory containing built client assets
+const clientDir = resolve(projectRoot, 'dist/client')
 
 async function start() {
   // Set PORT from environment variable, default to 3000
@@ -71,10 +74,71 @@ async function start() {
     const fetchHandler =
       typeof server.fetch === 'function' ? server.fetch.bind(server) : server
 
+    async function handleStaticAsset(request) {
+      const url = new URL(request.url)
+      const pathname = url.pathname
+
+      // Only handle built asset paths
+      if (!pathname.startsWith('/assets/')) {
+        return null
+      }
+
+      const relativePath = pathname.replace(/^\/+/, '')
+      const filePath = resolve(clientDir, relativePath)
+
+      // Prevent path traversal
+      if (!filePath.startsWith(clientDir)) {
+        return null
+      }
+
+      let fileStat
+      try {
+        fileStat = await stat(filePath)
+      } catch {
+        return null
+      }
+
+      if (!fileStat.isFile()) {
+        return null
+      }
+
+      const ext = extname(filePath)
+      const mimeTypes = {
+        '.css': 'text/css',
+        '.js': 'text/javascript',
+        '.mjs': 'text/javascript',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/vnd.microsoft.icon',
+      }
+
+      const contentType = mimeTypes[ext] || 'application/octet-stream'
+      const stream = createReadStream(filePath)
+
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': fileStat.size.toString(),
+        },
+      })
+    }
+
     const nodeServer = serveNode({
       port: Number(port),
       hostname: host,
-      fetch: fetchHandler,
+      // Serve static assets from dist/client/assets first, then delegate to SSR
+      fetch: async (request) => {
+        const staticResponse = await handleStaticAsset(request)
+        if (staticResponse) {
+          return staticResponse
+        }
+        return fetchHandler(request)
+      },
     })
 
     // Handle graceful shutdown
