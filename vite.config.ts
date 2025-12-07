@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import tsConfigPaths from 'vite-tsconfig-paths'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
+import { nitro } from 'nitro/vite'
 import viteReact from '@vitejs/plugin-react'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -22,7 +23,7 @@ export default defineConfig({
     tanstackStart({
       prerender: {
         // Enable prerendering globally
-        enabled: true,
+        enabled: false,
         
         // CRITICAL: Disable crawlLinks to prevent automatic link discovery
         // When crawlLinks is false, ONLY the paths specified in the filter will be prerendered
@@ -53,6 +54,11 @@ export default defineConfig({
           console.log(`✅ Prerendered: ${page.path}`)
         },
       }
+    }),
+    nitro({
+      config: {
+        preset: 'node-server',
+      },
     }),
     viteReact(),
     tailwindcss(),
