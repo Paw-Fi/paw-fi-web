@@ -46,34 +46,129 @@ export function ResetPassword() {
     const initializeRecoverySession = async () => {
       try {
         const url = new URL(window.location.href);
-        const code = url.searchParams.get('code');
+        console.log('[ResetPassword] Initializing recovery session', {
+          href: window.location.href,
+          searchParams: Object.fromEntries(url.searchParams.entries()),
+        });
 
-        if (code) {
-          // For PKCE-based recovery links, exchange the code for a session first
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        // 1) Let Supabase JS handle any tokens in the URL first.
+        //    With detectSessionInUrl enabled, getSession will parse the URL
+        //    for password recovery tokens / PKCE codes and establish a session.
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
 
-          if (error || !data?.session?.user) {
-            console.error('Error exchanging code for session:', error);
-            setIsValidSession(false);
-            return;
-          }
-
-          // Clean up the URL so the code param isn't kept around
-          window.history.replaceState({}, document.title, url.pathname + url.hash);
+        if (initialSession?.user) {
+          console.log('[ResetPassword] Session already established from getSession', {
+            userId: initialSession.user.id,
+          });
+          // Clean up common auth-related query params once we have a session
+          ['code', 'token', 'token_hash', 'type'].forEach((param) => {
+            url.searchParams.delete(param);
+          });
+          const cleanedSearch = url.searchParams.toString();
+          const newUrl = cleanedSearch
+            ? `${url.pathname}?${cleanedSearch}${url.hash}`
+            : url.pathname + url.hash;
+          window.history.replaceState({}, document.title, newUrl);
           setIsValidSession(true);
           return;
         }
 
-        // Fallback: check if we already have a valid session
-        const { data: { session } } = await supabase.auth.getSession();
+        // 2) If no session yet but we have a PKCE code, try manual exchange
+        const code = url.searchParams.get('code');
+        if (code) {
+          console.log('[ResetPassword] Found PKCE code in URL, attempting exchangeCodeForSession', {
+            codePresent: !!code,
+          });
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (session?.user) {
+          if (error || !data?.session?.user) {
+            console.error('Error exchanging code for session:', error);
+
+            // As a fallback, re-check session in case Supabase already processed the URL
+            const {
+              data: { session: retrySession },
+            } = await supabase.auth.getSession();
+
+            if (retrySession?.user) {
+              ['code', 'token', 'token_hash', 'type'].forEach((param) => {
+                url.searchParams.delete(param);
+              });
+              const cleanedSearch = url.searchParams.toString();
+              const newUrl = cleanedSearch
+                ? `${url.pathname}?${cleanedSearch}${url.hash}`
+                : url.pathname + url.hash;
+              window.history.replaceState({}, document.title, newUrl);
+              setIsValidSession(true);
+              return;
+            }
+
+            setIsValidSession(false);
+            return;
+          }
+
+          ['code', 'token', 'token_hash', 'type'].forEach((param) => {
+            url.searchParams.delete(param);
+          });
+          const cleanedSearch = url.searchParams.toString();
+          const newUrl = cleanedSearch
+            ? `${url.pathname}?${cleanedSearch}${url.hash}`
+            : url.pathname + url.hash;
+          window.history.replaceState({}, document.title, newUrl);
           setIsValidSession(true);
-        } else {
-          setIsValidSession(false);
+          return;
         }
+
+        // 3) Fallback for email OTP-style recovery links using token/token_hash
+        const tokenHash = url.searchParams.get('token_hash') ?? url.searchParams.get('token');
+        const type = url.searchParams.get('type');
+
+        if (tokenHash && type === 'recovery') {
+          console.log('[ResetPassword] Found recovery token in URL, attempting verifyOtp', {
+            hasTokenHash: !!tokenHash,
+            type,
+          });
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+
+          if (error) {
+            console.error('Error verifying recovery OTP:', error);
+            setIsValidSession(false);
+            return;
+          }
+
+          const {
+            data: { session: otpSession },
+          } = await supabase.auth.getSession();
+
+          if (otpSession?.user) {
+            console.log('[ResetPassword] verifyOtp succeeded, session established', {
+              userId: otpSession.user.id,
+            });
+            ['code', 'token', 'token_hash', 'type'].forEach((param) => {
+              url.searchParams.delete(param);
+            });
+            const cleanedSearch = url.searchParams.toString();
+            const newUrl = cleanedSearch
+              ? `${url.pathname}?${cleanedSearch}${url.hash}`
+              : url.pathname + url.hash;
+            window.history.replaceState({}, document.title, newUrl);
+            setIsValidSession(true);
+            return;
+          }
+
+          setIsValidSession(false);
+          return;
+        }
+
+        // 4) No session, no usable recovery parameters
+        console.warn('[ResetPassword] No session and no usable recovery parameters, marking link invalid');
+        setIsValidSession(false);
       } catch (err) {
-        console.error('Error initializing recovery session:', err);
+        console.error('[ResetPassword] Error initializing recovery session:', err);
         setIsValidSession(false);
       }
     };
