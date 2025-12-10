@@ -124,15 +124,9 @@ Deno.serve(async (req: Request) => {
       return errorResponse('GPT cannot delete household expenses', 403);
     }
 
-    // For non-GPT requests, verify ownership through user_contacts join
+    // For non-GPT requests, verify ownership via expenses.user_id
     if (!detection.isGpt) {
-      const { data: expenseWithContact } = await supabase
-        .from('expenses')
-        .select('id, user_contacts!inner(user_id)')
-        .eq('id', expenseId)
-        .single();
-      
-      const expenseUserId = (expenseWithContact as any)?.user_contacts?.user_id;
+      const expenseUserId = (expense as any)?.user_id as string | undefined;
       if (!expenseUserId || expenseUserId !== userId) {
         return errorResponse('You do not have permission to delete this expense', 403);
       }

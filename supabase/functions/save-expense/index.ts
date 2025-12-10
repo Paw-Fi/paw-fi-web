@@ -181,6 +181,10 @@ Deno.serve(async (req: Request) => {
             console.error('[save-expense] Failed to update contact currency:', updateCurrencyError);
           }
         }
+      } else {
+        console.log('[save-expense] No user_contact row found for user; proceeding with null contact_id (non-WhatsApp user).', {
+          userId,
+        });
       }
     }
 
@@ -211,10 +215,10 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (!contactId || !userId) {
+    if (!userId) {
       return new Response(
-        JSON.stringify({ error: 'User contact not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Unable to resolve user identity' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

@@ -170,13 +170,10 @@ Deno.serve(async (req: Request) => {
           .update({ preferred_currency: currency })
           .eq('id', contact.id);
       }
-    }
-
-    if (!contactId) {
-      return new Response(
-        JSON.stringify({ error: 'User contact not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } else {
+      console.log('[save-income] No user_contact row found for user; proceeding with null contact_id (non-WhatsApp user).', {
+        userId,
+      });
     }
 
     // Convert amount to cents

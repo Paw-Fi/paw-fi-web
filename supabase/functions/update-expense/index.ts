@@ -347,20 +347,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // For non-GPT requests, enforce different rules for personal vs household expenses:
-    // - Personal expenses: only the creator can edit.
+    // - Personal expenses: only the creator can edit (checked via expenses.user_id).
     // - Household expenses: any member of the household can edit.
     if (!detection.isGpt) {
       const expenseHouseholdIdForAuth: string | null = (expense as any)?.household_id ?? null;
 
       if (!expenseHouseholdIdForAuth) {
-        // Personal expense: require that the caller is the creator via user_contacts join
-        const { data: expenseWithContact } = await supabase
-          .from('expenses')
-          .select('id, user_contacts!inner(user_id)')
-          .eq('id', expenseId)
-          .single();
-
-        const expenseUserId = (expenseWithContact as any)?.user_contacts?.user_id;
+        // Personal expense: require that the caller is the creator via expenses.user_id
+        const expenseUserId = (expense as any)?.user_id as string | undefined;
         if (!expenseUserId || expenseUserId !== userId) {
           console.warn(
             `[update-expense] Unauthorized personal edit: User ${userId} attempted to update expense ${expenseId} owned by ${expenseUserId}`,
