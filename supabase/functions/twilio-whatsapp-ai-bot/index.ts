@@ -18,10 +18,8 @@ import { createOrUpdateBudget, upsertEnvelope, upsertEnvelopeAllocation, upsertE
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
 import { debugLog, formatInvokeError, normalizeExpensesForTool, buildCategoryChart, formatExpensesSummary, CATEGORY_GUIDE, formatAmount } from "../shared/formatting-helpers.ts";
-import { runAnalyzeExpense } from "../shared/analyze-core.ts";
+import { runAnalyzeExpense, buildXlsxPreview, summarizePdfWithGemini } from "../shared/analyze-core.ts";
 import { sendWhatsAppInteractiveButtons } from "../shared/whatsapp-helpers.ts";
-// XLSX parser for spreadsheet previews
-import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 
 // --- Constants & Types ---
 
@@ -815,40 +813,6 @@ Deno.serve(async (req: Request) => {
       }
     }
   }
-
-function buildXlsxPreview(buf: Uint8Array): string | null {
-  try {
-    const wb = XLSX.read(buf, { type: "array" });
-    const sheetName = wb.SheetNames[0];
-    if (!sheetName) return null;
-    const sheet = wb.Sheets[sheetName];
-    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    if (!Array.isArray(rows) || rows.length === 0) return null;
-    const limited = rows.slice(0, 20).map((r) => (Array.isArray(r) ? r.slice(0, 8) : r));
-    const previewLines = limited.map((r: any) => JSON.stringify(r));
-    return `Sheet "${sheetName}" preview (first ${limited.length} rows):\n${previewLines.join("\n")}`;
-  } catch (e) {
-    console.error("XLSX parse error", e);
-    return null;
-  }
-}
-
-async function summarizePdfWithGemini(base64Data: string, mimeType: string, geminiKey: string): Promise<string | null> {
-  try {
-    const ai = new GoogleGenerativeAI(geminiKey);
-    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const resp = await model.generateContent({
-      contents: [
-        { role: "user", parts: [{ text: "Summarize this PDF. Extract key amounts, dates, and any tabular transaction data. Keep it concise for WhatsApp." }] },
-        { role: "user", parts: [{ inlineData: { mimeType, data: base64Data } }] },
-      ],
-    });
-    return resp.response.text() || null;
-  } catch (e) {
-    console.error("PDF summary via Gemini failed", e);
-    return null;
-  }
-}
 
 async function buildFinancialSnapshot(
   supabase: ReturnType<typeof createClient>,

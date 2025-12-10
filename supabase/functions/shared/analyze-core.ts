@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 import { validateCurrency } from "./currency-validator.ts";
 import { normalizeCategory, getExpenseCategories, getIncomeCategories } from "./category-colors.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
@@ -9,6 +10,12 @@ function b64encode(bytes: Uint8Array): string {
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
   return btoa(binary);
+}
+
+export interface AnalyzeAttachment {
+  filename: string;
+  contentType: string;
+  data: string; // base64
 }
 
 export interface AnalyzeRequestBody {
@@ -23,6 +30,7 @@ export interface AnalyzeRequestBody {
   date?: string;
   currency?: string;
   language?: string;
+  attachments?: AnalyzeAttachment[];
 }
 
 export interface AnalyzeResult {
@@ -41,6 +49,113 @@ export interface ExpenseItem {
   currencySymbol: string;
   date: string;
   description?: string;
+}
+
+async function analyzeFromText(
+  genAI: GoogleGenerativeAI,
+  callerCurrency: string,
+  callerDate: string,
+  language: string,
+  bodyText: string,
+  tools: any,
+  expenseCategories: string[],
+  incomeCategories: string[],
+): Promise<ExpenseItem[]> {
+  let items: ExpenseItem[] = [];
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
+  const systemInstruction = [
+    "You are a professional transaction extraction and classification system.",
+    "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
+
+    "### 1. QUANTITY & AMOUNT STRATEGY",
+    "- **Single Receipt/Bill**: If the text represents a single receipt with line items and a total, return **ONE** transaction for the Grand Total.",
+    "- **Bank Feed / List**: If the text lists multiple distinct transactions, return them as **SEPARATE** items.",
+    "- Do NOT output a separate transaction for subtotal/total/grand total lines.",
+
+    "### 2. CLASSIFICATION (Type & Category)",
+    "- **Type**: 'expense' (spending, debit, payment) vs 'income' (deposit, salary, refund).",
+    "- **Bank/Notification Context**: 'Credited', 'Deposit', 'Received', 'Top up' -> INCOME. 'Debited', 'Paid', 'Purchase', 'Sent to', 'Withdrawal' -> EXPENSE.",
+    `   - **Expense Categories**: ${expenseCategories.join(", ")}.`,
+    `   - **Income Categories**: ${incomeCategories.join(", ")}.`,
+    "- **Fallback**: If unrecognizable, choose the closest generic category from the provided lists (for example an 'other'/'misc' style expense category or a generic income category). Never invent category names that are not present in the provided lists.",
+    "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
+
+    "### 3. CURRENCY & DATE",
+    "- Detect explicit currency symbol/code; else use Caller Currency.",
+    "- If text clearly indicates a different currency, use that currency (no conversion).",
+    "- Date parsing: Look for ANY date reference (absolute or relative like 'yesterday').",
+    "- Convert relative dates to YYYY-MM-DD based on Caller Date.",
+    "- Only use Caller Date if NO date is mentioned.",
+    "- **Amount policy**: Always return amounts as positive numbers (no minus signs). A negative or red value in the source indicates 'expense' vs 'income' type, not a negative amount.",
+
+    "### 4. DESCRIPTION & LANGUAGE",
+    "- Write natural, conversational notes generally matching the user's intent.",
+    `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
+
+    "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
+  ].join("\n");
+
+  const response = await model.generateContent({
+    systemInstruction,
+    contents: [{ role: "user", parts: [{ text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nUser: ${bodyText}` }] }],
+    generationConfig: { maxOutputTokens: 512 },
+  });
+
+  const tool = response.response.functionCalls()?.[0];
+  if (tool && tool.name === "add_transactions") {
+    const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
+    items = rawItems
+      .map((it) => {
+        const itemCurrency = it.currency || callerCurrency;
+        const rawCategory = it.category || "other";
+        const normalizedCategory = normalizeCategory(rawCategory);
+
+        // Debug: Log category normalization for text analysis
+        console.log(
+          `[analyze-expense] Text analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`,
+        );
+
+        const txType = String(it.type || "").toLowerCase();
+        // Use correct symbol for the detected currency
+        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+
+        return {
+          type: txType === "income" || txType === "expense" ? txType : undefined,
+          amount: Number(it.amount),
+          category: normalizedCategory,
+          currency: itemCurrency,
+          currencySymbol: itemCurrencySymbol,
+          date: it.date || callerDate,
+          description: it.description || bodyText,
+        } as ExpenseItem;
+      })
+      .filter((it) => {
+        return (
+          it.type &&
+          (it.type === "income" || it.type === "expense") &&
+          Number.isFinite(it.amount) &&
+          it.amount > 0 &&
+          typeof it.category === "string" &&
+          typeof it.currency === "string" &&
+          typeof it.currencySymbol === "string" &&
+          typeof it.date === "string"
+        );
+      });
+
+    if (items.length > 1) {
+      const withoutTotals = items.filter((it) => !isTotalLike(it.description));
+      if (withoutTotals.length > 0) items = withoutTotals;
+      const sums = items.map((_, i) =>
+        items
+          .filter((__, j) => i !== j)
+          .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
+      );
+      items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+    }
+  }
+
+  return items;
 }
 
 function sanitizeUuid(value?: string | null): string | null {
@@ -135,7 +250,7 @@ async function attemptAnalysis(
       }
     }
     
-    return { success: false, error: `${modelName} could not extract valid transactions` };
+    return { success: false, error: `Moneko AI could not extract valid transactions` };
   } catch (error) {
     if (error instanceof Error && error.message.includes('timed out')) {
       throw error; // Re-throw timeout errors
@@ -157,12 +272,27 @@ export async function runAnalyzeExpense(
       return { success: false, error: "userId is required", status: 400, language: "en" };
     }
 
-    if (!body.text && !body.image) {
-      return { success: false, error: "Must provide either text or image", status: 400, language: "en" };
+    const hasText = typeof body.text === "string" && body.text.trim().length > 0;
+    const hasImage = !!body.image;
+    const hasAttachments = Array.isArray(body.attachments) && body.attachments.length > 0;
+
+    const modes = [hasText, hasImage, hasAttachments].filter(Boolean).length;
+    if (modes === 0) {
+      return {
+        success: false,
+        error: "Must provide text, image, or attachments",
+        status: 400,
+        language: "en",
+      };
     }
 
-    if (body.text && body.image) {
-      return { success: false, error: "Cannot process both text and image simultaneously", status: 400, language: "en" };
+    if (modes > 1) {
+      return {
+        success: false,
+        error: "Cannot process multiple input types simultaneously",
+        status: 400,
+        language: "en",
+      };
     }
 
     const callerCurrency = validateCurrency(body.currency);
@@ -217,96 +347,84 @@ export async function runAnalyzeExpense(
 
     let items: ExpenseItem[] = [];
 
-    if (body.text) {
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
-      const systemInstruction = [
-        "You are a professional transaction extraction and classification system.",
-        "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
-        
-        "### 1. QUANTITY & AMOUNT STRATEGY",
-        "- **Single Receipt/Bill**: If the text represents a single receipt with line items and a total, return **ONE** transaction for the Grand Total.",
-        "- **Bank Feed / List**: If the text lists multiple distinct transactions, return them as **SEPARATE** items.",
-        "- Do NOT output a separate transaction for subtotal/total/grand total lines.",
+    if (hasAttachments) {
+      const att = body.attachments![0];
+      const filename = att.filename || "";
+      const contentType = att.contentType || "";
+      const lowerName = filename.toLowerCase();
 
-        "### 2. CLASSIFICATION (Type & Category)",
-        "- **Type**: 'expense' (spending, debit, payment) vs 'income' (deposit, salary, refund).",
-        "- **Bank/Notification Context**: 'Credited', 'Deposit', 'Received', 'Top up' -> INCOME. 'Debited', 'Paid', 'Purchase', 'Sent to', 'Withdrawal' -> EXPENSE.",
-        `   - **Expense Categories**: ${expenseCategories.join(", ")}.`,
-        `   - **Income Categories**: ${incomeCategories.join(", ")}.`,
-        "- **Fallback**: If unrecognizable, choose the closest generic category from the provided lists (for example an 'other'/'misc' style expense category or a generic income category). Never invent category names that are not present in the provided lists.",
-        "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
-
-        "### 3. CURRENCY & DATE",
-        "- Detect explicit currency symbol/code; else use Caller Currency.",
-        "- If text clearly indicates a different currency, use that currency (no conversion).",
-        "- Date parsing: Look for ANY date reference (absolute or relative like 'yesterday').",
-        "- Convert relative dates to YYYY-MM-DD based on Caller Date.",
-        "- Only use Caller Date if NO date is mentioned.",
-        "- **Amount policy**: Always return amounts as positive numbers (no minus signs). A negative or red value in the source indicates 'expense' vs 'income' type, not a negative amount.",
-
-        "### 4. DESCRIPTION & LANGUAGE",
-        "- Write natural, conversational notes generally matching the user's intent.",
-        `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
-        
-        "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
-      ].join("\n");
-
-      const response = await model.generateContent({
-        systemInstruction,
-        contents: [{ role: "user", parts: [{ text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nUser: ${body.text}` }] }],
-        generationConfig: { maxOutputTokens: 512 },
-      });
-
-      const tool = response.response.functionCalls()?.[0];
-      if (tool && tool.name === "add_transactions") {
-        const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
-        items = rawItems.map((it) => {
-          const itemCurrency = it.currency || callerCurrency;
-          const rawCategory = it.category || "other";
-          const normalizedCategory = normalizeCategory(rawCategory);
-          
-          // Debug: Log category normalization for text analysis
-          console.log(`[analyze-expense] Text analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`);
-          
-          const txType = String(it.type || "").toLowerCase();
-          // Use correct symbol for the detected currency
-          const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
-          
-          return {
-            type: (txType === "income" || txType === "expense") ? txType : undefined,
-            amount: Number(it.amount),
-            category: normalizedCategory,
-            currency: itemCurrency,
-            currencySymbol: itemCurrencySymbol,
-            date: it.date || callerDate,
-            description: it.description || body.text,
-          };
-        }).filter((it) => {
-          return it.type && (it.type === "income" || it.type === "expense") && 
-                 Number.isFinite(it.amount) &&
-                 it.amount > 0 &&
-                 typeof it.category === 'string' &&
-                 typeof it.currency === 'string' &&
-                 typeof it.currencySymbol === 'string' &&
-                 typeof it.date === 'string';
-        }) as ExpenseItem[];
-        if (items.length > 1) {
-          const withoutTotals = items.filter((it) => !isTotalLike(it.description));
-          if (withoutTotals.length > 0) items = withoutTotals;
-          const sums = items.map((_, i) => items.filter((__, j) => i !== j).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0));
-          items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
-        }
+      const cleaned = att.data.replace(/^data:.*;base64,/, "");
+      const binaryString = atob(cleaned);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
-    } else if (body.image) {
-      if (!body.image.contentType || !body.image.contentType.startsWith("image/")) {
+
+      const textLike =
+        /^(text\/|application\/(json|csv|xml|javascript))/i.test(contentType) ||
+        /\.(csv|txt|json|xml)$/i.test(lowerName);
+      const isXlsx =
+        /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(contentType) ||
+        /\.xlsx$/i.test(lowerName);
+      const isPdf = /application\/pdf/i.test(contentType) || /\.pdf$/i.test(lowerName);
+
+      let syntheticText = "";
+
+      if (textLike) {
+        try {
+          syntheticText = new TextDecoder("utf-8", { fatal: false }).decode(bytes.slice(0, 16000));
+        } catch {
+          syntheticText = "";
+        }
+      } else if (isXlsx) {
+        syntheticText = buildXlsxPreview(bytes) || "";
+      } else if (isPdf) {
+        const base64Data = b64encode(bytes);
+        const summary = await summarizePdfWithGemini(base64Data, "application/pdf", geminiApiKey);
+        syntheticText = summary || "";
+      }
+
+      if (!syntheticText.trim()) {
+        return {
+          success: false,
+          error: "Unsupported or unreadable attachment format",
+          status: 400,
+          language,
+        };
+      }
+
+      items = await analyzeFromText(
+        genAI,
+        callerCurrency,
+        callerDate,
+        language,
+        syntheticText,
+        tools,
+        expenseCategories,
+        incomeCategories,
+      );
+    } else if (hasText) {
+      items = await analyzeFromText(
+        genAI,
+        callerCurrency,
+        callerDate,
+        language,
+        body.text!,
+        tools,
+        expenseCategories,
+        incomeCategories,
+      );
+    } else if (hasImage) {
+      const image = body.image!;
+      if (!image.contentType || !image.contentType.startsWith("image/")) {
         return { success: false, error: "Invalid image content type", status: 400, language };
       }
       // Prefer raw bytes if provided; otherwise decode base64
       let bytes: Uint8Array;
-      if (body.image.bytes instanceof Uint8Array) {
-        bytes = body.image.bytes;
+      if (image.bytes instanceof Uint8Array) {
+        bytes = image.bytes;
       } else {
-        const base64Data = body.image.data.replace(/^data:image\/\w+;base64,/, "");
+        const base64Data = image.data.replace(/^data:image\/\w+;base64,/, "");
         const binaryString = atob(base64Data);
         bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -471,5 +589,43 @@ export async function runAnalyzeExpense(
       status: 500,
       language: "en",
     };
+  }
+}
+
+export function buildXlsxPreview(buf: Uint8Array): string | null {
+  try {
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheetName = wb.SheetNames[0];
+    if (!sheetName) return null;
+    const sheet = wb.Sheets[sheetName];
+    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const limited = rows.slice(0, 20).map((r) => (Array.isArray(r) ? r.slice(0, 8) : r));
+    const previewLines = limited.map((r: any) => JSON.stringify(r));
+    return `Sheet "${sheetName}" preview (first ${limited.length} rows):\n${previewLines.join("\n")}`;
+  } catch (e) {
+    console.error("XLSX parse error", e);
+    return null;
+  }
+}
+
+export async function summarizePdfWithGemini(
+  base64Data: string,
+  mimeType: string,
+  geminiKey: string,
+): Promise<string | null> {
+  try {
+    const ai = new GoogleGenerativeAI(geminiKey);
+    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const resp = await model.generateContent({
+      contents: [
+        { role: "user", parts: [{ text: "Summarize this PDF. Extract key amounts, dates, and any tabular transaction data. Keep it concise for WhatsApp." }] },
+        { role: "user", parts: [{ inlineData: { mimeType, data: base64Data } }] },
+      ],
+    });
+    return resp.response.text() || null;
+  } catch (e) {
+    console.error("PDF summary via Gemini failed", e);
+    return null;
   }
 }
