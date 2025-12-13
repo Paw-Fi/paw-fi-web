@@ -27,6 +27,11 @@ export interface AnalyzeRequestBody {
     // Optional raw bytes to avoid double-encoding issues (preferred when available)
     bytes?: Uint8Array;
   };
+  audio?: {
+    data: string;
+    contentType: string;
+    bytes?: Uint8Array;
+  };
   date?: string;
   currency?: string;
   language?: string;
@@ -51,20 +56,12 @@ export interface ExpenseItem {
   description?: string;
 }
 
-async function analyzeFromText(
-  genAI: GoogleGenerativeAI,
-  callerCurrency: string,
-  callerDate: string,
+function buildTransactionSystemInstruction(
   language: string,
-  bodyText: string,
-  tools: any,
   expenseCategories: string[],
   incomeCategories: string[],
-): Promise<ExpenseItem[]> {
-  let items: ExpenseItem[] = [];
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
-  const systemInstruction = [
+): string {
+  return [
     "You are a professional transaction extraction and classification system.",
     "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
 
@@ -95,6 +92,22 @@ async function analyzeFromText(
 
     "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
   ].join("\n");
+}
+
+async function analyzeFromText(
+  genAI: GoogleGenerativeAI,
+  callerCurrency: string,
+  callerDate: string,
+  language: string,
+  bodyText: string,
+  tools: any,
+  expenseCategories: string[],
+  incomeCategories: string[],
+): Promise<ExpenseItem[]> {
+  let items: ExpenseItem[] = [];
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
+  const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
 
   const response = await model.generateContent({
     systemInstruction,
@@ -128,6 +141,100 @@ async function analyzeFromText(
           currencySymbol: itemCurrencySymbol,
           date: it.date || callerDate,
           description: it.description || bodyText,
+        } as ExpenseItem;
+      })
+      .filter((it) => {
+        return (
+          it.type &&
+          (it.type === "income" || it.type === "expense") &&
+          Number.isFinite(it.amount) &&
+          it.amount > 0 &&
+          typeof it.category === "string" &&
+          typeof it.currency === "string" &&
+          typeof it.currencySymbol === "string" &&
+          typeof it.date === "string"
+        );
+      });
+
+    if (items.length > 1) {
+      const withoutTotals = items.filter((it) => !isTotalLike(it.description));
+      if (withoutTotals.length > 0) items = withoutTotals;
+      const sums = items.map((_, i) =>
+        items
+          .filter((__, j) => i !== j)
+          .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
+      );
+      items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+    }
+  }
+
+  return items;
+}
+
+async function analyzeFromAudio(
+  genAI: GoogleGenerativeAI,
+  callerCurrency: string,
+  callerDate: string,
+  language: string,
+  base64Audio: string,
+  contentType: string,
+  tools: any,
+  expenseCategories: string[],
+  incomeCategories: string[],
+): Promise<ExpenseItem[]> {
+  let items: ExpenseItem[] = [];
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
+  const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
+
+  const response = await model.generateContent({
+    systemInstruction,
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text:
+              `Caller Currency: ${callerCurrency}\n` +
+              `Caller Date: ${callerDate}\n` +
+              "The following is an audio description of one or more transactions. Analyze it and return the structured transactions by calling add_transactions.",
+          },
+          {
+            inline_data: {
+              mime_type: contentType || "audio/mp3",
+              data: base64Audio,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: { maxOutputTokens: 512 },
+  });
+
+  const tool = response.response.functionCalls()?.[0];
+  if (tool && tool.name === "add_transactions") {
+    const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
+    items = rawItems
+      .map((it) => {
+        const itemCurrency = it.currency || callerCurrency;
+        const rawCategory = it.category || "other";
+        const normalizedCategory = normalizeCategory(rawCategory);
+
+        console.log(
+          `[analyze-expense] Audio analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`,
+        );
+
+        const txType = String(it.type || "").toLowerCase();
+        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+
+        return {
+          type: txType === "income" || txType === "expense" ? txType : undefined,
+          amount: Number(it.amount),
+          category: normalizedCategory,
+          currency: itemCurrency,
+          currencySymbol: itemCurrencySymbol,
+          date: it.date || callerDate,
+          description: it.description || "",
         } as ExpenseItem;
       })
       .filter((it) => {
@@ -275,12 +382,13 @@ export async function runAnalyzeExpense(
     const hasText = typeof body.text === "string" && body.text.trim().length > 0;
     const hasImage = !!body.image;
     const hasAttachments = Array.isArray(body.attachments) && body.attachments.length > 0;
+    const hasAudio = !!body.audio;
 
-    const modes = [hasText, hasImage, hasAttachments].filter(Boolean).length;
+    const modes = [hasText, hasImage, hasAttachments, hasAudio].filter(Boolean).length;
     if (modes === 0) {
       return {
         success: false,
-        error: "Must provide text, image, or attachments",
+        error: "Must provide text, image, attachments, or audio",
         status: 400,
         language: "en",
       };
@@ -410,6 +518,40 @@ export async function runAnalyzeExpense(
         callerDate,
         language,
         body.text!,
+        tools,
+        expenseCategories,
+        incomeCategories,
+      );
+    } else if (hasAudio) {
+      const audio = body.audio!;
+      if (!audio.contentType || !audio.contentType.startsWith("audio/")) {
+        return { success: false, error: "Invalid audio content type", status: 400, language };
+      }
+
+      let bytes: Uint8Array;
+      if (audio.bytes instanceof Uint8Array) {
+        bytes = audio.bytes;
+      } else {
+        const base64Data = audio.data.replace(/^data:audio\/\w+;base64,/, "");
+        const binaryString = atob(base64Data);
+        bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+      }
+
+      if (bytes.length > 20 * 1024 * 1024) {
+        return { success: false, error: "Audio too large. Maximum 20MB", status: 400, language };
+      }
+      const base64Audio = b64encode(bytes);
+
+      items = await analyzeFromAudio(
+        genAI,
+        callerCurrency,
+        callerDate,
+        language,
+        base64Audio,
+        audio.contentType,
         tools,
         expenseCategories,
         incomeCategories,

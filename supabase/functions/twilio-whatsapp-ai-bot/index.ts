@@ -754,6 +754,72 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
+    } else if (mediaUrl && /^audio\//i.test(mediaType || "")) {
+      // WhatsApp voice message / audio note: download and run analyze-core audio extraction
+      const accountSid = formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
+      const authHeader = "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
+      const audioRes = await fetch(mediaUrl, { headers: { Authorization: authHeader } });
+
+      if (!audioRes.ok) {
+        if (WHATSAPP_DEBUG) debugNotes.push(`audio fetch failed status=${audioRes.status}`);
+        userMessageContent = `[User sent a voice message, but download failed status=${audioRes.status}${
+          caption ? ` | caption: "${caption}"` : ""
+        }]`;
+      } else {
+        const rawContentType = audioRes.headers.get("content-type") || mediaType || "";
+        const contentType = rawContentType.split(";")[0].trim();
+        const audioBuf = new Uint8Array(await audioRes.arrayBuffer());
+        const base64Data = uint8ToBase64(audioBuf);
+
+        // Attempt audio analysis with a hard timeout, similar to text/image flows
+        let analysis: any = null;
+        try {
+          const analysisPromise = runAnalyzeExpense(
+            {
+              userId,
+              audio: { data: base64Data, contentType, bytes: audioBuf },
+              currency: userCurrency,
+            },
+            GEMINI_API_KEY,
+          );
+
+          const timeoutPromise = new (globalThis as any).Promise(
+            (_: unknown, reject: (reason?: unknown) => void) => {
+              setTimeout(
+                () => reject(new Error("Audio analysis timed out after 30 seconds")),
+                30000,
+              );
+            },
+          );
+
+          analysis = await (globalThis as any).Promise.race([analysisPromise, timeoutPromise]);
+        } catch (timeoutError) {
+          console.error("[twilio-whatsapp-ai-bot] Audio analysis timeout:", timeoutError);
+          analysis = {
+            success: false,
+            error:
+              "The audio is taking longer than expected to process. Please try again by speaking clearly and mentioning the amount, currency, and date.",
+            language: "en",
+          };
+        }
+
+        if (!analysis || !analysis.success || !analysis.items) {
+          if (WHATSAPP_DEBUG) debugNotes.push(`audio analyze-expense error: ${analysis?.error || "unknown"}`);
+
+          userMessageContent = `[User sent a voice message${
+            caption ? ` with caption "${caption}"` : ""
+          }, but analysis failed: ${
+            analysis?.error ||
+            "Could not extract expense information from the audio. Please try again by clearly describing what you spent, how much, in which currency, and when."
+          }. Please help the user by suggesting they try again or type the expense manually like "Spent 45 on groceries yesterday".]`;
+        } else {
+          userMessageContent = `[User sent a voice message${
+            caption ? ` with caption "${caption}"` : ""
+          }. Successfully extracted from audio: ${JSON.stringify(
+            analysis.items!,
+          )}. Please confirm with the user and ask if they want to save these transactions.]`;
+        }
+      }
     } else if (mediaUrl) {
       // Non-image file: fetch and include a small preview so AI keeps context
       console.log("[twilio-whatsapp-ai-bot] Non-image media detected, building preview", {

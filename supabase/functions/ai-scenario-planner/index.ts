@@ -21,6 +21,9 @@ interface ScenarioRequestBody {
   targetDate?: string; // YYYY-MM-DD
   userId?: string; // ignored for auth, we derive from JWT
   language?: string; // ISO 639-1 or language tag, e.g., "en" or "zh-CN"
+  currency?: string; // e.g., "USD", "EUR"
+  mode?: "personal" | "household";
+  householdId?: string;
 }
 
 // Convert locale-specific digits (Arabic-Indic, Eastern-Arabic, Thai, etc.) to ASCII
@@ -168,6 +171,10 @@ serve(async (req: Request): Promise<Response> => {
     const targetDateInput = (body.targetDate || "").trim();
     const languageRaw = (body.language || "").trim();
     const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageRaw) ? languageRaw : "en";
+    const currencyRaw = (body.currency || "").trim();
+    const currency = currencyRaw || "USD";
+    const mode: "personal" | "household" = body.mode === "household" ? "household" : "personal";
+    const householdId = mode === "household" ? (body.householdId || "").trim() : "";
 
     // Accept non-English and various word orders; only require non-empty content
     if (!question) {
@@ -187,24 +194,12 @@ serve(async (req: Request): Promise<Response> => {
     const targetDate = parsed.date;
     const targetDateStr = parsed.iso;
 
-    // Get the user's contact (to map to expenses/budgets contact_id, handle duplicates by getting most recent)
-    const contactResult = await supabaseClient
-      .from('user_contacts')
-      .select('id,user_id,phone_e164,verified,preferred_currency')
-      .eq('user_id', userId)
-      .order('id', { ascending: false })
-      .limit(1);
-    const contact = contactResult.data?.[0] ?? null;
-    const contactError = contactResult.error;
-
-    if (contactError || !contact) {
-      return new Response(JSON.stringify({ error: "Verified contact not found for user" }), {
-        status: 404,
+    if (mode === "household" && !householdId) {
+      return new Response(JSON.stringify({ error: "householdId is required when mode is 'household'." }), {
+        status: 400,
         headers: { ...getCorsHeaders(req.headers.get('Origin') || undefined), "Content-Type": "application/json" },
       });
     }
-
-    const contactId = contact.id as string;
 
     // Build date range: last 6 months of data for context
     const today = new Date();
@@ -212,53 +207,127 @@ serve(async (req: Request): Promise<Response> => {
     const fromStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth()+1).padStart(2,'0')}-${String(fromDate.getDate()).padStart(2,'0')}`;
     const toStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-    // Fetch expenses and budgets
-    const { data: expenses, error: expensesError } = await supabaseClient
+    // Build base queries for expenses and budgets (select only fields actually used)
+    let expensesQuery = supabaseClient
       .from('expenses')
-      .select('id,contact_id,date,amount_cents,currency,category')
-      .eq('contact_id', contactId)
+      .select('user_id,date,amount_cents,currency,category,owner_type')
       .gte('date', fromStr)
       .lte('date', toStr)
-      .order('date', { ascending: true });
+      .eq('type', 'expense');
 
-    const { data: budgets, error: budgetsError } = await supabaseClient
-      .from('daily_budgets')
-      .select('id,contact_id,date,amount_cents,currency')
-      .eq('contact_id', contactId)
-      .gte('date', fromStr)
-      .lte('date', toStr)
-      .order('date', { ascending: true });
+    if (mode === "household") {
+      expensesQuery = expensesQuery.eq('household_id', householdId);
+    } else {
+      expensesQuery = expensesQuery.eq('user_id', userId);
+    }
+
+    // Budgets are now stored as monthly totals in the budgets table.
+    // We fetch the relevant months for the current window and derive
+    // both monthly and per-day budget figures from total_budget_cents.
+    let budgetsQuery = supabaseClient
+      .from('budgets')
+      .select('period_month,total_budget_cents,currency')
+      .eq('currency', currency)
+      .gte('period_month', fromStr)
+      .lte('period_month', toStr);
+
+    if (mode === "household") {
+      budgetsQuery = budgetsQuery.eq('household_id', householdId);
+    } else {
+      budgetsQuery = budgetsQuery
+        .eq('user_id', userId)
+        .is('household_id', null);
+    }
+
+    // Run expenses, budgets, goals, and financial profiles queries in parallel
+    const [
+      { data: expenses, error: expensesError },
+      { data: budgets, error: budgetsError },
+      { data: goals },
+      { data: finProfiles },
+    ] = await Promise.all([
+      expensesQuery.order('date', { ascending: true }),
+      budgetsQuery.order('period_month', { ascending: true }),
+      supabaseClient
+        .from('financial_goals')
+        .select('id, name, target_amount, current_amount, start_date, target_date, is_on_track')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false }),
+      supabaseClient
+        .from('financial_health_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1),
+    ]);
 
     if (expensesError) console.warn('Expenses fetch error:', expensesError.message);
     if (budgetsError) console.warn('Budgets fetch error:', budgetsError.message);
-
-    // Optionally fetch goals & financial profiles if available (best-effort)
-    const { data: goals } = await supabaseClient
-      .from('financial_goals')
-      .select('id, name, target_amount, current_amount, start_date, target_date, is_on_track')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    const { data: finProfiles } = await supabaseClient
-      .from('financial_health_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1);
 
     // Aggregate stats
     function centsToAmount(x?: number | null) { return ((x || 0) / 100.0); }
 
     const daily: Record<string, { spent: number; budget: number }> = {};
+    const memberTotalsByUser: Record<string, { spent: number; currency: string }> = {};
+    const ownerTypeTotals: Record<string, { spent: number; currency: string }> = {};
+    const categoryTotals: Record<string, number> = {};
+    const monthly: Record<string, { spent: number; budget: number; net: number }> = {};
+
+    // Aggregate spending per day, and in household mode per member / owner_type
     for (const e of expenses || []) {
-      const k = (e.date as string).slice(0, 10);
-      daily[k] ??= { spent: 0, budget: 0 };
-      daily[k].spent += centsToAmount(e.amount_cents as number);
+      const dateStr = (e.date as string).slice(0, 10);
+      const amt = centsToAmount(e.amount_cents as number);
+
+      daily[dateStr] ??= { spent: 0, budget: 0 };
+      daily[dateStr].spent += amt;
+
+      if (mode === "household") {
+        const uid = (e.user_id as string) || 'unknown';
+        const ownerType = (e.owner_type as string) || 'unknown';
+        const rowCurrency = (e.currency as string) || currency;
+
+        if (!memberTotalsByUser[uid]) {
+          memberTotalsByUser[uid] = { spent: 0, currency: rowCurrency };
+        }
+        memberTotalsByUser[uid].spent += amt;
+
+        if (!ownerTypeTotals[ownerType]) {
+          ownerTypeTotals[ownerType] = { spent: 0, currency: rowCurrency };
+        }
+        ownerTypeTotals[ownerType].spent += amt;
+      }
     }
+
+    // Aggregate monthly budgets and derive a per-day budget series by
+    // spreading each month's total evenly across its days.
+    const monthlyBudgetTotals: Record<string, number> = {};
     for (const b of budgets || []) {
-      const k = (b.date as string).slice(0, 10);
-      daily[k] ??= { spent: 0, budget: 0 };
-      daily[k].budget += centsToAmount(b.amount_cents as number);
+      const period = (b.period_month as string).slice(0, 10); // YYYY-MM-DD
+      const ym = period.slice(0, 7); // YYYY-MM
+      const amt = centsToAmount(b.total_budget_cents as number);
+
+      monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
+      monthly[ym].budget += amt;
+      monthlyBudgetTotals[ym] = (monthlyBudgetTotals[ym] || 0) + amt;
+    }
+
+    for (const ym in monthlyBudgetTotals) {
+      const [yearStr, monthStr] = ym.split('-');
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+      if (!year || !month) continue;
+
+      const firstOfMonth = new Date(year, month - 1, 1);
+      const lastOfMonth = new Date(year, month, 0);
+      const daysInMonth = lastOfMonth.getDate();
+      const perDay = monthlyBudgetTotals[ym] / daysInMonth;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        if (dateStr < fromStr || dateStr > toStr) continue;
+        daily[dateStr] ??= { spent: 0, budget: 0 };
+        daily[dateStr].budget += perDay;
+      }
     }
 
     const sortedDates = Object.keys(daily).sort();
@@ -280,8 +349,6 @@ serve(async (req: Request): Promise<Response> => {
     const avgNetPerDay = deltas.length ? deltas.reduce((a,b)=>a+b,0) / deltas.length : 0;
 
     // Monthly summaries and top categories (last 90 days)
-    const categoryTotals: Record<string, number> = {};
-    const monthly: Record<string, { spent: number; budget: number; net: number }> = {};
     const ninetyDaysAgo = new Date(today.getTime() - 90*24*60*60*1000);
 
     for (const e of expenses || []) {
@@ -294,13 +361,6 @@ serve(async (req: Request): Promise<Response> => {
         const key = String(e.category).toLowerCase();
         if (dt >= ninetyDaysAgo) categoryTotals[key] = (categoryTotals[key] || 0) + amt;
       }
-    }
-    for (const b of budgets || []) {
-      const dt = new Date(b.date as string);
-      const ym = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
-      monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
-      const amt = centsToAmount(b.amount_cents as number);
-      monthly[ym].budget += amt;
     }
     for (const k in monthly) monthly[k].net = monthly[k].budget - monthly[k].spent;
 
@@ -315,8 +375,14 @@ serve(async (req: Request): Promise<Response> => {
     const projectedNoScenario = running + avgNetPerDay * daysUntilTarget;
 
     // Prepare prompt for Gemini
-    const currency = contact.preferred_currency || 'USD';
-    const advisoryPrompt = `You are a fiduciary financial advisor (Moneko) with deep expertise in personal finance, budgeting, and savings strategy. A user asked a scenario question they want evaluated by ${targetDateStr}. Provide a thorough, data-driven assessment using the provided user data. If their goal is not achievable within the timeframe, propose realistic alternatives, trade-offs, and a step-by-step plan to get as close as possible.
+    const perspective = mode === "household" ? "their household's shared finances" : "their personal finances";
+    const actorLabel = mode === "household" ? "A household" : "A user";
+    const householdMembersSummary = mode === "household" ? {
+      byUserId: memberTotalsByUser,
+      byOwnerType: ownerTypeTotals,
+    } : null;
+
+    const advisoryPrompt = `You are a fiduciary financial advisor (Moneko) with deep expertise in personal and household finance, budgeting, and savings strategy. ${actorLabel} asked a scenario question they want evaluated by ${targetDateStr}. Provide a thorough, data-driven assessment using the provided ${mode === "household" ? "household" : "personal"} data. If their goal is not achievable within the timeframe, propose realistic alternatives, trade-offs, and a step-by-step plan to get as close as possible.
 
 Strict requirements:
 - Speak in a supportive, clear, and actionable tone.
@@ -329,7 +395,7 @@ USER_QUESTION: ${question}
 TARGET_DATE: ${targetDateStr}
 
 USER_DATA:
-- Contact: ${JSON.stringify({ id: contact.id, currency, phone: contact.phone_e164 }, null, 2)}
+- Context: ${JSON.stringify({ userId, mode, householdId: mode === "household" ? householdId : null, currency })}
 - SummaryStats: ${JSON.stringify({
       windowFrom: fromStr,
       windowTo: toStr,
@@ -342,11 +408,12 @@ USER_DATA:
       currentRunningBalance: running,
       projectedNoScenarioByTarget: projectedNoScenario,
       daysUntilTarget: daysUntilTarget,
-    }, null, 2)}
-- Monthly: ${JSON.stringify(monthly, null, 2)}
-- TopCategories90d: ${JSON.stringify(topCategories, null, 2)}
-- Goals: ${JSON.stringify(goals || [], null, 2)}
-- FinancialHealthProfile: ${JSON.stringify(finProfiles && finProfiles[0] || null, null, 2)}
+    })}
+- Monthly: ${JSON.stringify(monthly)}
+- TopCategories90d: ${JSON.stringify(topCategories)}
+- Goals: ${JSON.stringify(goals || [])}
+- FinancialHealthProfile: ${JSON.stringify(finProfiles && finProfiles[0] || null)}
+${mode === "household" ? `- HouseholdMembers: ${JSON.stringify(householdMembersSummary)}` : ""}
 
 Now analyze deeply and provide a comprehensive advisory response.
 
@@ -359,30 +426,72 @@ Important language requirement: Reply strictly in ${language}. Use that language
       temperature: 0.6,
     } as const;
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: advisoryPrompt }] }],
-    }, generationConfig);
+    const encoder = new TextEncoder();
 
-    const aiAdvice = result.response.text();
-
-    return new Response(JSON.stringify({
-      success: true,
-      advice: aiAdvice,
-      meta: {
-        currency,
-        targetDate: targetDateStr,
-        language,
-        stats: {
-          windowFrom: fromStr,
-          windowTo: toStr,
-          daysWithData: days,
-          avgNetPerDay,
-          currentRunningBalance: running,
-          projectedNoScenarioByTarget: projectedNoScenario,
-        },
+    const metaPayload = {
+      currency,
+      targetDate: targetDateStr,
+      language,
+      mode,
+      householdId: mode === "household" ? householdId : null,
+      stats: {
+        windowFrom: fromStr,
+        windowTo: toStr,
+        daysWithData: days,
+        avgNetPerDay,
+        currentRunningBalance: running,
+        projectedNoScenarioByTarget: projectedNoScenario,
       },
-    }), {
-      headers: { ...getCorsHeaders(req.headers.get('Origin') || undefined), "Content-Type": "application/json" },
+    };
+
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          // 1) Emit meta information first so the client can set up UI/state.
+          controller.enqueue(
+            encoder.encode(JSON.stringify({ type: "meta", meta: metaPayload }) + "\n"),
+          );
+
+          // 2) Stream Gemini content chunks as they arrive.
+          const result = await model.generateContentStream(
+            {
+              contents: [{ role: "user", parts: [{ text: advisoryPrompt }] }],
+            },
+            generationConfig,
+          );
+
+          for await (const chunk of result.stream) {
+            const text = chunk.text();
+            if (!text) continue;
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({ type: "chunk", text }) + "\n",
+              ),
+            );
+          }
+
+          // 3) Final done marker so client knows the stream is complete.
+          controller.enqueue(
+            encoder.encode(JSON.stringify({ type: "done" }) + "\n"),
+          );
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          controller.enqueue(
+            encoder.encode(
+              JSON.stringify({ type: "error", error: message }) + "\n",
+            ),
+          );
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...getCorsHeaders(req.headers.get('Origin') || undefined),
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+      },
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
