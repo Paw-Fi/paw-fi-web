@@ -3,10 +3,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { authenticateUser, verifyUserMatch } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 interface DeleteExpenseRequest {
   expenseId: string;
+  userId?: string;
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -40,33 +42,27 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: DeleteExpenseRequest = await req.json();
-    const { expenseId } = body;
-    if (!expenseId) return errorResponse('expenseId is required');
+    if (!body?.expenseId) return errorResponse('expenseId is required');
+    const expenseId = sanitizeUuid(body.expenseId);
+    if (!expenseId) return errorResponse('Invalid expenseId format');
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
 
     let userId: string | null = null;
-
-    // For non-GPT requests, userId should be in body (legacy client support)
-    if (!detection.isGpt && 'userId' in body && (body as any).userId) {
-      userId = sanitizeUuid((body as any).userId);
-      if (!userId) {
-        return errorResponse('Invalid userId format');
-      }
-    }
+    let requestedUserId: string | null = null;
 
     let resolvedIdentityMeta: Record<string, unknown> | undefined;
 
-    if (!userId && detection.isGpt) {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { 'X-Client-Info': 'moneko-delete-expense' } },
+    });
+
+    if (detection.isGpt) {
       if (!conversationId) {
         return errorResponse('conversationId is required for GPT requests');
       }
-
-      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-        auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-        global: { headers: { 'X-Client-Info': 'moneko-delete-expense' } },
-      });
 
       try {
         const guestIdentity = await ensureGuestIdentity({
@@ -96,16 +92,33 @@ Deno.serve(async (req: Request) => {
         console.error('[delete-expense] Failed to resolve GPT guest identity:', guestError);
         return errorResponse('Failed to prepare GPT guest user', 500);
       }
+    } else {
+      // For non-GPT requests, derive user identity from the Authorization JWT.
+      // NEVER trust userId from request body.
+      const authResult = await authenticateUser(req, supabase);
+      if (!authResult.success || !authResult.userId) {
+        return errorResponse(
+          authResult.error ?? 'Authentication required',
+          authResult.statusCode ?? 401,
+        );
+      }
+      userId = authResult.userId;
+
+      // Legacy support: if the client still sends userId, verify it matches.
+      if ('userId' in body && body.userId) {
+        requestedUserId = sanitizeUuid(body.userId);
+        if (!requestedUserId) {
+          return errorResponse('Invalid userId format');
+        }
+        if (!verifyUserMatch(userId, requestedUserId)) {
+          return errorResponse('You do not have permission to delete this expense', 403);
+        }
+      }
     }
 
     if (!userId) {
-      return errorResponse('userId is required for non-GPT requests');
+      return errorResponse('Authentication required', 401);
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { 'X-Client-Info': 'moneko-delete-expense' } },
-    });
 
     // Fetch expense to verify ownership and obtain household info
     const { data: expense, error } = await supabase
@@ -127,8 +140,32 @@ Deno.serve(async (req: Request) => {
     // For non-GPT requests, verify ownership via expenses.user_id
     if (!detection.isGpt) {
       const expenseUserId = (expense as any)?.user_id as string | undefined;
-      if (!expenseUserId || expenseUserId !== userId) {
+      if (!expenseUserId) {
         return errorResponse('You do not have permission to delete this expense', 403);
+      }
+
+      // Personal transactions: only the owner can delete.
+      if (!expense.household_id && expenseUserId !== userId) {
+        return errorResponse('You do not have permission to delete this expense', 403);
+      }
+
+      // Household transactions: any household member can delete.
+      if (expense.household_id && expenseUserId !== userId) {
+        const { data: member, error: memberError } = await supabase
+          .from('household_members')
+          .select('id')
+          .eq('household_id', expense.household_id)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (memberError) {
+          console.error('[delete-expense] Failed to verify household membership:', memberError);
+          return errorResponse('Failed to verify household membership', 500);
+        }
+
+        if (!member) {
+          return errorResponse('You do not have permission to delete this expense', 403);
+        }
       }
     } else {
       // For GPT, verify by user_id field directly
