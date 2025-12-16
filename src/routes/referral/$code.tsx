@@ -28,6 +28,7 @@ import { MonekoIcon } from '@/components/shared/moneko-icon';
 import { ReferralAuthPrompt } from '@/components/auth/referral-auth-prompt';
 import AppleLogo from '@assets/images/shared/apple-logo.png';
 import { AppleDownloadButton } from '@/components/ui/apple-download-button';
+import { AndroidDownloadButton } from '@/components/ui/android-download-button';
 
 // Route search params type
 type InviteeSearch = {
@@ -191,7 +192,10 @@ function InviteePage() {
                 </p>
               </div>
             </div>
-               <AppleDownloadButton/>
+              <div className="flex flex-col lg:flex-row gap-4">
+                 <AppleDownloadButton/>
+                 <AndroidDownloadButton/>
+              </div>
           </div>
           </motion.div>
         )}

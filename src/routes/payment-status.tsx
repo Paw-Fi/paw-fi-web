@@ -124,7 +124,7 @@ function PaymentStatusPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/30 bg-slate-50/60 p-8 shadow-2xl backdrop-blur-xl dark:border-slate-700/50 dark:bg-slate-900/60">
+          <div className="">
             {isLoading && (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-purple-600"></div>

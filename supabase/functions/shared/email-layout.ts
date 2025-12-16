@@ -303,3 +303,33 @@ export function testFlightCtaHtml(): string {
     </div>
   `;
 }
+
+// Google Play CTA helper (uses the same button styling as TestFlight)
+export function googlePlayCtaHtml(): string {
+  return `
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${sanitizeUrl(LINKS.playStore)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
+        <img src="${LINKS.googleLogo}" alt="Google Play" style="height: 20px; width: auto; margin-right: 5px;" />
+        Get it on Google Play
+      </a>
+    </div>
+  `;
+}
+
+// Combined CTA helper for mobile downloads (TestFlight + Google Play)
+export function mobileDownloadCtasHtml(): string {
+  return `
+    <div style="text-align: center; margin: 32px 0;">
+      <div style="display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
+        <a href="${sanitizeUrl(LINKS.testflight)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
+          <img src="${LINKS.appleLogo}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />
+          Download on TestFlight
+        </a>
+        <a href="${sanitizeUrl(LINKS.playStore)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
+          <img src="${LINKS.googleLogo}" alt="Google Play" style="height: 20px; width: auto; margin-right: 5px;" />
+          Get it on Google Play
+        </a>
+      </div>
+    </div>
+  `;
+}

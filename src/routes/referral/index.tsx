@@ -36,6 +36,7 @@ import phone3 from '@assets/images/couple-budgeting/3.png'
 import phone4 from '@assets/images/couple-budgeting/4.png'
 import phone5 from '@assets/images/couple-budgeting/5.png'
 import { AppleDownloadButton } from '@/components/ui/apple-download-button';
+import { AndroidDownloadButton } from '@/components/ui/android-download-button';
 import { faDiscord } from '@fortawesome/free-brands-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { DISCORD_URL } from '..';
@@ -316,7 +317,10 @@ function ReferralPage() {
                 Explore Moneko while your friend joins. You’ll both get lifetime access once they accept.
               </p>
 
-              <AppleDownloadButton className='mt-6 mb-4'/>
+              <div className="mt-6 mb-4 flex flex-col lg:flex-row gap-3">
+                <AppleDownloadButton />
+                <AndroidDownloadButton />
+              </div>
               <motion.a
               href={DISCORD_URL}
               target="_blank"

@@ -5,6 +5,8 @@ import { Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'react-toastify'
+import { AppleDownloadButton } from '@/components/ui/apple-download-button'
+import { AndroidDownloadButton } from '@/components/ui/android-download-button'
 
 export const Route = createFileRoute('/invites/$token')({
   component: InvitePage,
@@ -473,24 +475,9 @@ function InvitePage() {
 
           <div className="text-sm text-muted-foreground">
             <p className="mb-3">Don't have the app yet?</p>
-            <div className="flex gap-3 justify-center">
-              <a
-                href="https://testflight.apple.com/join/Q9rNbkN5"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline transition-colors duration-200"
-              >
-                Download for iOS
-              </a>
-              {/* <span>•</span>
-              <a
-                href="https://play.google.com/store/apps/details?id=com.moneko.app"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline transition-colors duration-200"
-              >
-                Download for Android
-              </a> */}
+            <div className="flex flex-col items-center gap-3">
+              <AppleDownloadButton />
+              <AndroidDownloadButton />
             </div>
           </div>
         </motion.div>

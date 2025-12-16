@@ -15,6 +15,8 @@ import classNames from "classnames";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { coupleBudgetingKeys } from "@/hooks/use-couple-budgeting-waitlist";
+import { AppleDownloadButton } from "@/components/ui/apple-download-button";
+import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/Q9rNbkN5"
 
@@ -488,9 +490,13 @@ export function FreeTrialGiveawayForm({ questions, onSubmit, userHasClaimedFromD
 <CheckCircle className="mr-3 text-green-600 dark:text-green-400 w-5 h-5" />
                     <span className="font-semibold text-green-700 dark:text-green-300">Thank you for joining!</span>
                   </div>
-                  <p className="text-sm text-green-600 dark:text-green-400 leading-relaxed">
-                    Click <a href={TESTFLIGHT_URL} target="_blank" className="underline decoration-slate-300 font-bold hover:decoration-slate-500 dark:decoration-slate-600">here</a> to download the mobile app
+                  <p className="text-sm text-green-600 dark:text-green-400 leading-relaxed mb-4">
+                    Download the mobile app:
                   </p>
+                  <div className="flex flex-col items-center gap-3">
+                    <AppleDownloadButton />
+                    <AndroidDownloadButton />
+                  </div>
                 </div>
               </div>
             </motion.div>

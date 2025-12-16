@@ -8,6 +8,8 @@ export const LINKS = {
   testflight: 'https://testflight.apple.com/join/Q9rNbkN5',
   appStore: 'https://testflight.apple.com/join/Q9rNbkN5',
   appleLogo: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/apple-logo.png',
+  googleLogo: 'https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/google-play.png',
+  playStore:'https://play.google.com/store/apps/details?id=com.moneko.mobile',
   stripe: 'https://stripe.com',
 } as const;
 
@@ -16,6 +18,7 @@ const ALLOWED_HOSTS = [
   'moneko.io',
   'testflight.apple.com',
   'apps.apple.com',
+  'play.google.com',
   'stripe.com',
   'supabase.co',
   'upload.wikimedia.org',

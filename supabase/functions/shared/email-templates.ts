@@ -1,5 +1,5 @@
 // Email templates for Moneko
-import { baseTemplate, renderButton, renderFooter, testFlightCtaHtml } from './email-layout.ts';
+import { baseTemplate, renderButton, renderFooter, mobileDownloadCtasHtml } from './email-layout.ts';
 import { htmlToText } from './email-html-to-text.ts';
 import { escapeHtml, sanitizeSubject, formatDate, formatCurrency, pluralize } from './email-utils.ts';
 import { sanitizeUrl, LINKS } from './email-security.ts';
@@ -22,7 +22,7 @@ export const subscriptionCreatedTemplate = (data: {
     <h1 class="title">Welcome to ${escapeHtml(data.planName)}</h1>
     <p class="subtitle">Thank you for joining Moneko. ${escapeHtml(subscriptionMessage)}</p>
     <p>You now have full access to all premium features included in your plan.</p>
-    ${testFlightCtaHtml()}
+    ${mobileDownloadCtasHtml()}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
@@ -57,7 +57,7 @@ export const subscriptionUpdatedTemplate = (data: {
     <p class="subtitle">${escapeHtml(subtitle)}</p>
     <p>Your subscription will automatically renew on ${formatDate(data.endDate)}.</p>
     ${renderButton('Manage Subscription', sanitizeUrl(data.dashboardUrl))}
-    ${testFlightCtaHtml()}
+    ${mobileDownloadCtasHtml()}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
@@ -93,7 +93,7 @@ export const subscriptionCanceledTemplate = (data: {
     <p class="subtitle">${escapeHtml(subtitle)}</p>
     <p>We're sorry to see you go. If you change your mind, you can resubscribe anytime.</p>
     ${renderButton('Resubscribe', sanitizeUrl(data.dashboardUrl))}
-    ${testFlightCtaHtml()}
+    ${mobileDownloadCtasHtml()}
     <p>We'd love to hear your feedback about why you canceled. Your input helps us improve.</p>
     <p>The Moneko Team</p>
   `;
@@ -167,7 +167,7 @@ export const referralAcceptedTemplate = (data: {
     <h1 class="title">Your Friend Joined Moneko 🎉</h1>
     <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${data.refereeName ? escapeHtml(data.refereeName)+" " : ''}has accepted your invitation and joined Moneko!</p>
     <p>Thank you for helping grow our community. Your support means a lot to us.</p>
-    ${renderButton('Download on TestFlight', sanitizeUrl(LINKS.testflight), 'apple')}
+    ${mobileDownloadCtasHtml()}
     <p>Keep sharing the love - you'll earn rewards for each friend who subscribes to a premium plan.</p>
     <p>The Moneko Team</p>
   `;
@@ -190,7 +190,7 @@ export const referralSuccessfulTemplate = (data: {
     <p class="subtitle">Hi ${escapeHtml(data.name)}, thanks for joining Moneko through ${escapeHtml(data.referrerName)}'s invitation!</p>
     <p>You're all set up and ready to start your financial journey with us. We're excited to have you on board!</p>
     ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
-    ${testFlightCtaHtml()}
+    ${mobileDownloadCtasHtml()}
     <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
@@ -214,7 +214,7 @@ export const welcomeTemplate = (data: {
     <p>Thank you for verifying your email address. You now have full access to Moneko's powerful financial tools and insights.</p>
     <p>Start your journey to better financial health by exploring your personalized dashboard:</p>
     ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
-    ${testFlightCtaHtml()}
+    ${mobileDownloadCtasHtml()}
     <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
@@ -223,163 +223,6 @@ export const welcomeTemplate = (data: {
     html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you successfully verified your Moneko account.' })),
     text: htmlToText(content),
     subject: sanitizeSubject('Welcome to Moneko!'),
-  };
-};
-
-// Email verification template
-export const emailVerificationTemplate = (data: {
-  name: string;
-  verificationUrl: string;
-}) => {
-  const content = `
-    <h1 class="title">Verify Your Email Address</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.name)}, please verify your email address to complete your Moneko account setup.</p>
-    <p>Click the button below to confirm your email address and activate your account:</p>
-    ${renderButton('Verify Email', sanitizeUrl(data.verificationUrl))}
-    <p>This verification link will expire in 24 hours for security reasons.</p>
-    <p>If you didn't create a Moneko account, you can safely ignore this email.</p>
-    <p>The Moneko Team</p>
-  `;
-  
-  return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email to verify your email address.' })),
-    text: htmlToText(content),
-    subject: sanitizeSubject('Verify Your Moneko Account'),
-  };
-};
-
-// Password reset template
-export const passwordResetTemplate = (data: {
-  name: string;
-  resetUrl: string;
-  expiryHours?: number;
-}) => {
-  const expiryText = data.expiryHours ? ` This link will expire in ${data.expiryHours} ${pluralize(data.expiryHours, 'hour')}.` : '';
-  
-  const content = `
-    <h1 class="title">Reset Your Password</h1>
-    <p class="subtitle">We received a request to reset your password for your Moneko account.</p>
-    <p>Click the button below to create a new password:</p>
-    ${renderButton('Reset Password', sanitizeUrl(data.resetUrl))}
-    <p>${escapeHtml(expiryText)}</p>
-    <p>If you didn't request this password reset, you can safely ignore this email. Your password will remain unchanged.</p>
-    <p>For security reasons, this link can only be used once.</p>
-    <p>The Moneko Team</p>
-  `;
-  
-  return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because a password reset was requested for your account.' })),
-    text: htmlToText(content),
-    subject: sanitizeSubject('Reset Your Moneko Password'),
-  };
-};
-
-// Newsletter subscription confirmation template
-export const newsletterSubscribeTemplate = (data: {
-  name: string;
-  email: string;
-}) => {
-  const content = `
-    <h1 class="title">Welcome to the Moneko Newsletter</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.name)}, thanks for subscribing to our newsletter!</p>
-    <p>You'll now receive regular updates about new features, financial tips, and exclusive content from the Moneko team.</p>
-    <p>We're excited to share our journey with you and help you achieve your financial goals.</p>
-    ${renderButton('Explore Features', sanitizeUrl(LINKS.dashboard))}
-    <p>If you didn't subscribe to this newsletter, you can unsubscribe at any time using the link below.</p>
-    <p>The Moneko Team</p>
-  `;
-  
-  return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you subscribed to the Moneko newsletter.' })),
-    text: htmlToText(content),
-    subject: sanitizeSubject('Welcome to the Moneko Newsletter'),
-  };
-};
-
-// Newsletter unsubscribe confirmation template
-export const newsletterUnsubscribeTemplate = (data: {
-  email: string;
-}) => {
-  const content = `
-    <h1 class="title">You've Been Unsubscribed</h1>
-    <p class="subtitle">You've been successfully removed from the Moneko newsletter mailing list.</p>
-    <p>We're sorry to see you go. If you change your mind, you can always resubscribe from your account settings.</p>
-    <p>Thank you for being part of our community. We wish you the best on your financial journey.</p>
-    ${renderButton('Manage Account', sanitizeUrl(LINKS.dashboard))}
-    <p>The Moneko Team</p>
-  `;
-  
-  return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you unsubscribed from the Moneko newsletter.' })),
-    text: htmlToText(content),
-    subject: sanitizeSubject('Unsubscribed from Moneko Newsletter'),
-  };
-};
-
-// Security alert template
-export const securityAlertTemplate = (data: {
-  name: string;
-  alertType: 'login' | 'password_change' | 'email_change' | 'suspicious_activity';
-  location?: string;
-  ipAddress?: string;
-  timestamp: string;
-  dashboardUrl: string;
-  supportUrl?: string;
-}) => {
-  const title = data.alertType === 'login' ? 'New Login Detected' :
-                data.alertType === 'password_change' ? 'Password Changed' :
-                data.alertType === 'email_change' ? 'Email Address Changed' :
-                'Suspicious Activity Detected';
-  
-  const subtitle = data.alertType === 'login' ? 'We detected a new login to your Moneko account.' :
-                   data.alertType === 'password_change' ? 'Your password was successfully changed.' :
-                   data.alertType === 'email_change' ? 'Your email address was successfully changed.' :
-                   'We detected suspicious activity on your account.';
-  
-  const content = `
-    <h1 class="title">${escapeHtml(title)}</h1>
-    <p class="subtitle">${escapeHtml(subtitle)}</p>
-    ${data.location ? `<p><strong>Location:</strong> ${escapeHtml(data.location)}</p>` : ''}
-    ${data.ipAddress ? `<p><strong>IP Address:</strong> ${escapeHtml(data.ipAddress)}</p>` : ''}
-    ${data.timestamp ? `<p><strong>Time:</strong> ${formatDate(data.timestamp)}</p>` : ''}
-    ${data.alertType === 'login' ? 
-      `<p>If this was you, no further action is needed.</p>
-       <p>If you don't recognize this activity, please secure your account immediately:</p>
-       ${renderButton('Secure My Account', sanitizeUrl(data.dashboardUrl))}
-       ${data.supportUrl ? `<p>If you need help, please <a href="${sanitizeUrl(data.supportUrl)}">contact our support team</a>.</p>` : ''}` :
-      `<p>If this was you, no further action is needed.</p>
-       <p>If you don't recognize this activity, please contact support immediately.</p>`}
-    <p>The Moneko Team</p>
-  `;
-  
-  return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because of security activity on your account.' })),
-    text: htmlToText(content),
-    subject: sanitizeSubject(`Moneko Security Alert — ${title}`),
-  };
-};
-
-// General notification template
-export const notificationTemplate = (data: {
-  name: string;
-  title: string;
-  message: string;
-  actionUrl?: string;
-  actionText?: string;
-  priority?: 'low' | 'medium' | 'high';
-}) => {
-  
-  const content = `
-    <h1 class="title">${escapeHtml(data.title)}</h1>
-    <p class="subtitle">${escapeHtml(data.message)}</p>
-    ${data.actionUrl && data.actionText ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl)) : ''}
-    <p>The Moneko Team</p>
-  `;
-  
-  return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email as a notification from Moneko.' })),
-    text: htmlToText(content),
-    subject: sanitizeSubject(data.title),
   };
 };
 
@@ -398,7 +241,7 @@ export const courseCompletionTemplate = (data: {
     <p>You've taken an important step in your financial education journey. We're proud of your dedication to learning.</p>
     ${data.certificateUrl ? renderButton('Download Certificate', sanitizeUrl(data.certificateUrl)) : ''}
     ${data.nextCourseUrl ? `<p>Ready for your next challenge? <a href="${sanitizeUrl(data.nextCourseUrl)}">Check out recommended courses</a> to continue your learning journey.</p>` : ''}
-    ${testFlightCtaHtml()}
+    ${mobileDownloadCtasHtml()}
     <p>Keep up the great work.</p>
     <p>The Moneko Team</p>
   `;
@@ -594,5 +437,58 @@ export const invoicePaymentSucceededTemplate = (data: {
     html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your payment was processed successfully.' })),
     text: htmlToText(content),
     subject: sanitizeSubject(`Payment Received — ${data.planName}`),
+  };
+};
+
+export const notificationTemplate = (data: {
+  name: string;
+  title: string;
+  message: string;
+  actionUrl?: string;
+  actionText?: string;
+  priority?: 'low' | 'medium' | 'high';
+}) => {
+  const content = `
+    <h1 class="title">${escapeHtml(data.title)}</h1>
+    <p class="subtitle">Hi ${escapeHtml(data.name)},</p>
+    <p>${escapeHtml(data.message)}</p>
+    ${data.actionUrl && data.actionText ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl)) : ''}
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content, renderFooter()),
+    text: htmlToText(content),
+    subject: sanitizeSubject(data.title),
+  };
+};
+
+export const mobileBetaWelcomeTemplate = (data: { name: string }) => {
+  const content = `
+    <h1 class="title">Welcome to the Moneko Mobile Public Beta!</h1>
+    <p class="subtitle">Hi ${escapeHtml(data.name)},</p>
+    <p>Thanks for helping us test the Moneko mobile experience. You're officially part of our public beta, and we can't wait for you to explore the latest build.</p>
+    <p><strong>You're Ready to Install</strong></p>
+    <ul>
+      <li>Download the mobile build and start budgeting on the go</li>
+      <li>Share feedback directly with the team to shape upcoming releases</li>
+      <li>Expect frequent updates as we add more capabilities</li>
+    </ul>
+    <p><strong>What You Can Explore Right Now</strong></p>
+    <ul>
+      <li><strong>Chat-based expense logging</strong> - Log expenses or income with natural language and quick taps.</li>
+      <li><strong>Smart spending insights</strong> - Let AI categorize your spending and surface top categories.</li>
+      <li><strong>Bill & paycheck reminders</strong> - Stay notified about upcoming income and obligations.</li>
+      <li><strong>Goal tracking with celebrations</strong> - Set goals, track growth, and celebrate milestones.</li>
+    </ul>
+    ${mobileDownloadCtasHtml()}
+    <p>Need help or have feedback about the beta? Reply to this email or contact us at <a href="${sanitizeUrl(LINKS.support)}">hello@moneko.io</a>.</p>
+    <p class="muted">The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(content, renderFooter({ customReason: 'This email was sent to you because you joined our mobile app waitlist.' })),
+    text: htmlToText(content),
+    subject: sanitizeSubject('Welcome to the Moneko Mobile Public Beta!'),
   };
 };

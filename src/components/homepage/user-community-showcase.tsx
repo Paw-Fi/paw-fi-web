@@ -8,7 +8,7 @@ import { useCommunityStats } from '@/hooks/use-community-stats';
 
 interface User {
   id: string;
-  email: string;
+  email: string | null;
   full_name: string | null;
   avatar_url: string | null;
   created_at: string;
@@ -19,7 +19,9 @@ interface User {
  * Format: first 2 chars + **** + last 2 chars before @ + @domain.com
  * Example: john.doe@example.com -> jo****oe@example.com
  */
-const encryptEmail = (email: string): string => {
+const encryptEmail = (email: string | null | undefined): string => {
+  if (!email) return '****';
+
   const [localPart, domain] = email.split('@');
   
   if (!localPart || !domain) return '****';
@@ -70,7 +72,7 @@ const UserCard: React.FC<UserCardProps> = ({ user }) => {
     .map((n) => n.charAt(0))
     .join('')
     .toUpperCase()
-    .slice(0, 2) || user.email.charAt(0).toUpperCase();
+    .slice(0, 2) || (user.email ? user.email.charAt(0).toUpperCase() : '?');
 
   return (
     <motion.div

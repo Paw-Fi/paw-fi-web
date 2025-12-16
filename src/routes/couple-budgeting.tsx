@@ -24,6 +24,7 @@ import { useCoupleBudgetingUserClaimed, useJoinCoupleBudgetingWaitlist } from "@
 import { useAuth } from "@/contexts/auth-context";
 import { useState } from "react";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
+import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 
 export const Route = createFileRoute("/couple-budgeting")({
   component: CoupleBudgetingPage,
@@ -350,7 +351,7 @@ Simplified by AI                </h1>
         {/* Mobile App Preview Section */}
         <section className="px-6 py-20 relative overflow-hidden">
           <motion.div 
-            className="max-w-7xl mx-auto"
+            className="max-w-7xl mx-auto flex flex-col items-center"
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
@@ -363,7 +364,10 @@ Simplified by AI                </h1>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                 Moneko gives you and your partner a crystal-clear view of your money, so you can make smarter decisions as a team.
               </p>
-              <AppleDownloadButton className="mt-6"/>
+              <div className="mt-6 mb-4 flex flex-col lg:flex-row gap-3 justify-center">
+                <AppleDownloadButton />
+              <AndroidDownloadButton />
+            </div>
             </motion.div>
 
             {/* Carousel rendering: preserve exact item styles; phone mockup is injected via prop */}
