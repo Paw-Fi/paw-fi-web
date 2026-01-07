@@ -147,6 +147,9 @@ export const trialEndingTemplate = (data: {
     <p class="subtitle">Your ${escapeHtml(data.planName)} trial will end on ${formatDate(data.trialEndDate)}.</p>
     <p>To continue enjoying all the benefits without interruption, please ensure your payment method is up to date.</p>
     ${renderButton('Manage Membership', sanitizeUrl(data.dashboardUrl))}
+    <p><strong>Want to keep premium for free?</strong> We’re giving away <strong>free lifetime access</strong> through our referral program.</p>
+    <p>Invite a friend to Moneko and when they join, you both unlock lifetime premium automatically.</p>
+    ${renderButton('Get Lifetime Access (Referral Program)', sanitizeUrl('https://moneko.io/referral'), 'secondary')}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;

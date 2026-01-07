@@ -51,6 +51,12 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     'MX$': 'MXN',
     'R$': 'BRL',
 
+    // Jamaica Dollar
+    'J$': 'JMD',
+
+    // Malawi Kwacha
+    'MK': 'MWK',
+
     // Kenya Shilling
     'KSH': 'KES',
     'KSHS': 'KES',
