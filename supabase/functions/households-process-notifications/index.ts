@@ -410,6 +410,12 @@ serve(async (req) => {
             targetUserId = null; // Broadcast to all members except actor
             break;
 
+          case 'expense_deleted':
+            title = '🗑️ Expense Deleted';
+            body = `An expense was deleted in your household`;
+            targetUserId = null; // Broadcast to all members except actor
+            break;
+
           case 'budget_warn':
           case 'budget_alert':
             // These are handled by households-send-nudge, skip
