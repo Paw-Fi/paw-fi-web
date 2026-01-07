@@ -29,6 +29,13 @@ Allow: /budgeting-app/freelancers-budgeting
 Allow: /budgeting-app/entrepreneurs-budgeting
 Allow: /budgeting-app/retirees-budgeting
 
+# Core Feature Pages - Product Tour
+Allow: /features/whatsapp-assistant
+Allow: /features/pockets-system
+Allow: /features/household-mode
+Allow: /features/ai-insights
+
+
 # Content variant landing pages with different financial focuses
 Allow: /budgeting-app/high-interest-portfolios
 Allow: /budgeting-app/business-cash-flow

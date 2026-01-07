@@ -84,7 +84,7 @@ export function ShadcnSignInForm({
             search: redirectUrl ? { redirect: redirectUrl } : undefined
           })
         } else {
-          navigate({ to: redirectUrl || "/dashboard" })
+          navigate({ to: redirectUrl || "/couple-budgeting" })
         }
       }
     } catch (error: any) {

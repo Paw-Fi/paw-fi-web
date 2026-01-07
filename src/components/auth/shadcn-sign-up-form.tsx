@@ -74,7 +74,7 @@ interface ShadcnSignUpFormProps {
 
 // Helper function to parse redirect URLs with query parameters
 const parseRedirectUrl = (url: string | undefined) => {
-  if (!url) return { to: "/dashboard" as const };
+  if (!url) return { to: "/couple-budgeting" as const };
   
   // Split by ? to separate path and query string
   const [path, queryString] = url.split('?');
