@@ -161,7 +161,7 @@ export async function processFreeFormTextExpense(params: {
     + '   - If found, use THAT currency code (EUR for €, MYR for RM, SAR for ر.س, etc.)\n'
     + '2. FALLBACK: If NO currency is mentioned, use the Caller Currency provided below\n'
     + '3. ALWAYS output currency as a 3-letter ISO-4217 code in the JSON. Never output symbols or aliases (e.g., $, R, US$, RM).\n'
-    + '   Map common symbols/aliases to ISO codes: $, US$, U$ => USD; R or RJ => ZAR; RM => MYR; A$ => AUD; C$ => CAD; S$ => SGD; HK$ => HKD; NZ$ => NZD; MX$ => MXN; R$ => BRL; KSH/KSHS => KES; د.إ => AED; ر.س => SAR; £ => GBP; € => EUR.\n'
+    + '   Map common symbols/aliases to ISO codes: $, US$, U$ => USD; R or RJ => ZAR; RM => MYR; A$ => AUD; C$ => CAD; S$ => SGD; HK$ => HKD; NZ$ => NZD; MX$ => MXN; R$ => BRL; KSH/KSHS => KES; د.إ => AED; ر.س => SAR; £ => GBP; € => EUR; J$ => JMD; MK => MWK.\n'
     + '   If ambiguous (e.g., ¥), omit the currency so the caller currency applies.\n'
     + '4. NEVER leave currency empty after all fallbacks.\n\n'
     + 'Use the provided functions to perform updates, including category fields. Keep replies short and human-friendly.';

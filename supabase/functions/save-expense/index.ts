@@ -7,12 +7,85 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function normalizePercentage(value: unknown): number {
+  if (!isFiniteNumber(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 100) return 100;
+  return value;
+}
+
+function normalizeShares(value: unknown): number | null {
+  if (!isFiniteNumber(value)) return null;
+  const shares = Math.trunc(value);
+  // DB constraint: shares must be > 0 when present; treat <= 0 as excluded (null).
+  return shares > 0 ? shares : null;
+}
+
+function normalizeAmount(value: unknown): number {
+  if (!isFiniteNumber(value)) return 0;
+  return value < 0 ? 0 : value;
+}
+
+function allocateCentsByWeights(
+  totalCents: number,
+  weights: number[],
+): number[] {
+  const safeTotal = Number.isFinite(totalCents)
+    ? Math.max(0, Math.trunc(totalCents))
+    : 0;
+  const safeWeights = weights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0));
+  const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0);
+
+  if (safeTotal === 0 || totalWeight <= 0 || safeWeights.length === 0) {
+    return safeWeights.map(() => 0);
+  }
+
+  const floors: number[] = [];
+  const fracs: { idx: number; frac: number }[] = [];
+  let sumFloors = 0;
+
+  for (let i = 0; i < safeWeights.length; i++) {
+    const weight = safeWeights[i];
+    if (weight <= 0) {
+      floors.push(0);
+      continue;
+    }
+    const raw = safeTotal * (weight / totalWeight);
+    const floored = Math.floor(raw);
+    const frac = raw - floored;
+    floors.push(floored);
+    sumFloors += floored;
+    fracs.push({ idx: i, frac });
+  }
+
+  let remainder = safeTotal - sumFloors;
+  if (remainder <= 0) return floors;
+
+  fracs.sort((a, b) => b.frac - a.frac);
+  if (fracs.length === 0) return floors;
+
+  let cursor = 0;
+  while (remainder > 0) {
+    const target = fracs[cursor % fracs.length].idx;
+    floors[target] += 1;
+    remainder -= 1;
+    cursor += 1;
+  }
+
+  return floors;
 }
 
 interface MemberSplit {
@@ -23,7 +96,7 @@ interface MemberSplit {
 }
 
 interface CustomSplits {
-  splitType: 'equal' | 'amount' | 'percentage' | 'shares';
+  splitType: "equal" | "amount" | "percentage" | "shares";
   memberSplits: MemberSplit[];
 }
 
@@ -40,14 +113,20 @@ interface RequestBody {
   customSplits?: CustomSplits; // Custom split configuration (optional)
   isRecurring?: boolean; // Whether this is a recurring expense (v1.5)
   recurrence_rule?: { // Recurrence configuration (v1.5)
-    frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom';
+    frequency:
+      | "daily"
+      | "weekly"
+      | "biweekly"
+      | "monthly"
+      | "yearly"
+      | "custom";
     anchor_date: string;
     end_date?: string;
     interval?: number;
     reminder?: { // Optional reminder configuration (v1.6)
       enabled: boolean;
       value: number; // How many days/hours before
-      unit: 'days' | 'hours';
+      unit: "days" | "hours";
     };
   };
   payerUserId?: string; // Optional explicit payer for household split
@@ -55,16 +134,19 @@ interface RequestBody {
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     // Validate request method
-    if (req.method !== 'POST') {
+    if (req.method !== "POST") {
       return new Response(
-        JSON.stringify({ error: 'Method not allowed. Use POST.' }),
-        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Method not allowed. Use POST." }),
+        {
+          status: 405,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -75,61 +157,79 @@ Deno.serve(async (req: Request) => {
     req.headers.forEach((value, key) => {
       headerSnapshot[key] = value;
     });
-    console.log('[save-expense] Incoming headers:', headerSnapshot);
-    console.log('[save-expense] Incoming body:', body);
+    console.log("[save-expense] Incoming headers:", headerSnapshot);
+    console.log("[save-expense] Incoming body:", body);
 
     const detection = detectGptRequest(req);
 
     let userId = sanitizeUuid(body.userId ?? null);
 
     if (body.userId && !userId) {
-      console.warn('[save-expense] Ignoring invalid userId provided in payload', {
-        provided: body.userId,
-        conversationId: detection.conversationId,
-      });
+      console.warn(
+        "[save-expense] Ignoring invalid userId provided in payload",
+        {
+          provided: body.userId,
+          conversationId: detection.conversationId,
+        },
+      );
     }
 
     if (!userId && !detection.isGpt) {
       return new Response(
-        JSON.stringify({ error: 'userId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "userId is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     if (!body.amount || body.amount <= 0) {
       return new Response(
-        JSON.stringify({ error: 'Valid amount is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Valid amount is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     if (!body.category) {
       return new Response(
-        JSON.stringify({ error: 'Category is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Category is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     if (!body.date) {
       return new Response(
-        JSON.stringify({ error: 'Date is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Date is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Get environment variables
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Server configuration error" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Validate and normalize currency
-    const currency = validateCurrency(body.currency || 'USD');
+    const currency = validateCurrency(body.currency || "USD");
     const resolvedUserMetadata: Record<string, unknown> = {};
     if (detection.conversationId) {
       resolvedUserMetadata.conversationId = detection.conversationId;
@@ -138,7 +238,7 @@ Deno.serve(async (req: Request) => {
       resolvedUserMetadata.ephemeralUserId = detection.ephemeralUserId;
     }
 
-    console.log('[save-expense] Saving expense:', {
+    console.log("[save-expense] Saving expense:", {
       userId,
       amount: body.amount,
       category: body.category,
@@ -147,26 +247,36 @@ Deno.serve(async (req: Request) => {
     });
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { 'X-Client-Info': 'moneko-save-expense' } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { "X-Client-Info": "moneko-save-expense" } },
     });
 
     let contactId: string | null = null;
 
     if (userId) {
       const { data: contact, error: contactError } = await supabase
-        .from('user_contacts')
-        .select('id, preferred_currency')
-        .eq('user_id', userId)
-        .order('id', { ascending: false })
+        .from("user_contacts")
+        .select("id, preferred_currency")
+        .eq("user_id", userId)
+        .order("id", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (contactError) {
-        console.error('[save-expense] Failed to look up user contact:', contactError);
+        console.error(
+          "[save-expense] Failed to look up user contact:",
+          contactError,
+        );
         return new Response(
-          JSON.stringify({ error: 'Failed to resolve user contact' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: "Failed to resolve user contact" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
@@ -174,17 +284,23 @@ Deno.serve(async (req: Request) => {
         contactId = contact.id;
         if (!contact.preferred_currency && currency) {
           const { error: updateCurrencyError } = await supabase
-            .from('user_contacts')
+            .from("user_contacts")
             .update({ preferred_currency: currency })
-            .eq('id', contact.id);
+            .eq("id", contact.id);
           if (updateCurrencyError) {
-            console.error('[save-expense] Failed to update contact currency:', updateCurrencyError);
+            console.error(
+              "[save-expense] Failed to update contact currency:",
+              updateCurrencyError,
+            );
           }
         }
       } else {
-        console.log('[save-expense] No user_contact row found for user; proceeding with null contact_id (non-WhatsApp user).', {
-          userId,
-        });
+        console.log(
+          "[save-expense] No user_contact row found for user; proceeding with null contact_id (non-WhatsApp user).",
+          {
+            userId,
+          },
+        );
       }
     }
 
@@ -197,7 +313,7 @@ Deno.serve(async (req: Request) => {
         });
         userId = guestIdentity.userId;
         contactId = guestIdentity.contactId;
-        console.log('[save-expense] Resolved GPT guest identity', {
+        console.log("[save-expense] Resolved GPT guest identity", {
           conversationId: detection.conversationId,
           userId,
           contactId,
@@ -207,38 +323,50 @@ Deno.serve(async (req: Request) => {
           createdContact: guestIdentity.createdContact,
         };
       } catch (identityError) {
-        console.error('[save-expense] Failed to resolve GPT guest identity:', identityError);
+        console.error(
+          "[save-expense] Failed to resolve GPT guest identity:",
+          identityError,
+        );
         return new Response(
-          JSON.stringify({ error: 'Failed to prepare GPT guest user' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: "Failed to prepare GPT guest user" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
     }
 
     if (!userId) {
       return new Response(
-        JSON.stringify({ error: 'Unable to resolve user identity' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Unable to resolve user identity" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Convert amount to cents
     const amountCents = Math.round(body.amount * 100);
 
-    console.log('[save-expense] Full request body:', JSON.stringify(body, null, 2));
-    console.log('[save-expense] isRecurring:', body.isRecurring);
-    console.log('[save-expense] recurrence_rule:', body.recurrence_rule);
+    console.log(
+      "[save-expense] Full request body:",
+      JSON.stringify(body, null, 2),
+    );
+    console.log("[save-expense] isRecurring:", body.isRecurring);
+    console.log("[save-expense] recurrence_rule:", body.recurrence_rule);
 
     // Insert expense into expenses table
     const { data: expense, error: expenseError } = await supabase
-      .from('expenses')
+      .from("expenses")
       .insert({
         contact_id: contactId,
         user_id: userId,
         amount_cents: amountCents,
         category: body.category,
         date: body.date,
-        raw_text: body.description || '',
+        raw_text: body.description || "",
         currency: currency,
         receipt_image_url: body.receiptImageUrl || null,
         created_at: body.clientCreatedAt || new Date().toISOString(),
@@ -249,18 +377,24 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (expenseError) {
-      console.error('[save-expense] Error saving expense:', expenseError);
+      console.error("[save-expense] Error saving expense:", expenseError);
       return new Response(
-        JSON.stringify({ error: 'Failed to save expense', details: expenseError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: "Failed to save expense",
+          details: expenseError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    console.log('[save-expense] Expense saved:', expense.id);
+    console.log("[save-expense] Expense saved:", expense.id);
 
     // GPT requests do not support household functionality
     if (detection.isGpt) {
-      console.log('[save-expense] GPT request - household features disabled');
+      console.log("[save-expense] GPT request - household features disabled");
       return new Response(
         JSON.stringify({
           success: true,
@@ -269,17 +403,20 @@ Deno.serve(async (req: Request) => {
           resolvedUserId: userId,
           meta: resolvedUserMetadata,
         }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // Resolve actor display name for notification title
-    let actorName = 'Someone';
+    let actorName = "Someone";
     try {
       const { data: appUser } = await supabase
-        .from('users')
-        .select('full_name')
-        .eq('id', userId)
+        .from("users")
+        .select("full_name")
+        .eq("id", userId)
         .maybeSingle();
       if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
         actorName = appUser.full_name as string;
@@ -288,129 +425,192 @@ Deno.serve(async (req: Request) => {
 
     // If householdId provided, create household split
     if (body.householdId) {
-      console.log('[save-expense] Creating household split for household:', body.householdId);
+      console.log(
+        "[save-expense] Creating household split for household:",
+        body.householdId,
+      );
 
       // Verify user is member of household
       const { data: membership } = await supabase
-        .from('household_members')
-        .select('id, role')
-        .eq('household_id', body.householdId)
-        .eq('user_id', userId)
+        .from("household_members")
+        .select("id, role")
+        .eq("household_id", body.householdId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (!membership) {
-        console.error('[save-expense] User is not a member of household:', body.householdId);
+        console.error(
+          "[save-expense] User is not a member of household:",
+          body.householdId,
+        );
         // Still return success for expense, just log warning
         return new Response(
           JSON.stringify({
             success: true,
             data: expense,
-            warning: 'Expense saved but not shared (not a household member)',
+            warning: "Expense saved but not shared (not a household member)",
             resolvedUserId: userId,
             meta: resolvedUserMetadata,
           }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
       // Get all household members
       const { data: members } = await supabase
-        .from('household_members')
-        .select('user_id')
-        .eq('household_id', body.householdId);
+        .from("household_members")
+        .select("user_id")
+        .eq("household_id", body.householdId);
 
       if (!members || members.length === 0) {
-        console.error('[save-expense] No active members in household');
+        console.error("[save-expense] No active members in household");
         return new Response(
-            JSON.stringify({
-              success: true,
-              data: expense,
-              warning: 'Expense saved but not shared (no active members)',
-              resolvedUserId: userId,
-              meta: resolvedUserMetadata,
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+          JSON.stringify({
+            success: true,
+            data: expense,
+            warning: "Expense saved but not shared (no active members)",
+            resolvedUserId: userId,
+            meta: resolvedUserMetadata,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
 
       // Determine split type and validate custom splits
-      const splitType = body.customSplits?.splitType || 'equal';
+      const splitType = body.customSplits?.splitType || "equal";
       const customSplits = body.customSplits;
 
       // Validate custom splits if provided
       if (customSplits) {
-        console.log('[save-expense] Processing custom splits:', splitType);
+        console.log("[save-expense] Processing custom splits:", splitType);
+
+        // Normalize member split values so downstream validations and inserts
+        // don't violate DB constraints (e.g., shares cannot be 0).
+        const normalizedMemberSplits: MemberSplit[] = customSplits.memberSplits
+          .map((split) => ({
+            userId: split.userId,
+            amount: normalizeAmount(split.amount),
+            percentage: normalizePercentage(split.percentage),
+            shares: normalizeShares(split.shares),
+          }));
 
         // Validate all members are included
-        const customUserIds = customSplits.memberSplits.map(s => s.userId).sort();
-        const allUserIds = members.map(m => m.user_id).sort();
-        
+        const customUserIds = normalizedMemberSplits.map((s) => s.userId)
+          .sort();
+        const allUserIds = members.map((m) => m.user_id).sort();
+
         if (JSON.stringify(customUserIds) !== JSON.stringify(allUserIds)) {
-          console.error('[save-expense] Custom splits do not match household members');
+          console.error(
+            "[save-expense] Custom splits do not match household members",
+          );
           return new Response(
             JSON.stringify({
-              error: 'Custom splits must include all household members',
+              error: "Custom splits must include all household members",
             }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
           );
         }
 
         // Validate based on split type
-        if (splitType === 'amount') {
-          const totalSplit = customSplits.memberSplits.reduce((sum, s) => sum + (s.amount || 0), 0);
-          const totalSplitCents = Math.round(totalSplit * 100);
+        if (splitType === "amount") {
+          const totalSplitCents = normalizedMemberSplits.reduce(
+            (sum, s) => sum + Math.round((s.amount || 0) * 100),
+            0,
+          );
           if (Math.abs(totalSplitCents - amountCents) > 1) { // Allow 1 cent rounding difference
-            console.error('[save-expense] Amount splits do not equal total:', totalSplitCents, 'vs', amountCents);
+            console.error(
+              "[save-expense] Amount splits do not equal total:",
+              totalSplitCents,
+              "vs",
+              amountCents,
+            );
             return new Response(
               JSON.stringify({
-                error: `Amount splits (${totalSplit}) must equal total expense amount (${body.amount})`,
+                error:
+                  `Amount splits must equal total expense amount (${body.amount})`,
               }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
             );
           }
-        } else if (splitType === 'percentage') {
-          const totalPercent = customSplits.memberSplits.reduce((sum, s) => sum + (s.percentage || 0), 0);
+        } else if (splitType === "percentage") {
+          const totalPercent = normalizedMemberSplits.reduce(
+            (sum, s) => sum + (s.percentage || 0),
+            0,
+          );
           if (Math.abs(totalPercent - 100) > 0.01) { // Allow 0.01% rounding difference
-            console.error('[save-expense] Percentage splits do not equal 100%:', totalPercent);
+            console.error(
+              "[save-expense] Percentage splits do not equal 100%:",
+              totalPercent,
+            );
             return new Response(
               JSON.stringify({
                 error: `Percentage splits (${totalPercent}%) must equal 100%`,
               }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
             );
           }
-        } else if (splitType === 'shares') {
-          const totalShares = customSplits.memberSplits.reduce((sum, s) => sum + (s.shares || 0), 0);
+        } else if (splitType === "shares") {
+          const totalShares = normalizedMemberSplits.reduce(
+            (sum, s) => sum + (s.shares || 0),
+            0,
+          );
           if (totalShares <= 0) {
-            console.error('[save-expense] Invalid shares: total shares must be > 0');
+            console.error(
+              "[save-expense] Invalid shares: total shares must be > 0",
+            );
             return new Response(
               JSON.stringify({
-                error: 'At least one member must have a share greater than 0',
+                error: "At least one member must have a share greater than 0",
               }),
-              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
             );
           }
         }
+
+        // Use normalized splits for all downstream logic.
+        (body.customSplits as CustomSplits).memberSplits =
+          normalizedMemberSplits;
       }
 
       // Resolve payer for split group: default current user unless explicit payerUserId provided and valid
       let payerUserId = sanitizeUuid(body.payerUserId ?? null) || userId;
       if (payerUserId && body.householdId) {
         const { data: validPayer } = await supabase
-          .from('household_members')
-          .select('user_id')
-          .eq('household_id', body.householdId)
-          .eq('user_id', payerUserId)
+          .from("household_members")
+          .select("user_id")
+          .eq("household_id", body.householdId)
+          .eq("user_id", payerUserId)
           .maybeSingle();
         if (!validPayer) {
-          console.warn('[save-expense] Provided payerUserId is not a member of the household; falling back to current user', { payerUserId });
+          console.warn(
+            "[save-expense] Provided payerUserId is not a member of the household; falling back to current user",
+            { payerUserId },
+          );
           payerUserId = userId;
         }
       }
 
       // Create expense split group
       const { data: splitGroup, error: splitGroupError } = await supabase
-        .from('expense_split_groups')
+        .from("expense_split_groups")
         .insert({
           household_id: body.householdId,
           expense_id: expense.id,
@@ -425,77 +625,114 @@ Deno.serve(async (req: Request) => {
         .single();
 
       if (splitGroupError) {
-        console.error('[save-expense] Error creating split group:', splitGroupError);
+        console.error(
+          "[save-expense] Error creating split group:",
+          splitGroupError,
+        );
         return new Response(
-            JSON.stringify({
-              success: true,
-              data: expense,
-              warning: 'Expense saved but split group creation failed',
-              resolvedUserId: userId,
-              meta: resolvedUserMetadata,
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+          JSON.stringify({
+            success: true,
+            data: expense,
+            warning: "Expense saved but split group creation failed",
+            resolvedUserId: userId,
+            meta: resolvedUserMetadata,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
 
-      console.log('[save-expense] Split group created:', splitGroup.id, 'with type:', splitType);
+      console.log(
+        "[save-expense] Split group created:",
+        splitGroup.id,
+        "with type:",
+        splitType,
+      );
 
       // Create split lines based on split type
       let splitLines: any[];
 
-      if (splitType === 'equal') {
+      if (splitType === "equal") {
         // Equal split: divide amount equally
         const amountPerMember = Math.floor(amountCents / members.length);
-        splitLines = members.map((member) => ({
+        const remainder = amountCents - (amountPerMember * members.length);
+        splitLines = members.map((member, index) => ({
           split_group_id: splitGroup.id,
           user_id: member.user_id,
-          amount_cents: amountPerMember,
+          amount_cents: amountPerMember + (index == 0 ? remainder : 0),
           is_settled: false,
           settled_at: null,
           created_at: new Date().toISOString(),
         }));
-      } else if (splitType === 'amount' && customSplits) {
+      } else if (splitType === "amount" && customSplits) {
         // Custom amount split
-        splitLines = customSplits.memberSplits.map((split) => ({
+        const cents = customSplits.memberSplits.map((split) =>
+          Math.max(0, Math.round((split.amount || 0) * 100))
+        );
+        const sumCents = cents.reduce((sum, v) => sum + v, 0);
+        const diff = amountCents - sumCents;
+        if (diff !== 0 && cents.length > 0) {
+          cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
+        }
+        splitLines = customSplits.memberSplits.map((split, index) => ({
           split_group_id: splitGroup.id,
           user_id: split.userId,
-          amount_cents: Math.round((split.amount || 0) * 100),
+          amount_cents: cents[index] ?? 0,
           is_settled: false,
           settled_at: null,
           created_at: new Date().toISOString(),
         }));
-      } else if (splitType === 'percentage' && customSplits) {
-        // Percentage split: calculate amount from percentage
-        splitLines = customSplits.memberSplits.map((split) => ({
+      } else if (splitType === "percentage" && customSplits) {
+        // Percentage split: calculate amount from percentage with remainder-safe allocation
+        const weights = customSplits.memberSplits.map((split) =>
+          split.percentage || 0
+        );
+        const allocatedCents = allocateCentsByWeights(amountCents, weights);
+        splitLines = customSplits.memberSplits.map((split, index) => ({
           split_group_id: splitGroup.id,
           user_id: split.userId,
-          amount_cents: Math.round(amountCents * (split.percentage || 0) / 100),
+          amount_cents: allocatedCents[index] ?? 0,
           percentage: split.percentage,
           is_settled: false,
           settled_at: null,
           created_at: new Date().toISOString(),
         }));
-      } else if (splitType === 'shares' && customSplits) {
-        // Shares split: calculate amount from shares
-        const totalShares = customSplits.memberSplits.reduce((sum, s) => sum + (s.shares || 0), 0);
+      } else if (splitType === "shares" && customSplits) {
+        // Shares split: calculate amount from shares with remainder-safe allocation.
+        const totalShares = customSplits.memberSplits.reduce(
+          (sum, s) => sum + (s.shares || 0),
+          0,
+        );
         if (totalShares <= 0) {
-          console.error('[save-expense] Cannot create split lines: total shares is 0');
+          console.error(
+            "[save-expense] Cannot create split lines: total shares is 0",
+          );
           return new Response(
             JSON.stringify({
               success: true,
               data: expense,
-              warning: 'Expense saved but split lines creation failed due to invalid shares',
+              warning:
+                "Expense saved but split lines creation failed due to invalid shares",
               resolvedUserId: userId,
               meta: resolvedUserMetadata,
             }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
           );
         }
-        splitLines = customSplits.memberSplits.map((split) => ({
+        const weights = customSplits.memberSplits.map((split) =>
+          split.shares || 0
+        );
+        const allocatedCents = allocateCentsByWeights(amountCents, weights);
+        splitLines = customSplits.memberSplits.map((split, index) => ({
           split_group_id: splitGroup.id,
           user_id: split.userId,
-          amount_cents: Math.round(amountCents * (split.shares || 0) / totalShares),
-          shares: split.shares,
+          amount_cents: allocatedCents[index] ?? 0,
+          shares: split.shares ?? null,
           is_settled: false,
           settled_at: null,
           created_at: new Date().toISOString(),
@@ -503,10 +740,11 @@ Deno.serve(async (req: Request) => {
       } else {
         // Fallback to equal split
         const amountPerMember = Math.floor(amountCents / members.length);
-        splitLines = members.map((member) => ({
+        const remainder = amountCents - (amountPerMember * members.length);
+        splitLines = members.map((member, index) => ({
           split_group_id: splitGroup.id,
           user_id: member.user_id,
-          amount_cents: amountPerMember,
+          amount_cents: amountPerMember + (index == 0 ? remainder : 0),
           is_settled: false,
           settled_at: null,
           created_at: new Date().toISOString(),
@@ -514,57 +752,77 @@ Deno.serve(async (req: Request) => {
       }
 
       const { error: splitLinesError } = await supabase
-        .from('expense_split_lines')
+        .from("expense_split_lines")
         .insert(splitLines);
 
       if (splitLinesError) {
-        console.error('[save-expense] Error creating split lines:', splitLinesError);
+        console.error(
+          "[save-expense] Error creating split lines:",
+          splitLinesError,
+        );
         return new Response(
-            JSON.stringify({
-              success: true,
-              data: expense,
-              warning: 'Expense saved but split lines creation failed',
-              resolvedUserId: userId,
-              meta: resolvedUserMetadata,
-            }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+          JSON.stringify({
+            success: true,
+            data: expense,
+            warning: "Expense saved but split lines creation failed",
+            resolvedUserId: userId,
+            meta: resolvedUserMetadata,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
 
-      console.log('[save-expense] Split lines created for', members.length, 'members');
+      console.log(
+        "[save-expense] Split lines created for",
+        members.length,
+        "members",
+      );
 
       // Update expense with split_group_id AND household_id
       await supabase
-        .from('expenses')
+        .from("expenses")
         .update({
           split_group_id: splitGroup.id,
           household_id: body.householdId,
         })
-        .eq('id', expense.id);
+        .eq("id", expense.id);
 
       // Create notifications for all household members EXCEPT the adder
-      const { error: notifyError } = await supabase.rpc('notify_household_members_expense', {
-        p_household_id: body.householdId,
-        p_expense_id: expense.id,
-        p_actor_user_id: userId,
-        p_event_type: 'expense_added',
-        p_expense_data: {
-          actor_name: actorName,
-          amount_cents: amountCents,
-          currency: currency,
-          category: body.category,
-          note: body.description || '',
+      const { error: notifyError } = await supabase.rpc(
+        "notify_household_members_expense",
+        {
+          p_household_id: body.householdId,
+          p_expense_id: expense.id,
+          p_actor_user_id: userId,
+          p_event_type: "expense_added",
+          p_expense_data: {
+            actor_name: actorName,
+            amount_cents: amountCents,
+            currency: currency,
+            category: body.category,
+            note: body.description || "",
+          },
         },
-      });
+      );
 
       if (notifyError) {
-        console.error('[save-expense] Error creating notifications:', notifyError);
+        console.error(
+          "[save-expense] Error creating notifications:",
+          notifyError,
+        );
         // Don't fail the request, just log the error
       } else {
-        console.log('[save-expense] Notifications created for household members');
+        console.log(
+          "[save-expense] Notifications created for household members",
+        );
       }
 
-      console.log('[save-expense] Household expense split created successfully');
+      console.log(
+        "[save-expense] Household expense split created successfully",
+      );
     }
 
     // Return saved expense
@@ -576,18 +834,23 @@ Deno.serve(async (req: Request) => {
         resolvedUserId: userId,
         meta: resolvedUserMetadata,
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
-
   } catch (error) {
-    console.error('[save-expense] Error:', error);
+    console.error("[save-expense] Error:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: 'Failed to save expense',
-        details: error instanceof Error ? error.message : String(error)
+        error: "Failed to save expense",
+        details: error instanceof Error ? error.message : String(error),
       }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });

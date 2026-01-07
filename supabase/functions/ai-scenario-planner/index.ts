@@ -382,14 +382,33 @@ serve(async (req: Request): Promise<Response> => {
       byOwnerType: ownerTypeTotals,
     } : null;
 
-    const advisoryPrompt = `You are a fiduciary financial advisor (Moneko) with deep expertise in personal and household finance, budgeting, and savings strategy. ${actorLabel} asked a scenario question they want evaluated by ${targetDateStr}. Provide a thorough, data-driven assessment using the provided ${mode === "household" ? "household" : "personal"} data. If their goal is not achievable within the timeframe, propose realistic alternatives, trade-offs, and a step-by-step plan to get as close as possible.
+    const advisoryPrompt = `You are a concise financial advisor for Moneko. Answer the user's scenario question using ONLY the provided ${mode === "household" ? "household" : "personal"} financial data.
 
-Strict requirements:
-- Speak in a supportive, clear, and actionable tone.
-- Base your analysis on the supplied data only; do not invent numbers.
-- Include: (1) Feasibility verdict, (2) Key drivers (income/budget vs spending by category), (3) Risks and assumptions, (4) Concrete plan with quantified adjustments (category cuts, timeline shifts, or additional income), (5) A short "week-by-week" or "month-by-month" playbook until ${targetDateStr}, (6) What to monitor weekly.
-- Use the user's currency ${currency} for any amounts.
-- Keep the final answer as plain text (markdown is OK). Avoid code fences.
+SCOPE DETECTION:
+- If the question mentions "we", "our", "household", "family", or "partner" → use household finances.
+- Otherwise → use personal finances.
+- Ignore data unrelated to the question.
+
+HARD OUTPUT RULES (violating any = failure):
+1. Output MUST be Markdown.
+2. Output MUST be exactly 8–10 visible lines total. Short lines preferred.
+3. Line 1 MUST be a big heading with the decision: "# YES", "# NO", or "# CONDITIONAL".
+4. No jargon. Plain language only. No lecturing. No long paragraphs.
+5. No tables. No disclaimers.
+6. Use ${currency} for all amounts.
+7. Do NOT invent numbers. If critical data is missing, answer CONDITIONAL and state what's missing in the Check line.
+
+REQUIRED FORMAT (in this exact order, each as ONE short line except Steps):
+
+# [YES / NO / CONDITIONAL]
+**Decision:** [One sentence summary of the verdict.]
+**Suggested budget range:** [${currency} low – high, infer a safe range even if user didn't specify a price.]
+**Why:** [One short reason only.]
+**Steps to make it work:**
+- [If YES: how to do it safely—timing, saving plan, limits.]
+- [If NO: how to make it achievable—cut costs, delay date, save target, alternatives.]
+- [Optional 3rd bullet if needed.]
+**Check:** [1–2 key numbers the user should confirm, e.g., monthly surplus, cash on hand. If data is missing, state exactly what.]
 
 USER_QUESTION: ${question}
 TARGET_DATE: ${targetDateStr}
@@ -415,9 +434,11 @@ USER_DATA:
 - FinancialHealthProfile: ${JSON.stringify(finProfiles && finProfiles[0] || null)}
 ${mode === "household" ? `- HouseholdMembers: ${JSON.stringify(householdMembersSummary)}` : ""}
 
-Now analyze deeply and provide a comprehensive advisory response.
-
-Important language requirement: Reply strictly in ${language}. Use that language consistently for all headings, lists, and content. Do not mix languages.`;
+LANGUAGE REQUIREMENT (critical):
+- Your ENTIRE response MUST be in ${language}.
+- Translate ALL labels: "# YES" → localized equivalent (e.g., "# 是", "# OUI", "# SÍ"), "Decision:", "Suggested budget range:", "Why:", "Steps to make it work:", "Check:" → all translated.
+- Use native number formatting and currency symbols appropriate for ${language}.
+- Do NOT mix languages. Every word must be in ${language}.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     const generationConfig = {
