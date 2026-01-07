@@ -6,27 +6,24 @@ import { HomeHeader } from "@/components/index/header";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { Helmet } from "@dr.pogodin/react-helmet";
-// Dynamic content system
-import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
-// Direct imports to avoid lazy loading issues
-import HeroSection from "@/components/homepage/new/hero-section";
-import { FeaturesBentoGrid } from "@/components/homepage/features-bento-grid";
-import VideoSection from "@/components/homepage/new/video-section";
-import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
-import ExpertLessonsSection from "@/components/homepage/new/expert-lessons-section";
+// V2 Components
+import { HeroV2 } from "@/components/homepage/v2/hero-v2";
+import { FeaturesSection } from "@/components/homepage/v2/features-section";
+import { ComparisonTable } from "@/components/homepage/v2/comparison-table";
+import { CTASection } from "@/components/homepage/v2/cta-section";
+
+// Existing Components
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 import AmbientHalo from "@/components/ui/ambient-halo";
-import { DashboardShowcase } from "@/components/homepage/dashboard-showcase";
-import TestimonialsSection from "@/components/homepage/new/testimonials-section";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
-// Use budgeting-focused variant for homepage messaging
-const contentVariant = "main";
-const pageData = passiveIncomeVariants[contentVariant];
+const META_TITLE = "Moneko - AI Budgeting App & Expense Tracker";
+const META_DESCRIPTION = "The AI financial assistant that chats with you. Track spending, manage pockets, and plan with AI—right from WhatsApp or our dedicated app.";
+const META_KEYWORDS = "budgeting app, expense tracker, AI finance, whatsapp budget, pocket budgeting, envelope system, joint finances";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -34,9 +31,9 @@ export const Route = createFileRoute("/")({
   head: () => {
     const pageUrl = getCanonicalUrl("/");
     const meta = seo({
-      title: pageData.meta.title,
-      description: pageData.meta.description,
-      keywords: pageData.meta.keywords,
+      title: META_TITLE,
+      description: META_DESCRIPTION,
+      keywords: META_KEYWORDS,
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
@@ -65,7 +62,7 @@ export default function HomePage() {
         "name": "Moneko",
         "alternateName": "Moneko App",
         "url": "https://moneko.io",
-        "description": "AI-powered personal finance coach and budgeting app helping users take control of their money",
+        "description": META_DESCRIPTION,
         "logo": {
           "@type": "ImageObject",
           "url": "https://moneko.io/og-img.png",
@@ -100,8 +97,8 @@ export default function HomePage() {
         "@type": "WebPage",
         "@id": pageUrl,
         "url": pageUrl,
-        "name": pageData.meta.title,
-        "description": pageData.meta.description,
+        "name": META_TITLE,
+        "description": META_DESCRIPTION,
         "isPartOf": { "@id": "https://moneko.io/#website" },
         "inLanguage": "en-US",
         "about": {
@@ -114,7 +111,7 @@ export default function HomePage() {
         "@type": "SoftwareApplication",
         "name": "Moneko",
         "applicationCategory": "FinanceApplication",
-        "operatingSystem": "Web, iOS, Android",
+        "operatingSystem": "iOS, Android, Web",
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -125,7 +122,7 @@ export default function HomePage() {
           "ratingValue": "4.8",
           "ratingCount": "1250"
         },
-        "description": "AI-powered personal finance coach and budgeting app"
+        "description": META_DESCRIPTION
       }
     ]
   };
@@ -133,15 +130,15 @@ export default function HomePage() {
   return (
     <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
-        <title>{pageData.meta.title}</title>
-        <meta name="description" content={pageData.meta.description} />
-        <meta name="keywords" content={pageData.meta.keywords} />
+        <title>{META_TITLE}</title>
+        <meta name="description" content={META_DESCRIPTION} />
+        <meta name="keywords" content={META_KEYWORDS} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         
         {/* Open Graph Meta Tags for Social Sharing */}
-        <meta property="og:title" content={pageData.meta.title} />
-        <meta property="og:description" content={pageData.meta.description} />
+        <meta property="og:title" content={META_TITLE} />
+        <meta property="og:description" content={META_DESCRIPTION} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:image" content="https://moneko.io/og-img.png" />
@@ -150,8 +147,8 @@ export default function HomePage() {
         
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={pageData.meta.title} />
-        <meta name="twitter:description" content={pageData.meta.description} />
+        <meta name="twitter:title" content={META_TITLE} />
+        <meta name="twitter:description" content={META_DESCRIPTION} />
         <meta name="twitter:image" content="https://moneko.io/og-img.png" />
         <meta name="twitter:site" content="@monekoapp" />
         <meta name="twitter:creator" content="@monekoapp" />
@@ -175,45 +172,16 @@ export default function HomePage() {
         <HomeHeader />
       </nav>
 
-      {/* Hero Section - Transparent background with halo */}
-      <section className="relative">
-        <HeroSection data={pageData} />
-      </section>
+      {/* Main Content Sections */}
+      <HeroV2 />
+      
+      <FeaturesSection />
 
-      {/* Video Section */}
-      {/* <section className="relative bg-section-bg-light">
-        <VideoSection data={pageData} />
-      </section> */}
+      <ComparisonTable />
 
-      {/* Features Bento Grid Section */}
-      <section className="relative bg-section-bg-light">
-        <FeaturesBentoGrid />
-      </section>
+      <FAQSection />
 
-      {/* DashboardShowcase Section */}
-      <section className="relative bg-section-bg-light">
-        <DashboardShowcase />
-      </section>
-
-      {/* Three Steps Section */}
-      <section className="relative bg-section-bg-light">
-        <ThreeStepsSection data={pageData} />
-      </section>
-
-      {/* Testimonials Section */}
-      {/* <section className="relative bg-section-bg-light">
-        <TestimonialsSection />
-      </section> */}
-
-      {/* Expert-Led Lessons Section */}
-      <section className="relative bg-section-bg-light">
-        <ExpertLessonsSection data={pageData} />
-      </section>
-
-      {/* FAQ Section */}
-      <section className="relative">
-        <FAQSection />
-      </section>
+      <CTASection />
 
       {/* Footer */}
       <Footer />

@@ -587,6 +587,12 @@
   .animate-spotlight {
     animation: spotlight 2s ease 0.75s 1 forwards;
   }
+
+  .animate-float {
+    animation-name: float;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
 }
 
 /* Prose/Markdown content styles for lesson content */
@@ -625,6 +631,13 @@
     opacity: 1;
     transform: translate(-50%,-40%) scale(1);
   }
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(30px, -50px) rotate(10deg); }
+  66% { transform: translate(-20px, 20px) rotate(-5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 @theme inline {
