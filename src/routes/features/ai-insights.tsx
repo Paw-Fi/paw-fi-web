@@ -32,7 +32,7 @@ export const Route = createFileRoute("/features/ai-insights")({
       title: META_TITLE,
       description: META_DESCRIPTION,
       keywords: META_KEYWORDS,
-      image: "https://moneko.io/og-ai-insights.png",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
 

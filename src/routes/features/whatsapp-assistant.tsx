@@ -33,7 +33,7 @@ export const Route = createFileRoute("/features/whatsapp-assistant")({
       title: META_TITLE,
       description: META_DESCRIPTION,
       keywords: META_KEYWORDS,
-      image: "https://moneko.io/og-whatsapp.png",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
 

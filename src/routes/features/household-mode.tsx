@@ -34,7 +34,7 @@ export const Route = createFileRoute("/features/household-mode")({
       title: META_TITLE,
       description: META_DESCRIPTION,
       keywords: META_KEYWORDS,
-      image: "https://moneko.io/og-household.png",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
 

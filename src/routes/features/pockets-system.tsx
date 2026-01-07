@@ -31,7 +31,7 @@ export const Route = createFileRoute("/features/pockets-system")({
       title: META_TITLE,
       description: META_DESCRIPTION,
       keywords: META_KEYWORDS,
-      image: "https://moneko.io/og-pockets.png",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
 
