@@ -15,6 +15,7 @@ import { OrbitingCircles } from "@/components/ui/orbiting-circles";
 import { Badge } from "@/components/ui/badge";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import ThreeMonekos from "@/assets/images/index/3-moneko.svg";
+import { BentoCard } from "@/components/ui/bento-card";
 
 // SEO & Meta Imports
 import { Helmet } from "@dr.pogodin/react-helmet";
@@ -99,7 +100,7 @@ export default function HouseholdFeaturePage() {
   };
 
   return (
-    <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden font-sans selection:bg-purple-100 dark:selection:bg-purple-900">
+    <div className="min-h-screen relative bg-white dark:bg-[#050505] overflow-hidden font-sans selection:bg-gray-100 dark:selection:bg-gray-800">
       <Helmet>
         <title>{META_TITLE}</title>
         <meta name="description" content={META_DESCRIPTION} />
@@ -111,31 +112,18 @@ export default function HouseholdFeaturePage() {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      {/* Background Decor */}
-      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen opacity-40 dark:opacity-20">
-         <></>
-      </BackgroundBeamsWithCollision>
-      <DotPattern
-        className={cn(
-          "fixed inset-0 opacity-30 dark:opacity-15 pointer-events-none z-[1]",
-          "[mask-image:radial-gradient(1200px_circle_at_center,white,transparent)]"
-        )}
-        cr={1}
-        cx={20}
-        cy={20}
-      />
+      {/* Background Decor - Subtle Technical Grid */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+      </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <MonekoIcon />
             <motion.button
               onClick={() => navigate({ to: "/" })}
-              className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200 px-3 py-2 rounded-md hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               whileHover={{ x: -2 }}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -143,9 +131,10 @@ export default function HouseholdFeaturePage() {
             </motion.button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main className="relative z-10 pt-32 pb-20">
+      <main className="relative z-10 pt-32 px-4 md:px-6 max-w-[1200px] mx-auto">
+        
         {/* Hero Section */}
         <section className="container px-4 md:px-6 mx-auto mb-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -154,13 +143,13 @@ export default function HouseholdFeaturePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-sm font-medium mb-6">
-                 <Users className="w-4 h-4" />
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 text-sm font-medium mb-6">
+                 <Users className="w-3 h-3 fill-current" />
                  Collaborative Finance for Couples
               </span>
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
-                Manage <span className="text-purple-600 dark:text-purple-400">Ours</span> <br />
-                without losing <span className="relative">Yours.</span>
+                Manage <span className="text-slate-500 dark:text-slate-400">Ours</span> <br />
+                without losing <span className="relative text-gray-400 dark:text-gray-600">Yours.</span>
               </h1>
               <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                 Stop the "Who owes who?" texts. Moneko is the <strong>joint expense tracker</strong> that 
@@ -181,39 +170,70 @@ export default function HouseholdFeaturePage() {
           </div>
         </section>
 
-        {/* Feature 1: The Orbit */}
-        <FeatureBlock
-          title="Real-Time Shared Household Budgeting"
-          description="Create a unified household hub to track joint expenses like mortgage payments, utilities, and weekly groceries. Instantly see who paid the latest bill and maintain a balanced ledger without manual spreadsheets."
-          align="left"
-          visual={<HouseholdOrbitVisual />}
-        />
+        {/* Bento Grid Features */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[auto] md:auto-rows-[550px] mb-32">
+            
+            {/* Card 1: The Orbit (Wide) */}
+            <BentoCard className="md:col-span-2 overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row">
+                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center z-10 relative order-2 md:order-1">
+                   <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-4">Unified Household Hub.</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-sm">
+                       Track joint expenses like mortgage, utilities, and groceries in a single view. See who paid what instantly.
+                   </p>
+                </div>
+                <div className="flex-1 relative min-h-[400px] md:min-h-auto flex items-center justify-center p-8 order-1 md:order-2 bg-gradient-to-b from-transparent to-black/5 dark:to-white/5">
+                    <HouseholdOrbitVisual />
+                </div>
+            </BentoCard>
 
-        {/* Feature 2: Fair Splitting */}
-        <FeatureBlock
-          title="Automated & Equitable Bill Splitting"
-          description="Financial fairness isn't always 50/50. Moneko offers flexible splitting options—split by income percentage, exact dollar amounts, or custom shares. Perfect for partners with different salary levels."
-          align="right"
-          visual={<FairSplittingVisual />}
-        />
+            {/* Card 2: Fair Splitting (Tall) */}
+            <BentoCard className="relative overflow-hidden bg-white dark:bg-black border border-gray-200 dark:border-gray-800 flex flex-col pt-8">
+                 <div className="px-8 w-full z-10 shrink-0">
+                     <div className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center mb-4 text-slate-600 dark:text-slate-400">
+                         <Split className="w-5 h-5" />
+                     </div>
+                     <h3 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white mb-2">Split Fairly</h3>
+                     <p className="text-slate-500 dark:text-slate-400 text-base">
+                        50/50? Percentage of income? Custom shares? You choose how to split every bill.
+                     </p>
+                 </div>
+                 <div className="flex-1 w-full flex items-center justify-center relative overflow-hidden p-8">
+                    <FairSplittingVisual />
+                 </div>
+            </BentoCard>
 
-        {/* Feature 3: Instant Settlement */}
-        <FeatureBlock
-          title="Seamless Monthly Debt Settlements"
-          description="Eliminate the friction of small transfers. Moneko keeps a running tally of household debt, allowing you to 'settle up' the entire month's shared expenses with a single, documented transfer."
-          align="left"
-          visual={<InstantSettlementVisual />}
-        />
-        
-        {/* Feature 4: Private by Default */}
-         <FeatureBlock
-          title="Privacy-First Individual Tracking"
-          description="Autonomy matters. Your personal spending remains strictly private. Only transactions you explicitly 'share' enter the household view, ensuring you can manage personal gifts or hobbies with total discretion."
-          align="right"
-          visual={<PrivateByDefaultVisual />}
-        />
+            {/* Card 3: Instant Settlement (Tall) */}
+             <BentoCard className="xs:col-span-1 border border-gray-200 dark:border-gray-800 bg-white dark:bg-black flex flex-col p-8 justify-between relative overflow-hidden">
+                <div className="z-10">
+                   <div className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center mb-4 text-slate-600 dark:text-slate-400">
+                         <HeartHandshake className="w-5 h-5" />
+                   </div>
+                   <h3 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white mb-2">One-Tap Settle Up</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-base mb-6">
+                       Moneko tallies the debt. Settle a whole month of expenses with one transfer.
+                   </p>
+                </div>
+                <div className="flex justify-center items-end flex-1">
+                     <InstantSettlementVisual />
+                </div>
+             </BentoCard>
 
-        {/* Methodology Section for SEO E-E-A-T */}
+             {/* Card 4: Privacy (Wide) */}
+             <BentoCard className="md:col-span-2 overflow-hidden bg-slate-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row-reverse">
+                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center z-10 relative">
+                   <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-4">Total Autonomy.</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-md">
+                       Your personal spending is yours. Only transactions you explicitly 'share' enter the household view.
+                   </p>
+                </div>
+                <div className="flex-1 relative min-h-[300px] flex items-center justify-center p-8 bg-gradient-to-t from-transparent to-white/50 dark:to-black/50">
+                    <PrivateByDefaultVisual />
+                </div>
+            </BentoCard>
+
+        </section>
+
+        {/* Methodology Section */}
         <section className="container px-4 py-24 mx-auto border-t border-slate-100 dark:border-slate-800">
            <div className="max-w-3xl mx-auto space-y-12">
               <div className="text-center">
@@ -221,17 +241,17 @@ export default function HouseholdFeaturePage() {
                  <p className="text-slate-600 dark:text-slate-400">Why thousands of couples trust Moneko to manage their household economy.</p>
               </div>
               <div className="grid md:grid-cols-2 gap-8">
-                 <div className="flex gap-4">
-                    <CheckCircle2 className="w-6 h-6 text-purple-500 shrink-0" />
+                 <div className="flex gap-4 p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                    <CheckCircle2 className="w-6 h-6 text-slate-700 dark:text-slate-300 shrink-0" />
                     <div>
-                       <h3 className="font-bold text-slate-900 dark:text-white">Reduces Money Conflict</h3>
+                       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Reduces Money Conflict</h3>
                        <p className="text-sm text-slate-500">Automated tracking removes the 'nag factor' from relationship finances.</p>
                     </div>
                  </div>
-                 <div className="flex gap-4">
-                    <CheckCircle2 className="w-6 h-6 text-purple-500 shrink-0" />
+                 <div className="flex gap-4 p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                    <CheckCircle2 className="w-6 h-6 text-slate-700 dark:text-slate-300 shrink-0" />
                     <div>
-                       <h3 className="font-bold text-slate-900 dark:text-white">Joint Goal Alignment</h3>
+                       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Joint Goal Alignment</h3>
                        <p className="text-sm text-slate-500">Collaborate on large purchases like homes or vacations with shared 'Pockets'.</p>
                     </div>
                  </div>
@@ -241,13 +261,13 @@ export default function HouseholdFeaturePage() {
 
          {/* Bottom CTA */}
          <section className="container px-4 py-24 mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white">Ready to team up?</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8">Join over 50,000 users building better financial futures together.</p>
+            <h2 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white tracking-tight">Ready to team up?</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-xl mx-auto">Join over 50,000 users building better financial futures together.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <AppleDownloadButton />
               <AndroidDownloadButton />
             </div>
-            <div className="mt-12 flex items-center justify-center gap-8 text-slate-400 text-sm">
+            <div className="mt-12 flex items-center justify-center gap-8 text-slate-500 dark:text-slate-400 text-sm font-medium">
                 <span className="flex items-center gap-2"><Lock className="w-4 h-4" /> End-to-End Encryption</span>
                 <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> Bank-Level Security</span>
             </div>
@@ -257,46 +277,18 @@ export default function HouseholdFeaturePage() {
   );
 }
 
-// --- Layout Components ---
-
-const FeatureBlock = ({ title, description, align, visual }: { title: string, description: string, align: 'left' | 'right', visual: ReactNode }) => {
-  return (
-    <div className="py-24">
-      <div className="container px-4 md:px-6 mx-auto">
-        <div className={cn("flex flex-col items-center gap-12 lg:gap-24", align === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row')}>
-          {/* Text Content */}
-          <div className="flex-1 space-y-6 text-center lg:text-left">
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{description}</p>
-          </div>
-          
-          {/* Visual Content */}
-          <div className="flex-1 w-full flex justify-center">
-             <div className="relative w-full max-w-[450px] aspect-[4/3] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex items-center justify-center">
-                <div className="absolute inset-0 bg-grid-slate-200/50 dark:bg-grid-slate-800/50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] pointer-events-none" />
-                <div className="relative w-full h-full flex items-center justify-center p-6">
-                    {visual}
-                </div>
-             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // --- Visual Components ---
 
 const FeatureTag = ({ label }: { label: string }) => (
   <div className="relative flex h-full !w-64 items-center justify-center">
     <span
       aria-hidden="true"
-      className="block h-2 w-2 rounded-full bg-purple-500 shadow-sm shadow-purple-500/30"
+      className="block h-2 w-2 rounded-full bg-slate-900 dark:bg-white shadow-sm"
     />
     <Badge
       aria-label={label}
       variant="outline"
-      className="absolute left-full ml-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur px-3 py-1 text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-sm text-slate-700 dark:text-slate-200"
+      className="absolute left-full ml-2 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur px-3 py-1 text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-sm text-slate-700 dark:text-slate-200 whitespace-nowrap"
     >
       {label}
     </Badge>
@@ -308,18 +300,18 @@ const HouseholdOrbitVisual = () => {
   const motionSpeed = prefersReducedMotion ? 0 : 1; 
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <div className="absolute inset-0 flex items-center justify-center top-0 scale-100">
-           <div className="relative z-10 p-4 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-purple-100 dark:border-purple-900/50">
-                <img src={ThreeMonekos} className="h-20 w-auto" alt="Household Hub" />
+    <div className="relative h-full w-full overflow-hidden min-h-[300px] flex items-center justify-center">
+      <div className="relative flex items-center justify-center scale-110">
+           <div className="relative z-10 p-4 bg-white dark:bg-slate-800 rounded-full shadow-lg border border-slate-100 dark:border-slate-700">
+                <img src={ThreeMonekos} className="h-20 w-auto grayscale" alt="Household Hub" />
            </div>
 
         <OrbitingCircles iconSize={40} radius={80} duration={30} path speed={motionSpeed}>
-            <Avatar className="border-2 border-white shadow-sm w-12 h-12">
+            <Avatar className="border-2 border-white shadow-sm w-12 h-12 grayscale">
                 <AvatarImage src="https://randomuser.me/api/portraits/women/44.jpg" />
                 <AvatarFallback>A</AvatarFallback>
             </Avatar>
-            <Avatar className="border-2 border-white shadow-sm w-12 h-12">
+            <Avatar className="border-2 border-white shadow-sm w-12 h-12 grayscale">
                 <AvatarImage src="https://randomuser.me/api/portraits/men/32.jpg" />
                 <AvatarFallback>B</AvatarFallback>
             </Avatar>
@@ -354,7 +346,7 @@ const FairSplittingVisual = () => {
                         initial={{ width: "50%" }}
                         whileInView={{ width: "60%" }}
                         transition={{ duration: 1, delay: 0.5 }}
-                        className="h-full bg-indigo-500 relative"
+                        className="h-full bg-slate-900 dark:bg-slate-200 relative"
                     >
                          <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white opacity-50" />
                     </motion.div>
@@ -367,7 +359,7 @@ const FairSplittingVisual = () => {
                     <span className="font-bold">$125.00</span>
                 </div>
                 <div className="flex gap-2 text-xs">
-                    <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-md font-medium">You: $75.00</span>
+                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white px-2 py-1 rounded-md font-medium">You: $75.00</span>
                     <span className="text-slate-400 py-1">Partner: $50.00</span>
                 </div>
             </div>
@@ -384,7 +376,7 @@ const InstantSettlementVisual = () => {
             </div>
 
             <div className="flex-1 flex flex-col items-center gap-3 relative z-10">
-                <div className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-full text-sm font-bold shadow-sm whitespace-nowrap">
+                <div className="bg-slate-900 dark:bg-white text-white dark:text-black px-3 py-1.5 rounded-full text-sm font-bold shadow-sm whitespace-nowrap">
                     Gets $450.00
                 </div>
                 <motion.div 
@@ -407,35 +399,35 @@ const InstantSettlementVisual = () => {
 
 const PrivateByDefaultVisual = () => {
     return (
-        <div className="relative w-full h-full flex items-center justify-center">
+        <div className="relative w-full h-full flex items-center justify-center min-h-[300px]">
              <div className="relative w-48 h-64">
                  <motion.div 
-                    className="absolute inset-0 bg-white dark:bg-slate-800 border-2 border-purple-100 dark:border-purple-900 shadow-xl rounded-2xl p-4 rotate-[-6deg] z-10"
+                    className="absolute inset-0 bg-slate-900 dark:bg-black border-2 border-slate-700 dark:border-slate-800 shadow-xl rounded-2xl p-4 rotate-[-6deg] z-10 text-white"
                     whileHover={{ rotate: -8, scale: 1.05 }}
                  >
-                     <div className="w-full h-8 bg-purple-50 dark:bg-purple-900/20 rounded-lg mb-4 flex items-center px-2">
-                         <Users className="w-4 h-4 text-purple-400" />
+                     <div className="w-full h-8 bg-white/10 rounded-lg mb-4 flex items-center px-2">
+                         <Users className="w-4 h-4 text-white" />
                      </div>
                      <div className="space-y-3">
-                        <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full" />
-                        <div className="w-2/3 h-2 bg-slate-100 dark:bg-slate-700 rounded-full" />
-                        <div className="w-3/4 h-2 bg-slate-100 dark:bg-slate-700 rounded-full" />
+                        <div className="w-full h-2 bg-white/20 rounded-full" />
+                        <div className="w-2/3 h-2 bg-white/20 rounded-full" />
+                        <div className="w-3/4 h-2 bg-white/20 rounded-full" />
                      </div>
                      <div className="absolute bottom-4 left-0 right-0 text-center">
-                         <span className="text-[10px] font-bold text-purple-500 tracking-widest bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">SHARED</span>
+                         <span className="text-[10px] font-bold text-white tracking-widest bg-white/10 px-2 py-1 rounded border border-white/20">SHARED</span>
                      </div>
                  </motion.div>
 
                  <motion.div 
-                    className="absolute inset-0 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-md rounded-2xl p-4 rotate-[6deg] z-0"
+                    className="absolute inset-0 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shadow-md rounded-2xl p-4 rotate-[6deg] z-0"
                     whileHover={{ rotate: 8, x: 20 }}
                  >
-                     <div className="w-full h-8 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4 flex items-center px-2">
+                     <div className="w-full h-8 bg-slate-200 dark:bg-slate-800 rounded-lg mb-4 flex items-center px-2">
                          <div className="w-4 h-4 bg-slate-400 rounded-full" />
                      </div>
                      <div className="space-y-3 opacity-50">
-                        <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                        <div className="w-2/3 h-2 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                        <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                        <div className="w-2/3 h-2 bg-slate-200 dark:bg-slate-800 rounded-full" />
                      </div>
                      <div className="absolute bottom-4 left-0 right-0 text-center">
                          <span className="text-[10px] font-bold text-slate-400 tracking-widest">PERSONAL</span>

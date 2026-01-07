@@ -12,6 +12,7 @@ import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 import { useState, useEffect, ReactNode, useRef } from "react";
 import { getCurrencySymbolBasedOnTimeZone } from "@/utils/currency-symbols";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { BentoCard } from "@/components/ui/bento-card";
 
 // SEO & Meta Imports
 import { Helmet } from "@dr.pogodin/react-helmet";
@@ -77,7 +78,7 @@ export default function PocketsFeaturePage() {
   };
 
   return (
-    <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden font-sans selection:bg-orange-100 dark:selection:bg-orange-900">
+    <div className="min-h-screen relative bg-white dark:bg-[#050505] overflow-hidden font-sans selection:bg-gray-100 dark:selection:bg-gray-800">
       <Helmet>
         <title>{META_TITLE}</title>
         <meta name="description" content={META_DESCRIPTION} />
@@ -89,31 +90,18 @@ export default function PocketsFeaturePage() {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      {/* Background Decor */}
-      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen opacity-40 dark:opacity-20">
-         <></>
-      </BackgroundBeamsWithCollision>
-      <DotPattern
-        className={cn(
-          "fixed inset-0 opacity-30 dark:opacity-15 pointer-events-none z-[1]",
-          "[mask-image:radial-gradient(1200px_circle_at_center,white,transparent)]"
-        )}
-        cr={1}
-        cx={20}
-        cy={20}
-      />
+      {/* Background Decor - Subtle Technical Grid */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+      </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <MonekoIcon />
             <motion.button
               onClick={() => navigate({ to: "/" })}
-              className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200 px-3 py-2 rounded-md hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               whileHover={{ x: -2 }}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -121,9 +109,10 @@ export default function PocketsFeaturePage() {
             </motion.button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main className="relative z-10 pt-32 pb-20">
+      <main className="relative z-10 pt-32 px-4 md:px-6 max-w-[1200px] mx-auto">
+        
         {/* Hero Section */}
         <section className="container px-4 md:px-6 mx-auto mb-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -132,13 +121,13 @@ export default function PocketsFeaturePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-sm font-medium mb-6">
-                 <Wallet className="w-4 h-4" />
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 text-sm font-medium mb-6">
+                 <Wallet className="w-3 h-3 fill-current" />
                  Zero-Based Budgeting Methodology
               </span>
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
                 Master the Digital <br />
-                <span className="text-orange-500">Envelope System.</span>
+                <span className="text-gray-400 dark:text-gray-600">Envelope System.</span>
               </h1>
               <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                 Moneko Pockets bring the classic envelope budgeting method into the modern era. 
@@ -159,31 +148,57 @@ export default function PocketsFeaturePage() {
           </div>
         </section>
 
-        {/* Feature 1: Visual Budgeting */}
-        <FeatureBlock
-          title="Visualize Your Liquid Assets"
-          description="Generic spreadsheets fail because they're abstract. Pockets are visual containers that mimic real-world psychology. Watch the liquid levels in your Pockets drop as you spend, giving you an immediate, intuitive sense of your financial health."
-          align="left"
-          visual={<PocketsLiquidVisual />}
-        />
+        {/* Bento Grid Features */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[auto] md:auto-rows-[550px] mb-32">
+            
+            {/* Card 1: Visualize Assets (Wide) */}
+            <BentoCard className="md:col-span-2 overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row">
+                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center z-10 relative order-2 md:order-1">
+                   <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-4">Visual & Liquid.</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-sm">
+                       Pockets fill up like liquid containers. Watch them drain as you spend, giving you an intuitive sense of your financial health.
+                   </p>
+                </div>
+                <div className="flex-1 relative min-h-[400px] md:min-h-auto flex items-end justify-center py-12 order-1 md:order-2 bg-gradient-to-b from-transparent to-black/5 dark:to-white/5">
+                    <PocketsLiquidVisual />
+                </div>
+            </BentoCard>
 
-        {/* Feature 2: Flexible Allocations */}
-        <FeatureBlock
-          title="Dynamic Resource Reallocation"
-          description="Rigid budgets break when life happens. Moneko’s Pockets allow you to 'roll with the punches.' If you overspend on groceries, instantly move funds from your 'Dining Out' pocket with a single tap. Adaptive budgeting for the real world."
-          align="right"
-          visual={<FlexibleMovementVisual />}
-        />
+            {/* Card 2: Flexible Allocations (Tall) */}
+            <BentoCard className="relative overflow-hidden bg-white dark:bg-black border border-gray-200 dark:border-gray-800 flex flex-col pt-8">
+                 <div className="px-8 w-full z-10 shrink-0">
+                     <div className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center mb-4 text-slate-600 dark:text-slate-400">
+                         <RefreshCw className="w-5 h-5" />
+                     </div>
+                     <h3 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white mb-2">Roll With Punches</h3>
+                     <p className="text-slate-500 dark:text-slate-400 text-base">
+                        Overspent on groceries? Instantly move funds from 'Dining Out' with a single tap.
+                     </p>
+                 </div>
+                 <div className="flex-1 w-full flex items-center justify-center relative overflow-hidden p-8">
+                    <FlexibleMovementVisual />
+                 </div>
+            </BentoCard>
 
-        {/* Feature 3: Goal Tracking */}
-        <FeatureBlock
-          title="Automated Financial Goal Tracking"
-          description="Whether it's an emergency fund, a house down payment, or a dream vacation, Pockets serve as dedicated sinking funds. Monitor your progress through interactive charts and celebrate milestones as your savings grow."
-          align="left"
-          visual={<GoalTrackingVisual />}
-        />
+             {/* Card 3: Goal Tracking (Wide) */}
+             <BentoCard className="md:col-span-3 overflow-hidden bg-slate-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row-reverse">
+                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center z-10 relative">
+                   <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center mb-4 shadow-sm text-slate-900 dark:text-white">
+                         <Target className="w-5 h-5" />
+                   </div>
+                   <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-4">Goal Sinking Funds.</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-md">
+                       Whether it's an emergency fund or a dream vacation, Pockets serve as dedicated sinking funds. Monitor progress and celebrate milestones.
+                   </p>
+                </div>
+                <div className="flex-1 relative min-h-[300px] flex items-center justify-center p-8 bg-gradient-to-t from-transparent to-white/50 dark:to-black/50">
+                    <GoalTrackingVisual />
+                </div>
+            </BentoCard>
 
-        {/* New SEO Rich Section: Methodology */}
+        </section>
+
+        {/* Methodology Section */}
         <section className="container px-4 py-24 mx-auto border-t border-slate-100 dark:border-slate-800">
            <div className="max-w-3xl mx-auto space-y-12">
               <div className="text-center">
@@ -191,17 +206,17 @@ export default function PocketsFeaturePage() {
                  <p className="text-slate-600 dark:text-slate-400">The science behind why Pockets help you save 20% more on average.</p>
               </div>
               <div className="grid md:grid-cols-2 gap-8">
-                 <div className="flex gap-4">
-                    <CheckCircle2 className="w-6 h-6 text-orange-500 shrink-0" />
+                 <div className="flex gap-4 p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                    <CheckCircle2 className="w-6 h-6 text-slate-700 dark:text-slate-300 shrink-0" />
                     <div>
-                       <h3 className="font-bold text-slate-900 dark:text-white">Ends Decision Fatigue</h3>
+                       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Ends Decision Fatigue</h3>
                        <p className="text-sm text-slate-500">Decide where your money goes at the start of the month, not at the checkout counter.</p>
                     </div>
                  </div>
-                 <div className="flex gap-4">
-                    <CheckCircle2 className="w-6 h-6 text-orange-500 shrink-0" />
+                 <div className="flex gap-4 p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                    <CheckCircle2 className="w-6 h-6 text-slate-700 dark:text-slate-300 shrink-0" />
                     <div>
-                       <h3 className="font-bold text-slate-900 dark:text-white">Identifies Leakage</h3>
+                       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Identifies Leakage</h3>
                        <p className="text-sm text-slate-500">Uncover hidden subscription costs and impulsive spending habits instantly.</p>
                     </div>
                  </div>
@@ -211,13 +226,13 @@ export default function PocketsFeaturePage() {
 
          {/* Bottom CTA */}
          <section className="container px-4 py-24 mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white">Ready to organize your finances?</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-xl mx-auto">Join thousands of users who have mastered their cash flow using the Moneko Pockets method.</p>
+            <h2 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white tracking-tight">Ready to organize your finances?</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-xl mx-auto">Join thousands of users who have mastered their cash flow using the Moneko Pockets method.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <AppleDownloadButton />
               <AndroidDownloadButton />
             </div>
-            <div className="mt-12 flex items-center justify-center gap-8 text-slate-400 text-sm">
+            <div className="mt-12 flex items-center justify-center gap-8 text-slate-500 dark:text-slate-400 text-sm font-medium">
                 <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> SEC-Level Security</span>
                 <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Instant Sync</span>
             </div>
@@ -225,32 +240,6 @@ export default function PocketsFeaturePage() {
       </main>
     </div>
   );
-}
-
-// --- Layout Components ---
-
-const FeatureBlock = ({ title, description, align, visual }: { title: string, description: string, align: 'left' | 'right', visual: ReactNode }) => {
-  return (
-    <div className="py-24">
-      <div className="container px-4 md:px-6 mx-auto">
-        <div className={cn("flex flex-col items-center gap-12 lg:gap-24", align === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row')}>
-          {/* Text Content */}
-          <div className="flex-1 space-y-6 text-center lg:text-left">
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{description}</p>
-          </div>
-          
-          {/* Visual Content */}
-          <div className="flex-1 w-full flex justify-center">
-             <div className="relative w-full max-w-[450px] aspect-[4/3] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex items-center justify-center p-6">
-                <div className="absolute inset-0 bg-grid-slate-200/50 dark:bg-grid-slate-800/50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] pointer-events-none" />
-                {visual}
-             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 // --- Visual Components ---
@@ -285,20 +274,20 @@ const PocketsLiquidVisual = () => {
   };
 
   const pockets = [
-    { name: "Rent", total: 1200, spent: 1200, color: "#ef4444" },
-    { name: "Food", total: 500, spent: 320, color: "#f97316" }, 
-    { name: "Fun", total: 200, spent: 170, color: "#a855f7" },
+    { name: "Rent", total: 1200, spent: 1200, color: "#ef4444" }, // red-500
+    { name: "Food", total: 500, spent: 320, color: "#f97316" }, // orange-500
+    { name: "Fun", total: 200, spent: 170, color: "#a855f7" }, // purple-500
   ];
 
   return (
-    <div className="flex gap-4 sm:gap-6 items-end justify-center w-full z-10">
+    <div className="flex gap-4 sm:gap-6 items-end justify-center w-full z-10 max-w-[400px]">
         {pockets.map((pocket, i) => {
             const percent = Math.min((pocket.spent / pocket.total) * 100, 100);
             const showWave = !prefersReducedMotion && percent > 5 && percent < 95;
             const amplitudeScale = Math.max(0.65, Math.min(1, percent / 100 + 0.25));
             
             return (
-                <div key={pocket.name} className="flex flex-col items-center gap-3 w-1/3 max-w-[100px]">
+                <div key={pocket.name} className="flex flex-col items-center gap-3 w-1/3">
                     <div className="relative w-full aspect-[1/2] rounded-[1.5rem] bg-white border-2 border-slate-100 dark:bg-black/20 dark:border-white/10 overflow-hidden shadow-sm ring-1 ring-black/5">
                         <div className="absolute inset-0 flex items-end">
                             <motion.div 
@@ -338,30 +327,30 @@ const PocketsLiquidVisual = () => {
 const FlexibleMovementVisual = () => {
     return (
         <div className="flex items-center gap-4 w-full max-w-[320px] relative z-10">
-            <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 shadow-sm opacity-60 scale-90">
-                 <div className="h-8 w-8 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center text-green-600 mb-2">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm opacity-60 scale-90">
+                 <div className="h-8 w-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-500 mb-2">
                     <PieChart className="w-4 h-4" />
                  </div>
-                 <div className="h-2 w-16 bg-slate-100 dark:bg-slate-700 rounded-full mb-2" />
-                 <div className="h-1.5 w-full bg-green-500/20 rounded-full overflow-hidden">
+                 <div className="h-2 w-16 bg-slate-100 dark:bg-slate-800 rounded-full mb-2" />
+                 <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div className="h-full w-[80%] bg-green-500" />
                  </div>
             </div>
 
             <div className="flex flex-col items-center gap-2 text-slate-400">
-                <div className="text-xs font-mono bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-300">
+                <div className="text-xs font-mono bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded text-green-600 dark:text-green-400">
                     Moving $20
                 </div>
-                <Layers className="w-5 h-5 animate-pulse" />
+                <Layers className="w-5 h-5 animate-pulse text-green-500" />
             </div>
 
-            <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl p-4 border-2 border-orange-500/50 shadow-lg scale-105">
-                 <div className="h-8 w-8 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center text-orange-600 mb-2">
+            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl p-4 border-2 border-orange-500 dark:border-orange-400 shadow-lg scale-105">
+                 <div className="h-8 w-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center text-orange-600 dark:text-orange-400 mb-2">
                     <Wallet className="w-4 h-4" />
                  </div>
                  <div className="font-medium text-sm text-slate-800 dark:text-slate-200 mb-1">Groceries</div>
-                 <div className="text-xs text-orange-500 font-medium">+ $20.00</div>
-                 <div className="h-1.5 w-full bg-orange-500/20 rounded-full overflow-hidden mt-3">
+                 <div className="text-xs text-orange-500 font-bold">+ $20.00</div>
+                 <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-3">
                     <motion.div 
                         initial={{ width: "90%" }}
                         animate={{ width: "40%" }}
@@ -380,7 +369,7 @@ const GoalTrackingVisual = () => {
          <div className="w-full max-w-[300px] space-y-4 z-10">
              <div className="flex items-center justify-between mb-2">
                  <div className="flex items-center gap-2">
-                     <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center text-blue-600">
+                     <div className="h-8 w-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
                         <Target className="w-4 h-4" />
                      </div>
                      <div>
@@ -389,11 +378,11 @@ const GoalTrackingVisual = () => {
                      </div>
                  </div>
                  <div className="text-right">
-                    <div className="font-mono font-bold text-blue-600 text-lg">75%</div>
+                    <div className="font-mono font-bold text-blue-600 dark:text-blue-400 text-lg">75%</div>
                  </div>
              </div>
 
-             <div className="h-32 w-full bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden relative">
+             <div className="h-32 w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden relative">
                  <div className="absolute inset-x-4 bottom-4 top-4 flex gap-1 items-end">
                      {[30, 45, 60, 75].map((h, i) => (
                          <motion.div 

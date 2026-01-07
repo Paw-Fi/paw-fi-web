@@ -13,6 +13,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { getCurrencySymbolBasedOnTimeZone } from "@/utils/currency-symbols";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import monekoAnimate from "@/assets/images/logo/moneko-avatar.gif";
+import { BentoCard } from "@/components/ui/bento-card";
 
 // SEO & Meta Imports
 import { Helmet } from "@dr.pogodin/react-helmet";
@@ -100,7 +101,7 @@ export default function AIInsightsFeaturePage() {
   };
 
   return (
-    <div className="min-h-screen relative bg-white dark:bg-gray-900 overflow-hidden font-sans selection:bg-cyan-100 dark:selection:bg-cyan-900">
+    <div className="min-h-screen relative bg-white dark:bg-[#050505] overflow-hidden font-sans selection:bg-gray-100 dark:selection:bg-gray-800">
       <Helmet>
         <title>{META_TITLE}</title>
         <meta name="description" content={META_DESCRIPTION} />
@@ -112,31 +113,18 @@ export default function AIInsightsFeaturePage() {
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
-      {/* Background Decor */}
-      <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen opacity-40 dark:opacity-20">
-         <></>
-      </BackgroundBeamsWithCollision>
-      <DotPattern
-        className={cn(
-          "fixed inset-0 opacity-30 dark:opacity-15 pointer-events-none z-[1]",
-          "[mask-image:radial-gradient(1200px_circle_at_center,white,transparent)]"
-        )}
-        cr={1}
-        cx={20}
-        cy={20}
-      />
+      {/* Background Decor - Subtle Technical Grid */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+      </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <MonekoIcon />
             <motion.button
               onClick={() => navigate({ to: "/" })}
-              className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200 px-3 py-2 rounded-md hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+              className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               whileHover={{ x: -2 }}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -144,9 +132,10 @@ export default function AIInsightsFeaturePage() {
             </motion.button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <main className="relative z-10 pt-32 pb-20">
+      <main className="relative z-10 pt-32 px-4 md:px-6 max-w-[1200px] mx-auto">
+        
         {/* Hero Section */}
         <section className="container px-4 md:px-6 mx-auto mb-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -155,13 +144,13 @@ export default function AIInsightsFeaturePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 text-sm font-medium mb-6">
-                 <BrainCircuit className="w-4 h-4" />
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 text-sm font-medium mb-6">
+                 <BrainCircuit className="w-3 h-3 text-slate-500" />
                  Predictive Financial Clarity
               </span>
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
                 Turn Data into <br />
-                <span className="text-cyan-500 relative inline-block">Conversational Insights.</span>
+                <span className="text-gray-400 dark:text-gray-600">Conversational Insights.</span>
               </h1>
               <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
                 Stop deciphering complex spreadsheets. Moneko's <strong>AI Financial Assistant</strong> translates 
@@ -182,31 +171,57 @@ export default function AIInsightsFeaturePage() {
           </div>
         </section>
 
-        {/* Feature 1: Natural Language Queries */}
-        <FeatureBlock
-          title="Conversational Budget Analysis"
-          description="Your personal finance app should speak your language. Ask Moneko 'How much have I spent on coffee this quarter?' or 'Where did my money go last week?' to receive instant, categorized visualizations of your cash flow."
-          align="left"
-          visual={<AskAnythingVisual />}
-        />
+        {/* Bento Grid Features */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[auto] md:auto-rows-[550px] mb-32">
+            
+            {/* Card 1: Conversational Budget Analysis (Wide) */}
+            <BentoCard className="md:col-span-2 overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row">
+                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center z-10 relative order-2 md:order-1">
+                   <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-4">Conversational Analysis.</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-sm">
+                       Ask Moneko "How much have I spent on coffee this quarter?" or "Where did my money go?" to receive instant visualizations.
+                   </p>
+                </div>
+                <div className="flex-1 relative min-h-[400px] md:min-h-auto flex items-center justify-center p-8 order-1 md:order-2 bg-gradient-to-b from-transparent to-black/5 dark:to-white/5">
+                     <AskAnythingVisual />
+                </div>
+            </BentoCard>
 
-        {/* Feature 2: Scenario Planning */}
-        <FeatureBlock
-          title="Predictive Scenario Simulations"
-          description="Simulate the long-term impact of financial decisions before you commit. Moneko runs Monte Carlo simulations on your net worth to show how a new car payment or a higher savings rate affects your retirement and fire goals."
-          align="right"
-          visual={<ScenarioSimulationVisual />}
-        />
+            {/* Card 2: Scenario Planning (Tall) */}
+            <BentoCard className="relative overflow-hidden bg-white dark:bg-black border border-gray-200 dark:border-gray-800 flex flex-col pt-8">
+                 <div className="px-8 w-full z-10 shrink-0">
+                     <div className="w-10 h-10 bg-slate-100 dark:bg-slate-900 rounded-xl flex items-center justify-center mb-4 text-slate-600 dark:text-slate-400">
+                         <TrendingUp className="w-5 h-5" />
+                     </div>
+                     <h3 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white mb-2">Future Simulator</h3>
+                     <p className="text-slate-500 dark:text-slate-400 text-base">
+                        Simulate the impact of new car payments or savings rates on your net worth.
+                     </p>
+                 </div>
+                 <div className="flex-1 w-full flex items-end relative overflow-hidden mt-4">
+                    <ScenarioSimulationVisual />
+                 </div>
+            </BentoCard>
 
-        {/* Feature 3: Smart Alerts */}
-        <FeatureBlock
-          title="Automated Bill & Fraud Monitoring"
-          description="Moneko acts as a 24/7 financial watchdog. Using anomaly detection, it alerts you to subscription price hikes, unusual spending spikes, and potential duplicate charges before they affect your balance."
-          align="left"
-          visual={<SmartAlertsVisual />}
-        />
+             {/* Card 3: Smart Alerts (Wide) */}
+             <BentoCard className="md:col-span-3 overflow-hidden bg-slate-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row-reverse">
+                <div className="flex-1 p-8 md:p-12 flex flex-col justify-center z-10 relative">
+                   <div className="w-10 h-10 bg-white dark:bg-black rounded-xl flex items-center justify-center mb-4 shadow-sm text-slate-900 dark:text-white">
+                         <AlertTriangle className="w-5 h-5" />
+                   </div>
+                   <h3 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-4">24/7 Watchdog.</h3>
+                   <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed max-w-md">
+                       Moneko uses anomaly detection to alert you to subscription hikes, spending spikes, and potential fraud before they drain your wallet.
+                   </p>
+                </div>
+                <div className="flex-1 relative min-h-[300px] flex items-center justify-center p-8 bg-gradient-to-t from-transparent to-white/50 dark:to-black/50">
+                    <SmartAlertsVisual />
+                </div>
+            </BentoCard>
 
-        {/* Methodology Section for SEO E-E-A-T */}
+        </section>
+
+        {/* Methodology Section */}
         <section className="container px-4 py-24 mx-auto border-t border-slate-100 dark:border-slate-800">
            <div className="max-w-3xl mx-auto space-y-12">
               <div className="text-center">
@@ -214,17 +229,17 @@ export default function AIInsightsFeaturePage() {
                  <p className="text-slate-600 dark:text-slate-400">Advanced machine learning designed for personal financial sovereignty.</p>
               </div>
               <div className="grid md:grid-cols-2 gap-8">
-                 <div className="flex gap-4">
-                    <BarChart3 className="w-6 h-6 text-cyan-500 shrink-0" />
+                 <div className="flex gap-4 p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                    <BarChart3 className="w-6 h-6 text-slate-700 dark:text-slate-300 shrink-0" />
                     <div>
-                       <h3 className="font-bold text-slate-900 dark:text-white">Trend Extraction</h3>
+                       <h3 className="font-bold text-slate-900 dark:text-white mb-1">Trend Extraction</h3>
                        <p className="text-sm text-slate-500">Moneko identifies cyclical spending habits to predict future cash flow shortages before they happen.</p>
                     </div>
                  </div>
-                 <div className="flex gap-4">
-                    <MessageSquare className="w-6 h-6 text-cyan-500 shrink-0" />
+                 <div className="flex gap-4 p-6 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+                    <MessageSquare className="w-6 h-6 text-slate-700 dark:text-slate-300 shrink-0" />
                     <div>
-                       <h3 className="font-bold text-slate-900 dark:text-white">NLP Intelligence</h3>
+                       <h3 className="font-bold text-slate-900 dark:text-white mb-1">NLP Intelligence</h3>
                        <p className="text-sm text-slate-500">Natural Language Processing allows for human-like interaction with your financial data.</p>
                     </div>
                  </div>
@@ -234,13 +249,13 @@ export default function AIInsightsFeaturePage() {
 
          {/* Bottom CTA */}
          <section className="container px-4 py-24 mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-4 text-slate-900 dark:text-white">Ready for total financial clarity?</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-xl mx-auto">Harness the power of AI to stop tracking the past and start planning your future.</p>
+            <h2 className="text-4xl font-bold mb-6 text-slate-900 dark:text-white tracking-tight">Ready for total financial clarity?</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-xl mx-auto">Harness the power of AI to stop tracking the past and start planning your future.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <AppleDownloadButton />
               <AndroidDownloadButton />
             </div>
-            <div className="mt-12 flex items-center justify-center gap-8 text-slate-400 text-sm">
+            <div className="mt-12 flex items-center justify-center gap-8 text-slate-500 dark:text-slate-400 text-sm font-medium">
                 <span className="flex items-center gap-2"><ShieldCheck className="w-4 h-4" /> AES-256 Encryption</span>
                 <span className="flex items-center gap-2"><Zap className="w-4 h-4" /> Real-Time Analysis</span>
             </div>
@@ -250,42 +265,14 @@ export default function AIInsightsFeaturePage() {
   );
 }
 
-// --- Layout Components ---
-
-const FeatureBlock = ({ title, description, align, visual }: { title: string, description: string, align: 'left' | 'right', visual: ReactNode }) => {
-  return (
-    <div className="py-24">
-      <div className="container px-4 md:px-6 mx-auto">
-        <div className={cn("flex flex-col items-center gap-12 lg:gap-24", align === 'right' ? 'lg:flex-row-reverse' : 'lg:flex-row')}>
-          {/* Text Content */}
-          <div className="flex-1 space-y-6 text-center lg:text-left">
-            <h2 className="text-3xl md:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">{description}</p>
-          </div>
-          
-          {/* Visual Content */}
-          <div className="flex-1 w-full flex justify-center">
-             <div className="relative w-full max-w-[450px] aspect-[4/3] bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex items-center justify-center">
-                <div className="absolute inset-0 bg-grid-slate-200/50 dark:bg-grid-slate-800/50 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] pointer-events-none" />
-                <div className="relative w-full h-full flex items-center justify-center p-6">
-                    {visual}
-                </div>
-             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// --- Visual Components ---
+// --- Visual Components (Preserved & Adjusted for Bento) ---
 
 const AskAnythingVisual = () => {
     const currencySymbol = getCurrencySymbolBasedOnTimeZone();
     return (
-        <div className="w-full max-w-[350px] flex flex-col gap-6">
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg p-4 flex items-center gap-3 relative z-20">
-                 <div className="bg-cyan-100 dark:bg-cyan-900/30 p-2 rounded-full text-cyan-600">
+        <div className="w-full max-w-[380px] flex flex-col gap-6 scale-[0.9] md:scale-100">
+            <div className="bg-white dark:bg-black border border-gray-100 dark:border-gray-800 rounded-2xl shadow-xl shadow-gray-200/50 dark:shadow-none p-4 flex items-center gap-3 relative z-20">
+                 <div className="bg-slate-100 dark:bg-gray-800 p-2 rounded-full text-slate-600 dark:text-slate-400">
                     <Sparkles className="w-5 h-5" />
                  </div>
                  <div className="flex-1 h-6 relative overflow-hidden">
@@ -298,7 +285,7 @@ const AskAnythingVisual = () => {
                         Can I afford a trip to Japan?
                      </motion.div>
                  </div>
-                 <div className="w-8 h-8 rounded-full bg-cyan-500 text-white flex items-center justify-center">
+                 <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black flex items-center justify-center">
                      <Search className="w-4 h-4" />
                  </div>
             </div>
@@ -307,16 +294,16 @@ const AskAnythingVisual = () => {
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 1.5, duration: 0.6 }}
-                className="bg-white dark:bg-slate-800 border-l-4 border-cyan-500 shadow-md rounded-r-xl p-5 relative z-10"
+                className="bg-white dark:bg-black border-l-4 border-slate-900 dark:border-white shadow-xl shadow-gray-200/50 dark:shadow-none rounded-r-xl p-5 relative z-10"
             >
                 <div className="flex gap-4">
-                     <img src={monekoAnimate} className="w-10 h-10 rounded-full border border-slate-100 dark:border-slate-700" alt="Moneko AI Assistant" />
+                     <img src={monekoAnimate} className="w-10 h-10 rounded-full border border-gray-100 dark:border-gray-800" alt="Moneko AI Assistant" />
                      <div className="space-y-2">
                          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
                              <span className="font-bold text-slate-900 dark:text-white">Yes! 🇯🇵</span> you can comfortably afford it.
                          </p>
-                         <div className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg">
-                             Based on your {currencySymbol}400/mo surplus, you'll reach your {currencySymbol}3,500 goal by <span className="font-semibold text-cyan-600 dark:text-cyan-400">November 15th</span>.
+                         <div className="text-xs text-slate-500 dark:text-slate-400 bg-gray-50 dark:bg-gray-900 p-2 rounded-lg">
+                             Based on your {currencySymbol}400/mo surplus, you'll reach your {currencySymbol}3,500 goal by <span className="font-semibold text-slate-900 dark:text-white">November 15th</span>.
                          </div>
                      </div>
                 </div>
@@ -327,36 +314,31 @@ const AskAnythingVisual = () => {
 
 const ScenarioSimulationVisual = () => {
     return (
-        <div className="w-full h-full p-4 relative flex flex-col justify-end">
-            <div className="absolute top-6 left-6 z-10">
-                <div className="bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 mb-2">
-                    Net Worth Projection
-                </div>
-            </div>
-
-            <div className="w-full h-48 relative">
-                 <div className="absolute inset-0 flex flex-col justify-between opacity-20 dark:opacity-10">
-                    <div className="w-full h-px bg-slate-400" />
-                    <div className="w-full h-px bg-slate-400" />
-                    <div className="w-full h-px bg-slate-400" />
-                    <div className="w-full h-px bg-slate-400" />
+        <div className="w-full h-full p-6 relative flex flex-col justify-end">
+            <div className="w-full h-40 relative">
+                 {/* Chart Grid */}
+                 <div className="absolute inset-0 flex flex-col justify-between opacity-30 dark:opacity-20">
+                    <div className="w-full h-px bg-slate-300 border-t border-dashed border-slate-300" />
+                    <div className="w-full h-px bg-slate-300 border-t border-dashed border-slate-300" />
+                    <div className="w-full h-px bg-slate-300 border-t border-dashed border-slate-300" />
                  </div>
 
                  <svg className="absolute inset-0 w-full h-full overflow-visible">
                      <path 
-                        d="M0 150 C 50 145, 100 140, 150 130 C 200 120, 250 115, 300 110" 
+                        d="M0 130 C 50 125, 100 120, 150 110 C 200 100, 250 95, 300 90" 
                         fill="none" 
                         stroke="currentColor" 
-                        className="text-slate-300 dark:text-slate-600" 
-                        strokeWidth="3" 
+                        className="text-slate-300 dark:text-slate-700" 
+                        strokeWidth="2" 
                         strokeDasharray="4 4" 
                      />
                      
                      <motion.path 
-                        d="M150 130 C 200 100, 250 60, 350 20" 
+                        d="M150 110 C 200 80, 250 40, 320 10" 
                         fill="none" 
-                        stroke="#06b6d4" 
-                        strokeWidth="4"
+                        stroke="currentColor"
+                        className="text-slate-900 dark:text-white" 
+                        strokeWidth="3"
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
                         whileInView={{ pathLength: 1 }}
@@ -364,10 +346,10 @@ const ScenarioSimulationVisual = () => {
                      />
                  </svg>
 
-                 <div className="absolute top-[130px] left-[150px] w-3 h-3 bg-slate-400 rounded-full border-2 border-white dark:border-slate-900 -translate-x-1.5 -translate-y-1.5" />
+                 <div className="absolute top-[110px] left-[45%] w-2.5 h-2.5 bg-slate-400 rounded-full border border-white dark:border-black -translate-x-1/2 -translate-y-1/2" />
                  
                  <motion.div 
-                    className="absolute top-[20px] right-0 bg-cyan-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-lg transform translate-x-4"
+                    className="absolute top-[10px] right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm"
                     initial={{ opacity: 0, scale: 0.5 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 2 }}
@@ -376,10 +358,9 @@ const ScenarioSimulationVisual = () => {
                  </motion.div>
             </div>
             
-            <div className="flex justify-between text-xs text-slate-400 mt-2 px-1">
+            <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-400 mt-4">
                 <span>Today</span>
-                <span>1 Year</span>
-                <span>5 Years</span>
+                <span>Next Year</span>
             </div>
         </div>
     )
@@ -387,33 +368,33 @@ const ScenarioSimulationVisual = () => {
 
 const SmartAlertsVisual = () => {
     return (
-        <div className="w-full max-w-[320px] flex flex-col gap-4">
+        <div className="w-full max-w-[320px] flex flex-col gap-3">
              <motion.div 
-                initial={{ x: -50, opacity: 0 }}
+                initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.5 }}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 flex gap-3 opacity-60 scale-95"
+                className="bg-white dark:bg-black rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 opacity-50 scale-95 blur-[1px]"
              >
-                 <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
-                    <TrendingUp className="w-5 h-5" />
+                 <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <TrendingUp className="w-4 h-4" />
                  </div>
-                 <div>
-                     <div className="h-2 w-24 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-                     <div className="h-2 w-48 bg-slate-100 dark:bg-slate-700/50 rounded" />
+                 <div className="flex-1 space-y-2 py-1">
+                     <div className="h-1.5 w-16 bg-slate-200 dark:bg-slate-800 rounded" />
+                     <div className="h-1.5 w-32 bg-slate-100 dark:bg-slate-800/50 rounded" />
                  </div>
              </motion.div>
 
              <motion.div 
-                initial={{ x: -50, opacity: 0 }}
+                initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-lg border-l-4 border-l-red-500 border-y border-r border-slate-100 dark:border-slate-700 flex gap-4"
+                className="bg-white dark:bg-black rounded-xl p-4 shadow-xl border-l-4 border-l-slate-900 dark:border-l-white border-y border-r border-gray-200 dark:border-gray-800 flex gap-4 relative z-10"
              >
-                 <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 shrink-0">
+                 <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-900 dark:text-white shrink-0">
                     <AlertTriangle className="w-5 h-5" />
                  </div>
                  <div>
-                     <div className="font-semibold text-sm text-slate-800 dark:text-slate-200 mb-1">Subscription Hike</div>
+                     <div className="font-semibold text-sm text-slate-900 dark:text-white mb-1">Subscription Hike</div>
                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
                          Your <span className="font-medium text-slate-900 dark:text-white">Adobe Creative Cloud</span> bill increased by $3.00 this month.
                      </p>
@@ -421,17 +402,17 @@ const SmartAlertsVisual = () => {
              </motion.div>
              
              <motion.div 
-                initial={{ x: -50, opacity: 0 }}
+                initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700 flex gap-3 opacity-40 scale-90"
+                className="bg-white dark:bg-black rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 opacity-40 scale-90 blur-[2px]"
              >
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                    <Calendar className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                    <Calendar className="w-4 h-4" />
                  </div>
-                 <div>
-                     <div className="h-2 w-20 bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-                     <div className="h-2 w-32 bg-slate-100 dark:bg-slate-700/50 rounded" />
+                 <div className="flex-1 space-y-2 py-1">
+                      <div className="h-1.5 w-12 bg-slate-200 dark:bg-slate-800 rounded" />
+                      <div className="h-1.5 w-24 bg-slate-100 dark:bg-slate-800/50 rounded" />
                  </div>
              </motion.div>
         </div>
