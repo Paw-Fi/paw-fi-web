@@ -389,6 +389,7 @@ const GoalTrackingVisual = () => {
                             key={i}
                             initial={{ height: 0 }}
                             whileInView={{ height: `${h}%` }}
+                            viewport={{ once: true }}
                             transition={{ duration: 0.8, delay: i * 0.2 }}
                             className="flex-1 bg-blue-500 rounded-t-sm opacity-90"
                             style={{ opacity: 0.5 + (i * 0.15)}}

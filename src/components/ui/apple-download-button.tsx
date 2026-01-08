@@ -11,7 +11,7 @@ export const AppleDownloadButton=(props:{className?:string})=>{
                   rel="noopener noreferrer"
                   className={classNames("inline-flex items-center gap-2 rounded-2xl bg-black text-white dark:bg-white dark:text-black px-6 py-3 text-base font-semibold shadow-sm hover:opacity-90 transition-opacity",props.className)}
                 >
-                  <FontAwesomeIcon icon={faApple} className="text-xl w-auto" />
+                  <FontAwesomeIcon icon={faApple} className="text-xl w-5 h-5" />
                   Download on TestFlight
                 </a>
               </div>

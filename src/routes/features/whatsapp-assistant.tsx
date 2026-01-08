@@ -279,7 +279,7 @@ function NavBar({ navigate }: { navigate: any }) {
 const PhoneMockup = ({ mode }: { mode: 'capture' | 'insights' | 'sync' }) => {
   const currency = getCurrencySymbolBasedOnTimeZone();
   const ref = useRef(null)
-  const isInView = useInView(ref, { margin: "-100px" })
+  const isInView = useInView(ref, { margin: "-100px", once: true })
 
   return (
     <div ref={ref} className="bg-transparent w-full flex justify-center pointer-events-none select-none">

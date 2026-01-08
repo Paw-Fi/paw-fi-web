@@ -279,6 +279,7 @@ const AskAnythingVisual = () => {
                      <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         whileInView={{ y: 0, opacity: 1 }}
+                        viewport={{ once: true }}
                         transition={{ delay: 0.5, duration: 0.5 }}
                         className="text-slate-800 dark:text-slate-200 text-sm font-medium"
                      >
@@ -293,6 +294,7 @@ const AskAnythingVisual = () => {
             <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true }}
                 transition={{ delay: 1.5, duration: 0.6 }}
                 className="bg-white dark:bg-black border-l-4 border-slate-900 dark:border-white shadow-xl shadow-gray-200/50 dark:shadow-none rounded-r-xl p-5 relative z-10"
             >
@@ -342,6 +344,7 @@ const ScenarioSimulationVisual = () => {
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
                         whileInView={{ pathLength: 1 }}
+                        viewport={{ once: true }}
                         transition={{ duration: 1.5, delay: 0.5 }}
                      />
                  </svg>
@@ -352,6 +355,7 @@ const ScenarioSimulationVisual = () => {
                     className="absolute top-[10px] right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm"
                     initial={{ opacity: 0, scale: 0.5 }}
                     whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
                     transition={{ delay: 2 }}
                  >
                      +25% Growth
@@ -372,6 +376,7 @@ const SmartAlertsVisual = () => {
              <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
                 className="bg-white dark:bg-black rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 opacity-50 scale-95 blur-[1px]"
              >
@@ -387,6 +392,7 @@ const SmartAlertsVisual = () => {
              <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="bg-white dark:bg-black rounded-xl p-4 shadow-xl border-l-4 border-l-slate-900 dark:border-l-white border-y border-r border-gray-200 dark:border-gray-800 flex gap-4 relative z-10"
              >
@@ -404,6 +410,7 @@ const SmartAlertsVisual = () => {
              <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.4 }}
                 className="bg-white dark:bg-black rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 opacity-40 scale-90 blur-[2px]"
              >

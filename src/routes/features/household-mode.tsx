@@ -345,6 +345,7 @@ const FairSplittingVisual = () => {
                     <motion.div 
                         initial={{ width: "50%" }}
                         whileInView={{ width: "60%" }}
+                        viewport={{ once: true }}
                         transition={{ duration: 1, delay: 0.5 }}
                         className="h-full bg-slate-900 dark:bg-slate-200 relative"
                     >

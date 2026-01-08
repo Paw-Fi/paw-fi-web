@@ -173,7 +173,7 @@ serve(async (req) => {
       expensesQuery = expensesQuery.eq('currency', currency);
     }
 
-    const { data: expenses, error: expensesError } = await expensesQuery;
+    const { data: expensesRaw, error: expensesError } = await expensesQuery;
 
     if (expensesError) {
       console.error('Error fetching expenses:', expensesError);
@@ -186,10 +186,14 @@ serve(async (req) => {
       );
     }
 
-    // Calculate totals (treat ALL rows in expenses table as expenses)
-    // We sum absolute values to be robust whether rows were inserted as negative or positive.
+    const expenses = (expensesRaw || []).filter((e) => {
+      const isRecurring = e.is_recurring === true;
+      const type = (e.type || 'expense').toLowerCase();
+      return !isRecurring && type !== 'income';
+    });
+
     const totalExpensesCents = expenses
-      ?.reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0) || 0;
+      .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0);
 
     // Income is not tracked here; if ever added, it should be in a different table
     const totalIncomeCents = 0;
@@ -235,7 +239,7 @@ serve(async (req) => {
     // Calculate member contributions with CORRECT split handling
     const memberContributionsMap = new Map<string, MemberContribution>();
 
-    for (const expense of expenses || []) {
+    for (const expense of expenses) {
       const expenseId = expense.id;
       const payerId = expense.user_id;
       const expenseAmount = Math.abs(expense.amount_cents || 0);
@@ -345,7 +349,7 @@ serve(async (req) => {
     // Calculate category breakdown
     const categoryMap = new Map<string, { amount_cents: number; count: number }>();
 
-    for (const expense of expenses || []) {
+    for (const expense of expenses) {
       const category = expense.category || 'Uncategorized';
       const amount = Math.abs(expense.amount_cents || 0);
 
@@ -372,7 +376,7 @@ serve(async (req) => {
     let userActualSpending = 0;
 
     // Start with total expenses the user paid
-    const userExpenses = expenses?.filter(e => e.user_id === user.id) || [];
+    const userExpenses = expenses.filter(e => e.user_id === user.id);
 
     for (const expense of userExpenses) {
       // Check if this expense has a split
@@ -429,8 +433,8 @@ serve(async (req) => {
         } else {
           // Use all user's expenses (absolute), regardless of sign
           const userExpenseTotal = expenses
-            ?.filter(e => e.user_id === user.id)
-            .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0) || 0;
+            .filter(e => e.user_id === user.id)
+            .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0);
           spentCents = userExpenseTotal;
         }
       }
@@ -463,7 +467,7 @@ serve(async (req) => {
         total_expenses_cents: totalExpensesCents,
         total_income_cents: totalIncomeCents,
         net_cents: netCents,
-        transaction_count: expenses?.length || 0,
+        transaction_count: expenses.length,
         split_count: splitGroups?.length || 0
       },
       member_contributions: Array.from(memberContributionsMap.values()),
