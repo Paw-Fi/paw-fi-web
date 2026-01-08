@@ -327,8 +327,8 @@ const ScenarioSimulationVisual = () => {
                      <path 
                         d="M0 130 C 50 125, 100 120, 150 110 C 200 100, 250 95, 300 90" 
                         fill="none" 
-                        stroke="currentColor" 
-                        className="text-slate-300 dark:text-slate-700" 
+                        stroke="rgb(203 213 225)" 
+                        className="dark:stroke-slate-700" 
                         strokeWidth="2" 
                         strokeDasharray="4 4" 
                      />
@@ -336,8 +336,8 @@ const ScenarioSimulationVisual = () => {
                      <motion.path 
                         d="M150 110 C 200 80, 250 40, 320 10" 
                         fill="none" 
-                        stroke="currentColor"
-                        className="text-slate-900 dark:text-white" 
+                        stroke="rgb(15 23 42)"
+                        className="dark:stroke-white" 
                         strokeWidth="3"
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
