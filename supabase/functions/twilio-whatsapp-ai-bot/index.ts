@@ -23,7 +23,7 @@ import { sendWhatsAppInteractiveButtons } from "../shared/whatsapp-helpers.ts";
 
 // --- Constants & Types ---
 
-const MODEL_NAME = "gemini-2.5-flash"; // Fast and capable
+const MODEL_NAME = "gemini-3-flash-preview"; // Fast and capable
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal and household finances.

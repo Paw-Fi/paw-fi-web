@@ -6,10 +6,24 @@ import { getCurrencySymbol } from "./currency-symbols.ts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
 function b64encode(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
+  return encodeBase64(bytes);
+}
+
+function getFirstFunctionCall(response: any) {
+  const direct = response?.response?.functionCalls?.()?.[0];
+  if (direct) return direct;
+
+  const candidates = response?.response?.candidates;
+  if (!candidates || candidates.length === 0) return null;
+  
+  const parts = candidates[0].content?.parts || [];
+  for (const p of parts) {
+    if (p.functionCall) return p.functionCall;
+  }
+  return null;
 }
 
 export interface AnalyzeAttachment {
@@ -106,16 +120,20 @@ async function analyzeFromText(
 ): Promise<ExpenseItem[]> {
   let items: ExpenseItem[] = [];
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
   const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
-
-  const response = await model.generateContent({
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3-flash-preview",
+    tools,
     systemInstruction,
+  });
+  
+  const response = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nUser: ${bodyText}` }] }],
-    generationConfig: { maxOutputTokens: 512 },
+    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    generationConfig: { maxOutputTokens: 4096 },
   });
 
-  const tool = response.response.functionCalls()?.[0];
+  const tool = getFirstFunctionCall(response);
   if (tool && tool.name === "add_transactions") {
     const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
     items = rawItems
@@ -124,10 +142,8 @@ async function analyzeFromText(
         const rawCategory = it.category || "other";
         const normalizedCategory = normalizeCategory(rawCategory);
 
-        // Debug: Log category normalization for text analysis
-        console.log(
-          `[analyze-expense] Text analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`,
-        );
+        // Debug: Log category and amount
+        console.log(`[analyze-expense] Text raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`);
 
         const txType = String(it.type || "").toLowerCase();
         // Use correct symbol for the detected currency
@@ -135,7 +151,7 @@ async function analyzeFromText(
 
         return {
           type: txType === "income" || txType === "expense" ? txType : undefined,
-          amount: Number(it.amount),
+          amount: Math.abs(Number(it.amount)),
           category: normalizedCategory,
           currency: itemCurrency,
           currencySymbol: itemCurrencySymbol,
@@ -144,7 +160,7 @@ async function analyzeFromText(
         } as ExpenseItem;
       })
       .filter((it) => {
-        return (
+        const isValid =
           it.type &&
           (it.type === "income" || it.type === "expense") &&
           Number.isFinite(it.amount) &&
@@ -152,8 +168,10 @@ async function analyzeFromText(
           typeof it.category === "string" &&
           typeof it.currency === "string" &&
           typeof it.currencySymbol === "string" &&
-          typeof it.date === "string"
-        );
+          typeof it.date === "string";
+        
+        if (!isValid) console.log(`[analyze-expense] Text filtered invalid: ${JSON.stringify(it)}`);
+        return isValid;
       });
 
     if (items.length > 1) {
@@ -184,11 +202,15 @@ async function analyzeFromAudio(
 ): Promise<ExpenseItem[]> {
   let items: ExpenseItem[] = [];
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", tools });
   const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-3-flash-preview",
+    tools,
+    systemInstruction,
+  });
 
   const response = await model.generateContent({
-    systemInstruction,
+    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
     contents: [
       {
         role: "user",
@@ -200,18 +222,18 @@ async function analyzeFromAudio(
               "The following is an audio description of one or more transactions. Analyze it and return the structured transactions by calling add_transactions.",
           },
           {
-            inline_data: {
-              mime_type: contentType || "audio/mp3",
+            inlineData: {
+              mimeType: contentType || "audio/mp3",
               data: base64Audio,
             },
           },
         ],
       },
     ],
-    generationConfig: { maxOutputTokens: 512 },
+    generationConfig: { maxOutputTokens: 4096 },
   });
 
-  const tool = response.response.functionCalls()?.[0];
+  const tool = getFirstFunctionCall(response);
   if (tool && tool.name === "add_transactions") {
     const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
     items = rawItems
@@ -221,7 +243,7 @@ async function analyzeFromAudio(
         const normalizedCategory = normalizeCategory(rawCategory);
 
         console.log(
-          `[analyze-expense] Audio analysis category normalization: "${rawCategory}" -> "${normalizedCategory}"`,
+          `[analyze-expense] Audio raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`,
         );
 
         const txType = String(it.type || "").toLowerCase();
@@ -229,7 +251,7 @@ async function analyzeFromAudio(
 
         return {
           type: txType === "income" || txType === "expense" ? txType : undefined,
-          amount: Number(it.amount),
+          amount: Math.abs(Number(it.amount)),
           category: normalizedCategory,
           currency: itemCurrency,
           currencySymbol: itemCurrencySymbol,
@@ -238,7 +260,7 @@ async function analyzeFromAudio(
         } as ExpenseItem;
       })
       .filter((it) => {
-        return (
+        const isValid =
           it.type &&
           (it.type === "income" || it.type === "expense") &&
           Number.isFinite(it.amount) &&
@@ -246,8 +268,10 @@ async function analyzeFromAudio(
           typeof it.category === "string" &&
           typeof it.currency === "string" &&
           typeof it.currencySymbol === "string" &&
-          typeof it.date === "string"
-        );
+          typeof it.date === "string";
+        
+        if (!isValid) console.log(`[analyze-expense] Audio filtered invalid: ${JSON.stringify(it)}`);
+        return isValid;
       });
 
     if (items.length > 1) {
@@ -289,73 +313,117 @@ async function attemptAnalysis(
   callerCurrency: string,
   callerDate: string,
   tools: any,
-  timeoutMs: number = 15000
+  timeoutMs: number = 30000,
+  overrideContentType?: string
 ): Promise<{ success: boolean; items?: ExpenseItem[]; error?: string }> {
   const timeoutPromise = new Promise<never>((_, reject) => 
     setTimeout(() => reject(new Error(`Model ${modelName} timed out after ${timeoutMs}ms`)), timeoutMs)
   );
 
   try {
-    const model = genAI.getGenerativeModel({ model: modelName, tools });
+    const model = genAI.getGenerativeModel({ 
+      model: modelName, 
+      tools,
+      systemInstruction,
+    });
     
     const responsePromise = model.generateContent({
-      systemInstruction,
+      toolConfig: { functionCallingConfig: { mode: "AUTO" } },
       contents: [{
         role: "user",
         parts: [
           { text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract transaction details from this image (receipt, bank statement, or transaction notification):` },
           {
-            inline_data: {
-              mime_type: body.image?.contentType || "image/jpeg",
+            inlineData: {
+              mimeType: overrideContentType || body.image?.contentType || "image/jpeg",
               data: base64Image,
             },
           },
         ],
       }],
-      generationConfig: { maxOutputTokens: 512 },
+      generationConfig: { maxOutputTokens: 4096 },
     });
 
     const response = await Promise.race([responsePromise, timeoutPromise]);
     
-    const tool = response.response.functionCalls()?.[0];
+    const tool = getFirstFunctionCall(response);
     if (tool && tool.name === "add_transactions") {
       const rawItems: any[] = Array.isArray(tool.args?.items) ? tool.args.items : [];
-      const tempItems = rawItems.map((it) => {
-        const itemCurrency = it.currency || callerCurrency;
-        const rawCategory = it.category || "other";
-        const normalizedCategory = normalizeCategory(rawCategory);
-        
-        // Debug: Log category normalization
-        console.log(`[analyze-expense] Category normalization: "${rawCategory}" -> "${normalizedCategory}"`);
-        
-        const txType = String(it.type || "").toLowerCase();
-        
-        // Use correct symbol for the detected currency
-        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+      const tempItems = rawItems
+        .map((it) => {
+          const itemCurrency = it.currency || callerCurrency;
+          const rawCategory = it.category || "other";
+          const normalizedCategory = normalizeCategory(rawCategory);
 
-        return {
-          type: (txType === "income" || txType === "expense") ? txType : undefined,
-          amount: Number(it.amount),
-          category: normalizedCategory,
-          currency: itemCurrency,
-          currencySymbol: itemCurrencySymbol,
-          date: it.date || callerDate,
-          description: it.description || "",
-        };
-      }).filter((it) => it.type && (it.type === "income" || it.type === "expense") && Number.isFinite(it.amount) && it.amount > 0) as ExpenseItem[];
-      
+          // Debug: Log category and amount
+          console.log(
+            `[analyze-expense] Item raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`,
+          );
+
+          const txType = String(it.type || "").toLowerCase();
+
+          // Use correct symbol for the detected currency
+          const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+
+          return {
+            type: txType === "income" || txType === "expense" ? txType : undefined,
+            amount: Math.abs(Number(it.amount)),
+            category: normalizedCategory,
+            currency: itemCurrency,
+            currencySymbol: itemCurrencySymbol,
+            date: it.date || callerDate,
+            description: it.description || "",
+          };
+        })
+        .filter((it) => {
+          const isValid =
+            it.type &&
+            (it.type === "income" || it.type === "expense") &&
+            Number.isFinite(it.amount) &&
+            typeof it.category === "string" &&
+            typeof it.currency === "string" &&
+            typeof it.currencySymbol === "string" &&
+            typeof it.date === "string";
+
+          if (!isValid) console.log(`[analyze-expense] Filtered invalid item: ${JSON.stringify(it)}`);
+          return isValid;
+        }) as ExpenseItem[];
+
       let items = tempItems;
       if (items.length > 1) {
         const withoutTotals = items.filter((it) => !isTotalLike(it.description));
         if (withoutTotals.length > 0) items = withoutTotals;
-        const sums = items.map((_, i) => items.filter((__, j) => i !== j).reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0));
+        // Basic dedup check for sums (logic kept from original)
+        const sums = items.map((_, i) =>
+          items
+            .filter((__, j) => i !== j)
+            .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
+        );
         items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
       }
-      
+
       if (items.length > 0) {
         return { success: true, items };
       }
     }
+
+    const candidate = response.response.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+    const safetyRatings = candidate?.safetyRatings;
+    
+    // Fallback: If no tool call, see if there's text (for debugging)
+    let modelText = "";
+    try {
+      modelText = response.response.text();
+    } catch (e) {
+      // ignore
+    }
+    
+    console.log(`[analyze-expense] No valid tool call found.`);
+    console.log(`[analyze-expense] FinishReason: ${finishReason}`);
+    console.log(`[analyze-expense] SafetyRatings: ${JSON.stringify(safetyRatings)}`);
+    console.log(`[analyze-expense] Candidate Parts Count: ${candidate?.content?.parts?.length || 0}`);
+    console.log(`[analyze-expense] Model output text preview: ${JSON.stringify(modelText.slice(0, 200))}`);
     
     return { success: false, error: `Moneko AI could not extract valid transactions` };
   } catch (error) {
@@ -423,25 +491,25 @@ export async function runAnalyzeExpense(
       functionDeclarations: [
         {
           name: "add_transactions",
-          description: "Extract structured transactions (income or expense) with clear classification and rationale. Always include a type for every item.",
+          description: "Extract structured transactions (income or expense).",
           parameters: {
-            type: "OBJECT",
+            type: "object",
             properties: {
               items: {
-                type: "ARRAY",
-                description: "One or more transactions parsed from the user input or receipt.",
+                type: "array",
+                description: "One or more transactions parsed.",
                 items: {
-                  type: "OBJECT",
+                  type: "object",
                   properties: {
-                    type: { type: "STRING", enum: ["expense", "income"], description: "Transaction type" },
-                    amount: { type: "NUMBER", description: "Positive amount in caller currency unless different currency explicitly mentioned." },
+                    type: { type: "string", enum: ["expense", "income"], description: "Transaction type" },
+                    amount: { type: "number", description: "Positive amount." },
                     category: { 
-                      type: "STRING", 
-                      description: `Canonical category. If type=expense choose from: ${expenseCategories.join(", ")}. If type=income choose from: ${incomeCategories.join(", ")}. Prefer specific income categories over generic "income" when possible.`
+                      type: "string", 
+                      description: "Canonical category from provided list."
                     },
-                    currency: { type: "STRING", description: "ISO 4217 code. Use explicit currency on the input/receipt; otherwise use Caller Currency." },
-                    date: { type: "STRING", description: "YYYY-MM-DD. Parse ANY date from text (absolute like \"Jan 15\" or relative like \"yesterday\", \"last week\", \"3 days ago\") and convert to YYYY-MM-DD using Caller Date as reference. Only use Caller Date if no date mentioned." },
-                    description: { type: "STRING", description: "Natural, conversational note about the transaction - as if casually mentioning it to a friend. Use currency symbols (€, $, ¥, £) NOT currency names. For multi-item: \"Lunch €25, coffee €5\". Keep it brief and memorable." },
+                    currency: { type: "string", description: "ISO 4217 code." },
+                    date: { type: "string", description: "YYYY-MM-DD." },
+                    description: { type: "string", description: "Very short note (e.g. 'Coffee', 'Taxi')." },
                   },
                   required: ["type", "amount", "category"],
                 },
@@ -561,43 +629,55 @@ export async function runAnalyzeExpense(
       if (!image.contentType || !image.contentType.startsWith("image/")) {
         return { success: false, error: "Invalid image content type", status: 400, language };
       }
-      // Prefer raw bytes if provided; otherwise decode base64
-      let bytes: Uint8Array;
+      let base64Image = "";
+      let finalContentType = image.contentType;
+      
       if (image.bytes instanceof Uint8Array) {
-        bytes = image.bytes;
+        if (image.bytes.length > 10 * 1024 * 1024) {
+          return { success: false, error: "Image too large. Maximum 10MB", status: 400, language };
+        }
+        base64Image = b64encode(image.bytes);
       } else {
-        const base64Data = image.data.replace(/^data:image\/\w+;base64,/, "");
-        const binaryString = atob(base64Data);
-        bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        // Strip the data URI prefix if present
+        base64Image = image.data.replace(/^data:image\/\w+;base64,/, "");
+        // Strict cleaning of whitespace/newlines which can corrupt JSON transport or some base64 decoders
+        base64Image = base64Image.replace(/[\r\n\s]/g, "");
+        
+        // Approximate size check (base64 string length * 0.75 ~= byte size)
+        const approxBytes = base64Image.length * 0.75;
+        if (approxBytes > 10 * 1024 * 1024) {
+          return { success: false, error: "Image too large. Maximum 10MB", status: 400, language };
         }
       }
 
-      if (bytes.length > 10 * 1024 * 1024) {
-        return { success: false, error: "Image too large. Maximum 10MB", status: 400, language };
-      }
-      const base64Image = b64encode(bytes);
+      // Normalize common mime type variations for Gemini
+      if (finalContentType === 'image/jpg') finalContentType = 'image/jpeg';
+      
+      console.log(`[analyze-expense] Image Prep: contentType=${finalContentType} (orig=${image.contentType}), length=${base64Image.length}`);
+      console.log(`[analyze-expense] Base64 Start: ${base64Image.slice(0, 20)}...`);
+      console.log(`[analyze-expense] Base64 End: ...${base64Image.slice(-20)}`);
 
       const systemInstruction = [
         "You are an expert Financial OCR Analyst for Moneko.",
         "OBJECTIVE: Analyze the image to extract transaction data. Minimize noise, maximize accuracy.",
         "OUTPUT: Call `add_transactions` with the extracted items. Under no circumstances output plain text or JSON.",
 
-        "### 0. NOTIFICATION / SINGLE TRANSACTION SCREENS",
-        "- If the image is a notification or single-transaction view (e.g. 'You spent $15 at Starbucks'), return exactly ONE transaction.",
-        "- **Merchant**: App/Merchant name (e.g. 'Revolut • Starbucks' -> 'Starbucks').",
-        "- **Type**: 'expense' if 'spent', 'debited', 'paid', 'purchase'; 'income' if 'credited', 'received', 'deposit', 'refund'.",
-        "- **Amount**: Prominent numeric value.",
-        "- **Description**: Short summary like 'Coffee at Starbucks'.",
+        "### 0. LAYOUT DETECTION & STRATEGY",
+        "- **CASE A: MULTIPLE ITEMS (App List, Bank Feed)**: If the image shows a LIST of multiple distinct payments (rows) or a payment history:",
+        "   - **Action**: Extract every visible transaction row as a separate item.",
+        "   - **Ignore**: Daily/monthly headers ('Today', 'October'), running balances, or nav bars.",
+        "   - **Context**: Apps like AliPay, WeChat, PayPal, Banking Apps often show lists. Capture ALL rows.",
+        "",
+        "- **CASE B: SINGLE RECEIPT/TOTAL**: If the image is a physical receipt or bill with items summing to a total:",
+        "   - **Action**: Return **ONE** transaction for the Grand Total.",
+        "   - **Note**: Do NOT list the milk/eggs separately. Just the total.",
+        "",
+        "- **CASE C: SINGLE NOTIFICATION/DETAIL**: If and ONLY IF the image shows a single success screen or notification:",
+        "   - **Action**: Return exactly ONE transaction.",
 
-        "### 1. QUANTITY & AMOUNT STRATEGY",
-        "- **Single Receipt/Bill**: If the image is a receipt with a list of items and a final total, return **ONE** transaction.",
-        "   - **Amount**: Must be the **Grand Total** (Balance Due) at the bottom, including tax/tip.",
-        "   - **Description**: Summarize the items ('Walmart: Milk, Bread, Eggs').",
-        "   - **Rule**: Never output one item per receipt line. For receipts, you must output exactly one transaction with the grand total.",
-        "- **Bank Feed / List**: If the image shows multiple *distinct, unrelated* transactions (e.g. a bank statement list), extract them as **SEPARATE** items.",
-        "- **Ambiguity**: If unsure, prefer returning a single Item with the largest 'Total' amount found.",
+        "### 1. DATA EXTRACTION RULES",
+        "- **Bank Feed / App History**: For list views, extract Date, Merchant (Title), and Amount for each row.",
+        "- **Ambiguity**: If unsure if it's a list or detail view, prefer extracting multiple items if they look like distinct transactions.",
         "- **Amount policy**: Always return amounts as positive numbers (no minus signs). Negative or red values in the UI indicate 'expense' vs 'income' type, not a negative amount.",
 
         "### 2. CLASSIFICATION (Type & Category)",
@@ -624,9 +704,10 @@ export async function runAnalyzeExpense(
       ].join("\n");
 
       // Model progression: fast model first, then more capable one as fallback
+      // Timeouts increased to allow for parsing long transaction lists
       const modelAttempts = [
- { name: "gemini-2.5-flash-lite", timeout: 5000 },
-{ name: "gemini-3-pro-preview", timeout: 10000 },
+        { name: "gemini-3-flash-preview", timeout: 30000 },
+        { name: "gemini-3-pro-preview", timeout: 55000 },
       ];
 
       // Removed shadowing variables
@@ -646,7 +727,8 @@ export async function runAnalyzeExpense(
             callerCurrency,
             callerDate,
             tools,
-            timeout
+            30000,
+            finalContentType
           );
 
           if (result.success && result.items && result.items.length > 0) {
@@ -684,7 +766,7 @@ export async function runAnalyzeExpense(
         try {
           const fallback = await attemptAnalysis(
             genAI,
-            "gemini-2.5-flash-lite",
+            "gemini-3-flash-preview",
             handwritingInstruction,
             body,
             base64Image,
@@ -758,7 +840,7 @@ export async function summarizePdfWithGemini(
 ): Promise<string | null> {
   try {
     const ai = new GoogleGenerativeAI(geminiKey);
-    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const resp = await model.generateContent({
       contents: [
         { role: "user", parts: [{ text: "Summarize this PDF. Extract key amounts, dates, and any tabular transaction data. Keep it concise for WhatsApp." }] },

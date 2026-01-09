@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
@@ -173,6 +174,7 @@ serve(async (req: Request): Promise<Response> => {
     const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageRaw) ? languageRaw : "en";
     const currencyRaw = (body.currency || "").trim();
     const currency = currencyRaw || "USD";
+    const currencySymbol = getCurrencySymbol(currency);
     const mode: "personal" | "household" = body.mode === "household" ? "household" : "personal";
     const householdId = mode === "household" ? (body.householdId || "").trim() : "";
 
@@ -382,65 +384,61 @@ serve(async (req: Request): Promise<Response> => {
       byOwnerType: ownerTypeTotals,
     } : null;
 
-    const advisoryPrompt = `You are a concise financial advisor for Moneko. Answer the user's scenario question using ONLY the provided ${mode === "household" ? "household" : "personal"} financial data.
+    const advisoryPrompt = `You are a "Zero-Based Budgeting" Coach for Moneko. Your job is to tell the user the brutal truth about their affordability based ONLY on the provided data.
 
-SCOPE DETECTION:
-- If the question mentions "we", "our", "household", "family", or "partner" → use household finances.
-- Otherwise → use personal finances.
-- Ignore data unrelated to the question.
+SCOPE:
+- "we/our/family" -> use Household data.
+- "I/my" -> use Personal data.
 
-HARD OUTPUT RULES (violating any = failure):
+HARD OUTPUT RULES (violating = failure):
 1. Output MUST be Markdown.
-2. Output MUST be exactly 8–10 visible lines total. Short lines preferred.
-3. Line 1 MUST be a big heading with the decision: "# YES", "# NO", or "# CONDITIONAL".
-4. No jargon. Plain language only. No lecturing. No long paragraphs.
-5. No tables. No disclaimers.
-6. Use ${currency} for all amounts.
-7. Do NOT invent numbers. If critical data is missing, answer CONDITIONAL and state what's missing in the Check line.
+2. Output MUST be exactly 10–12 visible lines.
+3. Header MUST be translated to ${language}: "# YES", "# NO", or "# CAUTION" (e.g. "# OUI").
+4. Tone: Direct, non-judgmental, purely mathematical.
+5. Use ${currencySymbol} for amounts.
 
-REQUIRED FORMAT (in this exact order, each as ONE short line except Steps):
+RECIPES FOR ANALYSIS:
+- Use 'avgNetPerDay' to calculate "Time to Recover" (Cost / DailySurplus).
+- If 'projectedNoScenario' < Cost, the answer is usually NO.
+- Identify what *trade-off* is required (e.g., "This equals 2 weeks of groceries").
 
-# [YES / NO / CONDITIONAL]
-**Decision:** [One sentence summary of the verdict.]
-**Suggested budget range:** [${currency} low – high, infer a safe range even if user didn't specify a price.]
-**Why:** [One short reason only.]
-**Steps to make it work:**
-- [If YES: how to do it safely—timing, saving plan, limits.]
-- [If NO: how to make it achievable—cut costs, delay date, save target, alternatives.]
-- [Optional 3rd bullet if needed.]
-**Check:** [1–2 key numbers the user should confirm, e.g., monthly surplus, cash on hand. If data is missing, state exactly what.]
+REQUIRED FORMAT (Strictly follow this structure):
+
+# [Translated YES / NO / CAUTION]
+**Verdict:** [Direct answer. e.g. "Safe to buy." or "This exceeds your surplus."]
+**The Math:** [Show the trade-off. e.g. "This cost (${currencySymbol}X) requires Y days of your average daily surplus to pay off."]
+**Trade-off:** [What suffers? e.g. "This eats into your [TopCategory] budget" or "Reduces projected savings by X%".]
+**Path to Yes:**
+- [Step 1: Specific trade-off, e.g. "Cut Dining Out by 50% for 1 month"]
+- [Step 2: Timing, e.g. "Wait until [Date] to have cash"]
+- [Optional Step 3]
+**Critical Number:** [The 1 number to watch. e.g. "Daily spending must stay under ${currencySymbol}X"]
 
 USER_QUESTION: ${question}
-TARGET_DATE: ${targetDateStr}
+TARGET_DATE: ${targetDateStr || 'Not specified'}
 
 USER_DATA:
-- Context: ${JSON.stringify({ userId, mode, householdId: mode === "household" ? householdId : null, currency })}
-- SummaryStats: ${JSON.stringify({
-      windowFrom: fromStr,
-      windowTo: toStr,
-      daysWithData: days,
-      totalSpent,
-      totalBudget,
-      avgDailySpent,
-      avgDailyBudget,
-      avgNetPerDay,
-      currentRunningBalance: running,
-      projectedNoScenarioByTarget: projectedNoScenario,
-      daysUntilTarget: daysUntilTarget,
+- Context: ${JSON.stringify({ userId, mode, householdId: mode === "household" ? householdId : null, currency: currencySymbol })}
+- Trends: ${JSON.stringify({
+      daysAnalyzed: days,
+      totalSpentInPeriod: totalSpent,
+      avgDailySpend: avgDailySpent,
+      avgDailyNetSurplus: avgNetPerDay, // Critical for "Time to Recover"
+      currentCash: running,
+      projectedBalanceAtTarget: projectedNoScenario,
     })}
 - Monthly: ${JSON.stringify(monthly)}
-- TopCategories90d: ${JSON.stringify(topCategories)}
+- TopSpendCategories: ${JSON.stringify(topCategories)}
 - Goals: ${JSON.stringify(goals || [])}
 - FinancialHealthProfile: ${JSON.stringify(finProfiles && finProfiles[0] || null)}
 ${mode === "household" ? `- HouseholdMembers: ${JSON.stringify(householdMembersSummary)}` : ""}
 
-LANGUAGE REQUIREMENT (critical):
-- Your ENTIRE response MUST be in ${language}.
-- Translate ALL labels: "# YES" → localized equivalent (e.g., "# 是", "# OUI", "# SÍ"), "Decision:", "Suggested budget range:", "Why:", "Steps to make it work:", "Check:" → all translated.
-- Use native number formatting and currency symbols appropriate for ${language}.
-- Do NOT mix languages. Every word must be in ${language}.`;
+LANGUAGE:
+- Response MUST be in ${language}.
+- Translate ALL labels and headers (including "# YES/NO/CAUTION", "Verdict", "The Math", etc) to ${language}.
+- Use local currency/number format.`;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const generationConfig = {
       responseMimeType: "text/plain",
       maxOutputTokens: 2000,
