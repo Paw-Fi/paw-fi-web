@@ -27,7 +27,7 @@ export const Route = createFileRoute('/guides/what-will-my-house-payment-be')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

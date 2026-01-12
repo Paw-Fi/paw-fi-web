@@ -109,7 +109,7 @@ export const Route = createFileRoute("/early-access")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,

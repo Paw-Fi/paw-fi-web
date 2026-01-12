@@ -278,7 +278,7 @@ export const Route = createFileRoute("/dashboard/learning/")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: canonicalUrl

@@ -39,6 +39,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'PKR': '₨',
   'PYG': '₲',
   'RSD': 'Дин.',
+  'RON': 'RON',
   'RUB': '₽',
   'SAR': 'ر.س',
   'SEK': 'kr',

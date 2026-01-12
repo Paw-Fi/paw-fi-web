@@ -28,7 +28,7 @@ export const Route = createFileRoute('/guides/complete-beginner-guide-to-investi
 
       return {
         meta,
-        link: [
+        links: [
           {
             rel: 'canonical',
             href: pageUrl,

@@ -359,7 +359,7 @@ export const Route = createFileRoute('/passive-income/$slugId')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: canonicalUrl,

@@ -26,7 +26,7 @@ export const Route = createFileRoute('/guides/how-much-do-i-need-to-retire')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

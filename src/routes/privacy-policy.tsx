@@ -30,7 +30,7 @@ export const Route = createFileRoute('/privacy-policy')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

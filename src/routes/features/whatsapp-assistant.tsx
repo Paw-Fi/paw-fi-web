@@ -86,17 +86,6 @@ export default function WhatsAppFeaturePage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] font-sans selection:bg-gray-100 dark:selection:bg-gray-800 text-slate-900 dark:text-white pb-20">
       <Helmet>
-        <title>{META_TITLE}</title>
-        <meta name="description" content={META_DESCRIPTION} />
-        <meta name="keywords" content={META_KEYWORDS} />
-        <meta property="og:title" content={META_TITLE} />
-        <meta property="og:description" content={META_DESCRIPTION} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content="https://moneko.io/og-whatsapp.png" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={META_TITLE} />
-        <meta name="twitter:description" content={META_DESCRIPTION} />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 

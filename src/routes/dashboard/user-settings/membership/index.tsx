@@ -16,7 +16,7 @@ export const Route = createFileRoute("/dashboard/user-settings/membership/")({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

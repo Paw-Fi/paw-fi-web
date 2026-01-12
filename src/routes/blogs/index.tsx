@@ -71,7 +71,7 @@ export const Route = createFileRoute("/blogs/")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl

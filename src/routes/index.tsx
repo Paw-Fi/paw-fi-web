@@ -135,30 +135,6 @@ export default function HomePage() {
   return (
     <div className="relative min-h-screen bg-background font-sans selection:bg-primary/20">
       <Helmet>
-        <title>{META_TITLE}</title>
-        <meta name="description" content={META_DESCRIPTION} />
-        <meta name="keywords" content={META_KEYWORDS} />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-        
-        {/* Open Graph */}
-        <meta property="og:title" content={META_TITLE} />
-        <meta property="og:description" content={META_DESCRIPTION} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content="https://moneko.io/og-img.png" />
-        <meta property="og:site_name" content="Moneko" />
-        <meta property="og:locale" content="en_US" />
-        
-        {/* Twitter */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={META_TITLE} />
-        <meta name="twitter:description" content={META_DESCRIPTION} />
-        <meta name="twitter:image" content="https://moneko.io/og-img.png" />
-        <meta name="twitter:site" content="@monekoapp" />
-        <meta name="twitter:creator" content="@monekoapp" />
-        
-        <meta name="theme-color" content="#8b5cf6" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 

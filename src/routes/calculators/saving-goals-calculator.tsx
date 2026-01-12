@@ -27,7 +27,7 @@ export const Route = createFileRoute('/calculators/saving-goals-calculator')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

@@ -279,7 +279,7 @@ export const Route = createFileRoute("/dashboard/_layout/")({
     return {
       title,
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

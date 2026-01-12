@@ -103,13 +103,6 @@ export default function HouseholdFeaturePage() {
   return (
     <div className="min-h-screen relative bg-white dark:bg-[#050505] overflow-hidden font-sans selection:bg-gray-100 dark:selection:bg-gray-800">
       <Helmet>
-        <title>{META_TITLE}</title>
-        <meta name="description" content={META_DESCRIPTION} />
-        <meta name="keywords" content={META_KEYWORDS} />
-        <meta property="og:title" content={META_TITLE} />
-        <meta property="og:description" content={META_DESCRIPTION} />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content="https://moneko.io/og-household.png" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 

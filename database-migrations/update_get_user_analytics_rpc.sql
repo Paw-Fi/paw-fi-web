@@ -1,14 +1,10 @@
--- Migration: Add get_user_analytics RPC function
--- Purpose: Single optimized query to fetch all user analytics data (contact, expenses, budgets)
--- This replaces multiple client-side batched queries with a single server-side call,
--- eliminating cold-start connection issues and improving performance by 2-5x.
+-- Migration: Update get_user_analytics RPC function
+-- Purpose: Fix analytics to include user-owned rows even when contact_ids exist.
 --
--- Run this in Supabase SQL Editor or via migration tool.
+-- Use this migration for already-deployed databases where `add_get_user_analytics_rpc.sql`
+-- has already run. For clean/new database deploys, `add_get_user_analytics_rpc.sql`
+-- already contains the corrected logic; running this migration after it is safe.
 
--- Drop existing function if it exists (for idempotent migrations)
-DROP FUNCTION IF EXISTS get_user_analytics(UUID);
-
--- Create the optimized RPC function
 CREATE OR REPLACE FUNCTION get_user_analytics(p_user_id UUID)
 RETURNS JSON
 LANGUAGE plpgsql
@@ -106,11 +102,12 @@ BEGIN
 END;
 $$;
 
--- Grant execute permission to authenticated users
+-- Ensure execute permission remains granted
 GRANT EXECUTE ON FUNCTION get_user_analytics(UUID) TO authenticated;
 
--- Add comment for documentation
+-- Keep documentation comment up to date
 COMMENT ON FUNCTION get_user_analytics(UUID) IS 
 'Fetches all analytics data for a user in a single optimized query.
 Returns JSON with: contact (user_contacts), expenses (filtered personal only), budgets (daily_budgets).
-This replaces multiple client-side batched queries, eliminating cold-start timeouts.';
+Includes user_id-owned rows even when contact_id history exists, preventing contact_id NULL rows from being dropped.';
+

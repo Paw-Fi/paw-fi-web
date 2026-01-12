@@ -30,7 +30,7 @@ export const Route = createFileRoute('/terms-of-service')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

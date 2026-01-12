@@ -75,7 +75,7 @@ export const Route = createFileRoute('/calculators/')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

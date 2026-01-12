@@ -17,7 +17,7 @@ export const Route = createFileRoute('/reset-password/reset-password/')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

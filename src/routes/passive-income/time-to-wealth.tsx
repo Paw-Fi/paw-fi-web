@@ -47,7 +47,7 @@ export const Route = createFileRoute("/passive-income/time-to-wealth")({
 
     return {
       meta,
-      link: [
+      links: [
         { rel: "canonical", href: pageUrl },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -71,10 +71,6 @@ export default function TimeToWealthPage() {
   return (
     <div className="relative min-h-screen bg-moneko-background">
       <Helmet>
-        <title>{pageData.meta.title}</title>
-        <meta name="description" content={pageData.meta.description} />
-        <meta name="keywords" content={pageData.meta.keywords} />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
       </Helmet>
 

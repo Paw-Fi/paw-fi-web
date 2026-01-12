@@ -31,7 +31,7 @@ export const Route = createFileRoute('/dashboard/income-builder/')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: canonicalUrl,

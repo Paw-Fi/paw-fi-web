@@ -192,7 +192,7 @@ export const Route = createFileRoute('/dashboard/user-settings/')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: canonicalUrl

@@ -70,7 +70,7 @@ export const Route = createFileRoute('/referral/')({
 
     return {
       meta,
-      link: [{ rel: 'canonical', href: pageUrl }],
+      links: [{ rel: 'canonical', href: pageUrl }],
     };
   },
 });

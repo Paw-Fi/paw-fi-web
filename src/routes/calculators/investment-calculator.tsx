@@ -28,7 +28,7 @@ export const Route = createFileRoute('/calculators/investment-calculator')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

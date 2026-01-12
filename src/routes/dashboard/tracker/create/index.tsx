@@ -33,7 +33,7 @@ export const Route = createFileRoute('/dashboard/tracker/create/')({
         image: imageUrl,
         url: pageUrl,
       }),
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,
