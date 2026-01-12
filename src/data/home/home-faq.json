@@ -33,5 +33,30 @@
     "id": "getting-started",
     "question": "How do I get started?",
     "answer": "Visit the Budgeting App page to create your first plan, or try the Savings Goal Calculator to set a target and monthly amount."
+  },
+  {
+    "id": "whatsapp-budgeting",
+    "question": "Can I update my budget from WhatsApp?",
+    "answer": "Yes. After you verify your WhatsApp number, you can message Moneko to add expenses, send receipt photos or voice notes, ask for spending summaries, and even set monthly pocket splits directly from chat."
+  },
+  {
+    "id": "household-mode",
+    "question": "Does Moneko support household or joint budgets?",
+    "answer": "Moneko has a dedicated Household mode. You can switch between Personal and Household dashboards, share pockets, and keep notifications in sync across members."
+  },
+  {
+    "id": "ai-capture",
+    "question": "How does AI capture work for receipts and voice notes?",
+    "answer": "You can type a quick note, snap a receipt photo, attach supported files, or record a voice memo. Moneko extracts the amount, category, date, and merchant, then lets you review before saving."
+  },
+  {
+    "id": "manual-tracking",
+    "question": "Can I track spending without linking bank accounts?",
+    "answer": "Absolutely. Moneko is designed for fast manual capture—text, receipt photos, voice notes, or WhatsApp messages—so you can stay on top of expenses even if you prefer not to connect a bank."
+  },
+  {
+    "id": "insights",
+    "question": "What insights or planning tools do I get?",
+    "answer": "The Insights tab shows daily balance trends, pocket performance, and conversational “what if” planning. You can ask questions like “What happens if I add $200 more by next month?” and save the scenarios."
   }
 ]

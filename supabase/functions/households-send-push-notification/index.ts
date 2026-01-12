@@ -56,6 +56,7 @@ interface FCMv1Message {
       priority: string;
       notification: {
         sound: string;
+        color?: string;
         click_action?: string;
         channel_id?: string;
       };

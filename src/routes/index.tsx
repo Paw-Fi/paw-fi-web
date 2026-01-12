@@ -12,11 +12,15 @@ import { HeroV2 } from "@/components/homepage/v2/hero-v2";
 import { FeaturesSection } from "@/components/homepage/v2/features-section";
 import { ComparisonTable } from "@/components/homepage/v2/comparison-table";
 import { CTASection } from "@/components/homepage/v2/cta-section";
+import { HowItWorksSection } from "@/components/homepage/v2/how-it-works-section";
+import { CaptureSection } from "@/components/homepage/v2/capture-section";
+import { WidgetsSection } from "@/components/homepage/v2/widgets-section";
 
 // Existing Components
 import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 import AmbientHalo from "@/components/ui/ambient-halo";
+import { Separator } from "@/components/ui/separator";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -52,7 +56,8 @@ export const Route = createFileRoute("/")({
 
 export default function HomePage() {
   const pageUrl = getCanonicalUrl("/");
-
+  
+  // Structured data (Schema.org)
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -128,7 +133,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-moneko-background">
+    <div className="relative min-h-screen bg-background font-sans selection:bg-primary/20">
       <Helmet>
         <title>{META_TITLE}</title>
         <meta name="description" content={META_DESCRIPTION} />
@@ -136,7 +141,7 @@ export default function HomePage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
         
-        {/* Open Graph Meta Tags for Social Sharing */}
+        {/* Open Graph */}
         <meta property="og:title" content={META_TITLE} />
         <meta property="og:description" content={META_DESCRIPTION} />
         <meta property="og:type" content="website" />
@@ -145,7 +150,7 @@ export default function HomePage() {
         <meta property="og:site_name" content="Moneko" />
         <meta property="og:locale" content="en_US" />
         
-        {/* Twitter Card Meta Tags */}
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={META_TITLE} />
         <meta name="twitter:description" content={META_DESCRIPTION} />
@@ -153,37 +158,40 @@ export default function HomePage() {
         <meta name="twitter:site" content="@monekoapp" />
         <meta name="twitter:creator" content="@monekoapp" />
         
-        {/* Additional Brand & SEO Meta Tags */}
-        <meta name="application-name" content="Moneko" />
-        <meta name="apple-mobile-web-app-title" content="Moneko" />
-        <meta name="author" content="Moneko" />
-        <meta name="publisher" content="Moneko" />
         <meta name="theme-color" content="#8b5cf6" />
-        <meta name="msapplication-TileColor" content="#8b5cf6" />
-        
-        {/* Structured Data */}
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
       <AmbientHalo />
 
-      {/* Header */}
-      <nav className="border-border sticky top-0 z-50 border-b bg-white/10 backdrop-blur-md">
-        <HomeHeader />
-      </nav>
+      <HomeHeader />
 
-      {/* Main Content Sections */}
-      <HeroV2 />
-      
-      <FeaturesSection />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <HeroV2 />
+        
+        {/* Social Proof / Trust (Optional separator or keep it clean) */}
+    
+        {/* Core Features Bento Grid (Pockets, Households, Insights) */}
+        <FeaturesSection />
 
-      <ComparisonTable />
+            {/* Deep Dive 2: Capture (The Magic) */}
+        <CaptureSection />
 
-      <FAQSection />
+            {/* Deep Dive 1: How it Works (Workflow) */}
+        <HowItWorksSection />
 
-      <CTASection />
+        {/* Deep Dive 3: Widgets (Visual Appeal) */}
+        <WidgetsSection />
 
-      {/* Footer */}
+        {/* Deep Dive 4: Comparison (Why us) */}
+        <ComparisonTable />
+
+        <FAQSection />
+
+        <CTASection />
+      </main>
+
       <Footer />
     </div>
   );

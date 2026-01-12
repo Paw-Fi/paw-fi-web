@@ -9,7 +9,7 @@ interface FeatureComparisonGridProps {
 
 export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureComparisonGridProps) {
   const plans = Object.values(planData);
-  
+
   const features = [
     {
       category: "Basic Lessons",

@@ -122,7 +122,7 @@ async function analyzeFromText(
 
   const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash-lite",
     tools,
     systemInstruction,
   });
@@ -204,7 +204,7 @@ async function analyzeFromAudio(
 
   const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
   const model = genAI.getGenerativeModel({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.5-flash-lite",
     tools,
     systemInstruction,
   });

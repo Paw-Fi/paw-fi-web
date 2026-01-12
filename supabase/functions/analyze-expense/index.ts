@@ -21,7 +21,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // Parse request body
-    const body: AnalyzeRequestBody = await req.json();
+    let body: AnalyzeRequestBody;
+    try {
+      body = await req.json();
+    } catch (_error) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
@@ -32,7 +40,21 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const result = await runAnalyzeExpense(body, GEMINI_API_KEY);
+    let result: any;
+    try {
+      const analysisPromise = runAnalyzeExpense(body, GEMINI_API_KEY);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Analysis timed out after 30 seconds")), 30000)
+      );
+      result = await Promise.race([analysisPromise, timeoutPromise]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = message.includes("timed out") ? 504 : 500;
+      return new Response(
+        JSON.stringify({ success: false, error: message }),
+        { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     if (!result.success) {
       const status = result.status || 400;
       return new Response(
