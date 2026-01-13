@@ -356,6 +356,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const normalizedExpenseId = sanitizeUuid(expenseId);
+    if (!normalizedExpenseId) {
+      return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
+    }
+
     if (
       !updates || typeof updates !== "object" ||
       Object.keys(updates).length === 0
@@ -671,7 +676,7 @@ Deno.serve(async (req: Request) => {
       .select(
         "id, user_id, household_id, split_group_id, amount_cents, currency, raw_text, category, date, created_at",
       )
-      .eq("id", expenseId)
+      .eq("id", normalizedExpenseId)
       .single();
 
     if (fetchError) {
@@ -679,7 +684,13 @@ Deno.serve(async (req: Request) => {
       if (fetchError.code === "PGRST116") {
         return errorResponse("Expense not found", "NOT_FOUND", 404);
       }
-      return errorResponse("Failed to fetch expense", "SERVER_ERROR", 500);
+
+      // Invalid UUID (most commonly when the client passes a non-UUID id).
+      if (fetchError.code === "22P02") {
+        return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
+      }
+
+      return errorResponse("Failed to load expense for update", "SERVER_ERROR", 500);
     }
 
     if (!expense) {
@@ -689,7 +700,7 @@ Deno.serve(async (req: Request) => {
     // For GPT requests, only allow personal expenses (no household_id)
     if (detection.isGpt && expense.household_id) {
       console.warn(
-        `[update-expense] GPT attempt to update household expense: ${expenseId}`,
+        `[update-expense] GPT attempt to update household expense: ${normalizedExpenseId}`,
       );
       return errorResponse(
         "GPT cannot update household expenses",
@@ -1318,17 +1329,20 @@ Deno.serve(async (req: Request) => {
         ...updates,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", expenseId)
+      .eq("id", normalizedExpenseId)
       .select()
       .single();
 
     if (updateError) {
       console.error("[update-expense] Update error:", updateError);
+      if (updateError.code === "22P02") {
+        return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
+      }
       return errorResponse("Failed to update expense", "SERVER_ERROR", 500);
     }
 
     console.log(
-      `[update-expense] Successfully updated expense ${expenseId} for user ${userId}`,
+      `[update-expense] Successfully updated expense ${normalizedExpenseId} for user ${userId}`,
     );
 
     // For non-GPT requests, notify household members if this was a shared expense
@@ -1367,7 +1381,7 @@ Deno.serve(async (req: Request) => {
         "notify_household_members_expense",
         {
           p_household_id: expense.household_id,
-          p_expense_id: expenseId,
+          p_expense_id: normalizedExpenseId,
           p_actor_user_id: userId,
           p_event_type: "expense_edited",
           p_expense_data: {

@@ -49,6 +49,8 @@ export interface AnalyzeRequestBody {
   date?: string;
   currency?: string;
   language?: string;
+  householdId?: string;
+  householdMembers?: HouseholdMemberContext[];
   attachments?: AnalyzeAttachment[];
 }
 
@@ -60,6 +62,24 @@ export interface AnalyzeResult {
   status?: number;
 }
 
+export interface HouseholdMemberContext {
+  userId: string;
+  userName?: string | null;
+  userEmail?: string | null;
+}
+
+export interface MemberSplit {
+  userId: string;
+  amount?: number; // For 'amount' splitType (major units)
+  percentage?: number; // For 'percentage' splitType (0-100)
+  shares?: number; // For 'shares' splitType (positive int)
+}
+
+export interface CustomSplits {
+  splitType: "equal" | "amount" | "percentage" | "shares";
+  memberSplits: MemberSplit[];
+}
+
 export interface ExpenseItem {
   type: "expense" | "income";
   amount: number;
@@ -68,12 +88,15 @@ export interface ExpenseItem {
   currencySymbol: string;
   date: string;
   description?: string;
+  payerUserId?: string;
+  customSplits?: CustomSplits;
 }
 
 function buildTransactionSystemInstruction(
   language: string,
   expenseCategories: string[],
   incomeCategories: string[],
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
 ): string {
   return [
     "You are a professional transaction extraction and classification system.",
@@ -104,8 +127,401 @@ function buildTransactionSystemInstruction(
     "- Write natural, conversational notes generally matching the user's intent.",
     `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
 
+    ...(householdContext
+      ? [
+        "### 5. HOUSEHOLD SPLITS (when household context is provided)",
+        "- The caller is currently in a household/group context and wants split-aware logging.",
+        "- **payerUserId**:",
+        "  - If user says who paid (e.g., 'paid by B'), set payerUserId to that member's userId.",
+        "  - If not mentioned, omit payerUserId (backend defaults to the caller).",
+        "  - Use ONLY the userId from the provided member list. Do NOT output names/emails.",
+        "- **customSplits**:",
+        "  - If user describes a split (amounts/percent/shares), set customSplits accordingly.",
+        "  - If user does NOT describe a split, OMIT customSplits entirely (backend defaults to equal split across all household members).",
+        "  - When returning customSplits, ALWAYS include ALL household members exactly once in memberSplits.",
+        "  - If the user provides splits for only some members, distribute the remaining portion equally among the unspecified members.",
+        "  - If the user mentions a member by name/email/alias, map it to the matching userId from the member list.",
+        "  - If the user says 'paid by X' or 'X paid', you MUST set payerUserId.",
+        "  - If the user says 'split 15 for him/her/them', treat the pronoun as the last named member (often the payer).",
+        "  - Example: '20 dinner, paid by Charles, split 15 for him' => payerUserId=Charles userId, customSplits splitType=amount with Charles=15 and remaining split across other members.",
+      ]
+      : []),
+
     "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
   ].join("\n");
+}
+
+export function resolveHouseholdContext(
+  body: AnalyzeRequestBody,
+  callerUserId: string,
+) {
+  const members = Array.isArray(body.householdMembers)
+    ? body.householdMembers
+    : [];
+  const sanitized = members
+    .map((m) => ({
+      userId: sanitizeUuid(m.userId) || "",
+      userName: (m.userName || null) as string | null,
+      userEmail: (m.userEmail || null) as string | null,
+    }))
+    .filter((m) => m.userId.length > 0);
+
+  if (!sanitized.length) return null;
+
+  const memberIds = new Set(sanitized.map((m) => m.userId));
+  // If the caller is not in the list (unexpected), still allow splits to resolve.
+  memberIds.add(callerUserId);
+
+  const { aliasLookup, aliasesByUserId } = buildAliasIndex(
+    sanitized,
+    callerUserId,
+  );
+
+  return {
+    callerUserId,
+    members: sanitized,
+    memberIds,
+    aliasLookup,
+    aliasesByUserId,
+  };
+}
+
+function normalizeMemberLabel(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[_\-]+/g, " ")
+    .replace(/[^\p{L}\p{N}@. ]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function addAlias(
+  aliasToIds: Map<string, Set<string>>,
+  alias: string | null | undefined,
+  userId: string,
+) {
+  if (!alias) return;
+  const normalized = normalizeMemberLabel(alias);
+  if (!normalized) return;
+  const existing = aliasToIds.get(normalized) ?? new Set<string>();
+  existing.add(userId);
+  aliasToIds.set(normalized, existing);
+}
+
+function collectAliasesForMember(member: HouseholdMemberContext): string[] {
+  const aliases = new Set<string>();
+  const name = (member.userName || "").trim();
+  const email = (member.userEmail || "").trim();
+
+  if (name) {
+    aliases.add(name);
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length > 1) {
+      aliases.add(parts[0]);
+      aliases.add(parts[parts.length - 1]);
+    }
+  }
+
+  if (email) {
+    aliases.add(email);
+    const local = email.split("@")[0]?.trim();
+    if (local) aliases.add(local);
+  }
+
+  return Array.from(aliases);
+}
+
+function buildAliasIndex(
+  members: HouseholdMemberContext[],
+  callerUserId: string,
+) {
+  const aliasToIds = new Map<string, Set<string>>();
+  const aliasesByUserId = new Map<string, string[]>();
+
+  for (const member of members) {
+    const aliases = collectAliasesForMember(member);
+    const normalizedAliases = aliases
+      .map((alias) => normalizeMemberLabel(alias))
+      .filter(Boolean);
+    if (normalizedAliases.length > 0) {
+      aliasesByUserId.set(member.userId, normalizedAliases);
+    }
+    for (const alias of normalizedAliases) {
+      addAlias(aliasToIds, alias, member.userId);
+    }
+  }
+
+  // Caller pronoun aliases.
+  const callerAliases = ["me", "myself", "i", "my", "mine"];
+  for (const alias of callerAliases) {
+    addAlias(aliasToIds, alias, callerUserId);
+  }
+
+  const aliasLookup = new Map<string, string>();
+  for (const [alias, ids] of aliasToIds.entries()) {
+    if (ids.size === 1) {
+      aliasLookup.set(alias, Array.from(ids)[0]);
+    }
+  }
+
+  return { aliasLookup, aliasesByUserId };
+}
+
+function buildHouseholdContextPrompt(ctx: NonNullable<ReturnType<typeof resolveHouseholdContext>>) {
+  const lines = ctx.members.map((m) => {
+    const label = (m.userName || m.userEmail || "member").toString().trim() || "member";
+    const aliases = ctx.aliasesByUserId.get(m.userId) ?? [];
+    const aliasHint = aliases.length > 0 ? ` (aliases: ${aliases.join(", ")})` : "";
+    return `- ${label}${aliasHint}: ${m.userId}`;
+  });
+  return [
+    `Caller UserId: ${ctx.callerUserId}`,
+    "Caller Aliases: me, myself, i, my, mine",
+    "Caller Household Members (name/email/alias -> userId):",
+    ...lines,
+  ].join("\n");
+}
+
+function resolveMemberAlias(
+  raw: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+): string | undefined {
+  if (!ctx) return undefined;
+  const normalized = normalizeMemberLabel(raw);
+  if (!normalized) return undefined;
+  return ctx.aliasLookup.get(normalized);
+}
+
+function normalizePayerUserId(
+  raw: unknown,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+): string | undefined {
+  if (!ctx) return undefined;
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) return undefined;
+  const sanitized = sanitizeUuid(value);
+  if (sanitized && ctx.memberIds.has(sanitized)) return sanitized;
+  const aliasResolved = resolveMemberAlias(value, ctx);
+  if (aliasResolved && ctx.memberIds.has(aliasResolved)) return aliasResolved;
+  return undefined;
+}
+
+function resolveMemberUserId(
+  raw: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+): string | null {
+  if (!ctx) return null;
+  const sanitized = sanitizeUuid(raw);
+  if (sanitized && ctx.memberIds.has(sanitized)) return sanitized;
+  const aliasResolved = resolveMemberAlias(raw, ctx);
+  if (aliasResolved && ctx.memberIds.has(aliasResolved)) return aliasResolved;
+  return null;
+}
+
+function resolveMemberFromFragment(
+  fragment: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+): string | undefined {
+  if (!ctx) return undefined;
+  const normalized = normalizeMemberLabel(fragment);
+  if (!normalized) return undefined;
+  const direct = resolveMemberAlias(normalized, ctx);
+  if (direct) return direct;
+
+  const parts = normalized.split(/\s+|,|&/g).filter(Boolean);
+  for (const part of parts) {
+    const match = resolveMemberAlias(part, ctx);
+    if (match) return match;
+  }
+  return undefined;
+}
+
+function resolvePronounUserId(
+  raw: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+  payerUserId?: string,
+  lastMentionedUserId?: string,
+): string | undefined {
+  if (!ctx) return undefined;
+  const normalized = normalizeMemberLabel(raw);
+  if (!normalized) return undefined;
+  if (["me", "myself", "i", "my", "mine"].includes(normalized)) {
+    return ctx.callerUserId;
+  }
+  if (["him", "her", "them", "they", "he", "she", "their", "his", "hers"].includes(normalized)) {
+    return payerUserId || lastMentionedUserId || ctx.callerUserId;
+  }
+  return undefined;
+}
+
+export function inferPayerFromText(
+  text: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+): string | undefined {
+  if (!ctx) return undefined;
+  const patterns = [
+    /paid\s+by\s+([^.,;]+)/i,
+    /payer\s*[:=]\s*([^.,;]+)/i,
+    /([^.,;]+)\s+paid\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match || !match[1]) continue;
+    const candidate = resolveMemberFromFragment(match[1], ctx);
+    if (candidate) return candidate;
+  }
+  return undefined;
+}
+
+export function inferSplitAmountsFromText(
+  text: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+  payerUserId?: string,
+): CustomSplits | undefined {
+  if (!ctx) return undefined;
+  const regex = /(\d+(?:\.\d+)?)\s*(?:for|to)\s+([\p{L}\p{N}@._-]+)/giu;
+  const rawMap = new Map<string, number>();
+  let match: RegExpExecArray | null;
+  let lastMentionedUserId: string | undefined;
+
+  while ((match = regex.exec(text)) !== null) {
+    const amount = Number(match[1]);
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+    const rawName = match[2];
+    const pronounMatch = resolvePronounUserId(
+      rawName,
+      ctx,
+      payerUserId,
+      lastMentionedUserId,
+    );
+    const resolved = pronounMatch ?? resolveMemberFromFragment(rawName, ctx);
+    if (!resolved) continue;
+    lastMentionedUserId = resolved;
+    rawMap.set(resolved, (rawMap.get(resolved) ?? 0) + amount);
+  }
+
+  if (rawMap.size === 0) return undefined;
+
+  return {
+    splitType: "amount",
+    memberSplits: Array.from(rawMap.entries()).map(([userId, amount]) => ({
+      userId,
+      amount,
+    })),
+  };
+}
+
+export function normalizeCustomSplits(
+  raw: unknown,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+  totalAmount: number,
+): CustomSplits | undefined {
+  if (!ctx) return undefined;
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  const splitType = String(obj.splitType || "").trim().toLowerCase();
+  if (!splitType || splitType === "equal") return undefined;
+  if (!["amount", "percentage", "shares"].includes(splitType)) return undefined;
+
+  const rawMemberSplits = Array.isArray(obj.memberSplits) ? obj.memberSplits : [];
+  const byUserId = new Map<string, MemberSplit>();
+  for (const s of rawMemberSplits) {
+    if (!s || typeof s !== "object") continue;
+    const rec = s as Record<string, unknown>;
+    const rawUserId = typeof rec.userId === "string" ? rec.userId.trim() : "";
+    const resolvedId = resolveMemberUserId(rawUserId, ctx);
+    if (!resolvedId) continue;
+    byUserId.set(resolvedId, {
+      userId: resolvedId,
+      amount: typeof rec.amount === "number" ? rec.amount : undefined,
+      percentage: typeof rec.percentage === "number" ? rec.percentage : undefined,
+      shares: typeof rec.shares === "number" ? Math.trunc(rec.shares) : undefined,
+    });
+  }
+
+  const memberIds = ctx.members.map((m) => m.userId);
+  const full: MemberSplit[] = [];
+
+  if (splitType === "amount") {
+    const safeTotal = Number.isFinite(totalAmount) ? Math.max(0, totalAmount) : 0;
+    let specifiedSum = 0;
+    const missing: string[] = [];
+    for (const id of memberIds) {
+      const existing = byUserId.get(id);
+      const amt = existing?.amount;
+      if (typeof amt === "number" && Number.isFinite(amt) && amt >= 0) {
+        specifiedSum += amt;
+      } else {
+        missing.push(id);
+      }
+    }
+
+    const remaining = Math.max(0, safeTotal - specifiedSum);
+    const perMissing = missing.length > 0 ? remaining / missing.length : 0;
+
+    for (const id of memberIds) {
+      const existing = byUserId.get(id);
+      let amount = existing?.amount;
+      if (!(typeof amount === "number" && Number.isFinite(amount) && amount >= 0)) {
+        amount = perMissing;
+      }
+      full.push({ userId: id, amount });
+    }
+
+    // Remainder-safe adjustment to exactly match total.
+    const sum = full.reduce((acc, s) => acc + (s.amount || 0), 0);
+    const diff = safeTotal - sum;
+    if (full.length > 0 && Math.abs(diff) > 1e-6) {
+      const last = full[full.length - 1];
+      last.amount = Math.max(0, (last.amount || 0) + diff);
+    }
+  } else if (splitType === "percentage") {
+    let specifiedSum = 0;
+    const missing: string[] = [];
+    for (const id of memberIds) {
+      const existing = byUserId.get(id);
+      const pct = existing?.percentage;
+      if (typeof pct === "number" && Number.isFinite(pct) && pct >= 0) {
+        specifiedSum += pct;
+      } else {
+        missing.push(id);
+      }
+    }
+
+    const remaining = Math.max(0, 100 - specifiedSum);
+    const perMissing = missing.length > 0 ? remaining / missing.length : 0;
+
+    for (const id of memberIds) {
+      const existing = byUserId.get(id);
+      let percentage = existing?.percentage;
+      if (!(typeof percentage === "number" && Number.isFinite(percentage) && percentage >= 0)) {
+        percentage = perMissing;
+      }
+      full.push({ userId: id, percentage });
+    }
+
+    const sum = full.reduce((acc, s) => acc + (s.percentage || 0), 0);
+    const diff = 100 - sum;
+    if (full.length > 0 && Math.abs(diff) > 1e-6) {
+      const last = full[full.length - 1];
+      last.percentage = Math.max(0, (last.percentage || 0) + diff);
+    }
+  } else if (splitType === "shares") {
+    for (const id of memberIds) {
+      const existing = byUserId.get(id);
+      const shares = existing?.shares;
+      const safeShares = typeof shares === "number" && Number.isFinite(shares) && shares > 0
+        ? Math.trunc(shares)
+        : 1;
+      full.push({ userId: id, shares: safeShares });
+    }
+  }
+
+  return {
+    splitType: splitType as CustomSplits["splitType"],
+    memberSplits: full,
+  };
 }
 
 async function analyzeFromText(
@@ -117,18 +533,36 @@ async function analyzeFromText(
   tools: any,
   expenseCategories: string[],
   incomeCategories: string[],
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
 ): Promise<ExpenseItem[]> {
   let items: ExpenseItem[] = [];
 
-  const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
+  const systemInstruction = buildTransactionSystemInstruction(
+    language,
+    expenseCategories,
+    incomeCategories,
+    householdContext,
+  );
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash-lite",
     tools,
     systemInstruction,
   });
+  const householdPrompt = householdContext
+    ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
+    : "\n";
   
   const response = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nUser: ${bodyText}` }] }],
+    contents: [{
+      role: "user",
+      parts: [{
+        text:
+          `Caller Currency: ${callerCurrency}\n` +
+          `Caller Date: ${callerDate}` +
+          householdPrompt +
+          `User: ${bodyText}`,
+      }],
+    }],
     toolConfig: { functionCallingConfig: { mode: "AUTO" } },
     generationConfig: { maxOutputTokens: 4096 },
   });
@@ -146,17 +580,40 @@ async function analyzeFromText(
         console.log(`[analyze-expense] Text raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`);
 
         const txType = String(it.type || "").toLowerCase();
+        const resolvedType = txType === "income" || txType === "expense" ? txType : undefined;
+        const amount = Math.abs(Number(it.amount));
         // Use correct symbol for the detected currency
         const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
 
+        let payerUserId =
+          resolvedType === "expense" ? normalizePayerUserId(it.payerUserId, householdContext) : undefined;
+        let customSplits =
+          resolvedType === "expense" ? normalizeCustomSplits(it.customSplits, householdContext, amount) : undefined;
+
+        if (resolvedType === "expense" && householdContext) {
+          if (!payerUserId) {
+            payerUserId = inferPayerFromText(bodyText, householdContext);
+          }
+          if (!customSplits) {
+            const inferredSplits = inferSplitAmountsFromText(
+              bodyText,
+              householdContext,
+              payerUserId,
+            );
+            customSplits = normalizeCustomSplits(inferredSplits, householdContext, amount);
+          }
+        }
+
         return {
-          type: txType === "income" || txType === "expense" ? txType : undefined,
-          amount: Math.abs(Number(it.amount)),
+          type: resolvedType,
+          amount,
           category: normalizedCategory,
           currency: itemCurrency,
           currencySymbol: itemCurrencySymbol,
           date: it.date || callerDate,
           description: it.description || bodyText,
+          payerUserId,
+          customSplits,
         } as ExpenseItem;
       })
       .filter((it) => {
@@ -199,15 +656,24 @@ async function analyzeFromAudio(
   tools: any,
   expenseCategories: string[],
   incomeCategories: string[],
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
 ): Promise<ExpenseItem[]> {
   let items: ExpenseItem[] = [];
 
-  const systemInstruction = buildTransactionSystemInstruction(language, expenseCategories, incomeCategories);
+  const systemInstruction = buildTransactionSystemInstruction(
+    language,
+    expenseCategories,
+    incomeCategories,
+    householdContext,
+  );
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash-lite",
     tools,
     systemInstruction,
   });
+  const householdPrompt = householdContext
+    ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
+    : "\n";
 
   const response = await model.generateContent({
     toolConfig: { functionCallingConfig: { mode: "AUTO" } },
@@ -218,7 +684,8 @@ async function analyzeFromAudio(
           {
             text:
               `Caller Currency: ${callerCurrency}\n` +
-              `Caller Date: ${callerDate}\n` +
+              `Caller Date: ${callerDate}` +
+              householdPrompt +
               "The following is an audio description of one or more transactions. Analyze it and return the structured transactions by calling add_transactions.",
           },
           {
@@ -247,16 +714,25 @@ async function analyzeFromAudio(
         );
 
         const txType = String(it.type || "").toLowerCase();
+        const resolvedType = txType === "income" || txType === "expense" ? txType : undefined;
+        const amount = Math.abs(Number(it.amount));
         const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
 
+        const payerUserId =
+          resolvedType === "expense" ? normalizePayerUserId(it.payerUserId, householdContext) : undefined;
+        const customSplits =
+          resolvedType === "expense" ? normalizeCustomSplits(it.customSplits, householdContext, amount) : undefined;
+
         return {
-          type: txType === "income" || txType === "expense" ? txType : undefined,
-          amount: Math.abs(Number(it.amount)),
+          type: resolvedType,
+          amount,
           category: normalizedCategory,
           currency: itemCurrency,
           currencySymbol: itemCurrencySymbol,
           date: it.date || callerDate,
           description: it.description || "",
+          payerUserId,
+          customSplits,
         } as ExpenseItem;
       })
       .filter((it) => {
@@ -313,6 +789,7 @@ async function attemptAnalysis(
   callerCurrency: string,
   callerDate: string,
   tools: any,
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   timeoutMs: number = 30000,
   overrideContentType?: string
 ): Promise<{ success: boolean; items?: ExpenseItem[]; error?: string }> {
@@ -361,18 +838,27 @@ async function attemptAnalysis(
           );
 
           const txType = String(it.type || "").toLowerCase();
+          const resolvedType = txType === "income" || txType === "expense" ? txType : undefined;
+          const amount = Math.abs(Number(it.amount));
 
           // Use correct symbol for the detected currency
           const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
 
+          const payerUserId =
+            resolvedType === "expense" ? normalizePayerUserId(it.payerUserId, householdContext) : undefined;
+          const customSplits =
+            resolvedType === "expense" ? normalizeCustomSplits(it.customSplits, householdContext, amount) : undefined;
+
           return {
-            type: txType === "income" || txType === "expense" ? txType : undefined,
-            amount: Math.abs(Number(it.amount)),
+            type: resolvedType,
+            amount,
             category: normalizedCategory,
             currency: itemCurrency,
             currencySymbol: itemCurrencySymbol,
             date: it.date || callerDate,
             description: it.description || "",
+            payerUserId,
+            customSplits,
           };
         })
         .filter((it) => {
@@ -474,6 +960,7 @@ export async function runAnalyzeExpense(
     const callerCurrency = validateCurrency(body.currency);
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
     const language = normalizeLanguage(body.language);
+    const householdContext = resolveHouseholdContext(body, userId);
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const expenseCategories = getExpenseCategories();
@@ -510,6 +997,28 @@ export async function runAnalyzeExpense(
                     currency: { type: "string", description: "ISO 4217 code." },
                     date: { type: "string", description: "YYYY-MM-DD." },
                     description: { type: "string", description: "Very short note (e.g. 'Coffee', 'Taxi')." },
+                    payerUserId: { type: "string", description: "Household only: userId of who paid (if specified)." },
+                    customSplits: {
+                      type: "object",
+                      description: "Household only: split configuration. Omit entirely for equal split.",
+                      properties: {
+                        splitType: { type: "string", enum: ["equal", "amount", "percentage", "shares"] },
+                        memberSplits: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              userId: { type: "string" },
+                              amount: { type: "number" },
+                              percentage: { type: "number" },
+                              shares: { type: "number" },
+                            },
+                            required: ["userId"],
+                          },
+                        },
+                      },
+                      required: ["splitType", "memberSplits"],
+                    },
                   },
                   required: ["type", "amount", "category"],
                 },
@@ -578,6 +1087,7 @@ export async function runAnalyzeExpense(
         tools,
         expenseCategories,
         incomeCategories,
+        householdContext,
       );
     } else if (hasText) {
       items = await analyzeFromText(
@@ -589,6 +1099,7 @@ export async function runAnalyzeExpense(
         tools,
         expenseCategories,
         incomeCategories,
+        householdContext,
       );
     } else if (hasAudio) {
       const audio = body.audio!;
@@ -623,6 +1134,7 @@ export async function runAnalyzeExpense(
         tools,
         expenseCategories,
         incomeCategories,
+        householdContext,
       );
     } else if (hasImage) {
       const image = body.image!;
@@ -727,6 +1239,7 @@ export async function runAnalyzeExpense(
             callerCurrency,
             callerDate,
             tools,
+            householdContext,
             30000,
             finalContentType
           );
@@ -773,6 +1286,7 @@ export async function runAnalyzeExpense(
             callerCurrency,
             callerDate,
             tools,
+            householdContext,
             8000,
           );
 

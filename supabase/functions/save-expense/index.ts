@@ -424,6 +424,8 @@ Deno.serve(async (req: Request) => {
     } catch (_) {}
 
     // If householdId provided, create household split
+    let responseExpense = expense;
+
     if (body.householdId) {
       console.log(
         "[save-expense] Creating household split for household:",
@@ -483,8 +485,18 @@ Deno.serve(async (req: Request) => {
       }
 
       // Determine split type and validate custom splits
-      const splitType = body.customSplits?.splitType || "equal";
-      const customSplits = body.customSplits;
+      const rawSplitType = typeof body.customSplits?.splitType === "string"
+        ? body.customSplits.splitType.trim().toLowerCase()
+        : "equal";
+      const normalizedSplitType = ["equal", "amount", "percentage", "shares"].includes(rawSplitType)
+        ? rawSplitType
+        : "equal";
+      const hasMemberSplits = Array.isArray(body.customSplits?.memberSplits) &&
+        body.customSplits!.memberSplits.length > 0;
+      const customSplits = hasMemberSplits && normalizedSplitType !== "equal"
+        ? body.customSplits
+        : null;
+      const splitType = customSplits ? normalizedSplitType : "equal";
 
       // Validate custom splits if provided
       if (customSplits) {
@@ -586,8 +598,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // Use normalized splits for all downstream logic.
-        (body.customSplits as CustomSplits).memberSplits =
-          normalizedMemberSplits;
+        customSplits.memberSplits = normalizedMemberSplits;
       }
 
       // Resolve payer for split group: default current user unless explicit payerUserId provided and valid
@@ -790,6 +801,15 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", expense.id);
 
+      const { data: refreshedExpense, error: refreshError } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("id", expense.id)
+        .single();
+      if (!refreshError && refreshedExpense) {
+        responseExpense = refreshedExpense;
+      }
+
       // Create notifications for all household members EXCEPT the adder
       const { error: notifyError } = await supabase.rpc(
         "notify_household_members_expense",
@@ -829,7 +849,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        data: expense,
+        data: responseExpense,
         shared: !!body.householdId,
         resolvedUserId: userId,
         meta: resolvedUserMetadata,

@@ -14,6 +14,7 @@ import {
 } from "../shared/is-free-user.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { fetchExpensesDirect, saveExpenseDirect, deleteExpenseDirect } from "../shared/expenses-helpers.ts";
+import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import { createOrUpdateBudget, upsertEnvelope, upsertEnvelopeAllocation, upsertEnvelopeCategoryLink, getBudgetStatusDirect } from "../shared/budgets-helpers.ts";
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
@@ -46,8 +47,9 @@ CRITICAL RULES:
 13. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to households by name only; if multiple, offer names, not IDs.
 14. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
 15. **Options**: When offering choices (households, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
-16. **Financial snapshot**: For asks like “current financial situation/health/status”: provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
-17. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
+16. **Splits**: For household expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among household members.
+17. **Financial snapshot**: For asks like “current financial situation/health/status”: provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
+18. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
 
 COMMON USER INTENTS (answer directly, propose next steps):
 - Spending clarity: where money goes, why cash runs out, breakdowns by category, spot leaks, compare to norms.
@@ -269,6 +271,146 @@ function nextMonthStart(dateStr: string) {
   const dt = new Date(Date.UTC(year, month, 1));
   dt.setUTCMonth(dt.getUTCMonth() + 1);
   return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-01`;
+}
+
+function normalizeNameForMatch(value: string): string {
+  return (value || "")
+    .toLowerCase()
+    .replace(/@.*/, "") // drop email domain
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function resolveMemberIdByName(
+  members: Array<{ user_id: string; users?: { full_name?: string | null; email?: string | null } | null }>,
+  query: string,
+): string | null {
+  const q = normalizeNameForMatch(query);
+  if (!q) return null;
+
+  const matches: string[] = [];
+  for (const m of members) {
+    const name = normalizeNameForMatch(m.users?.full_name || "");
+    const email = normalizeNameForMatch(m.users?.email || "");
+    if (!m.user_id) continue;
+    if (name === q || email === q) matches.push(m.user_id);
+    else if (name.includes(q) || email.includes(q)) matches.push(m.user_id);
+  }
+  const unique = Array.from(new Set(matches));
+  if (unique.length !== 1) return null;
+  return unique[0];
+}
+
+async function resolveHouseholdSplitConfig(
+  supabase: ReturnType<typeof createClient>,
+  householdId: string,
+  actorUserId: string,
+  totalAmount: number,
+  args: any,
+): Promise<{ payerUserId?: string; customSplits?: CustomSplits }> {
+  const payerName = (args.payer_name || args.paid_by || "").toString().trim();
+  const splitTypeHint = (args.split_type || "").toString().trim().toLowerCase();
+  const memberSplitsRaw = Array.isArray(args.member_splits) ? args.member_splits : [];
+
+  const { data: members, error } = await supabase
+    .from("household_members")
+    .select("user_id, users(full_name, email)")
+    .eq("household_id", householdId);
+  if (error || !members || members.length === 0) return {};
+
+  const memberIds = members.map((m: any) => m.user_id as string).filter(Boolean);
+  if (memberIds.length === 0) return {};
+
+  const payerUserId =
+    payerName ? resolveMemberIdByName(members as any, payerName) || actorUserId : actorUserId;
+
+  if (!memberSplitsRaw.length) {
+    // No split specified: default equal split (omit customSplits).
+    return { payerUserId };
+  }
+
+  const inferredType = (() => {
+    if (["equal", "amount", "percentage", "shares"].includes(splitTypeHint)) return splitTypeHint;
+    const hasPct = memberSplitsRaw.some((s: any) => typeof s?.percentage === "number");
+    const hasShares = memberSplitsRaw.some((s: any) => typeof s?.shares === "number");
+    return hasPct ? "percentage" : hasShares ? "shares" : "amount";
+  })();
+
+  const byId = new Map<string, any>();
+  for (const s of memberSplitsRaw) {
+    const memberName = (s?.member_name || s?.member || s?.name || "").toString().trim();
+    if (!memberName) continue;
+    const memberId = resolveMemberIdByName(members as any, memberName);
+    if (!memberId) continue;
+    byId.set(memberId, s);
+  }
+
+  const total = Number.isFinite(totalAmount) ? Math.max(0, totalAmount) : 0;
+
+  const fullSplits: MemberSplit[] = [];
+  if (inferredType === "amount") {
+    let specifiedSum = 0;
+    const missing: string[] = [];
+    for (const id of memberIds) {
+      const s = byId.get(id);
+      const amt = typeof s?.amount === "number" ? Math.max(0, s.amount) : null;
+      if (amt == null) missing.push(id);
+      else specifiedSum += amt;
+    }
+    const remaining = Math.max(0, total - specifiedSum);
+    const perMissing = missing.length ? remaining / missing.length : 0;
+    for (const id of memberIds) {
+      const s = byId.get(id);
+      const amt = typeof s?.amount === "number" ? Math.max(0, s.amount) : perMissing;
+      fullSplits.push({ userId: id, amount: amt });
+    }
+    const sum = fullSplits.reduce((acc, s) => acc + (s.amount || 0), 0);
+    const diff = total - sum;
+    if (fullSplits.length && Math.abs(diff) > 1e-6) {
+      fullSplits[fullSplits.length - 1].amount = Math.max(
+        0,
+        (fullSplits[fullSplits.length - 1].amount || 0) + diff,
+      );
+    }
+  } else if (inferredType === "percentage") {
+    let specifiedSum = 0;
+    const missing: string[] = [];
+    for (const id of memberIds) {
+      const s = byId.get(id);
+      const pct = typeof s?.percentage === "number" ? Math.max(0, Math.min(100, s.percentage)) : null;
+      if (pct == null) missing.push(id);
+      else specifiedSum += pct;
+    }
+    const remaining = Math.max(0, 100 - specifiedSum);
+    const perMissing = missing.length ? remaining / missing.length : 0;
+    for (const id of memberIds) {
+      const s = byId.get(id);
+      const pct = typeof s?.percentage === "number" ? Math.max(0, Math.min(100, s.percentage)) : perMissing;
+      fullSplits.push({ userId: id, percentage: pct });
+    }
+    const sum = fullSplits.reduce((acc, s) => acc + (s.percentage || 0), 0);
+    const diff = 100 - sum;
+    if (fullSplits.length && Math.abs(diff) > 1e-6) {
+      fullSplits[fullSplits.length - 1].percentage = Math.max(
+        0,
+        (fullSplits[fullSplits.length - 1].percentage || 0) + diff,
+      );
+    }
+  } else if (inferredType === "shares") {
+    for (const id of memberIds) {
+      const s = byId.get(id);
+      const shares = typeof s?.shares === "number" ? Math.max(1, Math.trunc(s.shares)) : 1;
+      fullSplits.push({ userId: id, shares });
+    }
+  }
+
+  return {
+    payerUserId,
+    customSplits: {
+      splitType: inferredType as CustomSplits["splitType"],
+      memberSplits: fullSplits,
+    },
+  };
 }
 
 type FinancialSnapshot = {
@@ -542,6 +684,22 @@ Deno.serve(async (req: Request) => {
             currency: { type: "STRING", description: "ISO Currency Code" },
             household_id: { type: "STRING", description: "Optional: Household ID if it is a group expense" },
             household_name: { type: "STRING", description: "Optional: Household name if user provided it" },
+            payer_name: { type: "STRING", description: "Household only: who paid (member name/email). Example: 'paid by B'." },
+            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"], description: "Household only: how to split. If omitted, infer from member_splits fields." },
+            member_splits: {
+              type: "ARRAY",
+              description: "Household only: per-member split instructions (by name/email).",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  member_name: { type: "STRING", description: "Member name/email reference" },
+                  amount: { type: "NUMBER" },
+                  percentage: { type: "NUMBER" },
+                  shares: { type: "NUMBER" }
+                },
+                required: ["member_name"]
+              }
+            },
             is_recurring: { type: "BOOLEAN", description: "True if this is a recurring transaction" },
             frequency: { type: "STRING", description: "Frequency for recurring (monthly, weekly, etc.)" }
           },
@@ -619,6 +777,18 @@ Deno.serve(async (req: Request) => {
               toolResult = { expenses: normalized, chart_url: chartUrl };
             }
           } else if (call.name === "add_transaction") {
+            const householdId = (call.args.household_id || null) as string | null;
+            const isHouseholdExpense =
+              !!householdId && (call.args.type || "expense") === "expense";
+            const splitConfig = isHouseholdExpense
+              ? await resolveHouseholdSplitConfig(
+                  supabase,
+                  householdId!,
+                  userId,
+                  Number(call.args.amount || 0),
+                  call.args,
+                )
+              : {};
             const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
               type: call.args.type || "expense",
               amount: call.args.amount,
@@ -626,7 +796,9 @@ Deno.serve(async (req: Request) => {
               date: call.args.date || formatDateInTimeZone(userTimezone),
               currency: call.args.currency || userCurrency,
               description: call.args.description,
-              householdId: call.args.household_id || null,
+              householdId,
+              payerUserId: splitConfig.payerUserId,
+              customSplits: splitConfig.customSplits,
               isRecurring: call.args.is_recurring,
               recurrence_rule: call.args.is_recurring
                 ? { frequency: (call.args.frequency || "MONTHLY").toUpperCase(), interval: 1, anchor_date: call.args.date || formatDateInTimeZone(userTimezone) }
@@ -1191,6 +1363,22 @@ Deno.serve(async (req: Request) => {
             currency: { type: "STRING", description: "ISO Currency Code" },
             household_id: { type: "STRING", description: "Optional: Household ID if it is a group expense" },
             household_name: { type: "STRING", description: "Optional: Household name if user provided it" },
+            payer_name: { type: "STRING", description: "Household only: who paid (member name/email). Example: 'paid by B'." },
+            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"], description: "Household only: how to split. If omitted, infer from member_splits fields." },
+            member_splits: {
+              type: "ARRAY",
+              description: "Household only: per-member split instructions (by name/email).",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  member_name: { type: "STRING", description: "Member name/email reference" },
+                  amount: { type: "NUMBER" },
+                  percentage: { type: "NUMBER" },
+                  shares: { type: "NUMBER" }
+                },
+                required: ["member_name"]
+              }
+            },
             is_recurring: { type: "BOOLEAN", description: "True if this is a recurring transaction" },
             frequency: { type: "STRING", description: "Frequency for recurring (monthly, weekly, etc.)" }
           },
@@ -1393,6 +1581,18 @@ let persistedContent: string | undefined;
                   };
                 }
 
+                const isHouseholdExpense =
+                  !!householdId && (call.args.type || "expense") === "expense";
+                const splitConfig = isHouseholdExpense
+                  ? await resolveHouseholdSplitConfig(
+                      supabase,
+                      householdId!,
+                      userId,
+                      Number(call.args.amount || 0),
+                      call.args,
+                    )
+                  : {};
+
                 const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
                   type: call.args.type || "expense",
                   amount: call.args.amount,
@@ -1401,6 +1601,8 @@ let persistedContent: string | undefined;
                   currency: call.args.currency || userCurrency,
                   description: call.args.description,
                   householdId,
+                  payerUserId: splitConfig.payerUserId,
+                  customSplits: splitConfig.customSplits,
                   isRecurring: call.args.is_recurring,
                   recurrence_rule: recurrenceRule
                 });
