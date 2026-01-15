@@ -50,6 +50,7 @@ export interface AnalyzeRequestBody {
   currency?: string;
   language?: string;
   householdId?: string;
+  isPortfolio?: boolean;
   householdMembers?: HouseholdMemberContext[];
   attachments?: AnalyzeAttachment[];
 }
@@ -155,6 +156,7 @@ export function resolveHouseholdContext(
   body: AnalyzeRequestBody,
   callerUserId: string,
 ) {
+  if (body.isPortfolio) return null;
   const members = Array.isArray(body.householdMembers)
     ? body.householdMembers
     : [];

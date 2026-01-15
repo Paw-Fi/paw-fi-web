@@ -110,6 +110,7 @@ interface RequestBody {
   description?: string; // Optional description/note
   receiptImageUrl?: string; // Optional receipt image URL
   householdId?: string; // If provided, share with this household
+  isPortfolio?: boolean; // If true, treat as personal even with householdId
   customSplits?: CustomSplits; // Custom split configuration (optional)
   isRecurring?: boolean; // Whether this is a recurring expense (v1.5)
   recurrence_rule?: { // Recurrence configuration (v1.5)
@@ -238,12 +239,15 @@ Deno.serve(async (req: Request) => {
       resolvedUserMetadata.ephemeralUserId = detection.ephemeralUserId;
     }
 
+    const isPortfolio = body.isPortfolio === true;
+
     console.log("[save-expense] Saving expense:", {
       userId,
       amount: body.amount,
       category: body.category,
       currency,
       householdId: body.householdId,
+      isPortfolio,
     });
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -372,6 +376,7 @@ Deno.serve(async (req: Request) => {
         created_at: body.clientCreatedAt || new Date().toISOString(),
         is_recurring: body.isRecurring || false,
         recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
+        household_id: isPortfolio ? body.householdId || null : null,
       })
       .select()
       .single();
@@ -423,8 +428,24 @@ Deno.serve(async (req: Request) => {
       }
     } catch (_) {}
 
-    // If householdId provided, create household split
+    // If householdId provided, create household split unless this is a portfolio.
     let responseExpense = expense;
+
+    if (body.householdId && isPortfolio) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: responseExpense,
+          shared: false,
+          resolvedUserId: userId,
+          meta: resolvedUserMetadata,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     if (body.householdId) {
       console.log(

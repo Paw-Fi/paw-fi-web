@@ -17,6 +17,7 @@ interface ValidateInviteResponse {
     id: string;
     name: string;
     cover_image_url?: string | null; // Changed from emoji
+    is_portfolio?: boolean | null;
   };
   inviter?: {
     id: string;
@@ -90,10 +91,11 @@ serve(async (req) => {
         status,
         expires_at,
         personal_message,
-        households:household_id (
+          households:household_id (
           id,
           name,
-          cover_image_url
+          cover_image_url,
+          is_portfolio
         )
       `)
       .eq('token', token)

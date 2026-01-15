@@ -76,7 +76,7 @@ Deno.serve(async (req: Request) => {
 
         // In household mode, provide the household member list to the model so it can
         // reliably resolve payer/splits by userId (without exposing IDs to end users).
-        if (body.householdId && !Array.isArray(body.householdMembers)) {
+        if (body.householdId && !body.isPortfolio && !Array.isArray(body.householdMembers)) {
           const { data: membership, error: membershipError } = await supabaseAuthed
             .from("household_members")
             .select("id")
