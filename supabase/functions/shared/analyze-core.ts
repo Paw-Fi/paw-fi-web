@@ -567,7 +567,7 @@ async function analyzeFromText(
     }],
     toolConfig: { functionCallingConfig: { mode: "AUTO" } },
     generationConfig: { maxOutputTokens: 4096 },
-  });
+  } as any);
 
   const tool = getFirstFunctionCall(response);
   if (tool && tool.name === "add_transactions") {
@@ -700,7 +700,7 @@ async function analyzeFromAudio(
       },
     ],
     generationConfig: { maxOutputTokens: 4096 },
-  });
+  } as any);
 
   const tool = getFirstFunctionCall(response);
   if (tool && tool.name === "add_transactions") {
@@ -821,7 +821,7 @@ async function attemptAnalysis(
         ],
       }],
       generationConfig: { maxOutputTokens: 4096 },
-    });
+    } as any);
 
     const response = await Promise.race([responsePromise, timeoutPromise]);
     

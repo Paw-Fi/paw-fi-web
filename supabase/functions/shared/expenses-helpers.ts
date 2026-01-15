@@ -1,10 +1,33 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { createClient, type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { normalizeCategory } from "./category-colors.ts";
 
-export type SupabaseClient = ReturnType<typeof createClient>;
+export type SupabaseClient = SupabaseJsClient;
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const NEVER_UUID = "00000000-0000-0000-0000-000000000000";
+
+ function sanitizeUuid(value: string): string | null {
+   const trimmed = value.trim();
+   return UUID_REGEX.test(trimmed) ? trimmed : null;
+ }
+
+ function sanitizeUuidList(values: string[] | undefined): string[] {
+   if (!Array.isArray(values)) return [];
+   const out: string[] = [];
+   const seen: Record<string, true> = {};
+   for (const v of values) {
+     if (typeof v !== "string") continue;
+     const s = sanitizeUuid(v);
+     if (!s) continue;
+     if (seen[s]) continue;
+     seen[s] = true;
+     out.push(s);
+   }
+   return out;
+ }
 
 function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
+  return typeof value === "number" && isFinite(value);
 }
 
 function normalizePercentage(value: unknown): number {
@@ -16,7 +39,7 @@ function normalizePercentage(value: unknown): number {
 
 function normalizeShares(value: unknown): number | null {
   if (!isFiniteNumber(value)) return null;
-  const shares = Math.trunc(value);
+  const shares = Math.floor(value);
   return shares > 0 ? shares : null;
 }
 
@@ -25,14 +48,18 @@ function normalizeAmount(value: unknown): number {
   return value < 0 ? 0 : value;
 }
 
+function isSplitType(value: string): value is CustomSplits["splitType"] {
+  return value === "equal" || value === "amount" || value === "percentage" || value === "shares";
+}
+
 function allocateCentsByWeights(
   totalCents: number,
   weights: number[],
 ): number[] {
-  const safeTotal = Number.isFinite(totalCents)
-    ? Math.max(0, Math.trunc(totalCents))
+  const safeTotal = isFinite(totalCents)
+    ? Math.max(0, Math.floor(totalCents))
     : 0;
-  const safeWeights = weights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0));
+  const safeWeights = weights.map((w) => (isFinite(w) && w > 0 ? w : 0));
   const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0);
 
   if (safeTotal === 0 || totalWeight <= 0 || safeWeights.length === 0) {
@@ -79,6 +106,8 @@ export interface FetchExpensesOptions {
   startDate?: string;
   endDate?: string;
   householdId?: string | null;
+  isPortfolio?: boolean;
+  portfolioHouseholdIds?: string[];
   type?: "expense" | "income";
   currency?: string;
 }
@@ -100,10 +129,31 @@ export async function fetchExpensesDirect(
 
   if (opts.type) query = query.eq("type", opts.type);
 
+  const safePortfolioIds = sanitizeUuidList(opts.portfolioHouseholdIds);
+
   if (opts.householdId) {
     query = query.eq("household_id", opts.householdId);
+  } else if (opts.isPortfolio === true) {
+    query = query.eq("contact_id", contactId);
+    if (safePortfolioIds.length) {
+      query = query.in("household_id", safePortfolioIds);
+    } else {
+      query = query.eq("id", NEVER_UUID);
+    }
   } else {
-    query = query.eq("contact_id", contactId).is("household_id", null);
+    if (safePortfolioIds.length) {
+      const safeContactId = sanitizeUuid(contactId);
+      if (safeContactId) {
+        const csv = safePortfolioIds.join(",");
+        query = query.or(
+          `and(contact_id.eq.${safeContactId},household_id.is.null),and(contact_id.eq.${safeContactId},household_id.in.(${csv}))`,
+        );
+      } else {
+        query = query.eq("contact_id", contactId).is("household_id", null);
+      }
+    } else {
+      query = query.eq("contact_id", contactId).is("household_id", null);
+    }
   }
 
   if (opts.startDate) query = query.gte("date", opts.startDate);
@@ -121,6 +171,7 @@ export interface SaveExpenseParams {
   currency: string;
   description?: string;
   householdId?: string | null;
+  isPortfolio?: boolean;
   isRecurring?: boolean;
   recurrence_rule?: Record<string, unknown>;
   type?: "expense" | "income";
@@ -149,8 +200,9 @@ export async function saveExpenseDirect(
   const amount_cents = Math.round((params.amount || 0) * 100);
   const date = params.date || new Date().toISOString().split("T")[0];
   const category = normalizeCategory(params.category || "other");
+  const isPortfolioExpense = params.isPortfolio === true;
   const isHouseholdExpense =
-    !!params.householdId && (params.type || "expense") === "expense";
+    !!params.householdId && !isPortfolioExpense && (params.type || "expense") === "expense";
   const payload: Record<string, unknown> = {
     contact_id: contactId,
     user_id: userId,
@@ -181,7 +233,9 @@ export async function saveExpenseDirect(
     .eq("household_id", householdId);
   if (membersError || !members || members.length === 0) return insertRes;
 
-  const memberIds = members.map((m: any) => m.user_id as string).filter(Boolean);
+  const memberIds: string[] = members
+    .map((m: any) => m.user_id as string | null | undefined)
+    .filter((value: string | null | undefined): value is string => typeof value === "string" && value.length > 0);
   if (memberIds.length === 0) return insertRes;
 
   const rawSplitType = (params.customSplits?.splitType || "equal")
@@ -189,7 +243,7 @@ export async function saveExpenseDirect(
     .trim()
     .toLowerCase();
   const normalizedSplitType =
-    (["equal", "amount", "percentage", "shares"] as const).includes(rawSplitType as any)
+    isSplitType(rawSplitType)
       ? (rawSplitType as CustomSplits["splitType"])
       : "equal";
   const hasMemberSplits = Array.isArray(params.customSplits?.memberSplits) &&
@@ -200,7 +254,7 @@ export async function saveExpenseDirect(
   const splitType = customSplits ? normalizedSplitType : "equal";
 
   let payerUserId = params.payerUserId || userId;
-  if (!memberIds.includes(payerUserId)) {
+  if (memberIds.indexOf(payerUserId) === -1) {
     payerUserId = userId;
   }
 
@@ -224,52 +278,52 @@ export async function saveExpenseDirect(
   if (splitType === "equal") {
     const per = Math.floor(amount_cents / memberIds.length);
     const remainder = amount_cents - per * memberIds.length;
-    splitLines = memberIds.map((memberId, index) => ({
+    splitLines = memberIds.map((memberId: string, index: number) => ({
       split_group_id: splitGroup.id,
       user_id: memberId,
       amount_cents: per + (index === 0 ? remainder : 0),
     }));
   } else if (splitType === "amount" && customSplits) {
-    const normalizedById = new Map<string, MemberSplit>();
+    const normalizedById: Record<string, MemberSplit> = {};
     for (const s of customSplits.memberSplits || []) {
-      if (!memberIds.includes(s.userId)) continue;
-      normalizedById.set(s.userId, { userId: s.userId, amount: normalizeAmount(s.amount) });
+      if (memberIds.indexOf(s.userId) === -1) continue;
+      normalizedById[s.userId] = { userId: s.userId, amount: normalizeAmount(s.amount) };
     }
-    const full = memberIds.map((id) => normalizedById.get(id) || { userId: id, amount: 0 });
-    const cents = full.map((s) => Math.max(0, Math.round((s.amount || 0) * 100)));
-    const sum = cents.reduce((a, b) => a + b, 0);
+    const full = memberIds.map((id: string) => normalizedById[id] || { userId: id, amount: 0 });
+    const cents = full.map((s: MemberSplit) => Math.max(0, Math.round((s.amount || 0) * 100)));
+    const sum = cents.reduce((a: number, b: number) => a + b, 0);
     const diff = amount_cents - sum;
     if (cents.length > 0 && diff !== 0) cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
-    splitLines = full.map((s, idx) => ({
+    splitLines = full.map((s: MemberSplit, idx: number) => ({
       split_group_id: splitGroup.id,
       user_id: s.userId,
       amount_cents: cents[idx],
     }));
   } else if (splitType === "percentage" && customSplits) {
-    const normalizedById = new Map<string, MemberSplit>();
+    const normalizedById: Record<string, MemberSplit> = {};
     for (const s of customSplits.memberSplits || []) {
-      if (!memberIds.includes(s.userId)) continue;
-      normalizedById.set(s.userId, { userId: s.userId, percentage: normalizePercentage(s.percentage) });
+      if (memberIds.indexOf(s.userId) === -1) continue;
+      normalizedById[s.userId] = { userId: s.userId, percentage: normalizePercentage(s.percentage) };
     }
-    const full = memberIds.map((id) => normalizedById.get(id) || { userId: id, percentage: 0 });
-    const weights = full.map((s) => s.percentage || 0);
+    const full = memberIds.map((id: string) => normalizedById[id] || { userId: id, percentage: 0 });
+    const weights = full.map((s: MemberSplit) => s.percentage || 0);
     const cents = allocateCentsByWeights(amount_cents, weights);
-    splitLines = full.map((s, idx) => ({
+    splitLines = full.map((s: MemberSplit, idx: number) => ({
       split_group_id: splitGroup.id,
       user_id: s.userId,
       amount_cents: cents[idx],
       percentage: s.percentage,
     }));
   } else if (splitType === "shares" && customSplits) {
-    const normalizedById = new Map<string, MemberSplit>();
+    const normalizedById: Record<string, MemberSplit> = {};
     for (const s of customSplits.memberSplits || []) {
-      if (!memberIds.includes(s.userId)) continue;
-      normalizedById.set(s.userId, { userId: s.userId, shares: normalizeShares(s.shares) ?? 1 });
+      if (memberIds.indexOf(s.userId) === -1) continue;
+      normalizedById[s.userId] = { userId: s.userId, shares: normalizeShares(s.shares) ?? 1 };
     }
-    const full = memberIds.map((id) => normalizedById.get(id) || { userId: id, shares: 1 });
-    const weights = full.map((s) => s.shares || 0);
+    const full = memberIds.map((id: string) => normalizedById[id] || { userId: id, shares: 1 });
+    const weights = full.map((s: MemberSplit) => s.shares || 0);
     const cents = allocateCentsByWeights(amount_cents, weights);
-    splitLines = full.map((s, idx) => ({
+    splitLines = full.map((s: MemberSplit, idx: number) => ({
       split_group_id: splitGroup.id,
       user_id: s.userId,
       amount_cents: cents[idx],
@@ -279,7 +333,7 @@ export async function saveExpenseDirect(
     // Fallback to equal
     const per = Math.floor(amount_cents / memberIds.length);
     const remainder = amount_cents - per * memberIds.length;
-    splitLines = memberIds.map((memberId, index) => ({
+    splitLines = memberIds.map((memberId: string, index: number) => ({
       split_group_id: splitGroup.id,
       user_id: memberId,
       amount_cents: per + (index === 0 ? remainder : 0),

@@ -123,7 +123,8 @@ export async function ensureGuestIdentity(
       }
     } catch (authError) {
       console.error(`[ensureGuestIdentity] Auth operation failed for conversation ${conversationId}:`, authError);
-      throw new Error(`Auth system error: ${authError.message}`);
+      const message = authError instanceof Error ? authError.message : String(authError);
+      throw new Error(`Auth system error: ${message}`);
     }
   }
 

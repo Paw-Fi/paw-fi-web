@@ -1,7 +1,7 @@
 // Supabase Edge Function: twilio-whatsapp-ai-bot
 // Handles WhatsApp messages via Twilio, using Gemini AI and MCP-style tools.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { createClient, type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import {
@@ -26,28 +26,28 @@ import { runAnalyzeExpense, buildXlsxPreview, summarizePdfWithGemini } from "../
 const MODEL_NAME = "gemini-3-flash-preview"; // Fast and capable
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
-You can handle personal and household finances.
+You can handle personal finances and shared spaces.
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
     - Use currency symbols (€, $, £, ₦, etc.) when replying instead of ISO codes.
-2.  **Households**: If the user asks about "household" or "group" expenses, ask which household if they have multiple, or use the household_id provided in context.
-3.  **Confirmation**: For ambiguous requests (e.g., "5 coffee"), ask for clarification (Personal or Household? Which category?).
+2.  **Spaces**: If the user asks about “spaces” (e.g., family, roommates, portfolio), clarify which space if they have multiple, or use the household_id + is_portfolio provided in context.
+3.  **Confirmation**: For ambiguous requests (e.g., "5 coffee"), ask for clarification (Personal or which space? Which category?).
     - Infer a category from the text and propose it (e.g., "latte" -> "food & drink"). Ask for quick confirmation before saving.
 4.  **Charts**: If the user asks for a chart or graph, use the 'generate_chart_url' tool and provide the URL in your response. Explain that you are sending an image.
 5.  **Recurring**: If the user says "monthly", "weekly", "every month", etc., set 'is_recurring' to true.
 6.  **Tone**: Enthusiastic, encouraging, concise, and proactive (suitable for WhatsApp). Use light emojis, and close with a quick follow-up offer to help further (e.g., suggest related actions like totals, budgets, or recurring setup).
 7.  **Totals**: When listing or summarizing expenses, always include a total spent for the requested range and mention how many items are shown.
-8.  **Safety**: Do not reveal sensitive IDs.
+8.  **Safety**: Do not reveal sensitive IDs. Refer to each space by its name only.
 9.  **Budgets/Pockets**: Budgets live in the budgets table. They can be split across pockets (envelopes) with percentage shares. When setting a budget, propose a total and how to split it across relevant pockets; create multiple pocket budgets if the user asks for splits.
 10. **Pockets/Envelopes Actions**: You can create/update envelopes, set monthly allocations, link categories to envelopes, and show envelope status (alloc/spent/remaining) for a month.
 11. **Reminders/Recurring**: Recurring transactions can include reminders; ask for frequency and whether to set a reminder if the user hints at it.
-12. **Income vs Expense**: All transactions live in the "expenses" table with type = "expense" or "income". Default to expense if unclear. Always set the type when listing, adding, updating, or recurring. For household queries, use household_id to include transactions from all members; for personal, use contact_id with household_id IS NULL.
+12. **Income vs Expense**: All transactions live in the "expenses" table with type = "expense" or "income". Default to expense if unclear. Always set the type when listing, adding, updating, or recurring. For space queries, use household_id to include transactions from all members; for personal, use contact_id with household_id IS NULL.
 12. **Tooling discipline**: For add/update/delete/recurring/budget/envelope requests, call the appropriate tool. For recurring requests without a frequency, default to monthly. For incomes, set type="income".
-13. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to households by name only; if multiple, offer names, not IDs.
+13. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to spaces by name only; if multiple, offer names, not IDs.
 14. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
-15. **Options**: When offering choices (households, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
-16. **Splits**: For household expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among household members.
+15. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
+16. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
 17. **Financial snapshot**: For asks like “current financial situation/health/status”: provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
 18. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
 
@@ -62,7 +62,7 @@ COMMON USER INTENTS (answer directly, propose next steps):
 CURRENT CONTEXT:
 - Date: {{DATE}}
 - User Currency: {{CURRENCY}}
-- Households: {{HOUSEHOLDS}}
+- Spaces: {{HOUSEHOLDS}}
 - Categories (with brand colors): {{CATEGORIES}}
 `;
 
@@ -150,7 +150,7 @@ function getTwilioMessageSid(formData: FormData): string | null {
 }
 
 async function reserveTwilioIdempotency(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseJsClient,
   key: string,
   ackText?: string | null,
   ttlMinutes: number = IDEMPOTENCY_TTL_MINUTES
@@ -179,7 +179,7 @@ async function reserveTwilioIdempotency(
 }
 
 async function updateTwilioIdempotency(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseJsClient,
   key: string,
   result: IdempotencyRecord,
   ttlMinutes: number = IDEMPOTENCY_TTL_MINUTES
@@ -302,7 +302,7 @@ function resolveMemberIdByName(
 }
 
 async function resolveHouseholdSplitConfig(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseJsClient,
   householdId: string,
   actorUserId: string,
   totalAmount: number,
@@ -425,7 +425,7 @@ type FinancialSnapshot = {
 };
 
 async function buildFinancialSnapshot(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseJsClient,
   contactId: string,
   userId: string,
   currency: string,
@@ -467,7 +467,7 @@ async function buildFinancialSnapshot(
     .eq("user_id", userId)
     .eq("currency", currency)
     .gte("period_month", startDate.slice(0, 7) + "-01")
-    .lt(nextMonthStart(startDate))
+    .lt("period_month", nextMonthStart(startDate))
     .limit(1);
   const budgetCents = budgetRows?.[0]?.total_budget_cents || null;
 
@@ -541,6 +541,9 @@ Deno.serve(async (req: Request) => {
   const EDGE_FUNCTION_KEY = (SECRET_API_KEY || "").trim();
   const TWILIO_SKIP_SIGNATURE = (Deno.env.get("TWILIO_SKIP_SIGNATURE") || "").toLowerCase() === "true";
 
+  const twilioAccountSid = TWILIO_ACCOUNT_SID || "";
+  const twilioAuthToken = TWILIO_AUTH_TOKEN || "";
+
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !GEMINI_API_KEY || !EDGE_FUNCTION_KEY) {
     console.error("Missing environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
@@ -590,6 +593,45 @@ Deno.serve(async (req: Request) => {
     const userLang = contactRow?.preferred_language || "en";
     const userTimezone = contactRow?.preferred_timezone || "UTC";
 
+    const seenPortfolioIds: Record<string, true> = {};
+    const portfolioSpaceIds: string[] = [];
+    try {
+      const { data: ownedSpaces } = await supabase
+        .from("households")
+        .select("id, is_portfolio")
+        .eq("owner_id", userId);
+      for (const s of ownedSpaces || []) {
+        const id = (s as any)?.id;
+        if ((s as any)?.is_portfolio === true && typeof id === "string" && !seenPortfolioIds[id]) {
+          seenPortfolioIds[id] = true;
+          portfolioSpaceIds.push(id);
+        }
+      }
+
+      const { data: memberRows } = await supabase
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", userId);
+      const memberIds = (memberRows || [])
+        .map((r: any) => r?.household_id)
+        .filter((id: any) => typeof id === "string" && id.length > 0);
+      if (memberIds.length) {
+        const { data: memberSpaces } = await supabase
+          .from("households")
+          .select("id, is_portfolio")
+          .in("id", memberIds);
+        for (const s of memberSpaces || []) {
+          const id = (s as any)?.id;
+          if ((s as any)?.is_portfolio === true && typeof id === "string" && !seenPortfolioIds[id]) {
+            seenPortfolioIds[id] = true;
+            portfolioSpaceIds.push(id);
+          }
+        }
+      }
+    } catch {
+      // best-effort
+    }
+
     const sessionId = payload.session_id || `app:${userId}`;
     const messageText = payload.message?.toString() || "";
     const attachments: any[] = Array.isArray(payload.attachments) ? payload.attachments : [];
@@ -614,6 +656,10 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({ error: "Failed to initialize chat session" }, 500);
       }
       session = newSession;
+    }
+
+    if (!session) {
+      return jsonResponse({ error: "Failed to initialize chat session" }, 500);
     }
 
     // Handle attachments: store to storage bucket "chat-attachments" (best-effort)
@@ -672,7 +718,7 @@ Deno.serve(async (req: Request) => {
     const toolsApp = [
       {
         name: "add_transaction",
-        description: "Add an expense or income transaction. Use this for both personal and household transactions.",
+        description: "Add an expense or income transaction. Use this for both personal and shared spaces.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -682,13 +728,14 @@ Deno.serve(async (req: Request) => {
             description: { type: "STRING", description: "Description/Note" },
             date: { type: "STRING", description: "YYYY-MM-DD" },
             currency: { type: "STRING", description: "ISO Currency Code" },
-            household_id: { type: "STRING", description: "Optional: Household ID if it is a group expense" },
-            household_name: { type: "STRING", description: "Optional: Household name if user provided it" },
-            payer_name: { type: "STRING", description: "Household only: who paid (member name/email). Example: 'paid by B'." },
-            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"], description: "Household only: how to split. If omitted, infer from member_splits fields." },
+            household_id: { type: "STRING", description: "Optional: Space ID if it is a shared expense" },
+            household_name: { type: "STRING", description: "Optional: Space name if user provided it" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" },
+            payer_name: { type: "STRING", description: "Shared space only: who paid (member name/email). Example: 'paid by B'." },
+            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"], description: "Shared space only: how to split. If omitted, infer from member_splits fields." },
             member_splits: {
               type: "ARRAY",
-              description: "Household only: per-member split instructions (by name/email).",
+              description: "Shared space only: per-member split instructions (by name/email).",
               items: {
                 type: "OBJECT",
                 properties: {
@@ -712,13 +759,14 @@ Deno.serve(async (req: Request) => {
         parameters: {
           type: "OBJECT",
           properties: {
-              type: { type: "STRING", enum: ["expense", "income"] },
-              currency: { type: "STRING", description: "Optional: filter by currency" },
-              limit: { type: "NUMBER" },
-              start_date: { type: "STRING" },
-              end_date: { type: "STRING" },
-              household_id: { type: "STRING", description: "Optional: Filter by household" },
-              household_name: { type: "STRING", description: "Optional: Household name filter" }
+            type: { type: "STRING", enum: ["expense", "income"] },
+            currency: { type: "STRING", description: "Optional: filter by currency" },
+            limit: { type: "NUMBER" },
+            start_date: { type: "STRING" },
+            end_date: { type: "STRING" },
+            household_id: { type: "STRING", description: "Optional: Filter by space" },
+            household_name: { type: "STRING", description: "Optional: Space name filter" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
           }
         }
       },
@@ -748,14 +796,14 @@ Deno.serve(async (req: Request) => {
       }
     ];
 
-    const chat = model.startChat({ history: rawHistory, tools: [{ function_declarations: toolsApp }] });
+    const chat = model.startChat({ history: rawHistory, tools: [{ function_declarations: toolsApp }] as any });
     const result = await chat.sendMessage(userMessageContent);
     const response = await result.response;
-    let functionCalls = response.functionCalls();
+    let functionCalls = (response.functionCalls() as any[]) || [];
     let finalResponseText = response.text();
     let mediaUrl: string | undefined;
     if (functionCalls && functionCalls.length > 0) {
-      const toolResponses = [];
+      const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
         try {
@@ -765,6 +813,7 @@ Deno.serve(async (req: Request) => {
               startDate: call.args.start_date,
               endDate: call.args.end_date,
               householdId: call.args.household_id || null,
+              portfolioHouseholdIds: (call.args.household_id ? undefined : portfolioSpaceIds),
               currency: call.args.currency || undefined,
               type: call.args.type || undefined,
             });
@@ -895,9 +944,11 @@ Deno.serve(async (req: Request) => {
   debugLog(WHATSAPP_DEBUG, "incoming form data", { from, to, body, numMedia, whatsappSessionId });
 
   // 2. Fetch all user context in a single optimized call
-  const { data: contextData, error: contextError } = await supabase
+  const { data: contextDataRaw, error: contextError } = await supabase
     .rpc('get_whatsapp_context', { p_phone_e164: from })
     .single();
+
+  const contextData: any = contextDataRaw as any;
   
   debugLog(WHATSAPP_DEBUG, "context lookup", { contextData, contextError });
   
@@ -926,8 +977,8 @@ Deno.serve(async (req: Request) => {
     });
 
     await sendWhatsAppTemplate(
-      TWILIO_ACCOUNT_SID,
-      TWILIO_AUTH_TOKEN,
+      twilioAccountSid,
+      twilioAuthToken,
       to,
       from,
       TWILIO_TEMPLATES.VERIFICATION_CODE,
@@ -946,8 +997,8 @@ Deno.serve(async (req: Request) => {
   if (!contact || !contact.verified || !contact.user_id) {
     // Not verified: Send prompt template, fallback only if it fails
     const templateResult = await sendWhatsAppTemplate(
-      TWILIO_ACCOUNT_SID,
-      TWILIO_AUTH_TOKEN,
+      twilioAccountSid,
+      twilioAuthToken,
       to,
       from,
       TWILIO_TEMPLATES.VERIFICATION_PROMPT,
@@ -983,7 +1034,7 @@ Deno.serve(async (req: Request) => {
   if (isFreeUser(subscription)) {
     // Optional: Enforce paid-only features here if needed. 
     // For now, proceed or send warning? Original webhook sends NON_SUBSCRIBER template.
-    await sendWhatsAppTemplate(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, to, from, TWILIO_TEMPLATES.NON_SUBSCRIBER);
+    await sendWhatsAppTemplate(twilioAccountSid, twilioAuthToken, to, from, TWILIO_TEMPLATES.NON_SUBSCRIBER);
     if (idempotencyKey) {
       await updateTwilioIdempotency(supabase, idempotencyKey, {
         status: "done",
@@ -1305,18 +1356,34 @@ Deno.serve(async (req: Request) => {
     await insertChatMessage(supabase, sessionId, "user", userMessageContent, debugNotes, WHATSAPP_DEBUG);
 
     // 5. Prepare Context & History - use households from context
-    const households = contextData?.households ? 
-      contextData.households.map((h: any) => ({
-        household_id: h.household_id,
-        households: { name: h.name }
-      })) : [];
-    debugLog(WHATSAPP_DEBUG, "households", { households });
+    const spaces = contextData?.spaces || contextData?.households || [];
+    debugLog(WHATSAPP_DEBUG, "spaces", { spaces });
 
-    const householdContext = households?.map((h: any) => `${h.households?.name || "Household"}`).join("; ") || "None";
-    const householdMap = new Map<string, string>();
-    households?.forEach((h: any) => {
-      if (h.household_id) householdMap.set(h.household_id, h.households?.name || h.household_id);
-      if (h.households?.name) householdMap.set(h.households.name.toLowerCase(), h.household_id);
+    const portfolioSpaceIds = (spaces || [])
+      .filter((h: any) => !!h?.is_portfolio)
+      .map((h: any) => h?.household_id)
+      .filter((value: any) => typeof value === "string" && value.length > 0);
+
+    const householdContext =
+      spaces
+        ?.map((h: any) => `${h.name || "Space"}${h.is_portfolio ? " (Portfolio)" : ""}`)
+        .join("; ") || "None";
+
+    const spaceMap = new Map<
+      string,
+      { id: string; name: string; isPortfolio: boolean }
+    >();
+    spaces?.forEach((h: any) => {
+      if (!h?.household_id) return;
+      const record = {
+        id: h.household_id,
+        name: h.name || h.household_id,
+        isPortfolio: !!h.is_portfolio,
+      };
+      spaceMap.set(h.household_id, record);
+      if (record.name) {
+        spaceMap.set(record.name.toLowerCase(), record);
+      }
     });
 
     const { data: history } = await supabase
@@ -1351,7 +1418,7 @@ Deno.serve(async (req: Request) => {
   const tools = [
       {
         name: "add_transaction",
-        description: "Add an expense or income transaction. Use this for both personal and household transactions.",
+        description: "Add an expense or income transaction. Use this for both personal and shared spaces.",
         parameters: {
           type: "OBJECT",
           properties: {
@@ -1361,13 +1428,14 @@ Deno.serve(async (req: Request) => {
             description: { type: "STRING", description: "Description/Note" },
             date: { type: "STRING", description: "YYYY-MM-DD" },
             currency: { type: "STRING", description: "ISO Currency Code" },
-            household_id: { type: "STRING", description: "Optional: Household ID if it is a group expense" },
-            household_name: { type: "STRING", description: "Optional: Household name if user provided it" },
-            payer_name: { type: "STRING", description: "Household only: who paid (member name/email). Example: 'paid by B'." },
-            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"], description: "Household only: how to split. If omitted, infer from member_splits fields." },
+            household_id: { type: "STRING", description: "Optional: Space ID if it is a shared transaction" },
+            household_name: { type: "STRING", description: "Optional: Space name if user provided it" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" },
+            payer_name: { type: "STRING", description: "Shared space only: who paid (member name/email). Example: 'paid by B'." },
+            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"], description: "Shared space only: how to split. If omitted, infer from member_splits fields." },
             member_splits: {
               type: "ARRAY",
-              description: "Household only: per-member split instructions (by name/email).",
+              description: "Shared space only: per-member split instructions (by name/email).",
               items: {
                 type: "OBJECT",
                 properties: {
@@ -1398,7 +1466,8 @@ Deno.serve(async (req: Request) => {
             date: { type: "STRING", description: "YYYY-MM-DD" },
             currency: { type: "STRING" },
             household_id: { type: "STRING" },
-            household_name: { type: "STRING" }
+            household_name: { type: "STRING" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
           },
           required: ["expense_id"]
         }
@@ -1425,8 +1494,9 @@ Deno.serve(async (req: Request) => {
               limit: { type: "NUMBER" },
               start_date: { type: "STRING" },
               end_date: { type: "STRING" },
-              household_id: { type: "STRING", description: "Optional: Filter by household" },
-              household_name: { type: "STRING", description: "Optional: Household name filter" }
+              household_id: { type: "STRING", description: "Optional: Filter by space" },
+              household_name: { type: "STRING", description: "Optional: Space name filter" },
+              is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
           }
         }
       },
@@ -1437,8 +1507,9 @@ Deno.serve(async (req: Request) => {
             type: "OBJECT",
             properties: {
                 date: { type: "STRING", description: "YYYY-MM-DD" },
-                household_id: { type: "STRING", description: "Optional: Check household budget" },
-                household_name: { type: "STRING", description: "Optional: Household name" }
+                household_id: { type: "STRING", description: "Optional: Check space budget" },
+                household_name: { type: "STRING", description: "Optional: Space name" },
+                is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
             }
         }
       },
@@ -1450,8 +1521,9 @@ Deno.serve(async (req: Request) => {
             properties: {
                 amount: { type: "NUMBER" },
                 date: { type: "STRING", description: "YYYY-MM-DD" },
-                household_id: { type: "STRING", description: "Optional: household scope" },
-                household_name: { type: "STRING", description: "Optional: household name" },
+                household_id: { type: "STRING", description: "Optional: space scope" },
+                household_name: { type: "STRING", description: "Optional: space name" },
+                is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" },
                 pockets: {
                   type: "ARRAY",
                   items: {
@@ -1525,7 +1597,7 @@ Deno.serve(async (req: Request) => {
     // 6. Chat Loop (Model Turn)
     const chat = model.startChat({
         history: historyParts,
-        tools: [{ function_declarations: tools }]
+        tools: [{ function_declarations: tools }] as any
     });
 
     // Send message with timeout and error handling
@@ -1547,7 +1619,7 @@ Deno.serve(async (req: Request) => {
       }
     }
   
-let functionCalls = response ? response.functionCalls() : null;
+let functionCalls: any[] | null = response ? (response.functionCalls() as any[]) : null;
 if (!finalResponseText) {
   finalResponseText = response ? response.text() : "I'm having trouble processing your request right now. Please try again in a moment.";
 }
@@ -1556,22 +1628,27 @@ let persistedContent: string | undefined;
     // Loop for tool calls (handle sequential calls)
     // For simplicity, we handle one batch of calls then get final text.
     if (functionCalls && functionCalls.length > 0) {
-        const toolResponses = [];
+        const toolResponses: any[] = [];
         for (const call of functionCalls) {
             let toolResult = {};
             debugLog(WHATSAPP_DEBUG, "tool call", { name: call.name, args: call.args });
             try {
                 if (call.name === "add_transaction") {
-                let householdId = call.args.household_id;
-                const householdName = (call.args.household_name || call.args.householdName || "").toString().toLowerCase();
-                if (!householdId && householdName && householdMap.has(householdName)) {
-                  householdId = householdMap.get(householdName);
+                let householdId = call.args.household_id as string | null;
+                const householdName = (call.args.household_name || call.args.householdName || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
                 }
-                if (!householdId && !householdName && householdMap.size === 1) {
-                  householdId = Array.from(householdMap.values())[0];
+                if (!spaceMeta && !householdName && spaceMap.size === 1) {
+                  spaceMeta = Array.from(spaceMap.values())[0];
+                  householdId = spaceMeta?.id ?? null;
                 }
 
-                let recurrenceRule = undefined;
+                let recurrenceRule: Record<string, unknown> | undefined;
                 if (call.args.is_recurring) {
                 const anchor = (call.args.date || formatDateInTimeZone(userTimezone));
                   recurrenceRule = {
@@ -1601,24 +1678,29 @@ let persistedContent: string | undefined;
                   currency: call.args.currency || userCurrency,
                   description: call.args.description,
                   householdId,
+                  isPortfolio: spaceMeta?.isPortfolio ?? false,
                   payerUserId: splitConfig.payerUserId,
                   customSplits: splitConfig.customSplits,
                   isRecurring: call.args.is_recurring,
                   recurrence_rule: recurrenceRule
                 });
                 toolResult = error ? { error } : { success: true, data };
-              if (error) {
-                const formatted = formatInvokeError(error);
-                if (WHATSAPP_DEBUG) debugNotes.push(`save-expense error: ${formatted}`);
-                console.error("[twilio-whatsapp-ai-bot] save-expense error", { error, formatted });
-              } else {
-              }
-            } else if (call.name === "update_transaction") {
-                let householdId = call.args.household_id;
-                const householdName = (call.args.household_name || call.args.householdName || "").toString().toLowerCase();
-                if (!householdId && householdName && householdMap.has(householdName)) {
-                  householdId = householdMap.get(householdName);
+                if (error) {
+                  const formatted = formatInvokeError(error);
+                  if (WHATSAPP_DEBUG) debugNotes.push(`add-expense error: ${formatted}`);
+                  console.error("[twilio-whatsapp-ai-bot] add-expense error", { error, formatted });
                 }
+              } else if (call.name === "update_transaction") {
+                let householdId = call.args.household_id as string | null;
+                const householdName = (call.args.household_name || call.args.householdName || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+
                 const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
                   expenseId: call.args.expense_id,
                   amount: call.args.amount,
@@ -1627,8 +1709,10 @@ let persistedContent: string | undefined;
                   currency: call.args.currency || userCurrency,
                   description: call.args.description,
                   householdId,
+                  isPortfolio: spaceMeta?.isPortfolio ?? false,
                   type: call.args.type || "expense",
                 });
+
                 toolResult = error ? { error } : { success: true, data };
                 if (error) {
                   const formatted = formatInvokeError(error);
@@ -1644,18 +1728,24 @@ let persistedContent: string | undefined;
                   console.error("[twilio-whatsapp-ai-bot] delete-expense error", { error, formatted });
                 }
               } else if (call.name === "list_expenses") {
-                let householdId = call.args.household_id;
-                const householdName = (call.args.household_name || "").toString().toLowerCase();
-                if (!householdId && householdName && householdMap.has(householdName)) {
-                  householdId = householdMap.get(householdName);
+                let householdId = call.args.household_id as string | null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
                 }
                 const type = call.args.type || "expense";
                 const listPayload = {
-                  limit: call.args.limit || 50,
+                  limit: call.args.limit || 10,
                   startDate: call.args.start_date,
                   endDate: call.args.end_date,
                   householdId,
-                  currency: call.args.currency || undefined,
+                  isPortfolio: spaceMeta?.isPortfolio ?? false,
+                  portfolioHouseholdIds: householdId ? undefined : portfolioSpaceIds,
+                  currency: call.args.currency,
                   type,
                 };
                 debugLog(WHATSAPP_DEBUG, "list-expenses payload", listPayload);
@@ -1680,18 +1770,23 @@ let persistedContent: string | undefined;
                      const dateStr = (call.args.date || formatDateInTimeZone(userTimezone)).slice(0,10);
                      const period_month = dateStr.slice(0,7) + "-01";
                      let householdId = call.args.household_id || null;
-                     const householdName = (call.args.household_name || "").toString().toLowerCase();
-                     if (!householdId && householdName && householdMap.has(householdName)) {
-                       householdId = householdMap.get(householdName) || null;
+                     const householdName = (call.args.household_name || "")
+                       .toString()
+                       .toLowerCase();
+                     let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                     if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                       spaceMeta = spaceMap.get(householdName);
+                       householdId = spaceMeta?.id ?? null;
                      }
                      const res = await getBudgetStatusDirect(
                        supabase,
                        userId,
                        householdId,
                        period_month,
-                       userCurrency
+                       userCurrency,
+                       spaceMeta?.isPortfolio ?? false,
                      );
-                     if (res.error) {
+if (res.error) {
                        const formatted = formatInvokeError(res.error);
                        if (WHATSAPP_DEBUG) debugNotes.push(`get-budget direct error: ${formatted}`);
                        console.error("[twilio-whatsapp-ai-bot] get-budget direct error", { error: res.error, formatted });
@@ -1710,12 +1805,17 @@ let persistedContent: string | undefined;
                     }
                     } else if (call.name === "set_budget") {
                      // Create or update budget + envelopes/pockets
-                     const period_month = (call.args.date || new Date().toISOString().slice(0, 7) + "-01").slice(0,10);
+                     const dateStr = (call.args.date || formatDateInTimeZone(userTimezone)).slice(0, 10);
+                     const period_month = dateStr.slice(0, 7) + "-01";
                      const total_cents = Math.round((call.args.amount || 0) * 100);
                      let householdId = call.args.household_id || null;
-                     const householdName = (call.args.household_name || "").toString().toLowerCase();
-                     if (!householdId && householdName && householdMap.has(householdName)) {
-                       householdId = householdMap.get(householdName) || null;
+                     const householdName = (call.args.household_name || "")
+                       .toString()
+                       .toLowerCase();
+                     let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                     if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                       spaceMeta = spaceMap.get(householdName);
+                       householdId = spaceMeta?.id ?? null;
                      }
 
                      const { data: budgetRow, error: budgetErr } = await createOrUpdateBudget(
@@ -1724,7 +1824,8 @@ let persistedContent: string | undefined;
                        householdId,
                        period_month,
                        userCurrency,
-                       total_cents
+                       total_cents,
+                       spaceMeta?.isPortfolio ?? false,
                      );
                      if (budgetErr || !budgetRow) {
                        const formatted = formatInvokeError(budgetErr);
@@ -1886,13 +1987,13 @@ let persistedContent: string | undefined;
       immediateText: string;
     },
     deliveryMode: "twiml" | "api"
-  ) => {
+  ): Promise<Response> => {
     const { bodyToSend, persistedContent, immediateText } = computed;
 
     if (deliveryMode === "api") {
       const sendResult = await sendWhatsAppMessage(
-        TWILIO_ACCOUNT_SID,
-        TWILIO_AUTH_TOKEN,
+        twilioAccountSid,
+        twilioAuthToken,
         to,
         from,
         bodyToSend
@@ -1907,7 +2008,7 @@ let persistedContent: string | undefined;
             error: sendResult.error || "unknown",
           });
         }
-        return;
+        return xmlResponse(buildTwimlMessage(null));
       }
       if (idempotencyKey) {
         await updateTwilioIdempotency(supabase, idempotencyKey, {
@@ -1916,7 +2017,7 @@ let persistedContent: string | undefined;
           response_text: persistedContent,
         });
       }
-      return;
+      return xmlResponse(buildTwimlMessage(null));
     }
 
     if (idempotencyKey) {
@@ -1941,8 +2042,8 @@ let persistedContent: string | undefined;
         console.error("[twilio-whatsapp-ai-bot] Async processing failed:", error);
         const errorMessage = "I ran into an issue processing that. Please try again in a moment.";
         await sendWhatsAppMessage(
-          TWILIO_ACCOUNT_SID,
-          TWILIO_AUTH_TOKEN,
+          twilioAccountSid,
+          twilioAuthToken,
           to,
           from,
           errorMessage
@@ -2009,8 +2110,8 @@ let persistedContent: string | undefined;
       } else {
         const errorMessage = "I ran into an issue processing that. Please try again in a moment.";
         await sendWhatsAppMessage(
-          TWILIO_ACCOUNT_SID,
-          TWILIO_AUTH_TOKEN,
+          twilioAccountSid,
+          twilioAuthToken,
           to,
           from,
           errorMessage

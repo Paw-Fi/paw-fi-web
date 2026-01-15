@@ -621,7 +621,7 @@ export function getIncomeCategories(): string[] {
 
 // Expense-only canonical categories (excludes income-focused categories and umbrella 'income')
 export function getExpenseCategories(): string[] {
-  const incomeCategories = [...INCOME_CATEGORIES];
+  const incomeCategories: string[] = [...INCOME_CATEGORIES];
   return Array.from(ALLOWED_CATEGORIES)
     .filter((category: string) => incomeCategories.indexOf(category) === -1)
     .sort();
