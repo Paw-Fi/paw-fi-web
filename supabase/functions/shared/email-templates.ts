@@ -229,6 +229,55 @@ export const welcomeTemplate = (data: {
   };
 };
 
+// Household invite email template
+export const householdInviteTemplate = (data: {
+  inviteUrl: string;
+  personalMessage?: string;
+  householdName?: string;
+  inviterName?: string;
+}) => {
+  const inviter = data.inviterName?.trim();
+  const household = data.householdName?.trim();
+  const title = inviter && household
+    ? `${escapeHtml(inviter)} invited you to ${escapeHtml(household)}`
+    : inviter
+        ? `${escapeHtml(inviter)} invited you to a space`
+        : household
+            ? `You are invited to ${escapeHtml(household)}`
+            : 'You are invited to join a space';
+  const subtitle = household
+    ? `Join ${escapeHtml(household)} to start sharing expenses and budgets.`
+    : 'Join your space to start sharing expenses and budgets.';
+  const safeMessage = data.personalMessage?.trim();
+  const inviterLine = data.inviterName
+    ? `<p>Invite sent by ${escapeHtml(data.inviterName)}.</p>`
+    : '';
+
+  const content = `
+    <h1 class="title">${escapeHtml(title)}</h1>
+    <p class="subtitle">${subtitle}</p>
+    ${inviterLine}
+    <p>Click the button below to accept your invitation.</p>
+    ${renderButton('Accept Invite', sanitizeUrl(data.inviteUrl))}
+    ${safeMessage ? `<p><strong>Personal message:</strong></p><p>${escapeHtml(safeMessage)}</p>` : ''}
+    <p>If you did not expect this email, you can safely ignore it.</p>
+  `;
+
+  return {
+    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you were invited to join a Moneko space.' })),
+    text: htmlToText(content),
+    subject: sanitizeSubject(
+      inviter && household
+        ? `${inviter} invited you to ${household} on Moneko`
+        : inviter
+            ? `${inviter} invited you to a space on Moneko`
+            : household
+                ? `Invitation to join ${household} on Moneko`
+                : 'Invitation to join a space on Moneko'
+    ),
+  };
+};
+
 // Course completion template
 export const courseCompletionTemplate = (data: {
   name: string;

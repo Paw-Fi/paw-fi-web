@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { householdInviteTemplate } from "../shared/email-templates.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const appUrl = Deno.env.get('APP_URL') || 'https://moneko.io';
+const resendApiKey = Deno.env.get('RESEND_API_KEY');
+const resendFrom = Deno.env.get('RESEND_FROM') || 'Moneko <no-reply@moneko.io>';
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
@@ -12,6 +15,8 @@ interface CreateInviteRequest {
   household_id: string;
   invited_email?: string;
   personal_message?: string;
+  inviter_name?: string;
+  household_name?: string;
   expires_in_days?: number;
 }
 
@@ -19,6 +24,42 @@ interface CreateInviteResponse {
   invite_url: string;
   token: string;
   expires_at: string | null;
+}
+
+async function sendInviteEmail(params: {
+  to: string;
+  inviteUrl: string;
+  personalMessage?: string;
+}) {
+  if (!resendApiKey) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+
+  const { to, inviteUrl, personalMessage } = params;
+  const { html, text, subject } = householdInviteTemplate({
+    inviteUrl,
+    personalMessage,
+  });
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: resendFrom,
+      to: [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Resend email failed: ${response.status} ${errorBody}`);
+  }
 }
 
 serve(async (req) => {
@@ -71,7 +112,13 @@ serve(async (req) => {
 
     // Parse request body
     const body: CreateInviteRequest = await req.json();
-    const { household_id, invited_email, personal_message } = body;
+    const {
+      household_id,
+      invited_email,
+      personal_message,
+      inviter_name,
+      household_name,
+    } = body;
     let { expires_in_days } = body as { expires_in_days?: number };
     if (typeof expires_in_days !== 'number') expires_in_days = 7;
 
@@ -163,6 +210,27 @@ serve(async (req) => {
     }
 
     const inviteUrl = `${appUrl}/invites/${token}`;
+
+    if (invited_email) {
+      try {
+        await sendInviteEmail({
+          to: invited_email,
+          inviteUrl,
+          personalMessage: personal_message,
+          inviterName: inviter_name,
+          householdName: household_name,
+        });
+      } catch (error) {
+        console.error('Error sending invite email:', error);
+        return new Response(
+          JSON.stringify({ error: 'Failed to send invitation email' }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
 
     const response: CreateInviteResponse = {
       invite_url: inviteUrl,

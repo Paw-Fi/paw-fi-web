@@ -68,7 +68,7 @@ CURRENT CONTEXT:
 
 const PROCESSING_ACK_MESSAGES = [
   "Got it! I’m processing that now—this might take a moment. ⏳",
-  "Thanks! I’m reading your receipt now and will reply shortly. 🧾",
+  "Thanks! I’m working on it now and will reply shortly. 🧾",
   "On it! I’m crunching the details—back soon. 🤖",
   "Working on it now. I’ll send the details in a bit. ✨",
 ];
