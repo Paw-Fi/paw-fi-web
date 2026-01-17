@@ -7,8 +7,10 @@ import { authenticateUser, verifyUserMatch } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 interface DeleteExpenseRequest {
-  expenseId: string;
+  expenseId?: string;
+  expense_id?: string;
   userId?: string;
+  user_id?: string;
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -42,8 +44,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: DeleteExpenseRequest = await req.json();
-    if (!body?.expenseId) return errorResponse('expenseId is required');
-    const expenseId = sanitizeUuid(body.expenseId);
+    const expenseIdRaw = body?.expenseId ?? body?.expense_id;
+    if (!expenseIdRaw) return errorResponse('expenseId is required');
+    const expenseId = sanitizeUuid(expenseIdRaw);
     if (!expenseId) return errorResponse('Invalid expenseId format');
 
     const detection = detectGptRequest(req);
@@ -105,8 +108,9 @@ Deno.serve(async (req: Request) => {
       userId = authResult.userId;
 
       // Legacy support: if the client still sends userId, verify it matches.
-      if ('userId' in body && body.userId) {
-        requestedUserId = sanitizeUuid(body.userId);
+      const requestedUserIdRaw = body.userId ?? body.user_id;
+      if (requestedUserIdRaw) {
+        requestedUserId = sanitizeUuid(requestedUserIdRaw);
         if (!requestedUserId) {
           return errorResponse('Invalid userId format');
         }

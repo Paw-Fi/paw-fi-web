@@ -41,6 +41,17 @@ interface RequestBody {
       unit: 'days' | 'hours';
     };
   };
+  recurrenceRule?: { // Legacy camelCase recurrence configuration
+    frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom';
+    anchor_date: string;
+    end_date?: string;
+    interval?: number;
+    reminder?: { // Optional reminder configuration (v1.6)
+      enabled: boolean;
+      value: number; // How many days/hours before
+      unit: 'days' | 'hours';
+    };
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -63,6 +74,12 @@ Deno.serve(async (req: Request) => {
 
     console.log('[save-income] Full request body:', JSON.stringify(body, null, 2));
     console.log('[save-income] isRecurring:', body.isRecurring);
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
+    if (legacyRecurrenceRule && !body.recurrence_rule) {
+      body.recurrence_rule = legacyRecurrenceRule as RequestBody['recurrence_rule'];
+    }
+
     console.log('[save-income] recurrence_rule:', body.recurrence_rule);
 
     console.log('[save-income] Incoming request:', {

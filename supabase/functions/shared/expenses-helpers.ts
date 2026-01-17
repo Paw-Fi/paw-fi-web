@@ -358,7 +358,76 @@ export async function saveExpenseDirect(
 export async function deleteExpenseDirect(
   supabase: SupabaseClient,
   contactId: string,
+  userId: string,
   expenseId: string
 ) {
-  return supabase.from("expenses").delete().eq("id", expenseId).eq("contact_id", contactId);
+  const sanitizedExpenseId = sanitizeUuid(expenseId);
+  if (!sanitizedExpenseId) {
+    return { data: null, error: new Error("Invalid expenseId format") } as const;
+  }
+
+  const { data: expense, error: fetchError } = await supabase
+    .from("expenses")
+    .select("id, user_id, household_id, contact_id")
+    .eq("id", sanitizedExpenseId)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { data: null, error: fetchError } as const;
+  }
+  if (!expense) {
+    return { data: null, error: new Error("Expense not found") } as const;
+  }
+
+  const expenseUserId = (expense as any)?.user_id as string | undefined;
+  const expenseHouseholdId = (expense as any)?.household_id as string | null | undefined;
+  const expenseContactId = (expense as any)?.contact_id as string | null | undefined;
+
+  if (!expenseHouseholdId) {
+    const canDeletePersonal =
+      (expenseUserId && expenseUserId === userId) ||
+      (expenseContactId && expenseContactId === contactId);
+    if (!canDeletePersonal) {
+      return {
+        data: null,
+        error: new Error("You do not have permission to delete this expense"),
+      } as const;
+    }
+  } else if (expenseUserId !== userId) {
+    const { data: member, error: memberError } = await supabase
+      .from("household_members")
+      .select("id")
+      .eq("household_id", expenseHouseholdId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (memberError) {
+      return {
+        data: null,
+        error: new Error("Failed to verify household membership"),
+      } as const;
+    }
+    if (!member) {
+      return {
+        data: null,
+        error: new Error("You do not have permission to delete this expense"),
+      } as const;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", sanitizedExpenseId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return { data: null, error } as const;
+  }
+  if (!data) {
+    return { data: null, error: new Error("Expense not found") } as const;
+  }
+
+  return { data, error: null } as const;
 }

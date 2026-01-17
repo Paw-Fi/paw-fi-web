@@ -266,8 +266,12 @@ Deno.serve(async (req: Request) => {
 
   try {
     // Parse request body
-    const body: UpdateExpenseRequest = await req.json();
-    const { expenseId, updates } = body;
+    const body: UpdateExpenseRequest & {
+      expense_id?: string;
+      user_id?: string;
+    } = await req.json();
+    const expenseId = body.expenseId ?? body.expense_id;
+    const updates = body.updates;
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
@@ -275,8 +279,11 @@ Deno.serve(async (req: Request) => {
     let userId: string | null = null;
 
     // For non-GPT requests, userId should be in body (legacy client support)
-    if (!detection.isGpt && "userId" in body && (body as any).userId) {
-      userId = sanitizeUuid((body as any).userId);
+    if (!detection.isGpt && ("userId" in body || "user_id" in body)) {
+      const rawUserId = (body as any).userId ?? (body as any).user_id;
+      if (rawUserId) {
+        userId = sanitizeUuid(rawUserId);
+      }
       if (!userId) {
         return errorResponse("Invalid userId format", "VALIDATION_ERROR");
       }
@@ -362,9 +369,25 @@ Deno.serve(async (req: Request) => {
     }
 
     if (
-      !updates || typeof updates !== "object" ||
-      Object.keys(updates).length === 0
+      !updates || typeof updates !== "object" || Array.isArray(updates)
     ) {
+      return errorResponse(
+        "updates object is required and must be an object",
+        "VALIDATION_ERROR",
+      );
+    }
+
+    const rawCustomSplits = (body as any).customSplits as
+      | CustomSplitsPayload
+      | undefined;
+    const rawSplitUpdate = (body as any).splitUpdate as
+      | CustomSplitsPayload
+      | undefined;
+    const hasSplitPayload =
+      !!rawCustomSplits?.memberSplits?.length ||
+      !!rawSplitUpdate?.memberSplits?.length;
+
+    if (Object.keys(updates).length === 0 && !hasSplitPayload) {
       return errorResponse(
         "updates object is required and must contain at least one field",
         "VALIDATION_ERROR",

@@ -382,7 +382,8 @@ export function inferSplitAmountsFromText(
   payerUserId?: string,
 ): CustomSplits | undefined {
   if (!ctx) return undefined;
-  const regex = /(\d+(?:\.\d+)?)\s*(?:for|to)\s+([\p{L}\p{N}@._-]+)/giu;
+  const regex =
+    /(\d+(?:\.\d+)?)\s*(?:for|to)\s+(.+?)(?=(?:\s*(?:,|;)\s*\d)|(?:\s+\b(?:and|&)\b\s*\d)|$)/giu;
   const rawMap = new Map<string, number>();
   let match: RegExpExecArray | null;
   let lastMentionedUserId: string | undefined;
@@ -390,7 +391,13 @@ export function inferSplitAmountsFromText(
   while ((match = regex.exec(text)) !== null) {
     const amount = Number(match[1]);
     if (!Number.isFinite(amount) || amount <= 0) continue;
-    const rawName = match[2];
+    let rawName = match[2]?.trim() ?? "";
+    rawName = rawName
+      .replace(/^[\s,;]+/, "")
+      .replace(/[\s,;]+$/, "")
+      .replace(/\s+(?:and|&)\s*$/i, "")
+      .trim();
+    if (!rawName) continue;
     const pronounMatch = resolvePronounUserId(
       rawName,
       ctx,

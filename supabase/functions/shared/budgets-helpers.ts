@@ -39,7 +39,14 @@ export async function createOrUpdateBudget(
     updated_at: new Date().toISOString(),
     is_portfolio: householdId ? isPortfolio === true : null,
   };
-  return supabase.from("budgets").upsert(payload, { onConflict: "user_id,household_id,currency,period_month" }).select().maybeSingle();
+  const onConflict = householdId
+    ? "household_id,currency,period_month"
+    : "user_id,currency,period_month";
+  return supabase
+    .from("budgets")
+    .upsert(payload, { onConflict })
+    .select()
+    .maybeSingle();
 }
 
 export async function upsertEnvelope(
@@ -82,9 +89,16 @@ export async function upsertEnvelopeCategoryLink(
   envelopeId: string,
   category: string
 ) {
+  if (typeof category !== "string") {
+    return { data: null, error: null } as const;
+  }
+  const normalized = category.trim().toLowerCase();
+  if (!normalized) {
+    return { data: null, error: null } as const;
+  }
   return supabase.from("envelope_category_links").upsert({
     envelope_id: envelopeId,
-    category: category.toLowerCase(),
+    category: normalized,
     updated_at: new Date().toISOString(),
   }, { onConflict: "envelope_id,category" });
 }

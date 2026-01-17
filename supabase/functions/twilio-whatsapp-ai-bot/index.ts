@@ -13,7 +13,7 @@ import {
   isFreeUser,
 } from "../shared/is-free-user.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
-import { fetchExpensesDirect, saveExpenseDirect, deleteExpenseDirect } from "../shared/expenses-helpers.ts";
+import { fetchExpensesDirect, saveExpenseDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import { createOrUpdateBudget, upsertEnvelope, upsertEnvelopeAllocation, upsertEnvelopeCategoryLink, getBudgetStatusDirect } from "../shared/budgets-helpers.ts";
 import { insertChatMessage } from "../shared/chat-helpers.ts";
@@ -40,7 +40,7 @@ CRITICAL RULES:
 7.  **Totals**: When listing or summarizing expenses, always include a total spent for the requested range and mention how many items are shown.
 8.  **Safety**: Do not reveal sensitive IDs. Refer to each space by its name only.
 9.  **Budgets/Pockets**: Budgets live in the budgets table. They can be split across pockets (envelopes) with percentage shares. When setting a budget, propose a total and how to split it across relevant pockets; create multiple pocket budgets if the user asks for splits.
-10. **Pockets/Envelopes Actions**: You can create/update envelopes, set monthly allocations, link categories to envelopes, and show envelope status (alloc/spent/remaining) for a month.
+10. **Pockets/Envelopes Actions**: You can create/update/delete envelopes via set_pocket/delete_pocket, set monthly allocations, link categories to envelopes, and show envelope status (alloc/spent/remaining) for a month.
 11. **Reminders/Recurring**: Recurring transactions can include reminders; ask for frequency and whether to set a reminder if the user hints at it.
 12. **Income vs Expense**: All transactions live in the "expenses" table with type = "expense" or "income". Default to expense if unclear. Always set the type when listing, adding, updating, or recurring. For space queries, use household_id to include transactions from all members; for personal, use contact_id with household_id IS NULL.
 12. **Tooling discipline**: For add/update/delete/recurring/budget/envelope requests, call the appropriate tool. For recurring requests without a frequency, default to monthly. For incomes, set type="income".
@@ -65,6 +65,13 @@ CURRENT CONTEXT:
 - Spaces: {{HOUSEHOLDS}}
 - Categories (with brand colors): {{CATEGORIES}}
 `;
+const WHATSAPP_BUDGET_FLOW = `
+WHATSAPP BUDGET FLOW (WhatsApp only):
+- When the user asks to set/create a budget or pockets, call "draft_budget" with the proposed amount and pockets, then ask for confirmation.
+- When the user confirms (e.g., yes/ok/sounds good), call "confirm_budget" to finalize without re-asking for amounts unless missing.
+- Only call "set_budget" directly if the user explicitly asks to set it now and the full amount is present in the same message.
+`;
+const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
 const PROCESSING_ACK_MESSAGES = [
   "Got it! I’m processing that now—this might take a moment. ⏳",
@@ -132,6 +139,338 @@ function pickProcessingMessage(seed?: string | null) {
   }
   const idx = Math.abs(hash) % PROCESSING_ACK_MESSAGES.length;
   return PROCESSING_ACK_MESSAGES[idx];
+}
+
+function coerceNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim().replace(/%/g, "");
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function normalizePercentage(value: unknown): number | null {
+  const raw = coerceNumber(value);
+  if (raw == null) return null;
+  if (raw > 0 && raw <= 1) return raw * 100;
+  return raw;
+}
+
+function normalizeCategories(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+      .filter((entry) => entry.length > 0);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+  return [];
+}
+
+type NormalizedPocket = {
+  name: string;
+  percentage: number;
+  categories: string[];
+  color?: string;
+  icon?: string;
+};
+
+function normalizePockets(input: unknown): NormalizedPocket[] {
+  const rawList: any[] = Array.isArray(input)
+    ? input
+    : (input && typeof input === "object")
+      ? Object.entries(input as Record<string, unknown>).map(([name, percentage]) => ({
+          name,
+          percentage,
+        }))
+      : [];
+
+  const pockets: NormalizedPocket[] = [];
+  for (const entry of rawList) {
+    if (!entry || typeof entry !== "object") continue;
+    const rawName = (entry as any).name ?? (entry as any).label ?? "";
+    const name = typeof rawName === "string" ? rawName.trim() : "";
+    if (!name) continue;
+
+    const rawPercent =
+      (entry as any).percentage ??
+      (entry as any).percent ??
+      (entry as any).pct ??
+      (entry as any).ratio;
+    const percent = normalizePercentage(rawPercent);
+    if (percent == null) continue;
+
+    const clamped = Math.max(0, Math.min(100, percent));
+    const categories = normalizeCategories((entry as any).categories);
+    const colorRaw = (entry as any).color ?? (entry as any).hex ?? (entry as any).hex_color;
+    const iconRaw = (entry as any).icon ?? (entry as any).symbol;
+    const color = typeof colorRaw === "string" && colorRaw.trim().length > 0
+      ? colorRaw.trim()
+      : undefined;
+    const icon = typeof iconRaw === "string" && iconRaw.trim().length > 0
+      ? iconRaw.trim()
+      : undefined;
+    pockets.push({ name, percentage: clamped, categories, color, icon });
+  }
+  return pockets;
+}
+
+function normalizeDateInput(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  return trimmed.length >= 10 ? trimmed.slice(0, 10) : trimmed;
+}
+
+const BUDGET_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+type PendingBudgetDraft = {
+  amount: number;
+  currency: string;
+  date: string;
+  period_month: string;
+  household_id: string | null;
+  household_name?: string;
+  is_portfolio?: boolean;
+  pockets?: NormalizedPocket[];
+  created_at: string;
+};
+
+type SessionState = {
+  moneko_state?: {
+    pending_budget?: PendingBudgetDraft;
+  };
+};
+
+function normalizeSessionState(raw: unknown): SessionState {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as SessionState;
+  }
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as SessionState;
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return {};
+}
+
+function getPendingBudget(state: SessionState | null): PendingBudgetDraft | null {
+  const draft = state?.moneko_state?.pending_budget;
+  if (!draft || typeof draft !== "object") return null;
+  if (typeof draft.amount !== "number" || !Number.isFinite(draft.amount) || draft.amount <= 0) {
+    return null;
+  }
+  if (!draft.currency || typeof draft.currency !== "string") return null;
+  if (!draft.period_month || typeof draft.period_month !== "string") return null;
+  if (draft.created_at) {
+    const ts = Date.parse(draft.created_at);
+    if (!Number.isNaN(ts)) {
+      const ageMs = Date.now() - ts;
+      if (ageMs > BUDGET_DRAFT_MAX_AGE_MS) return null;
+    }
+  }
+  return draft;
+}
+
+function setPendingBudget(state: SessionState | null, draft: PendingBudgetDraft): SessionState {
+  const base = normalizeSessionState(state);
+  return {
+    ...base,
+    moneko_state: {
+      ...(base.moneko_state || {}),
+      pending_budget: draft,
+    },
+  };
+}
+
+function clearPendingBudget(state: SessionState | null): SessionState {
+  const base = normalizeSessionState(state);
+  if (!base.moneko_state?.pending_budget) return base;
+  const { pending_budget: _pending, ...rest } = base.moneko_state;
+  if (Object.keys(rest).length === 0) {
+    const { moneko_state: _state, ...withoutState } = base;
+    return withoutState;
+  }
+  return { ...base, moneko_state: rest };
+}
+
+async function loadSessionState(
+  supabase: SupabaseJsClient,
+  sessionId: string,
+  debugNotes: string[],
+  debugEnabled: boolean
+): Promise<SessionState> {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("system_prompt")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error) {
+    const formatted = formatInvokeError(error);
+    if (debugEnabled) debugNotes.push(`chat_sessions load state error: ${formatted}`);
+    console.error("[twilio-whatsapp-ai-bot] chat_sessions state load error", { error, formatted });
+    return {};
+  }
+  return normalizeSessionState((data as any)?.system_prompt);
+}
+
+async function saveSessionState(
+  supabase: SupabaseJsClient,
+  sessionId: string,
+  state: SessionState,
+  debugNotes: string[],
+  debugEnabled: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({
+      system_prompt: state,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", sessionId);
+  if (error) {
+    const formatted = formatInvokeError(error);
+    if (debugEnabled) debugNotes.push(`chat_sessions save state error: ${formatted}`);
+    console.error("[twilio-whatsapp-ai-bot] chat_sessions state save error", { error, formatted });
+  }
+}
+
+async function ensureHouseholdMember(
+  supabase: SupabaseJsClient,
+  householdId: string,
+  userId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("household_members")
+    .select("id")
+    .eq("household_id", householdId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) return false;
+  return !!data;
+}
+
+async function resolveBudgetForScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  period_month: string,
+  currency: string,
+  isPortfolio: boolean
+) {
+  let query = supabase
+    .from("budgets")
+    .select("id, total_budget_cents, currency, period_month")
+    .eq("user_id", userId)
+    .eq("currency", currency)
+    .eq("period_month", period_month)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (householdId) {
+    query = query.eq("household_id", householdId).eq("is_portfolio", isPortfolio === true);
+  } else {
+    query = query.is("household_id", null).is("is_portfolio", null);
+  }
+
+  return query.maybeSingle();
+}
+
+async function resolveEnvelopeByName(
+  supabase: SupabaseJsClient,
+  budgetId: string,
+  name: string
+) {
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) return { data: null, error: null } as const;
+  const { data, error } = await supabase
+    .from("budget_envelopes")
+    .select("id, name, budget_percentage")
+    .eq("budget_id", budgetId);
+  if (error || !data) return { data: null, error } as const;
+  const found = (data as any[]).find((row) =>
+    typeof row?.name === "string" && row.name.toLowerCase() === normalized
+  );
+  return { data: found ?? null, error: null } as const;
+}
+
+function rebalancePocketPercentages(
+  desiredPct: number,
+  others: Array<{ id: string; percentage: number }>
+): Record<string, number> {
+  const precision = 4;
+  const roundedDesired = Number(desiredPct.toFixed(precision));
+  const totalOther = others.reduce((sum, p) => sum + (p.percentage || 0), 0);
+  const currentTotal = roundedDesired + totalOther;
+  const updated: Record<string, number> = {};
+
+  if (currentTotal > 100 + 0.0001) {
+    const available = Math.max(0, 100 - roundedDesired);
+    if (totalOther <= 0 || available <= 0) {
+      return updated;
+    }
+    const factor = available / totalOther;
+    let remaining = available;
+    for (let i = 0; i < others.length; i++) {
+      const raw = Math.max(0, (others[i].percentage || 0) * factor);
+      const pct = i === others.length - 1
+        ? remaining
+        : Number(raw.toFixed(precision));
+      remaining -= pct;
+      updated[others[i].id] = Number(pct.toFixed(precision));
+    }
+  } else {
+    for (const p of others) {
+      updated[p.id] = Number((p.percentage || 0).toFixed(precision));
+    }
+  }
+
+  return updated;
+}
+
+function buildRecurrenceRule(args: any, fallbackAnchor: string) {
+  const provided = args?.recurrence_rule;
+  if (provided && typeof provided === "object" && !Array.isArray(provided)) {
+    return provided as Record<string, unknown>;
+  }
+
+  const frequency = typeof args?.frequency === "string" && args.frequency.trim()
+    ? args.frequency.trim().toLowerCase()
+    : null;
+  const interval = Number.isFinite(args?.interval) ? Math.trunc(args.interval) : null;
+  const anchor_date = normalizeDateInput(args?.anchor_date, fallbackAnchor);
+  const end_date = typeof args?.end_date === "string" && args.end_date.trim()
+    ? normalizeDateInput(args.end_date, "")
+    : "";
+  const reminderValue = Number.isFinite(args?.reminder_value) ? Math.trunc(args.reminder_value) : null;
+  const reminderUnit = typeof args?.reminder_unit === "string" ? args.reminder_unit : null;
+
+  if (!frequency) return null;
+
+  const rule: Record<string, unknown> = {
+    frequency,
+    anchor_date,
+  };
+
+  if (interval && interval > 0) rule.interval = interval;
+  if (end_date) rule.end_date = end_date;
+  if (reminderValue && reminderUnit) {
+    rule.reminder = { enabled: true, value: reminderValue, unit: reminderUnit };
+  }
+
+  return rule;
 }
 
 
@@ -1386,6 +1725,114 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    let sessionState = await loadSessionState(supabase, sessionId, debugNotes, WHATSAPP_DEBUG);
+    const pendingBudgetDraft = getPendingBudget(sessionState);
+    if (!pendingBudgetDraft && sessionState?.moneko_state?.pending_budget) {
+      sessionState = clearPendingBudget(sessionState);
+      await saveSessionState(supabase, sessionId, sessionState, debugNotes, WHATSAPP_DEBUG);
+    }
+
+    const resolveBudgetScope = (args: any, fallback?: PendingBudgetDraft | null) => {
+      let householdId = (args.household_id ?? fallback?.household_id ?? null) as string | null;
+      const householdName = (args.household_name || args.householdName || fallback?.household_name || "")
+        .toString()
+        .toLowerCase();
+      let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+      if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+        spaceMeta = spaceMap.get(householdName);
+        householdId = spaceMeta?.id ?? null;
+      }
+      const resolvedName = spaceMeta?.name || (householdName || undefined);
+      const isPortfolio = householdId ? (spaceMeta?.isPortfolio ?? fallback?.is_portfolio ?? false) : false;
+      return { householdId, resolvedName, isPortfolio };
+    };
+
+    const buildBudgetDraftFromArgs = (args: any, fallback?: PendingBudgetDraft | null) => {
+      const amountCandidate = coerceNumber(args.amount);
+      const amountMajor = amountCandidate != null && amountCandidate > 0
+        ? amountCandidate
+        : (fallback?.amount ?? null);
+      if (!amountMajor || amountMajor <= 0) {
+        return { error: "Invalid budget amount" };
+      }
+      const rawDate = typeof args.date === "string" && args.date.trim()
+        ? args.date.trim()
+        : (fallback?.date || formatDateInTimeZone(userTimezone));
+      const dateStr = rawDate.slice(0, 10);
+      const period_month = dateStr.slice(0, 7) + "-01";
+      const { householdId, resolvedName, isPortfolio } = resolveBudgetScope(args, fallback);
+      const pockets = normalizePockets(
+        args.pockets ??
+          args.pocket_splits ??
+          args.envelopes ??
+          fallback?.pockets ??
+          []
+      );
+      const draft: PendingBudgetDraft = {
+        amount: amountMajor,
+        currency: userCurrency,
+        date: dateStr,
+        period_month,
+        household_id: householdId,
+        household_name: resolvedName,
+        is_portfolio: isPortfolio,
+        pockets: pockets.length ? pockets : undefined,
+        created_at: new Date().toISOString(),
+      };
+      return { draft };
+    };
+
+    const applyBudgetDraft = async (draft: PendingBudgetDraft) => {
+      const total_cents = Math.round(draft.amount * 100);
+      const { data: budgetRow, error: budgetErr } = await createOrUpdateBudget(
+        supabase,
+        userId,
+        draft.household_id,
+        draft.period_month,
+        draft.currency || userCurrency,
+        total_cents,
+        draft.household_id ? draft.is_portfolio === true : false,
+      );
+      if (budgetErr || !budgetRow) {
+        return { error: budgetErr ?? "Failed to save budget" };
+      }
+      const pockets = Array.isArray(draft.pockets) ? draft.pockets : [];
+      const created: any[] = [];
+      for (const p of pockets) {
+        const { data: env, error: envErr } = await upsertEnvelope(
+          supabase,
+          budgetRow.id,
+          userId,
+          draft.household_id,
+          p.name,
+          p.percentage,
+          draft.currency || userCurrency
+        );
+        if (env && env.id) {
+          created.push({ name: p.name, percentage: p.percentage });
+          if (p.color || p.icon) {
+            await supabase
+              .from("budget_envelopes")
+              .update({
+                ...(p.color ? { color: p.color } : {}),
+                ...(p.icon ? { icon: p.icon } : {}),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", env.id);
+          }
+          for (const cat of p.categories || []) {
+            await upsertEnvelopeCategoryLink(supabase, env.id, cat);
+          }
+          const alloc_cents = Math.round((p.percentage / 100) * total_cents);
+          await upsertEnvelopeAllocation(supabase, env.id, draft.period_month, alloc_cents);
+        } else if (envErr) {
+          const formatted = formatInvokeError(envErr);
+          if (WHATSAPP_DEBUG) debugNotes.push(`envelope upsert error: ${formatted}`);
+        }
+      }
+      return { budgetRow, envelopes: created };
+    };
+
     const { data: history } = await supabase
       .from("chat_messages")
       .select("role, content")
@@ -1406,7 +1853,7 @@ Deno.serve(async (req: Request) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ 
         model: MODEL_NAME,
-        systemInstruction: SYSTEM_INSTRUCTION
+        systemInstruction: WHATSAPP_SYSTEM_INSTRUCTION
           .replace("{{DATE}}", formatDateInTimeZone(userTimezone))
           .replace("{{CURRENCY}}", userCurrency)
           .replace("{{HOUSEHOLDS}}", householdContext)
@@ -1447,6 +1894,9 @@ Deno.serve(async (req: Request) => {
                 required: ["member_name"]
               }
             },
+            owner_type: { type: "STRING", enum: ["me", "partner", "household"], description: "Income only: owner type" },
+            privacy_scope: { type: "STRING", enum: ["private", "balances_only", "full"], description: "Income only: privacy scope" },
+            source: { type: "STRING", description: "Income only: source label" },
             is_recurring: { type: "BOOLEAN", description: "True if this is a recurring transaction" },
             frequency: { type: "STRING", description: "Frequency for recurring (monthly, weekly, etc.)" }
           },
@@ -1467,7 +1917,30 @@ Deno.serve(async (req: Request) => {
             currency: { type: "STRING" },
             household_id: { type: "STRING" },
             household_name: { type: "STRING" },
-            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" },
+            payer_name: { type: "STRING", description: "Shared space only: who paid (member name/email)." },
+            split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"] },
+            member_splits: {
+              type: "ARRAY",
+              description: "Shared space only: per-member split instructions (by name/email).",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  member_name: { type: "STRING", description: "Member name/email reference" },
+                  amount: { type: "NUMBER" },
+                  percentage: { type: "NUMBER" },
+                  shares: { type: "NUMBER" }
+                },
+                required: ["member_name"]
+              }
+            },
+            source: { type: "STRING", description: "Income only: source label" },
+            is_recurring: { type: "BOOLEAN" },
+            frequency: { type: "STRING" },
+            interval: { type: "NUMBER" },
+            end_date: { type: "STRING", description: "YYYY-MM-DD" },
+            anchor_date: { type: "STRING", description: "YYYY-MM-DD" },
+            recurrence_rule: { type: "OBJECT" }
           },
           required: ["expense_id"]
         }
@@ -1514,6 +1987,62 @@ Deno.serve(async (req: Request) => {
         }
       },
       {
+        name: "draft_budget",
+        description: "Draft a budget proposal (amount and pockets) and store it for confirmation.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            amount: { type: "NUMBER" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            household_id: { type: "STRING", description: "Optional: space scope" },
+            household_name: { type: "STRING", description: "Optional: space name" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" },
+            pockets: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  name: { type: "STRING" },
+                  percentage: { type: "NUMBER" },
+                  categories: { type: "ARRAY", items: { type: "STRING" } },
+                },
+                required: ["name", "percentage"]
+              },
+              description: "Optional: envelope splits with percentages and categories"
+            }
+          },
+          required: ["amount"]
+        }
+      },
+      {
+        name: "confirm_budget",
+        description: "Confirm and apply the last drafted budget (can include overrides).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            confirm: { type: "BOOLEAN", description: "Set true to confirm" },
+            amount: { type: "NUMBER" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            household_id: { type: "STRING", description: "Optional: space scope" },
+            household_name: { type: "STRING", description: "Optional: space name" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" },
+            pockets: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  name: { type: "STRING" },
+                  percentage: { type: "NUMBER" },
+                  categories: { type: "ARRAY", items: { type: "STRING" } },
+                },
+                required: ["name", "percentage"]
+              },
+              description: "Optional: envelope splits with percentages and categories"
+            }
+          }
+        }
+      },
+      {
         name: "set_budget",
         description: "Set the budget amount for the month (supports pockets/envelopes split).",
         parameters: {
@@ -1532,6 +2061,8 @@ Deno.serve(async (req: Request) => {
                       name: { type: "STRING" },
                       percentage: { type: "NUMBER" },
                       categories: { type: "ARRAY", items: { type: "STRING" } },
+                      color: { type: "STRING" },
+                      icon: { type: "STRING" },
                     },
                     required: ["name", "percentage"]
                   },
@@ -1539,6 +2070,41 @@ Deno.serve(async (req: Request) => {
                 }
             },
             required: ["amount"]
+        }
+      },
+      {
+        name: "set_pocket",
+        description: "Create or update a pocket/envelope for the current budget.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING", description: "Pocket name to create/update" },
+            new_name: { type: "STRING", description: "Optional new name" },
+            percentage: { type: "NUMBER", description: "Allocation percentage (0-100)" },
+            categories: { type: "ARRAY", items: { type: "STRING" } },
+            color: { type: "STRING", description: "Hex color (e.g. #FF0000)" },
+            icon: { type: "STRING", description: "Material icon name" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            household_id: { type: "STRING", description: "Optional: space scope" },
+            household_name: { type: "STRING", description: "Optional: space name" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
+          },
+          required: ["name"]
+        }
+      },
+      {
+        name: "delete_pocket",
+        description: "Delete a pocket/envelope by name.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING", description: "Pocket name to delete" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            household_id: { type: "STRING", description: "Optional: space scope" },
+            household_name: { type: "STRING", description: "Optional: space name" },
+            is_portfolio: { type: "BOOLEAN", description: "Optional: Whether the target space is a portfolio" }
+          },
+          required: ["name"]
         }
       },
       {
@@ -1582,11 +2148,39 @@ Deno.serve(async (req: Request) => {
           parameters: {
               type: "OBJECT",
               properties: {
-                  action: { type: "STRING", enum: ["add", "delete"] },
-                  expense_id: { type: "STRING", description: "Required for delete" },
+                  action: { type: "STRING", enum: ["add", "update", "delete"] },
+                  expense_id: { type: "STRING", description: "Required for update/delete" },
                   amount: { type: "NUMBER" },
                   category: { type: "STRING" },
+                  currency: { type: "STRING" },
+                  description: { type: "STRING" },
+                  source: { type: "STRING", description: "Income only: source" },
                   frequency: { type: "STRING", enum: ["weekly", "monthly", "yearly"] },
+                  interval: { type: "NUMBER" },
+                  anchor_date: { type: "STRING", description: "YYYY-MM-DD" },
+                  end_date: { type: "STRING", description: "YYYY-MM-DD" },
+                  reminder_value: { type: "NUMBER" },
+                  reminder_unit: { type: "STRING", enum: ["days", "hours"] },
+                  owner_type: { type: "STRING", enum: ["me", "partner", "household"] },
+                  privacy_scope: { type: "STRING", enum: ["private", "balances_only", "full"] },
+                  household_id: { type: "STRING" },
+                  household_name: { type: "STRING" },
+                  is_portfolio: { type: "BOOLEAN" },
+                  payer_name: { type: "STRING" },
+                  split_type: { type: "STRING", enum: ["equal", "amount", "percentage", "shares"] },
+                  member_splits: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        member_name: { type: "STRING" },
+                        amount: { type: "NUMBER" },
+                        percentage: { type: "NUMBER" },
+                        shares: { type: "NUMBER" }
+                      },
+                      required: ["member_name"]
+                    }
+                  },
                   type: { type: "STRING", enum: ["expense", "income"], description: "Recurring transaction type" }
               },
               required: ["action"]
@@ -1648,47 +2242,88 @@ let persistedContent: string | undefined;
                   householdId = spaceMeta?.id ?? null;
                 }
 
-                let recurrenceRule: Record<string, unknown> | undefined;
-                if (call.args.is_recurring) {
-                const anchor = (call.args.date || formatDateInTimeZone(userTimezone));
-                  recurrenceRule = {
-                      frequency: (call.args.frequency || "MONTHLY").toUpperCase(),
+                const dateStr = normalizeDateInput(
+                  call.args.date,
+                  formatDateInTimeZone(userTimezone),
+                );
+                const recurrenceRule = call.args.is_recurring
+                  ? (buildRecurrenceRule(call.args, dateStr) || {
+                      frequency: "monthly",
                       interval: 1,
-                      anchor_date: anchor
+                      anchor_date: dateStr,
+                    })
+                  : null;
+                const type =
+                  typeof call.args.type === "string" && call.args.type
+                    ? call.args.type.toLowerCase()
+                    : "expense";
+
+                if (type === "income") {
+                  const payload = {
+                    userId,
+                    amount: call.args.amount,
+                    category: call.args.category,
+                    currency: call.args.currency || userCurrency,
+                    date: dateStr,
+                    description: call.args.description,
+                    source: call.args.source,
+                    ownerType: call.args.owner_type || "me",
+                    privacyScope: call.args.privacy_scope || "full",
+                    householdId,
+                    isRecurring: !!call.args.is_recurring,
+                    recurrence_rule: recurrenceRule || undefined,
+                    clientCreatedAt: new Date().toISOString(),
                   };
-                }
+                  const { data, error } = await supabase.functions.invoke(
+                    "save-income",
+                    { body: payload },
+                  );
+                  const success = !error && data?.success === true;
+                  toolResult = success ? { success: true, data: data?.data ?? data } : { error: error ?? data?.error };
+                  if (!success) {
+                    const formatted = formatInvokeError(error ?? data?.error);
+                    if (WHATSAPP_DEBUG) debugNotes.push(`add-income error: ${formatted}`);
+                    console.error("[twilio-whatsapp-ai-bot] add-income error", { error, formatted });
+                  }
+                } else {
+                  const isHouseholdExpense = !!householdId && type === "expense";
+                  const splitConfig = isHouseholdExpense
+                    ? await resolveHouseholdSplitConfig(
+                        supabase,
+                        householdId!,
+                        userId,
+                        Number(call.args.amount || 0),
+                        call.args,
+                      )
+                    : {};
 
-                const isHouseholdExpense =
-                  !!householdId && (call.args.type || "expense") === "expense";
-                const splitConfig = isHouseholdExpense
-                  ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId!,
-                      userId,
-                      Number(call.args.amount || 0),
-                      call.args,
-                    )
-                  : {};
-
-                const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
-                  type: call.args.type || "expense",
-                  amount: call.args.amount,
-                  category: call.args.category,
-                  date: call.args.date || formatDateInTimeZone(userTimezone),
-                  currency: call.args.currency || userCurrency,
-                  description: call.args.description,
-                  householdId,
-                  isPortfolio: spaceMeta?.isPortfolio ?? false,
-                  payerUserId: splitConfig.payerUserId,
-                  customSplits: splitConfig.customSplits,
-                  isRecurring: call.args.is_recurring,
-                  recurrence_rule: recurrenceRule
-                });
-                toolResult = error ? { error } : { success: true, data };
-                if (error) {
-                  const formatted = formatInvokeError(error);
-                  if (WHATSAPP_DEBUG) debugNotes.push(`add-expense error: ${formatted}`);
-                  console.error("[twilio-whatsapp-ai-bot] add-expense error", { error, formatted });
+                  const payload = {
+                    userId,
+                    amount: call.args.amount,
+                    category: call.args.category,
+                    currency: call.args.currency || userCurrency,
+                    date: dateStr,
+                    description: call.args.description,
+                    householdId,
+                    isPortfolio: spaceMeta?.isPortfolio ?? false,
+                    payerUserId: splitConfig.payerUserId,
+                    customSplits: splitConfig.customSplits,
+                    isRecurring: !!call.args.is_recurring,
+                    recurrence_rule: recurrenceRule || undefined,
+                    clientCreatedAt: new Date().toISOString(),
+                    type: "expense",
+                  };
+                  const { data, error } = await supabase.functions.invoke(
+                    "save-expense",
+                    { body: payload },
+                  );
+                  const success = !error && data?.success === true;
+                  toolResult = success ? { success: true, data: data?.data ?? data } : { error: error ?? data?.error };
+                  if (!success) {
+                    const formatted = formatInvokeError(error ?? data?.error);
+                    if (WHATSAPP_DEBUG) debugNotes.push(`add-expense error: ${formatted}`);
+                    console.error("[twilio-whatsapp-ai-bot] add-expense error", { error, formatted });
+                  }
                 }
               } else if (call.name === "update_transaction") {
                 let householdId = call.args.household_id as string | null;
@@ -1700,30 +2335,118 @@ let persistedContent: string | undefined;
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
                 }
+                const dateStr = normalizeDateInput(
+                  call.args.date,
+                  formatDateInTimeZone(userTimezone),
+                );
+                const recurrenceRule = buildRecurrenceRule(call.args, dateStr);
+                const hasSplitHints = Array.isArray(call.args.member_splits) &&
+                  call.args.member_splits.length > 0;
+                const hasPayerHint = typeof call.args.payer_name === "string" &&
+                  call.args.payer_name.trim().length > 0;
 
-                const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
-                  expenseId: call.args.expense_id,
-                  amount: call.args.amount,
-                  category: call.args.category,
-                  date: call.args.date,
-                  currency: call.args.currency || userCurrency,
-                  description: call.args.description,
-                  householdId,
-                  isPortfolio: spaceMeta?.isPortfolio ?? false,
-                  type: call.args.type || "expense",
-                });
+                let expenseRow: any = null;
+                if (hasSplitHints || hasPayerHint || !householdId || call.args.amount == null) {
+                  const { data: row } = await supabase
+                    .from("expenses")
+                    .select("id, amount_cents, household_id, split_group_id")
+                    .eq("id", call.args.expense_id)
+                    .maybeSingle();
+                  expenseRow = row;
+                  if (!householdId && row?.household_id) {
+                    householdId = row.household_id as string;
+                    spaceMeta = householdId ? spaceMap.get(householdId) : spaceMeta;
+                  }
+                }
 
-                toolResult = error ? { error } : { success: true, data };
-                if (error) {
-                  const formatted = formatInvokeError(error);
-                  if (WHATSAPP_DEBUG) debugNotes.push(`update-expense error: ${formatted}`);
-                  console.error("[twilio-whatsapp-ai-bot] update-expense error", { error, formatted });
+                const updates: Record<string, unknown> = {};
+                if (call.args.amount != null) {
+                  const amount = Number(call.args.amount);
+                  if (Number.isFinite(amount)) {
+                    updates.amount_cents = Math.round(amount * 100);
+                  }
+                }
+                if (call.args.category != null) updates.category = call.args.category;
+                if (call.args.description != null) updates.raw_text = call.args.description;
+                if (call.args.currency != null) updates.currency = call.args.currency;
+                if (call.args.date != null) updates.date = dateStr;
+                if (call.args.is_recurring != null) {
+                  updates.is_recurring = !!call.args.is_recurring;
+                }
+                if (call.args.source != null) updates.source = call.args.source;
+                if (recurrenceRule) updates.recurrence_rule = recurrenceRule;
+
+                const totalForSplits = (() => {
+                  if (call.args.amount != null && Number.isFinite(Number(call.args.amount))) {
+                    return Number(call.args.amount);
+                  }
+                  const cents = expenseRow?.amount_cents;
+                  return typeof cents === "number" ? cents / 100 : 0;
+                })();
+
+                const splitConfig = (householdId && !spaceMeta?.isPortfolio && (hasSplitHints || hasPayerHint))
+                  ? await resolveHouseholdSplitConfig(
+                      supabase,
+                      householdId,
+                      userId,
+                      totalForSplits,
+                      call.args,
+                    )
+                  : {};
+
+                if (splitConfig.payerUserId) {
+                  updates.payer_user_id = splitConfig.payerUserId;
+                }
+
+                const extraBody: Record<string, unknown> = {};
+                const hasCustomSplits = !!splitConfig.customSplits &&
+                  Array.isArray(splitConfig.customSplits.memberSplits) &&
+                  splitConfig.customSplits.memberSplits.length > 0;
+                if (householdId && hasCustomSplits) {
+                  extraBody.householdId = householdId;
+                  if (expenseRow?.split_group_id) {
+                    extraBody.splitUpdate = splitConfig.customSplits;
+                  } else {
+                    extraBody.customSplits = splitConfig.customSplits;
+                  }
+                }
+                if (splitConfig.payerUserId) {
+                  extraBody.payerUserId = splitConfig.payerUserId;
+                }
+
+                if (Object.keys(updates).length === 0 && Object.keys(extraBody).length === 0) {
+                  toolResult = { error: "No updates provided" };
+                } else {
+                  const requestBody: Record<string, unknown> = {
+                    userId,
+                    expenseId: call.args.expense_id,
+                    updates,
+                  };
+                  if (Object.keys(extraBody).length > 0) {
+                    Object.assign(requestBody, extraBody);
+                  }
+
+                  const { data, error } = await supabase.functions.invoke(
+                    "update-expense",
+                    { body: requestBody },
+                  );
+                  const success = !error && data?.success === true;
+                  toolResult = success ? { success: true, data: data?.data ?? data } : { error: error ?? data?.error };
+                  if (!success) {
+                    const formatted = formatInvokeError(error ?? data?.error);
+                    if (WHATSAPP_DEBUG) debugNotes.push(`update-expense error: ${formatted}`);
+                    console.error("[twilio-whatsapp-ai-bot] update-expense error", { error, formatted });
+                  }
                 }
               } else if (call.name === "delete_transaction") {
-                const { error } = await deleteExpenseDirect(supabase, contactId, call.args.expense_id);
-                toolResult = error ? { error } : { success: true };
-                if (error) {
-                  const formatted = formatInvokeError(error);
+                const { data, error } = await supabase.functions.invoke(
+                  "delete-expense",
+                  { body: { userId, expenseId: call.args.expense_id } },
+                );
+                const success = !error && data?.success === true;
+                toolResult = success ? { success: true } : { error: error ?? data?.error };
+                if (!success) {
+                  const formatted = formatInvokeError(error ?? data?.error);
                   if (WHATSAPP_DEBUG) debugNotes.push(`delete-expense error: ${formatted}`);
                   console.error("[twilio-whatsapp-ai-bot] delete-expense error", { error, formatted });
                 }
@@ -1803,67 +2526,258 @@ if (res.error) {
                       if (WHATSAPP_DEBUG) debugNotes.push(`set-currency error: ${formatted}`);
                       console.error("[twilio-whatsapp-ai-bot] set-currency error", { error, formatted });
                     }
+                    } else if (call.name === "draft_budget") {
+                      const { draft, error } = buildBudgetDraftFromArgs(call.args);
+                      if (!draft || error) {
+                        toolResult = { error: error || "Invalid budget draft" };
+                      } else {
+                        sessionState = setPendingBudget(sessionState, draft);
+                        await saveSessionState(supabase, sessionId, sessionState, debugNotes, WHATSAPP_DEBUG);
+                        toolResult = {
+                          success: true,
+                          pending_budget: {
+                            amount: draft.amount,
+                            currency: draft.currency,
+                            period_month: draft.period_month,
+                            pockets: draft.pockets || [],
+                            household_name: draft.household_name,
+                          },
+                        };
+                      }
+                    } else if (call.name === "confirm_budget") {
+                      if (call.args.confirm === false) {
+                        toolResult = { error: "Confirmation required" };
+                      } else {
+                        const pending = getPendingBudget(sessionState);
+                        const { draft, error } = buildBudgetDraftFromArgs(call.args, pending);
+                        if (!draft || error) {
+                          toolResult = {
+                            error: pending ? (error || "Invalid budget draft") : "No pending budget to confirm",
+                          };
+                        } else {
+                          const res = await applyBudgetDraft(draft);
+                          if (res.error) {
+                            const formatted = formatInvokeError(res.error);
+                            toolResult = { error: res.error ?? "Failed to save budget" };
+                            if (WHATSAPP_DEBUG) debugNotes.push(`confirm-budget error: ${formatted}`);
+                            console.error("[twilio-whatsapp-ai-bot] confirm-budget error", { error: res.error, formatted });
+                          } else {
+                            toolResult = { success: true, budget: res.budgetRow, envelopes: res.envelopes };
+                            sessionState = clearPendingBudget(sessionState);
+                            await saveSessionState(supabase, sessionId, sessionState, debugNotes, WHATSAPP_DEBUG);
+                          }
+                        }
+                      }
                     } else if (call.name === "set_budget") {
-                     // Create or update budget + envelopes/pockets
-                     const dateStr = (call.args.date || formatDateInTimeZone(userTimezone)).slice(0, 10);
-                     const period_month = dateStr.slice(0, 7) + "-01";
-                     const total_cents = Math.round((call.args.amount || 0) * 100);
-                     let householdId = call.args.household_id || null;
-                     const householdName = (call.args.household_name || "")
-                       .toString()
-                       .toLowerCase();
-                     let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
-                     if (!spaceMeta && householdName && spaceMap.has(householdName)) {
-                       spaceMeta = spaceMap.get(householdName);
-                       householdId = spaceMeta?.id ?? null;
-                     }
-
-                     const { data: budgetRow, error: budgetErr } = await createOrUpdateBudget(
-                       supabase,
-                       userId,
-                       householdId,
-                       period_month,
-                       userCurrency,
-                       total_cents,
-                       spaceMeta?.isPortfolio ?? false,
+                      // Create or update budget + envelopes/pockets
+                      const pending = getPendingBudget(sessionState);
+                      const { draft, error } = buildBudgetDraftFromArgs(call.args, pending);
+                      if (!draft || error) {
+                        toolResult = { error: error || "Invalid budget amount" };
+                      } else {
+                        const res = await applyBudgetDraft(draft);
+                        if (res.error) {
+                          const formatted = formatInvokeError(res.error);
+                          toolResult = { error: res.error ?? "Failed to save budget" };
+                          if (WHATSAPP_DEBUG) debugNotes.push(`set-budget error: ${formatted}`);
+                          console.error("[twilio-whatsapp-ai-bot] set-budget error", { error: res.error, formatted });
+                        } else {
+                          toolResult = { success: true, budget: res.budgetRow, envelopes: res.envelopes };
+                          sessionState = clearPendingBudget(sessionState);
+                          await saveSessionState(supabase, sessionId, sessionState, debugNotes, WHATSAPP_DEBUG);
+                        }
+                      }
+              } else if (call.name === "set_pocket") {
+                     const dateStr = normalizeDateInput(
+                       call.args.date,
+                       formatDateInTimeZone(userTimezone),
                      );
-                     if (budgetErr || !budgetRow) {
-                       const formatted = formatInvokeError(budgetErr);
-                       toolResult = { error: budgetErr };
-                       if (WHATSAPP_DEBUG) debugNotes.push(`set-budget error: ${formatted}`);
-                       console.error("[twilio-whatsapp-ai-bot] set-budget error", { budgetErr, formatted });
+                     const period_month = dateStr.slice(0, 7) + "-01";
+                     const { householdId, isPortfolio } = resolveBudgetScope(call.args);
+                     if (householdId && !(await ensureHouseholdMember(supabase, householdId, userId))) {
+                       toolResult = { error: "You do not have access to that space" };
                      } else {
-                       // Handle pockets/envelopes splits
-                       const pockets = Array.isArray(call.args.pockets) ? call.args.pockets : [];
-                       const created: any[] = [];
-                       for (const p of pockets) {
-                         if (!p?.name || typeof p.percentage !== "number") continue;
-                         const { data: env, error: envErr } = await upsertEnvelope(
-                           supabase,
-                           budgetRow.id,
-                           userId,
-                           householdId,
-                           p.name,
-                           p.percentage,
-                           userCurrency
-                         );
-                         if (env && env.id) {
-                           created.push({ name: p.name, percentage: p.percentage });
-                           // Optional categories
-                           if (Array.isArray(p.categories)) {
-                             for (const cat of p.categories) {
-                               await upsertEnvelopeCategoryLink(supabase, env.id, cat);
+                       const { data: budgetRow, error: budgetErr } = await resolveBudgetForScope(
+                         supabase,
+                         userId,
+                         householdId,
+                         period_month,
+                         userCurrency,
+                         isPortfolio,
+                       );
+                       if (budgetErr || !budgetRow) {
+                         toolResult = { error: "Please set a budget first for this month" };
+                       } else {
+                         const name = (call.args.name || "").toString().trim();
+                         if (!name) {
+                           toolResult = { error: "Pocket name is required" };
+                         } else {
+                           const { data: envelope } = await resolveEnvelopeByName(
+                             supabase,
+                             budgetRow.id,
+                             name,
+                           );
+                           const newName = (call.args.new_name || "").toString().trim();
+                           const pctInput = coerceNumber(call.args.percentage);
+                           const rawCategories = normalizeCategories(call.args.categories);
+                           const categories = rawCategories.map((c) => c.toLowerCase());
+                           const color = typeof call.args.color === "string"
+                             ? call.args.color.trim()
+                             : undefined;
+                           const icon = typeof call.args.icon === "string"
+                             ? call.args.icon.trim()
+                             : undefined;
+
+                           if (!envelope && pctInput == null) {
+                             toolResult = { error: "Pocket percentage is required" };
+                           } else if (!envelope && categories.length === 0) {
+                             toolResult = { error: "Please provide at least one category" };
+                           } else {
+                             const { data: envelopes } = await supabase
+                               .from("budget_envelopes")
+                               .select("id, name, budget_percentage")
+                               .eq("budget_id", budgetRow.id);
+                             const existingPct = envelope?.budget_percentage;
+                             const desiredPctRaw = pctInput != null
+                               ? Math.max(0, Math.min(100, pctInput))
+                               : (typeof existingPct === "number" ? existingPct : 0);
+                             const desiredPct = Number(desiredPctRaw.toFixed(4));
+                             const others = (envelopes || [])
+                               .filter((p: any) => p.id !== envelope?.id)
+                               .map((p: any) => ({
+                                 id: p.id as string,
+                                 percentage: Number(p.budget_percentage) || 0,
+                               }));
+                             const adjustedOthers = pctInput != null
+                               ? rebalancePocketPercentages(desiredPct, others)
+                               : {};
+
+                             let envelopeId = envelope?.id as string | undefined;
+                             if (envelopeId) {
+                               await supabase
+                                 .from("budget_envelopes")
+                                 .update({
+                                   name: newName || name,
+                                   budget_id: budgetRow.id,
+                                   budget_percentage: desiredPct,
+                                   updated_at: new Date().toISOString(),
+                                   ...(color ? { color } : {}),
+                                   ...(icon ? { icon } : {}),
+                                   household_id: householdId,
+                                   currency: userCurrency,
+                                 })
+                                 .eq("id", envelopeId);
+                             } else {
+                               const insertRes = await supabase
+                                 .from("budget_envelopes")
+                                 .insert({
+                                   user_id: userId,
+                                   budget_id: budgetRow.id,
+                                   name: newName || name,
+                                   budget_percentage: desiredPct,
+                                   household_id: householdId,
+                                   currency: userCurrency,
+                                   color: color ?? null,
+                                   icon: icon ?? null,
+                                 })
+                                 .select("id")
+                                 .maybeSingle();
+                               envelopeId = insertRes?.id as string | undefined;
+                             }
+
+                             if (!envelopeId) {
+                               toolResult = { error: "Failed to save pocket" };
+                             } else {
+                               if (categories.length > 0) {
+                                 await supabase
+                                   .from("envelope_category_links")
+                                   .delete()
+                                   .eq("envelope_id", envelopeId);
+                                 await supabase
+                                   .from("envelope_category_links")
+                                   .insert(
+                                     categories.map((category) => ({
+                                       envelope_id: envelopeId,
+                                       category,
+                                     })),
+                                   );
+                               }
+
+                               if (pctInput != null) {
+                                 if (desiredPct >= 100 && others.length > 0) {
+                                   for (const other of others) {
+                                     await supabase
+                                       .from("budget_envelopes")
+                                       .update({
+                                         budget_percentage: 0,
+                                         updated_at: new Date().toISOString(),
+                                       })
+                                       .eq("id", other.id);
+                                   }
+                                 } else {
+                                   for (const entry of Object.entries(adjustedOthers)) {
+                                     await supabase
+                                       .from("budget_envelopes")
+                                       .update({
+                                         budget_percentage: entry[1],
+                                         updated_at: new Date().toISOString(),
+                                       })
+                                       .eq("id", entry[0]);
+                                   }
+                                 }
+                               }
+
+                               toolResult = { success: true, pocket: { id: envelopeId, name: newName || name } };
                              }
                            }
-                           // Optional allocation (percentage of total)
-                           const alloc_cents = Math.round((p.percentage / 100) * total_cents);
-                           await upsertEnvelopeAllocation(supabase, env.id, period_month, alloc_cents);
-                         } else if (envErr) {
-                           const formatted = formatInvokeError(envErr);
-                           if (WHATSAPP_DEBUG) debugNotes.push(`envelope upsert error: ${formatted}`);
                          }
                        }
-                       toolResult = { success: true, budget: budgetRow, envelopes: created };
+                     }
+              } else if (call.name === "delete_pocket") {
+                     const dateStr = normalizeDateInput(
+                       call.args.date,
+                       formatDateInTimeZone(userTimezone),
+                     );
+                     const period_month = dateStr.slice(0, 7) + "-01";
+                     const { householdId, isPortfolio } = resolveBudgetScope(call.args);
+                     if (householdId && !(await ensureHouseholdMember(supabase, householdId, userId))) {
+                       toolResult = { error: "You do not have access to that space" };
+                     } else {
+                       const { data: budgetRow, error: budgetErr } = await resolveBudgetForScope(
+                         supabase,
+                         userId,
+                         householdId,
+                         period_month,
+                         userCurrency,
+                         isPortfolio,
+                       );
+                       if (budgetErr || !budgetRow) {
+                         toolResult = { error: "Please set a budget first for this month" };
+                       } else {
+                         const name = (call.args.name || "").toString().trim();
+                         if (!name) {
+                           toolResult = { error: "Pocket name is required" };
+                         } else {
+                           const { data: envelope } = await resolveEnvelopeByName(
+                             supabase,
+                             budgetRow.id,
+                             name,
+                           );
+                           if (!envelope?.id) {
+                             toolResult = { error: "Pocket not found" };
+                           } else {
+                             const { error: deleteErr } = await supabase
+                               .from("budget_envelopes")
+                               .delete()
+                               .eq("id", envelope.id);
+                             if (deleteErr) {
+                               toolResult = { error: deleteErr };
+                             } else {
+                               toolResult = { success: true };
+                             }
+                           }
+                         }
+                       }
                      }
               } else if (call.name === "generate_chart_url") {
                      // Generate QuickChart URL
@@ -1883,32 +2797,226 @@ if (res.error) {
                    toolResult = { url };
             } else if (call.name === "manage_recurring") {
                 // Use update-expense or save-expense
-                if (call.args.action === "add") {
-                  const recurrenceRule = {
-                    frequency: (call.args.frequency || "MONTHLY").toUpperCase(),
+                const action = (call.args.action || "").toString().toLowerCase();
+                if (action === "add") {
+                  let householdId = call.args.household_id as string | null;
+                  const householdName = (call.args.household_name || "")
+                    .toString()
+                    .toLowerCase();
+                  let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                  if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                    spaceMeta = spaceMap.get(householdName);
+                    householdId = spaceMeta?.id ?? null;
+                  }
+                  if (!spaceMeta && !householdName && spaceMap.size === 1) {
+                    spaceMeta = Array.from(spaceMap.values())[0];
+                    householdId = spaceMeta?.id ?? null;
+                  }
+
+                  const dateStr = normalizeDateInput(
+                    call.args.anchor_date ?? call.args.date,
+                    formatDateInTimeZone(userTimezone),
+                  );
+                  const recurrenceRule = buildRecurrenceRule(call.args, dateStr) || {
+                    frequency: (call.args.frequency || "monthly").toString().toLowerCase(),
                     interval: 1,
-                    anchor_date: formatDateInTimeZone(userTimezone),
+                    anchor_date: dateStr,
                   };
-                  const { data, error } = await saveExpenseDirect(supabase, contactId, userId, {
-                    amount: call.args.amount,
-                    category: call.args.category,
-                    date: formatDateInTimeZone(userTimezone),
-                    currency: userCurrency,
-                    isRecurring: true,
-                    recurrence_rule: recurrenceRule,
-                    type: call.args.type || "expense",
-                  });
-                  toolResult = error ? { error } : { success: true, data };
-                  if (error) {
-                    const formatted = formatInvokeError(error);
-                    if (WHATSAPP_DEBUG) debugNotes.push(`save-expense (recurring add) error: ${formatted}`);
-                    console.error("[twilio-whatsapp-ai-bot] save-expense recurring add error", { error, formatted });
+                  const type =
+                    typeof call.args.type === "string" && call.args.type
+                      ? call.args.type.toLowerCase()
+                      : "expense";
+
+                  if (type === "income") {
+                    const payload = {
+                      userId,
+                      amount: call.args.amount,
+                      category: call.args.category,
+                      currency: call.args.currency || userCurrency,
+                      date: dateStr,
+                      description: call.args.description,
+                      source: call.args.source,
+                      ownerType: call.args.owner_type || "me",
+                      privacyScope: call.args.privacy_scope || "full",
+                      householdId,
+                      isRecurring: true,
+                      recurrence_rule: recurrenceRule,
+                      clientCreatedAt: new Date().toISOString(),
+                    };
+                    const { data, error } = await supabase.functions.invoke(
+                      "save-income",
+                      { body: payload },
+                    );
+                    const success = !error && data?.success === true;
+                    toolResult = success ? { success: true, data: data?.data ?? data } : { error: error ?? data?.error };
+                    if (!success) {
+                      const formatted = formatInvokeError(error ?? data?.error);
+                      if (WHATSAPP_DEBUG) debugNotes.push(`save-income (recurring add) error: ${formatted}`);
+                      console.error("[twilio-whatsapp-ai-bot] save-income recurring add error", { error, formatted });
+                    }
+                  } else {
+                    const isHouseholdExpense = !!householdId;
+                    const splitConfig = isHouseholdExpense
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId!,
+                          userId,
+                          Number(call.args.amount || 0),
+                          call.args,
+                        )
+                      : {};
+                    const payload = {
+                      userId,
+                      amount: call.args.amount,
+                      category: call.args.category,
+                      currency: call.args.currency || userCurrency,
+                      date: dateStr,
+                      description: call.args.description,
+                      householdId,
+                      isPortfolio: spaceMeta?.isPortfolio ?? false,
+                      payerUserId: splitConfig.payerUserId,
+                      customSplits: splitConfig.customSplits,
+                      isRecurring: true,
+                      recurrence_rule: recurrenceRule,
+                      clientCreatedAt: new Date().toISOString(),
+                      type: "expense",
+                    };
+                    const { data, error } = await supabase.functions.invoke(
+                      "save-expense",
+                      { body: payload },
+                    );
+                    const success = !error && data?.success === true;
+                    toolResult = success ? { success: true, data: data?.data ?? data } : { error: error ?? data?.error };
+                    if (!success) {
+                      const formatted = formatInvokeError(error ?? data?.error);
+                      if (WHATSAPP_DEBUG) debugNotes.push(`save-expense (recurring add) error: ${formatted}`);
+                      console.error("[twilio-whatsapp-ai-bot] save-expense recurring add error", { error, formatted });
+                    }
+                  }
+                } else if (action === "update") {
+                  if (!call.args.expense_id) {
+                    toolResult = { error: "expense_id is required for update" };
+                  } else {
+                    let householdId = call.args.household_id as string | null;
+                    const householdName = (call.args.household_name || "")
+                      .toString()
+                      .toLowerCase();
+                    let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+                    if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+                      spaceMeta = spaceMap.get(householdName);
+                      householdId = spaceMeta?.id ?? null;
+                    }
+
+                    const dateStr = normalizeDateInput(
+                      call.args.anchor_date ?? call.args.date,
+                      formatDateInTimeZone(userTimezone),
+                    );
+                    const recurrenceRule = buildRecurrenceRule(call.args, dateStr);
+
+                    let expenseRow: any = null;
+                    const hasSplitHints = Array.isArray(call.args.member_splits) &&
+                      call.args.member_splits.length > 0;
+                    const hasPayerHint = typeof call.args.payer_name === "string" &&
+                      call.args.payer_name.trim().length > 0;
+                    if (hasSplitHints || hasPayerHint || !householdId || call.args.amount == null) {
+                      const { data: row } = await supabase
+                        .from("expenses")
+                        .select("id, amount_cents, household_id, split_group_id")
+                        .eq("id", call.args.expense_id)
+                        .maybeSingle();
+                      expenseRow = row;
+                      if (!householdId && row?.household_id) {
+                        householdId = row.household_id as string;
+                        spaceMeta = householdId ? spaceMap.get(householdId) : spaceMeta;
+                      }
+                    }
+
+                    const updates: Record<string, unknown> = {};
+                    if (call.args.amount != null) {
+                      const amount = Number(call.args.amount);
+                      if (Number.isFinite(amount)) {
+                        updates.amount_cents = Math.round(amount * 100);
+                      }
+                    }
+                    if (call.args.category != null) updates.category = call.args.category;
+                    if (call.args.description != null) updates.raw_text = call.args.description;
+                    if (call.args.currency != null) updates.currency = call.args.currency;
+                    if (call.args.date != null) updates.date = dateStr;
+                    updates.is_recurring = true;
+                    if (call.args.source != null) updates.source = call.args.source;
+                    if (recurrenceRule) updates.recurrence_rule = recurrenceRule;
+
+                    const totalForSplits = (() => {
+                      if (call.args.amount != null && Number.isFinite(Number(call.args.amount))) {
+                        return Number(call.args.amount);
+                      }
+                      const cents = expenseRow?.amount_cents;
+                      return typeof cents === "number" ? cents / 100 : 0;
+                    })();
+
+                    const splitConfig = (householdId && !spaceMeta?.isPortfolio && (hasSplitHints || hasPayerHint))
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          totalForSplits,
+                          call.args,
+                        )
+                      : {};
+
+                    if (splitConfig.payerUserId) {
+                      updates.payer_user_id = splitConfig.payerUserId;
+                    }
+
+                    const extraBody: Record<string, unknown> = {};
+                    const hasCustomSplits = !!splitConfig.customSplits &&
+                      Array.isArray(splitConfig.customSplits.memberSplits) &&
+                      splitConfig.customSplits.memberSplits.length > 0;
+                    if (householdId && hasCustomSplits) {
+                      extraBody.householdId = householdId;
+                      if (expenseRow?.split_group_id) {
+                        extraBody.splitUpdate = splitConfig.customSplits;
+                      } else {
+                        extraBody.customSplits = splitConfig.customSplits;
+                      }
+                    }
+                    if (splitConfig.payerUserId) {
+                      extraBody.payerUserId = splitConfig.payerUserId;
+                    }
+
+                    if (Object.keys(updates).length === 0 && Object.keys(extraBody).length === 0) {
+                      toolResult = { error: "No updates provided" };
+                    } else {
+                      const requestBody: Record<string, unknown> = {
+                        userId,
+                        expenseId: call.args.expense_id,
+                        updates,
+                      };
+                      if (Object.keys(extraBody).length > 0) {
+                        Object.assign(requestBody, extraBody);
+                      }
+                      const { data, error } = await supabase.functions.invoke(
+                        "update-expense",
+                        { body: requestBody },
+                      );
+                      const success = !error && data?.success === true;
+                      toolResult = success ? { success: true, data: data?.data ?? data } : { error: error ?? data?.error };
+                      if (!success) {
+                        const formatted = formatInvokeError(error ?? data?.error);
+                        if (WHATSAPP_DEBUG) debugNotes.push(`update-expense error: ${formatted}`);
+                        console.error("[twilio-whatsapp-ai-bot] update-expense error", { error, formatted });
+                      }
+                    }
                   }
                 } else {
-                  const { error } = await deleteExpenseDirect(supabase, contactId, call.args.expense_id);
-                  toolResult = error ? { error } : { success: true };
-                  if (error) {
-                    const formatted = formatInvokeError(error);
+                  const { data, error } = await supabase.functions.invoke(
+                    "delete-expense",
+                    { body: { userId, expenseId: call.args.expense_id } },
+                  );
+                  const success = !error && data?.success === true;
+                  toolResult = success ? { success: true } : { error: error ?? data?.error };
+                  if (!success) {
+                    const formatted = formatInvokeError(error ?? data?.error);
                     if (WHATSAPP_DEBUG) debugNotes.push(`delete-expense error: ${formatted}`);
                     console.error("[twilio-whatsapp-ai-bot] delete-expense error", { error, formatted });
                   }
