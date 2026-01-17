@@ -213,7 +213,7 @@ This directory contains SQL files that define the database schema in an incremen
   - `seo_pages_data`: Stores content for programmatically generated SEO pages.
   - `bank_connections`, `bank_accounts`, `bank_institutions`, `bank_sync_audit`: Plaid-aware banking primitives that keep provider metadata separate from the existing `expenses` table and support future background sync jobs.
 - **Row-Level Security (RLS):** RLS is enabled on all tables containing user data. Policies are defined in the migration files to ensure users can only access their own data. Backend functions use the `service_role_key` to bypass RLS when necessary.
-- **PostgreSQL Functions & Triggers:** The database uses custom SQL functions (e.g., `increment_user_xp`) and triggers to automate logic at the database level, ensuring data integrity.
+- **PostgreSQL Functions & Triggers:** The database uses custom SQL functions (e.g., `increment_user_xp`, `get_last_expense_per_user`) and triggers (e.g., `notification_events` real-time webhook) to automate logic at the database level, ensuring data integrity.
 
 ## 4. Getting Started
 

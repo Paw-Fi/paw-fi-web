@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
+import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -366,6 +368,7 @@ serve(async (req) => {
         let title: string;
         let body: string;
         let targetUserId: string | null = event.user_id;
+        let messageData: Record<string, string> = {};
 
         switch (event.event_type) {
           case 'invite_sent':
@@ -409,6 +412,20 @@ serve(async (req) => {
             body = `An expense was modified in your household`;
             targetUserId = null; // Broadcast to all members except actor
             break;
+
+          case 'expense_deleted':
+            title = '🗑️ Expense Deleted';
+            body = `An expense was deleted in your household`;
+            targetUserId = null; // Broadcast to all members except actor
+            break;
+
+          case 'log_expense_reminder': {
+            const reminderMessage = buildLogExpenseReminderMessage(event.payload ?? {});
+            title = reminderMessage.title;
+            body = reminderMessage.body;
+            messageData = reminderMessage.data;
+            break;
+          }
 
           case 'budget_warn':
           case 'budget_alert':
@@ -473,6 +490,7 @@ serve(async (req) => {
           .in('user_id', userIds);
 
         const isExpenseEvent = event.event_type === 'expense_added' || event.event_type === 'expense_edited';
+        const isLogExpenseReminder = event.event_type === 'log_expense_reminder';
 
         // Filter users by quiet hours (skip for expense events)
         const eligibleUserIds = userIds.filter(userId => {
@@ -484,21 +502,35 @@ serve(async (req) => {
           }
 
           // Check quiet hours unless expense event (immediate delivery)
-          if (!isExpenseEvent && prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
-            const [startHour, startMinute] = prefs.nudge_quiet_hours_start.split(':').map(Number);
-            const [endHour, endMinute] = prefs.nudge_quiet_hours_end.split(':').map(Number);
-
-            const startMinutes = startHour * 60 + startMinute;
-            const endMinutes = endHour * 60 + endMinute;
-
-            // Handle quiet hours that span midnight
-            if (startMinutes > endMinutes) {
-              if (currentTimeMinutes >= startMinutes || currentTimeMinutes <= endMinutes) {
-                return false; // In quiet hours
+          if (!isExpenseEvent) {
+            if (isLogExpenseReminder) {
+              const quietStart = Number.isFinite(Number(event.payload?.quiet_start))
+                ? Number(event.payload.quiet_start)
+                : 22;
+              const quietEnd = Number.isFinite(Number(event.payload?.quiet_end))
+                ? Number(event.payload.quiet_end)
+                : 8;
+              const timezone = event.payload?.timezone as string | undefined;
+              const localMinutes = getLocalTimeMinutes(timezone, currentTime);
+              if (isInQuietHours(localMinutes, quietStart, quietEnd)) {
+                return false;
               }
-            } else {
-              if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
-                return false; // In quiet hours
+            } else if (prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
+              const [startHour, startMinute] = prefs.nudge_quiet_hours_start.split(':').map(Number);
+              const [endHour, endMinute] = prefs.nudge_quiet_hours_end.split(':').map(Number);
+
+              const startMinutes = startHour * 60 + startMinute;
+              const endMinutes = endHour * 60 + endMinute;
+
+              // Handle quiet hours that span midnight
+              if (startMinutes > endMinutes) {
+                if (currentTimeMinutes >= startMinutes || currentTimeMinutes <= endMinutes) {
+                  return false; // In quiet hours
+                }
+              } else {
+                if (currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes) {
+                  return false; // In quiet hours
+                }
               }
             }
           }
@@ -550,6 +582,14 @@ serve(async (req) => {
         let eventSentCount = 0;
         let eventFailedCount = 0;
 
+        const payloadData = typeof event.payload === 'object'
+          ? Object.fromEntries(Object.entries(event.payload).map(([k, v]) => [k, String(v)]))
+          : {};
+        const mergedData = {
+          ...payloadData,
+          ...messageData,
+        };
+
         const pushPromises = devices.map(async (device) => {
           const success = await sendFCMv1Notification(
             device.push_token,
@@ -559,12 +599,7 @@ serve(async (req) => {
               event_type: event.event_type,
               household_id: event.household_id || '',
               event_id: event.id,
-              ...(typeof event.payload === 'object' ?
-                Object.fromEntries(
-                  Object.entries(event.payload).map(([k, v]) => [k, String(v)])
-                ) :
-                {}
-              )
+              ...mergedData
             },
             accessToken,
             imageUrl

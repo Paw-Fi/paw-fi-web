@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
+import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
+import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -34,6 +36,7 @@ function getServiceAccountMeta() {
     return null;
   }
 }
+
 
 interface NotificationPayload {
   notification_event_id: string;
@@ -596,6 +599,7 @@ serve(async (req) => {
     }
 
     const isExpenseEvent = event_type === 'expense_added' || event_type === 'expense_edited';
+    const isLogExpenseReminder = event_type === 'log_expense_reminder';
 
     // Get user's notification preferences
     const { data: prefs } = await supabase
@@ -623,38 +627,64 @@ serve(async (req) => {
     }
 
     // Check quiet hours (skip for expense events to ensure immediate delivery)
-    if (!isExpenseEvent && prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
-      const now = new Date();
-      const currentTime = now.getHours() * 60 + now.getMinutes();
+    if (!isExpenseEvent) {
+      if (isLogExpenseReminder) {
+        const now = new Date();
+        const quietStart = Number.isFinite(Number(payload.quiet_start)) ? Number(payload.quiet_start) : 22;
+        const quietEnd = Number.isFinite(Number(payload.quiet_end)) ? Number(payload.quiet_end) : 8;
+        const timezone = payload.timezone as string | undefined;
+        const localMinutes = getLocalTimeMinutes(timezone, now);
+        if (isInQuietHours(localMinutes, quietStart, quietEnd)) {
+          console.log('[send-push] Log expense reminder in quiet hours, will retry later');
+          await supabase
+            .from('notification_events')
+            .update({
+              retry_count: 1,
+              last_retry_at: new Date().toISOString()
+            })
+            .eq('id', notification_event_id);
 
-      const startParts = prefs.nudge_quiet_hours_start.split(':');
-      const endParts = prefs.nudge_quiet_hours_end.split(':');
+          return new Response(
+            JSON.stringify({ success: true, skipped: 'Quiet hours' }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
+      } else if (prefs && prefs.nudge_quiet_hours_start && prefs.nudge_quiet_hours_end) {
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
 
-      const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-      const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+        const startParts = prefs.nudge_quiet_hours_start.split(':');
+        const endParts = prefs.nudge_quiet_hours_end.split(':');
 
-      const inQuietHours =
-        startMinutes < endMinutes
-          ? currentTime >= startMinutes && currentTime < endMinutes
-          : currentTime >= startMinutes || currentTime < endMinutes;
+        const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+        const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
 
-      if (inQuietHours) {
-        console.log('[send-push] Currently in quiet hours, will retry later');
-        await supabase
-          .from('notification_events')
-          .update({
-            retry_count: 1,
-            last_retry_at: new Date().toISOString()
-          })
-          .eq('id', notification_event_id);
+        const inQuietHours =
+          startMinutes < endMinutes
+            ? currentTime >= startMinutes && currentTime < endMinutes
+            : currentTime >= startMinutes || currentTime < endMinutes;
 
-        return new Response(
-          JSON.stringify({ success: true, skipped: 'Quiet hours' }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+        if (inQuietHours) {
+          console.log('[send-push] Currently in quiet hours, will retry later');
+          await supabase
+            .from('notification_events')
+            .update({
+              retry_count: 1,
+              last_retry_at: new Date().toISOString()
+            })
+            .eq('id', notification_event_id);
+
+          return new Response(
+            JSON.stringify({ success: true, skipped: 'Quiet hours' }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            }
+          );
+        }
       }
     }
 
@@ -1021,12 +1051,17 @@ function buildNotificationMessage(
         timeframe = 'soon'; // Shouldn't happen but just in case
       }
       
-      const transactionLabel = transactionType === 'income' ? 'payment' : 'expense';
-      const emoji = transactionType === 'income' ? '💰' : '📅';
+      // Cheerful tones for both, happier for income
+      const isIncome = transactionType === 'income';
+      const capCategory = category ? category.charAt(0).toUpperCase() + category.slice(1) : undefined;
+      const title = isIncome ? '💰 Incoming Payment' : '🔔 Upcoming Expense';
+      const body = isIncome
+        ? `${capCategory || 'Income'} of ${amount} arrives ${timeframe}`
+        : `${capCategory || 'Expense'} of ${amount} is due ${timeframe}`;
       
       return {
-        title: `${emoji} Recurring ${transactionLabel.charAt(0).toUpperCase() + transactionLabel.slice(1)} Reminder`,
-        body: `${category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Transaction'} of ${amount} is due ${timeframe}`,
+        title,
+        body,
         data: {
           expense_id: payload.expense_id || '',
           type: transactionType,
@@ -1036,6 +1071,10 @@ function buildNotificationMessage(
           deep_link: `moneko://recurring/${payload.expense_id || ''}`,
         }
       };
+    }
+
+    case 'log_expense_reminder': {
+      return buildLogExpenseReminderMessage(payload);
     }
 
     case 'settlement_completed':
