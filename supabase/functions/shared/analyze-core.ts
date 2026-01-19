@@ -35,6 +35,7 @@ export interface AnalyzeAttachment {
 export interface AnalyzeRequestBody {
   userId?: string | null;
   text?: string;
+  typeHint?: "expense" | "income" | "mixed";
   image?: {
     data: string;
     contentType: string;
@@ -98,10 +99,19 @@ function buildTransactionSystemInstruction(
   expenseCategories: string[],
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+  typeHint?: AnalyzeRequestBody["typeHint"],
 ): string {
+  const normalizedHint = typeHint && typeHint !== "mixed"
+    ? typeHint
+    : undefined;
   return [
     "You are a professional transaction extraction and classification system.",
     "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
+    ...(normalizedHint
+      ? [
+        `Caller Hint: The transactions are most likely ${normalizedHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`,
+      ]
+      : []),
 
     "### 1. QUANTITY & AMOUNT STRATEGY",
     "- **Single Receipt/Bill**: If the text represents a single receipt with line items and a total, return **ONE** transaction for the Grand Total.",
@@ -543,6 +553,7 @@ async function analyzeFromText(
   expenseCategories: string[],
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+  typeHint?: AnalyzeRequestBody["typeHint"],
 ): Promise<ExpenseItem[]> {
   let items: ExpenseItem[] = [];
 
@@ -551,6 +562,7 @@ async function analyzeFromText(
     expenseCategories,
     incomeCategories,
     householdContext,
+    typeHint,
   );
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash-lite",
@@ -666,6 +678,7 @@ async function analyzeFromAudio(
   expenseCategories: string[],
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+  typeHint?: AnalyzeRequestBody["typeHint"],
 ): Promise<ExpenseItem[]> {
   let items: ExpenseItem[] = [];
 
@@ -674,6 +687,7 @@ async function analyzeFromAudio(
     expenseCategories,
     incomeCategories,
     householdContext,
+    typeHint,
   );
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash-lite",
@@ -970,6 +984,11 @@ export async function runAnalyzeExpense(
     const callerDate = body.date || new Date().toISOString().slice(0, 10);
     const language = normalizeLanguage(body.language);
     const householdContext = resolveHouseholdContext(body, userId);
+    const rawTypeHint = body.typeHint?.toString().trim().toLowerCase();
+    const typeHint =
+      rawTypeHint === "expense" || rawTypeHint === "income" || rawTypeHint === "mixed"
+        ? (rawTypeHint as AnalyzeRequestBody["typeHint"])
+        : undefined;
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const expenseCategories = getExpenseCategories();
@@ -1097,6 +1116,7 @@ export async function runAnalyzeExpense(
         expenseCategories,
         incomeCategories,
         householdContext,
+        typeHint,
       );
     } else if (hasText) {
       items = await analyzeFromText(
@@ -1109,6 +1129,7 @@ export async function runAnalyzeExpense(
         expenseCategories,
         incomeCategories,
         householdContext,
+        typeHint,
       );
     } else if (hasAudio) {
       const audio = body.audio!;
@@ -1144,6 +1165,7 @@ export async function runAnalyzeExpense(
         expenseCategories,
         incomeCategories,
         householdContext,
+        typeHint,
       );
     } else if (hasImage) {
       const image = body.image!;
@@ -1178,10 +1200,14 @@ export async function runAnalyzeExpense(
       console.log(`[analyze-expense] Base64 Start: ${base64Image.slice(0, 20)}...`);
       console.log(`[analyze-expense] Base64 End: ...${base64Image.slice(-20)}`);
 
+      const typeHintNote = typeHint && typeHint !== "mixed"
+        ? `Caller Hint: The transactions are most likely ${typeHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`
+        : null;
       const systemInstruction = [
         "You are an expert Financial OCR Analyst for Moneko.",
         "OBJECTIVE: Analyze the image to extract transaction data. Minimize noise, maximize accuracy.",
         "OUTPUT: Call `add_transactions` with the extracted items. Under no circumstances output plain text or JSON.",
+        ...(typeHintNote ? [typeHintNote] : []),
 
         "### 0. LAYOUT DETECTION & STRATEGY",
         "- **CASE A: MULTIPLE ITEMS (App List, Bank Feed)**: If the image shows a LIST of multiple distinct payments (rows) or a payment history:",
@@ -1278,6 +1304,7 @@ export async function runAnalyzeExpense(
           "You are an expert Financial OCR Analyst for Moneko.",
           "OBJECTIVE: The image is likely a handwritten list of expenses or income on paper.",
           "OUTPUT: Call `add_transactions` with the extracted items. Under no circumstances output plain text or JSON.",
+          ...(typeHintNote ? [typeHintNote] : []),
           "",
           "### HANDWRITTEN LIST PATTERN",
           "- Treat each readable line that looks like \"<label> <amount>\" (e.g. \"gym $45\", \"grocery $120\") as a separate transaction.",

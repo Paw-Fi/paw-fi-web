@@ -2,8 +2,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
-import { PLAID_PROVIDER, PlaidTransaction, syncPlaidTransactions } from "../shared/plaid-client.ts";
-import { persistPlaidTransactions, type ExpensePreview } from "../shared/bank-sync.ts";
+import {
+  PLAID_PROVIDER,
+  PlaidError,
+  PlaidTransaction,
+  syncPlaidTransactions,
+} from "../shared/plaid-client.ts";
+import {
+  persistPlaidTransactions,
+  stagePlaidTransactions,
+  type ExpensePreview,
+} from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -24,6 +33,7 @@ interface SyncSummary {
   updated: number;
   removed: number;
   skipped: number;
+  currencyMismatches: number;
   accountsProcessed: number;
   status: "succeeded" | "error";
   error?: string;
@@ -94,8 +104,10 @@ Deno.serve(async (req) => {
 
     let connectionsQuery = supabase
       .from("bank_connections")
-      .select("id, user_id, plaid_access_token_encrypted, plaid_cursor, status")
-      .eq("user_id", authResult.userId);
+      .select("id, user_id, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, status")
+      .eq("user_id", authResult.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .neq("status", "disabled");
 
     if (body.connectionId) {
       connectionsQuery = connectionsQuery.eq("id", body.connectionId);
@@ -120,7 +132,7 @@ Deno.serve(async (req) => {
     const connectionIds = connections.map((conn) => conn.id);
     const { data: bankAccounts, error: bankAccountError } = await supabase
       .from("bank_accounts")
-      .select("id, bank_connection_id, plaid_account_id, currency")
+      .select("id, bank_connection_id, plaid_account_id, provider_account_id, currency")
       .in("bank_connection_id", connectionIds);
 
     if (bankAccountError) {
@@ -133,13 +145,15 @@ Deno.serve(async (req) => {
 
     const accountMap = new Map<string, BankAccountRow>();
     (bankAccounts || []).forEach((account) => {
-      accountMap.set(account.plaid_account_id, account);
+      const key = account.provider_account_id || account.plaid_account_id;
+      accountMap.set(key, account);
     });
 
     const summaries: SyncSummary[] = [];
     let totalInserted = 0;
     let totalUpdated = 0;
     let totalRemoved = 0;
+    let totalCurrencyMismatches = 0;
     const allAdded: ExpensePreview[] = [];
 
     for (const connection of connections) {
@@ -155,6 +169,7 @@ Deno.serve(async (req) => {
       totalInserted += summary.inserted;
       totalUpdated += summary.updated;
       totalRemoved += summary.removed;
+      totalCurrencyMismatches += summary.currencyMismatches;
       allAdded.push(...summary.addedTransactions);
     }
 
@@ -166,6 +181,7 @@ Deno.serve(async (req) => {
           inserted: totalInserted,
           updated: totalUpdated,
           removed: totalRemoved,
+          currencyMismatches: totalCurrencyMismatches,
         },
         connections: summaries,
         addedTransactions: allAdded,
@@ -195,6 +211,7 @@ async function syncConnection(params: {
     updated: 0,
     removed: 0,
     skipped: 0,
+    currencyMismatches: 0,
     accountsProcessed: 0,
     status: "succeeded",
     addedTransactions: [],
@@ -217,11 +234,38 @@ async function syncConnection(params: {
     await params.supabase.from("bank_sync_audit").update(patch).eq("id", auditId);
   };
 
+  const lockResult = await params.supabase.rpc("acquire_bank_sync_lock", {
+    p_bank_connection_id: params.connection.id,
+    p_lock_seconds: 900,
+    p_locked_by: "plaid-sync",
+  });
+
+  if (!lockResult.data) {
+    summary.status = "error";
+    summary.error = "Sync already in progress";
+    await auditUpdate({
+      status: "failed",
+      error_message: summary.error,
+      finished_at: new Date().toISOString(),
+    });
+    return summary;
+  }
+
   try {
-    const accessToken = await decryptSecret(params.connection.plaid_access_token_encrypted);
+    await params.supabase
+      .from("bank_connections")
+      .update({ last_sync_attempt_at: new Date().toISOString() })
+      .eq("id", params.connection.id);
+
+    const encryptedToken = params.connection.access_token_encrypted
+      || params.connection.plaid_access_token_encrypted;
+    if (!encryptedToken) {
+      throw new Error("Missing Plaid access token");
+    }
+    const accessToken = await decryptSecret(encryptedToken);
     let cursor: string | undefined = params.cursorOverride === "reset"
       ? undefined
-      : (params.cursorOverride || params.connection.plaid_cursor || undefined);
+      : (params.cursorOverride || params.connection.cursor || params.connection.plaid_cursor || undefined);
     const processedAccounts = new Set<string>();
     let hasMore = true;
 
@@ -235,6 +279,13 @@ async function syncConnection(params: {
         if (!account) continue;
         if (params.accountFilter && account.id !== params.accountFilter.id) continue;
 
+        await stagePlaidTransactions({
+          supabase: params.supabase,
+          bankConnectionId: params.connection.id,
+          bankAccountId: account.id,
+          transactions,
+        });
+
         const result = await persistPlaidTransactions({
           supabase: params.supabase,
           userId: params.userId,
@@ -246,6 +297,7 @@ async function syncConnection(params: {
         summary.inserted += result.inserted;
         summary.updated += result.updated;
         summary.skipped += result.skipped;
+        summary.currencyMismatches += result.currencyMismatches;
         summary.addedTransactions.push(...result.insertedRecords);
         processedAccounts.add(account.id);
       }
@@ -255,9 +307,13 @@ async function syncConnection(params: {
         if (removedIds.length) {
           await params.supabase
             .from("expenses")
-            .delete()
+            .update({
+              deleted_at: new Date().toISOString(),
+              deleted_reason: "provider_removed",
+            })
             .eq("provider", PLAID_PROVIDER)
             .eq("user_id", params.userId)
+            .is("deleted_at", null)
             .in("provider_transaction_id", removedIds);
           summary.removed += removedIds.length;
         }
@@ -270,6 +326,7 @@ async function syncConnection(params: {
     await params.supabase
       .from("bank_connections")
       .update({
+        cursor: cursor || null,
         plaid_cursor: cursor || null,
         last_synced_at: new Date().toISOString(),
         status: "active",
@@ -277,6 +334,13 @@ async function syncConnection(params: {
         error_message: null,
       })
       .eq("id", params.connection.id);
+
+    if (processedAccounts.size) {
+      await params.supabase
+        .from("bank_accounts")
+        .update({ last_synced_at: new Date().toISOString() })
+        .in("id", Array.from(processedAccounts));
+    }
 
     summary.accountsProcessed = processedAccounts.size;
     await auditUpdate({
@@ -291,10 +355,25 @@ async function syncConnection(params: {
     console.error("[plaid-sync] Connection sync failed", params.connection.id, error);
     summary.status = "error";
     summary.error = error instanceof Error ? error.message : String(error);
+    const errorCode = error instanceof PlaidError ? error.code || null : null;
+    await params.supabase
+      .from("bank_connections")
+      .update({
+        status: "error",
+        error_code: errorCode,
+        error_message: summary.error,
+      })
+      .eq("id", params.connection.id);
     await auditUpdate({
       status: "failed",
       error_message: summary.error,
+      error_code: errorCode,
+      error_payload: error instanceof PlaidError ? error.details : null,
       finished_at: new Date().toISOString(),
+    });
+  } finally {
+    await params.supabase.rpc("release_bank_sync_lock", {
+      p_bank_connection_id: params.connection.id,
     });
   }
 
@@ -316,6 +395,7 @@ interface BankAccountRow {
   id: string;
   bank_connection_id: string;
   plaid_account_id: string;
+  provider_account_id?: string | null;
   currency: string;
   user_id?: string;
 }
@@ -323,7 +403,9 @@ interface BankAccountRow {
 interface BankConnectionRow {
   id: string;
   user_id: string;
-  plaid_access_token_encrypted: string;
-  plaid_cursor: string | null;
-  status?: string;
+  access_token_encrypted?: string | null;
+  plaid_access_token_encrypted?: string | null;
+  cursor?: string | null;
+  plaid_cursor?: string | null;
+  status: string;
 }

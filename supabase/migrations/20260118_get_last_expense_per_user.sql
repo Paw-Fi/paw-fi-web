@@ -26,6 +26,7 @@ AS $$
   FROM public.expenses
   WHERE user_id = ANY(p_user_ids)
     AND type = 'expense'
+    AND deleted_at IS NULL
   ORDER BY user_id, created_at DESC;
 $$;
 

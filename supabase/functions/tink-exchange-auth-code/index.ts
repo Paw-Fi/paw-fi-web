@@ -1,21 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { exchangePublicToken, getPlaidAccounts, PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { encryptSecret } from "../shared/token-encryption.ts";
-import { upsertPlaidAccounts } from "../shared/bank-sync.ts";
+import {
+  exchangeTinkAuthorizationCode,
+  getTinkAccounts,
+  TINK_PROVIDER,
+} from "../shared/tink-client.ts";
+import { upsertTinkAccounts } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("Supabase credentials missing for plaid-exchange-public-token");
+  console.error("Supabase credentials missing for tink-exchange-auth-code");
 }
 
 interface ExchangeRequest {
-  publicToken: string;
-  institutionId?: string;
-  institutionName?: string;
+  code: string;
 }
 
 Deno.serve(async (req) => {
@@ -41,8 +43,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = (await req.json()) as ExchangeRequest;
-    if (!body?.publicToken) {
-      return new Response(JSON.stringify({ error: "publicToken is required" }), {
+    if (!body?.code) {
+      return new Response(JSON.stringify({ error: "code is required" }), {
         status: 400,
         headers: { ...headers, "Content-Type": "application/json" },
       });
@@ -50,7 +52,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-plaid-exchange-public-token" } },
+      global: { headers: { "X-Client-Info": "moneko-tink-exchange-auth-code" } },
     });
 
     const authResult = await authenticateUser(req, supabase);
@@ -61,21 +63,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    const plaidResponse = await exchangePublicToken(body.publicToken);
-    const encryptedToken = await encryptSecret(plaidResponse.access_token);
+    const tokenResponse = await exchangeTinkAuthorizationCode(body.code);
+    const encryptedAccess = await encryptSecret(tokenResponse.access_token);
+    const encryptedRefresh = tokenResponse.refresh_token ? await encryptSecret(tokenResponse.refresh_token) : null;
+    const expiresAt = tokenResponse.expires_in
+      ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
+      : null;
+
+    const itemId = tokenResponse.user_id || tokenResponse.id_hint || tokenResponse.access_token.slice(0, 24);
+
+    const providerItemId = itemId.startsWith("tink_") ? itemId : `tink_${itemId}`;
 
     const payload = {
       user_id: authResult.userId,
-      provider: PLAID_PROVIDER,
-      plaid_item_id: plaidResponse.item_id,
-      provider_item_id: plaidResponse.item_id,
-      plaid_access_token_encrypted: encryptedToken,
-      access_token_encrypted: encryptedToken,
+      provider: TINK_PROVIDER,
+      plaid_item_id: providerItemId,
+      provider_item_id: providerItemId,
+      plaid_access_token_encrypted: encryptedAccess,
+      access_token_encrypted: encryptedAccess,
+      refresh_token_encrypted: encryptedRefresh,
       cursor: null,
+      plaid_cursor: null,
+      expires_at: expiresAt,
       status: "active",
       metadata: {
-        institution_id: body.institutionId || null,
-        institution_name: body.institutionName || null,
+        scope: tokenResponse.scope || null,
       },
     };
 
@@ -86,7 +98,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (connectionError) {
-      console.error("[plaid-exchange-public-token] Failed to persist connection", connectionError);
+      console.error("[tink-exchange-auth-code] Failed to persist connection", connectionError);
       return new Response(JSON.stringify({ error: "Failed to save connection" }), {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
@@ -94,15 +106,27 @@ Deno.serve(async (req) => {
     }
 
     if (connection?.id) {
-      await supabase.from("bank_connection_tokens").insert({
-        bank_connection_id: connection.id,
-        token_type: "access",
-        token_encrypted: encryptedToken,
-      });
+      await supabase.from("bank_connection_tokens").insert([
+        {
+          bank_connection_id: connection.id,
+          token_type: "access",
+          token_encrypted: encryptedAccess,
+          expires_at: expiresAt,
+        },
+        ...(encryptedRefresh
+          ? [
+              {
+                bank_connection_id: connection.id,
+                token_type: "refresh",
+                token_encrypted: encryptedRefresh,
+              },
+            ]
+          : []),
+      ]);
     }
 
-    const accounts = await getPlaidAccounts(plaidResponse.access_token);
-    const upsertResult = await upsertPlaidAccounts({
+    const accounts = await getTinkAccounts(tokenResponse.access_token);
+    const upsertResult = await upsertTinkAccounts({
       supabase,
       userId: authResult.userId,
       bankConnectionId: connection.id,
@@ -118,11 +142,10 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("[plaid-exchange-public-token] Unexpected error", error);
+    console.error("[tink-exchange-auth-code] Unexpected error", error);
     return new Response(
-      JSON.stringify({ error: "Failed to exchange public token", details: error instanceof Error ? error.message : String(error) }),
+      JSON.stringify({ error: "Failed to exchange Tink code", details: error instanceof Error ? error.message : String(error) }),
       { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
     );
   }
 });
-

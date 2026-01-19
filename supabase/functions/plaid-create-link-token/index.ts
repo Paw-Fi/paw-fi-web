@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { createPlaidLinkToken } from "../shared/plaid-client.ts";
+import { createPlaidLinkToken, PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -58,8 +58,9 @@ Deno.serve(async (req) => {
     if (body.connectionId) {
       const { data: connection, error: connectionError } = await supabase
         .from("bank_connections")
-        .select("id, user_id, plaid_access_token_encrypted")
+        .select("id, user_id, provider, access_token_encrypted, plaid_access_token_encrypted")
         .eq("id", body.connectionId)
+        .eq("provider", PLAID_PROVIDER)
         .maybeSingle();
 
       if (connectionError) {
@@ -77,8 +78,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (connection.plaid_access_token_encrypted) {
-        accessToken = await decryptSecret(connection.plaid_access_token_encrypted);
+      const encryptedToken = connection.access_token_encrypted || connection.plaid_access_token_encrypted;
+      if (encryptedToken) {
+        accessToken = await decryptSecret(encryptedToken);
       }
     }
 

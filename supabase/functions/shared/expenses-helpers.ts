@@ -1,30 +1,34 @@
-import { createClient, type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import {
+  createClient,
+  type SupabaseClient as SupabaseJsClient,
+} from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { normalizeCategory } from "./category-colors.ts";
 
 export type SupabaseClient = SupabaseJsClient;
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const NEVER_UUID = "00000000-0000-0000-0000-000000000000";
 
- function sanitizeUuid(value: string): string | null {
-   const trimmed = value.trim();
-   return UUID_REGEX.test(trimmed) ? trimmed : null;
- }
+function sanitizeUuid(value: string): string | null {
+  const trimmed = value.trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
 
- function sanitizeUuidList(values: string[] | undefined): string[] {
-   if (!Array.isArray(values)) return [];
-   const out: string[] = [];
-   const seen: Record<string, true> = {};
-   for (const v of values) {
-     if (typeof v !== "string") continue;
-     const s = sanitizeUuid(v);
-     if (!s) continue;
-     if (seen[s]) continue;
-     seen[s] = true;
-     out.push(s);
-   }
-   return out;
- }
+function sanitizeUuidList(values: string[] | undefined): string[] {
+  if (!Array.isArray(values)) return [];
+  const out: string[] = [];
+  const seen: Record<string, true> = {};
+  for (const v of values) {
+    if (typeof v !== "string") continue;
+    const s = sanitizeUuid(v);
+    if (!s) continue;
+    if (seen[s]) continue;
+    seen[s] = true;
+    out.push(s);
+  }
+  return out;
+}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && isFinite(value);
@@ -49,7 +53,12 @@ function normalizeAmount(value: unknown): number {
 }
 
 function isSplitType(value: string): value is CustomSplits["splitType"] {
-  return value === "equal" || value === "amount" || value === "percentage" || value === "shares";
+  return (
+    value === "equal" ||
+    value === "amount" ||
+    value === "percentage" ||
+    value === "shares"
+  );
 }
 
 function allocateCentsByWeights(
@@ -115,7 +124,7 @@ export interface FetchExpensesOptions {
 export async function fetchExpensesDirect(
   supabase: SupabaseClient,
   contactId: string,
-  opts: FetchExpensesOptions
+  opts: FetchExpensesOptions,
 ) {
   let query = supabase
     .from("expenses")
@@ -125,6 +134,7 @@ export async function fetchExpensesDirect(
     )
     .order("date", { ascending: false })
     .order("created_at", { ascending: false })
+    .is("deleted_at", null)
     .limit(opts.limit ?? 5);
 
   if (opts.type) query = query.eq("type", opts.type);
@@ -195,14 +205,16 @@ export async function saveExpenseDirect(
   supabase: SupabaseClient,
   contactId: string,
   userId: string,
-  params: SaveExpenseParams
+  params: SaveExpenseParams,
 ) {
   const amount_cents = Math.round((params.amount || 0) * 100);
   const date = params.date || new Date().toISOString().split("T")[0];
   const category = normalizeCategory(params.category || "other");
   const isPortfolioExpense = params.isPortfolio === true;
   const isHouseholdExpense =
-    !!params.householdId && !isPortfolioExpense && (params.type || "expense") === "expense";
+    !!params.householdId &&
+    !isPortfolioExpense &&
+    (params.type || "expense") === "expense";
   const payload: Record<string, unknown> = {
     contact_id: contactId,
     user_id: userId,
@@ -217,10 +229,19 @@ export async function saveExpenseDirect(
     recurrence_rule: params.recurrence_rule || null,
   };
   if (params.expenseId) {
-    return supabase.from("expenses").update(payload).eq("id", params.expenseId).select().single();
+    return supabase
+      .from("expenses")
+      .update(payload)
+      .eq("id", params.expenseId)
+      .select()
+      .single();
   }
 
-  const insertRes = await supabase.from("expenses").insert(payload).select().single();
+  const insertRes = await supabase
+    .from("expenses")
+    .insert(payload)
+    .select()
+    .single();
   if (insertRes.error || !insertRes.data) return insertRes;
 
   // Household expense: create split group + split lines (equal by default).
@@ -235,22 +256,26 @@ export async function saveExpenseDirect(
 
   const memberIds: string[] = members
     .map((m: any) => m.user_id as string | null | undefined)
-    .filter((value: string | null | undefined): value is string => typeof value === "string" && value.length > 0);
+    .filter(
+      (value: string | null | undefined): value is string =>
+        typeof value === "string" && value.length > 0,
+    );
   if (memberIds.length === 0) return insertRes;
 
   const rawSplitType = (params.customSplits?.splitType || "equal")
     .toString()
     .trim()
     .toLowerCase();
-  const normalizedSplitType =
-    isSplitType(rawSplitType)
-      ? (rawSplitType as CustomSplits["splitType"])
-      : "equal";
-  const hasMemberSplits = Array.isArray(params.customSplits?.memberSplits) &&
+  const normalizedSplitType = isSplitType(rawSplitType)
+    ? (rawSplitType as CustomSplits["splitType"])
+    : "equal";
+  const hasMemberSplits =
+    Array.isArray(params.customSplits?.memberSplits) &&
     params.customSplits!.memberSplits.length > 0;
-  const customSplits = hasMemberSplits && normalizedSplitType !== "equal"
-    ? params.customSplits
-    : undefined;
+  const customSplits =
+    hasMemberSplits && normalizedSplitType !== "equal"
+      ? params.customSplits
+      : undefined;
   const splitType = customSplits ? normalizedSplitType : "equal";
 
   let payerUserId = params.payerUserId || userId;
@@ -287,13 +312,21 @@ export async function saveExpenseDirect(
     const normalizedById: Record<string, MemberSplit> = {};
     for (const s of customSplits.memberSplits || []) {
       if (memberIds.indexOf(s.userId) === -1) continue;
-      normalizedById[s.userId] = { userId: s.userId, amount: normalizeAmount(s.amount) };
+      normalizedById[s.userId] = {
+        userId: s.userId,
+        amount: normalizeAmount(s.amount),
+      };
     }
-    const full = memberIds.map((id: string) => normalizedById[id] || { userId: id, amount: 0 });
-    const cents = full.map((s: MemberSplit) => Math.max(0, Math.round((s.amount || 0) * 100)));
+    const full = memberIds.map(
+      (id: string) => normalizedById[id] || { userId: id, amount: 0 },
+    );
+    const cents = full.map((s: MemberSplit) =>
+      Math.max(0, Math.round((s.amount || 0) * 100)),
+    );
     const sum = cents.reduce((a: number, b: number) => a + b, 0);
     const diff = amount_cents - sum;
-    if (cents.length > 0 && diff !== 0) cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
+    if (cents.length > 0 && diff !== 0)
+      cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
     splitLines = full.map((s: MemberSplit, idx: number) => ({
       split_group_id: splitGroup.id,
       user_id: s.userId,
@@ -303,9 +336,14 @@ export async function saveExpenseDirect(
     const normalizedById: Record<string, MemberSplit> = {};
     for (const s of customSplits.memberSplits || []) {
       if (memberIds.indexOf(s.userId) === -1) continue;
-      normalizedById[s.userId] = { userId: s.userId, percentage: normalizePercentage(s.percentage) };
+      normalizedById[s.userId] = {
+        userId: s.userId,
+        percentage: normalizePercentage(s.percentage),
+      };
     }
-    const full = memberIds.map((id: string) => normalizedById[id] || { userId: id, percentage: 0 });
+    const full = memberIds.map(
+      (id: string) => normalizedById[id] || { userId: id, percentage: 0 },
+    );
     const weights = full.map((s: MemberSplit) => s.percentage || 0);
     const cents = allocateCentsByWeights(amount_cents, weights);
     splitLines = full.map((s: MemberSplit, idx: number) => ({
@@ -318,9 +356,14 @@ export async function saveExpenseDirect(
     const normalizedById: Record<string, MemberSplit> = {};
     for (const s of customSplits.memberSplits || []) {
       if (memberIds.indexOf(s.userId) === -1) continue;
-      normalizedById[s.userId] = { userId: s.userId, shares: normalizeShares(s.shares) ?? 1 };
+      normalizedById[s.userId] = {
+        userId: s.userId,
+        shares: normalizeShares(s.shares) ?? 1,
+      };
     }
-    const full = memberIds.map((id: string) => normalizedById[id] || { userId: id, shares: 1 });
+    const full = memberIds.map(
+      (id: string) => normalizedById[id] || { userId: id, shares: 1 },
+    );
     const weights = full.map((s: MemberSplit) => s.shares || 0);
     const cents = allocateCentsByWeights(amount_cents, weights);
     splitLines = full.map((s: MemberSplit, idx: number) => ({
@@ -359,17 +402,21 @@ export async function deleteExpenseDirect(
   supabase: SupabaseClient,
   contactId: string,
   userId: string,
-  expenseId: string
+  expenseId: string,
 ) {
   const sanitizedExpenseId = sanitizeUuid(expenseId);
   if (!sanitizedExpenseId) {
-    return { data: null, error: new Error("Invalid expenseId format") } as const;
+    return {
+      data: null,
+      error: new Error("Invalid expenseId format"),
+    } as const;
   }
 
   const { data: expense, error: fetchError } = await supabase
     .from("expenses")
     .select("id, user_id, household_id, contact_id")
     .eq("id", sanitizedExpenseId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (fetchError) {
@@ -380,8 +427,14 @@ export async function deleteExpenseDirect(
   }
 
   const expenseUserId = (expense as any)?.user_id as string | undefined;
-  const expenseHouseholdId = (expense as any)?.household_id as string | null | undefined;
-  const expenseContactId = (expense as any)?.contact_id as string | null | undefined;
+  const expenseHouseholdId = (expense as any)?.household_id as
+    | string
+    | null
+    | undefined;
+  const expenseContactId = (expense as any)?.contact_id as
+    | string
+    | null
+    | undefined;
 
   if (!expenseHouseholdId) {
     const canDeletePersonal =

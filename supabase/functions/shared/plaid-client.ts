@@ -1,4 +1,5 @@
 import { normalizeCategory } from "./category-colors.ts";
+import { fetchWithRetry } from "./bank-retry.ts";
 
 export const PLAID_PROVIDER = "plaid";
 
@@ -74,7 +75,7 @@ export class PlaidError extends Error {
 
 async function plaidRequest<T>(path: string, body: Record<string, unknown>): Promise<T> {
   const config = getPlaidConfig();
-  const response = await fetch(`${config.baseUrl}${path}`, {
+  const response = await fetchWithRetry(`${config.baseUrl}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

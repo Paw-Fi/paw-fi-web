@@ -30,15 +30,19 @@ async function sendInviteEmail(params: {
   to: string;
   inviteUrl: string;
   personalMessage?: string;
+  inviterName?: string;
+  householdName?: string;
 }) {
   if (!resendApiKey) {
     throw new Error('RESEND_API_KEY is not configured');
   }
 
-  const { to, inviteUrl, personalMessage } = params;
+  const { to, inviteUrl, personalMessage, inviterName, householdName } = params;
   const { html, text, subject } = householdInviteTemplate({
     inviteUrl,
     personalMessage,
+    inviterName,
+    householdName,
   });
 
   const response = await fetch('https://api.resend.com/emails', {
@@ -212,13 +216,27 @@ serve(async (req) => {
     const inviteUrl = `${appUrl}/invites/${token}`;
 
     if (invited_email) {
+      const resolvedInviterName = inviter_name?.trim()
+        || user.user_metadata?.full_name
+        || user.user_metadata?.name
+        || user.email?.split('@')[0]
+        || 'Someone';
+      let resolvedHouseholdName = household_name?.trim();
+      if (!resolvedHouseholdName) {
+        const { data: householdData } = await supabase
+          .from('households')
+          .select('name')
+          .eq('id', household_id)
+          .single();
+        resolvedHouseholdName = householdData?.name ?? undefined;
+      }
       try {
         await sendInviteEmail({
           to: invited_email,
           inviteUrl,
           personalMessage: personal_message,
-          inviterName: inviter_name,
-          householdName: household_name,
+          inviterName: resolvedInviterName,
+          householdName: resolvedHouseholdName,
         });
       } catch (error) {
         console.error('Error sending invite email:', error);
