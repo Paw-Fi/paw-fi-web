@@ -93,6 +93,11 @@ supabase functions deploy expense-daily-nudges --project-ref $PROJECT_REF
 echo "✅ expense-daily-nudges deployed"
 echo ""
 
+# Step 12: Deploy households-process-invite-reminders (SERVICE ROLE - called by cron)
+echo "📦 [12/12] Deploying households-process-invite-reminders function..."
+supabase functions deploy households-process-invite-reminders --project-ref $PROJECT_REF
+echo ""
+
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ All Households functions deployed successfully!"
 echo "════════════════════════════════════════════════════════════"
