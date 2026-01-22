@@ -47,6 +47,24 @@ const stripe = new Stripe(env.stripeSecretKey, {
 // Initialize Supabase client
 const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
 
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function appendNonceToUrl(url: string, nonce: string): string {
+  try {
+    const u = new URL(url);
+    // The nonce must be stable and appended by the backend.
+    // For Stripe placeholders (session_id={CHECKOUT_SESSION_ID}), this is safe.
+    u.searchParams.set("v", nonce);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 function safeParseUrl(value: string | null): URL | null {
   if (!value) return null;
   try {
@@ -151,8 +169,9 @@ serve(async (req: Request) => {
           ? getPriceId(plan as PlanType)
           : getPriceId(plan as PlanType, billingInterval as BillingInterval);
     } catch (error) {
-      console.error("Error getting price ID:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Error getting price ID:", message);
+      return new Response(JSON.stringify({ error: message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -274,7 +293,11 @@ serve(async (req: Request) => {
         await retrieveCustomerWithRetry(stripe, customerId);
         console.log("Using existing Stripe customer:", customerId);
       } catch (error) {
-        console.error("Customer not found in Stripe, creating new one:", error);
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(
+          "Customer not found in Stripe, creating new one:",
+          message,
+        );
 
         const customer = await createCustomerWithRetry(stripe, {
           email: userData.email,
@@ -332,6 +355,18 @@ serve(async (req: Request) => {
         sanitizedCancelUrl ||
         `${baseOrigin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`;
 
+      // For public verify-payment, we add a per-session nonce to the redirect URL.
+      // We create the Stripe session first (to get session.id), then persist the nonce.
+      const verificationNonce = generateNonce();
+      const finalSuccessUrlWithNonce = appendNonceToUrl(
+        finalSuccessUrl,
+        verificationNonce,
+      );
+      const finalCancelUrlWithNonce = appendNonceToUrl(
+        finalCancelUrl,
+        verificationNonce,
+      );
+
       // LIFETIME PLAN: Use payment mode (one-time) instead of subscription mode
       if (plan === "lifetime") {
         console.log("Creating LIFETIME checkout session (payment mode):", {
@@ -351,8 +386,8 @@ serve(async (req: Request) => {
             },
           ],
           mode: "payment", // ONE-TIME payment, NOT subscription
-          success_url: finalSuccessUrl,
-          cancel_url: finalCancelUrl,
+          success_url: finalSuccessUrlWithNonce,
+          cancel_url: finalCancelUrlWithNonce,
           allow_promotion_codes: true,
           // CRITICAL: Enable invoice creation for one-time payments (Stripe official invoices)
           invoice_creation: {
@@ -379,11 +414,12 @@ serve(async (req: Request) => {
         let session;
         try {
           session = await createCheckoutSessionWithRetry(stripe, sessionConfig);
-        } catch (sessionError) {
+        } catch (sessionError: unknown) {
+          const stripeErr = sessionError as any;
           // If customer doesn't exist, recreate it and try again
           if (
-            sessionError.code === "resource_missing" &&
-            sessionError.message?.includes("customer")
+            stripeErr?.code === "resource_missing" &&
+            stripeErr?.message?.includes("customer")
           ) {
             console.log(
               "Customer not found during checkout, recreating:",
@@ -429,6 +465,26 @@ serve(async (req: Request) => {
           url: session.url,
         });
 
+        // Persist nonce keyed to the Stripe Checkout Session ID.
+        try {
+          await supabase.from("stripe_checkout_session_verifications").upsert(
+            {
+              session_id: session.id,
+              user_id: userId,
+              nonce: verificationNonce,
+              plan,
+            },
+            {
+              onConflict: "session_id",
+            },
+          );
+        } catch (e) {
+          console.error(
+            "Failed to persist stripe checkout session verification nonce:",
+            e,
+          );
+        }
+
         return new Response(
           JSON.stringify({
             clientSecret: session.client_secret,
@@ -462,8 +518,8 @@ serve(async (req: Request) => {
           },
         ],
         mode: "subscription",
-        success_url: finalSuccessUrl,
-        cancel_url: finalCancelUrl,
+        success_url: finalSuccessUrlWithNonce,
+        cancel_url: finalCancelUrlWithNonce,
         // Default: allow promotions; overridden for trial flows below
         allow_promotion_codes: true,
         // Subscription metadata - persists on the subscription object
@@ -520,11 +576,12 @@ serve(async (req: Request) => {
       let session;
       try {
         session = await createCheckoutSessionWithRetry(stripe, sessionConfig);
-      } catch (sessionError) {
+      } catch (sessionError: unknown) {
+        const stripeErr = sessionError as any;
         // If customer doesn't exist, recreate it and try again
         if (
-          sessionError.code === "resource_missing" &&
-          sessionError.message?.includes("customer")
+          stripeErr?.code === "resource_missing" &&
+          stripeErr?.message?.includes("customer")
         ) {
           console.log(
             "Customer not found during checkout, recreating:",
@@ -567,6 +624,27 @@ serve(async (req: Request) => {
         url: session.url,
       });
 
+      // Persist a nonce keyed to the Stripe Checkout Session ID.
+      // This allows verify-payment to be called by logged-out users safely.
+      try {
+        await supabase.from("stripe_checkout_session_verifications").upsert(
+          {
+            session_id: session.id,
+            user_id: userId,
+            nonce: verificationNonce,
+            plan,
+          },
+          {
+            onConflict: "session_id",
+          },
+        );
+      } catch (e) {
+        console.error(
+          "Failed to persist stripe checkout session verification nonce:",
+          e,
+        );
+      }
+
       // Return session details
       return new Response(
         JSON.stringify({
@@ -579,17 +657,18 @@ serve(async (req: Request) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
-    } catch (stripeError) {
+    } catch (stripeError: unknown) {
+      const stripeErr = stripeError as any;
       console.error("Stripe session creation error:", {
-        error: stripeError.message,
-        type: stripeError.type,
-        code: stripeError.code,
+        error: stripeErr?.message,
+        type: stripeErr?.type,
+        code: stripeErr?.code,
       });
 
       return new Response(
         JSON.stringify({
           error: "Failed to create checkout session",
-          details: stripeError.message,
+          details: stripeErr?.message || String(stripeError),
         }),
         {
           status: 500,
@@ -597,16 +676,17 @@ serve(async (req: Request) => {
         },
       );
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("Error creating checkout session:", {
-      error: error.message,
-      stack: error.stack,
+      error: message,
+      stack: error instanceof Error ? error.stack : undefined,
     });
 
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: error.message,
+        details: message,
       }),
       {
         status: 500,

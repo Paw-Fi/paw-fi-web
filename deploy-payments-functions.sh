@@ -12,7 +12,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="qbuynyxyemigtnvdujts"
+PROJECT_REF="pbopcsmrcykdzbilpilf"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  Deploying Payments Functions to Supabase"
@@ -35,7 +35,8 @@ echo "OK: create-checkout-session deployed"
 echo ""
 
 echo "[3/9] Deploying verify-payment function..."
-supabase functions deploy verify-payment --project-ref $PROJECT_REF
+# Public endpoint: used by logged-out web payment-status page.
+supabase functions deploy verify-payment --project-ref $PROJECT_REF --no-verify-jwt
 echo "OK: verify-payment deployed"
 echo ""
 

@@ -25,6 +25,7 @@ type CheckoutSearchParams = {
   promo?: string; // Promo code
   status?: string; // Payment status: success, failed, canceled
   session_id?: string; // Stripe session ID for status verification
+  v?: string; // Public verification nonce for logged-out verify-payment
   userId?: string; // User ID for mobile app checkout (when user not logged in)
   source?: string; // Source platform: 'mobile' or 'web'
   redirectUrl?: string; // Deep link URL to redirect back to mobile app after success
@@ -89,6 +90,7 @@ function CheckoutPage() {
     promo,
     status,
     session_id,
+    v,
     userId: paramUserId,
     source,
     redirectUrl,
@@ -337,7 +339,7 @@ function CheckoutPage() {
       if (isMobileCheckout && redirectUrl && typeof window !== "undefined") {
         if (status === "success") {
           // Redirect directly to mobile app with success status and selected plan
-          window.location.href = `${redirectUrl}?status=success${session_id ? `&session_id=${session_id}` : ""}&plan=${selectedPlan}`;
+          window.location.href = `${redirectUrl}?status=success${session_id ? `&session_id=${session_id}` : ""}${v ? `&v=${encodeURIComponent(v)}` : ""}&plan=${selectedPlan}`;
           return;
         } else if (status === "failed") {
           window.location.href = `${redirectUrl}?status=failed&plan=${selectedPlan}&error=${encodeURIComponent("Payment failed")}`;
@@ -355,6 +357,7 @@ function CheckoutPage() {
           search: {
             status: "success",
             session_id: session_id,
+            v,
             plan: selectedPlan,
           },
         });
@@ -675,7 +678,7 @@ function CheckoutPage() {
           <Button
             onClick={() => {
               if (typeof window !== "undefined") {
-                window.location.href = `${redirectUrl}?status=success&plan=${selectedPlan}`;
+                window.location.href = `${redirectUrl}?status=success${v ? `&v=${encodeURIComponent(v)}` : ""}&plan=${selectedPlan}`;
               }
             }}
             size="lg"

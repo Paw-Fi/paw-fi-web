@@ -26,7 +26,7 @@ serve(async (req: Request) => {
       return new Response(null, { status: 200, headers: corsHeaders })
     }
 
-    if (req.method !== 'GET') {
+    if (req.method !== 'GET' && req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -42,8 +42,18 @@ serve(async (req: Request) => {
       })
     }
 
-    const url = new URL(req.url)
-    const platform = url.searchParams.get('platform')
+    let platform: string | null = null
+    if (req.method === 'GET') {
+      const url = new URL(req.url)
+      platform = url.searchParams.get('platform')
+    } else {
+      try {
+        const body = (await req.json()) as { platform?: unknown } | null
+        platform = (body?.platform as string | undefined) ?? null
+      } catch (_) {
+        platform = null
+      }
+    }
     if (!isPlatform(platform)) {
       return new Response(JSON.stringify({ error: 'Invalid platform' }), {
         status: 400,
