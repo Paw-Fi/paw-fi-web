@@ -228,11 +228,6 @@ export default function HomePage() {
           "price": "0",
           "priceCurrency": "USD"
         },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "4.8",
-          "ratingCount": "1250"
-        },
         "description": META_DESCRIPTION
       }
     ]

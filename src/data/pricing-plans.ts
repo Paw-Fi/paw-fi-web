@@ -1,4 +1,3 @@
-import { DISCORD_URL } from "@/routes";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faGift,
@@ -60,6 +59,8 @@ export interface PricingTier {
   subtitle: string;
   priceMonthly: string;
   priceYearly?: string;
+  compareAtPriceMonthly?: string;
+  compareAtPriceYearly?: string;
   annualTotal?: number;
   priceFrequencyText: string;
   description: string;
@@ -84,9 +85,13 @@ export interface PlanData {
   description: string;
   monthlyPrice: number;
   yearlyPrice: number;
+  compareAtMonthlyPrice?: number;
+  compareAtYearlyPrice?: number;
   annualTotal?: number;
   priceMonthly: string;
   priceYearly: string;
+  compareAtPriceMonthly?: string;
+  compareAtPriceYearly?: string;
   priceFrequencyText: string;
   highlight: boolean;
   popular?: boolean;
@@ -109,8 +114,8 @@ export const planData: Record<string, PlanData> = {
     id: "free",
     name: "Starter",
     title: "Starter",
-    subtitle: "Free dashboard to start budgeting smarter with AI",
-    description: "Start your financial journey with AI-powered budgeting tools",
+    subtitle: "Free AI budgeting dashboard for simple monthly money tracking",
+    description: "A free budgeting plan to track spending, set up pockets (digital envelopes), and manage recurring bills.",
     monthlyPrice: 0,
     yearlyPrice: 0,
     priceMonthly: "$0",
@@ -123,32 +128,32 @@ export const planData: Record<string, PlanData> = {
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",
     features: [
-      "Limited AI conversations with Moneko",
-      "Basic budgeting & expense tracking",
-      "Create and view savings goals",
-      "Desktop access only",
-      "Join our budgeting community",
-      "Best for trying Moneko before upgrading"
+      "Core web budgeting dashboard",
+      "Fast capture (text + review)",
+      "Pockets (envelopes) for monthly budgeting",
+      "Personal and Household modes",
+      "Recurring items (bills + income)",
+      "Community access"
     ],
     featureItems: [
-      { text: "Limited AI conversations with Moneko", icon: faComments },
-      { text: "Basic budgeting & expense tracking", icon: faChartLine },
-      { text: "Create and view savings goals", icon: faBullseye },
-      { text: "Desktop access only", icon: faUsers },
-      { text: "Join our budgeting community", icon: faUsers },
-      { text: "Best for trying Moneko before upgrading", icon: faGift }
+      { text: "Core web budgeting dashboard", icon: faChartLine },
+      { text: "Fast capture (text + review)", icon: faComments },
+      { text: "Pockets (envelopes) for monthly budgeting", icon: faBullseye },
+      { text: "Personal and Household modes", icon: faUsers },
+      { text: "Recurring items (bills + income)", icon: faEdit },
+      { text: "Community access", icon: faGift }
     ],
     featureComparison: {
-      basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "Limited Access" },
-      advancedCourses: { description: "Expert-generated advanced courses", isIncluded: false },
-      aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: false },
-      aiConversations: { description: "Chat with Moneko AI assistant", isIncluded: true, limit: "Limited conversations" },
-      goalCreation: { description: "Create and track financial goals", isIncluded: true, limit: "Create only (view-only)" },
-      goalModification: { description: "Modify and AI-refine your goals", isIncluded: false },
-      portfolioTracking: { description: "Track your investments", isIncluded: false },
-      support: { description: "Get help when needed", isIncluded: true, limit: "Standard Access" },
-      oneOnOneGuidance: { description: "Personal financial guidance", isIncluded: false },
-      communityAccess: { description: "Join our financial community", isIncluded: true, limit: "Standard Access" }
+      basicLessons: { description: "Fast capture", isIncluded: true, limit: "Text capture" },
+      advancedCourses: { description: "Pockets (envelopes)", isIncluded: true },
+      aiPersonalizedLessons: { description: "Scenario planning", isIncluded: true },
+      aiConversations: { description: "WhatsApp assistant", isIncluded: false },
+      goalCreation: { description: "Personal vs Household mode", isIncluded: true },
+      goalModification: { description: "Recurring items", isIncluded: true },
+      portfolioTracking: { description: "Multi-currency view", isIncluded: true },
+      support: { description: "Support", isIncluded: true, limit: "Standard" },
+      oneOnOneGuidance: { description: "1:1 guidance", isIncluded: false },
+      communityAccess: { description: "Community access", isIncluded: true, limit: "Standard" }
     }
   },
   
@@ -156,48 +161,52 @@ export const planData: Record<string, PlanData> = {
     id: "plus",
     name: "Plus",
     title: "Plus",
-    subtitle: "Perfect for managing expenses, bills, and savings with AI support",
-    description: "Full budgeting tools with AI-powered insights and mobile access",
+    subtitle: "Full AI budgeting plan for faster capture + scenario planning",
+    description: "Upgrade for WhatsApp expense tracking (where available), receipt/voice capture (where available), and scenario insights.",
     monthlyPrice: 5.99,
     yearlyPrice: 29.99,
+    compareAtMonthlyPrice: 7.99,
+    compareAtYearlyPrice: 59.99,
     annualTotal: 29.99,
     priceMonthly: "$5.99",
     priceYearly: "$29.99",
+    compareAtPriceMonthly: "$7.99",
+    compareAtPriceYearly: "$59.99",
     priceFrequencyText: "/month",
     highlight: true,
     popular: true,
-    actionText: "Try Plus Free for 1 Month",
+    actionText: "Upgrade to Plus",
     actionLink: "/checkout?plan=plus",
-    badgeText: "Most Popular",
+    badgeText: "Early Bird",
     audienceText: "",
     bgColor: "bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20",
     textColor: "text-gray-900 dark:text-white",
     borderColor: "border-purple-200 dark:border-purple-800",
     features: [
-      "Unlimited AI conversations with Moneko",
-      "Full budgeting and expense categorization",
-      "Advanced savings goal tracking with AI suggestions",
-      "Smart reminders for paychecks & bills",
-      "Desktop + Mobile App sync"
+      "Everything in Starter",
+      "WhatsApp assistant access (where available)",
+      "Receipt photo capture (where available)",
+      "Voice note capture (where available)",
+      "Scenario planning and saved insights"
     ],
     featureItems: [
-      { text: "Unlimited AI conversations with Moneko", icon: faRobot },
-      { text: "Full budgeting and expense categorization", icon: faChartLine },
-      { text: "Advanced savings goal tracking with AI suggestions", icon: faBullseye },
-      { text: "Smart reminders for paychecks & bills", icon: faHeadset },
-      { text: "Desktop + Mobile App sync", icon: faBook }
+      { text: "Everything in Starter", icon: faGift },
+      { text: "WhatsApp assistant access (where available)", icon: faRobot },
+      { text: "Receipt photo capture (where available)", icon: faBook },
+      { text: "Voice note capture (where available)", icon: faComments },
+      { text: "Scenario planning and saved insights", icon: faChartLine }
     ],
     featureComparison: {
-      basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "All 10", highlight: true },
-      advancedCourses: { description: "Expert-generated advanced courses", isIncluded: true, limit: "Unlimited Access", highlight: true },
-      aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: true },
-      aiConversations: { description: "Chat with Moneko AI assistant", isIncluded: true, limit: "Unlimited", highlight: true },
-      goalCreation: { description: "Create and track financial goals", isIncluded: true, limit: "Full access", highlight: true },
-      goalModification: { description: "Modify and AI-refine your goals", isIncluded: true, limit: "With AI refinement", highlight: true },
-      portfolioTracking: { description: "Track your investments", isIncluded: true, limit: "1 Brokerage Account" },
-      support: { description: "Get help when needed", isIncluded: true, limit: "Priority (24hr response)" },
-      oneOnOneGuidance: { description: "Personal financial guidance", isIncluded: false },
-      communityAccess: { description: "Join our financial community", isIncluded: true, limit: "Priority Access" }
+      basicLessons: { description: "Fast capture", isIncluded: true, limit: "Text + review", highlight: true },
+      advancedCourses: { description: "Pockets (envelopes)", isIncluded: true, highlight: true },
+      aiPersonalizedLessons: { description: "Scenario planning", isIncluded: true, highlight: true },
+      aiConversations: { description: "WhatsApp assistant", isIncluded: true, limit: "Where available", highlight: true },
+      goalCreation: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
+      goalModification: { description: "Recurring items", isIncluded: true, highlight: true },
+      portfolioTracking: { description: "Multi-currency view", isIncluded: true },
+      support: { description: "Support", isIncluded: true, limit: "Standard" },
+      oneOnOneGuidance: { description: "1:1 guidance", isIncluded: false },
+      communityAccess: { description: "Community access", isIncluded: true, limit: "Standard" }
     }
   },
   
@@ -205,8 +214,8 @@ export const planData: Record<string, PlanData> = {
     id: "lifetime",
     name: "Lifetime",
     title: "Lifetime",
-    subtitle: "All features, AI support & Founder benefits — forever",
-    description: "Early-bird one-time payment for lifetime access",
+    subtitle: "All features — one-time payment, lifetime access",
+    description: "A limited-time one-time payment option for lifetime access.",
     monthlyPrice: 39.99,
     yearlyPrice: 39.99,
     annualTotal: 39.99,
@@ -216,34 +225,32 @@ export const planData: Record<string, PlanData> = {
     highlight: false,
     actionText: "Secure Lifetime Access",
     actionLink: "/checkout?plan=lifetime",
-    audienceText: "Early-bird only (one-time).\nLifetime will be removed after the sale.",
+    audienceText: "Limited-time lifetime access offer (one-time).",
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",
     features: [
-      "Unlimited AI insights & personalization",
       "All Plus features included",
-      "Free future updates & features",
-      "Founder Member Benefits",
-      "Priority support (24hr response)"
+      "Lifetime access for the account",
+      "Discord community perks (when offered)",
+      "Support"
     ],
     featureItems: [
-      { text: "Unlimited AI insights & personalization", icon: faRobot },
       { text: "All Plus features included", icon: faGift },
-      { text: "Free future updates & features", icon: faBook },
-      { text: "Founder Member Benefits", icon: faUserTie },
-      { text: "Priority support (24hr response)", icon: faHeadset }
+      { text: "Lifetime access for the account", icon: faUserTie },
+      { text: "Discord community perks (when offered)", icon: faUsers },
+      { text: "Support", icon: faHeadset }
     ],
     featureComparison: {
-      basicLessons: { description: "Core financial education lessons", isIncluded: true, limit: "All 10" },
-      advancedCourses: { description: "Expert-generated advanced courses", isIncluded: true, limit: "Unlimited Access", highlight: true },
-      aiPersonalizedLessons: { description: "AI-generated personalized lessons", isIncluded: true, limit: "Unlimited", highlight: true },
-      aiConversations: { description: "Chat with Moneko AI assistant", isIncluded: true, limit: "Unlimited", highlight: true },
-      goalCreation: { description: "Create and track financial goals", isIncluded: true, limit: "Advanced management", highlight: true },
-      goalModification: { description: "Modify and AI-refine your goals", isIncluded: true, limit: "AI optimization", highlight: true },
-      portfolioTracking: { description: "Track your investments", isIncluded: true, limit: "Unlimited Accounts", highlight: true },
-      support: { description: "Get help when needed", isIncluded: true, limit: "Priority (24hr response)" },
-      oneOnOneGuidance: { description: "Personal financial guidance", isIncluded: true, limit: "Founder Benefits", highlight: true },
-      communityAccess: { description: "Join our financial community", isIncluded: true, limit: "VIP Access" }
+      basicLessons: { description: "Fast capture", isIncluded: true, limit: "Text + review" },
+      advancedCourses: { description: "Pockets (envelopes)", isIncluded: true, highlight: true },
+      aiPersonalizedLessons: { description: "Scenario planning", isIncluded: true, highlight: true },
+      aiConversations: { description: "WhatsApp assistant", isIncluded: true, limit: "Where available", highlight: true },
+      goalCreation: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
+      goalModification: { description: "Recurring items", isIncluded: true, highlight: true },
+      portfolioTracking: { description: "Multi-currency view", isIncluded: true, highlight: true },
+      support: { description: "Support", isIncluded: true, limit: "Standard" },
+      oneOnOneGuidance: { description: "1:1 guidance", isIncluded: false },
+      communityAccess: { description: "Community access", isIncluded: true, limit: "Standard" }
     }
   },
 };
@@ -268,6 +275,8 @@ export function getPricingTiers(isYearly: boolean = false): PricingTier[] {
     subtitle: plan.subtitle,
     priceMonthly: plan.priceMonthly,
     priceYearly: plan.priceYearly,
+    compareAtPriceMonthly: plan.compareAtPriceMonthly,
+    compareAtPriceYearly: plan.compareAtPriceYearly,
     annualTotal: plan.annualTotal,
     priceFrequencyText: isYearly ? "/year" : plan.priceFrequencyText,
     description: plan.description,

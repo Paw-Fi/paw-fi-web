@@ -8,21 +8,15 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
-import {
-  getPricingTiers,
-} from "@/data/pricing-plans";
+import { getPricingTiers } from "@/data/pricing-plans";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Rocket, Loader2, Sparkles } from "lucide-react";
-
+import { Check, Rocket, Loader2 } from "lucide-react";
 import { HomeHeader } from "@/components/index/header";
 import classNames from "classnames";
 import { FaqSection } from "@/components/ui/faq-section";
 import { FeatureComparisonGrid } from "@/components/pricing/feature-comparison-grid";
-import { SocialProofSection } from "@/components/pricing/social-proof-section";
-import { useAuth } from "@/contexts/auth-context";
-import { useSubscription } from "@/hooks/use-subscription";
 import { StructuredData } from "@/components/seo/structured-data";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 import { DiscordLogoIcon } from "@radix-ui/react-icons";
@@ -34,35 +28,28 @@ export const Route = createFileRoute("/pricing")({
   head: () => {
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
-      title: "Moneko Pricing Plans | Simple, Transparent AI Budgeting App Pricing",
+      title: "Moneko Pricing | AI Budgeting App Plans for Individuals & Households",
       description:
-        "Choose the perfect plan for your financial journey: Free Starter for beginners, Plus at $29.99/year or $5.99/month, or Lifetime Early Bird at $39.99 one-time (limited time).",
+        "Compare Moneko pricing and choose the right plan. Starter is free. Plus is $5.99/month or $29.99/year (promo). A limited-time Lifetime plan is $39.99 one-time. Moneko helps with fast capture, pockets (digital envelopes), recurring items, household mode, and optional WhatsApp expense tracking (where available).",
       keywords:
-        "moneko pricing, moneko plans, moneko subscription, personal finance app pricing, AI budgeting app, budgeting app subscription, financial planning pricing, lifetime access, moneko cost, moneko free",
+        "moneko pricing, moneko plans, AI budgeting app pricing, budgeting app pricing, envelope budgeting app pricing, household budgeting app pricing, budgeting app for couples pricing, WhatsApp expense tracker pricing, personal finance app subscription, lifetime access budgeting app",
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
 
-    // Enhanced GEO-Optimized Product Schema with Expert Attribution
+    // Product schema (keep claims strictly factual)
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Product",
-      name: "Moneko - AI Personal Finance Coach & Budgeting App",
+      name: "Moneko - AI Budgeting App",
       description:
-        "Moneko is an expert-designed financial education app created by CFA charterholder Sabina Shao, offering AI-powered coaching, investment guidance, and personalized budgeting tools.",
+        "Moneko is an AI-assisted budgeting app that helps you capture spending, organize pockets (envelopes), manage recurring items, and plan scenarios across personal and household finances.",
       image: "https://moneko.io/og-img.png",
       brand: {
         "@type": "Brand",
         name: "Moneko",
       },
-      creator: {
-        "@type": "Person",
-        "name": "Sabina Shao",
-        "jobTitle": "CEO & Financial Education Expert",
-        "hasCredential": "CFA Charterholder",
-        "knowsAbout": ["Personal Finance", "Investment Strategy", "Financial Planning", "Wealth Building"]
-      },
-      category: "Financial Education Software",
+      category: "FinanceApplication",
       audience: {
         "@type": "Audience",
         "audienceType": "Individual Financial Learners"
@@ -77,29 +64,27 @@ export const Route = createFileRoute("/pricing")({
             price: "0",
             priceCurrency: "USD",
             description:
-              "Free dashboard to start budgeting smarter with AI",
+              "Free dashboard to start budgeting with pockets (envelopes), recurring items, and personal vs household modes.",
             url: pageUrl,
             availability: "https://schema.org/InStock",
             category: "Digital Good",
           },
           {
             "@type": "Offer",
-            name: "Moneko Plus Plan",
-            priceSpecification: [
-              {
-                "@type": "PriceSpecification",
-                price: "5.99",
-                priceCurrency: "USD",
-                billingDuration: "P1M", // ISO 8601 duration for 1 month
-              },
-              {
-                "@type": "PriceSpecification",
-                price: "29.99",
-                priceCurrency: "USD",
-                billingDuration: "P1Y", // ISO 8601 duration for 1 year
-              },
-            ],
-            description: "Perfect for managing expenses, bills, and savings with AI support",
+            name: "Moneko Plus Plan (Monthly)",
+            price: "5.99",
+            priceCurrency: "USD",
+            description: "Monthly pricing for the Plus plan.",
+            url: pageUrl,
+            availability: "https://schema.org/InStock",
+            category: "Digital Good",
+          },
+          {
+            "@type": "Offer",
+            name: "Moneko Plus Plan (Annual)",
+            price: "29.99",
+            priceCurrency: "USD",
+            description: "Early Bird promo annual pricing for the Plus plan.",
             url: pageUrl,
             availability: "https://schema.org/InStock",
             category: "Digital Good",
@@ -110,7 +95,7 @@ export const Route = createFileRoute("/pricing")({
             price: "39.99",
             priceCurrency: "USD",
             description:
-              "Lifetime Early Bird (limited time) — one-time payment for full access",
+              "Limited-time lifetime access offer — one-time payment for access.",
             url: pageUrl,
             availability: "https://schema.org/LimitedAvailability",
             category: "Digital Good",
@@ -169,7 +154,6 @@ function PricingPage() {
   const [billingPeriodMessage, setBillingPeriodMessage] = useState("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const { user } = useAuth();
 
   // Get pricing tiers from shared data module
   const pricingTiers = getPricingTiers(isAnnual);
@@ -184,35 +168,36 @@ function PricingPage() {
   const faqData = [
     {
       question: "Can I upgrade or downgrade my plan later?",
-      answer: "Yes! You can upgrade or downgrade your plan at any time. When you upgrade, you'll be charged the prorated amount for the remainder of your billing cycle. When you downgrade, the change will take effect at your next billing cycle."
+      answer: "Yes. You can change plans from your account settings. Plan changes and billing dates are handled by Stripe based on your current subscription.",
     },
     {
-      question: "What happens at the end of my free trial?",
-      answer: "Your free trial automatically converts to a paid subscription unless you cancel before it ends. We'll send you email reminders before your trial expires, and you can cancel anytime during the trial with no charges."
+      question: "Do you offer a free plan?",
+      answer: "Yes. Starter is free so you can try core budgeting features like pockets (digital envelopes), recurring items, and personal vs household budgets.",
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards (Visa, MasterCard, American Express, Discover). All payments are processed securely through Stripe with bank-level encryption."
+      answer: "We accept major credit cards. Payments are processed through Stripe.",
     },
     {
       question: "Is my financial data secure?",
-      answer: "Absolutely. We use bank-level 256-bit SSL encryption and are SOC 2 compliant. We only access your accounts in read-only mode and never store your banking credentials. Your data is protected with the same security standards used by major financial institutions."
+      answer: "We use encrypted connections and follow least-privilege access patterns. For details on how we handle information, see our Privacy Policy or contact hello@moneko.io.",
     },
     {
       question: "What is your cancellation and refund policy?",
-      answer: "You can cancel your subscription anytime with no cancellation fees. We offer a 30-day money-back guarantee - if you're not satisfied within the first 30 days, we'll provide a full refund. After cancellation, you'll retain access until the end of your current billing period."
+      answer: "You can cancel anytime from account settings. For billing questions (including refunds), contact hello@moneko.io and we’ll help based on your payment details.",
     },
     {
-      question: "How do the AI-personalized lessons work?",
-      answer: "Our AI analyzes your financial goals, experience level, and learning preferences to create custom lessons just for you. You can chat with the AI about specific topics you want to learn, and it will generate comprehensive, personalized content tailored to your situation."
+      question: "What does the AI help with in Moneko?",
+      answer: "Moneko supports faster capture (text, receipt photos, voice notes where available), smarter categorization workflows, and scenario-style insights (" +
+        "'what if' planning) to help you understand spending patterns and make informed budgeting decisions.",
     },
     {
-      question: "Do you offer student or educator discounts?",
-      answer: "Yes! We offer a 50% discount for verified students and educators. Contact us at hello@moneko.io with your .edu email address to get started with your discounted plan."
+      question: "Do you offer discounts?",
+      answer: "Discounts may be offered during limited-time promotions. Join our Discord or contact hello@moneko.io for current options.",
     },
     {
       question: "Can I use Moneko on desktop and mobile?",
-      answer: "Yes. Plus includes desktop + mobile sync. You can log in on the web and in the app and keep everything in sync."
+      answer: "Moneko supports web access and an optional WhatsApp assistant (where available). For mobile availability, check current app store listings or contact hello@moneko.io.",
     }
   ];
 
@@ -237,7 +222,7 @@ function PricingPage() {
       if (!userId) {
         setIsLoading(false);
         toast.error("Please sign in to subscribe");
-        navigate({ to: "/login",search:{redirect:"/pricing"} });
+        navigate({ to: "/login", search: { redirect: "/pricing" } });
         return;
       }
 
@@ -296,25 +281,29 @@ function PricingPage() {
 
   return (
     <AmbientHaloLayout>
-      {/* GEO-Optimized FAQ Schema for Pricing */}
+      {/* FAQ schema (keep claims strictly factual) */}
       <StructuredData
         type="faq"
         data={[
           {
-            question: "What makes Moneko's financial education different from other apps?",
-            answer: "Moneko is created by CFA charterholder Sabina Shao with over 10 years of financial expertise. Our AI-powered platform provides personalized coaching, expert-designed courses, and real-time portfolio tracking - all backed by proven investment strategies and behavioral finance principles."
+            question: "What is Moneko?",
+            answer: "Moneko is an AI-assisted budgeting app built around fast capture, pockets (envelopes), personal vs household tracking, recurring items, and scenario planning."
           },
           {
-            question: "Can I trust Moneko with my financial planning decisions?",
-            answer: "Yes. Moneko's content is created and reviewed by certified financial experts including CFA charterholders. Our educational approach is based on academic research, proven investment principles, and decades of real-world financial planning experience."
+            question: "Does Moneko replace a financial advisor?",
+            answer: "No. Moneko is a budgeting and planning tool. It can help you organize and understand your finances, but it’s not a substitute for professional advice."
           },
           {
-            question: "How does Moneko's AI coaching compare to human financial advisors?",
-            answer: "Moneko's AI coaching provides 24/7 access to expert-designed financial guidance at a fraction of the cost of traditional advisors. While not replacing human advisors for complex situations, our AI delivers personalized education and actionable insights based on CFA-level expertise."
+            question: "What can I do with the WhatsApp assistant?",
+            answer: "You can capture transactions and ask for summaries from chat. Depending on your plan, WhatsApp features may be gated."
           },
           {
-            question: "What credentials do Moneko's financial experts have?",
-            answer: "Moneko is founded and led by Sabina Shao, a CFA charterholder with over 10 years of experience in personal finance and investment strategy. Our content team includes certified financial experts with combined decades of experience in wealth management and financial education."
+            question: "What are pockets (envelopes)?",
+            answer: "Pockets are monthly budget containers (like Groceries or Bills) that help you allocate money and see what’s left as you spend."
+          },
+          {
+            question: "Where can I learn more about privacy and cookies?",
+            answer: "You can review our Privacy Policy, Terms of Service, and Cookie Policy for details about data handling and site usage."
           }
         ]}
       />
@@ -331,7 +320,7 @@ function PricingPage() {
             className="text-5xl mb-8 sm:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-slate-200 leading-tight tracking-tight"
             variants={itemVariants}
           >
-            The AI Budgeting App for Smarter Money Management
+            Moneko Pricing: AI Budgeting Plans for Individuals & Households
             <br />
           </motion.h1>
 
@@ -339,7 +328,7 @@ function PricingPage() {
             className="mx-auto max-w-3xl text-base text-muted-foreground-color sm:text-lg mb-10"
             variants={itemVariants}
           >
-            Manage your money with Moneko, the AI-powered budgeting app for desktop and mobile. Track expenses, set savings goals, and get smart reminders for bills and paychecks. Choose the plan that fits your journey.
+            Compare plans for Moneko, an AI-assisted budgeting app built for fast expense capture, pockets (digital envelopes), recurring items, personal vs household budgets, and scenario planning. Use the web app, and optionally track spending via the WhatsApp assistant (where available).
           </motion.p>
 
           <motion.div
@@ -354,7 +343,37 @@ function PricingPage() {
               initialToggled={isAnnual}
               srText="Toggle billing period"
             />
-            <span className="text-base font-medium text-foreground">Annually (Save 50%)</span>
+            <span className="text-base font-medium text-foreground">Annually (Best value)</span>
+          </motion.div>
+          <motion.p
+            className="mt-4 text-sm text-muted-foreground-color"
+            variants={itemVariants}
+          >
+            Early Bird promo: Plus was $7.99/month or $59.99/year.
+          </motion.p>
+
+          <motion.div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2" variants={itemVariants}>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/features/pockets-system">
+              Explore Pockets (Envelopes)
+            </a>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/features/household-mode">
+              Household Mode
+            </a>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/features/whatsapp-assistant">
+              WhatsApp Assistant
+            </a>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/features/ai-insights">
+              AI Insights
+            </a>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/privacy-policy">
+              Privacy Policy
+            </a>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/terms-of-service">
+              Terms
+            </a>
+            <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/cookie-policy">
+              Cookies
+            </a>
           </motion.div>
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
@@ -372,6 +391,9 @@ function PricingPage() {
           {pricingTiers.map((tier) => {
             const isLifetime = tier.title === "Lifetime";
             const isPlusPlan = tier.title === "Plus";
+            const showCompareAt = isPlusPlan && (!!tier.compareAtPriceMonthly || !!tier.compareAtPriceYearly);
+            const compareAtPrice = isAnnual ? tier.compareAtPriceYearly : tier.compareAtPriceMonthly;
+            const currentPrice = isAnnual && !isLifetime ? tier.priceYearly : tier.priceMonthly;
 
             return (
               <motion.div
@@ -386,8 +408,7 @@ function PricingPage() {
                       "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
                       {
                         "bg-primary text-primary-foreground": tier.badgeText === "Most Popular",
-                        "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-100": tier.badgeText === "LIMITED SPOTS AVAILABLE",
-                        "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular" && tier.badgeText !== "LIMITED SPOTS AVAILABLE",
+                        "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular",
                       },
                     )}
                   >
@@ -408,14 +429,14 @@ function PricingPage() {
                     {isPlusPlan && isAnnual && (
                       <div className="text-center mb-4">
                         <span className="text-base font-semibold text-primary">
-                        $29.99/YEAR (SAVE 50%)
+                        Early Bird: $29.99/year (was $59.99)
                         </span>
                       </div>
                     )}
                      {isLifetime && (
                       <div className="text-center mb-4">
                         <span className="text-base font-semibold text-primary">
-                        LIMITED SPOTS AVAILABLE
+                        LIMITED-TIME LIFETIME OFFER
                         </span>
                       </div>
                     )}
@@ -430,15 +451,21 @@ function PricingPage() {
 
                   <CardContent className="pt-0 px-8 pb-8">
                     <div className="mb-6 text-center">
-                      <div className="flex items-baseline justify-center gap-0.5 mb-2">
+                      <div className="flex items-baseline justify-center gap-3 mb-2">
+                        {showCompareAt && compareAtPrice ? (
+                          <span className="text-lg font-semibold text-muted-foreground line-through">
+                            {compareAtPrice}
+                          </span>
+                        ) : null}
                         <span className="text-5xl font-bold text-foreground tracking-tight">
-                          {isAnnual && !isLifetime ? tier.priceYearly : tier.priceMonthly}
+                          {currentPrice}
                         </span>
-                        
                       </div>
 
                       {/* Price label and additional info */}
-                      {!isLifetime && (
+                      {isLifetime ? (
+                        <p className="text-sm text-muted-foreground mt-1">USD / one-time</p>
+                      ) : (
                         <p className="text-sm text-muted-foreground mt-1">
                           USD / {isAnnual ? "year" : "month"}
                         </p>
@@ -453,7 +480,13 @@ function PricingPage() {
 
                       {isLifetime && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          Early-bird only (One-time). Lifetime will be removed after the sale.
+                          Limited-time lifetime access offer. Availability and terms may change.
+                        </p>
+                      )}
+
+                      {isPlusPlan && !isAnnual && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Early Bird: $5.99/month (was $7.99)
                         </p>
                       )}
                     </div>
@@ -472,7 +505,7 @@ function PricingPage() {
                         const lowerTitle = tier.title.toLowerCase();
                         // Free plan -> registration
                         if (lowerTitle === "starter" || lowerTitle === "free") {
-                          navigate({ to: "/register", search: { redirect: "/pricing" } });
+                          navigate({ to: "/register", search: { redirect: "/pricing", code: undefined } });
                           return;
                         }
 
@@ -503,7 +536,7 @@ function PricingPage() {
                         <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border border-purple-200/50 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-all duration-200 hover:scale-105">
                           <DiscordLogoIcon className="h-4 w-4 text-[#5865F2] flex-shrink-0" />
                           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                          Join our Discord for discounts up to 50%!
+                          Join Discord to get a discount code
                           </span>
                         </div>
                       </div>
@@ -543,22 +576,13 @@ function PricingPage() {
           <FeatureComparisonGrid prefersReducedMotion={prefersReducedMotion} />
         </motion.div>
 
-        {/* <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-          variants={containerVariants}
-        >
-          <SocialProofSection prefersReducedMotion={prefersReducedMotion} />
-        </motion.div> */}
-
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
           variants={containerVariants}
         >
-          <FaqSection faqData={faqData} />
+          <FaqSection faqData={faqData} title="Pricing & Billing FAQ" />
         </motion.div>
 
         <motion.div 
@@ -576,10 +600,10 @@ function PricingPage() {
             </CardHeader>
             <CardContent>
               <CardDescription className="text-base max-w-lg mx-auto mb-6 text-muted-foreground-color">
-                Start with our Free plan to explore core features, or dive deeper
-                with a Plus trial. You can always upgrade as your financial needs
-                grow.
-              </CardDescription>
+               Start with our Free plan to explore core features, or dive deeper
+              with Plus. You can always upgrade as your budgeting needs
+               grow.
+             </CardDescription>
               <Button variant="link" className="text-primary hover:text-primary/80" asChild>
                 <a href="mailto:hello@moneko.io" className="inline-flex items-center gap-2">
                   Contact Us for a Recommendation
