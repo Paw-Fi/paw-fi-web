@@ -1,7 +1,8 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@13.10.0'
-import { corsHeaders } from '../shared/cors.ts'
+import { getCorsHeaders } from '../shared/cors.ts'
+import { authenticateUser } from '../shared/auth.ts'
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
@@ -14,8 +15,11 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
+    const origin = req.headers.get('origin') || ''
+    const corsHeaders = getCorsHeaders(origin)
+
     // Handle CORS preflight OPTIONS request
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders })
@@ -29,16 +33,17 @@ serve(async (req) => {
       })
     }
 
-    // Get the user ID from the query string
-    const url = new URL(req.url)
-    const userId = url.searchParams.get('userId')
+    // Authenticate user from JWT token - NEVER trust userId from query/body
+    const authResult = await authenticateUser(req, supabase)
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
+    if (!authResult.success) {
+      return new Response(JSON.stringify({ error: authResult.error }), {
+        status: authResult.statusCode || 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    const userId = authResult.userId!
 
     // First, directly check if there's a subscription in the subscriptions table
     const { data: directSubscription, error: directError } = await supabase
@@ -111,12 +116,14 @@ serve(async (req) => {
       console.error('Error getting features:', featuresError)
     }
 
-    // Get additional details from Stripe if customer ID exists
+    // Get additional details from Stripe if this is a Stripe subscription
     let paymentMethod: any = null
     let invoices: any[] = []
 
-    // We only need customer ID to fetch invoices - subscription ID is optional
-    if (finalSubscription.stripe_customer_id) {
+    const provider = (finalSubscription as any).provider || 'stripe'
+
+    // Only Stripe subscriptions have Stripe invoices/payment method
+    if (provider === 'stripe' && finalSubscription.stripe_customer_id) {
       try {
         // Get all invoices for the customer (works for both Lifetime and recurring)
         // Lifetime: invoice_creation enabled in checkout creates official invoices

@@ -35,7 +35,8 @@ export const Route = createFileRoute("/pricing")({
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
       title: "Moneko Pricing Plans | Simple, Transparent AI Budgeting App Pricing",
-      description: "Choose the perfect plan for your financial journey: Free Starter for beginners, Plus at $49/year with AI support, or Lifetime access at $149 one-time. Start budgeting smarter today.",
+      description:
+        "Choose the perfect plan for your financial journey: Free Starter for beginners, Plus at $29.99/year or $5.99/month, or Lifetime Early Bird at $39.99 one-time (limited time).",
       keywords:
         "moneko pricing, moneko plans, moneko subscription, personal finance app pricing, AI budgeting app, budgeting app subscription, financial planning pricing, lifetime access, moneko cost, moneko free",
       image: "https://moneko.io/og-img.png",
@@ -87,13 +88,13 @@ export const Route = createFileRoute("/pricing")({
             priceSpecification: [
               {
                 "@type": "PriceSpecification",
-                price: "7.99",
+                price: "5.99",
                 priceCurrency: "USD",
                 billingDuration: "P1M", // ISO 8601 duration for 1 month
               },
               {
                 "@type": "PriceSpecification",
-                price: "49",
+                price: "29.99",
                 priceCurrency: "USD",
                 billingDuration: "P1Y", // ISO 8601 duration for 1 year
               },
@@ -106,10 +107,10 @@ export const Route = createFileRoute("/pricing")({
           {
             "@type": "Offer",
             name: "Moneko Lifetime Plan",
-            price: "149",
+            price: "39.99",
             priceCurrency: "USD",
             description:
-              "All features, AI support & Founder benefits — forever",
+              "Lifetime Early Bird (limited time) — one-time payment for full access",
             url: pageUrl,
             availability: "https://schema.org/LimitedAvailability",
             category: "Digital Good",
@@ -191,7 +192,7 @@ function PricingPage() {
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards (Visa, MasterCard, American Express, Discover) and PayPal. All payments are processed securely through Stripe with bank-level encryption."
+      answer: "We accept all major credit cards (Visa, MasterCard, American Express, Discover). All payments are processed securely through Stripe with bank-level encryption."
     },
     {
       question: "Is my financial data secure?",
@@ -210,8 +211,8 @@ function PricingPage() {
       answer: "Yes! We offer a 50% discount for verified students and educators. Contact us at hello@moneko.io with your .edu email address to get started with your discounted plan."
     },
     {
-      question: "Can I connect multiple brokerage accounts?",
-      answer: "With the Investor plan, you can connect 1 brokerage account. Wealth Builder subscribers can connect unlimited accounts from all major brokerages including Fidelity, Charles Schwab, Vanguard, TD Ameritrade, and more."
+      question: "Can I use Moneko on desktop and mobile?",
+      answer: "Yes. Plus includes desktop + mobile sync. You can log in on the web and in the app and keep everything in sync."
     }
   ];
 
@@ -353,7 +354,7 @@ function PricingPage() {
               initialToggled={isAnnual}
               srText="Toggle billing period"
             />
-            <span className="text-base font-medium text-foreground">Annually (Save 40%)</span>
+            <span className="text-base font-medium text-foreground">Annually (Save 50%)</span>
           </motion.div>
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
@@ -404,12 +405,10 @@ function PricingPage() {
                 )}>
                   <CardHeader className="text-center pb-8 pt-8">
                     {/* Show annual pricing banner inside card below badge */}
-                    {isPlusPlan && (
+                    {isPlusPlan && isAnnual && (
                       <div className="text-center mb-4">
                         <span className="text-base font-semibold text-primary">
-                        
-                        $49/YEAR (SAVE 40%)
-
+                        $29.99/YEAR (SAVE 50%)
                         </span>
                       </div>
                     )}
@@ -454,8 +453,7 @@ function PricingPage() {
 
                       {isLifetime && (
                         <p className="text-sm text-muted-foreground mt-1">
-                          Early-bird price (One-time)<br />
-                          <span className="line-through">Original $199 USD</span>
+                          Early-bird only (One-time). Lifetime will be removed after the sale.
                         </p>
                       )}
                     </div>

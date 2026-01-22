@@ -1,0 +1,108 @@
+#!/bin/bash
+
+# Payments & Subscription Functions Deployment Script
+# Project: Moneko
+#
+# Deploys:
+# - Stripe checkout + verification functions (web + Android)
+# - IAP catalog + verification functions (iOS)
+#
+# Project Dev Ref: qbuynyxyemigtnvdujts
+# Project Prod Ref: pbopcsmrcykdzbilpilf
+
+set -e  # Exit on any error
+
+PROJECT_REF="pbopcsmrcykdzbilpilf"
+
+echo "════════════════════════════════════════════════════════════"
+echo "  Deploying Payments Functions to Supabase"
+echo "  Project: $PROJECT_REF"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+# ---------------------------------------------------------------------------
+# Stripe (web + Android) functions
+# ---------------------------------------------------------------------------
+
+echo "[1/9] Deploying stripe-webhook function..."
+supabase functions deploy stripe-webhook --project-ref $PROJECT_REF --no-verify-jwt
+echo "OK: stripe-webhook deployed"
+echo ""
+
+echo "[2/9] Deploying create-checkout-session function..."
+supabase functions deploy create-checkout-session --project-ref $PROJECT_REF
+echo "OK: create-checkout-session deployed"
+echo ""
+
+echo "[3/9] Deploying verify-payment function..."
+supabase functions deploy verify-payment --project-ref $PROJECT_REF
+echo "OK: verify-payment deployed"
+echo ""
+
+echo "[4/9] Deploying get-subscription function..."
+supabase functions deploy get-subscription --project-ref $PROJECT_REF
+echo "OK: get-subscription deployed"
+echo ""
+
+echo "[5/9] Deploying update-subscription function..."
+supabase functions deploy update-subscription --project-ref $PROJECT_REF
+echo "OK: update-subscription deployed"
+echo ""
+
+echo "[6/9] Deploying preview-subscription-change function..."
+supabase functions deploy preview-subscription-change --project-ref $PROJECT_REF
+echo "OK: preview-subscription-change deployed"
+echo ""
+
+echo "[7/9] Deploying create-portal-session function..."
+supabase functions deploy create-portal-session --project-ref $PROJECT_REF
+echo "OK: create-portal-session deployed"
+echo ""
+
+# ---------------------------------------------------------------------------
+# IAP (iOS) functions
+# ---------------------------------------------------------------------------
+
+echo "[8/9] Deploying get-subscription-products function..."
+supabase functions deploy get-subscription-products --project-ref $PROJECT_REF
+echo "OK: get-subscription-products deployed"
+echo ""
+
+echo "[9/9] Deploying verify-iap-purchase function..."
+supabase functions deploy verify-iap-purchase --project-ref $PROJECT_REF
+echo "OK: verify-iap-purchase deployed"
+echo ""
+
+echo "════════════════════════════════════════════════════════════"
+echo "  OK: All payments functions deployed successfully"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+
+echo "Next Steps:"
+echo ""
+echo "1) Apply DB migrations (if not already applied):"
+echo "   - moneko-web/supabase/migrations/20260122_iap_subscription_catalog.sql"
+echo "   - moneko-web/supabase/migrations/20260122_seed_ios_subscription_products.sql"
+echo ""
+echo "2) Verify Environment Variables in Supabase Dashboard (Project -> Settings -> Secrets):"
+echo "   Required (Stripe / web checkout):"
+echo "   - STRIPE_SECRET_KEY=sk_..."
+echo "   - STRIPE_WEBHOOK_SECRET=whsec_..."
+echo "   - STRIPE_MONTHLY_PLUS_PLAN_ID=price_... (or STRIPE_PLUS_MONTHLY_PRICE_ID)"
+echo "   - STRIPE_YEARLY_PLUS_PLAN_ID=price_... (or STRIPE_PLUS_YEARLY_PRICE_ID)"
+echo "   - STRIPE_LIFETIME_PRICE_ID=price_..."
+echo "   - SUPABASE_URL=https://<project>.supabase.co"
+echo "   - SUPABASE_SERVICE_ROLE_KEY=..."
+echo ""
+echo "   Required (iOS IAP verification):"
+echo "   - APP_STORE_SHARED_SECRET=<App Store Connect -> App Information -> App-Specific Shared Secret>"
+echo ""
+echo "   Optional (Android server-side verification, if/when you enable Android IAP):"
+echo "   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON={...}"
+echo "   - ANDROID_PACKAGE_NAME=com.moneko.mobile"
+echo ""
+echo "3) Monitor logs:"
+echo "   supabase functions logs create-checkout-session --project-ref $PROJECT_REF"
+echo "   supabase functions logs verify-payment --project-ref $PROJECT_REF"
+echo "   supabase functions logs verify-iap-purchase --project-ref $PROJECT_REF"
+echo ""

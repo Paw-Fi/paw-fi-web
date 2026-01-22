@@ -35,7 +35,7 @@ function safeUnixToISO(unixTimestamp: number | null | undefined): string | null 
   }
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
     // Handle CORS preflight OPTIONS request
     if (req.method === 'OPTIONS') {
@@ -104,12 +104,48 @@ serve(async (req) => {
 
     // Lifetime plan: one-time payment (mode='payment'), no subscription ID
     if (session.mode === 'payment') {
-      console.log('Lifetime payment session detected - webhook will handle fulfillment')
+      console.log('Lifetime payment session detected - fulfilling immediately')
+
+      const plan = session.metadata?.plan || 'lifetime'
+
+      // Idempotent DB upsert so mobile deep-link callback can unlock immediately.
+      // Webhook may still run later; this makes the UX robust.
+      try {
+        const now = new Date()
+        const subscriptionData = {
+          user_id: userId,
+          provider: 'stripe',
+          stripe_subscription_id: null,
+          stripe_customer_id: session.customer as string,
+          store_product_id: null,
+          plan,
+          status: 'active',
+          billing_interval: null,
+          current_period_end: null, // Lifetime must have NULL period end
+          cancel_at_period_end: false,
+          updated_at: now.toISOString(),
+        }
+
+        await supabase
+          .from('subscriptions')
+          .upsert({
+            ...subscriptionData,
+            created_at: now.toISOString(),
+          }, {
+            onConflict: 'user_id',
+          })
+
+        console.log('Lifetime subscription upserted for user:', userId)
+      } catch (dbError) {
+        console.error('Failed to upsert lifetime subscription:', dbError)
+        // Keep returning verified=true so client can proceed; webhook may still fix state.
+      }
+
       return new Response(
         JSON.stringify({
           verified: true,
-          message: 'Lifetime payment successful - access granted via webhook',
-          plan: session.metadata?.plan || 'lifetime',
+          message: 'Lifetime payment successful',
+          plan,
           mode: 'payment',
         }),
         {
@@ -274,8 +310,9 @@ serve(async (req) => {
       }
     )
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
     console.error('Error verifying payment:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
