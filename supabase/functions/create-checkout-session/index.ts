@@ -1,6 +1,6 @@
 /**
  * Create Stripe Checkout Session - Production Ready
- * 
+ *
  * Creates a Stripe Checkout session for subscription payments
  * Implements:
  * - Customer creation/attachment
@@ -10,268 +10,347 @@
  * - Price ID validation
  */
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
-import Stripe from 'https://esm.sh/stripe@13.10.0'
-import { getCorsHeaders } from '../shared/cors.ts'
-import { validate as validateUuid } from 'https://deno.land/std@0.177.0/uuid/mod.ts'
-import { getPriceId, validatePriceId } from '../shared/stripe-subscription-prices.ts'
-import { authenticateUser } from '../shared/auth.ts'
-import { validateEnvironment } from '../shared/env-validation.ts'
-import { generateIdempotencyKey } from '../shared/idempotency.ts'
-import { 
-  createCheckoutSessionWithRetry, 
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import Stripe from "https://esm.sh/stripe@13.10.0";
+import { getCorsHeaders } from "../shared/cors.ts";
+import { validate as validateUuid } from "https://deno.land/std@0.177.0/uuid/mod.ts";
+import {
+  getPriceId,
+  validatePriceId,
+} from "../shared/stripe-subscription-prices.ts";
+import { authenticateUser } from "../shared/auth.ts";
+import { validateEnvironment } from "../shared/env-validation.ts";
+import { generateIdempotencyKey } from "../shared/idempotency.ts";
+import {
+  createCheckoutSessionWithRetry,
   createCustomerWithRetry,
-  retrieveCustomerWithRetry 
-} from '../shared/stripe-retry.ts'
-import { 
-  PlanType, 
-  BillingInterval, 
-  isValidPlan, 
+  retrieveCustomerWithRetry,
+} from "../shared/stripe-retry.ts";
+import {
+  PlanType,
+  BillingInterval,
+  isValidPlan,
   isValidInterval,
-  TRIAL_PERIOD_DAYS 
-} from '../shared/subscription-constants.ts'
+  TRIAL_PERIOD_DAYS,
+} from "../shared/subscription-constants.ts";
 
 // Validate environment on startup
-const env = validateEnvironment()
+const env = validateEnvironment();
 
 // Initialize Stripe with validated configuration
 const stripe = new Stripe(env.stripeSecretKey, {
   // Use account's default API version for maximum compatibility
   httpClient: Stripe.createFetchHttpClient(),
-})
+});
 
 // Initialize Supabase client
-const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey)
+const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
 
-serve(async (req) => {
+function safeParseUrl(value: string | null): URL | null {
+  if (!value) return null;
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeRedirectUrl(
+  value: string | null,
+  allowedHosts: Set<string>,
+): string | null {
+  const parsed = safeParseUrl(value);
+  if (!parsed) return null;
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+  if (!allowedHosts.has(parsed.hostname)) return null;
+
+  return parsed.toString();
+}
+
+serve(async (req: Request) => {
   // Get CORS headers - proper configuration using shared utility
-  const origin = req.headers.get('origin') || '';
+  const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
-  
+
   try {
     // Handle CORS preflight OPTIONS request
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { 
-        status: 200, 
-        headers: corsHeaders 
-      })
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: corsHeaders,
+      });
     }
 
     // Only allow POST requests
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Authenticate user from JWT token - NEVER trust userId from request body
-    const authResult = await authenticateUser(req, supabase)
+    const authResult = await authenticateUser(req, supabase);
 
     if (!authResult.success) {
       return new Response(JSON.stringify({ error: authResult.error }), {
         status: authResult.statusCode || 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Use authenticated userId - this is the ONLY safe userId
-    const userId = authResult.userId!
+    const userId = authResult.userId!;
 
     // Parse the request body (plan, billingInterval, successUrl, cancelUrl only)
     // NOTE: isTrial is determined by backend based on subscription history (security)
     // NOTE: billingInterval is optional for Lifetime (one-time payment)
-    const { plan, billingInterval, successUrl, cancelUrl } = await req.json()
+    const { plan, billingInterval, successUrl, cancelUrl } = await req.json();
 
     // Validate plan
     if (!plan || !isValidPlan(plan)) {
-      return new Response(JSON.stringify({ error: 'Invalid plan selected' }), {
+      return new Response(JSON.stringify({ error: "Invalid plan selected" }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Free plan doesn't need a checkout session
-    if (plan === 'free') {
-      return new Response(JSON.stringify({ error: 'Free plan does not require payment' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (plan === "free") {
+      return new Response(
+        JSON.stringify({ error: "Free plan does not require payment" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Lifetime is one-time payment, doesn't require billing interval
     // For other plans, validate billing interval
-    if (plan !== 'lifetime') {
+    if (plan !== "lifetime") {
       if (!billingInterval || !isValidInterval(billingInterval)) {
-        return new Response(JSON.stringify({ error: 'Invalid billing interval' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+        return new Response(
+          JSON.stringify({ error: "Invalid billing interval" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
     }
 
     // Get the price ID based on plan and billing interval (with validation)
-    let priceId: string
+    let priceId: string;
     try {
       // Lifetime doesn't use billing interval
-      priceId = plan === 'lifetime'
-        ? getPriceId(plan as PlanType)
-        : getPriceId(plan as PlanType, billingInterval as BillingInterval)
+      priceId =
+        plan === "lifetime"
+          ? getPriceId(plan as PlanType)
+          : getPriceId(plan as PlanType, billingInterval as BillingInterval);
     } catch (error) {
-      console.error('Error getting price ID:', error)
+      console.error("Error getting price ID:", error);
       return new Response(JSON.stringify({ error: error.message }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Double-check price ID is valid
     if (!validatePriceId(priceId)) {
-      console.error('Invalid price ID format:', priceId)
-      return new Response(JSON.stringify({ error: 'Invalid price configuration' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      console.error("Invalid price ID format:", priceId);
+      return new Response(
+        JSON.stringify({ error: "Invalid price configuration" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    console.log('Creating checkout session:', { userId, plan, billingInterval, priceId })
-    
+    console.log("Creating checkout session:", {
+      userId,
+      plan,
+      billingInterval,
+      priceId,
+    });
+
     // SECURITY: Check if user is bound to a household subscription
     // Bound users cannot create their own subscriptions - they must unbind first
     const { data: existingSub } = await supabase
-      .from('subscriptions')
-      .select('id, bound_to_user_id, bound_to_household_id, plan, status')
-      .eq('user_id', userId)
-      .maybeSingle()
-    
+      .from("subscriptions")
+      .select("id, bound_to_user_id, bound_to_household_id, plan, status")
+      .eq("user_id", userId)
+      .maybeSingle();
+
     // CRITICAL: Prevent bound users from subscribing directly
     if (existingSub?.bound_to_user_id) {
-      console.error('User is bound to household subscription:', {
+      console.error("User is bound to household subscription:", {
         userId,
         boundTo: existingSub.bound_to_user_id,
-        household: existingSub.bound_to_household_id
-      })
-      return new Response(JSON.stringify({ 
-        error: 'You are currently sharing a household subscription. Please leave the household first to manage your own subscription.',
-        code: 'BOUND_TO_HOUSEHOLD'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+        household: existingSub.bound_to_household_id,
+      });
+      return new Response(
+        JSON.stringify({
+          error:
+            "You are currently sharing a household subscription. Please leave the household first to manage your own subscription.",
+          code: "BOUND_TO_HOUSEHOLD",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
-    
+
     // SECURITY: Check trial eligibility based on subscription history
     // A user is eligible for trial ONLY if no subscription row exists at all
     // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
     // Simple and secure: Only new users (no row) get trials
-    const isEligibleForTrial = !existingSub || (existingSub as any).plan === 'free'
-    
-    console.log('Trial eligibility check:', {
+    const isEligibleForTrial =
+      !existingSub || (existingSub as any).plan === "free";
+
+    console.log("Trial eligibility check:", {
       hasExistingRow: !!existingSub,
       isEligible: isEligibleForTrial,
-      isBound: !!existingSub?.bound_to_user_id
-    })
-    
+      isBound: !!existingSub?.bound_to_user_id,
+    });
+
     // Get user details from auth.users (basic info)
     const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('email, full_name')
-      .eq('id', userId)
-      .single()
+      .from("users")
+      .select("email, full_name")
+      .eq("id", userId)
+      .single();
 
     if (userError || !userData) {
-      console.error('Error fetching user:', userError)
-      return new Response(JSON.stringify({ error: 'User not found' }), {
+      console.error("Error fetching user:", userError);
+      return new Response(JSON.stringify({ error: "User not found" }), {
         status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get or create Stripe customer
     // Use user_stripe_mapping table to store customer ID
     const { data: mappingData } = await supabase
-      .from('user_stripe_mapping')
-      .select('stripe_customer_id')
-      .eq('user_id', userId)
-      .single()
-    
-    let customerId = mappingData?.stripe_customer_id
+      .from("user_stripe_mapping")
+      .select("stripe_customer_id")
+      .eq("user_id", userId)
+      .single();
+
+    let customerId = mappingData?.stripe_customer_id;
 
     if (!customerId) {
-      console.log('Creating new Stripe customer for user:', userId)
-      
+      console.log("Creating new Stripe customer for user:", userId);
+
       const customer = await createCustomerWithRetry(stripe, {
         email: userData.email,
         name: userData.full_name || undefined,
         metadata: {
           userId,
         },
-      })
+      });
 
-      customerId = customer.id
+      customerId = customer.id;
 
       // Store customer ID in user_stripe_mapping table
-      await supabase
-        .from('user_stripe_mapping')
-        .upsert({ 
-          user_id: userId, 
-          stripe_customer_id: customerId 
-        }, {
-          onConflict: 'user_id'
-        })
+      await supabase.from("user_stripe_mapping").upsert(
+        {
+          user_id: userId,
+          stripe_customer_id: customerId,
+        },
+        {
+          onConflict: "user_id",
+        },
+      );
 
-      console.log('Created Stripe customer:', customerId)
+      console.log("Created Stripe customer:", customerId);
     } else {
       // Verify customer exists in Stripe
       try {
-        await retrieveCustomerWithRetry(stripe, customerId)
-        console.log('Using existing Stripe customer:', customerId)
+        await retrieveCustomerWithRetry(stripe, customerId);
+        console.log("Using existing Stripe customer:", customerId);
       } catch (error) {
-        console.error('Customer not found in Stripe, creating new one:', error)
-        
+        console.error("Customer not found in Stripe, creating new one:", error);
+
         const customer = await createCustomerWithRetry(stripe, {
           email: userData.email,
           name: userData.full_name || undefined,
           metadata: {
             userId,
           },
-        })
+        });
 
-        customerId = customer.id
+        customerId = customer.id;
 
-        await supabase
-          .from('user_stripe_mapping')
-          .upsert({ 
-            user_id: userId, 
-            stripe_customer_id: customerId 
-          }, {
-            onConflict: 'user_id'
-          })
+        await supabase.from("user_stripe_mapping").upsert(
+          {
+            user_id: userId,
+            stripe_customer_id: customerId,
+          },
+          {
+            onConflict: "user_id",
+          },
+        );
       }
     }
-    
+
     try {
       // Determine URLs
-      const origin = req.headers.get('origin') || env.appUrl
-      const finalSuccessUrl = successUrl || `${origin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`
-      const finalCancelUrl = cancelUrl || `${origin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`
+      const origin = req.headers.get("origin") || env.appUrl;
+      const originUrl = safeParseUrl(origin);
+      const appUrl = safeParseUrl(env.appUrl);
+      const baseOrigin = originUrl?.origin || appUrl?.origin || env.appUrl;
+
+      const allowedHosts = new Set(
+        [
+          originUrl?.hostname,
+          appUrl?.hostname,
+          "moneko.io",
+          "www.moneko.io",
+          "localhost",
+          "127.0.0.1",
+        ].filter((host): host is string => Boolean(host)),
+      );
+
+      const sanitizedSuccessUrl = sanitizeRedirectUrl(
+        typeof successUrl === "string" ? successUrl : null,
+        allowedHosts,
+      );
+      const sanitizedCancelUrl = sanitizeRedirectUrl(
+        typeof cancelUrl === "string" ? cancelUrl : null,
+        allowedHosts,
+      );
+
+      const finalSuccessUrl =
+        sanitizedSuccessUrl ||
+        `${baseOrigin}/checkout?status=success&session_id={CHECKOUT_SESSION_ID}`;
+      const finalCancelUrl =
+        sanitizedCancelUrl ||
+        `${baseOrigin}/checkout?status=canceled&session_id={CHECKOUT_SESSION_ID}`;
 
       // LIFETIME PLAN: Use payment mode (one-time) instead of subscription mode
-      if (plan === 'lifetime') {
-        console.log('Creating LIFETIME checkout session (payment mode):', { userId, plan, priceId })
+      if (plan === "lifetime") {
+        console.log("Creating LIFETIME checkout session (payment mode):", {
+          userId,
+          plan,
+          priceId,
+        });
 
         const sessionConfig: Stripe.Checkout.SessionCreateParams = {
           customer: customerId, // CRITICAL: Always attach customer (email is already on customer)
           client_reference_id: userId, // CRITICAL: User ID for verification after checkout
-          payment_method_types: ['card'],
+          payment_method_types: ["card"],
           line_items: [
             {
               price: priceId,
               quantity: 1,
             },
           ],
-          mode: 'payment', // ONE-TIME payment, NOT subscription
+          mode: "payment", // ONE-TIME payment, NOT subscription
           success_url: finalSuccessUrl,
           cancel_url: finalCancelUrl,
           allow_promotion_codes: true,
@@ -284,7 +363,7 @@ serve(async (req) => {
             metadata: {
               user_id: userId,
               plan: plan,
-              checkout_type: 'lifetime',
+              checkout_type: "lifetime",
             },
             receipt_email: userData.email, // CRITICAL: Stripe sends receipt email
           },
@@ -292,79 +371,97 @@ serve(async (req) => {
           metadata: {
             user_id: userId,
             plan: plan,
-            checkout_type: 'lifetime',
+            checkout_type: "lifetime",
           },
-        }
+        };
 
         // Try to create session, handle customer not found error
-        let session
+        let session;
         try {
-          session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+          session = await createCheckoutSessionWithRetry(stripe, sessionConfig);
         } catch (sessionError) {
           // If customer doesn't exist, recreate it and try again
-          if (sessionError.code === 'resource_missing' && sessionError.message?.includes('customer')) {
-            console.log('Customer not found during checkout, recreating:', customerId)
-            
+          if (
+            sessionError.code === "resource_missing" &&
+            sessionError.message?.includes("customer")
+          ) {
+            console.log(
+              "Customer not found during checkout, recreating:",
+              customerId,
+            );
+
             const newCustomer = await createCustomerWithRetry(stripe, {
               email: userData.email,
               name: userData.full_name || undefined,
               metadata: {
                 userId,
               },
-            })
+            });
 
-            customerId = newCustomer.id
-            
-            await supabase
-              .from('user_stripe_mapping')
-              .upsert({ 
-                user_id: userId, 
-                stripe_customer_id: customerId 
-              }, {
-                onConflict: 'user_id'
-              })
-            
+            customerId = newCustomer.id;
+
+            await supabase.from("user_stripe_mapping").upsert(
+              {
+                user_id: userId,
+                stripe_customer_id: customerId,
+              },
+              {
+                onConflict: "user_id",
+              },
+            );
+
             // Update config with new customer ID
-            sessionConfig.customer = customerId
-            
+            sessionConfig.customer = customerId;
+
             // Retry with new customer
-            session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+            session = await createCheckoutSessionWithRetry(
+              stripe,
+              sessionConfig,
+            );
           } else {
-            throw sessionError
+            throw sessionError;
           }
         }
 
-        console.log('Lifetime checkout session created:', {
+        console.log("Lifetime checkout session created:", {
           id: session.id,
           customerId,
           url: session.url,
-        })
+        });
 
-        return new Response(JSON.stringify({
-          clientSecret: session.client_secret,
-          checkoutUrl: session.url,
-          sessionId: session.id,
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+        return new Response(
+          JSON.stringify({
+            clientSecret: session.client_secret,
+            checkoutUrl: session.url,
+            sessionId: session.id,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       // RECURRING PLANS (Plus, Premium): Use subscription mode
-      console.log('Creating SUBSCRIPTION checkout session:', { userId, plan, billingInterval, priceId })
+      console.log("Creating SUBSCRIPTION checkout session:", {
+        userId,
+        plan,
+        billingInterval,
+        priceId,
+      });
 
       // Build session config according to Stripe best practices
       const sessionConfig: Stripe.Checkout.SessionCreateParams = {
         customer: customerId, // CRITICAL: Always attach customer
         client_reference_id: userId, // CRITICAL: User ID for verification after checkout
-        payment_method_types: ['card'],
+        payment_method_types: ["card"],
         line_items: [
           {
             price: priceId,
             quantity: 1,
           },
         ],
-        mode: 'subscription',
+        mode: "subscription",
         success_url: finalSuccessUrl,
         cancel_url: finalCancelUrl,
         // Default: allow promotions; overridden for trial flows below
@@ -380,121 +477,141 @@ serve(async (req) => {
         // Session metadata - for tracking checkout process only
         metadata: {
           user_id: userId,
-          checkout_type: 'subscription',
+          checkout_type: "subscription",
         },
-      }
+      };
 
       // Trial configuration - Determined by backend based on subscription history
       // Only eligible users (new users who never subscribed) get trials WITHOUT payment method
       if (isEligibleForTrial) {
-        console.log('User is eligible for trial - configuring trial period WITHOUT payment method required')
-        sessionConfig.payment_method_collection = 'if_required' // Don't require payment method for first-time trials
-        sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // Checkout Sessions require 'allow_incomplete' (not 'default_incomplete')
-        sessionConfig.subscription_data!.trial_period_days = TRIAL_PERIOD_DAYS
+        console.log(
+          "User is eligible for trial - configuring trial period WITHOUT payment method required",
+        );
+        sessionConfig.payment_method_collection = "if_required"; // Don't require payment method for first-time trials
+        sessionConfig.subscription_data!.payment_behavior = "allow_incomplete"; // Checkout Sessions require 'allow_incomplete' (not 'default_incomplete')
+        sessionConfig.subscription_data!.trial_period_days = TRIAL_PERIOD_DAYS;
         // Configure what happens when trial ends without payment method
         sessionConfig.subscription_data!.trial_settings = {
           end_behavior: {
-            missing_payment_method: 'pause' // Pause subscription if no payment method when trial ends
-          }
-        }
+            missing_payment_method: "pause", // Pause subscription if no payment method when trial ends
+          },
+        };
         // Reduce visual noise on the page for trials
-        sessionConfig.allow_promotion_codes = false
+        sessionConfig.allow_promotion_codes = false;
         // Add reassurance copy only for trial checkout
         sessionConfig.custom_text = {
           submit: {
             message:
-              'No credit card required. You will not be charged and access pauses automatically after the 30‑day trial.',
+              "No credit card required. You will not be charged and access pauses automatically after the 30‑day trial.",
           },
-        }
+        };
       } else {
-        console.log('User is NOT eligible for trial - require payment immediately')
-        sessionConfig.payment_method_collection = 'always' // Always require payment method
-        sessionConfig.subscription_data!.payment_behavior = 'allow_incomplete' // CRITICAL: Checkout Sessions require 'allow_incomplete' for proper 3DS/failed payment handling
-        sessionConfig.allow_promotion_codes = true
+        console.log(
+          "User is NOT eligible for trial - require payment immediately",
+        );
+        sessionConfig.payment_method_collection = "always"; // Always require payment method
+        sessionConfig.subscription_data!.payment_behavior = "allow_incomplete"; // CRITICAL: Checkout Sessions require 'allow_incomplete' for proper 3DS/failed payment handling
+        sessionConfig.allow_promotion_codes = true;
       }
 
       // Create checkout session with retry
       // NOTE: Per Stripe docs, idempotency keys are NOT recommended for Checkout Sessions
       // because sessions expire after 24 hours and users should be able to create new ones
-      let session
+      let session;
       try {
-        session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+        session = await createCheckoutSessionWithRetry(stripe, sessionConfig);
       } catch (sessionError) {
         // If customer doesn't exist, recreate it and try again
-        if (sessionError.code === 'resource_missing' && sessionError.message?.includes('customer')) {
-          console.log('Customer not found during checkout, recreating:', customerId)
-          
+        if (
+          sessionError.code === "resource_missing" &&
+          sessionError.message?.includes("customer")
+        ) {
+          console.log(
+            "Customer not found during checkout, recreating:",
+            customerId,
+          );
+
           const newCustomer = await createCustomerWithRetry(stripe, {
             email: userData.email,
             name: userData.full_name || undefined,
             metadata: {
               userId,
             },
-          })
+          });
 
-          customerId = newCustomer.id
-          
-          await supabase
-            .from('user_stripe_mapping')
-            .upsert({ 
-              user_id: userId, 
-              stripe_customer_id: customerId 
-            }, {
-              onConflict: 'user_id'
-            })
-          
+          customerId = newCustomer.id;
+
+          await supabase.from("user_stripe_mapping").upsert(
+            {
+              user_id: userId,
+              stripe_customer_id: customerId,
+            },
+            {
+              onConflict: "user_id",
+            },
+          );
+
           // Update config with new customer ID
-          sessionConfig.customer = customerId
-          
+          sessionConfig.customer = customerId;
+
           // Retry with new customer
-          session = await createCheckoutSessionWithRetry(stripe, sessionConfig)
+          session = await createCheckoutSessionWithRetry(stripe, sessionConfig);
         } else {
-          throw sessionError
+          throw sessionError;
         }
       }
-      
-      console.log('Checkout session created:', {
+
+      console.log("Checkout session created:", {
         id: session.id,
         customerId,
         url: session.url,
-      })
-      
+      });
+
       // Return session details
-      return new Response(JSON.stringify({ 
-        clientSecret: session.client_secret,
-        checkoutUrl: session.url,
-        sessionId: session.id,
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({
+          clientSecret: session.client_secret,
+          checkoutUrl: session.url,
+          sessionId: session.id,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     } catch (stripeError) {
-      console.error('Stripe session creation error:', {
+      console.error("Stripe session creation error:", {
         error: stripeError.message,
         type: stripeError.type,
         code: stripeError.code,
-      })
-      
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create checkout session',
-        details: stripeError.message,
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      });
+
+      return new Response(
+        JSON.stringify({
+          error: "Failed to create checkout session",
+          details: stripeError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
   } catch (error) {
-    console.error('Error creating checkout session:', {
+    console.error("Error creating checkout session:", {
       error: error.message,
       stack: error.stack,
-    })
-    
-    return new Response(JSON.stringify({ 
-      error: 'Internal server error',
-      details: error.message,
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+    });
+
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: error.message,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
-})
+});

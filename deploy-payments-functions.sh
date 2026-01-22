@@ -12,7 +12,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="pbopcsmrcykdzbilpilf"
+PROJECT_REF="qbuynyxyemigtnvdujts"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  Deploying Payments Functions to Supabase"
@@ -68,9 +68,13 @@ supabase functions deploy get-subscription-products --project-ref $PROJECT_REF
 echo "OK: get-subscription-products deployed"
 echo ""
 
-echo "[9/9] Deploying verify-iap-purchase function..."
+echo "[9/10] Deploying verify-iap-purchase function..."
 supabase functions deploy verify-iap-purchase --project-ref $PROJECT_REF
 echo "OK: verify-iap-purchase deployed"
+
+echo "[10/10] Deploying app-store-notifications function..."
+supabase functions deploy app-store-notifications --project-ref $PROJECT_REF --no-verify-jwt
+echo "OK: app-store-notifications deployed"
 echo ""
 
 echo "════════════════════════════════════════════════════════════"
@@ -96,6 +100,11 @@ echo "   - SUPABASE_SERVICE_ROLE_KEY=..."
 echo ""
 echo "   Required (iOS IAP verification):"
 echo "   - APP_STORE_SHARED_SECRET=<App Store Connect -> App Information -> App-Specific Shared Secret>"
+echo "   - APPLE_BUNDLE_ID=com.moneko.mobile"
+echo "   - APPLE_APP_ID=<App Store numeric ID>"
+echo "   - APPLE_APP_STORE_ISSUER_ID=<App Store Server API Issuer ID>"
+echo "   - APPLE_APP_STORE_KEY_ID=<App Store Server API Key ID>"
+echo "   - APPLE_APP_STORE_PRIVATE_KEY=<.p8 private key contents>"
 echo ""
 echo "   Optional (Android server-side verification, if/when you enable Android IAP):"
 echo "   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON={...}"
