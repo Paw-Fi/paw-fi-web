@@ -1,7 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { createPlaidLinkToken, PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import {
+  createPlaidLinkToken,
+  PLAID_PROVIDER,
+} from "../shared/plaid-client.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -33,24 +36,36 @@ Deno.serve(async (req) => {
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
   }
 
   try {
     const body = (await req.json().catch(() => ({}))) as CreateLinkTokenRequest;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-plaid-create-link-token" } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-plaid-create-link-token" },
+      },
     });
 
     const authResult = await authenticateUser(req, supabase);
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
-        { status: authResult.statusCode || 401, headers: { ...headers, "Content-Type": "application/json" } },
+        {
+          status: authResult.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -58,17 +73,25 @@ Deno.serve(async (req) => {
     if (body.connectionId) {
       const { data: connection, error: connectionError } = await supabase
         .from("bank_connections")
-        .select("id, user_id, provider, access_token_encrypted, plaid_access_token_encrypted")
+        .select(
+          "id, user_id, provider, access_token_encrypted, plaid_access_token_encrypted",
+        )
         .eq("id", body.connectionId)
         .eq("provider", PLAID_PROVIDER)
         .maybeSingle();
 
       if (connectionError) {
-        console.error("[plaid-create-link-token] Failed to load connection", connectionError);
-        return new Response(JSON.stringify({ error: "Failed to load connection" }), {
-          status: 500,
-          headers: { ...headers, "Content-Type": "application/json" },
-        });
+        console.error(
+          "[plaid-create-link-token] Failed to load connection",
+          connectionError,
+        );
+        return new Response(
+          JSON.stringify({ error: "Failed to load connection" }),
+          {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (!connection || connection.user_id !== authResult.userId) {
@@ -78,7 +101,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      const encryptedToken = connection.access_token_encrypted || connection.plaid_access_token_encrypted;
+      const encryptedToken =
+        connection.access_token_encrypted ||
+        connection.plaid_access_token_encrypted;
       if (encryptedToken) {
         accessToken = await decryptSecret(encryptedToken);
       }
@@ -93,14 +118,27 @@ Deno.serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ success: true, linkToken: response.link_token, expiration: response.expiration }),
-      { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
+      JSON.stringify({
+        success: true,
+        linkToken: response.link_token,
+        expiration: response.expiration,
+      }),
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[plaid-create-link-token] Unexpected error", error);
     return new Response(
-      JSON.stringify({ error: "Failed to create link token", details: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
+      JSON.stringify({
+        error: "Failed to create link token",
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   }
 });

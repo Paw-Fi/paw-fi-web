@@ -1,7 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { exchangePublicToken, getPlaidAccounts, PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import {
+  exchangePublicToken,
+  getPlaidAccounts,
+  PLAID_PROVIDER,
+} from "../shared/plaid-client.ts";
 import { encryptSecret } from "../shared/token-encryption.ts";
 import { upsertPlaidAccounts } from "../shared/bank-sync.ts";
 
@@ -33,31 +37,46 @@ Deno.serve(async (req) => {
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
   }
 
   try {
     const body = (await req.json()) as ExchangeRequest;
     if (!body?.publicToken) {
-      return new Response(JSON.stringify({ error: "publicToken is required" }), {
-        status: 400,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "publicToken is required" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-plaid-exchange-public-token" } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-plaid-exchange-public-token" },
+      },
     });
 
     const authResult = await authenticateUser(req, supabase);
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
-        { status: authResult.statusCode || 401, headers: { ...headers, "Content-Type": "application/json" } },
+        {
+          status: authResult.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -86,11 +105,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (connectionError) {
-      console.error("[plaid-exchange-public-token] Failed to persist connection", connectionError);
-      return new Response(JSON.stringify({ error: "Failed to save connection" }), {
-        status: 500,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      console.error(
+        "[plaid-exchange-public-token] Failed to persist connection",
+        connectionError,
+      );
+      return new Response(
+        JSON.stringify({ error: "Failed to save connection" }),
+        {
+          status: 500,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (connection?.id) {
@@ -115,14 +140,22 @@ Deno.serve(async (req) => {
         connectionId: connection.id,
         accounts: upsertResult.records,
       }),
-      { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[plaid-exchange-public-token] Unexpected error", error);
     return new Response(
-      JSON.stringify({ error: "Failed to exchange public token", details: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
+      JSON.stringify({
+        error: "Failed to exchange public token",
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   }
 });
-

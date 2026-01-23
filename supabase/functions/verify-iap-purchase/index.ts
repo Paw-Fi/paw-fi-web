@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
@@ -122,13 +122,13 @@ async function getAppleRootCAs(): Promise<Uint8Array[]> {
 
 function normalizePrivateKey(value: string): string {
   if (!value) return "";
-  
+
   // Handle various escape formats that might come from environment variables
   let normalized = value
-    .replace(/\\n/g, "\n")  // Escaped \n to actual newline
-    .replace(/\\r/g, "")    // Remove any \r
+    .replace(/\\n/g, "\n") // Escaped \n to actual newline
+    .replace(/\\r/g, "") // Remove any \r
     .trim();
-  
+
   // If the key doesn't have proper PEM structure, it might be base64 encoded
   if (!normalized.includes("-----BEGIN")) {
     // Try to decode if it looks like it might be base64 encoded
@@ -141,23 +141,26 @@ function normalizePrivateKey(value: string): string {
       // Not base64, use as-is
     }
   }
-  
+
   // Ensure proper line breaks in PEM format
   // Some systems store the key as a single line with spaces instead of newlines
   if (normalized.includes("-----BEGIN") && !normalized.includes("\n")) {
     normalized = normalized
-      .replace(/-----BEGIN PRIVATE KEY-----\s*/, "-----BEGIN PRIVATE KEY-----\n")
+      .replace(
+        /-----BEGIN PRIVATE KEY-----\s*/,
+        "-----BEGIN PRIVATE KEY-----\n",
+      )
       .replace(/\s*-----END PRIVATE KEY-----/, "\n-----END PRIVATE KEY-----")
       .replace(/\s+/g, "\n");
   }
-  
+
   console.log("Private key format check:", {
     hasBeginMarker: normalized.includes("-----BEGIN PRIVATE KEY-----"),
     hasEndMarker: normalized.includes("-----END PRIVATE KEY-----"),
     hasNewlines: normalized.includes("\n"),
     length: normalized.length,
   });
-  
+
   return normalized;
 }
 
@@ -208,7 +211,7 @@ function base64UrlDecode(input: string): string {
 /**
  * Decodes a JWS payload without cryptographic verification.
  * The JWS format is: header.payload.signature (all base64url encoded)
- * 
+ *
  * Note: This does NOT verify the signature. We validate the transaction
  * by calling the App Store Server API with the extracted transactionId.
  */
@@ -406,7 +409,10 @@ serve(async (req: Request) => {
 
       // StoreKit 2 sends JWS (starts with "eyJ"), StoreKit 1 sends base64 receipt
       const hasJws = serverReceipt && isJws(serverReceipt);
-      console.log("Verification mode:", hasJws ? "JWS (StoreKit 2)" : "Receipt (StoreKit 1)");
+      console.log(
+        "Verification mode:",
+        hasJws ? "JWS (StoreKit 2)" : "Receipt (StoreKit 1)",
+      );
 
       const now = Date.now();
       let status: SubscriptionStatus = "active";
@@ -463,14 +469,18 @@ serve(async (req: Request) => {
 
         // Determine environment from the decoded payload
         const jwsEnvironment = decodedTransaction.environment?.toLowerCase();
-        environment = jwsEnvironment === "sandbox" 
-          ? Environment.SANDBOX 
-          : Environment.PRODUCTION;
+        environment =
+          jwsEnvironment === "sandbox"
+            ? Environment.SANDBOX
+            : Environment.PRODUCTION;
         console.log("Environment from JWS:", environment);
 
         // Step 2: Validate via App Store Server API (if configured)
         // This provides authoritative verification from Apple's servers
-        if (isAppleServerApiConfigured() && decodedTransaction.originalTransactionId) {
+        if (
+          isAppleServerApiConfigured() &&
+          decodedTransaction.originalTransactionId
+        ) {
           try {
             console.log("Validating transaction via App Store Server API...");
             const serverTransaction = await fetchLatestAppStoreTransaction({
@@ -483,14 +493,21 @@ serve(async (req: Request) => {
               // Use the server-verified transaction data (more authoritative)
               decodedTransaction = serverTransaction;
             } else {
-              console.log("App Store Server API returned no transaction, using decoded JWS data");
+              console.log(
+                "App Store Server API returned no transaction, using decoded JWS data",
+              );
             }
           } catch (apiError) {
             // Log but don't fail - the decoded JWS data is still usable
-            console.warn("App Store Server API validation failed, using decoded JWS data:", apiError);
+            console.warn(
+              "App Store Server API validation failed, using decoded JWS data:",
+              apiError,
+            );
           }
         } else {
-          console.log("App Store Server API not configured or no originalTransactionId, using decoded JWS data");
+          console.log(
+            "App Store Server API not configured or no originalTransactionId, using decoded JWS data",
+          );
         }
 
         // Validate product ID matches
@@ -520,7 +537,8 @@ serve(async (req: Request) => {
         }
 
         transactionId = decodedTransaction.transactionId ?? null;
-        originalTransactionId = decodedTransaction.originalTransactionId ?? null;
+        originalTransactionId =
+          decodedTransaction.originalTransactionId ?? null;
 
         if (plan === "lifetime") {
           // Non-consumable: just needs to exist and not be revoked
@@ -612,7 +630,9 @@ serve(async (req: Request) => {
           const latest = matching[0];
           if (!latest) {
             return new Response(
-              JSON.stringify({ error: "Lifetime purchase not found in receipt" }),
+              JSON.stringify({
+                error: "Lifetime purchase not found in receipt",
+              }),
               {
                 status: 400,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -635,9 +655,8 @@ serve(async (req: Request) => {
           status = "active";
           currentPeriodEnd = null;
         } else {
-          const latestInfo = (receiptResponse.latest_receipt_info ?? []) as Array<
-            Record<string, unknown>
-          >;
+          const latestInfo = (receiptResponse.latest_receipt_info ??
+            []) as Array<Record<string, unknown>>;
           const matching = latestInfo
             .filter((x) => x["product_id"] === storeProductId)
             .sort(
@@ -685,7 +704,8 @@ serve(async (req: Request) => {
           if (!Number.isFinite(expiresMs) || expiresMs <= now) {
             status = "canceled";
           } else {
-            status = latest["is_trial_period"] === "true" ? "trialing" : "active";
+            status =
+              latest["is_trial_period"] === "true" ? "trialing" : "active";
           }
         }
 
@@ -775,7 +795,8 @@ serve(async (req: Request) => {
         );
       }
 
-      const environmentString = environment === Environment.SANDBOX ? "Sandbox" : "Production";
+      const environmentString =
+        environment === Environment.SANDBOX ? "Sandbox" : "Production";
 
       const subscriptionUpdate: Record<string, unknown> = {
         user_id: userId,

@@ -42,8 +42,7 @@ export function detectGptRequest(req: Request): GptDetectionResult {
     null;
 
   const conversationId =
-    normalizeId(headerConversation) ??
-    normalizeId(headerEphemeral);
+    normalizeId(headerConversation) ?? normalizeId(headerEphemeral);
 
   const isGpt = Boolean(conversationId);
 
@@ -71,7 +70,9 @@ export async function ensureGuestIdentity(
     .maybeSingle();
 
   if (contactLookupError) {
-    throw new Error(`Failed to look up guest contact: ${contactLookupError.message}`);
+    throw new Error(
+      `Failed to look up guest contact: ${contactLookupError.message}`,
+    );
   }
 
   let userId = existingContact?.user_id ?? null;
@@ -82,48 +83,60 @@ export async function ensureGuestIdentity(
     try {
       // Use conversationId as the unique identifier for auth users
       const guestId = `gpt-${conversationId}`;
-      
+
       // Check if auth user already exists by looking for users with this conversation_id in metadata
-      const { data: existingUsers, error: authUserError } = await supabase.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
+      const { data: existingUsers, error: authUserError } =
+        await supabase.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        });
 
       if (authUserError) {
         throw new Error(`Failed to check auth user: ${authUserError.message}`);
       }
 
-      const existingAuthUser = existingUsers.users.find(user => 
-        user.user_metadata?.conversation_id === conversationId
+      const existingAuthUser = existingUsers.users.find(
+        (user) => user.user_metadata?.conversation_id === conversationId,
       );
-      
+
       if (existingAuthUser) {
         userId = existingAuthUser.id;
-        console.log(`[ensureGuestIdentity] Found existing auth user for conversation ${conversationId}`);
+        console.log(
+          `[ensureGuestIdentity] Found existing auth user for conversation ${conversationId}`,
+        );
       } else {
         // Create auth user for GPT guest with conversationId as the primary identifier
-        const { data: createdAuthUser, error: createAuthError } = await supabase.auth.admin.createUser({
-          email: `${guestId}@guest.moneko`, // Required field but not used for authentication
-          email_confirm: true,
-          user_metadata: {
-            full_name: "GPT Guest",
-            conversation_id: conversationId,
-            is_guest: true,
-            phone_e164: guestPhone,
-          },
-        });
+        const { data: createdAuthUser, error: createAuthError } =
+          await supabase.auth.admin.createUser({
+            email: `${guestId}@guest.moneko`, // Required field but not used for authentication
+            email_confirm: true,
+            user_metadata: {
+              full_name: "GPT Guest",
+              conversation_id: conversationId,
+              is_guest: true,
+              phone_e164: guestPhone,
+            },
+          });
 
         if (createAuthError) {
-          throw new Error(`Failed to create auth guest user: ${createAuthError.message}`);
+          throw new Error(
+            `Failed to create auth guest user: ${createAuthError.message}`,
+          );
         }
 
         userId = createdAuthUser.user.id;
         createdUser = true;
-        console.log(`[ensureGuestIdentity] Created new auth user for conversation ${conversationId}`);
+        console.log(
+          `[ensureGuestIdentity] Created new auth user for conversation ${conversationId}`,
+        );
       }
     } catch (authError) {
-      console.error(`[ensureGuestIdentity] Auth operation failed for conversation ${conversationId}:`, authError);
-      const message = authError instanceof Error ? authError.message : String(authError);
+      console.error(
+        `[ensureGuestIdentity] Auth operation failed for conversation ${conversationId}:`,
+        authError,
+      );
+      const message =
+        authError instanceof Error ? authError.message : String(authError);
       throw new Error(`Auth system error: ${message}`);
     }
   }
@@ -144,7 +157,9 @@ export async function ensureGuestIdentity(
       .single();
 
     if (createContactError) {
-      throw new Error(`Failed to create guest contact: ${createContactError.message}`);
+      throw new Error(
+        `Failed to create guest contact: ${createContactError.message}`,
+      );
     }
 
     contactId = newContact.id;
@@ -156,7 +171,9 @@ export async function ensureGuestIdentity(
       .eq("id", contactId);
 
     if (updateContactError) {
-      throw new Error(`Failed to attach user to guest contact: ${updateContactError.message}`);
+      throw new Error(
+        `Failed to attach user to guest contact: ${updateContactError.message}`,
+      );
     }
   } else if (currency && existingContact.preferred_currency !== currency) {
     const { error: updateCurrencyError } = await supabase
@@ -165,7 +182,9 @@ export async function ensureGuestIdentity(
       .eq("id", contactId);
 
     if (updateCurrencyError) {
-      throw new Error(`Failed to update guest currency: ${updateCurrencyError.message}`);
+      throw new Error(
+        `Failed to update guest currency: ${updateCurrencyError.message}`,
+      );
     }
   }
 

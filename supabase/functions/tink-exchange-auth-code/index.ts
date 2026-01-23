@@ -35,10 +35,13 @@ Deno.serve(async (req) => {
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
   }
 
   try {
@@ -51,28 +54,44 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-tink-exchange-auth-code" } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-tink-exchange-auth-code" },
+      },
     });
 
     const authResult = await authenticateUser(req, supabase);
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
-        { status: authResult.statusCode || 401, headers: { ...headers, "Content-Type": "application/json" } },
+        {
+          status: authResult.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
       );
     }
 
     const tokenResponse = await exchangeTinkAuthorizationCode(body.code);
     const encryptedAccess = await encryptSecret(tokenResponse.access_token);
-    const encryptedRefresh = tokenResponse.refresh_token ? await encryptSecret(tokenResponse.refresh_token) : null;
+    const encryptedRefresh = tokenResponse.refresh_token
+      ? await encryptSecret(tokenResponse.refresh_token)
+      : null;
     const expiresAt = tokenResponse.expires_in
       ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
       : null;
 
-    const itemId = tokenResponse.user_id || tokenResponse.id_hint || tokenResponse.access_token.slice(0, 24);
+    const itemId =
+      tokenResponse.user_id ||
+      tokenResponse.id_hint ||
+      tokenResponse.access_token.slice(0, 24);
 
-    const providerItemId = itemId.startsWith("tink_") ? itemId : `tink_${itemId}`;
+    const providerItemId = itemId.startsWith("tink_")
+      ? itemId
+      : `tink_${itemId}`;
 
     const payload = {
       user_id: authResult.userId,
@@ -98,11 +117,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (connectionError) {
-      console.error("[tink-exchange-auth-code] Failed to persist connection", connectionError);
-      return new Response(JSON.stringify({ error: "Failed to save connection" }), {
-        status: 500,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      console.error(
+        "[tink-exchange-auth-code] Failed to persist connection",
+        connectionError,
+      );
+      return new Response(
+        JSON.stringify({ error: "Failed to save connection" }),
+        {
+          status: 500,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (connection?.id) {
@@ -139,13 +164,22 @@ Deno.serve(async (req) => {
         connectionId: connection.id,
         accounts: upsertResult.records,
       }),
-      { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[tink-exchange-auth-code] Unexpected error", error);
     return new Response(
-      JSON.stringify({ error: "Failed to exchange Tink code", details: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
+      JSON.stringify({
+        error: "Failed to exchange Tink code",
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   }
 });

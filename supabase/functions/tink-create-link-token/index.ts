@@ -1,7 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
-import { createTinkLinkUrl, getTinkConfig, TINK_PROVIDER } from "../shared/tink-client.ts";
+import {
+  createTinkLinkUrl,
+  getTinkConfig,
+  TINK_PROVIDER,
+} from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -30,17 +34,24 @@ Deno.serve(async (req) => {
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
   }
 
   try {
     const config = getTinkConfig();
     const body = (await req.json().catch(() => ({}))) as CreateLinkRequest;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
       global: { headers: { "X-Client-Info": "moneko-tink-create-link-token" } },
     });
 
@@ -48,7 +59,10 @@ Deno.serve(async (req) => {
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
-        { status: authResult.statusCode || 401, headers: { ...headers, "Content-Type": "application/json" } },
+        {
+          status: authResult.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -64,13 +78,22 @@ Deno.serve(async (req) => {
         linkUrl: link_url,
         state,
       }),
-      { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[tink-create-link-token] Unexpected error", error);
     return new Response(
-      JSON.stringify({ error: "Failed to create Tink link", details: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
+      JSON.stringify({
+        error: "Failed to create Tink link",
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   }
 });

@@ -65,7 +65,9 @@ on conflict do nothing;
 -- 4) Expenses per contact
 create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
-  contact_id uuid not null references public.user_contacts(id) on delete cascade,
+  -- contact_id is only present for WhatsApp-bound accounts.
+  -- The core app supports authenticated users that do not have a user_contacts row.
+  contact_id uuid references public.user_contacts(id) on delete cascade,
   date date not null,
   amount_cents bigint not null,
   currency text default 'USD',

@@ -5,13 +5,16 @@
  * NEVER trust userId from request body - always derive from JWT
  */
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import {
+  createClient,
+  SupabaseClient,
+} from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 export interface AuthResult {
-  success: boolean
-  userId?: string
-  error?: string
-  statusCode?: number
+  success: boolean;
+  userId?: string;
+  error?: string;
+  statusCode?: number;
 }
 
 /**
@@ -23,47 +26,50 @@ export interface AuthResult {
  */
 export async function authenticateUser(
   req: Request,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
 ): Promise<AuthResult> {
   // Get Authorization header
-  const authHeader = req.headers.get('Authorization')
+  const authHeader = req.headers.get("Authorization");
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return {
       success: false,
-      error: 'Missing or invalid Authorization header',
+      error: "Missing or invalid Authorization header",
       statusCode: 401,
-    }
+    };
   }
 
   // Extract JWT token
-  const token = authHeader.replace('Bearer ', '')
+  const token = authHeader.replace("Bearer ", "");
 
   try {
     // Verify JWT and get user
-    const { data: { user }, error } = await supabase.auth.getUser(token)
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-      console.error('Authentication failed:', error?.message)
+      console.error("Authentication failed:", error?.message);
       return {
         success: false,
-        error: 'Invalid or expired authentication token',
+        error: "Invalid or expired authentication token",
         statusCode: 401,
-      }
+      };
     }
 
     // Return authenticated user ID
     return {
       success: true,
       userId: user.id,
-    }
+    };
   } catch (error) {
-    console.error('Authentication error:', error)
+    console.error("Authentication error:", error);
     return {
       success: false,
-      error: 'Authentication failed',
+      error: "Authentication failed",
       statusCode: 401,
-    }
+    };
   }
 }
 
@@ -77,14 +83,14 @@ export async function authenticateUser(
  */
 export function verifyUserMatch(
   authenticatedUserId: string,
-  requestedUserId: string
+  requestedUserId: string,
 ): boolean {
   if (authenticatedUserId !== requestedUserId) {
-    console.warn('User ID mismatch detected', {
+    console.warn("User ID mismatch detected", {
       authenticated: authenticatedUserId,
       requested: requestedUserId,
-    })
-    return false
+    });
+    return false;
   }
-  return true
+  return true;
 }
