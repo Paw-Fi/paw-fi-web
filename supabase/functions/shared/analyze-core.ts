@@ -145,21 +145,51 @@ function buildTransactionSystemInstruction(
 
     ...(householdContext
       ? [
-        "### 5. HOUSEHOLD SPLITS (when household context is provided)",
-        "- The caller is currently in a household/group context and wants split-aware logging.",
-        "- **payerUserId**:",
-        "  - If user says who paid (e.g., 'paid by B'), set payerUserId to that member's userId.",
-        "  - If not mentioned, omit payerUserId (backend defaults to the caller).",
-        "  - Use ONLY the userId from the provided member list. Do NOT output names/emails.",
-        "- **customSplits**:",
-        "  - If user describes a split (amounts/percent/shares), set customSplits accordingly.",
-        "  - If user does NOT describe a split, OMIT customSplits entirely (backend defaults to equal split across all household members).",
-        "  - When returning customSplits, ALWAYS include ALL household members exactly once in memberSplits.",
-        "  - If the user provides splits for only some members, distribute the remaining portion equally among the unspecified members.",
-        "  - If the user mentions a member by name/email/alias, map it to the matching userId from the member list.",
-        "  - If the user says 'paid by X' or 'X paid', you MUST set payerUserId.",
-        "  - If the user says 'split 15 for him/her/them', treat the pronoun as the last named member (often the payer).",
-        "  - Example: '20 dinner, paid by Charles, split 15 for him' => payerUserId=Charles userId, customSplits splitType=amount with Charles=15 and remaining split across other members.",
+        "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
+        "- The caller is in a household/group context. You MUST extract split information when mentioned.",
+        "",
+        "#### 5.1 PAYER IDENTIFICATION (payerUserId)",
+        "- If user mentions who paid, set payerUserId to that member's userId.",
+        "- Patterns to recognize (any language): 'paid by X', 'X paid', 'X付的', 'X가 냈어', 'pagado por X'",
+        "- If not mentioned, OMIT payerUserId (backend defaults to caller).",
+        "- Use ONLY userId from the provided member list. Never output names/emails.",
+        "",
+        "#### 5.2 SPLIT EXTRACTION (customSplits) - THIS IS CRITICAL",
+        "- You MUST detect and extract split information from natural language in ANY language.",
+        "- If NO split is mentioned, OMIT customSplits entirely (backend defaults to equal split).",
+        "- When returning customSplits, ALWAYS include ALL household members exactly once.",
+        "",
+        "**SPLIT PATTERNS TO RECOGNIZE (examples in various formats):**",
+        "",
+        "Amount-based splits (splitType='amount'):",
+        "- 'split 30 with lester' → Lester owes 30, caller owes remainder",
+        "- '30 for lester, 10 for me' → Lester=30, Caller=10",
+        "- 'lester pays 30' → Lester owes 30",
+        "- '小明出30' → Xiaoming owes 30",
+        "- 'lester 30, me 10' → Lester=30, Caller=10",
+        "",
+        "Percentage splits (splitType='percentage'):",
+        "- '70/30 split' → First person 70%, second 30%",
+        "- 'split 60-40' → 60% and 40%",
+        "- 'lester pays 75%' → Lester=75%, caller=25%",
+        "",
+        "Shares splits (splitType='shares'):",
+        "- 'split 2:1' → First person 2 shares, second 1 share",
+        "- 'lester gets double' → Lester=2 shares, others=1 share",
+        "",
+        "Equal splits (DO NOT return customSplits):",
+        "- 'split equally', 'go halves', '平分', 'AA制', 'split 50/50 with 2 people'",
+        "",
+        "**CALCULATION RULES:**",
+        "- If user specifies one person's amount, calculate the remainder for others.",
+        "- Example: Total=40, 'split 30 with lester' → Lester=30, Caller=10 (40-30)",
+        "- If user specifies all amounts, use them directly.",
+        "- Always ensure amounts sum to total, percentages sum to 100.",
+        "",
+        "**MEMBER RESOLUTION:**",
+        "- Match names/aliases to userId from the provided member list.",
+        "- 'me', 'myself', 'I', '我' → Caller's userId",
+        "- Pronouns (him/her/them) → Last mentioned member or payer",
       ]
       : []),
 
@@ -409,48 +439,15 @@ export function inferPayerFromText(
 }
 
 export function inferSplitAmountsFromText(
-  text: string,
-  ctx: ReturnType<typeof resolveHouseholdContext> | null,
-  payerUserId?: string,
+  _text: string,
+  _ctx: ReturnType<typeof resolveHouseholdContext> | null,
+  _payerUserId?: string,
 ): CustomSplits | undefined {
-  if (!ctx) return undefined;
-  const regex =
-    /(\d+(?:\.\d+)?)\s*(?:for|to)\s+(.+?)(?=(?:\s*(?:,|;)\s*\d)|(?:\s+\b(?:and|&)\b\s*\d)|$)/giu;
-  const rawMap = new Map<string, number>();
-  let match: RegExpExecArray | null;
-  let lastMentionedUserId: string | undefined;
-
-  while ((match = regex.exec(text)) !== null) {
-    const amount = Number(match[1]);
-    if (!Number.isFinite(amount) || amount <= 0) continue;
-    let rawName = match[2]?.trim() ?? "";
-    rawName = rawName
-      .replace(/^[\s,;]+/, "")
-      .replace(/[\s,;]+$/, "")
-      .replace(/\s+(?:and|&)\s*$/i, "")
-      .trim();
-    if (!rawName) continue;
-    const pronounMatch = resolvePronounUserId(
-      rawName,
-      ctx,
-      payerUserId,
-      lastMentionedUserId,
-    );
-    const resolved = pronounMatch ?? resolveMemberFromFragment(rawName, ctx);
-    if (!resolved) continue;
-    lastMentionedUserId = resolved;
-    rawMap.set(resolved, (rawMap.get(resolved) ?? 0) + amount);
-  }
-
-  if (rawMap.size === 0) return undefined;
-
-  return {
-    splitType: "amount",
-    memberSplits: Array.from(rawMap.entries()).map(([userId, amount]) => ({
-      userId,
-      amount,
-    })),
-  };
+  // DEPRECATED: Split extraction is now handled entirely by the AI model.
+  // The AI receives household member context and is instructed to return
+  // customSplits directly in the function call response.
+  // This function is kept for backward compatibility but always returns undefined.
+  return undefined;
 }
 
 export function normalizeCustomSplits(
@@ -656,30 +653,15 @@ async function analyzeFromText(
         // Use correct symbol for the detected currency
         const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
 
-        let payerUserId = resolvedType === "expense"
+        // Split extraction is handled entirely by the AI model.
+        // The AI receives detailed instructions and examples for split patterns
+        // in any language. No regex fallbacks are used.
+        const payerUserId = resolvedType === "expense"
           ? normalizePayerUserId(it.payerUserId, householdContext)
           : undefined;
-        let customSplits = resolvedType === "expense"
+        const customSplits = resolvedType === "expense"
           ? normalizeCustomSplits(it.customSplits, householdContext, amount)
           : undefined;
-
-        if (resolvedType === "expense" && householdContext) {
-          if (!payerUserId) {
-            payerUserId = inferPayerFromText(bodyText, householdContext);
-          }
-          if (!customSplits) {
-            const inferredSplits = inferSplitAmountsFromText(
-              bodyText,
-              householdContext,
-              payerUserId,
-            );
-            customSplits = normalizeCustomSplits(
-              inferredSplits,
-              householdContext,
-              amount,
-            );
-          }
-        }
 
         return {
           type: resolvedType,
@@ -1181,21 +1163,37 @@ export async function runAnalyzeExpense(
                       customSplits: {
                         type: "object",
                         description:
-                          "Household only: split configuration. Omit entirely for equal split.",
+                          "Household only: Custom split when user specifies non-equal distribution. MUST be returned when user mentions specific amounts/percentages for members. Omit ONLY for equal splits or when no split is mentioned.",
                         properties: {
                           splitType: {
                             type: "string",
-                            enum: ["equal", "amount", "percentage", "shares"],
+                            enum: ["amount", "percentage", "shares"],
+                            description:
+                              "Type of split: 'amount' for specific amounts per person, 'percentage' for percentage splits, 'shares' for ratio-based splits.",
                           },
                           memberSplits: {
                             type: "array",
+                            description:
+                              "Array of splits for ALL household members. Calculate remainder for unspecified members.",
                             items: {
                               type: "object",
                               properties: {
-                                userId: { type: "string" },
-                                amount: { type: "number" },
-                                percentage: { type: "number" },
-                                shares: { type: "number" },
+                                userId: {
+                                  type: "string",
+                                  description: "Member's userId from the provided member list.",
+                                },
+                                amount: {
+                                  type: "number",
+                                  description: "For splitType='amount': the amount this member owes.",
+                                },
+                                percentage: {
+                                  type: "number",
+                                  description: "For splitType='percentage': percentage (0-100) this member owes.",
+                                },
+                                shares: {
+                                  type: "number",
+                                  description: "For splitType='shares': number of shares for this member.",
+                                },
                               },
                               required: ["userId"],
                             },
