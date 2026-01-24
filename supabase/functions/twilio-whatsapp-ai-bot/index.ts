@@ -23,7 +23,7 @@ import { runAnalyzeExpense, buildXlsxPreview, summarizePdfWithGemini } from "../
 
 // --- Constants & Types ---
 
-const MODEL_NAME = "gemini-3-flash-preview"; // Fast and capable
+const MODEL_NAME = "gemini-2.5-flash"; // Fast and capable
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
@@ -1462,10 +1462,9 @@ Deno.serve(async (req: Request) => {
 
       if (!analysis || !analysis.success || !analysis.items) {
         if (WHATSAPP_DEBUG) debugNotes.push(`text analyze-expense error: ${analysis?.error || "unknown"}`);
-        userMessageContent = `[User message: "${caption}". Transaction analysis failed: ${
-          analysis?.error ||
-          "Could not extract transaction information. Please try again with a clearer description, for example: \"Spent 45 on groceries yesterday\"."
-        } ]`;
+        // When analysis fails (e.g., for intent messages like "edit my expenses", "show budget"),
+        // just pass the raw message to the AI - it can handle intents directly with its tools
+        userMessageContent = caption;
       } else {
         userMessageContent = `[User message: "${caption}". Successfully extracted from text: ${JSON.stringify(
           analysis.items!
@@ -2200,7 +2199,7 @@ Deno.serve(async (req: Request) => {
     try {
       const messagePromise = chat.sendMessage(userMessageContent);
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("AI response timed out after 25 seconds")), 25000)
+        setTimeout(() => reject(new Error("AI response timed out after 60 seconds")), 60000)
       );
     
       const result = await Promise.race([messagePromise, timeoutPromise]);
@@ -2326,6 +2325,57 @@ let persistedContent: string | undefined;
                   }
                 }
               } else if (call.name === "update_transaction") {
+                // First validate the expense_id exists and belongs to this user
+                const rawExpenseId = call.args.expense_id;
+                if (!rawExpenseId || typeof rawExpenseId !== "string" || rawExpenseId.trim().length === 0) {
+                  toolResult = { error: "expense_id is required. Please use list_expenses first to get the expense ID you want to update." };
+                  toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                  continue;
+                }
+
+                // Always fetch the expense to validate ownership before attempting update
+                const { data: expenseRow, error: expenseFetchError } = await supabase
+                  .from("expenses")
+                  .select("id, user_id, amount_cents, household_id, split_group_id")
+                  .eq("id", rawExpenseId)
+                  .maybeSingle();
+
+                if (expenseFetchError || !expenseRow) {
+                  console.warn("[twilio-whatsapp-ai-bot] update_transaction: expense not found", { expenseId: rawExpenseId, error: expenseFetchError });
+                  toolResult = { error: "Expense not found. Please use list_expenses first to see your expenses and get the correct expense ID." };
+                  toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                  continue;
+                }
+
+                // Validate ownership - expense must belong to this user (for personal) or user must be household member
+                const expenseUserId = expenseRow.user_id;
+                const expenseHouseholdId = expenseRow.household_id;
+                
+                if (!expenseHouseholdId) {
+                  // Personal expense - must be owned by this user
+                  if (expenseUserId !== userId) {
+                    console.warn("[twilio-whatsapp-ai-bot] update_transaction: unauthorized - expense belongs to different user", { expenseId: rawExpenseId, expenseUserId, requestUserId: userId });
+                    toolResult = { error: "You don't have permission to edit this expense. Please use list_expenses to see your own expenses." };
+                    toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                    continue;
+                  }
+                } else {
+                  // Household expense - verify user is a member
+                  const { data: membership } = await supabase
+                    .from("household_members")
+                    .select("user_id")
+                    .eq("household_id", expenseHouseholdId)
+                    .eq("user_id", userId)
+                    .maybeSingle();
+                  
+                  if (!membership) {
+                    console.warn("[twilio-whatsapp-ai-bot] update_transaction: unauthorized - user not in household", { expenseId: rawExpenseId, householdId: expenseHouseholdId, userId });
+                    toolResult = { error: "You don't have permission to edit this household expense." };
+                    toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                    continue;
+                  }
+                }
+
                 let householdId = call.args.household_id as string | null;
                 const householdName = (call.args.household_name || call.args.householdName || "")
                   .toString()
@@ -2335,6 +2385,12 @@ let persistedContent: string | undefined;
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
                 }
+                // Use household from expense if not provided in args
+                if (!householdId && expenseHouseholdId) {
+                  householdId = expenseHouseholdId;
+                  spaceMeta = householdId ? spaceMap.get(householdId) : spaceMeta;
+                }
+                
                 const dateStr = normalizeDateInput(
                   call.args.date,
                   formatDateInTimeZone(userTimezone),
@@ -2344,20 +2400,6 @@ let persistedContent: string | undefined;
                   call.args.member_splits.length > 0;
                 const hasPayerHint = typeof call.args.payer_name === "string" &&
                   call.args.payer_name.trim().length > 0;
-
-                let expenseRow: any = null;
-                if (hasSplitHints || hasPayerHint || !householdId || call.args.amount == null) {
-                  const { data: row } = await supabase
-                    .from("expenses")
-                    .select("id, amount_cents, household_id, split_group_id")
-                    .eq("id", call.args.expense_id)
-                    .maybeSingle();
-                  expenseRow = row;
-                  if (!householdId && row?.household_id) {
-                    householdId = row.household_id as string;
-                    spaceMeta = householdId ? spaceMap.get(householdId) : spaceMeta;
-                  }
-                }
 
                 const updates: Record<string, unknown> = {};
                 if (call.args.amount != null) {
@@ -2439,9 +2481,58 @@ let persistedContent: string | undefined;
                   }
                 }
               } else if (call.name === "delete_transaction") {
+                // First validate the expense_id exists and belongs to this user
+                const rawExpenseId = call.args.expense_id;
+                if (!rawExpenseId || typeof rawExpenseId !== "string" || rawExpenseId.trim().length === 0) {
+                  toolResult = { error: "expense_id is required. Please use list_expenses first to get the expense ID you want to delete." };
+                  toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                  continue;
+                }
+
+                // Fetch the expense to validate ownership before attempting delete
+                const { data: expenseToDelete, error: deleteFetchError } = await supabase
+                  .from("expenses")
+                  .select("id, user_id, household_id")
+                  .eq("id", rawExpenseId)
+                  .maybeSingle();
+
+                if (deleteFetchError || !expenseToDelete) {
+                  console.warn("[twilio-whatsapp-ai-bot] delete_transaction: expense not found", { expenseId: rawExpenseId, error: deleteFetchError });
+                  toolResult = { error: "Expense not found. Please use list_expenses first to see your expenses and get the correct expense ID." };
+                  toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                  continue;
+                }
+
+                // Validate ownership
+                const deleteExpenseHouseholdId = expenseToDelete.household_id;
+                if (!deleteExpenseHouseholdId) {
+                  // Personal expense - must be owned by this user
+                  if (expenseToDelete.user_id !== userId) {
+                    console.warn("[twilio-whatsapp-ai-bot] delete_transaction: unauthorized", { expenseId: rawExpenseId, expenseUserId: expenseToDelete.user_id, requestUserId: userId });
+                    toolResult = { error: "You don't have permission to delete this expense. Please use list_expenses to see your own expenses." };
+                    toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                    continue;
+                  }
+                } else {
+                  // Household expense - verify user is a member
+                  const { data: deleteMembership } = await supabase
+                    .from("household_members")
+                    .select("user_id")
+                    .eq("household_id", deleteExpenseHouseholdId)
+                    .eq("user_id", userId)
+                    .maybeSingle();
+                  
+                  if (!deleteMembership) {
+                    console.warn("[twilio-whatsapp-ai-bot] delete_transaction: unauthorized - user not in household", { expenseId: rawExpenseId, householdId: deleteExpenseHouseholdId, userId });
+                    toolResult = { error: "You don't have permission to delete this household expense." };
+                    toolResponses.push({ functionResponse: { name: call.name, response: toolResult } });
+                    continue;
+                  }
+                }
+
                 const { data, error } = await supabase.functions.invoke(
                   "delete-expense",
-                  { body: { userId, expenseId: call.args.expense_id } },
+                  { body: { userId, expenseId: rawExpenseId } },
                 );
                 const success = !error && data?.success === true;
                 toolResult = success ? { success: true } : { error: error ?? data?.error };
