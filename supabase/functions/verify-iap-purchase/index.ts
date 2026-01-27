@@ -557,8 +557,24 @@ serve(async (req: Request) => {
             );
           }
 
-          currentPeriodEnd = new Date(expiresDate).toISOString();
-          if (expiresDate <= now) {
+          // Parse expiresDate safely (it's milliseconds as number or string)
+          const expiresMs =
+            typeof expiresDate === "number"
+              ? expiresDate
+              : parseInt(String(expiresDate), 10);
+
+          if (!Number.isFinite(expiresMs)) {
+            return new Response(
+              JSON.stringify({ error: "Invalid expiry date format" }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+
+          currentPeriodEnd = new Date(expiresMs).toISOString();
+          if (expiresMs <= Date.now()) {
             status = "canceled";
           } else {
             status = "active";
