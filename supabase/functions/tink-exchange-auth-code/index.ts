@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       .eq("state", body.state)
       .eq("user_id", authResult.userId)
       .gt("expires_at", new Date().toISOString())
-      .select("state")
+      .select("state, external_user_id, market")
       .maybeSingle();
 
     if (stateError) {
@@ -173,17 +173,22 @@ Deno.serve(async (req) => {
       ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
       : null;
 
-    // SECURITY: Never use access token material as an identifier.
-    // Prefer: user_id from token response > id_hint > credentialsId from callback > random UUID
-    const itemId =
-      tokenResponse.user_id ||
-      tokenResponse.id_hint ||
-      body.credentialsId ||
-      crypto.randomUUID();
-
-    const providerItemId = itemId.startsWith("tink_")
-      ? itemId
-      : `tink_${itemId}`;
+    // Prefer stable identifiers from our state record.
+    // This keeps reconnections idempotent (same provider_item_id) and avoids duplicate bank_connections.
+    const stateExternalUserId = (
+      stateRecord as { external_user_id?: string | null } | null
+    )?.external_user_id;
+    const providerItemId = stateExternalUserId
+      ? `tink_${stateExternalUserId}`
+      : (() => {
+        // SECURITY: Never use access token material as an identifier.
+        // Prefer: user_id from token response > id_hint > credentialsId from callback > random UUID
+        const itemId = tokenResponse.user_id ||
+          tokenResponse.id_hint ||
+          body.credentialsId ||
+          crypto.randomUUID();
+        return itemId.startsWith("tink_") ? itemId : `tink_${itemId}`;
+      })();
 
     // Use atomic RPC to create/update connection with household
     // This prevents race conditions where concurrent requests create duplicate households
@@ -196,7 +201,10 @@ Deno.serve(async (req) => {
         p_access_token_encrypted: encryptedAccess,
         p_refresh_token_encrypted: encryptedRefresh,
         p_expires_at: expiresAt,
-        p_country_code: body.countryCode?.toUpperCase() || null,
+        p_country_code:
+          (stateRecord as { market?: string | null } | null)?.market ||
+          body.countryCode?.toUpperCase() ||
+          null,
         p_idempotency_key: body.idempotencyKey || null,
         p_institution_name: body.institutionName || "Bank Account",
         p_institution_logo: body.institutionLogo || null,
@@ -204,6 +212,8 @@ Deno.serve(async (req) => {
           scope: tokenResponse.scope || null,
           institution_name: body.institutionName || null,
           institution_logo: body.institutionLogo || null,
+          credentials_id: body.credentialsId || null,
+          external_user_id: stateExternalUserId || null,
         },
       },
     );

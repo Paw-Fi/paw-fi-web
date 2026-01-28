@@ -107,7 +107,8 @@
 #   supabase/migrations/20260120_bank_sync_resilience.sql
 #     - Creates bank_webhook_events, bank_sync_jobs (+ RLS/indexes)
 #   supabase/migrations/20260128_bank_sync_hardening.sql
-#     - Idempotency, locks, tink_auth_states, atomic RPC upsert_bank_connection_with_household
+#     - Idempotency, locks, tink_auth_states (with connection_id for delegated auth)
+#     - Atomic RPC upsert_bank_connection_with_household
 #   supabase/migrations/20260129_bank_sync_cron_scheduler.sql
 #     - pg_cron schedules (bank-sync-processor + cleanup) + verify_bank_sync_cron_config()
 

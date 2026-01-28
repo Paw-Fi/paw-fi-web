@@ -253,6 +253,8 @@ CREATE INDEX IF NOT EXISTS idx_bank_connections_needs_reauth
 CREATE TABLE IF NOT EXISTS public.tink_auth_states (
   state TEXT PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  external_user_id TEXT,
+  market TEXT,
   expires_at TIMESTAMPTZ NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -260,6 +262,8 @@ CREATE TABLE IF NOT EXISTS public.tink_auth_states (
 COMMENT ON TABLE public.tink_auth_states IS 'Stores Tink OAuth state tokens for CSRF protection during bank linking flow.';
 COMMENT ON COLUMN public.tink_auth_states.state IS 'Unique state token generated for each link session.';
 COMMENT ON COLUMN public.tink_auth_states.user_id IS 'User who initiated the link flow.';
+COMMENT ON COLUMN public.tink_auth_states.external_user_id IS 'Tink external user ID for this session (format: {user_id}-{market}).';
+COMMENT ON COLUMN public.tink_auth_states.market IS 'ISO 3166-1 alpha-2 market code for this link session.';
 COMMENT ON COLUMN public.tink_auth_states.expires_at IS 'Expiration time for this state (typically 10 minutes).';
 
 -- Index for efficient cleanup of expired states
@@ -269,6 +273,11 @@ CREATE INDEX IF NOT EXISTS idx_tink_auth_states_expires
 -- Index for user lookup during validation
 CREATE INDEX IF NOT EXISTS idx_tink_auth_states_user
   ON public.tink_auth_states(user_id, expires_at);
+
+-- Index for external_user_id lookup (for finding existing Tink users)
+CREATE INDEX IF NOT EXISTS idx_tink_auth_states_external_user
+  ON public.tink_auth_states(external_user_id)
+  WHERE external_user_id IS NOT NULL;
 
 -- RLS policies for tink_auth_states (service role only)
 ALTER TABLE public.tink_auth_states ENABLE ROW LEVEL SECURITY;

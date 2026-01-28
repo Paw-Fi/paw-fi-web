@@ -3,16 +3,19 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret, encryptSecret } from "../shared/token-encryption.ts";
 import {
+  type ExpensePreview,
   persistTinkTransactions,
   stageTinkTransactions,
-  type ExpensePreview,
   upsertTinkAccounts,
 } from "../shared/bank-sync.ts";
 import {
   getTinkAccounts,
+  getTinkConfig,
+  getTinkUserAccessToken,
   refreshTinkAccessToken,
   syncTinkTransactions,
   TINK_PROVIDER,
+  type TinkTransaction,
 } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -27,6 +30,8 @@ interface SyncRequest {
   bankAccountId?: string;
   cursorOverride?: string;
   deletedTransactionIds?: string[];
+  credentialsId?: string;
+  state?: string;
 }
 
 interface SyncSummary {
@@ -75,7 +80,7 @@ Deno.serve(async (req) => {
         detectSessionInUrl: false,
       },
       global: { headers: { "X-Client-Info": "moneko-tink-sync-transactions" } },
-    });
+    }) as any;
 
     const authResult = await authenticateUserOrInternal(
       req,
@@ -90,6 +95,210 @@ Deno.serve(async (req) => {
           headers: { ...headers, "Content-Type": "application/json" },
         },
       );
+    }
+
+    // Handle credentialsId from Tink Link callback
+    // When user completes bank connection in Tink Link, we receive credentialsId and state
+    // Now we need to: 1) Validate state, 2) Get user access token, 3) Create connection, 4) Sync
+    if (body.credentialsId && body.state) {
+      // Validate state for CSRF protection and get external_user_id + market
+      const { data: stateRecord, error: stateError } = await supabase
+        .from("tink_auth_states")
+        .delete()
+        .eq("state", body.state)
+        .eq("user_id", authResult.userId)
+        .gt("expires_at", new Date().toISOString())
+        .select("external_user_id, market")
+        .maybeSingle();
+
+      if (stateError) {
+        console.error("[tink-sync] Failed to validate state", stateError);
+        return new Response(
+          JSON.stringify({ error: "Failed to validate security state" }),
+          {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (!stateRecord) {
+        console.warn(
+          `[tink-sync] Invalid or expired state for user ${authResult.userId}`,
+        );
+        return new Response(
+          JSON.stringify({
+            error:
+              "Invalid or expired security state. Please restart the connection flow.",
+          }),
+          {
+            status: 400,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      console.log(
+        `[tink-sync] Validated callback for user ${stateRecord.external_user_id} in market ${stateRecord.market}`,
+      );
+
+      // Persist credentialsId immediately (even if token exchange fails later).
+      // This prevents the user from being forced into ADD mode (duplicate credentials) on retry.
+      try {
+        await supabase.from("tink_credentials_cache").upsert(
+          {
+            credentials_id: body.credentialsId,
+            user_id: authResult.userId,
+            external_user_id: stateRecord.external_user_id,
+            market: stateRecord.market,
+            last_error: null,
+          },
+          { onConflict: "credentials_id" },
+        );
+      } catch (cacheError) {
+        console.warn(
+          "[tink-sync] Failed to persist tink_credentials_cache (migration missing?):",
+          cacheError instanceof Error ? cacheError.message : String(cacheError),
+        );
+      }
+
+      // Generate NEW authorization code and exchange for access token
+      // The authorization code embedded in Tink Link was already consumed by Tink Link itself
+      const config = getTinkConfig();
+      let tokenResponse;
+      try {
+        tokenResponse = await getTinkUserAccessToken({
+          externalUserId: stateRecord.external_user_id,
+          market: stateRecord.market,
+          scopes: config.scopes,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        try {
+          await supabase
+            .from("tink_credentials_cache")
+            .update({
+              last_error: message,
+            })
+            .eq("credentials_id", body.credentialsId);
+        } catch (_) {
+          // Best-effort.
+        }
+
+        return new Response(
+          JSON.stringify({
+            error: "Failed to exchange Tink auth code",
+            details: message,
+          }),
+          {
+            status: 502,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      console.log(
+        `[tink-sync] Got access token for external user ${stateRecord.external_user_id}`,
+      );
+
+      // Encrypt tokens
+      const encryptedAccess = await encryptSecret(tokenResponse.access_token);
+      const encryptedRefresh = tokenResponse.refresh_token
+        ? await encryptSecret(tokenResponse.refresh_token)
+        : null;
+      const expiresAt = tokenResponse.expires_in
+        ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
+        : null;
+
+      // Use external_user_id as provider_item_id for stable identifier
+      // This ensures reconnections UPDATE the same connection instead of creating duplicates
+      // Format: tink_4f42e85a-4637-41fb-8fc5-f81933c83861-ie
+      const providerItemId = `tink_${stateRecord.external_user_id}`;
+
+      // Create/update bank connection with household using atomic RPC
+      // The RPC will find existing connection by provider_item_id and update it
+      const { data: upsertResult, error: upsertError } = await supabase.rpc(
+        "upsert_bank_connection_with_household",
+        {
+          p_user_id: authResult.userId,
+          p_provider: TINK_PROVIDER,
+          p_provider_item_id: providerItemId,
+          p_access_token_encrypted: encryptedAccess,
+          p_refresh_token_encrypted: encryptedRefresh,
+          p_expires_at: expiresAt,
+          p_country_code: stateRecord.market,
+          p_idempotency_key: null,
+          p_institution_name: "Bank Account",
+          p_institution_logo: null,
+          p_metadata: {
+            scope: tokenResponse.scope || null,
+            credentials_id: body.credentialsId,
+            external_user_id: stateRecord.external_user_id,
+          },
+        },
+      );
+
+      if (upsertError || !upsertResult || upsertResult.length === 0) {
+        console.error("[tink-sync] Failed to create connection", upsertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create bank connection" }),
+          {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const {
+        connection_id: connectionId,
+        household_id: householdId,
+        is_new_connection: isNewConnection,
+      } = upsertResult[0];
+
+      console.log(
+        `[tink-sync] ${
+          isNewConnection ? "Created" : "Updated"
+        } connection ${connectionId} with household ${householdId}`,
+      );
+
+      // Store tokens in bank_connection_tokens table
+      const tokensToUpsert = [
+        {
+          bank_connection_id: connectionId,
+          token_type: "access",
+          token_encrypted: encryptedAccess,
+          expires_at: expiresAt,
+        },
+      ];
+
+      if (encryptedRefresh) {
+        tokensToUpsert.push({
+          bank_connection_id: connectionId,
+          token_type: "refresh",
+          token_encrypted: encryptedRefresh,
+          expires_at: null,
+        });
+      }
+
+      await supabase.from("bank_connection_tokens").upsert(tokensToUpsert, {
+        onConflict: "bank_connection_id,token_type",
+      });
+
+      // Fetch and store accounts
+      const accounts = await getTinkAccounts(tokenResponse.access_token);
+      await upsertTinkAccounts({
+        supabase,
+        userId: authResult.userId,
+        bankConnectionId: connectionId,
+        accounts,
+      });
+
+      console.log(
+        `[tink-sync] Upserted ${accounts.length} accounts for connection ${connectionId}`,
+      );
+
+      // Now continue with transaction sync using the newly created connection
+      body.connectionId = connectionId;
     }
 
     let accountFilter: BankAccountRow | null = null;
@@ -160,7 +369,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const connectionIds = connections.map((conn) => conn.id);
+    const connectionIds = connections.map((conn: BankConnectionRow) => conn.id);
     const { data: bankAccounts, error: bankAccountError } = await supabase
       .from("bank_accounts")
       .select(
@@ -183,7 +392,7 @@ Deno.serve(async (req) => {
     }
 
     const accountMap = new Map<string, BankAccountRow>();
-    (bankAccounts || []).forEach((account) => {
+    (bankAccounts || []).forEach((account: BankAccountRow) => {
       const key = account.provider_account_id || account.plaid_account_id;
       accountMap.set(key, account);
     });
@@ -249,7 +458,8 @@ Deno.serve(async (req) => {
 async function syncConnection(params: {
   connection: BankConnectionRow;
   accountMap: Map<string, BankAccountRow>;
-  supabase: ReturnType<typeof createClient>;
+  // Avoid coupling to generated SupabaseClient schema types in Deno.
+  supabase: any;
   userId: string;
   accountFilter: BankAccountRow | null;
   cursorOverride?: string;
@@ -310,13 +520,15 @@ async function syncConnection(params: {
       .update({ last_sync_attempt_at: new Date().toISOString() })
       .eq("id", params.connection.id);
 
-    let accessTokenEncrypted =
-      params.connection.access_token_encrypted ||
+    const accessTokenEncryptedRaw = params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
-    if (!accessTokenEncrypted) {
+    if (!accessTokenEncryptedRaw) {
       throw new Error("Missing Tink access token");
     }
-    let accessToken = await decryptSecret(accessTokenEncrypted);
+    if (typeof accessTokenEncryptedRaw !== "string") {
+      throw new Error("Invalid Tink access token format");
+    }
+    let accessToken = await decryptSecret(accessTokenEncryptedRaw);
 
     // Check if token needs refresh
     if (
@@ -325,8 +537,7 @@ async function syncConnection(params: {
     ) {
       const expiresAt = new Date(params.connection.expires_at);
       // Refresh if expired or expiring within 5 minutes
-      const shouldRefresh =
-        Number.isFinite(expiresAt.getTime()) &&
+      const shouldRefresh = Number.isFinite(expiresAt.getTime()) &&
         expiresAt.getTime() <= Date.now() + 5 * 60 * 1000;
 
       if (shouldRefresh) {
@@ -344,9 +555,12 @@ async function syncConnection(params: {
             console.log(
               `[tink-sync] Refreshing token for connection ${params.connection.id}`,
             );
-            const refreshToken = await decryptSecret(
-              params.connection.refresh_token_encrypted,
-            );
+            const refreshTokenEncrypted =
+              params.connection.refresh_token_encrypted;
+            if (!refreshTokenEncrypted) {
+              throw new Error("Missing Tink refresh token");
+            }
+            const refreshToken = await decryptSecret(refreshTokenEncrypted);
             const refreshed = await refreshTinkAccessToken(refreshToken);
             accessToken = refreshed.access_token;
             const encryptedAccess = await encryptSecret(refreshed.access_token);
@@ -361,8 +575,8 @@ async function syncConnection(params: {
               .from("bank_connections")
               .update({
                 access_token_encrypted: encryptedAccess,
-                refresh_token_encrypted:
-                  encryptedRefresh || params.connection.refresh_token_encrypted,
+                refresh_token_encrypted: encryptedRefresh ||
+                  params.connection.refresh_token_encrypted,
                 expires_at: expiresAtNext,
               })
               .eq("id", params.connection.id);
@@ -376,12 +590,12 @@ async function syncConnection(params: {
               },
               ...(encryptedRefresh
                 ? [
-                    {
-                      bank_connection_id: params.connection.id,
-                      token_type: "refresh",
-                      token_encrypted: encryptedRefresh,
-                    },
-                  ]
+                  {
+                    bank_connection_id: params.connection.id,
+                    token_type: "refresh",
+                    token_encrypted: encryptedRefresh,
+                  },
+                ]
                 : []),
             ]);
 
@@ -409,9 +623,10 @@ async function syncConnection(params: {
             .single();
 
           if (updatedConnection?.access_token_encrypted) {
-            accessToken = await decryptSecret(
-              updatedConnection.access_token_encrypted,
-            );
+            const tokenEncrypted = updatedConnection.access_token_encrypted;
+            if (typeof tokenEncrypted === "string" && tokenEncrypted.length) {
+              accessToken = await decryptSecret(tokenEncrypted);
+            }
           }
         }
       }
@@ -438,14 +653,13 @@ async function syncConnection(params: {
       });
     }
 
-    let cursor: string | undefined =
-      params.cursorOverride === "reset"
-        ? undefined
-        : params.cursorOverride ||
-          params.connection.cursor ||
-          params.connection.plaid_cursor ||
-          undefined ||
-          undefined;
+    let cursor: string | undefined = params.cursorOverride === "reset"
+      ? undefined
+      : params.cursorOverride ||
+        params.connection.cursor ||
+        params.connection.plaid_cursor ||
+        undefined ||
+        undefined;
     const processedAccounts = new Set<string>();
     let nextPage = cursor;
 
@@ -459,8 +673,9 @@ async function syncConnection(params: {
           : `tink_${tinkAccountId}`;
         const account = params.accountMap.get(lookupKey);
         if (!account) continue;
-        if (params.accountFilter && account.id !== params.accountFilter.id)
+        if (params.accountFilter && account.id !== params.accountFilter.id) {
           continue;
+        }
 
         await stageTinkTransactions({
           supabase: params.supabase,
@@ -566,9 +781,9 @@ async function syncConnection(params: {
 }
 
 function groupByAccount(
-  transactions: { accountId?: string }[],
-): Map<string, typeof transactions> {
-  const grouped = new Map<string, typeof transactions>();
+  transactions: TinkTransaction[],
+): Map<string, TinkTransaction[]> {
+  const grouped = new Map<string, TinkTransaction[]>();
   transactions.forEach((txn) => {
     if (!txn.accountId) return;
     const collection = grouped.get(txn.accountId) || [];

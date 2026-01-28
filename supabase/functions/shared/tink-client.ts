@@ -13,6 +13,10 @@ const LINK_BASE_URLS = {
   production: "https://link.tink.com",
 };
 
+const MARKET_LOCALE_OVERRIDES: Record<string, string> = {
+  IE: "en_IE",
+};
+
 type TinkEnv = keyof typeof API_BASE_URLS;
 
 interface TinkConfig {
@@ -32,6 +36,7 @@ interface TinkLinkParams {
   market?: string;
   locale?: string;
   scopes?: string[];
+  authorizationCode: string;
 }
 
 export interface TinkTokenResponse {
@@ -70,6 +75,10 @@ export interface TinkTransaction {
   categories?: { pfm?: { detailed?: string | null; primary?: string | null } };
 }
 
+function getTinkLinkScopes(scopes: string[]): string[] {
+  return scopes.filter((scope) => scope !== "offline_access");
+}
+
 let cachedConfig: TinkConfig | null = null;
 
 export function getTinkConfig(): TinkConfig {
@@ -81,9 +90,13 @@ export function getTinkConfig(): TinkConfig {
     throw new Error("TINK_CLIENT_ID and TINK_CLIENT_SECRET must be configured");
   }
 
-  const env = (Deno.env.get("TINK_ENV")?.trim()?.toLowerCase() || "sandbox") as TinkEnv;
-  const redirectUri = Deno.env.get("TINK_REDIRECT_URI")?.trim() || "moneko://tink";
-  const scopes = (Deno.env.get("TINK_SCOPES") || "accounts:read,transactions:read,offline_access")
+  const env = (Deno.env.get("TINK_ENV")?.trim()?.toLowerCase() ||
+    "sandbox") as TinkEnv;
+  const redirectUri =
+    Deno.env.get("TINK_REDIRECT_URI")?.trim() || "moneko://tink";
+  const scopes = (
+    Deno.env.get("TINK_SCOPES") || "accounts:read,transactions:read"
+  )
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
@@ -103,26 +116,271 @@ export function getTinkConfig(): TinkConfig {
   return cachedConfig;
 }
 
-export function createTinkLinkUrl(params: TinkLinkParams): { link_url: string; state: string } {
+export function createTinkLinkUrl(
+  params: TinkLinkParams & {
+    credentialsId?: string;
+  },
+): {
+  link_url: string;
+  state: string;
+} {
   const config = getTinkConfig();
   const state = params.state || crypto.randomUUID();
   const market = (params.market || config.defaultMarket).toUpperCase();
-  const scopes = params.scopes || config.scopes;
-  const locale = params.locale || config.defaultLocale;
+  const scopes = getTinkLinkScopes(params.scopes || config.scopes);
+  const locale =
+    params.locale ?? MARKET_LOCALE_OVERRIDES[market] ?? config.defaultLocale;
 
-  const url = new URL(`${config.linkBaseUrl}/1.0/`);
+  // Use UPDATE mode if credentialsId provided (reconnection), otherwise ADD mode (new connection)
+  const path = params.credentialsId
+    ? `/1.0/credentials/${params.credentialsId}/update`
+    : "/1.0/credentials/add";
+
+  const url = new URL(`${config.linkBaseUrl}${path}`);
   url.searchParams.set("client_id", config.clientId);
   url.searchParams.set("redirect_uri", config.redirectUri);
+  url.searchParams.set("authorization_code", params.authorizationCode);
+  url.searchParams.set("scope", scopes.join(","));
   url.searchParams.set("market", market);
   url.searchParams.set("locale", locale);
-  url.searchParams.set("scope", scopes.join(" "));
   url.searchParams.set("state", state);
-  url.searchParams.set("test", config.env === "production" ? "false" : "true");
 
   return { link_url: url.toString(), state };
 }
 
-export async function exchangeTinkAuthorizationCode(code: string): Promise<TinkTokenResponse> {
+async function getTinkClientAccessToken(): Promise<string> {
+  const config = getTinkConfig();
+  const scope = (
+    Deno.env.get("TINK_CLIENT_SCOPES") || "authorization:grant,user:create"
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(",");
+
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    scope,
+  });
+
+  const response = await fetchWithRetry(
+    `${config.apiBaseUrl}/api/v1/oauth/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    },
+  );
+
+  const payload = await response.json();
+  if (!response.ok) {
+    console.error("[tink-client] Client token error", {
+      status: response.status,
+      payload,
+    });
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to get Tink client token",
+    );
+  }
+
+  const accessToken = payload?.access_token as string | undefined;
+  if (!accessToken) {
+    throw new Error("Missing Tink client access token");
+  }
+
+  return accessToken;
+}
+
+export async function createTinkUserAuthorizationCode(params: {
+  externalUserId: string;
+  scopes?: string[];
+  market?: string;
+  locale?: string;
+  // Delegated grant actor (who can exchange/consume this authorization code).
+  // For Tink Link (browser flow), this is typically a Tink-managed actor client.
+  // For server-side exchange (token endpoint with client_secret), this should be our own clientId.
+  actorClientId?: string;
+}): Promise<string> {
+  const config = getTinkConfig();
+  const accessToken = await getTinkClientAccessToken();
+  const requestedScopes = params.scopes || config.scopes;
+  const linkScopes = getTinkLinkScopes(requestedScopes);
+
+  // `offline_access` is used for refresh tokens, but it is not always a valid
+  // scope for the delegated grant on a given client. Keep it out of the delegated
+  // grant to avoid hard failures; token exchange can still succeed without it.
+  const requestedScopesForDelegation = requestedScopes.filter(
+    (scope) => scope !== "offline_access",
+  );
+  const delegateScopes = (
+    Deno.env.get("TINK_LINK_DELEGATE_SCOPES") ||
+    "credentials:read,credentials:refresh,credentials:write,providers:read,user:read,authorization:read"
+  )
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .concat(requestedScopesForDelegation)
+    .filter(Boolean)
+    // Deduplicate while preserving order
+    .filter((value, index, array) => array.indexOf(value) === index)
+    .join(",");
+  const market = (params.market || config.defaultMarket).toUpperCase();
+  const locale =
+    params.locale ?? MARKET_LOCALE_OVERRIDES[market] ?? config.defaultLocale;
+
+  let userId: string | undefined;
+  const createUserResponse = await fetchWithRetry(
+    `${config.apiBaseUrl}/api/v1/user/create`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        external_user_id: params.externalUserId,
+        market,
+        locale,
+        retention_class: "permanent",
+      }),
+    },
+  );
+
+  const createUserPayload = await createUserResponse.json();
+  if (!createUserResponse.ok && createUserResponse.status !== 409) {
+    console.error("[tink-client] User create error", {
+      status: createUserResponse.status,
+      payload: createUserPayload,
+    });
+    throw new Error(
+      createUserPayload?.error_description ||
+        createUserPayload?.error ||
+        createUserPayload?.errorMessage ||
+        "Failed to create Tink user",
+    );
+  }
+
+  if (createUserResponse.ok) {
+    userId = createUserPayload?.user_id as string | undefined;
+    console.log("[tink-client] Created user", {
+      userId,
+      externalUserId: params.externalUserId,
+      market,
+      locale,
+    });
+  } else if (createUserResponse.status === 409) {
+    console.log("[tink-client] User already exists", {
+      externalUserId: params.externalUserId,
+      market,
+      locale,
+    });
+  }
+
+  const body = new URLSearchParams({
+    scope: delegateScopes,
+    id_hint: params.externalUserId,
+  });
+
+  // Only include actor_client_id if explicitly provided.
+  // Some Tink setups rely on an internal Link actor client, others accept omitting this.
+  // We avoid hardcoding a magic value.
+  if (params.actorClientId) {
+    body.set("actor_client_id", params.actorClientId);
+  }
+
+  if (userId) {
+    body.set("user_id", userId);
+  } else {
+    body.set("external_user_id", params.externalUserId);
+  }
+
+  const delegateUrl = `${config.apiBaseUrl}/api/v1/oauth/authorization-grant/delegate`;
+
+  const delegate = async (scope: string) => {
+    const delegateBody = new URLSearchParams(body);
+    delegateBody.set("scope", scope);
+    const response = await fetchWithRetry(delegateUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: delegateBody.toString(),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    return { response, payload };
+  };
+
+  let { response, payload } = await delegate(delegateScopes);
+
+  // Some clients reject `offline_access` at the delegation step even if it's in TINK_SCOPES.
+  // If that happens, retry once with it removed.
+  if (
+    !response.ok &&
+    payload?.errorCode === "oauth.invalid_scope" &&
+    typeof payload?.errorDetails === "string" &&
+    payload.errorDetails.includes("offline_access")
+  ) {
+    const retryScope = delegateScopes
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((s) => s !== "offline_access")
+      .join(",");
+
+    console.warn(
+      "[tink-client] Delegated grant rejected offline_access; retrying without it",
+    );
+    ({ response, payload } = await delegate(retryScope));
+  }
+
+  if (!response.ok) {
+    console.error("[tink-client] Authorization grant error", {
+      status: response.status,
+      payload,
+    });
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        payload?.errorMessage ||
+        "Failed to create Tink authorization code",
+    );
+  }
+
+  const code = payload?.code as string | undefined;
+  if (!code) {
+    throw new Error("Missing Tink authorization code");
+  }
+
+  return code;
+}
+
+/**
+ * Get a user access token for an existing Tink user after Tink Link callback.
+ * This creates a new authorization code and immediately exchanges it for an access token.
+ * Use this when the user has completed Tink Link and you need to access their data.
+ */
+export async function getTinkUserAccessToken(params: {
+  externalUserId: string;
+  scopes?: string[];
+  market?: string;
+  locale?: string;
+}): Promise<TinkTokenResponse> {
+  // Generate a new authorization code for this user
+  const authorizationCode = await createTinkUserAuthorizationCode(params);
+
+  // Immediately exchange it for an access token
+  return await exchangeTinkAuthorizationCode(authorizationCode);
+}
+
+export async function exchangeTinkAuthorizationCode(
+  code: string,
+): Promise<TinkTokenResponse> {
   const config = getTinkConfig();
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -132,21 +390,36 @@ export async function exchangeTinkAuthorizationCode(code: string): Promise<TinkT
     redirect_uri: config.redirectUri,
   });
 
-  const response = await fetchWithRetry(`${config.apiBaseUrl}/api/v1/oauth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  const response = await fetchWithRetry(
+    `${config.apiBaseUrl}/api/v1/oauth/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    },
+  );
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload?.error_description || payload?.error || "Failed to exchange Tink auth code");
+    console.error("[tink-client] Token exchange error", {
+      status: response.status,
+      error: payload?.error,
+      error_description: payload?.error_description,
+      error_code: payload?.error_code,
+    });
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to exchange Tink auth code",
+    );
   }
 
   return payload as TinkTokenResponse;
 }
 
-export async function refreshTinkAccessToken(refreshToken: string): Promise<TinkTokenResponse> {
+export async function refreshTinkAccessToken(
+  refreshToken: string,
+): Promise<TinkTokenResponse> {
   const config = getTinkConfig();
   const body = new URLSearchParams({
     grant_type: "refresh_token",
@@ -155,38 +428,119 @@ export async function refreshTinkAccessToken(refreshToken: string): Promise<Tink
     client_secret: config.clientSecret,
   });
 
-  const response = await fetchWithRetry(`${config.apiBaseUrl}/api/v1/oauth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  const response = await fetchWithRetry(
+    `${config.apiBaseUrl}/api/v1/oauth/token`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    },
+  );
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload?.error_description || payload?.error || "Failed to refresh Tink access token");
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to refresh Tink access token",
+    );
   }
 
   return payload as TinkTokenResponse;
 }
 
-export async function getTinkAccounts(accessToken: string): Promise<TinkAccount[]> {
+export async function getTinkAccounts(
+  accessToken: string,
+): Promise<TinkAccount[]> {
   const config = getTinkConfig();
-  const response = await fetchWithRetry(`${config.apiBaseUrl}/data/v2/accounts`, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const response = await fetchWithRetry(
+    `${config.apiBaseUrl}/data/v2/accounts`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload?.error_description || payload?.error || "Failed to fetch Tink accounts");
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to fetch Tink accounts",
+    );
   }
 
   return (payload?.accounts || []) as TinkAccount[];
 }
 
+export interface TinkCredential {
+  id: string;
+  providerId?: string;
+  providerName?: string;
+  type?: string;
+  status?: string;
+  updated?: number;
+  userId?: string;
+}
+
 interface TinkTransactionsResponse {
   transactions: TinkTransaction[];
   nextPageToken?: string | null;
+}
+
+/**
+ * List credentials for a Tink user
+ * Returns array of credentials with their IDs and status
+ */
+export async function listTinkCredentials(
+  accessToken: string,
+): Promise<TinkCredential[]> {
+  const config = getTinkConfig();
+  const response = await fetchWithRetry(
+    `${config.apiBaseUrl}/api/v1/credentials/list`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to list Tink credentials",
+    );
+  }
+
+  return (payload?.credentials || []) as TinkCredential[];
+}
+
+/**
+ * Delete a specific credential by ID
+ * Use this to remove old credentials before adding new ones
+ */
+export async function deleteTinkCredential(
+  accessToken: string,
+  credentialsId: string,
+): Promise<void> {
+  const config = getTinkConfig();
+  const response = await fetchWithRetry(
+    `${config.apiBaseUrl}/api/v1/credentials/${credentialsId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        `Failed to delete Tink credential ${credentialsId}`,
+    );
+  }
 }
 
 export async function syncTinkTransactions(
@@ -205,7 +559,11 @@ export async function syncTinkTransactions(
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload?.error_description || payload?.error || "Failed to sync Tink transactions");
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to sync Tink transactions",
+    );
   }
 
   return {
@@ -224,19 +582,22 @@ export interface MapTinkTransactionInput {
 export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
   const txn = input.transaction;
   const amount = Number(txn.amount?.value?.amount || 0);
-  const currency = txn.amount?.value?.currencyCode || input.defaultCurrency || "USD";
+  const currency =
+    txn.amount?.value?.currencyCode || input.defaultCurrency || "USD";
   const absAmount = Math.abs(amount);
   const amountCents = Math.round(absAmount * 100);
   const isIncome = amount > 0;
-  const description = txn.descriptions?.display
-    || txn.descriptions?.original
-    || txn.merchantName
-    || "Transaction";
+  const description =
+    txn.descriptions?.display ||
+    txn.descriptions?.original ||
+    txn.merchantName ||
+    "Transaction";
 
-  const categoryName = txn.categories?.pfm?.detailed
-    || txn.categories?.pfm?.primary
-    || null;
-  const normalizedCategory = categoryName ? normalizeCategory(categoryName) : null;
+  const categoryName =
+    txn.categories?.pfm?.detailed || txn.categories?.pfm?.primary || null;
+  const normalizedCategory = categoryName
+    ? normalizeCategory(categoryName)
+    : null;
 
   return {
     user_id: input.userId,
@@ -245,8 +606,11 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
     provider_transaction_id: txn.id,
     amount_cents: amountCents,
     currency,
-    date: txn.dates?.booked || txn.dates?.value || new Date().toISOString().slice(0, 10),
-    type: isIncome ? "income" : "expense" as const,
+    date:
+      txn.dates?.booked ||
+      txn.dates?.value ||
+      new Date().toISOString().slice(0, 10),
+    type: isIncome ? "income" : ("expense" as const),
     category: normalizedCategory,
     raw_text: description,
     source: txn.merchantName || null,
