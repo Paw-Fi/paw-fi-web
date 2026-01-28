@@ -6,14 +6,15 @@ runConfig:
   memoryMiB: 2048
 
 env:
+  # Increased heap size for Vite SSR build which requires significant memory
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=3072"
+    value: "--max-old-space-size=4096"
     availability:
       - BUILD
       - RUNTIME
 
 scripts:
-  buildCommand: NODE_OPTIONS="--max-old-space-size=3072" npm run build
+  buildCommand: NODE_OPTIONS="--max-old-space-size=4096" npm run build
   runCommand: npm run start
 
 outputFiles:
