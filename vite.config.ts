@@ -16,6 +16,40 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  // Disable sourcemaps in production to drastically reduce build memory usage
+  // This is the #1 cause of Vite/Rollup OOM during SSR builds
+  build: {
+    sourcemap: false,
+    // Increase chunk size warning limit (reduces Rollup overhead)
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        // Manual chunks to split heavy vendor dependencies
+        // NOTE: Do NOT include modules that are in ssr.external - they conflict during SSR build
+        // (recharts, chart.js, react-chartjs-2, three, lottie-react are externalized for SSR)
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-animation': ['framer-motion', 'motion'],
+          'vendor-ui': ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-tabs', '@radix-ui/react-select'],
+        },
+      },
+    },
+  },
+  // Externalize heavy client-only dependencies from SSR bundle
+  // These don't need to run on the server and massively increase SSR bundle size
+  ssr: {
+    noExternal: ['@tanstack/react-router', '@tanstack/react-start'],
+    external: [
+      'three',
+      '@react-three/fiber',
+      'lottie-web',
+      'lottie-react',
+      'mermaid',
+      'chart.js',
+      'recharts',
+      'react-chartjs-2',
+    ],
+  },
   plugins: [
     tsConfigPaths({
       projects: ['./tsconfig.json'],

@@ -1,8 +1,19 @@
 # Firebase App Hosting configuration using modern scripts format
 runtime: nodejs22
 
+runConfig:
+  cpu: 1
+  memoryMiB: 2048
+
+env:
+  - variable: NODE_OPTIONS
+    value: "--max-old-space-size=3072"
+    availability:
+      - BUILD
+      - RUNTIME
+
 scripts:
-  buildCommand: npm run build
+  buildCommand: NODE_OPTIONS="--max-old-space-size=3072" npm run build
   runCommand: npm run start
 
 outputFiles:
