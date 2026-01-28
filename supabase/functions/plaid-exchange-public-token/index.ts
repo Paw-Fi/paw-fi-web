@@ -20,6 +20,9 @@ interface ExchangeRequest {
   publicToken: string;
   institutionId?: string;
   institutionName?: string;
+  institutionLogo?: string;
+  countryCode?: string;
+  idempotencyKey?: string;
 }
 
 Deno.serve(async (req) => {
@@ -80,34 +83,71 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check idempotency - return existing connection if found
+    if (body.idempotencyKey) {
+      const { data: existingConnection } = await supabase
+        .from("bank_connections")
+        .select("id, household_id")
+        .eq("user_id", authResult.userId)
+        .eq("idempotency_key", body.idempotencyKey)
+        .maybeSingle();
+
+      if (existingConnection) {
+        console.log(
+          `[plaid-exchange] Idempotent request detected, returning existing connection: ${existingConnection.id}`,
+        );
+        // Fetch accounts for the existing connection
+        const { data: existingAccounts } = await supabase
+          .from("bank_accounts")
+          .select("id, name, mask, type, subtype, currency, balance_current")
+          .eq("bank_connection_id", existingConnection.id);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            connectionId: existingConnection.id,
+            householdId: existingConnection.household_id,
+            accounts: existingAccounts || [],
+            idempotent: true,
+          }),
+          {
+            status: 200,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
     const plaidResponse = await exchangePublicToken(body.publicToken);
     const encryptedToken = await encryptSecret(plaidResponse.access_token);
 
-    const payload = {
-      user_id: authResult.userId,
-      provider: PLAID_PROVIDER,
-      plaid_item_id: plaidResponse.item_id,
-      provider_item_id: plaidResponse.item_id,
-      plaid_access_token_encrypted: encryptedToken,
-      access_token_encrypted: encryptedToken,
-      cursor: null,
-      status: "active",
-      metadata: {
-        institution_id: body.institutionId || null,
-        institution_name: body.institutionName || null,
+    // Use atomic RPC to create/update connection with household
+    // This prevents race conditions where concurrent requests create duplicate households
+    const { data: upsertResult, error: upsertError } = await supabase.rpc(
+      "upsert_bank_connection_with_household",
+      {
+        p_user_id: authResult.userId,
+        p_provider: PLAID_PROVIDER,
+        p_provider_item_id: plaidResponse.item_id,
+        p_access_token_encrypted: encryptedToken,
+        p_refresh_token_encrypted: null,
+        p_expires_at: null,
+        p_country_code: body.countryCode?.toUpperCase() || "US",
+        p_idempotency_key: body.idempotencyKey || null,
+        p_institution_name: body.institutionName || "Bank Account",
+        p_institution_logo: body.institutionLogo || null,
+        p_metadata: {
+          institution_id: body.institutionId || null,
+          institution_name: body.institutionName || null,
+          institution_logo: body.institutionLogo || null,
+        },
       },
-    };
+    );
 
-    const { data: connection, error: connectionError } = await supabase
-      .from("bank_connections")
-      .upsert(payload, { onConflict: "user_id,provider,provider_item_id" })
-      .select("id")
-      .single();
-
-    if (connectionError) {
+    if (upsertError || !upsertResult || upsertResult.length === 0) {
       console.error(
-        "[plaid-exchange-public-token] Failed to persist connection",
-        connectionError,
+        "[plaid-exchange-public-token] Failed to upsert connection",
+        upsertError,
       );
       return new Response(
         JSON.stringify({ error: "Failed to save connection" }),
@@ -118,27 +158,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (connection?.id) {
-      await supabase.from("bank_connection_tokens").insert({
-        bank_connection_id: connection.id,
-        token_type: "access",
-        token_encrypted: encryptedToken,
-      });
+    const {
+      connection_id: connectionId,
+      household_id: householdId,
+      is_new_connection: isNewConnection,
+    } = upsertResult[0];
+
+    if (isNewConnection) {
+      console.log(
+        `[plaid-exchange] Created new connection ${connectionId} with household ${householdId}`,
+      );
+    } else {
+      console.log(
+        `[plaid-exchange] Updated existing connection ${connectionId}, reusing household ${householdId}`,
+      );
+    }
+
+    // Store token in bank_connection_tokens table
+    if (connectionId) {
+      await supabase.from("bank_connection_tokens").upsert(
+        {
+          bank_connection_id: connectionId,
+          token_type: "access",
+          token_encrypted: encryptedToken,
+        },
+        { onConflict: "bank_connection_id,token_type" },
+      );
     }
 
     const accounts = await getPlaidAccounts(plaidResponse.access_token);
-    const upsertResult = await upsertPlaidAccounts({
+    const upsertAccountsResult = await upsertPlaidAccounts({
       supabase,
       userId: authResult.userId,
-      bankConnectionId: connection.id,
+      bankConnectionId: connectionId,
       accounts,
     });
 
     return new Response(
       JSON.stringify({
         success: true,
-        connectionId: connection.id,
-        accounts: upsertResult.records,
+        connectionId: connectionId,
+        householdId: householdId,
+        accounts: upsertAccountsResult.records,
       }),
       {
         status: 200,

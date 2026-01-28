@@ -22,6 +22,7 @@ import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { Separator } from "@/components/ui/separator";
+import { DataOwnershipSection } from "@/components/sections/data-ownership-section";
 
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
@@ -261,9 +262,12 @@ export default function HomePage() {
         {/* Deep Dive 3: Widgets (Visual Appeal) */}
         <WidgetsSection />
 
+        {/* Data Ownership Section - Trust & Safety */}
+        <DataOwnershipSection />
+
         <section
           id="backlink-resources"
-          className="mx-auto mt-24 max-w-6xl rounded-[32px] border border-white/20 bg-white/60 p-10 shadow-2xl shadow-primary/10 backdrop-blur-3xl dark:border-slate-800/60 dark:bg-slate-900/70"
+          className="sr-only mx-auto mt-24 max-w-6xl rounded-[32px] border border-white/20 bg-white/60 p-10 shadow-2xl shadow-primary/10 backdrop-blur-3xl dark:border-slate-800/60 dark:bg-slate-900/70"
         >
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
             <div className="lg:w-1/3">

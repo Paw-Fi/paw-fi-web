@@ -89,37 +89,62 @@ function TermsOfService() {
             <li>Infringe the intellectual property rights of others</li>
           </ul>
           
-          <h2 className="mt-8 text-2xl font-semibold">5. Intellectual Property</h2>
+          <h2 className="mt-8 text-2xl font-semibold">6. Data Ownership and Control</h2>
+          <p>
+            At Moneko, we believe your data belongs to you. You maintain complete ownership and control over your personal and financial information.
+          </p>
+          
+          <h3 className="mt-6 text-xl font-semibold">Your Data Rights</h3>
+          <ul className="list-disc pl-8">
+            <li>You can export all your data at any time in Excel or CSV format</li>
+            <li>You can delete your account and all associated data with one click</li>
+            <li>We do not keep backup copies of deleted user data</li>
+            <li>We never sell your personal or financial data to third parties</li>
+            <li>You maintain full ownership of your financial information</li>
+          </ul>
+          
+          <h3 className="mt-6 text-xl font-semibold">No Lock-in Policy</h3>
+          <p>
+            We are committed to ensuring you can easily use your data however you choose. This means:
+          </p>
+          <ul className="list-disc pl-8">
+            <li>No restrictions on using exported data with other services</li>
+            <li>No barriers to migrating away from Moneko</li>
+            <li>Complete data portability and portability rights</li>
+            <li>True deletion - not just deactivation - when you choose to leave</li>
+          </ul>
+          
+          <h2 className="mt-8 text-2xl font-semibold">7. Intellectual Property</h2>
           <p>
             All content on Moneko, including text, graphics, logos, and software, is the property of Moneko or its content suppliers and is protected by copyright and other intellectual property laws.
           </p>
           
-          <h2 className="mt-8 text-2xl font-semibold">6. Disclaimer of Warranties</h2>
+          <h2 className="mt-8 text-2xl font-semibold">8. Disclaimer of Warranties</h2>
           <p>
             Our services are provided "as is" without warranties of any kind, either express or implied. We do not guarantee that our services will be uninterrupted, secure, or error-free.
           </p>
           
-          <h2 className="mt-8 text-2xl font-semibold">7. Limitation of Liability</h2>
+          <h2 className="mt-8 text-2xl font-semibold">9. Limitation of Liability</h2>
           <p>
             Moneko shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of our services.
           </p>
           
-          <h2 className="mt-8 text-2xl font-semibold">8. Educational Content Disclaimer</h2>
+          <h2 className="mt-8 text-2xl font-semibold">10. Educational Content Disclaimer</h2>
           <p>
             The educational content provided by Moneko is for informational purposes only and does not constitute financial advice. Users should consult with qualified financial professionals before making investment decisions.
           </p>
           
-          <h2 className="mt-8 text-2xl font-semibold">9. Modification of Terms</h2>
+          <h2 className="mt-8 text-2xl font-semibold">11. Modification of Terms</h2>
           <p>
             We reserve the right to modify these Terms of Service at any time. We will notify users of any material changes through our website or by email.
           </p>
           
-          <h2 className="mt-8 text-2xl font-semibold">10. Governing Law</h2>
+          <h2 className="mt-8 text-2xl font-semibold">12. Governing Law</h2>
           <p>
             These Terms of Service shall be governed by and construed in accordance with the laws of the jurisdiction in which Moneko operates, without regard to its conflict of law provisions.
           </p>
           
-          <h2 className="mt-8 text-2xl font-semibold">11. Contact Information</h2>
+          <h2 className="mt-8 text-2xl font-semibold">13. Contact Information</h2>
           <p>
             If you have any questions about these Terms of Service, please contact us at:
           </p>

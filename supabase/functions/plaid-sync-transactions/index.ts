@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
-import { authenticateUser } from "../shared/auth.ts";
+import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import {
   PLAID_PROVIDER,
@@ -77,7 +77,11 @@ Deno.serve(async (req) => {
       },
     });
 
-    const authResult = await authenticateUser(req, supabase);
+    const authResult = await authenticateUserOrInternal(
+      req,
+      supabase,
+      body.connectionId,
+    );
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
@@ -421,6 +425,62 @@ async function syncConnection(params: {
     summary.status = "error";
     summary.error = error instanceof Error ? error.message : String(error);
     const errorCode = error instanceof PlaidError ? error.code || null : null;
+
+    // Handle specific Plaid error codes
+    if (error instanceof PlaidError) {
+      // ITEM_LOGIN_REQUIRED: User needs to re-authenticate
+      if (errorCode === "ITEM_LOGIN_REQUIRED") {
+        console.log(
+          `[plaid-sync] Connection ${params.connection.id} requires re-authentication`,
+        );
+        await params.supabase
+          .from("bank_connections")
+          .update({
+            status: "needs_reauth",
+            error_code: errorCode,
+            error_message:
+              "Bank requires re-authentication. Please reconnect your account.",
+          })
+          .eq("id", params.connection.id);
+        await auditUpdate({
+          status: "failed",
+          error_message: "Bank requires re-authentication",
+          error_code: errorCode,
+          error_payload: error.details,
+          finished_at: new Date().toISOString(),
+        });
+        return summary;
+      }
+
+      // INVALID_CURSOR: Cursor is stale/invalid, reset and retry
+      if (errorCode === "INVALID_CURSOR") {
+        console.log(
+          `[plaid-sync] Invalid cursor for connection ${params.connection.id}, resetting cursor`,
+        );
+        // Reset the cursor and mark for retry
+        await params.supabase
+          .from("bank_connections")
+          .update({
+            cursor: null,
+            plaid_cursor: null,
+            error_code: null,
+            error_message: null,
+          })
+          .eq("id", params.connection.id);
+        // Update error for audit but mark as recoverable
+        summary.error = "Cursor reset - sync will retry with fresh cursor";
+        await auditUpdate({
+          status: "failed",
+          error_message: summary.error,
+          error_code: errorCode,
+          error_payload: error.details,
+          finished_at: new Date().toISOString(),
+        });
+        return summary;
+      }
+    }
+
+    // Default error handling for other errors
     await params.supabase
       .from("bank_connections")
       .update({

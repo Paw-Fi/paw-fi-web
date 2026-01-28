@@ -1,19 +1,41 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
+import {
+  verifyTinkWebhook,
+  generateWebhookEventId,
+} from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+// Skip verification ONLY if explicitly set via SKIP_WEBHOOK_VERIFICATION=true
+// This is secure by default - verification is required unless explicitly disabled
+const SKIP_WEBHOOK_VERIFICATION =
+  Deno.env.get("SKIP_WEBHOOK_VERIFICATION")?.toLowerCase() === "true";
+
+if (SKIP_WEBHOOK_VERIFICATION) {
+  console.warn(
+    "[tink-webhook] WARNING: Webhook verification is disabled. This should only be used in development.",
+  );
+}
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for tink-webhook");
 }
 
+// Events that trigger transaction sync
 const SYNC_EVENTS = new Set([
   "account-transactions:modified",
   "account-booked-transactions:modified",
   "account-transactions:deleted",
   "refresh:finished",
+]);
+
+// Events that indicate credentials need re-authentication
+const REAUTH_EVENTS = new Set([
+  "credentials:status-updated", // Check status field for AUTHENTICATION_ERROR
+  "credentials:deleted",
 ]);
 
 interface TinkWebhookPayload {
@@ -25,6 +47,7 @@ interface TinkWebhookPayload {
   content?: {
     userId?: string;
     credentialsId?: string;
+    status?: string;
     account?: { id?: string };
     transactions?: { ids?: string[] };
   };
@@ -54,10 +77,39 @@ Deno.serve(async (req) => {
     );
   }
 
+  // Get raw body for signature verification
+  const rawBody = await req.text();
+
+  // Verify webhook signature (required by default, can be disabled via SKIP_WEBHOOK_VERIFICATION=true)
+  if (!SKIP_WEBHOOK_VERIFICATION) {
+    const tinkSignatureHeader = req.headers.get("X-Tink-Signature");
+    const verificationResult = await verifyTinkWebhook(
+      rawBody,
+      tinkSignatureHeader,
+    );
+
+    if (!verificationResult.valid) {
+      console.error(
+        "[tink-webhook] Signature verification failed:",
+        verificationResult.error,
+      );
+      return new Response(
+        JSON.stringify({ error: "Invalid webhook signature" }),
+        {
+          status: 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    console.log(
+      "[tink-webhook] Signature verified successfully, timestamp:",
+      verificationResult.timestamp,
+    );
+  }
+
   try {
-    const payload = (await req
-      .json()
-      .catch(() => null)) as TinkWebhookPayload | null;
+    const payload = JSON.parse(rawBody) as TinkWebhookPayload | null;
     const providerItemId =
       payload?.context?.userId || payload?.content?.userId || null;
 
@@ -77,13 +129,15 @@ Deno.serve(async (req) => {
       global: { headers: { "X-Client-Info": "moneko-tink-webhook" } },
     });
 
+    // Look up the connection
     const { data: connection } = await supabase
       .from("bank_connections")
-      .select("id")
+      .select("id, status")
       .eq("provider", TINK_PROVIDER)
       .eq("provider_item_id", providerItemId)
       .maybeSingle();
 
+    // Log the webhook event
     await supabase.from("bank_webhook_events").insert({
       provider: TINK_PROVIDER,
       event_type: payload.event,
@@ -93,13 +147,88 @@ Deno.serve(async (req) => {
       payload,
     });
 
+    // Handle reauth events
+    if (REAUTH_EVENTS.has(payload.event)) {
+      // Check if credentials status indicates authentication error
+      const needsReauth =
+        payload.event === "credentials:deleted" ||
+        (payload.event === "credentials:status-updated" &&
+          payload.content?.status === "AUTHENTICATION_ERROR");
+
+      if (needsReauth && connection?.id) {
+        await supabase
+          .from("bank_connections")
+          .update({
+            status: "needs_reauth",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", connection.id);
+        console.log(
+          `[tink-webhook] Marked connection ${connection.id} as needs_reauth (${payload.event})`,
+        );
+      }
+    }
+
+    // Handle sync events - create sync job
     if (connection?.id && SYNC_EVENTS.has(payload.event)) {
-      await supabase.from("bank_sync_jobs").insert({
-        bank_connection_id: connection.id,
-        provider: TINK_PROVIDER,
-        trigger_source: "webhook",
-        payload,
-      });
+      // Generate idempotency key for webhook (async - uses content hash)
+      const webhookEventId = await generateWebhookEventId(
+        "tink",
+        payload as Record<string, unknown>,
+      );
+
+      // Check idempotency using database function
+      const { data: isDuplicate } = await supabase.rpc(
+        "check_webhook_idempotency",
+        {
+          p_webhook_event_id: webhookEventId,
+        },
+      );
+
+      if (isDuplicate) {
+        console.log(
+          `[tink-webhook] Duplicate webhook detected, skipping: ${webhookEventId}`,
+        );
+        return new Response(
+          JSON.stringify({ received: true, duplicate: true }),
+          {
+            status: 200,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Create sync job with webhook_event_id for idempotency
+      const { error: insertError } = await supabase
+        .from("bank_sync_jobs")
+        .insert({
+          bank_connection_id: connection.id,
+          provider: TINK_PROVIDER,
+          trigger_source: "webhook",
+          webhook_event_id: webhookEventId,
+          payload,
+        });
+
+      if (insertError) {
+        // If it's a unique constraint violation, it's a duplicate
+        if (insertError.code === "23505") {
+          console.log(
+            `[tink-webhook] Duplicate sync job detected via constraint: ${webhookEventId}`,
+          );
+          return new Response(
+            JSON.stringify({ received: true, duplicate: true }),
+            {
+              status: 200,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+        console.error("[tink-webhook] Failed to create sync job:", insertError);
+      } else {
+        console.log(
+          `[tink-webhook] Created sync job for connection ${connection.id}, event: ${webhookEventId}`,
+        );
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {

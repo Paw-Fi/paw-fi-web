@@ -71,6 +71,30 @@ Deno.serve(async (req) => {
       locale: body.locale || config.defaultLocale,
     });
 
+    // Store state in DB for CSRF protection - expires in 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const { error: stateError } = await supabase
+      .from("tink_auth_states")
+      .insert({
+        state,
+        user_id: authResult.userId,
+        expires_at: expiresAt,
+      });
+
+    if (stateError) {
+      console.error(
+        "[tink-create-link-token] Failed to store state",
+        stateError,
+      );
+      return new Response(
+        JSON.stringify({ error: "Failed to initialize Tink link" }),
+        {
+          status: 500,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

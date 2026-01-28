@@ -345,14 +345,13 @@ function PricingPage() {
             />
             <span className="text-base font-medium text-foreground">Annually (Best value)</span>
           </motion.div>
-          <motion.p
-            className="mt-4 text-sm text-muted-foreground-color"
-            variants={itemVariants}
+          <p
+            className="mt-4 text-sm text-muted-foreground-color sr-only"
           >
             Early Bird promo: Plus was $7.99/month or $59.99/year.
-          </motion.p>
+          </p>
 
-          <motion.div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2" variants={itemVariants}>
+          <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 sr-only">
             <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/features/pockets-system">
               Explore Pockets (Envelopes)
             </a>
@@ -374,7 +373,7 @@ function PricingPage() {
             <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/cookie-policy">
               Cookies
             </a>
-          </motion.div>
+          </div>
           <span className="sr-only" aria-live="polite" aria-atomic="true">
             {billingPeriodMessage}
           </span>

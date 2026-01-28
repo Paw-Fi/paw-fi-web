@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
-import { authenticateUser } from "../shared/auth.ts";
+import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret, encryptSecret } from "../shared/token-encryption.ts";
 import {
   persistTinkTransactions,
@@ -77,7 +77,11 @@ Deno.serve(async (req) => {
       global: { headers: { "X-Client-Info": "moneko-tink-sync-transactions" } },
     });
 
-    const authResult = await authenticateUser(req, supabase);
+    const authResult = await authenticateUserOrInternal(
+      req,
+      supabase,
+      body.connectionId,
+    );
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
@@ -313,54 +317,103 @@ async function syncConnection(params: {
       throw new Error("Missing Tink access token");
     }
     let accessToken = await decryptSecret(accessTokenEncrypted);
+
+    // Check if token needs refresh
     if (
       params.connection.refresh_token_encrypted &&
       params.connection.expires_at
     ) {
       const expiresAt = new Date(params.connection.expires_at);
-      if (
+      // Refresh if expired or expiring within 5 minutes
+      const shouldRefresh =
         Number.isFinite(expiresAt.getTime()) &&
-        expiresAt.getTime() <= Date.now()
-      ) {
-        const refreshToken = await decryptSecret(
-          params.connection.refresh_token_encrypted,
-        );
-        const refreshed = await refreshTinkAccessToken(refreshToken);
-        accessToken = refreshed.access_token;
-        const encryptedAccess = await encryptSecret(refreshed.access_token);
-        const encryptedRefresh = refreshed.refresh_token
-          ? await encryptSecret(refreshed.refresh_token)
-          : null;
-        const expiresAtNext = refreshed.expires_in
-          ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
-          : null;
-        await params.supabase
-          .from("bank_connections")
-          .update({
-            access_token_encrypted: encryptedAccess,
-            refresh_token_encrypted:
-              encryptedRefresh || params.connection.refresh_token_encrypted,
-            expires_at: expiresAtNext,
-          })
-          .eq("id", params.connection.id);
+        expiresAt.getTime() <= Date.now() + 5 * 60 * 1000;
 
-        await params.supabase.from("bank_connection_tokens").insert([
+      if (shouldRefresh) {
+        // Acquire token refresh lock to prevent race conditions
+        const { data: lockAcquired } = await params.supabase.rpc(
+          "acquire_token_refresh_lock",
           {
-            bank_connection_id: params.connection.id,
-            token_type: "access",
-            token_encrypted: encryptedAccess,
-            expires_at: expiresAtNext,
+            p_bank_connection_id: params.connection.id,
+            p_lock_seconds: 30,
           },
-          ...(encryptedRefresh
-            ? [
-                {
-                  bank_connection_id: params.connection.id,
-                  token_type: "refresh",
-                  token_encrypted: encryptedRefresh,
-                },
-              ]
-            : []),
-        ]);
+        );
+
+        if (lockAcquired) {
+          try {
+            console.log(
+              `[tink-sync] Refreshing token for connection ${params.connection.id}`,
+            );
+            const refreshToken = await decryptSecret(
+              params.connection.refresh_token_encrypted,
+            );
+            const refreshed = await refreshTinkAccessToken(refreshToken);
+            accessToken = refreshed.access_token;
+            const encryptedAccess = await encryptSecret(refreshed.access_token);
+            const encryptedRefresh = refreshed.refresh_token
+              ? await encryptSecret(refreshed.refresh_token)
+              : null;
+            const expiresAtNext = refreshed.expires_in
+              ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
+              : null;
+
+            await params.supabase
+              .from("bank_connections")
+              .update({
+                access_token_encrypted: encryptedAccess,
+                refresh_token_encrypted:
+                  encryptedRefresh || params.connection.refresh_token_encrypted,
+                expires_at: expiresAtNext,
+              })
+              .eq("id", params.connection.id);
+
+            await params.supabase.from("bank_connection_tokens").insert([
+              {
+                bank_connection_id: params.connection.id,
+                token_type: "access",
+                token_encrypted: encryptedAccess,
+                expires_at: expiresAtNext,
+              },
+              ...(encryptedRefresh
+                ? [
+                    {
+                      bank_connection_id: params.connection.id,
+                      token_type: "refresh",
+                      token_encrypted: encryptedRefresh,
+                    },
+                  ]
+                : []),
+            ]);
+
+            console.log(
+              `[tink-sync] Token refreshed successfully for connection ${params.connection.id}`,
+            );
+          } finally {
+            // Always release the lock
+            await params.supabase.rpc("release_token_refresh_lock", {
+              p_bank_connection_id: params.connection.id,
+            });
+          }
+        } else {
+          // Another process is refreshing, wait a moment and re-fetch the connection
+          console.log(
+            `[tink-sync] Token refresh in progress by another process, waiting...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // Re-fetch the connection to get the updated token
+          const { data: updatedConnection } = await params.supabase
+            .from("bank_connections")
+            .select("access_token_encrypted, expires_at")
+            .eq("id", params.connection.id)
+            .single();
+
+          if (updatedConnection?.access_token_encrypted) {
+            accessToken = await decryptSecret(
+              updatedConnection.access_token_encrypted,
+            );
+          }
+        }
       }
     }
 
@@ -453,11 +506,12 @@ async function syncConnection(params: {
       }
     }
 
+    // Note: Tink doesn't support incremental sync via cursor like Plaid.
+    // Each sync fetches all transactions and paginates through them.
+    // We don't persist the cursor as it's only used for pagination within a single sync.
     await params.supabase
       .from("bank_connections")
       .update({
-        cursor: nextPage || null,
-        plaid_cursor: nextPage || null,
         last_synced_at: new Date().toISOString(),
         status: "active",
         error_code: null,

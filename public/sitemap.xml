@@ -18,6 +18,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://moneko.io/how-it-works</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://moneko.io/cookie-policy</loc>
     <lastmod>2025-09-08</lastmod>
     <changefreq>yearly</changefreq>
@@ -26,6 +31,11 @@
   <url>
     <loc>https://moneko.io/privacy-policy</loc>
     <lastmod>2025-09-08</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://moneko.io/eula</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

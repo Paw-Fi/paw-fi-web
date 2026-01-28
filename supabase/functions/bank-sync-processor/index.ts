@@ -5,6 +5,10 @@ import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
+
+// Fixed batch size to prevent DoS attacks
+const BATCH_SIZE = 10;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for bank-sync-processor");
@@ -27,10 +31,6 @@ interface BankConnection {
   provider: string;
 }
 
-interface ProcessorRequest {
-  batchSize?: number;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -41,6 +41,33 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
+      headers: { ...headers, "Content-Type": "application/json" },
+    });
+  }
+
+  // CRITICAL: Authenticate internal service calls only
+  // This endpoint should NOT be publicly accessible
+  if (!INTERNAL_SERVICE_SECRET) {
+    console.error(
+      "[bank-sync-processor] INTERNAL_SERVICE_SECRET not configured",
+    );
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  const providedSecret = req.headers.get("X-Internal-Service-Secret");
+  if (
+    !providedSecret ||
+    !constantTimeCompare(providedSecret, INTERNAL_SERVICE_SECRET)
+  ) {
+    console.warn("[bank-sync-processor] Unauthorized access attempt");
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
       headers: { ...headers, "Content-Type": "application/json" },
     });
   }
@@ -56,9 +83,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = (await req.json().catch(() => ({}))) as ProcessorRequest;
-    const batchSize = body.batchSize || 10;
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,
@@ -68,17 +92,36 @@ Deno.serve(async (req) => {
       global: { headers: { "X-Client-Info": "moneko-bank-sync-processor" } },
     });
 
-    // Fetch pending jobs
-    const { data: jobs, error: jobsError } = await supabase
-      .from("bank_sync_jobs")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(batchSize);
+    // Release stuck jobs before fetching new ones (TTL: 15 minutes)
+    // Must match or exceed sync endpoint lock durations to avoid requeueing in-flight jobs
+    const { data: releasedCount, error: releaseError } = await supabase.rpc(
+      "release_stuck_sync_jobs",
+      { p_ttl_minutes: 15 },
+    );
+
+    if (releaseError) {
+      console.error(
+        "[bank-sync-processor] Failed to release stuck jobs:",
+        releaseError,
+      );
+    } else if (releasedCount > 0) {
+      console.log(`[bank-sync-processor] Released ${releasedCount} stuck jobs`);
+    }
+
+    // Fetch pending jobs (atomic claim via update with returning)
+    // Use FOR UPDATE SKIP LOCKED pattern for atomic job claiming via RPC
+    const processorId = crypto.randomUUID();
+    const { data: jobs, error: jobsError } = await supabase.rpc(
+      "claim_pending_sync_jobs",
+      {
+        p_batch_size: BATCH_SIZE,
+        p_processor_id: processorId,
+      },
+    );
 
     if (jobsError) {
-      console.error("[bank-sync-processor] Failed to fetch jobs", jobsError);
-      return new Response(JSON.stringify({ error: "Failed to fetch jobs" }), {
+      console.error("[bank-sync-processor] Failed to claim jobs", jobsError);
+      return new Response(JSON.stringify({ error: "Failed to claim jobs" }), {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
       });
@@ -98,6 +141,10 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log(
+      `[bank-sync-processor] Claimed ${jobs.length} jobs with processor ${processorId}`,
+    );
+
     const results = {
       processed: 0,
       succeeded: 0,
@@ -107,14 +154,7 @@ Deno.serve(async (req) => {
 
     for (const job of jobs as BankSyncJob[]) {
       try {
-        // Mark job as processing
-        await supabase
-          .from("bank_sync_jobs")
-          .update({
-            status: "processing",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", job.id);
+        // Jobs are already marked as processing by the RPC call
 
         // Load bank connection
         const { data: connection, error: connectionError } = await supabase
@@ -138,11 +178,12 @@ Deno.serve(async (req) => {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
 
-        // Mark job as completed
+        // Mark job as completed (clear processing_started_at)
         await supabase
           .from("bank_sync_jobs")
           .update({
             status: "completed",
+            processing_started_at: null,
             updated_at: new Date().toISOString(),
             processed_at: new Date().toISOString(),
           })
@@ -154,11 +195,12 @@ Deno.serve(async (req) => {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
-        // Mark job as failed
+        // Mark job as failed (clear processing_started_at)
         await supabase
           .from("bank_sync_jobs")
           .update({
             status: "failed",
+            processing_started_at: null,
             updated_at: new Date().toISOString(),
             processed_at: new Date().toISOString(),
             payload: {
@@ -238,7 +280,7 @@ async function processTinkJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET!,
       },
       body: JSON.stringify({
         connectionId: connection.id,
@@ -265,7 +307,7 @@ async function processPlaidJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET!,
       },
       body: JSON.stringify({
         connectionId: connection.id,
@@ -277,4 +319,20 @@ async function processPlaidJob(
     const errorText = await response.text();
     throw new Error(`Plaid sync failed: ${response.status} ${errorText}`);
   }
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+
+  return result === 0;
 }

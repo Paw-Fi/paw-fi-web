@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   MessageSquare,
   Camera,
-  ArrowRight
+  ArrowRight,
+  FileSpreadsheet,
+  Trash2
 } from 'lucide-react'
 import { BentoCard } from "@/components/ui/bento-card"
 import { HomeHeader } from "@/components/index/header"
@@ -23,6 +25,8 @@ import { AppleDownloadButton } from "@/components/ui/apple-download-button"
 import { AndroidDownloadButton } from "@/components/ui/android-download-button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DataOwnershipSection } from "@/components/sections/data-ownership-section";
+import { FaqSection } from "@/components/ui/faq-section";
 
 const META_TITLE = "How Moneko Works - AI Budgeting Simplified"
 const META_DESCRIPTION = "See how Moneko uses AI to simplify personal and household finance. From voice capture to envelope budgeting and WhatsApp integration."
@@ -44,6 +48,54 @@ export const Route = createFileRoute('/how-it-works')({
 function HowItWorksPage() {
   const currencySymbol = getCurrencySymbolBasedOnTimeZone()
   const pageUrl = getCanonicalUrl("/how-it-works")
+
+  const faqData = [
+    {
+      question: "How does Moneko capture expenses without manual data entry?",
+      answer:
+        "You can log spending by typing a short message, sending a receipt photo, recording a voice note, or attaching supported files. Moneko extracts key details (like amount, date, and category) and routes you to a review screen so you can confirm or edit before saving.",
+    },
+    {
+      question: "What are Pockets (envelope budgeting) and how do they work?",
+      answer:
+        "Pockets are digital envelopes for your monthly budget (like Groceries, Bills, Fun, and Goals). You set a total budget, allocate it across pockets, and then spending updates each pocket so you can see what’s left in real time.",
+    },
+    {
+      question: "What’s the difference between Personal and Household mode?",
+      answer:
+        "Personal mode tracks just your finances. Household mode is for shared budgets and spending with other members, so you can manage joint expenses and see group-aware dashboards.",
+    },
+    {
+      question: "Can I plan for recurring bills and income?",
+      answer:
+        "Yes. The Recurring area is designed for transactions you don’t want to re-enter every month—like rent, subscriptions, utilities, and salary. You can add, edit, and delete recurring items.",
+    },
+    {
+      question: "What is AI Scenario Planning and what can I use it for?",
+      answer:
+        "Scenario Planning lets you ask “what if?” questions in plain language and pick a target date. Moneko responds with a structured answer and can save scenarios so you can revisit them later.",
+    },
+    {
+      question: "What can the WhatsApp assistant do?",
+      answer:
+        "From WhatsApp, you can log expenses or income, send receipt photos, send voice notes, request spending summaries, and check your budgets and pockets. When needed, the assistant can ask clarifying questions or present quick-reply buttons to keep chat fast.",
+    },
+    {
+      question: "Do I need to verify my WhatsApp number (and is it included in every plan)?",
+      answer:
+        "To protect your account, WhatsApp usage requires verifying your WhatsApp number through the in-app verification flow. WhatsApp access may also be subscription-gated depending on your plan.",
+    },
+    {
+      question: "Does Moneko support multi-currency budgeting?",
+      answer:
+        "Yes. You can switch your current currency view so budgeting, charts, and totals stay consistent when you spend across multiple currencies.",
+    },
+    {
+      question: "Can I use widgets and notifications?",
+      answer:
+        "Moneko can optionally provide home screen widgets for quick budget and pocket views, plus quick actions like starting a quick-add. You can also enable notifications so important updates (including household-related events) reach you outside the app.",
+    },
+  ];
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -88,6 +140,20 @@ function HowItWorksPage() {
             "text": "Use AI scenario planning to ask 'What if?' questions and forecast your future balance."
           }
         ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${pageUrl}#faq`,
+        "url": pageUrl,
+        "name": "Moneko How It Works FAQ",
+        "mainEntity": faqData.map((item) => ({
+          "@type": "Question",
+          "name": item.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": item.answer,
+          },
+        })),
       }
     ]
   };
@@ -267,6 +333,14 @@ function HowItWorksPage() {
               </div>
            </div>
         </section>
+
+        {/* Data Ownership Section - Trust & Safety */}
+        <DataOwnershipSection />
+
+        <div className="border-t border-slate-100 dark:border-slate-800">
+          <FaqSection faqData={faqData} title="How Moneko Works: FAQ" />
+        </div>
+      
 
          {/* Bottom CTA */}
          <section className="container px-4 py-24 mx-auto text-center">
