@@ -272,14 +272,15 @@ Deno.serve(async (req) => {
 
     // Create Tink user and get authorization code via delegated grant
     // This code will be embedded in the Tink Link URL and consumed by Tink Link itself
+    // If no actorClientId is provided, it defaults to Tink Link's constant actor client ID
     const authorizationCode = await createTinkUserAuthorizationCode({
       externalUserId,
       scopes: config.scopes,
       market,
       locale: body.locale,
-      // If your Tink setup requires an actor client for Link, set:
-      // TINK_LINK_ACTOR_CLIENT_ID via Supabase secrets.
-      actorClientId: Deno.env.get("TINK_LINK_ACTOR_CLIENT_ID")?.trim(),
+      // Allow override via env var if needed, otherwise defaults to Tink Link actor client ID
+      actorClientId:
+        Deno.env.get("TINK_LINK_ACTOR_CLIENT_ID")?.trim() || undefined,
     });
 
     console.log(

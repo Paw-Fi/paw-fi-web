@@ -129,6 +129,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_accounts_provider_account
   ON public.bank_accounts(provider, provider_account_id)
   WHERE provider_account_id IS NOT NULL;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'bank_accounts_provider_account_unique'
+  ) THEN
+    ALTER TABLE public.bank_accounts
+      ADD CONSTRAINT bank_accounts_provider_account_unique
+      UNIQUE (provider, provider_account_id);
+  END IF;
+END $$;
+
 ALTER TABLE public.bank_accounts
   DROP CONSTRAINT IF EXISTS unique_plaid_account;
 
@@ -142,6 +153,17 @@ CREATE TABLE IF NOT EXISTS public.bank_connection_tokens (
   key_version INTEGER DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'bank_connection_tokens_unique'
+  ) THEN
+    ALTER TABLE public.bank_connection_tokens
+      ADD CONSTRAINT bank_connection_tokens_unique
+      UNIQUE (bank_connection_id, token_type);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_bank_connection_tokens_connection
   ON public.bank_connection_tokens(bank_connection_id);
@@ -167,6 +189,17 @@ CREATE TABLE IF NOT EXISTS public.bank_transaction_raw (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bank_transaction_raw_provider
   ON public.bank_transaction_raw(bank_account_id, provider, provider_transaction_id)
   WHERE provider_transaction_id IS NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'bank_transaction_raw_unique'
+  ) THEN
+    ALTER TABLE public.bank_transaction_raw
+      ADD CONSTRAINT bank_transaction_raw_unique
+      UNIQUE (bank_account_id, provider, provider_transaction_id);
+  END IF;
+END $$;
 
 ALTER TABLE public.bank_transaction_raw ENABLE ROW LEVEL SECURITY;
 

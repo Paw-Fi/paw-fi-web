@@ -17,6 +17,14 @@ const MARKET_LOCALE_OVERRIDES: Record<string, string> = {
   IE: "en_IE",
 };
 
+/**
+ * Tink Link's constant actor client ID.
+ * This is documented by Tink and required for delegated authorization grants
+ * that will be consumed by Tink Link.
+ * @see https://docs.tink.com/resources/tink-link-web/tink-link-web-permanent-users
+ */
+const TINK_LINK_ACTOR_CLIENT_ID = "df05e4b379934cd09963197cc855bfe9";
+
 type TinkEnv = keyof typeof API_BASE_URLS;
 
 interface TinkConfig {
@@ -68,11 +76,23 @@ export interface TinkAccount {
 export interface TinkTransaction {
   id: string;
   accountId: string;
-  amount: { value: { amount: number; currencyCode?: string | null } };
+  amount?: {
+    currencyCode?: string | null;
+    value?: {
+      unscaledValue?: number | string | null;
+      scale?: number | string | null;
+    } | null;
+  } | null;
   dates?: { booked?: string | null; value?: string | null };
-  descriptions?: { original?: string | null; display?: string | null };
+  descriptions?: {
+    original?: string | null;
+    display?: string | null;
+    detailed?: { unstructured?: string | null } | null;
+  };
   merchantName?: string | null;
   categories?: { pfm?: { detailed?: string | null; primary?: string | null } };
+  identifiers?: { providerTransactionId?: string | null } | null;
+  types?: { type?: string | null } | null;
 }
 
 function getTinkLinkScopes(scopes: string[]): string[] {
@@ -285,12 +305,11 @@ export async function createTinkUserAuthorizationCode(params: {
     id_hint: params.externalUserId,
   });
 
-  // Only include actor_client_id if explicitly provided.
-  // Some Tink setups rely on an internal Link actor client, others accept omitting this.
-  // We avoid hardcoding a magic value.
-  if (params.actorClientId) {
-    body.set("actor_client_id", params.actorClientId);
-  }
+  // Tink Link requires actor_client_id to be set to the constant Tink Link actor client ID.
+  // Use custom actor client ID if provided (e.g., for server-to-server exchange), otherwise
+  // default to the Tink Link actor client ID.
+  const actorClientId = params.actorClientId || TINK_LINK_ACTOR_CLIENT_ID;
+  body.set("actor_client_id", actorClientId);
 
   if (userId) {
     body.set("user_id", userId);
@@ -371,8 +390,16 @@ export async function getTinkUserAccessToken(params: {
   market?: string;
   locale?: string;
 }): Promise<TinkTokenResponse> {
-  // Generate a new authorization code for this user
-  const authorizationCode = await createTinkUserAuthorizationCode(params);
+  const config = getTinkConfig();
+
+  // Generate a new authorization code for this user.
+  // IMPORTANT: Use our own client ID as the actor_client_id because WE will be
+  // exchanging this code (not Tink Link). The actor_client_id must match the
+  // client_id used in the token exchange request.
+  const authorizationCode = await createTinkUserAuthorizationCode({
+    ...params,
+    actorClientId: config.clientId,
+  });
 
   // Immediately exchange it for an access token
   return await exchangeTinkAuthorizationCode(authorizationCode);
@@ -581,20 +608,27 @@ export interface MapTinkTransactionInput {
 
 export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
   const txn = input.transaction;
-  const amount = Number(txn.amount?.value?.amount || 0);
-  const currency =
-    txn.amount?.value?.currencyCode || input.defaultCurrency || "USD";
+  const rawAmount = txn.amount?.value?.unscaledValue;
+  const scale = Number(txn.amount?.value?.scale ?? 0);
+  const numericAmount = rawAmount == null ? 0 : Number(rawAmount);
+  const divisor = Number.isFinite(scale) ? Math.pow(10, scale) : 1;
+  const amount = divisor ? numericAmount / divisor : numericAmount;
+  const currency = txn.amount?.currencyCode || input.defaultCurrency || "USD";
   const absAmount = Math.abs(amount);
   const amountCents = Math.round(absAmount * 100);
   const isIncome = amount > 0;
   const description =
     txn.descriptions?.display ||
     txn.descriptions?.original ||
+    txn.descriptions?.detailed?.unstructured ||
     txn.merchantName ||
     "Transaction";
 
   const categoryName =
-    txn.categories?.pfm?.detailed || txn.categories?.pfm?.primary || null;
+    txn.categories?.pfm?.detailed ||
+    txn.categories?.pfm?.primary ||
+    mapTinkTransactionTypeToCategory(txn.types?.type) ||
+    null;
   const normalizedCategory = categoryName
     ? normalizeCategory(categoryName)
     : null;
@@ -603,7 +637,7 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
     user_id: input.userId,
     bank_account_id: input.bankAccountId,
     provider: TINK_PROVIDER,
-    provider_transaction_id: txn.id,
+    provider_transaction_id: txn.identifiers?.providerTransactionId || txn.id,
     amount_cents: amountCents,
     currency,
     date:
@@ -623,4 +657,36 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
     base_currency: currency,
     fx_rate: 1,
   };
+}
+
+function mapTinkTransactionTypeToCategory(type?: string | null): string | null {
+  if (!type) return null;
+  const key = type.trim().toUpperCase();
+  switch (key) {
+    case "TRANSFER":
+    case "TRANSFER_IN":
+    case "TRANSFER_OUT":
+    case "CASH_WITHDRAWAL":
+      return "transfers";
+    case "PAYROLL":
+    case "SALARY":
+      return "salary";
+    case "INTEREST":
+      return "interest income";
+    case "DIVIDEND":
+      return "investments";
+    case "LOAN_PAYMENT":
+      return "loan payments";
+    case "CREDIT_CARD_PAYMENT":
+      return "debt payments";
+    case "FEE":
+    case "BANK_FEE":
+      return "bank fees";
+    case "REFUND":
+      return "refunds";
+    case "SAVINGS":
+      return "savings";
+    default:
+      return null;
+  }
 }

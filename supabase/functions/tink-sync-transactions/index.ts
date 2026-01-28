@@ -239,9 +239,25 @@ Deno.serve(async (req) => {
       );
 
       if (upsertError || !upsertResult || upsertResult.length === 0) {
-        console.error("[tink-sync] Failed to create connection", upsertError);
+        console.error("[tink-sync] Failed to create connection", {
+          error: upsertError,
+          errorMessage: upsertError?.message,
+          errorCode: upsertError?.code,
+          errorDetails: upsertError?.details,
+          errorHint: upsertError?.hint,
+          result: upsertResult,
+          params: {
+            userId: authResult.userId,
+            provider: TINK_PROVIDER,
+            providerItemId,
+            market: stateRecord.market,
+          },
+        });
         return new Response(
-          JSON.stringify({ error: "Failed to create bank connection" }),
+          JSON.stringify({
+            error: "Failed to create bank connection",
+            details: upsertError?.message || "RPC returned empty result",
+          }),
           {
             status: 500,
             headers: { ...headers, "Content-Type": "application/json" },
@@ -441,7 +457,19 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("[tink-sync] Unexpected error", error);
+    const errorObject =
+      error instanceof Error
+        ? { message: error.message, name: error.name, stack: error.stack }
+        : error;
+    console.error("[tink-sync] Unexpected error", errorObject);
+    try {
+      console.error(
+        "[tink-sync] Unexpected error (json)",
+        JSON.stringify(errorObject),
+      );
+    } catch (_) {
+      // Best-effort logging for non-serializable errors.
+    }
     return new Response(
       JSON.stringify({
         error: "Failed to sync Tink transactions",
@@ -520,7 +548,8 @@ async function syncConnection(params: {
       .update({ last_sync_attempt_at: new Date().toISOString() })
       .eq("id", params.connection.id);
 
-    const accessTokenEncryptedRaw = params.connection.access_token_encrypted ||
+    const accessTokenEncryptedRaw =
+      params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
     if (!accessTokenEncryptedRaw) {
       throw new Error("Missing Tink access token");
@@ -537,7 +566,8 @@ async function syncConnection(params: {
     ) {
       const expiresAt = new Date(params.connection.expires_at);
       // Refresh if expired or expiring within 5 minutes
-      const shouldRefresh = Number.isFinite(expiresAt.getTime()) &&
+      const shouldRefresh =
+        Number.isFinite(expiresAt.getTime()) &&
         expiresAt.getTime() <= Date.now() + 5 * 60 * 1000;
 
       if (shouldRefresh) {
@@ -575,8 +605,8 @@ async function syncConnection(params: {
               .from("bank_connections")
               .update({
                 access_token_encrypted: encryptedAccess,
-                refresh_token_encrypted: encryptedRefresh ||
-                  params.connection.refresh_token_encrypted,
+                refresh_token_encrypted:
+                  encryptedRefresh || params.connection.refresh_token_encrypted,
                 expires_at: expiresAtNext,
               })
               .eq("id", params.connection.id);
@@ -590,12 +620,12 @@ async function syncConnection(params: {
               },
               ...(encryptedRefresh
                 ? [
-                  {
-                    bank_connection_id: params.connection.id,
-                    token_type: "refresh",
-                    token_encrypted: encryptedRefresh,
-                  },
-                ]
+                    {
+                      bank_connection_id: params.connection.id,
+                      token_type: "refresh",
+                      token_encrypted: encryptedRefresh,
+                    },
+                  ]
                 : []),
             ]);
 
@@ -653,18 +683,33 @@ async function syncConnection(params: {
       });
     }
 
-    let cursor: string | undefined = params.cursorOverride === "reset"
-      ? undefined
-      : params.cursorOverride ||
-        params.connection.cursor ||
-        params.connection.plaid_cursor ||
-        undefined ||
-        undefined;
+    let cursor: string | undefined =
+      params.cursorOverride === "reset"
+        ? undefined
+        : params.cursorOverride ||
+          params.connection.cursor ||
+          params.connection.plaid_cursor ||
+          undefined ||
+          undefined;
     const processedAccounts = new Set<string>();
     let nextPage = cursor;
+    let didLogSample = false;
 
     do {
       const response = await syncTinkTransactions(accessToken, nextPage);
+      if (!didLogSample && response.transactions?.length) {
+        const sample = response.transactions[0];
+        console.log("[tink-sync] Sample transaction", {
+          id: sample.id,
+          accountId: sample.accountId,
+          amount: sample.amount,
+          dates: sample.dates,
+          types: sample.types,
+          descriptions: sample.descriptions,
+          identifiers: sample.identifiers,
+        });
+        didLogSample = true;
+      }
       const grouped = groupByAccount(response.transactions);
 
       for (const [tinkAccountId, transactions] of grouped.entries()) {

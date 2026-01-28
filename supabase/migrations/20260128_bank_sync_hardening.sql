@@ -377,6 +377,7 @@ DECLARE
   v_is_new BOOLEAN := FALSE;
   v_existing_household_id UUID;
   v_lock_key BIGINT;
+  v_user_currency TEXT;
 BEGIN
   -- Generate a deterministic lock key from the unique constraint columns
   -- Using hashtext to convert the composite key to a bigint for pg_advisory_xact_lock
@@ -415,14 +416,35 @@ BEGIN
     -- New connection - create household first, then connection
     v_is_new := TRUE;
     
-    -- Create the household
-    INSERT INTO public.households (name, created_by, is_portfolio, image_url)
-    VALUES (p_institution_name, p_user_id, TRUE, p_institution_logo)
+    -- Get user's preferred currency (from user_contacts or default to USD)
+    SELECT COALESCE(
+      (
+        SELECT UPPER(uc.preferred_currency)
+        FROM public.user_contacts uc
+        WHERE uc.user_id = p_user_id
+        ORDER BY uc.updated_at DESC NULLS LAST, uc.created_at DESC NULLS LAST
+        LIMIT 1
+      ),
+      'USD'
+    ) INTO v_user_currency;
+    
+    -- Create the household with correct column names:
+    -- - owner_id (not created_by)
+    -- - cover_image_url (not image_url)
+    -- - currency is required
+    INSERT INTO public.households (name, owner_id, is_portfolio, cover_image_url, currency)
+    VALUES (p_institution_name, p_user_id, TRUE, p_institution_logo, v_user_currency)
     RETURNING id INTO v_household_id;
     
     -- Add user as owner
     INSERT INTO public.household_members (household_id, user_id, role, joined_at)
-    VALUES (v_household_id, p_user_id, 'owner', NOW());
+    SELECT v_household_id, p_user_id, 'owner', NOW()
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM public.household_members hm
+      WHERE hm.household_id = v_household_id
+        AND hm.user_id = p_user_id
+    );
     
     -- Create the connection
     -- The advisory lock ensures this INSERT won't race with another transaction
@@ -469,7 +491,7 @@ EXCEPTION
     -- In either case, clean up any orphan household we created, then look up the
     -- winning connection and return it (making the API idempotent for the client).
     IF v_household_id IS NOT NULL AND v_is_new THEN
-      DELETE FROM public.household_members WHERE household_id = v_household_id;
+      DELETE FROM public.household_members hm WHERE hm.household_id = v_household_id;
       DELETE FROM public.households WHERE id = v_household_id;
     END IF;
     

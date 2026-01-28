@@ -233,6 +233,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_provider_transaction
   ON public.expenses(user_id, provider, provider_transaction_id)
   WHERE provider IS NOT NULL AND provider_transaction_id IS NOT NULL;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'expenses_provider_transaction_unique'
+  ) THEN
+    ALTER TABLE public.expenses
+      ADD CONSTRAINT expenses_provider_transaction_unique
+      UNIQUE (user_id, provider, provider_transaction_id);
+  END IF;
+END $$;
+
 COMMENT ON INDEX idx_expenses_provider_transaction IS 'Prevents duplicate imports of provider transactions per user.';
 
 DO $$
