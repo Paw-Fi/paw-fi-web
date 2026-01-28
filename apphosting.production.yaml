@@ -6,13 +6,13 @@ runConfig:
   maxInstances: 3
   concurrency: 80
   cpu: 1
-  memoryMiB: 512
+  memoryMiB: 2048
 
 env:
   # Production Supabase configuration
   # Using secrets for secure environment variables
   - variable: NODE_OPTIONS
-    value: "--max-old-space-size=8192"
+    value: "--max-old-space-size=1536"
     availability:
       - BUILD
       - RUNTIME  
