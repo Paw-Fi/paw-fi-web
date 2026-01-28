@@ -27,7 +27,7 @@ echo ""
 
 echo "📦 [3/8] Deploying get-budget function..."
 supabase functions deploy get-budget --project-ref $PROJECT_REF
-echo "✅ get-budget deployed"
+echo "✅ get-budget deployed" 
 echo ""
 
 echo "📦 [4/8] Deploying list-expenses function..."

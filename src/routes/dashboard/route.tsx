@@ -245,7 +245,7 @@ export const Route = createFileRoute("/dashboard")({
     return {
       title,
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

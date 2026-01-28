@@ -19,6 +19,7 @@ import { BentoCard } from "@/components/ui/bento-card";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
+import { HomeHeader } from "@/components/index/header";
 
 // SEO Constants
 const META_TITLE = "WhatsApp Expense Tracker & AI Receipt Scanner | Moneko Assistant";
@@ -85,17 +86,6 @@ export default function WhatsAppFeaturePage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] font-sans selection:bg-gray-100 dark:selection:bg-gray-800 text-slate-900 dark:text-white pb-20">
       <Helmet>
-        <title>{META_TITLE}</title>
-        <meta name="description" content={META_DESCRIPTION} />
-        <meta name="keywords" content={META_KEYWORDS} />
-        <meta property="og:title" content={META_TITLE} />
-        <meta property="og:description" content={META_DESCRIPTION} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content="https://moneko.io/og-whatsapp.png" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={META_TITLE} />
-        <meta name="twitter:description" content={META_DESCRIPTION} />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
@@ -104,7 +94,7 @@ export default function WhatsAppFeaturePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
       </div>
 
-      <NavBar navigate={navigate} />
+      <HomeHeader />
 
       <main className="relative z-10 pt-32 px-4 md:px-6 max-w-[1200px] mx-auto">
         
@@ -253,33 +243,13 @@ export default function WhatsAppFeaturePage() {
   );
 }
 
-// --- Components ---
-
-function NavBar({ navigate }: { navigate: any }) {
-    return (
-      <header className="fixed top-0 left-0 right-0 z-50">
-        <div className="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50" />
-        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between relative z-10">
-          <MonekoIcon />
-          <button
-            onClick={() => navigate({ to: "/" })}
-            className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-        </div>
-      </header>
-    )
-}
-
 
 
 // Reuse existing PhoneMockup logic but styled for the new grid
 const PhoneMockup = ({ mode }: { mode: 'capture' | 'insights' | 'sync' }) => {
   const currency = getCurrencySymbolBasedOnTimeZone();
   const ref = useRef(null)
-  const isInView = useInView(ref, { margin: "-100px" })
+  const isInView = useInView(ref, { margin: "-100px", once: true })
 
   return (
     <div ref={ref} className="bg-transparent w-full flex justify-center pointer-events-none select-none">

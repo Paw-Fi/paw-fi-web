@@ -8,7 +8,11 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
-import { ALLOWED_CATEGORIES, resolveCategoryColor, normalizeCategory } from "../shared/category-colors.ts";
+import {
+  ALLOWED_CATEGORIES,
+  resolveCategoryColor,
+  normalizeCategory,
+} from "../shared/category-colors.ts";
 import { getDaysInMonth } from "../shared/date-utils.ts";
 
 // ---------- Types ----------
@@ -56,25 +60,29 @@ function encodeBase64(bytes: Uint8Array) {
   return btoa(bin);
 }
 
-function errorResponse(message: string, status = 400, details?: unknown): Response {
-  return new Response(
-    JSON.stringify({ error: message, details }),
-    {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    },
-  );
+function errorResponse(
+  message: string,
+  status = 400,
+  details?: unknown,
+): Response {
+  return new Response(JSON.stringify({ error: message, details }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 // ---------- QuickChart rendering ----------
-async function renderChartPNG(chartConfig: unknown, opts?: {
-  width?: number;
-  height?: number;
-  backgroundColor?: string;
-  version?: string;        // Chart.js version
-  format?: "png" | "webp";
-  devicePixelRatio?: number;
-}): Promise<Uint8Array> {
+async function renderChartPNG(
+  chartConfig: unknown,
+  opts?: {
+    width?: number;
+    height?: number;
+    backgroundColor?: string;
+    version?: string; // Chart.js version
+    format?: "png" | "webp";
+    devicePixelRatio?: number;
+  },
+): Promise<Uint8Array> {
   const payload = {
     chart: chartConfig,
     width: opts?.width ?? 720,
@@ -126,10 +134,13 @@ function buildDoughnutConfigFromBreakdown(breakdown: {
 }) {
   const labels = breakdown.totals.map((t) => {
     const friendly = t.category.replace(/[_]+/g, " ");
-    return friendly.split(" ").map((word) => {
-      if (!word) return "";
-      return word.slice(0, 1).toUpperCase() + word.slice(1);
-    }).join(" ");
+    return friendly
+      .split(" ")
+      .map((word) => {
+        if (!word) return "";
+        return word.slice(0, 1).toUpperCase() + word.slice(1);
+      })
+      .join(" ");
   });
   const values = breakdown.totals.map((t) => t.amountMajor);
   const colors = breakdown.totals.map((t) => resolveCategoryColor(t.category));
@@ -229,9 +240,9 @@ async function respondWithChart({
     Math.round((endDate.getTime() - startDate.getTime()) / 86400000) + 1,
   );
 
-  const meaningfulEntry = breakdown.find((entry) =>
-    entry.totals.some((t) => t.amountMajor > 0)
-  ) ?? breakdown[0];
+  const meaningfulEntry =
+    breakdown.find((entry) => entry.totals.some((t) => t.amountMajor > 0)) ??
+    breakdown[0];
 
   let chartImageUrl: string | null = null;
 
@@ -316,7 +327,10 @@ Deno.serve(async (req) => {
     if (req.method !== "POST") {
       return new Response(
         JSON.stringify({ error: "Method not allowed. Use POST." }),
-        { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        {
+          status: 405,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -326,9 +340,10 @@ Deno.serve(async (req) => {
     const conversationId = detection.conversationId ?? null;
 
     const suppliedUserId = body.userId?.trim() || null;
-    const userId = suppliedUserId && /^[0-9a-f-]{36}$/i.test(suppliedUserId)
-      ? suppliedUserId
-      : null;
+    const userId =
+      suppliedUserId && /^[0-9a-f-]{36}$/i.test(suppliedUserId)
+        ? suppliedUserId
+        : null;
 
     if (suppliedUserId && !userId) {
       return new Response(JSON.stringify({ error: "Invalid userId format" }), {
@@ -337,7 +352,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const currencyFilter = body.currency ? validateCurrency(body.currency) : null;
+    const currencyFilter = body.currency
+      ? validateCurrency(body.currency)
+      : null;
 
     const maxRowsInput = body.maxRows ?? MAX_ROWS_DEFAULT;
     const maxRows = Math.min(Math.max(1, maxRowsInput), MAX_ROWS_HARD_LIMIT);
@@ -383,12 +400,19 @@ Deno.serve(async (req) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
       global: { headers: { "X-Client-Info": "moneko-expenses-summary" } },
     });
 
@@ -398,8 +422,13 @@ Deno.serve(async (req) => {
     if (!resolvedUserId && detection.isGpt) {
       if (!conversationId) {
         return new Response(
-          JSON.stringify({ error: "Unable to resolve identity from GPT headers." }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({
+            error: "Unable to resolve identity from GPT headers.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
 
@@ -411,17 +440,24 @@ Deno.serve(async (req) => {
         });
         resolvedUserId = identity.userId;
         identityMeta.conversationId = conversationId;
-        if (detection.ephemeralUserId) identityMeta.ephemeralUserId = detection.ephemeralUserId;
+        if (detection.ephemeralUserId)
+          identityMeta.ephemeralUserId = detection.ephemeralUserId;
         identityMeta.guest = {
           contactId: identity.contactId,
           createdUser: identity.createdUser,
           createdContact: identity.createdContact,
         };
       } catch (identityError) {
-        console.error("[expenses-summary] Guest identity error:", identityError);
+        console.error(
+          "[expenses-summary] Guest identity error:",
+          identityError,
+        );
         return new Response(
           JSON.stringify({ error: "Failed to prepare GPT guest user" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
         );
       }
     }
@@ -481,15 +517,20 @@ Deno.serve(async (req) => {
       .from("expenses")
       .select("id, user_id, amount_cents, currency, category, date")
       .eq("user_id", finalUserId)
+      .is("deleted_at", null)
       .gte("date", startDateIso)
       .lte("date", endDateIso);
 
     if (currencyFilter) qb = qb.eq("currency", currencyFilter);
 
-    const { data, error } = await qb.order("date", { ascending: false }).limit(maxRows);
+    const { data, error } = await qb
+      .order("date", { ascending: false })
+      .limit(maxRows);
 
     if (error) {
-      throw new Error(`[expenses-summary] Failed to fetch expenses: ${error.message}`);
+      throw new Error(
+        `[expenses-summary] Failed to fetch expenses: ${error.message}`,
+      );
     }
 
     for (const record of data as ExpenseRecord[]) {
@@ -504,24 +545,28 @@ Deno.serve(async (req) => {
     for (const exp of expenses) {
       const currency = validateCurrency(exp.currency || "USD");
       const category = normalizeCategory(exp.category);
-      
+
       // Debug logging to ensure "other" categories are being processed
       if (category === "other") {
         console.log(`[expenses-summary] Processing "other" category expense:`, {
           id: exp.id,
           originalCategory: exp.category,
           normalizedCategory: category,
-          amount: exp.amount_cents / 100
+          amount: exp.amount_cents / 100,
         });
       }
-      
+
       totalsByCurrency.set(
         currency,
         (totalsByCurrency.get(currency) ?? 0) + exp.amount_cents,
       );
 
-      const categoryMap = categoryMapByCurrency.get(currency) ?? new Map<string, number>();
-      categoryMap.set(category, (categoryMap.get(category) ?? 0) + exp.amount_cents);
+      const categoryMap =
+        categoryMapByCurrency.get(currency) ?? new Map<string, number>();
+      categoryMap.set(
+        category,
+        (categoryMap.get(category) ?? 0) + exp.amount_cents,
+      );
       categoryMapByCurrency.set(currency, categoryMap);
     }
 
@@ -542,7 +587,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const breakdown: BreakdownEntry[] = Array.from(categoryMapByCurrency.entries())
+    const breakdown: BreakdownEntry[] = Array.from(
+      categoryMapByCurrency.entries(),
+    )
       .map(([currency, map]) => {
         const totalCents = totalsByCurrency.get(currency) ?? 0;
         const totals = Array.from(map.entries())
@@ -583,7 +630,10 @@ Deno.serve(async (req) => {
         error: "Failed to compute expense summary",
         details: error instanceof Error ? error.message : String(error),
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });

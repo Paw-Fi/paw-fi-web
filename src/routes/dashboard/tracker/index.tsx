@@ -293,7 +293,7 @@ export const Route = createFileRoute("/dashboard/tracker/")(({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: canonicalUrl,

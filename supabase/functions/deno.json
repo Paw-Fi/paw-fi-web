@@ -1,4 +1,16 @@
 {
+  "compilerOptions": {
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable",
+      "dom.asynciterable",
+      "deno.ns"
+    ],
+    "strict": true,
+    "allowJs": true,
+    "allowImportingTsExtensions": true
+  },
   "tasks": {
     "start": "deno run --allow-net --allow-env --allow-read index.ts"
   },

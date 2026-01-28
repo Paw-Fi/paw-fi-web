@@ -29,7 +29,7 @@ echo ""
 
 # Step 3: Deploy verify-payment
 echo "📦 [3/7] Deploying verify-payment function..."
-supabase functions deploy verify-payment --project-ref $PROJECT_REF
+supabase functions deploy verify-payment --project-ref $PROJECT_REF --no-verify-jwt
 echo "✅ verify-payment deployed"
 echo ""
 

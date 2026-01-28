@@ -620,7 +620,7 @@ export const Route = createFileRoute('/calculators/retirement-calculator')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

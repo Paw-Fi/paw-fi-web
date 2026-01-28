@@ -19,7 +19,7 @@ export const Route = createFileRoute("/unsubscribe")({
                 image: imageUrl,
                 url: pageUrl,
             }),
-            link: [
+            links: [
                 {
                     rel: "canonical",
                     href: pageUrl,

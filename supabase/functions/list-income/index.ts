@@ -146,7 +146,7 @@ Deno.serve(async (req: Request) => {
     
     // Apply household filters (NEW)
     // CRITICAL: In household mode, fetch ALL income for the household (any member)
-    // In personal mode, filter by user_id AND ensure household_id is null
+    // In personal mode, filter by user_id AND ensure household_id is null OR is a portfolio household
     if (body.personalOnly === true) {
       // ONLY personal income (split_group_id IS NULL)
       query = query.eq("user_id", userId).is("split_group_id", null);
@@ -157,8 +157,26 @@ Deno.serve(async (req: Request) => {
       // Specific household - fetch ALL income for this household (any member)
       query = query.eq("household_id", body.householdId);
     } else {
-      // Default personal mode: filter by user_id and exclude household income
-      query = query.eq("user_id", userId).is("household_id", null);
+      // Default personal mode: filter by user_id and exclude non-portfolio household income
+      // Portfolio households (is_portfolio=true) should be included in personal view
+      // We need to fetch portfolio household IDs for this user first
+      const { data: userHouseholds } = await supabase
+        .from("households")
+        .select("id, is_portfolio")
+        .or(`owner_id.eq.${userId},id.in.(select household_id from household_members where user_id='${userId}')`);
+      
+      const portfolioHouseholdIds = (userHouseholds || [])
+        .filter(h => h.is_portfolio === true)
+        .map(h => h.id);
+      
+      if (portfolioHouseholdIds.length > 0) {
+        // Include income where household_id is null OR in portfolio households
+        query = query.eq("user_id", userId)
+          .or(`household_id.is.null,household_id.in.(${portfolioHouseholdIds.join(',')})`);
+      } else {
+        // No portfolio households, simple null check
+        query = query.eq("user_id", userId).is("household_id", null);
+      }
     }
 
     // Apply filters

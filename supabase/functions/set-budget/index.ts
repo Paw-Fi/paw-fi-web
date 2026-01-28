@@ -9,15 +9,18 @@ import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 // Types
 interface SetBudgetRequest {
-  phone?: string;      // E.164 format (optional if userId provided)
-  userId?: string;     // User ID (optional if phone provided)
-  amount: number;      // Budget amount (in dollars/currency units, not cents)
-  date?: string;       // ISO date like 2025-01-07; default today (UTC)
-  currency?: string;   // Optional currency code, default USD
+  phone?: string; // E.164 format (optional if userId provided)
+  userId?: string; // User ID (optional if phone provided)
+  amount: number; // Budget amount (in dollars/currency units, not cents)
+  date?: string; // ISO date like 2025-01-07; default today (UTC)
+  currency?: string; // Optional currency code, default USD
 }
 
 function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 function errorResponse(message: string, status = 400, details?: unknown) {
@@ -25,7 +28,8 @@ function errorResponse(message: string, status = 400, details?: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const detection = detectGptRequest(req);
@@ -34,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  
+
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return errorResponse("Server not configured", 500);
   }
@@ -79,7 +83,11 @@ Deno.serve(async (req: Request) => {
   const providedCurrency = validateCurrency(inputCurrency);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
     global: { headers: { "X-Client-Info": "moneko-set-budget" } },
   });
 
@@ -124,19 +132,19 @@ Deno.serve(async (req: Request) => {
       .from("user_contacts")
       .select("id, user_id, preferred_currency")
       .eq("phone_e164", phone)
-      .order('id', { ascending: false })
+      .order("id", { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
     contactId = contact?.id ?? contactId;
-    resolvedUserId = resolvedUserId ?? (contact?.user_id ?? null);
+    resolvedUserId = resolvedUserId ?? contact?.user_id ?? null;
   } else if (!contactId && resolvedUserId) {
     // Search by user_id (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_currency, phone_e164")
       .eq("user_id", resolvedUserId)
-      .order('id', { ascending: false })
+      .order("id", { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
@@ -158,14 +166,20 @@ Deno.serve(async (req: Request) => {
       .single();
     if (!contactFetchErr) {
       contact = contactRow;
-      resolvedUserId = resolvedUserId ?? (contactRow?.user_id ?? null);
+      resolvedUserId = resolvedUserId ?? contactRow?.user_id ?? null;
     }
   }
 
-  const budgetCurrency = providedCurrency || validateCurrency(contact?.preferred_currency as string | null);
+  const budgetCurrency =
+    providedCurrency ||
+    validateCurrency(contact?.preferred_currency as string | null);
 
   if (!contactId) {
-    console.error("set-budget could not resolve contact id", { phone, resolvedUserId, conversationId });
+    console.error("set-budget could not resolve contact id", {
+      phone,
+      resolvedUserId,
+      conversationId,
+    });
     return errorResponse("Failed to resolve contact", 500);
   }
 
@@ -180,8 +194,13 @@ Deno.serve(async (req: Request) => {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: resolvedUserId || null, preferred_currency: budgetCurrency, updated_at: new Date().toISOString() },
-          { onConflict: 'phone_e164' }
+          {
+            phone_e164: phone,
+            user_id: resolvedUserId || null,
+            preferred_currency: budgetCurrency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "phone_e164" },
         )
         .select("id")
         .single();
@@ -209,18 +228,18 @@ Deno.serve(async (req: Request) => {
   const budgetCents = Math.round(amount * 100);
 
   // Upsert budget using new multi-currency constraint
-  const { error: upsertErr } = await supabase
-    .from("daily_budgets")
-    .upsert(
-      [{ 
-        contact_id: contactId, 
-        date: dateStr, 
-        amount_cents: budgetCents, 
-        currency: budgetCurrency, 
-        updated_at: new Date().toISOString() 
-      }], 
-      { onConflict: "contact_id,date,currency" }  // Updated: now includes currency
-    );
+  const { error: upsertErr } = await supabase.from("daily_budgets").upsert(
+    [
+      {
+        contact_id: contactId,
+        date: dateStr,
+        amount_cents: budgetCents,
+        currency: budgetCurrency,
+        updated_at: new Date().toISOString(),
+      },
+    ],
+    { onConflict: "contact_id,date,currency" }, // Updated: now includes currency
+  );
 
   if (upsertErr) {
     console.error("budget upsert error", upsertErr);
@@ -235,17 +254,20 @@ Deno.serve(async (req: Request) => {
     .eq("date", dateStr)
     .eq("currency", budgetCurrency);
 
-  const totalSpentCents = (expenseRows || []).reduce((sum, r: any) => sum + (r.amount_cents || 0), 0);
+  const totalSpentCents = (expenseRows || []).reduce(
+    (sum, r: any) => sum + (r.amount_cents || 0),
+    0,
+  );
   const remainingCents = Math.max(budgetCents - totalSpentCents, 0);
 
   // Prepare response
   const results = {
     date: dateStr,
     currency: budgetCurrency,
-    budget_set: { 
-      amount_cents: budgetCents, 
-      date: dateStr, 
-      currency: budgetCurrency 
+    budget_set: {
+      amount_cents: budgetCents,
+      date: dateStr,
+      currency: budgetCurrency,
     },
     totals: {
       budget_cents: budgetCents,

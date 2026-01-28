@@ -33,7 +33,8 @@ function formatMoney(cents: number, currency: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const detection = detectGptRequest(req);
@@ -69,20 +70,27 @@ Deno.serve(async (req: Request) => {
   if (!phone && !userId && !detection.isGpt) {
     return errorResponse("Either 'phone' or 'userId' must be provided", 400);
   }
-  if (phone && typeof phone !== "string") return errorResponse("'phone' must be a string", 400);
-  if (userId && typeof userId !== "string") return errorResponse("'userId' must be a string", 400);
+  if (phone && typeof phone !== "string")
+    return errorResponse("'phone' must be a string", 400);
+  if (userId && typeof userId !== "string")
+    return errorResponse("'userId' must be a string", 400);
 
   const targetDate = inputDate ? new Date(inputDate) : new Date();
-  if (Number.isNaN(targetDate.getTime())) return errorResponse("Invalid date format", 400);
+  if (Number.isNaN(targetDate.getTime()))
+    return errorResponse("Invalid date format", 400);
   const targetDateIso = targetDate.toISOString().slice(0, 10);
-  const monthStartIso = new Date(Date.UTC(
-    targetDate.getUTCFullYear(),
-    targetDate.getUTCMonth(),
-    1,
-  )).toISOString().slice(0, 10);
+  const monthStartIso = new Date(
+    Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1),
+  )
+    .toISOString()
+    .slice(0, 10);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
     global: { headers: { "X-Client-Info": "moneko-get-budget" } },
   });
 
@@ -129,7 +137,7 @@ Deno.serve(async (req: Request) => {
     contactRecord = result.data?.[0] ?? null;
     contactErr = result.error;
     contactId = contactRecord?.id ?? null;
-    resolvedUserId = resolvedUserId ?? (contactRecord?.user_id ?? null);
+    resolvedUserId = resolvedUserId ?? contactRecord?.user_id ?? null;
   } else if (!contactId && resolvedUserId) {
     const result = await supabase
       .from("user_contacts")
@@ -150,7 +158,7 @@ Deno.serve(async (req: Request) => {
       .single();
     if (!contactFetchErr) {
       contactRecord = fetchedContact;
-      resolvedUserId = resolvedUserId ?? (fetchedContact?.user_id ?? null);
+      resolvedUserId = resolvedUserId ?? fetchedContact?.user_id ?? null;
     }
   }
 
@@ -167,7 +175,8 @@ Deno.serve(async (req: Request) => {
   const preferredCurrency = contactRecord?.preferred_currency
     ? validateCurrency(contactRecord.preferred_currency)
     : null;
-  const targetCurrency = validateCurrency(inputCurrency) || preferredCurrency || "USD";
+  const targetCurrency =
+    validateCurrency(inputCurrency) || preferredCurrency || "USD";
 
   const { data: budgetRows, error: budgetErr } = await supabase
     .from("daily_budgets")
@@ -200,7 +209,10 @@ Deno.serve(async (req: Request) => {
   }
 
   const daysInMonth = getDaysInMonth(targetDate);
-  const targetDay = clampDayToMonth(targetDate, typeof requestedDay === "number" ? requestedDay : targetDate.getUTCDate());
+  const targetDay = clampDayToMonth(
+    targetDate,
+    typeof requestedDay === "number" ? requestedDay : targetDate.getUTCDate(),
+  );
 
   const dailyBudgetCents = budgetRow.amount_cents ?? 0;
   const budgetToDateCents = dailyBudgetCents * targetDay;
@@ -211,6 +223,7 @@ Deno.serve(async (req: Request) => {
     .select("amount_cents, currency, date")
     .eq("contact_id", contactId)
     .eq("currency", targetCurrency)
+    .is("deleted_at", null)
     .gte("date", monthStartIso)
     .lte("date", targetDateIso);
 
@@ -223,8 +236,14 @@ Deno.serve(async (req: Request) => {
     (sum, row: any) => sum + (row.amount_cents ?? 0),
     0,
   );
-  const remainingToDateCents = Math.max(budgetToDateCents - spentToDateCents, 0);
-  const projectedMonthRemaining = Math.max(monthBudgetCents - spentToDateCents, 0);
+  const remainingToDateCents = Math.max(
+    budgetToDateCents - spentToDateCents,
+    0,
+  );
+  const projectedMonthRemaining = Math.max(
+    monthBudgetCents - spentToDateCents,
+    0,
+  );
 
   const report = {
     date: targetDateIso,

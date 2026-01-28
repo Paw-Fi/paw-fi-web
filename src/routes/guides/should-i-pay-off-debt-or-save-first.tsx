@@ -26,7 +26,7 @@ export const Route = createFileRoute('/guides/should-i-pay-off-debt-or-save-firs
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

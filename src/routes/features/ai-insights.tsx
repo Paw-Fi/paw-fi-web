@@ -19,6 +19,7 @@ import { BentoCard } from "@/components/ui/bento-card";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
+import { HomeHeader } from "@/components/index/header";
 
 const META_TITLE = "AI Financial Assistant & Expense Forecasting | Moneko Insights";
 const META_DESCRIPTION = "Get instant answers to your financial questions. Use Moneko's AI assistant for scenario simulations, expense forecasting, and real-time smart alerts to master your money.";
@@ -103,13 +104,6 @@ export default function AIInsightsFeaturePage() {
   return (
     <div className="min-h-screen relative bg-white dark:bg-[#050505] overflow-hidden font-sans selection:bg-gray-100 dark:selection:bg-gray-800">
       <Helmet>
-        <title>{META_TITLE}</title>
-        <meta name="description" content={META_DESCRIPTION} />
-        <meta name="keywords" content={META_KEYWORDS} />
-        <meta property="og:title" content={META_TITLE} />
-        <meta property="og:description" content={META_DESCRIPTION} />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content="https://moneko.io/og-ai-insights.png" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
@@ -118,21 +112,8 @@ export default function AIInsightsFeaturePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
       </div>
 
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <MonekoIcon />
-            <motion.button
-              onClick={() => navigate({ to: "/" })}
-              className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-              whileHover={{ x: -2 }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </motion.button>
-          </div>
-        </div>
-      </nav>
+        <HomeHeader />
+  
 
       <main className="relative z-10 pt-32 px-4 md:px-6 max-w-[1200px] mx-auto">
         
@@ -279,6 +260,7 @@ const AskAnythingVisual = () => {
                      <motion.div
                         initial={{ y: 20, opacity: 0 }}
                         whileInView={{ y: 0, opacity: 1 }}
+                        viewport={{ once: true }}
                         transition={{ delay: 0.5, duration: 0.5 }}
                         className="text-slate-800 dark:text-slate-200 text-sm font-medium"
                      >
@@ -293,6 +275,7 @@ const AskAnythingVisual = () => {
             <motion.div 
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                viewport={{ once: true }}
                 transition={{ delay: 1.5, duration: 0.6 }}
                 className="bg-white dark:bg-black border-l-4 border-slate-900 dark:border-white shadow-xl shadow-gray-200/50 dark:shadow-none rounded-r-xl p-5 relative z-10"
             >
@@ -342,6 +325,7 @@ const ScenarioSimulationVisual = () => {
                         strokeLinecap="round"
                         initial={{ pathLength: 0 }}
                         whileInView={{ pathLength: 1 }}
+                        viewport={{ once: true }}
                         transition={{ duration: 1.5, delay: 0.5 }}
                      />
                  </svg>
@@ -352,6 +336,7 @@ const ScenarioSimulationVisual = () => {
                     className="absolute top-[10px] right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm"
                     initial={{ opacity: 0, scale: 0.5 }}
                     whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
                     transition={{ delay: 2 }}
                  >
                      +25% Growth
@@ -372,6 +357,7 @@ const SmartAlertsVisual = () => {
              <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
                 className="bg-white dark:bg-black rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 opacity-50 scale-95 blur-[1px]"
              >
@@ -387,6 +373,7 @@ const SmartAlertsVisual = () => {
              <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="bg-white dark:bg-black rounded-xl p-4 shadow-xl border-l-4 border-l-slate-900 dark:border-l-white border-y border-r border-gray-200 dark:border-gray-800 flex gap-4 relative z-10"
              >
@@ -404,6 +391,7 @@ const SmartAlertsVisual = () => {
              <motion.div 
                 initial={{ x: -20, opacity: 0 }}
                 whileInView={{ x: 0, opacity: 1 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.4 }}
                 className="bg-white dark:bg-black rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-800 flex gap-3 opacity-40 scale-90 blur-[2px]"
              >

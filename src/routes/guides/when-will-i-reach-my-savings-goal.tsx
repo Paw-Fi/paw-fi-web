@@ -26,7 +26,7 @@ export const Route = createFileRoute('/guides/when-will-i-reach-my-savings-goal'
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

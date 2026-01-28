@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { validateCurrency } from "../shared/currency-validator.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -41,6 +42,22 @@ interface BudgetStatus {
   is_over_budget: boolean;
   is_at_warn_threshold: boolean;
   is_at_alert_threshold: boolean;
+}
+
+interface SplitLineRow {
+  user_id: string;
+  amount_cents: number;
+  is_settled: boolean;
+}
+
+interface SplitGroupRow {
+  id: string;
+  expense_id: string | null;
+  payer_user_id: string;
+  total_amount_cents: number;
+  created_at: string;
+  currency: string;
+  expense_split_lines: SplitLineRow[];
 }
 
 interface HouseholdSummaryResponse {
@@ -127,6 +144,7 @@ serve(async (req) => {
     }
 
     const { household_id, currency = 'USD', start_date, end_date } = params;
+    const currencyCode = validateCurrency(currency || 'USD');
 
     if (!household_id) {
       return new Response(
@@ -169,11 +187,11 @@ serve(async (req) => {
       .gte('date', startDate.split('T')[0]) // expenses table uses 'date' not 'created_at'
       .lte('date', endDate.split('T')[0]);
 
-    if (currency) {
-      expensesQuery = expensesQuery.eq('currency', currency);
+    if (currencyCode) {
+      expensesQuery = expensesQuery.ilike('currency', currencyCode);
     }
 
-    const { data: expenses, error: expensesError } = await expensesQuery;
+    const { data: expensesRaw, error: expensesError } = await expensesQuery;
 
     if (expensesError) {
       console.error('Error fetching expenses:', expensesError);
@@ -186,10 +204,14 @@ serve(async (req) => {
       );
     }
 
-    // Calculate totals (treat ALL rows in expenses table as expenses)
-    // We sum absolute values to be robust whether rows were inserted as negative or positive.
+    const expenses = (expensesRaw || []).filter((e) => {
+      const isRecurring = e.is_recurring === true;
+      const type = (e.type || 'expense').toLowerCase();
+      return !isRecurring && type !== 'income';
+    });
+
     const totalExpensesCents = expenses
-      ?.reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0) || 0;
+      .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0);
 
     // Income is not tracked here; if ever added, it should be in a different table
     const totalIncomeCents = 0;
@@ -208,22 +230,39 @@ serve(async (req) => {
         payer_user_id,
         total_amount_cents,
         created_at,
+        currency,
         expense_split_lines (
           user_id,
           amount_cents,
           is_settled
         )
       `)
-      .eq('household_id', household_id);
+      .eq('household_id', household_id)
+      .ilike('currency', currencyCode);
 
     if (splitGroupsError) {
       console.error('Error fetching split groups:', splitGroupsError);
     }
 
+    const balances: Record<string, number> = {};
+
+    const parseCents = (value: unknown): number => {
+      if (value === null || value === undefined) return 0;
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed === '') return 0;
+        const num = Number(trimmed);
+        return isFinite(num) ? num : 0;
+      }
+      return 0;
+    };
+
     // Create lookup maps for quick access
-    const expenseIdToSplitGroup = new Map<string, typeof splitGroups[0]>();
-    const splitGroupIdToSplitGroup = new Map<string, typeof splitGroups[0]>();
-    for (const splitGroup of splitGroups || []) {
+    const splitGroupsSafe = (splitGroups || []) as SplitGroupRow[];
+    const expenseIdToSplitGroup = new Map<string, SplitGroupRow>();
+    const splitGroupIdToSplitGroup = new Map<string, SplitGroupRow>();
+    for (const splitGroup of splitGroupsSafe) {
       if (splitGroup.id) {
         splitGroupIdToSplitGroup.set(splitGroup.id, splitGroup);
       }
@@ -232,16 +271,37 @@ serve(async (req) => {
       }
     }
 
+    const { data: settlementEvents, error: settlementEventsError } = await supabase
+      .from('household_settlement_events')
+      .select('payer_user_id, participant_user_id, amount_cents')
+      .eq('household_id', household_id)
+      .ilike('currency', currencyCode);
+
+    if (settlementEventsError) {
+      console.error('Error fetching settlement events:', settlementEventsError);
+    }
+
+    for (const ev of settlementEvents || []) {
+      const creditorId = ev.payer_user_id as string | null;
+      const debtorId = ev.participant_user_id as string | null;
+      if (!creditorId || !debtorId) continue;
+      const amountCents = Math.abs(parseCents((ev as Record<string, unknown>).amount_cents));
+      if (amountCents <= 0) continue;
+
+      balances[creditorId] = (balances[creditorId] || 0) - amountCents;
+      balances[debtorId] = (balances[debtorId] || 0) + amountCents;
+    }
+
     // Calculate member contributions with CORRECT split handling
     const memberContributionsMap = new Map<string, MemberContribution>();
 
-    for (const expense of expenses || []) {
+    for (const expense of expenses) {
       const expenseId = expense.id;
       const payerId = expense.user_id;
       const expenseAmount = Math.abs(expense.amount_cents || 0);
 
       // Check if this expense has a split
-      let splitGroup = undefined as undefined | typeof splitGroups[0];
+      let splitGroup: SplitGroupRow | undefined;
 
       // 1) Prefer linking via expense.split_group_id (authoritative)
       if (expense.split_group_id) {
@@ -254,8 +314,8 @@ serve(async (req) => {
       }
 
       // Fallback matching for legacy records missing expense_id linkage
-      if (!splitGroup && (splitGroups?.length || 0) > 0) {
-        splitGroup = (splitGroups || []).find((sg) => {
+      if (!splitGroup && splitGroupsSafe.length > 0) {
+        splitGroup = splitGroupsSafe.find((sg) => {
           if (sg.expense_id === expenseId) return true;
           const diff = Math.abs((sg.total_amount_cents || 0) - expenseAmount);
           return diff < 100; // within $1 difference in cents
@@ -305,24 +365,32 @@ serve(async (req) => {
       }
     }
 
-    const balances: Record<string, number> = {};
+    const getOutstandingCents = (line: { amount_cents?: unknown; is_settled?: unknown }): number => {
+      const amount = Math.abs(parseCents(line.amount_cents));
+      const isSettled = line.is_settled === true;
+      return isSettled ? 0 : amount;
+    };
 
-    for (const splitGroup of splitGroups || []) {
+    for (const splitGroup of splitGroupsSafe) {
       const payerId = splitGroup.payer_user_id;
-      const totalAmount = splitGroup.total_amount_cents;
+      const lines = splitGroup.expense_split_lines || [];
+      let totalRemainingCents = 0;
 
-      // Payer is owed the total
-      balances[payerId] = (balances[payerId] || 0) + totalAmount;
+      for (const line of lines) {
+        totalRemainingCents += getOutstandingCents(line);
+      }
+
+      balances[payerId] = (balances[payerId] || 0) + totalRemainingCents;
 
       // Each participant owes their share
-      for (const line of splitGroup.expense_split_lines || []) {
-        if (!line.is_settled) {
+      for (const line of lines) {
+        const remainingCents = getOutstandingCents(line);
+
+        if (remainingCents > 0) {
           if (line.user_id === payerId) {
-            // Payer owes themselves
-            balances[payerId] -= line.amount_cents || 0;
+            balances[payerId] -= remainingCents;
           } else {
-            // Participant owes
-            balances[line.user_id] = (balances[line.user_id] || 0) - (line.amount_cents || 0);
+            balances[line.user_id] = (balances[line.user_id] || 0) - remainingCents;
           }
         }
 
@@ -345,7 +413,7 @@ serve(async (req) => {
     // Calculate category breakdown
     const categoryMap = new Map<string, { amount_cents: number; count: number }>();
 
-    for (const expense of expenses || []) {
+    for (const expense of expenses) {
       const category = expense.category || 'Uncategorized';
       const amount = Math.abs(expense.amount_cents || 0);
 
@@ -372,16 +440,16 @@ serve(async (req) => {
     let userActualSpending = 0;
 
     // Start with total expenses the user paid
-    const userExpenses = expenses?.filter(e => e.user_id === user.id) || [];
+    const userExpenses = expenses.filter(e => e.user_id === user.id);
 
     for (const expense of userExpenses) {
       // Check if this expense has a split
-      let expenseSplit = undefined as undefined | typeof splitGroups[0];
+      let expenseSplit: SplitGroupRow | undefined;
       if (expense.split_group_id) {
         expenseSplit = splitGroupIdToSplitGroup.get(expense.split_group_id);
       }
       if (!expenseSplit) {
-        expenseSplit = splitGroups?.find(sg =>
+        expenseSplit = splitGroupsSafe.find((sg) =>
           sg.expense_id === expense.id ||
           (sg.created_at && Math.abs((sg.total_amount_cents || 0) - Math.abs(expense.amount_cents || 0)) < 100)
         );
@@ -389,7 +457,9 @@ serve(async (req) => {
 
       if (expenseSplit) {
         // Find user's portion from split lines
-        const userLine = expenseSplit.expense_split_lines?.find(line => line.user_id === user.id);
+        const userLine = expenseSplit.expense_split_lines?.find(
+          (line: SplitLineRow) => line.user_id === user.id,
+        );
         if (userLine) {
           // Add only their split portion
           userActualSpending += userLine.amount_cents || 0;
@@ -413,7 +483,9 @@ serve(async (req) => {
     const budgetStatuses: BudgetStatus[] = [];
 
     for (const budget of budgets || []) {
-      if (currency && budget.currency !== currency) continue;
+      if (currencyCode && (budget.currency || '').toUpperCase() !== currencyCode) {
+        continue;
+      }
 
       // Calculate spending based on budget type
       let spentCents = 0;
@@ -429,8 +501,8 @@ serve(async (req) => {
         } else {
           // Use all user's expenses (absolute), regardless of sign
           const userExpenseTotal = expenses
-            ?.filter(e => e.user_id === user.id)
-            .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0) || 0;
+            .filter(e => e.user_id === user.id)
+            .reduce((sum, e) => sum + Math.abs(e.amount_cents || 0), 0);
           spentCents = userExpenseTotal;
         }
       }
@@ -454,7 +526,7 @@ serve(async (req) => {
 
     const response: HouseholdSummaryResponse = {
       household_id,
-      currency,
+      currency: currencyCode,
       period: {
         start_date: startDate,
         end_date: endDate
@@ -463,8 +535,8 @@ serve(async (req) => {
         total_expenses_cents: totalExpensesCents,
         total_income_cents: totalIncomeCents,
         net_cents: netCents,
-        transaction_count: expenses?.length || 0,
-        split_count: splitGroups?.length || 0
+        transaction_count: expenses.length,
+        split_count: splitGroupsSafe.length
       },
       member_contributions: Array.from(memberContributionsMap.values()),
       category_breakdown: categoryBreakdown,

@@ -27,11 +27,11 @@ function normalizePercentage(value: unknown): number {
   return value;
 }
 
-function normalizeShares(value: unknown): number | null {
-  if (!isFiniteNumber(value)) return null;
+function normalizeShares(value: unknown): number | undefined {
+  if (!isFiniteNumber(value)) return undefined;
   const shares = Math.trunc(value);
-  // DB constraint: shares must be > 0 when present; treat <= 0 as excluded (null).
-  return shares > 0 ? shares : null;
+  // DB constraint: shares must be > 0 when present; treat <= 0 as excluded.
+  return shares > 0 ? shares : undefined;
 }
 
 function normalizeAmount(value: unknown): number {
@@ -110,9 +110,11 @@ interface RequestBody {
   description?: string; // Optional description/note
   receiptImageUrl?: string; // Optional receipt image URL
   householdId?: string; // If provided, share with this household
+  isPortfolio?: boolean; // If true, treat as personal even with householdId
   customSplits?: CustomSplits; // Custom split configuration (optional)
   isRecurring?: boolean; // Whether this is a recurring expense (v1.5)
-  recurrence_rule?: { // Recurrence configuration (v1.5)
+  recurrence_rule?: {
+    // Recurrence configuration (v1.5)
     frequency:
       | "daily"
       | "weekly"
@@ -123,7 +125,8 @@ interface RequestBody {
     anchor_date: string;
     end_date?: string;
     interval?: number;
-    reminder?: { // Optional reminder configuration (v1.6)
+    reminder?: {
+      // Optional reminder configuration (v1.6)
       enabled: boolean;
       value: number; // How many days/hours before
       unit: "days" | "hours";
@@ -175,13 +178,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!userId && !detection.isGpt) {
-      return new Response(
-        JSON.stringify({ error: "userId is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "userId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!body.amount || body.amount <= 0) {
@@ -195,23 +195,17 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!body.category) {
-      return new Response(
-        JSON.stringify({ error: "Category is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Category is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (!body.date) {
-      return new Response(
-        JSON.stringify({ error: "Date is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Date is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get environment variables
@@ -238,12 +232,15 @@ Deno.serve(async (req: Request) => {
       resolvedUserMetadata.ephemeralUserId = detection.ephemeralUserId;
     }
 
+    const isPortfolio = body.isPortfolio === true;
+
     console.log("[save-expense] Saving expense:", {
       userId,
       amount: body.amount,
       category: body.category,
       currency,
       householdId: body.householdId,
+      isPortfolio,
     });
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -372,6 +369,7 @@ Deno.serve(async (req: Request) => {
         created_at: body.clientCreatedAt || new Date().toISOString(),
         is_recurring: body.isRecurring || false,
         recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
+        household_id: isPortfolio ? body.householdId || null : null,
       })
       .select()
       .single();
@@ -423,7 +421,25 @@ Deno.serve(async (req: Request) => {
       }
     } catch (_) {}
 
-    // If householdId provided, create household split
+    // If householdId provided, create household split unless this is a portfolio.
+    let responseExpense = expense;
+
+    if (body.householdId && isPortfolio) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: responseExpense,
+          shared: false,
+          resolvedUserId: userId,
+          meta: resolvedUserMetadata,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     if (body.householdId) {
       console.log(
         "[save-expense] Creating household split for household:",
@@ -483,8 +499,26 @@ Deno.serve(async (req: Request) => {
       }
 
       // Determine split type and validate custom splits
-      const splitType = body.customSplits?.splitType || "equal";
-      const customSplits = body.customSplits;
+      const rawSplitType =
+        typeof body.customSplits?.splitType === "string"
+          ? body.customSplits.splitType.trim().toLowerCase()
+          : "equal";
+      const normalizedSplitType = [
+        "equal",
+        "amount",
+        "percentage",
+        "shares",
+      ].includes(rawSplitType)
+        ? rawSplitType
+        : "equal";
+      const hasMemberSplits =
+        Array.isArray(body.customSplits?.memberSplits) &&
+        body.customSplits!.memberSplits.length > 0;
+      const customSplits =
+        hasMemberSplits && normalizedSplitType !== "equal"
+          ? body.customSplits
+          : null;
+      const splitType = customSplits ? normalizedSplitType : "equal";
 
       // Validate custom splits if provided
       if (customSplits) {
@@ -492,8 +526,8 @@ Deno.serve(async (req: Request) => {
 
         // Normalize member split values so downstream validations and inserts
         // don't violate DB constraints (e.g., shares cannot be 0).
-        const normalizedMemberSplits: MemberSplit[] = customSplits.memberSplits
-          .map((split) => ({
+        const normalizedMemberSplits: MemberSplit[] =
+          customSplits.memberSplits.map((split) => ({
             userId: split.userId,
             amount: normalizeAmount(split.amount),
             percentage: normalizePercentage(split.percentage),
@@ -501,7 +535,8 @@ Deno.serve(async (req: Request) => {
           }));
 
         // Validate all members are included
-        const customUserIds = normalizedMemberSplits.map((s) => s.userId)
+        const customUserIds = normalizedMemberSplits
+          .map((s) => s.userId)
           .sort();
         const allUserIds = members.map((m) => m.user_id).sort();
 
@@ -526,7 +561,8 @@ Deno.serve(async (req: Request) => {
             (sum, s) => sum + Math.round((s.amount || 0) * 100),
             0,
           );
-          if (Math.abs(totalSplitCents - amountCents) > 1) { // Allow 1 cent rounding difference
+          if (Math.abs(totalSplitCents - amountCents) > 1) {
+            // Allow 1 cent rounding difference
             console.error(
               "[save-expense] Amount splits do not equal total:",
               totalSplitCents,
@@ -535,8 +571,7 @@ Deno.serve(async (req: Request) => {
             );
             return new Response(
               JSON.stringify({
-                error:
-                  `Amount splits must equal total expense amount (${body.amount})`,
+                error: `Amount splits must equal total expense amount (${body.amount})`,
               }),
               {
                 status: 400,
@@ -549,7 +584,8 @@ Deno.serve(async (req: Request) => {
             (sum, s) => sum + (s.percentage || 0),
             0,
           );
-          if (Math.abs(totalPercent - 100) > 0.01) { // Allow 0.01% rounding difference
+          if (Math.abs(totalPercent - 100) > 0.01) {
+            // Allow 0.01% rounding difference
             console.error(
               "[save-expense] Percentage splits do not equal 100%:",
               totalPercent,
@@ -586,8 +622,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // Use normalized splits for all downstream logic.
-        (body.customSplits as CustomSplits).memberSplits =
-          normalizedMemberSplits;
+        customSplits.memberSplits = normalizedMemberSplits;
       }
 
       // Resolve payer for split group: default current user unless explicit payerUserId provided and valid
@@ -657,7 +692,7 @@ Deno.serve(async (req: Request) => {
       if (splitType === "equal") {
         // Equal split: divide amount equally
         const amountPerMember = Math.floor(amountCents / members.length);
-        const remainder = amountCents - (amountPerMember * members.length);
+        const remainder = amountCents - amountPerMember * members.length;
         splitLines = members.map((member, index) => ({
           split_group_id: splitGroup.id,
           user_id: member.user_id,
@@ -669,7 +704,7 @@ Deno.serve(async (req: Request) => {
       } else if (splitType === "amount" && customSplits) {
         // Custom amount split
         const cents = customSplits.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100))
+          Math.max(0, Math.round((split.amount || 0) * 100)),
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = amountCents - sumCents;
@@ -686,8 +721,8 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "percentage" && customSplits) {
         // Percentage split: calculate amount from percentage with remainder-safe allocation
-        const weights = customSplits.memberSplits.map((split) =>
-          split.percentage || 0
+        const weights = customSplits.memberSplits.map(
+          (split) => split.percentage || 0,
         );
         const allocatedCents = allocateCentsByWeights(amountCents, weights);
         splitLines = customSplits.memberSplits.map((split, index) => ({
@@ -724,8 +759,8 @@ Deno.serve(async (req: Request) => {
             },
           );
         }
-        const weights = customSplits.memberSplits.map((split) =>
-          split.shares || 0
+        const weights = customSplits.memberSplits.map(
+          (split) => split.shares || 0,
         );
         const allocatedCents = allocateCentsByWeights(amountCents, weights);
         splitLines = customSplits.memberSplits.map((split, index) => ({
@@ -740,7 +775,7 @@ Deno.serve(async (req: Request) => {
       } else {
         // Fallback to equal split
         const amountPerMember = Math.floor(amountCents / members.length);
-        const remainder = amountCents - (amountPerMember * members.length);
+        const remainder = amountCents - amountPerMember * members.length;
         splitLines = members.map((member, index) => ({
           split_group_id: splitGroup.id,
           user_id: member.user_id,
@@ -790,6 +825,15 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", expense.id);
 
+      const { data: refreshedExpense, error: refreshError } = await supabase
+        .from("expenses")
+        .select("*")
+        .eq("id", expense.id)
+        .single();
+      if (!refreshError && refreshedExpense) {
+        responseExpense = refreshedExpense;
+      }
+
       // Create notifications for all household members EXCEPT the adder
       const { error: notifyError } = await supabase.rpc(
         "notify_household_members_expense",
@@ -829,7 +873,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        data: expense,
+        data: responseExpense,
         shared: !!body.householdId,
         resolvedUserId: userId,
         meta: resolvedUserMetadata,

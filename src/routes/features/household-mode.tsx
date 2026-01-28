@@ -21,6 +21,7 @@ import { BentoCard } from "@/components/ui/bento-card";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
+import { HomeHeader } from "@/components/index/header";
 
 const META_TITLE = "Joint Expense Tracker & Budgeting for Couples | Moneko Household";
 const META_DESCRIPTION = "The best joint expense tracker for couples. Manage shared household bills, split expenses fairly, and track joint savings without losing your personal privacy.";
@@ -102,13 +103,6 @@ export default function HouseholdFeaturePage() {
   return (
     <div className="min-h-screen relative bg-white dark:bg-[#050505] overflow-hidden font-sans selection:bg-gray-100 dark:selection:bg-gray-800">
       <Helmet>
-        <title>{META_TITLE}</title>
-        <meta name="description" content={META_DESCRIPTION} />
-        <meta name="keywords" content={META_KEYWORDS} />
-        <meta property="og:title" content={META_TITLE} />
-        <meta property="og:description" content={META_DESCRIPTION} />
-        <meta property="og:url" content={pageUrl} />
-        <meta property="og:image" content="https://moneko.io/og-household.png" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
 
@@ -117,21 +111,8 @@ export default function HouseholdFeaturePage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
       </div>
 
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/70 dark:bg-black/70 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <MonekoIcon />
-            <motion.button
-              onClick={() => navigate({ to: "/" })}
-              className="flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-              whileHover={{ x: -2 }}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Home
-            </motion.button>
-          </div>
-        </div>
-      </nav>
+      <HomeHeader />
+
 
       <main className="relative z-10 pt-32 px-4 md:px-6 max-w-[1200px] mx-auto">
         
@@ -345,6 +326,7 @@ const FairSplittingVisual = () => {
                     <motion.div 
                         initial={{ width: "50%" }}
                         whileInView={{ width: "60%" }}
+                        viewport={{ once: true }}
                         transition={{ duration: 1, delay: 0.5 }}
                         className="h-full bg-slate-900 dark:bg-slate-200 relative"
                     >

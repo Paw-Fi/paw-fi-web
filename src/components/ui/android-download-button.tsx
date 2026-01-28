@@ -14,7 +14,7 @@ export const AndroidDownloadButton = (props: { className?: string }) => {
           props.className,
         )}
       >
-        <FontAwesomeIcon icon={faGooglePlay} className="text-lg w-auto" />
+        <FontAwesomeIcon icon={faGooglePlay} className="text-lg w-5 h-5" />
         Get it on Google Play
       </a>
     </div>

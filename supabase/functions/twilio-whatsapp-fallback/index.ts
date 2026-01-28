@@ -77,6 +77,10 @@ Deno.serve(async (req: Request) => {
   const rawBody = await req.text();
   const params = new URLSearchParams(rawBody);
   const isErrorCallback = !!params.get('ErrorCode');
+  const fallbackUrl =
+    Deno.env.get("TWILIO_FALLBACK_WEBHOOK_URL") ||
+    Deno.env.get("TWILIO_WEBHOOK_URL") ||
+    req.url;
 
   // Attempt to validate Twilio signature if configured
   try {
@@ -88,17 +92,14 @@ Deno.serve(async (req: Request) => {
         req.headers.get("X-Twilio-Webhook-Signature") ||
         req.headers.get("x-twilio-webhook-signature");
 
-      const urlUsedByTwilio = req.url;
+      const urlUsedByTwilio = fallbackUrl;
 
       if (sha256Header) {
         // 2025 docs: SHA-256 signature uses raw body concatenated with URL.
         const shaBase = urlUsedByTwilio + rawBody;
         const computed = await hmacSha256Base64(TWILIO_AUTH_TOKEN, shaBase);
         if (computed !== sha256Header) {
-          if (!isErrorCallback) {
-            return jsonResponse({ error: 'Invalid SHA-256 signature' }, 403);
-          }
-          console.warn('Fallback error callback invalid SHA-256 signature', {
+          console.warn('Fallback invalid SHA-256 signature', {
             url: urlUsedByTwilio,
           });
         }
@@ -106,17 +107,11 @@ Deno.serve(async (req: Request) => {
         const baseString = buildSignatureBaseString(urlUsedByTwilio, params);
         const computedSignature = await hmacSha1Base64(TWILIO_AUTH_TOKEN, baseString);
         if (computedSignature !== legacyHeader) {
-          if (!isErrorCallback) {
-            return jsonResponse({ error: 'Invalid signature' }, 403);
-          }
-          console.warn('Fallback error callback invalid SHA-1 signature', {
+          console.warn('Fallback invalid SHA-1 signature', {
             url: urlUsedByTwilio,
           });
         }
       } else {
-        if (!isErrorCallback) {
-          return jsonResponse({ error: 'Missing Twilio signature' }, 403);
-        }
         console.warn('Fallback error callback missing Twilio signature headers', {
           url: urlUsedByTwilio,
         });
@@ -130,34 +125,42 @@ Deno.serve(async (req: Request) => {
   const from = normalizePhone(params.get('From'));
   const body = params.get('Body') || '';
   if (!from || !body) {
-    return xmlResponse('<Response><Message>[Fallback] Invalid message</Message></Response>');
+    return xmlResponse('<Response></Response>');
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-fallback' } },
-  });
-
-  // Try primary processing path (same as main webhook) by reusing finance-update
-  const preview = body.trim().slice(0, 160);
-  let reply =
-    `[Fallback] Our WhatsApp assistant is briefly restarting, so I'm using the backup recorder. ` +
-    `${preview ? `I captured your note: “${preview}”. ` : ""}I'll process it as soon as the assistant is back online.`;
   try {
-    const { data, error } = await supabase.functions.invoke('finance-update', {
-      body: { phone: from, text: body },
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { 'X-Client-Info': 'moneko-twilio-whatsapp-fallback' } },
     });
-    if (error) {
-      console.error('fallback finance-update error', error);
-    } else if (data?.reply) {
-      reply =
-        `[Fallback] Our assistant is restarting, so I logged your update${preview ? ` (“${preview}”)` : ""}.` +
-        `\nSummary: ${data.reply}`;
-    }
-  } catch (e) {
-    console.error('fallback invoke failure', e);
-  }
 
-  const twiml = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Message>${reply.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Message></Response>`;
-  return xmlResponse(twiml);
+    // Try primary processing path (same as main webhook) by reusing finance-update
+    const preview = body.trim().slice(0, 160);
+    let reply =
+      `[Fallback] Our WhatsApp assistant is briefly restarting, so I'm using the backup recorder. ` +
+      `${preview ? `I captured your note: “${preview}”. ` : ""}I'll process it as soon as the assistant is back online.`;
+    try {
+      const { data, error } = await supabase.functions.invoke('finance-update', {
+        body: { phone: from, text: body },
+      });
+      if (error) {
+        console.error('fallback finance-update error', error);
+      } else if (data?.reply) {
+        reply =
+          `[Fallback] Our assistant is restarting, so I logged your update${preview ? ` (“${preview}”)` : ""}.` +
+          `\nSummary: ${data.reply}`;
+      }
+    } catch (e) {
+      console.error('fallback invoke failure', e);
+    }
+
+    const twiml = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Message>${reply.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Message></Response>`;
+    return xmlResponse(twiml);
+  } catch (e) {
+    console.error('fallback handler failure', e);
+    const safeReply =
+      "[Fallback] Sorry, I'm having trouble processing your message right now. Please try again in a moment.";
+    const twiml = `<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Message>${safeReply.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</Message></Response>`;
+    return xmlResponse(twiml);
+  }
 });

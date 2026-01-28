@@ -28,7 +28,7 @@ export const Route = createFileRoute('/guides/401k-vs-ira-complete-comparison')(
 
       return {
         meta,
-        link: [
+        links: [
           {
             rel: 'canonical',
             href: pageUrl,

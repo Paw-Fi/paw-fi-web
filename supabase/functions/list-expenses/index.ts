@@ -7,9 +7,10 @@ import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { normalizeCategory } from "../shared/category-colors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
@@ -23,15 +24,28 @@ interface RequestBody {
   startDate?: string;
   endDate?: string;
   currency?: string;
-  householdId?: string; // If provided, fetch household expenses
-  
+  householdId?: string; // If provided, fetch space expenses
+  isPortfolio?: boolean; // When householdId is provided, indicates whether the space is a portfolio
+
   // Recurring filters (NEW - for proper data separation)
-  includeRecurring?: boolean;   // If true, ONLY fetch recurring transactions
-  excludeRecurring?: boolean;   // If true, EXCLUDE recurring transactions
-  
+  includeRecurring?: boolean; // If true, ONLY fetch recurring transactions
+  excludeRecurring?: boolean; // If true, EXCLUDE recurring transactions
+
   // Household filters (NEW - for proper data separation)
-  personalOnly?: boolean;       // If true, only fetch personal (split_group_id IS NULL)
-  householdOnly?: boolean;      // If true, only fetch household (split_group_id IS NOT NULL)
+  personalOnly?: boolean; // If true, only fetch personal (split_group_id IS NULL)
+  householdOnly?: boolean; // If true, only fetch household (split_group_id IS NOT NULL)
+}
+
+function uniqueStrings(values: unknown[]): string[] {
+  const seen: Record<string, true> = {};
+  const out: string[] = [];
+  for (const v of values) {
+    if (typeof v !== "string" || !v) continue;
+    if (seen[v]) continue;
+    seen[v] = true;
+    out.push(v);
+  }
+  return out;
 }
 
 interface ExpenseRecord {
@@ -74,27 +88,23 @@ Deno.serve(async (req: Request) => {
     let userId = sanitizeUuid(body.userId ?? null);
 
     if (body.userId && !userId) {
-      console.warn("[list-expenses] Ignoring invalid userId provided in payload", {
-        provided: body.userId,
-        conversationId: detection.conversationId,
-      });
-    }
-
-    if (!userId && !detection.isGpt) {
-      return new Response(
-        JSON.stringify({ error: "userId is required" }),
+      console.warn(
+        "[list-expenses] Ignoring invalid userId provided in payload",
         {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          provided: body.userId,
+          conversationId: detection.conversationId,
         },
       );
     }
 
+    if (!userId && !detection.isGpt) {
+      return new Response(JSON.stringify({ error: "userId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const limit = Math.max(1, Math.min(body.limit ?? DEFAULT_LIMIT, MAX_LIMIT));
-    let supabase
-
-
-
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
@@ -105,18 +115,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-     supabase = createClient(
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-          detectSessionInUrl: false,
-        },
-        global: { headers: { "X-Client-Info": "moneko-list-expenses" } },
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
       },
-    );
+      global: { headers: { "X-Client-Info": "moneko-list-expenses" } },
+    });
 
     if (!userId && detection.isGpt) {
       if (!detection.conversationId) {
@@ -139,7 +145,10 @@ Deno.serve(async (req: Request) => {
           userId,
         });
       } catch (guestError) {
-        console.error("[list-expenses] Failed to resolve GPT guest identity:", guestError);
+        console.error(
+          "[list-expenses] Failed to resolve GPT guest identity:",
+          guestError,
+        );
         return new Response(
           JSON.stringify({ error: "Failed to prepare GPT guest user" }),
           {
@@ -151,13 +160,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Unable to resolve user" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "Unable to resolve user" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const resolvedMeta: Record<string, unknown> = {};
@@ -168,25 +174,93 @@ Deno.serve(async (req: Request) => {
       resolvedMeta.ephemeralUserId = detection.ephemeralUserId;
     }
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const offset = body.offset || 0;
+
+    const safeHouseholdId = sanitizeUuid(body.householdId ?? null);
+    if (body.householdId && !safeHouseholdId) {
+      return new Response(JSON.stringify({ error: "Invalid householdId" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-     supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-list-expenses" } },
-    });
+    // Resolve the user's spaces so we can build safe portfolio/non-portfolio filters.
+    // No SQL interpolation; everything is done with `.eq`/`.in`.
+    const { data: ownedSpaces } = await supabase
+      .from("households")
+      .select("id, is_portfolio")
+      .eq("owner_id", userId);
 
-    const offset = body.offset || 0;
+    const { data: memberRows } = await supabase
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", userId);
+
+    const memberSpaceIds = uniqueStrings(
+      (memberRows || []).map((r: any) => r?.household_id),
+    );
+
+    const { data: memberSpaces } = memberSpaceIds.length
+      ? await supabase
+          .from("households")
+          .select("id, is_portfolio")
+          .in("id", memberSpaceIds)
+      : { data: [] };
+
+    const allSpaces = [...(ownedSpaces || []), ...(memberSpaces || [])];
+    const portfolioSpaceIds = uniqueStrings(
+      allSpaces
+        .filter((h: any) => h?.is_portfolio === true)
+        .map((h: any) => h?.id),
+    );
+    const nonPortfolioSpaceIds = uniqueStrings(
+      allSpaces
+        .filter((h: any) => h?.is_portfolio !== true)
+        .map((h: any) => h?.id),
+    );
+
+    if (safeHouseholdId && typeof body.isPortfolio === "boolean") {
+      const isInPortfolio = portfolioSpaceIds.indexOf(safeHouseholdId) !== -1;
+      const isInNonPortfolio =
+        nonPortfolioSpaceIds.indexOf(safeHouseholdId) !== -1;
+      if (!isInPortfolio && !isInNonPortfolio) {
+        return new Response(
+          JSON.stringify({ error: "householdId not found" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+      if (body.isPortfolio === true && !isInPortfolio) {
+        return new Response(
+          JSON.stringify({ error: "householdId is not a portfolio space" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+      if (body.isPortfolio === false && isInPortfolio) {
+        return new Response(
+          JSON.stringify({ error: "householdId is a portfolio space" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
 
     // Start building query
     let query = supabase
       .from("expenses")
-      .select("id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at", { count: 'exact' })
+      .select(
+        "id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at, contact_id, user_id",
+        { count: "exact" },
+      )
       .eq("type", "expense") // CRITICAL: Only fetch expenses (not income)
+      .is("deleted_at", null) // Exclude soft-deleted transactions
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1); // Pagination support
@@ -199,22 +273,44 @@ Deno.serve(async (req: Request) => {
       // EXCLUDE recurring transactions (for home page)
       query = query.or("is_recurring.is.false,is_recurring.is.null");
     }
-    
+
     // Apply household filters (NEW)
-    // CRITICAL: In household mode, fetch ALL expenses for the household (any member)
-    // In personal mode, filter by user_id AND ensure household_id is null
+    // CRITICAL:
+    // - Personal view = personal + portfolio
+    // - Regular shared space view = space expenses only (non-portfolio)
     if (body.personalOnly === true) {
-      // ONLY personal expenses (split_group_id IS NULL)
-      query = query.eq("user_id", userId).is("split_group_id", null);
-    } else if (body.householdOnly === true) {
-      // ONLY household expenses (split_group_id IS NOT NULL)
-      query = query.not("split_group_id", "is", null);
-    } else if (body.householdId) {
-      // Specific household - fetch ALL expenses for this household (any member)
-      query = query.eq("household_id", body.householdId);
-    } else {
-      // Default personal mode: filter by user_id and exclude household expenses
+      // ONLY personal expenses
       query = query.eq("user_id", userId).is("household_id", null);
+    } else if (body.householdOnly === true) {
+      // ONLY regular (non-portfolio) shared space expenses
+      if (nonPortfolioSpaceIds.length) {
+        query = query.in("household_id", nonPortfolioSpaceIds);
+      } else {
+        query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    } else if (safeHouseholdId) {
+      // Specific space
+      query = query.eq("household_id", safeHouseholdId);
+    } else {
+      if (body.isPortfolio === true) {
+        // Portfolio-only view (still user-scoped)
+        query = query.eq("user_id", userId);
+        if (portfolioSpaceIds.length) {
+          query = query.in("household_id", portfolioSpaceIds);
+        } else {
+          query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+        }
+      } else {
+        // Default personal view: personal + portfolio
+        query = query.eq("user_id", userId);
+        if (portfolioSpaceIds.length) {
+          query = query.or(
+            `household_id.is.null,household_id.in.(${portfolioSpaceIds.join(",")})`,
+          );
+        } else {
+          query = query.is("household_id", null);
+        }
+      }
     }
 
     // Apply date filters if provided
@@ -224,7 +320,7 @@ Deno.serve(async (req: Request) => {
     if (body.endDate) {
       query = query.lte("date", body.endDate);
     }
-    
+
     // Apply currency filter if provided
     if (body.currency) {
       query = query.eq("currency", validateCurrency(body.currency));
@@ -235,41 +331,46 @@ Deno.serve(async (req: Request) => {
     if (error) {
       console.error("[list-expenses] Database error:", error);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch expenses' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: "Failed to fetch expenses" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
-    console.log(`[list-expenses] Fetched ${expenses.length} expenses, total: ${count}`);
+    console.log(
+      `[list-expenses] Fetched ${expenses.length} expenses, total: ${count}`,
+    );
 
     // Transform and normalize data
     // IMPORTANT: Use snake_case keys to match mobile ExpenseEntry.fromJson expectations
-    const data = expenses.map(expense => {
+    const data = expenses.map((expense) => {
       // Parse recurrence_rule if it's a string (JSONB sometimes comes as string)
       let recurrenceRule = expense.recurrence_rule;
-      if (typeof recurrenceRule === 'string') {
+      if (typeof recurrenceRule === "string") {
         try {
           recurrenceRule = JSON.parse(recurrenceRule);
         } catch (e) {
-          console.warn('[list-expenses] Failed to parse recurrence_rule:', e);
+          console.warn("[list-expenses] Failed to parse recurrence_rule:", e);
           recurrenceRule = null;
         }
       }
-      
+
       // Parse attachments if it's a string
       let attachments = expense.attachments || [];
-      if (typeof attachments === 'string') {
+      if (typeof attachments === "string") {
         try {
           attachments = JSON.parse(attachments);
         } catch (e) {
-          console.warn('[list-expenses] Failed to parse attachments:', e);
+          console.warn("[list-expenses] Failed to parse attachments:", e);
           attachments = [];
         }
       }
-      
+
       return {
         id: expense.id,
-        type: expense.type || 'expense',
+        type: expense.type || "expense",
         date: expense.date,
         category: normalizeCategory(expense.category),
         raw_text: expense.raw_text,
@@ -293,11 +394,11 @@ Deno.serve(async (req: Request) => {
         data,
         resolvedUserId: userId,
         meta: {
-          count: data.length,          // Items in this response
-          total: count || 0,            // Total matching items (NEW)
+          count: data.length, // Items in this response
+          total: count || 0, // Total matching items (NEW)
           limit,
-          offset: offset,               // Current offset (NEW)
-          hasMore: (offset + data.length) < (count || 0), // Has more pages (NEW)
+          offset: offset, // Current offset (NEW)
+          hasMore: offset + data.length < (count || 0), // Has more pages (NEW)
           filters: {
             startDate: body.startDate || null,
             endDate: body.endDate || null,
@@ -306,11 +407,16 @@ Deno.serve(async (req: Request) => {
             excludeRecurring: body.excludeRecurring || false,
             personalOnly: body.personalOnly || false,
             householdOnly: body.householdOnly || false,
+            householdId: safeHouseholdId,
+            isPortfolio: body.isPortfolio || false,
           },
           identity: resolvedMeta,
         },
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[list-expenses] Error:", error);

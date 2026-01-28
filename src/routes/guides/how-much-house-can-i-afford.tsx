@@ -27,7 +27,7 @@ export const Route = createFileRoute('/guides/how-much-house-can-i-afford')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

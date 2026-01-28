@@ -97,36 +97,12 @@ const UserCard: React.FC<UserCardProps> = ({ user }) => {
   );
 };
 
-// Mock users for demo/fallback when database is empty
-const generateMockUsers = (count: number): User[] => {
-  const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn', 'Sage', 'Rowan', 'Kai', 'Cameron', 'Dakota', 'Peyton', 'Skyler', 'Phoenix', 'River', 'Harley', 'Emerson', 'Finley'];
-  const lastNames = ['Smith', 'Johnson', 'Brown', 'Davis', 'Miller', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Garcia', 'Martinez', 'Robinson', 'Clark', 'Rodriguez', 'Lewis'];
-  const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'icloud.com', 'proton.me'];
-  
-  return Array.from({ length: count }, (_, i) => {
-    const firstName = firstNames[i % firstNames.length];
-    const lastName = lastNames[(i + 7) % lastNames.length];
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domains[i % domains.length]}`;
-    
-    return {
-      id: `mock-${i}`,
-      email,
-      full_name: `${firstName} ${lastName}`,
-      avatar_url: null,
-      created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-    };
-  });
-};
-
 export function UserCommunityShowcase() {
   // Use TanStack Query hook for data fetching with caching
   const { data, isLoading, error } = useCommunityStats();
 
-  // Fallback to mock data on error or empty database
-  const totalUsers = data?.totalUsers || 250;
-  const displayUsers = data?.displayUsers?.length ? data.displayUsers : generateMockUsers(30);
-
-  const displayCount = totalUsers;
+  const totalUsers = data?.totalUsers;
+  const displayUsers = data?.displayUsers?.length ? data.displayUsers : [];
 
   return (
     <section className="relative z-10 px-4 py-20 sm:px-6 lg:px-8 overflow-hidden">
@@ -147,20 +123,24 @@ export function UserCommunityShowcase() {
               </span>
             </div>
 
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-light text-foreground">
-              <span className="font-medium bg-gradient-to-r from-moneko-primary to-moneko-secondary bg-clip-text text-transparent">
-                <NumberTicker
-                  value={displayCount}
-                  className="inline-block font-medium bg-gradient-to-r from-moneko-primary to-moneko-secondary bg-clip-text text-transparent"
-                />
-                +
-              </span>
-              {' '}people have already joined
-            </h2>
+            {typeof totalUsers === 'number' ? (
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-light text-foreground">
+                <span className="font-medium bg-gradient-to-r from-moneko-primary to-moneko-secondary bg-clip-text text-transparent">
+                  <NumberTicker
+                    value={totalUsers}
+                    className="inline-block font-medium bg-gradient-to-r from-moneko-primary to-moneko-secondary bg-clip-text text-transparent"
+                  />
+                </span>
+                {' '}people have already joined
+              </h2>
+            ) : (
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-light text-foreground">
+                Join our growing community
+              </h2>
+            )}
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Be part of a growing community taking control of their financial future.
-              Join us today and start your journey.
+              Join people using Moneko to build healthier budgeting habits.
             </p>
           </motion.div>
 

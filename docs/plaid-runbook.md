@@ -6,19 +6,18 @@ This guide covers how to connect Plaid to the Supabase backend, how to exchange 
 
 Configure these secrets locally (`.env.local` / `supabase/.env`) and in Supabase Project Settings → API → Secrets.
 
-| Variable | Description |
-| --- | --- |
-| `PLAID_CLIENT_ID` | Plaid client ID (Sandbox/Development/Production). |
-| `PLAID_SECRET` | Plaid secret associated with the environment. |
-| `PLAID_ENV` | `sandbox`, `development`, or `production`. Defaults to `sandbox`. |
-| `PLAID_PRODUCTS` | Comma-separated product list (default `transactions`). |
-| `PLAID_COUNTRY_CODES` | Comma-separated ISO country codes (default `US,CA`). |
-| `PLAID_CLIENT_NAME` | Display name shown inside Link (default `Moneko`). |
-| `PLAID_REDIRECT_URI` | Hardcoded in code to `https://moneko.io/plaid/redirect` (used for OAuth handoff). |
-| `PLAID_ANDROID_PACKAGE_NAME` | Hardcoded in code to `com.moneko.mobile` for Android OAuth/App-to-App. |
-| `PLAID_WEBHOOK_URL` | Optional webhook URL for Plaid events. |
-| `PLAID_LINK_CUSTOMIZATION_NAME` | Optional Link customization key. |
-| `PLAID_ENCRYPTION_KEY` | 32-byte base64 key used for AES-GCM encryption of access tokens. |
+| Variable                        | Description                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| `PLAID_CLIENT_ID`               | Plaid client ID (Sandbox/Development/Production).                                 |
+| `PLAID_SECRET`                  | Plaid secret associated with the environment.                                     |
+| `PLAID_ENV`                     | `sandbox`, `development`, or `production`. Defaults to `sandbox`.                 |
+| `PLAID_PRODUCTS`                | Comma-separated product list (default `transactions`).                            |
+| `PLAID_COUNTRY_CODES`           | Comma-separated ISO country codes (default `US,CA`).                              |
+| `PLAID_CLIENT_NAME`             | Display name shown inside Link (default `Moneko`).                                |
+| `PLAID_REDIRECT_URI`            | Hardcoded in code to `https://moneko.io/plaid/redirect` (used for OAuth handoff). |
+| `PLAID_ANDROID_PACKAGE_NAME`    | Hardcoded in code to `com.moneko.mobile` for Android OAuth/App-to-App.            |
+| `PLAID_LINK_CUSTOMIZATION_NAME` | Optional Link customization key.                                                  |
+| `PLAID_ENCRYPTION_KEY`          | 32-byte base64 key used for AES-GCM encryption of access tokens.                  |
 
 > Generate `PLAID_ENCRYPTION_KEY` via `openssl rand -base64 32` and keep it secret. All access tokens are encrypted before being stored in `bank_connections.plaid_access_token_encrypted`.
 
@@ -45,24 +44,29 @@ Configure these secrets locally (`.env.local` / `supabase/.env`) and in Supabase
 
 - **Create Link Token**
   ```ts
-  const { data } = await fetch('/functions/v1/plaid-create-link-token', { method: 'POST' });
+  const { data } = await fetch("/functions/v1/plaid-create-link-token", {
+    method: "POST",
+  });
   const { linkToken } = await data.json();
-  const plaid = usePlaidLink({ token: linkToken, onSuccess: ({ public_token, metadata }) => {
-    await fetch('/functions/v1/plaid-exchange-public-token', {
-      method: 'POST',
-      body: JSON.stringify({
-        publicToken: public_token,
-        institutionId: metadata.institution?.institution_id,
-        institutionName: metadata.institution?.name,
-      }),
-    });
-  }});
+  const plaid = usePlaidLink({
+    token: linkToken,
+    onSuccess: ({ public_token, metadata }) => {
+      await fetch("/functions/v1/plaid-exchange-public-token", {
+        method: "POST",
+        body: JSON.stringify({
+          publicToken: public_token,
+          institutionId: metadata.institution?.institution_id,
+          institutionName: metadata.institution?.name,
+        }),
+      });
+    },
+  });
   ```
 - **Sync**
-   ```ts
-   await fetch('/functions/v1/plaid-sync-transactions', { method: 'POST' });
-   // Afterwards refetch expenses list from Supabase REST/Edge function.
-   ```
+  ```ts
+  await fetch("/functions/v1/plaid-sync-transactions", { method: "POST" });
+  // Afterwards refetch expenses list from Supabase REST/Edge function.
+  ```
 
 ### Mobile deep-link parameters
 
@@ -73,6 +77,12 @@ When an OAuth institution completes, `/plaid/redirect` collects the query/hash p
 - `status`: Optional string set by Plaid (e.g., `connected`).
 - `error_code` / `error_message`: Present if the OAuth handoff failed.
 - Any additional Plaid query params are forwarded untouched, so future additions continue working without frontend changes.
+
+### Webhook routing
+
+Plaid Link tokens are created with the webhook URL set automatically to the Supabase Edge Function endpoint:
+
+- `https://<your-project>.supabase.co/functions/v1/plaid-webhook`
 
 ## 4. Local Testing Checklist
 

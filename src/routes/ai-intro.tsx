@@ -21,7 +21,7 @@ export const Route = createFileRoute('/ai-intro')({
         image: imageUrl,
         url: pageUrl,
       }),
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,

@@ -28,7 +28,7 @@ export const Route = createFileRoute('/guides/how-to-calculate-emergency-fund')(
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

@@ -435,7 +435,7 @@ export const Route = createFileRoute('/questions/$questionSlug')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: canonicalUrl

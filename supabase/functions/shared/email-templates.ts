@@ -1,8 +1,19 @@
 // Email templates for Moneko
-import { baseTemplate, renderButton, renderFooter, mobileDownloadCtasHtml } from './email-layout.ts';
-import { htmlToText } from './email-html-to-text.ts';
-import { escapeHtml, sanitizeSubject, formatDate, formatCurrency, pluralize } from './email-utils.ts';
-import { sanitizeUrl, LINKS } from './email-security.ts';
+import {
+  baseTemplate,
+  renderButton,
+  renderFooter,
+  mobileDownloadCtasHtml,
+} from "./email-layout.ts";
+import { htmlToText } from "./email-html-to-text.ts";
+import {
+  escapeHtml,
+  sanitizeSubject,
+  formatDate,
+  formatCurrency,
+  pluralize,
+} from "./email-utils.ts";
+import { sanitizeUrl, LINKS } from "./email-security.ts";
 
 // Subscription created email template
 export const subscriptionCreatedTemplate = (data: {
@@ -13,10 +24,10 @@ export const subscriptionCreatedTemplate = (data: {
   isLifetime?: boolean;
 }) => {
   const subscriptionMessage = data.isLifetime
-    ? 'You now have lifetime access to all premium features — no renewals, no recurring charges.'
-    : data.endDate 
+    ? "You now have lifetime access to all premium features — no renewals, no recurring charges."
+    : data.endDate
       ? `Your subscription is now active and will automatically renew on ${formatDate(data.endDate)}.`
-      : 'Your subscription is now active.';
+      : "Your subscription is now active.";
 
   const content = `
     <h1 class="title">Welcome to ${escapeHtml(data.planName)}</h1>
@@ -28,7 +39,13 @@ export const subscriptionCreatedTemplate = (data: {
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you subscribed to Moneko.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you subscribed to Moneko.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(`Welcome to Moneko ${data.planName}`),
   };
@@ -40,30 +57,44 @@ export const subscriptionUpdatedTemplate = (data: {
   planName: string;
   endDate: string;
   dashboardUrl: string;
-  changeType: 'upgrade' | 'downgrade' | 'renewal' | 'interval_changed';
+  changeType: "upgrade" | "downgrade" | "renewal" | "interval_changed";
 }) => {
-  const title = data.changeType === 'upgrade' ? 'Your Subscription Has Been Upgraded' :
-                data.changeType === 'downgrade' ? 'Your Subscription Has Been Changed' :
-                data.changeType === 'interval_changed' ? 'Your Billing Interval Has Changed' :
-                'Your Subscription Has Been Renewed';
-  
-  const subtitle = data.changeType === 'upgrade' ? `You've been upgraded to ${escapeHtml(data.planName)}.` :
-                   data.changeType === 'downgrade' ? `Your plan has been changed to ${escapeHtml(data.planName)}.` :
-                   data.changeType === 'interval_changed' ? `Your billing interval is now ${escapeHtml(data.planName)}.` :
-                   `Your ${escapeHtml(data.planName)} subscription has been renewed.`;
+  const title =
+    data.changeType === "upgrade"
+      ? "Your Subscription Has Been Upgraded"
+      : data.changeType === "downgrade"
+        ? "Your Subscription Has Been Changed"
+        : data.changeType === "interval_changed"
+          ? "Your Billing Interval Has Changed"
+          : "Your Subscription Has Been Renewed";
+
+  const subtitle =
+    data.changeType === "upgrade"
+      ? `You've been upgraded to ${escapeHtml(data.planName)}.`
+      : data.changeType === "downgrade"
+        ? `Your plan has been changed to ${escapeHtml(data.planName)}.`
+        : data.changeType === "interval_changed"
+          ? `Your billing interval is now ${escapeHtml(data.planName)}.`
+          : `Your ${escapeHtml(data.planName)} subscription has been renewed.`;
 
   const content = `
     <h1 class="title">${escapeHtml(title)}</h1>
     <p class="subtitle">${escapeHtml(subtitle)}</p>
     <p>Your subscription will automatically renew on ${formatDate(data.endDate)}.</p>
-    ${renderButton('Manage Subscription', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Manage Subscription", sanitizeUrl(data.dashboardUrl))}
     ${mobileDownloadCtasHtml()}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your subscription was updated.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your subscription was updated.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(title),
   };
@@ -79,27 +110,33 @@ export const subscriptionCanceledTemplate = (data: {
 }) => {
   const title = "Your Subscription Has Been Canceled";
   let subtitle;
-  
+
   if (data.immediateCancel) {
     subtitle = `Your ${escapeHtml(data.planName)} subscription is no longer active.`;
   } else {
-    subtitle = data.endDate 
+    subtitle = data.endDate
       ? `Your ${escapeHtml(data.planName)} subscription will remain active until ${formatDate(data.endDate)}.`
       : `Your ${escapeHtml(data.planName)} subscription will remain active until your current period ends.`;
   }
-  
+
   const content = `
     <h1 class="title">${escapeHtml(title)}</h1>
     <p class="subtitle">${escapeHtml(subtitle)}</p>
     <p>We're sorry to see you go. If you change your mind, you can resubscribe anytime.</p>
-    ${renderButton('Resubscribe', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Resubscribe", sanitizeUrl(data.dashboardUrl))}
     ${mobileDownloadCtasHtml()}
     <p>We'd love to hear your feedback about why you canceled. Your input helps us improve.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your subscription was canceled.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your subscription was canceled.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(title),
   };
@@ -118,20 +155,28 @@ export const paymentFailedTemplate = (data: {
     <h1 class="title">Payment Failed</h1>
     <p class="subtitle">We were unable to process your payment for ${escapeHtml(data.planName)}.</p>
     <p>Your payment method was declined. Please update your payment information to continue enjoying your premium benefits.</p>
-    ${data.isDowngraded ? 
-      `<p><strong>Important:</strong> Your account has been downgraded to the free plan due to the payment failure.</p>` : 
-      `<p><strong>Warning:</strong> Your subscription will be downgraded if payment is not updated soon.</p>`}
-    ${data.updatePaymentUrl ? renderButton('Update Payment Method', sanitizeUrl(data.updatePaymentUrl)) : ''}
-    ${data.resubscribeUrl ? renderButton('Resubscribe', sanitizeUrl(data.resubscribeUrl)) : ''}
-    ${renderButton('Manage Membership', sanitizeUrl(data.dashboardUrl))}
+    ${
+      data.isDowngraded
+        ? `<p><strong>Important:</strong> Your account has been downgraded to the free plan due to the payment failure.</p>`
+        : `<p><strong>Warning:</strong> Your subscription will be downgraded if payment is not updated soon.</p>`
+    }
+    ${data.updatePaymentUrl ? renderButton("Update Payment Method", sanitizeUrl(data.updatePaymentUrl)) : ""}
+    ${data.resubscribeUrl ? renderButton("Resubscribe", sanitizeUrl(data.resubscribeUrl)) : ""}
+    ${renderButton("Manage Membership", sanitizeUrl(data.dashboardUrl))}
     <p>If you believe this is an error, please contact our support team for assistance.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your subscription payment failed.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your subscription payment failed.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Payment Failed — Action Required'),
+    subject: sanitizeSubject("Payment Failed — Action Required"),
   };
 };
 
@@ -146,39 +191,51 @@ export const trialEndingTemplate = (data: {
     <h1 class="title">Your Trial Period Ends Soon</h1>
     <p class="subtitle">Your ${escapeHtml(data.planName)} trial will end on ${formatDate(data.trialEndDate)}.</p>
     <p>To continue enjoying all the benefits without interruption, please ensure your payment method is up to date.</p>
-    ${renderButton('Manage Membership', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Manage Membership", sanitizeUrl(data.dashboardUrl))}
     <p><strong>Want to keep premium for free?</strong> We’re giving away <strong>free lifetime access</strong> through our referral program.</p>
     <p>Invite a friend to Moneko and when they join, you both unlock lifetime premium automatically.</p>
-    ${renderButton('Get Lifetime Access (Referral Program)', sanitizeUrl('https://moneko.io/referral'), 'secondary')}
+    ${renderButton("Get Lifetime Access (Referral Program)", sanitizeUrl("https://moneko.io/referral"), "secondary")}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your free trial is ending soon.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your free trial is ending soon.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Your Moneko Trial Ends Soon'),
+    subject: sanitizeSubject("Your Moneko Trial Ends Soon"),
   };
 };
 
 // Referral accepted email template (to referrer)
 export const referralAcceptedTemplate = (data: {
-  referrerName: string
-  refereeName: string
+  referrerName: string;
+  refereeName: string;
 }) => {
   const content = `
     <h1 class="title">Your Friend Joined Moneko 🎉</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${data.refereeName ? escapeHtml(data.refereeName)+" " : ''}has accepted your invitation and joined Moneko!</p>
+    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${data.refereeName ? escapeHtml(data.refereeName) + " " : ""}has accepted your invitation and joined Moneko!</p>
     <p>Thank you for helping grow our community. Your support means a lot to us.</p>
     ${mobileDownloadCtasHtml()}
     <p>Keep sharing the love - you'll earn rewards for each friend who subscribes to a premium plan.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your friend accepted your Moneko invitation.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your friend accepted your Moneko invitation.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Your Friend Accepted Your Moneko Invitation!'),
+    subject: sanitizeSubject("Your Friend Accepted Your Moneko Invitation!"),
   };
 };
 
@@ -192,16 +249,22 @@ export const referralSuccessfulTemplate = (data: {
     <h1 class="title">Welcome to Moneko! 🎉</h1>
     <p class="subtitle">Hi ${escapeHtml(data.name)}, thanks for joining Moneko through ${escapeHtml(data.referrerName)}'s invitation!</p>
     <p>You're all set up and ready to start your financial journey with us. We're excited to have you on board!</p>
-    ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Go to Dashboard", sanitizeUrl(data.dashboardUrl))}
     ${mobileDownloadCtasHtml()}
     <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you joined Moneko through a referral invitation.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you joined Moneko through a referral invitation.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Welcome to Moneko!'),
+    subject: sanitizeSubject("Welcome to Moneko!"),
   };
 };
 
@@ -216,16 +279,78 @@ export const welcomeTemplate = (data: {
     <p class="subtitle">Hi ${escapeHtml(data.name)}, your account is all set up and ready to go!</p>
     <p>Thank you for verifying your email address. You now have full access to Moneko's powerful financial tools and insights.</p>
     <p>Start your journey to better financial health by exploring your personalized dashboard:</p>
-    ${renderButton('Go to Dashboard', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Go to Dashboard", sanitizeUrl(data.dashboardUrl))}
     ${mobileDownloadCtasHtml()}
     <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you successfully verified your Moneko account.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you successfully verified your Moneko account.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Welcome to Moneko!'),
+    subject: sanitizeSubject("Welcome to Moneko!"),
+  };
+};
+
+// Household invite email template
+export const householdInviteTemplate = (data: {
+  inviteUrl: string;
+  personalMessage?: string;
+  householdName?: string;
+  inviterName?: string;
+}) => {
+  const inviter = data.inviterName?.trim();
+  const household = data.householdName?.trim();
+  const title =
+    inviter && household
+      ? `${escapeHtml(inviter)} invited you to ${escapeHtml(household)}`
+      : inviter
+        ? `${escapeHtml(inviter)} invited you to a space`
+        : household
+          ? `You are invited to ${escapeHtml(household)}`
+          : "You are invited to join a space";
+  const subtitle = household
+    ? `Join ${escapeHtml(household)} to start sharing expenses and budgets.`
+    : "Join your space to start sharing expenses and budgets.";
+  const safeMessage = data.personalMessage?.trim();
+  const inviterLine = data.inviterName
+    ? `<p>Invite sent by ${escapeHtml(data.inviterName)}.</p>`
+    : "";
+
+  const content = `
+    <h1 class="title">${escapeHtml(title)}</h1>
+    <p class="subtitle">${subtitle}</p>
+    ${inviterLine}
+    <p>Click the button below to accept your invitation.</p>
+    ${renderButton("Accept Invite", sanitizeUrl(data.inviteUrl))}
+    ${safeMessage ? `<p><strong>Personal message:</strong></p><p>${escapeHtml(safeMessage)}</p>` : ""}
+    <p>If you did not expect this email, you can safely ignore it.</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you were invited to join a Moneko space.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject(
+      inviter && household
+        ? `${inviter} invited you to ${household} on Moneko`
+        : inviter
+          ? `${inviter} invited you to a space on Moneko`
+          : household
+            ? `Invitation to join ${household} on Moneko`
+            : "Invitation to join a space on Moneko",
+    ),
   };
 };
 
@@ -242,15 +367,21 @@ export const courseCompletionTemplate = (data: {
     <h1 class="title">Congratulations on Completing Your Course</h1>
     <p class="subtitle">You've successfully completed the <strong>${escapeHtml(data.courseName)}</strong> course on ${formatDate(data.completionDate)}.</p>
     <p>You've taken an important step in your financial education journey. We're proud of your dedication to learning.</p>
-    ${data.certificateUrl ? renderButton('Download Certificate', sanitizeUrl(data.certificateUrl)) : ''}
-    ${data.nextCourseUrl ? `<p>Ready for your next challenge? <a href="${sanitizeUrl(data.nextCourseUrl)}">Check out recommended courses</a> to continue your learning journey.</p>` : ''}
+    ${data.certificateUrl ? renderButton("Download Certificate", sanitizeUrl(data.certificateUrl)) : ""}
+    ${data.nextCourseUrl ? `<p>Ready for your next challenge? <a href="${sanitizeUrl(data.nextCourseUrl)}">Check out recommended courses</a> to continue your learning journey.</p>` : ""}
     ${mobileDownloadCtasHtml()}
     <p>Keep up the great work.</p>
     <p>The Moneko Team</p>
   `;
-  
+
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because you completed a course.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you completed a course.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(`Course Completed — ${data.courseName}`),
   };
@@ -271,16 +402,22 @@ export const invoiceFinalizedTemplate = (data: {
     <h1 class="title">Your Invoice is Ready</h1>
     <p class="subtitle">Your invoice for ${escapeHtml(data.planName)} subscription is now ready.</p>
     <p><strong>Amount:</strong> ${formatCurrency(data.amount, data.currency)}</p>
-    ${data.dueDate ? `<p><strong>Due Date:</strong> ${formatDate(data.dueDate)}</p>` : ''}
-    ${renderButton('View Invoice', sanitizeUrl(data.invoiceUrl))}
-    ${data.invoicePdfUrl ? `<p>You can also <a href="${sanitizeUrl(data.invoicePdfUrl)}">download the PDF version</a>.</p>` : ''}
+    ${data.dueDate ? `<p><strong>Due Date:</strong> ${formatDate(data.dueDate)}</p>` : ""}
+    ${renderButton("View Invoice", sanitizeUrl(data.invoiceUrl))}
+    ${data.invoicePdfUrl ? `<p>You can also <a href="${sanitizeUrl(data.invoicePdfUrl)}">download the PDF version</a>.</p>` : ""}
     <p>If you have automatic payments enabled, your payment method will be charged automatically.</p>
     <p>If you have any questions about this invoice, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because an invoice is ready for your subscription.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because an invoice is ready for your subscription.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(`Invoice Ready — ${data.planName}`),
   };
@@ -297,25 +434,35 @@ export const invoiceUpcomingTemplate = (data: {
   dashboardUrl: string;
   updatePaymentUrl?: string;
 }) => {
-  const urgencyText = data.daysUntil <= 3 ? 'soon' : `in ${data.daysUntil} days`;
-  
+  const urgencyText =
+    data.daysUntil <= 3 ? "soon" : `in ${data.daysUntil} days`;
+
   const content = `
     <h1 class="title">Upcoming Subscription Renewal</h1>
     <p class="subtitle">Your ${escapeHtml(data.planName)} subscription will renew ${urgencyText}.</p>
     <p><strong>Amount:</strong> ${formatCurrency(data.amount, data.currency)}</p>
     <p><strong>Renewal Date:</strong> ${formatDate(data.chargeDate)}</p>
     <p>Your subscription will automatically renew on this date. The payment method on file will be charged.</p>
-    ${data.updatePaymentUrl && data.daysUntil <= 7 ? 
-      `<p>Please ensure your payment method is up to date to avoid any interruption in service.</p>
-       ${renderButton('Update Payment Method', sanitizeUrl(data.updatePaymentUrl))}
-       ` : ''}
-    ${renderButton('Manage Subscription', sanitizeUrl(data.dashboardUrl))}
+    ${
+      data.updatePaymentUrl && data.daysUntil <= 7
+        ? `<p>Please ensure your payment method is up to date to avoid any interruption in service.</p>
+       ${renderButton("Update Payment Method", sanitizeUrl(data.updatePaymentUrl))}
+       `
+        : ""
+    }
+    ${renderButton("Manage Subscription", sanitizeUrl(data.dashboardUrl))}
     <p>If you want to make changes to your subscription or cancel, please do so before the renewal date.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your subscription is renewing soon.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your subscription is renewing soon.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(`Upcoming Renewal — ${data.planName}`),
   };
@@ -332,15 +479,15 @@ export const paymentActionRequiredTemplate = (data: {
   dashboardUrl: string;
 }) => {
   const expiryText = data.expiryHours
-    ? ` Please complete authentication within ${data.expiryHours} ${pluralize(data.expiryHours, 'hour')} to avoid subscription interruption.`
-    : '';
+    ? ` Please complete authentication within ${data.expiryHours} ${pluralize(data.expiryHours, "hour")} to avoid subscription interruption.`
+    : "";
 
   const content = `
     <h1 class="title">Action Required — Authenticate Your Payment</h1>
     <p class="subtitle">We need you to authenticate your payment for the ${escapeHtml(data.planName)} subscription.</p>
     <p><strong>Amount:</strong> ${formatCurrency(data.amount, data.currency)}</p>
     <p>Your bank requires additional verification (3D Secure) to complete this payment.</p>
-    ${renderButton('Authenticate Payment', sanitizeUrl(data.authenticationUrl))}
+    ${renderButton("Authenticate Payment", sanitizeUrl(data.authenticationUrl))}
     <p>${escapeHtml(expiryText)}</p>
     <p>This is a security measure to protect you from unauthorized transactions. The authentication process is quick and secure.</p>
     <p>If you don't recognize this charge, please <a href="${sanitizeUrl(data.dashboardUrl)}">review your subscription</a> immediately.</p>
@@ -348,9 +495,15 @@ export const paymentActionRequiredTemplate = (data: {
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because payment authentication is required.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because payment authentication is required.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Action Required — Authenticate Your Payment'),
+    subject: sanitizeSubject("Action Required — Authenticate Your Payment"),
   };
 };
 
@@ -365,17 +518,23 @@ export const paymentMethodUpdatedTemplate = (data: {
     <h1 class="title">Payment Method Updated</h1>
     <p class="subtitle">Your payment method has been successfully updated.</p>
     <p><strong>Payment Method:</strong> ${escapeHtml(data.paymentMethodType)}</p>
-    ${data.paymentMethodDetails ? `<p><strong>Details:</strong> ${escapeHtml(data.paymentMethodDetails)}</p>` : ''}
+    ${data.paymentMethodDetails ? `<p><strong>Details:</strong> ${escapeHtml(data.paymentMethodDetails)}</p>` : ""}
     <p>Your new payment method will be used for future subscription renewals.</p>
-    ${renderButton('Manage Payment Methods', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Manage Payment Methods", sanitizeUrl(data.dashboardUrl))}
     <p>If you didn't make this change, please contact our support team immediately.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your payment method was updated.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your payment method was updated.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Payment Method Updated Successfully'),
+    subject: sanitizeSubject("Payment Method Updated Successfully"),
   };
 };
 
@@ -387,26 +546,35 @@ export const discountExpiringTemplate = (data: {
   daysUntil: number;
   dashboardUrl: string;
 }) => {
-  const urgencyText = data.daysUntil <= 7 ? 'soon' : `in ${data.daysUntil} days`;
-  
+  const urgencyText =
+    data.daysUntil <= 7 ? "soon" : `in ${data.daysUntil} days`;
+
   const content = `
     <h1 class="title">Your Discount is Expiring</h1>
     <p class="subtitle">Your ${data.discountPercent}% discount expires ${urgencyText}.</p>
     <p>Don't miss out on your special pricing! Add a payment method to lock in your discount before it expires.</p>
     <p><strong>Discount Amount:</strong> ${data.discountPercent}% off</p>
     <p><strong>Expires:</strong> ${formatDate(data.expiryDate)}</p>
-    ${renderButton('Add Payment Method', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Add Payment Method", sanitizeUrl(data.dashboardUrl))}
     <p><strong>What happens if you don't add a payment method?</strong></p>
     <p>After ${formatDate(data.expiryDate)}, if no payment method is on file, your account will be automatically downgraded to our free plan. You can always resubscribe later from your membership dashboard.</p>
-    ${renderButton('Manage Membership', sanitizeUrl(data.dashboardUrl))}
+    ${renderButton("Manage Membership", sanitizeUrl(data.dashboardUrl))}
     <p>Thank you for being part of Moneko. We hope you continue your premium experience.</p>
     <p>The Moneko Team</p>
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your promotional discount is expiring.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your promotional discount is expiring.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject(`Action Needed — Your Moneko Discount Expires ${data.daysUntil <= 7 ? 'Soon' : `in ${data.daysUntil} days`}`),
+    subject: sanitizeSubject(
+      `Action Needed — Your Moneko Discount Expires ${data.daysUntil <= 7 ? "Soon" : `in ${data.daysUntil} days`}`,
+    ),
   };
 };
 
@@ -428,8 +596,8 @@ export const invoicePaymentSucceededTemplate = (data: {
     <p><strong>Invoice Number:</strong> ${escapeHtml(data.invoiceNumber)}</p>
     <p><strong>Amount Paid:</strong> ${formatCurrency(data.amount, data.currency)}</p>
     <p><strong>Payment Date:</strong> ${formatDate(data.paymentDate)}</p>
-    ${renderButton('View Invoice', sanitizeUrl(data.invoiceUrl))}
-    ${data.invoicePdfUrl ? `<p>You can also <a href="${sanitizeUrl(data.invoicePdfUrl)}">download your receipt (PDF)</a> for your records.</p>` : ''}
+    ${renderButton("View Invoice", sanitizeUrl(data.invoiceUrl))}
+    ${data.invoicePdfUrl ? `<p>You can also <a href="${sanitizeUrl(data.invoicePdfUrl)}">download your receipt (PDF)</a> for your records.</p>` : ""}
     <p>This receipt confirms your payment has been processed successfully. Your subscription remains active and you continue to have full access to all premium features.</p>
     <p><a href="${sanitizeUrl(data.dashboardUrl)}">Manage Your Subscription</a></p>
     <p>If you have any questions about this payment, just reply to this email and our support team will help you out.</p>
@@ -437,7 +605,13 @@ export const invoicePaymentSucceededTemplate = (data: {
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'You\'re receiving this email because your payment was processed successfully.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because your payment was processed successfully.",
+      }),
+    ),
     text: htmlToText(content),
     subject: sanitizeSubject(`Payment Received — ${data.planName}`),
   };
@@ -449,13 +623,13 @@ export const notificationTemplate = (data: {
   message: string;
   actionUrl?: string;
   actionText?: string;
-  priority?: 'low' | 'medium' | 'high';
+  priority?: "low" | "medium" | "high";
 }) => {
   const content = `
     <h1 class="title">${escapeHtml(data.title)}</h1>
     <p class="subtitle">Hi ${escapeHtml(data.name)},</p>
     <p>${escapeHtml(data.message)}</p>
-    ${data.actionUrl && data.actionText ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl)) : ''}
+    ${data.actionUrl && data.actionText ? renderButton(escapeHtml(data.actionText), sanitizeUrl(data.actionUrl)) : ""}
     <p>The Moneko Team</p>
   `;
 
@@ -490,8 +664,146 @@ export const mobileBetaWelcomeTemplate = (data: { name: string }) => {
   `;
 
   return {
-    html: baseTemplate(content, renderFooter({ customReason: 'This email was sent to you because you joined our mobile app waitlist.' })),
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "This email was sent to you because you joined our mobile app waitlist.",
+      }),
+    ),
     text: htmlToText(content),
-    subject: sanitizeSubject('Welcome to the Moneko Mobile Public Beta!'),
+    subject: sanitizeSubject("Welcome to the Moneko Mobile Public Beta!"),
+  };
+};
+
+// Invitation reminder for inviter (person who sent the invite)
+export const inviteReminderInviterTemplate = (data: {
+  inviterName: string;
+  inviteeName: string;
+  householdName: string;
+  inviteUrl: string;
+  daysSinceInvite: number;
+  reminderTier: 1 | 2 | 3;
+}) => {
+  const inviteePerson = data.inviteeName || "Your invitee";
+  const timeText =
+    data.daysSinceInvite === 1
+      ? "yesterday"
+      : `${data.daysSinceInvite} days ago`;
+
+  let title: string;
+  let subtitle: string;
+
+  if (data.reminderTier === 3) {
+    // Expiring soon - urgent
+    title = "Your Invitation is Expiring Soon";
+    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${escapeHtml(data.householdName)} yet, and your invitation expires in 2 days.`;
+  } else {
+    // Tier 1 - gentle reminder
+    title = "Pending Invitation";
+    subtitle = `${escapeHtml(inviteePerson)} hasn't joined ${escapeHtml(data.householdName)} yet.`;
+  }
+
+  const content = `
+    <h1 class="title">${title}</h1>
+    <p class="subtitle">${subtitle}</p>
+    <p>You invited ${escapeHtml(inviteePerson)} to join ${escapeHtml(data.householdName)} ${timeText}.</p>
+    ${
+      data.reminderTier === 3
+        ? `<p><strong>Action suggested:</strong> You might want to follow up with them directly or resend the invitation link.</p>`
+        : `<p>They may have missed the email or need a gentle reminder. Feel free to reach out to them directly!</p>`
+    }
+    ${renderButton("View Invitation", sanitizeUrl(data.inviteUrl))}
+    <p>You can also copy and share the invitation link with them via your preferred messaging app.</p>
+    <p>The Moneko Team</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you sent a household invitation that is still pending.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject(
+      data.reminderTier === 3
+        ? `Reminder: Your invitation to ${data.householdName} expires soon`
+        : `${data.inviteeName || "Your invitee"} hasn't joined ${data.householdName} yet`,
+    ),
+  };
+};
+
+// Invitation reminder for invitee (person who received the invite) - with tier variations
+export const inviteReminderInviteeTemplate = (data: {
+  inviteeName?: string;
+  inviterName: string;
+  householdName: string;
+  inviteUrl: string;
+  personalMessage?: string;
+  daysSinceInvite: number;
+  daysUntilExpiry?: number;
+  reminderTier: 1 | 2 | 3;
+}) => {
+  const greeting = data.inviteeName
+    ? `Hi ${escapeHtml(data.inviteeName)}`
+    : "Hi there";
+
+  let title: string;
+  let subtitle: string;
+  let bodyMessage: string;
+
+  if (data.reminderTier === 3) {
+    // Tier 3: Expiring soon - urgency
+    title = "Last Chance: Your Invitation Expires in 2 Days";
+    subtitle = `${escapeHtml(data.inviterName)} invited you to join ${escapeHtml(data.householdName)} on Moneko.`;
+    bodyMessage = `Your invitation expires in ${data.daysUntilExpiry || 2} days. Don't miss out on tracking expenses and budgets together with ${escapeHtml(data.inviterName)}!`;
+  } else if (data.reminderTier === 2) {
+    // Tier 2: Follow-up reminder - stronger nudge with benefits
+    title = `Don't Miss Out: Join ${escapeHtml(data.householdName)} on Moneko`;
+    subtitle = `${escapeHtml(data.inviterName)} is waiting for you to join.`;
+    bodyMessage = `It's been ${data.daysSinceInvite} days since ${escapeHtml(data.inviterName)} invited you. Together, you can track shared expenses, set budgets, and stay on top of your finances effortlessly.`;
+  } else {
+    // Tier 1: Gentle reminder
+    title = `${escapeHtml(data.inviterName)} invited you to join ${escapeHtml(data.householdName)}`;
+    subtitle = "Start tracking finances together on Moneko.";
+    bodyMessage = `${escapeHtml(data.inviterName)} sent you an invitation ${data.daysSinceInvite} days ago. Join ${escapeHtml(data.householdName)} to start collaborating on budgets and expenses.`;
+  }
+
+  const content = `
+    <h1 class="title">${title}</h1>
+    <p class="subtitle">${subtitle}</p>
+    <p>${greeting},</p>
+    <p>${bodyMessage}</p>
+    ${data.personalMessage ? `<p><strong>Personal message from ${escapeHtml(data.inviterName)}:</strong></p><p><em>"${escapeHtml(data.personalMessage)}"</em></p>` : ""}
+    ${renderButton("Accept Invitation", sanitizeUrl(data.inviteUrl))}
+    <p><strong>Why join a space on Moneko?</strong></p>
+    <ul>
+      <li>Track shared expenses with ease</li>
+      <li>Set and monitor budgets together</li>
+      <li>Split bills fairly and settle up instantly</li>
+      <li>Stay synced on household finances</li>
+    </ul>
+    ${mobileDownloadCtasHtml()}
+    <p>If you did not expect this email, you can safely ignore it.</p>
+  `;
+
+  return {
+    html: baseTemplate(
+      content,
+      renderFooter({
+        customReason:
+          "You're receiving this email because you were invited to join a Moneko space.",
+      }),
+    ),
+    text: htmlToText(content),
+    subject: sanitizeSubject(
+      data.reminderTier === 3
+        ? `Last chance: Your invitation to ${data.householdName} expires in 2 days`
+        : data.reminderTier === 2
+          ? `Don't miss out: Join ${data.householdName} on Moneko`
+          : `${data.inviterName} invited you to join ${data.householdName} on Moneko`,
+    ),
   };
 };

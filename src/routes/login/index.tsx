@@ -64,7 +64,7 @@ validateSearch: (search: Record<string, unknown>) => {
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

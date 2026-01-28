@@ -233,7 +233,7 @@ export const Route = createFileRoute("/dashboard/essentials/")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: canonicalUrl

@@ -64,12 +64,16 @@ BEGIN
           is_recurring
         FROM expenses
         WHERE 
-          -- Match by contact_ids if available, otherwise by user_id
-          CASE 
-            WHEN contact_ids IS NOT NULL AND array_length(contact_ids, 1) > 0 
-            THEN contact_id = ANY(contact_ids)
-            ELSE user_id = p_user_id
-          END
+          -- Always include rows owned by this user_id (covers app-created rows where contact_id is NULL),
+          -- plus legacy/WhatsApp rows keyed only by contact_id for this user (may have user_id NULL).
+          (
+            user_id = p_user_id
+            OR (
+              contact_ids IS NOT NULL
+              AND array_length(contact_ids, 1) > 0
+              AND contact_id = ANY(contact_ids)
+            )
+          )
           -- Filter for personal expenses only (no splits, no recurring)
           AND split_group_id IS NULL
           AND (is_recurring IS NULL OR is_recurring = false)

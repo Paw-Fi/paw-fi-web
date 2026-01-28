@@ -29,7 +29,7 @@ export const Route = createFileRoute('/guides/financial-terms-glossary')(
 
       return {
         meta,
-        link: [
+        links: [
           {
             rel: 'canonical',
             href: pageUrl,

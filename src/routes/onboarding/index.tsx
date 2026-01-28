@@ -103,7 +103,7 @@ export const Route = createFileRoute('/onboarding/')({
         image: imageUrl,
         url: pageUrl,
       }),
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,

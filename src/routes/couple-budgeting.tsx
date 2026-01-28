@@ -108,7 +108,7 @@ export const Route = createFileRoute("/couple-budgeting")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,

@@ -7,11 +7,14 @@ import { authenticateUser, verifyUserMatch } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 interface DeleteExpenseRequest {
-  expenseId: string;
+  expenseId?: string;
+  expense_id?: string;
   userId?: string;
+  user_id?: string;
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
@@ -22,29 +25,30 @@ function sanitizeUuid(value?: string | null): string | null {
 function errorResponse(message: string, status = 400) {
   return new Response(JSON.stringify({ success: false, error: message }), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
-  if (req.method !== 'POST') {
-    return errorResponse('Method not allowed. Use POST.', 405);
+  if (req.method !== "POST") {
+    return errorResponse("Method not allowed. Use POST.", 405);
   }
 
-  const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return errorResponse('Server configuration error', 500);
+    return errorResponse("Server configuration error", 500);
   }
 
   try {
     const body: DeleteExpenseRequest = await req.json();
-    if (!body?.expenseId) return errorResponse('expenseId is required');
-    const expenseId = sanitizeUuid(body.expenseId);
-    if (!expenseId) return errorResponse('Invalid expenseId format');
+    const expenseIdRaw = body?.expenseId ?? body?.expense_id;
+    if (!expenseIdRaw) return errorResponse("expenseId is required");
+    const expenseId = sanitizeUuid(expenseIdRaw);
+    if (!expenseId) return errorResponse("Invalid expenseId format");
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
@@ -55,13 +59,17 @@ Deno.serve(async (req: Request) => {
     let resolvedIdentityMeta: Record<string, unknown> | undefined;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { 'X-Client-Info': 'moneko-delete-expense' } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { "X-Client-Info": "moneko-delete-expense" } },
     });
 
     if (detection.isGpt) {
       if (!conversationId) {
-        return errorResponse('conversationId is required for GPT requests');
+        return errorResponse("conversationId is required for GPT requests");
       }
 
       try {
@@ -83,14 +91,17 @@ Deno.serve(async (req: Request) => {
           resolvedIdentityMeta.ephemeralUserId = detection.ephemeralUserId;
         }
 
-        console.log('[delete-expense] Resolved GPT guest identity', {
+        console.log("[delete-expense] Resolved GPT guest identity", {
           conversationId,
           userId,
           contactId: guestIdentity.contactId,
         });
       } catch (guestError) {
-        console.error('[delete-expense] Failed to resolve GPT guest identity:', guestError);
-        return errorResponse('Failed to prepare GPT guest user', 500);
+        console.error(
+          "[delete-expense] Failed to resolve GPT guest identity:",
+          guestError,
+        );
+        return errorResponse("Failed to prepare GPT guest user", 500);
       }
     } else {
       // For non-GPT requests, derive user identity from the Authorization JWT.
@@ -98,91 +109,153 @@ Deno.serve(async (req: Request) => {
       const authResult = await authenticateUser(req, supabase);
       if (!authResult.success || !authResult.userId) {
         return errorResponse(
-          authResult.error ?? 'Authentication required',
+          authResult.error ?? "Authentication required",
           authResult.statusCode ?? 401,
         );
       }
       userId = authResult.userId;
 
       // Legacy support: if the client still sends userId, verify it matches.
-      if ('userId' in body && body.userId) {
-        requestedUserId = sanitizeUuid(body.userId);
+      const requestedUserIdRaw = body.userId ?? body.user_id;
+      if (requestedUserIdRaw) {
+        requestedUserId = sanitizeUuid(requestedUserIdRaw);
         if (!requestedUserId) {
-          return errorResponse('Invalid userId format');
+          return errorResponse("Invalid userId format");
         }
         if (!verifyUserMatch(userId, requestedUserId)) {
-          return errorResponse('You do not have permission to delete this expense', 403);
+          return errorResponse(
+            "You do not have permission to delete this expense",
+            403,
+          );
         }
       }
     }
 
     if (!userId) {
-      return errorResponse('Authentication required', 401);
+      return errorResponse("Authentication required", 401);
     }
 
     // Fetch expense to verify ownership and obtain household info
     const { data: expense, error } = await supabase
-      .from('expenses')
-      .select('id, user_id, household_id, amount_cents, currency, raw_text, category, date')
-      .eq('id', expenseId)
+      .from("expenses")
+      .select(
+        "id, user_id, household_id, amount_cents, currency, raw_text, category, date, type",
+      )
+      .eq("id", expenseId)
       .single();
 
     if (error || !expense) {
-      return errorResponse('Expense not found', 404);
+      return errorResponse("Expense not found", 404);
+    }
+
+    const expenseHouseholdId = (expense as any)?.household_id as
+      | string
+      | null
+      | undefined;
+    let isPortfolioHousehold = false;
+    if (expenseHouseholdId) {
+      const { data: householdRow, error: householdError } = await supabase
+        .from("households")
+        .select("is_portfolio")
+        .eq("id", expenseHouseholdId)
+        .maybeSingle();
+
+      if (householdError) {
+        console.warn(
+          "[delete-expense] Failed to load household.is_portfolio; treating as non-portfolio",
+          householdError,
+        );
+      } else {
+        isPortfolioHousehold = householdRow?.is_portfolio === true;
+      }
     }
 
     // For GPT requests, only allow personal expenses (no household_id)
     if (detection.isGpt && expense.household_id) {
-      console.warn('[delete-expense] GPT attempt to delete household expense:', expenseId);
-      return errorResponse('GPT cannot delete household expenses', 403);
+      console.warn(
+        "[delete-expense] GPT attempt to delete household expense:",
+        expenseId,
+      );
+      return errorResponse("GPT cannot delete household expenses", 403);
     }
 
     // For non-GPT requests, verify ownership via expenses.user_id
     if (!detection.isGpt) {
       const expenseUserId = (expense as any)?.user_id as string | undefined;
       if (!expenseUserId) {
-        return errorResponse('You do not have permission to delete this expense', 403);
+        return errorResponse(
+          "You do not have permission to delete this expense",
+          403,
+        );
       }
 
       // Personal transactions: only the owner can delete.
       if (!expense.household_id && expenseUserId !== userId) {
-        return errorResponse('You do not have permission to delete this expense', 403);
+        return errorResponse(
+          "You do not have permission to delete this expense",
+          403,
+        );
+      }
+
+      // Portfolio household transactions behave like personal transactions.
+      if (
+        expense.household_id &&
+        isPortfolioHousehold &&
+        expenseUserId !== userId
+      ) {
+        return errorResponse(
+          "You do not have permission to delete this expense",
+          403,
+        );
       }
 
       // Household transactions: any household member can delete.
-      if (expense.household_id && expenseUserId !== userId) {
+      if (
+        expense.household_id &&
+        !isPortfolioHousehold &&
+        expenseUserId !== userId
+      ) {
         const { data: member, error: memberError } = await supabase
-          .from('household_members')
-          .select('id')
-          .eq('household_id', expense.household_id)
-          .eq('user_id', userId)
+          .from("household_members")
+          .select("id")
+          .eq("household_id", expense.household_id)
+          .eq("user_id", userId)
           .maybeSingle();
 
         if (memberError) {
-          console.error('[delete-expense] Failed to verify household membership:', memberError);
-          return errorResponse('Failed to verify household membership', 500);
+          console.error(
+            "[delete-expense] Failed to verify household membership:",
+            memberError,
+          );
+          return errorResponse("Failed to verify household membership", 500);
         }
 
         if (!member) {
-          return errorResponse('You do not have permission to delete this expense', 403);
+          return errorResponse(
+            "You do not have permission to delete this expense",
+            403,
+          );
         }
       }
     } else {
       // For GPT, verify by user_id field directly
       if (expense.user_id !== userId) {
-        return errorResponse('You do not have permission to delete this expense', 403);
+        return errorResponse(
+          "You do not have permission to delete this expense",
+          403,
+        );
       }
     }
 
     // Delete the expense
     const { error: delError } = await supabase
-      .from('expenses')
+      .from("expenses")
       .delete()
-      .eq('id', expenseId);
-    
-    if (delError) return errorResponse('Failed to delete expense', 500);
+      .eq("id", expenseId);
 
-    console.log('[delete-expense] Successfully deleted expense', {
+    if (delError) return errorResponse("Failed to delete expense", 500);
+
+    console.log("[delete-expense] Successfully deleted expense", {
       expenseId,
       userId,
       category: expense.category,
@@ -190,42 +263,53 @@ Deno.serve(async (req: Request) => {
     });
 
     // For non-GPT requests, notify household members if this was a shared expense
-    if (!detection.isGpt && expense.household_id) {
-      console.log('[delete-expense] Notifying household members about deletion for household:', expense.household_id);
-      
+    if (!detection.isGpt && expense.household_id && !isPortfolioHousehold) {
+      console.log(
+        "[delete-expense] Notifying household members about deletion for household:",
+        expense.household_id,
+      );
+
       // Resolve actor display name
-      let actorName = 'Someone';
+      let actorName = "Someone";
       try {
         const { data: appUser } = await supabase
-          .from('users')
-          .select('full_name')
-          .eq('id', userId)
+          .from("users")
+          .select("full_name")
+          .eq("id", userId)
           .maybeSingle();
         if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
           actorName = appUser.full_name as string;
         }
       } catch (_) {}
 
-      const { error: notifyError } = await supabase.rpc('notify_household_members_expense', {
-        p_household_id: expense.household_id,
-        p_expense_id: expenseId,
-        p_actor_user_id: userId,
-        p_event_type: 'expense_deleted',
-        p_expense_data: {
-          actor_name: actorName,
-          amount_cents: expense.amount_cents,
-          currency: expense.currency,
-          raw_text: expense.raw_text,
-          category: expense.category,
-          date: expense.date,
+      const { error: notifyError } = await supabase.rpc(
+        "notify_household_members_expense",
+        {
+          p_household_id: expense.household_id,
+          p_expense_id: expenseId,
+          p_actor_user_id: userId,
+          p_event_type: "expense_deleted",
+          p_expense_data: {
+            actor_name: actorName,
+            amount_cents: expense.amount_cents,
+            currency: expense.currency,
+            raw_text: expense.raw_text,
+            category: expense.category,
+            date: expense.date,
+          },
         },
-      });
+      );
 
       if (notifyError) {
-        console.error('[delete-expense] Error creating notifications:', notifyError);
+        console.error(
+          "[delete-expense] Error creating notifications:",
+          notifyError,
+        );
         // Don't fail the request, just log the error
       } else {
-        console.log('[delete-expense] Notifications created for household members');
+        console.log(
+          "[delete-expense] Notifications created for household members",
+        );
       }
     }
 
@@ -237,14 +321,17 @@ Deno.serve(async (req: Request) => {
 
     // For non-GPT requests, include shared flag
     if (!detection.isGpt) {
-      responseData.shared = !!expense.household_id;
+      responseData.shared = !!expense.household_id && !isPortfolioHousehold;
     }
 
     return new Response(JSON.stringify(responseData), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return errorResponse(e instanceof Error ? e.message : 'Unexpected error', 500);
+    return errorResponse(
+      e instanceof Error ? e.message : "Unexpected error",
+      500,
+    );
   }
 });

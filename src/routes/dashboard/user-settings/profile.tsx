@@ -43,7 +43,7 @@ export const Route = createFileRoute('/dashboard/user-settings/profile')({
     
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

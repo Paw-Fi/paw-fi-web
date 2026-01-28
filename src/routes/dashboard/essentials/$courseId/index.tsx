@@ -53,7 +53,7 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl

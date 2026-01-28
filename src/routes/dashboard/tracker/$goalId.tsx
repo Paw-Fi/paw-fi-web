@@ -107,7 +107,7 @@ export const Route = createFileRoute("/dashboard/tracker/$goalId")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,

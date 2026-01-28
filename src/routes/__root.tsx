@@ -8,8 +8,6 @@ import * as React from 'react'
 import { DefaultCatchBoundary } from '@/components/DefaultCatchBoundary'
 import { NotFound } from '@/components/NotFound'
 import appCss from '@/styles/main.css?url'
-import { seo } from '@/utils/seo'
-import { getCanonicalUrl} from '@/utils/canonical'
 // Import ToastContainer dynamically to avoid SSR issues
 import { lazy, Suspense } from 'react'
 const ToastContainer = lazy(() => import('react-toastify').then(mod => ({
@@ -22,8 +20,8 @@ import { ClientOnly } from '@/components/client-only'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { HelmetProvider } from '@dr.pogodin/react-helmet'
 import { GoogleTagManager } from '@/components/google-tag-manager'
-import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { MonekoCriticalResources, PerformanceHints } from '@/components/seo/critical-resources'
+import { MonekoOrganizationData, MonekoWebsiteData } from '@/components/seo/structured-data'
 import { Theme as RadixTheme } from '@radix-ui/themes'
 import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -32,75 +30,65 @@ import { getQueryClient } from '@/lib/query-client'
 
 export const Route = createRootRoute({
   head: () => {
-    // Default canonical URL for the root page
-    const pageUrl = getCanonicalUrl('/');
-    
     return {
-    meta: [
-      {
-        charSet: 'utf-8',
-      },
-      {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
-      },
-      ...seo({
-        title:
-          'Moneko | The AI Personal Finance Coach & Budgeting App',
-        description: `Take control of your finances with Moneko, the AI-powered budgeting app. Track spending, get personalized coaching, and achieve your financial goals with expert guidance and educational resources.`,
-      }),
-    ],
-    links: [
-      // Add canonical link to prevent duplicate content issues
-      { rel: 'canonical', href: pageUrl },
-      { rel: 'stylesheet', href: appCss },
-      
-      {
-        rel: 'apple-touch-icon',
-        sizes: '180x180',
-        href: '/logo192.png',  // Keep PNG for iOS compatibility
-      },
-      {
-        rel: 'icon',
-        type: 'image/webp',
-        sizes: '192x192',
-        href: '/logo192.webp',
-      },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        sizes: '192x192',
-        href: '/logo192.png',
-      },
-      {
-        rel: 'icon',
-        type: 'image/webp',
-        sizes: '32x32',
-        href: '/logo192.webp',
-      },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        sizes: '32x32',
-        href: '/logo192.png',
-      },
-      {
-        rel: 'icon',
-        type: 'image/webp',
-        sizes: '16x16',
-        href: '/logo192.webp',
-      },
-      {
-        rel: 'icon',
-        type: 'image/png',
-        sizes: '16x16',
-        href: '/logo192.png',
-      },
-      { rel: 'manifest', href: '/manifest.json' },
-      { rel: 'icon', href: '/favicon.ico' },
-      { rel: 'shortcut icon', href: '/favicon.ico' },
-    ],
-  };
+      meta: [
+        {
+          charSet: 'utf-8',
+        },
+        {
+          name: 'viewport',
+          content: 'width=device-width, initial-scale=1',
+        },
+      ],
+      links: [
+        { rel: 'stylesheet', href: appCss },
+
+        {
+          rel: 'apple-touch-icon',
+          sizes: '180x180',
+          href: '/logo192.png',  // Keep PNG for iOS compatibility
+        },
+        {
+          rel: 'icon',
+          type: 'image/webp',
+          sizes: '192x192',
+          href: '/logo192.webp',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '192x192',
+          href: '/logo192.png',
+        },
+        {
+          rel: 'icon',
+          type: 'image/webp',
+          sizes: '32x32',
+          href: '/logo192.webp',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '32x32',
+          href: '/logo192.png',
+        },
+        {
+          rel: 'icon',
+          type: 'image/webp',
+          sizes: '16x16',
+          href: '/logo192.webp',
+        },
+        {
+          rel: 'icon',
+          type: 'image/png',
+          sizes: '16x16',
+          href: '/logo192.png',
+        },
+        { rel: 'manifest', href: '/manifest.json' },
+        { rel: 'icon', href: '/favicon.ico' },
+        { rel: 'shortcut icon', href: '/favicon.ico' },
+      ],
+    }
   },
   errorComponent: (props) => {
     return (

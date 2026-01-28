@@ -1,4 +1,5 @@
 import { normalizeCategory } from "./category-colors.ts";
+import { fetchWithRetry } from "./bank-retry.ts";
 
 export const PLAID_PROVIDER = "plaid";
 
@@ -20,7 +21,6 @@ interface PlaidConfig {
   clientName: string;
   redirectUri: string;
   androidPackageName: string;
-  webhook?: string;
   linkCustomizationName?: string;
 }
 
@@ -32,7 +32,8 @@ export function getPlaidConfig(): PlaidConfig {
   const androidPackageName = "com.moneko.mobile";
   const clientId = Deno.env.get("PLAID_CLIENT_ID")?.trim();
   const secret = Deno.env.get("PLAID_SECRET")?.trim();
-  const env = (Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() || "sandbox") as PlaidEnv;
+  const env = (Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() ||
+    "sandbox") as PlaidEnv;
   if (!clientId || !secret) {
     throw new Error("PLAID_CLIENT_ID and PLAID_SECRET must be configured");
   }
@@ -54,10 +55,17 @@ export function getPlaidConfig(): PlaidConfig {
     clientName: Deno.env.get("PLAID_CLIENT_NAME")?.trim() || "Moneko",
     redirectUri,
     androidPackageName,
-    webhook: Deno.env.get("PLAID_WEBHOOK_URL")?.trim() || undefined,
-    linkCustomizationName: Deno.env.get("PLAID_LINK_CUSTOMIZATION_NAME")?.trim() || undefined,
+    linkCustomizationName:
+      Deno.env.get("PLAID_LINK_CUSTOMIZATION_NAME")?.trim() || undefined,
   };
   return cachedConfig;
+}
+
+function getDefaultPlaidWebhookUrl(): string | undefined {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
+  if (!supabaseUrl) return undefined;
+  const normalized = supabaseUrl.replace(/\/+$/, "");
+  return `${normalized}/functions/v1/plaid-webhook`;
 }
 
 export class PlaidError extends Error {
@@ -72,9 +80,12 @@ export class PlaidError extends Error {
   }
 }
 
-async function plaidRequest<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function plaidRequest<T>(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<T> {
   const config = getPlaidConfig();
-  const response = await fetch(`${config.baseUrl}${path}`, {
+  const response = await fetchWithRetry(`${config.baseUrl}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -115,9 +126,12 @@ export async function createPlaidLinkToken(
   params: CreateLinkTokenParams,
 ): Promise<CreateLinkTokenResponse> {
   const config = getPlaidConfig();
-  const countryCodes = params.countryCodes && params.countryCodes.length > 0
-    ? params.countryCodes.map((code) => code.trim().toUpperCase()).filter(Boolean)
-    : config.countryCodes;
+  const countryCodes =
+    params.countryCodes && params.countryCodes.length > 0
+      ? params.countryCodes
+          .map((code) => code.trim().toUpperCase())
+          .filter(Boolean)
+      : config.countryCodes;
 
   const platform = params.platform?.toLowerCase();
   const request: Record<string, unknown> = {
@@ -125,7 +139,10 @@ export async function createPlaidLinkToken(
     client_name: config.clientName,
     country_codes: countryCodes,
     language: params.language || "en",
-    products: params.products && params.products.length > 0 ? params.products : config.products,
+    products:
+      params.products && params.products.length > 0
+        ? params.products
+        : config.products,
   };
 
   if (platform === "android") {
@@ -134,8 +151,10 @@ export async function createPlaidLinkToken(
     request.redirect_uri = config.redirectUri;
   }
 
-  if (config.webhook) request.webhook = config.webhook;
-  if (config.linkCustomizationName) request.link_customization_name = config.linkCustomizationName;
+  const webhookUrl = getDefaultPlaidWebhookUrl();
+  if (webhookUrl) request.webhook = webhookUrl;
+  if (config.linkCustomizationName)
+    request.link_customization_name = config.linkCustomizationName;
   if (params.accessToken) request.access_token = params.accessToken;
   if (typeof params.transactionsDaysRequested === "number") {
     request.transactions = { days_requested: params.transactionsDaysRequested };
@@ -149,10 +168,15 @@ export interface ExchangePublicTokenResponse {
   item_id: string;
 }
 
-export async function exchangePublicToken(publicToken: string): Promise<ExchangePublicTokenResponse> {
-  return plaidRequest<ExchangePublicTokenResponse>("/item/public_token/exchange", {
-    public_token: publicToken,
-  });
+export async function exchangePublicToken(
+  publicToken: string,
+): Promise<ExchangePublicTokenResponse> {
+  return plaidRequest<ExchangePublicTokenResponse>(
+    "/item/public_token/exchange",
+    {
+      public_token: publicToken,
+    },
+  );
 }
 
 export interface PlaidAccount {
@@ -173,7 +197,9 @@ interface AccountsGetResponse {
   accounts: PlaidAccount[];
 }
 
-export async function getPlaidAccounts(accessToken: string): Promise<PlaidAccount[]> {
+export async function getPlaidAccounts(
+  accessToken: string,
+): Promise<PlaidAccount[]> {
   const response = await plaidRequest<AccountsGetResponse>("/accounts/get", {
     access_token: accessToken,
   });
@@ -256,20 +282,30 @@ export interface MapPlaidTransactionInput {
   transaction: PlaidTransaction;
 }
 
-type RecurrenceFrequency = "daily" | "weekly" | "biweekly" | "monthly" | "yearly" | "custom";
+type RecurrenceFrequency =
+  | "daily"
+  | "weekly"
+  | "biweekly"
+  | "monthly"
+  | "yearly"
+  | "custom";
 
 export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
 ): ExpenseUpsertInput {
   const txn = params.transaction;
-  const categoryName = txn.personal_finance_category?.detailed
-    || txn.personal_finance_category?.primary
-    || null;
-  const normalizedCategory = categoryName ? normalizeCategory(categoryName) : null;
-  const currency = txn.iso_currency_code
-    || txn.unofficial_currency_code
-    || params.defaultCurrency
-    || "USD";
+  const categoryName =
+    txn.personal_finance_category?.detailed ||
+    txn.personal_finance_category?.primary ||
+    null;
+  const normalizedCategory = categoryName
+    ? normalizeCategory(categoryName)
+    : null;
+  const currency =
+    txn.iso_currency_code ||
+    txn.unofficial_currency_code ||
+    params.defaultCurrency ||
+    "USD";
   const amount = Number(txn.amount || 0);
   const absAmount = Math.abs(amount);
   const amountCents = Math.round(absAmount * 100);
@@ -286,7 +322,8 @@ export function mapPlaidTransactionToExpense(
     provider_transaction_id: txn.transaction_id,
     amount_cents: amountCents,
     currency,
-    date: txn.date || txn.authorized_date || new Date().toISOString().slice(0, 10),
+    date:
+      txn.date || txn.authorized_date || new Date().toISOString().slice(0, 10),
     type: transactionType,
     category: normalizedCategory,
     raw_text: description,
@@ -306,11 +343,14 @@ function detectRecurring(transaction: PlaidTransaction): {
   isRecurring: boolean;
   recurrenceRule: Record<string, unknown> | null;
 } {
-  const detailed = transaction.personal_finance_category?.detailed?.toUpperCase() || "";
+  const detailed =
+    transaction.personal_finance_category?.detailed?.toUpperCase() || "";
   const keywords = ["SUBSCRIPTION", "PAYROLL", "RENT", "MORTGAGE", "UTILITIES"];
-  const description = `${transaction.name || ""} ${transaction.merchant_name || ""}`.toLowerCase();
+  const description =
+    `${transaction.name || ""} ${transaction.merchant_name || ""}`.toLowerCase();
   const keywordMatch = keywords.some((keyword) => detailed.includes(keyword));
-  const nameMatch = description.includes("subscription") || description.includes("monthly");
+  const nameMatch =
+    description.includes("subscription") || description.includes("monthly");
   const isRecurring = Boolean(keywordMatch || nameMatch);
   if (!isRecurring) {
     return { isRecurring: false, recurrenceRule: null };
@@ -330,7 +370,11 @@ function detectRecurring(transaction: PlaidTransaction): {
 
 function guessFrequency(detailedCategory: string): RecurrenceFrequency {
   if (detailedCategory.includes("PAYROLL")) return "biweekly";
-  if (detailedCategory.includes("RENT") || detailedCategory.includes("MORTGAGE") || detailedCategory.includes("SUBSCRIPTION")) {
+  if (
+    detailedCategory.includes("RENT") ||
+    detailedCategory.includes("MORTGAGE") ||
+    detailedCategory.includes("SUBSCRIPTION")
+  ) {
     return "monthly";
   }
   return "monthly";

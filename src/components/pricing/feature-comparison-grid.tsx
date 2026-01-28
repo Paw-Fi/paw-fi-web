@@ -9,42 +9,42 @@ interface FeatureComparisonGridProps {
 
 export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureComparisonGridProps) {
   const plans = Object.values(planData);
-  
+
   const features = [
     {
-      category: "Basic Lessons",
+      category: "Fast Expense Capture",
       key: "basicLessons" as const,
-      description: "Core financial education lessons"
+      description: "Log expenses quickly with a review-first workflow"
     },
     {
-      category: "Advanced Courses", 
+      category: "Pockets (Digital Envelope Budgeting)", 
       key: "advancedCourses" as const,
-      description: "Expert-generated courses by financial advisors"
+      description: "Allocate money into pockets (envelopes) for zero-based monthly budgeting"
     },
     {
-      category: "AI Conversations",
+      category: "WhatsApp Expense Tracking",
       key: "aiConversations" as const,
-      description: "Chat with Moneko & Finni AI assistants"
+      description: "Capture expenses and request summaries from chat (where available)"
     },
     {
-      category: "AI Personalized Lessons",
+      category: "Scenario Planning",
       key: "aiPersonalizedLessons" as const, 
-      description: "Custom lessons based on your goals"
+      description: "Run “what if” budgeting scenarios and save insights"
     },
     {
-      category: "Goal Creation",
+      category: "Personal vs Household Budgets",
       key: "goalCreation" as const,
-      description: "Create and track financial goals"
+      description: "Track personal budgets and shared household budgets in separate spaces"
     },
     {
-      category: "Goal Modification",
+      category: "Recurring Items",
       key: "goalModification" as const,
-      description: "Modify and AI-refine your goals"
+      description: "Bills and income that repeat"
     },
     {
-      category: "Portfolio Tracking",
+      category: "Multi-currency View",
       key: "portfolioTracking" as const, 
-      description: "Connect and monitor investment accounts"
+      description: "Switch currency views for budgeting and charts"
     },
     {
       category: "Customer Support",
@@ -54,7 +54,7 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
     {
       category: "1-on-1 Guidance",
       key: "oneOnOneGuidance" as const,
-      description: "Personal sessions with financial experts"
+      description: "Available in select plans (if offered)"
     },
     {
       category: "Community Access",
@@ -83,8 +83,8 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
       className="mt-20 overflow-hidden rounded-xl bg-card shadow-sm"    
     >
       <div className="bg-subtle-background px-8 py-6">
-        <h3 className="text-xl font-bold text-foreground">Feature Comparison</h3>
-        <p className="text-muted-foreground-color mt-2">Compare what you get with each plan</p>
+        <h3 className="text-xl font-bold text-foreground">Plan Features at a Glance</h3>
+        <p className="text-muted-foreground-color mt-2">Compare what’s included in Starter, Plus, and Lifetime</p>
       </div>
       
       <div className="overflow-x-auto">

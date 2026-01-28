@@ -1,9 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
-import { authenticateUser } from "../shared/auth.ts";
+import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
-import { PLAID_PROVIDER, PlaidTransaction, syncPlaidTransactions } from "../shared/plaid-client.ts";
-import { persistPlaidTransactions, type ExpensePreview } from "../shared/bank-sync.ts";
+import {
+  PLAID_PROVIDER,
+  PlaidError,
+  PlaidTransaction,
+  syncPlaidTransactions,
+} from "../shared/plaid-client.ts";
+import {
+  persistPlaidTransactions,
+  stagePlaidTransactions,
+  type ExpensePreview,
+} from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -24,6 +33,7 @@ interface SyncSummary {
   updated: number;
   removed: number;
   skipped: number;
+  currencyMismatches: number;
   accountsProcessed: number;
   status: "succeeded" | "error";
   error?: string;
@@ -45,24 +55,40 @@ Deno.serve(async (req) => {
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "Server configuration error" }), {
-      status: 500,
-      headers: { ...headers, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
+    );
   }
 
   try {
     const body = (await req.json().catch(() => ({}))) as SyncRequest;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-plaid-sync-transactions" } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-plaid-sync-transactions" },
+      },
     });
 
-    const authResult = await authenticateUser(req, supabase);
+    const authResult = await authenticateUserOrInternal(
+      req,
+      supabase,
+      body.connectionId,
+    );
     if (!authResult.success || !authResult.userId) {
       return new Response(
         JSON.stringify({ error: authResult.error || "Unauthorized" }),
-        { status: authResult.statusCode || 401, headers: { ...headers, "Content-Type": "application/json" } },
+        {
+          status: authResult.statusCode || 401,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
       );
     }
 
@@ -76,17 +102,23 @@ Deno.serve(async (req) => {
 
       if (accountError) {
         console.error("[plaid-sync] Failed to load bank account", accountError);
-        return new Response(JSON.stringify({ error: "Failed to load bank account" }), {
-          status: 500,
-          headers: { ...headers, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Failed to load bank account" }),
+          {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (!account || account.user_id !== authResult.userId) {
-        return new Response(JSON.stringify({ error: "Bank account not found" }), {
-          status: 404,
-          headers: { ...headers, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Bank account not found" }),
+          {
+            status: 404,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
       }
 
       accountFilter = account;
@@ -94,52 +126,76 @@ Deno.serve(async (req) => {
 
     let connectionsQuery = supabase
       .from("bank_connections")
-      .select("id, user_id, plaid_access_token_encrypted, plaid_cursor, status")
-      .eq("user_id", authResult.userId);
+      .select(
+        "id, user_id, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, status",
+      )
+      .eq("user_id", authResult.userId)
+      .eq("provider", PLAID_PROVIDER)
+      .neq("status", "disabled");
 
     if (body.connectionId) {
       connectionsQuery = connectionsQuery.eq("id", body.connectionId);
     }
 
-    const { data: connections, error: connectionsError } = await connectionsQuery;
+    const { data: connections, error: connectionsError } =
+      await connectionsQuery;
     if (connectionsError) {
-      console.error("[plaid-sync] Failed to load connections", connectionsError);
-      return new Response(JSON.stringify({ error: "Failed to load connections" }), {
-        status: 500,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      console.error(
+        "[plaid-sync] Failed to load connections",
+        connectionsError,
+      );
+      return new Response(
+        JSON.stringify({ error: "Failed to load connections" }),
+        {
+          status: 500,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (!connections?.length) {
-      return new Response(JSON.stringify({ error: "No bank connections found" }), {
-        status: 404,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "No bank connections found" }),
+        {
+          status: 404,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const connectionIds = connections.map((conn) => conn.id);
     const { data: bankAccounts, error: bankAccountError } = await supabase
       .from("bank_accounts")
-      .select("id, bank_connection_id, plaid_account_id, currency")
+      .select(
+        "id, bank_connection_id, plaid_account_id, provider_account_id, currency",
+      )
       .in("bank_connection_id", connectionIds);
 
     if (bankAccountError) {
-      console.error("[plaid-sync] Failed to load bank accounts", bankAccountError);
-      return new Response(JSON.stringify({ error: "Failed to load accounts" }), {
-        status: 500,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      console.error(
+        "[plaid-sync] Failed to load bank accounts",
+        bankAccountError,
+      );
+      return new Response(
+        JSON.stringify({ error: "Failed to load accounts" }),
+        {
+          status: 500,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const accountMap = new Map<string, BankAccountRow>();
     (bankAccounts || []).forEach((account) => {
-      accountMap.set(account.plaid_account_id, account);
+      const key = account.provider_account_id || account.plaid_account_id;
+      accountMap.set(key, account);
     });
 
     const summaries: SyncSummary[] = [];
     let totalInserted = 0;
     let totalUpdated = 0;
     let totalRemoved = 0;
+    let totalCurrencyMismatches = 0;
     const allAdded: ExpensePreview[] = [];
 
     for (const connection of connections) {
@@ -155,6 +211,7 @@ Deno.serve(async (req) => {
       totalInserted += summary.inserted;
       totalUpdated += summary.updated;
       totalRemoved += summary.removed;
+      totalCurrencyMismatches += summary.currencyMismatches;
       allAdded.push(...summary.addedTransactions);
     }
 
@@ -166,17 +223,27 @@ Deno.serve(async (req) => {
           inserted: totalInserted,
           updated: totalUpdated,
           removed: totalRemoved,
+          currencyMismatches: totalCurrencyMismatches,
         },
         connections: summaries,
         addedTransactions: allAdded,
       }),
-      { status: 200, headers: { ...headers, "Content-Type": "application/json" } },
+      {
+        status: 200,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[plaid-sync] Unexpected error", error);
     return new Response(
-      JSON.stringify({ error: "Failed to sync transactions", details: error instanceof Error ? error.message : String(error) }),
-      { status: 500, headers: { ...headers, "Content-Type": "application/json" } },
+      JSON.stringify({
+        error: "Failed to sync transactions",
+        details: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...headers, "Content-Type": "application/json" },
+      },
     );
   }
 });
@@ -195,6 +262,7 @@ async function syncConnection(params: {
     updated: 0,
     removed: 0,
     skipped: 0,
+    currencyMismatches: 0,
     accountsProcessed: 0,
     status: "succeeded",
     addedTransactions: [],
@@ -214,26 +282,72 @@ async function syncConnection(params: {
   const auditId = auditInsert.data?.id;
   const auditUpdate = async (patch: Record<string, unknown>) => {
     if (!auditId) return;
-    await params.supabase.from("bank_sync_audit").update(patch).eq("id", auditId);
+    await params.supabase
+      .from("bank_sync_audit")
+      .update(patch)
+      .eq("id", auditId);
   };
 
+  const lockResult = await params.supabase.rpc("acquire_bank_sync_lock", {
+    p_bank_connection_id: params.connection.id,
+    p_lock_seconds: 900,
+    p_locked_by: "plaid-sync",
+  });
+
+  if (!lockResult.data) {
+    summary.status = "error";
+    summary.error = "Sync already in progress";
+    await auditUpdate({
+      status: "failed",
+      error_message: summary.error,
+      finished_at: new Date().toISOString(),
+    });
+    return summary;
+  }
+
   try {
-    const accessToken = await decryptSecret(params.connection.plaid_access_token_encrypted);
-    let cursor: string | undefined = params.cursorOverride === "reset"
-      ? undefined
-      : (params.cursorOverride || params.connection.plaid_cursor || undefined);
+    await params.supabase
+      .from("bank_connections")
+      .update({ last_sync_attempt_at: new Date().toISOString() })
+      .eq("id", params.connection.id);
+
+    const encryptedToken =
+      params.connection.access_token_encrypted ||
+      params.connection.plaid_access_token_encrypted;
+    if (!encryptedToken) {
+      throw new Error("Missing Plaid access token");
+    }
+    const accessToken = await decryptSecret(encryptedToken);
+    let cursor: string | undefined =
+      params.cursorOverride === "reset"
+        ? undefined
+        : params.cursorOverride ||
+          params.connection.cursor ||
+          params.connection.plaid_cursor ||
+          undefined;
     const processedAccounts = new Set<string>();
     let hasMore = true;
 
     while (hasMore) {
       const response = await syncPlaidTransactions(accessToken, cursor);
-      const combined: PlaidTransaction[] = [...response.added, ...response.modified];
+      const combined: PlaidTransaction[] = [
+        ...response.added,
+        ...response.modified,
+      ];
       const grouped = groupByAccount(combined);
 
       for (const [plaidAccountId, transactions] of grouped.entries()) {
         const account = params.accountMap.get(plaidAccountId);
         if (!account) continue;
-        if (params.accountFilter && account.id !== params.accountFilter.id) continue;
+        if (params.accountFilter && account.id !== params.accountFilter.id)
+          continue;
+
+        await stagePlaidTransactions({
+          supabase: params.supabase,
+          bankConnectionId: params.connection.id,
+          bankAccountId: account.id,
+          transactions,
+        });
 
         const result = await persistPlaidTransactions({
           supabase: params.supabase,
@@ -246,18 +360,25 @@ async function syncConnection(params: {
         summary.inserted += result.inserted;
         summary.updated += result.updated;
         summary.skipped += result.skipped;
+        summary.currencyMismatches += result.currencyMismatches;
         summary.addedTransactions.push(...result.insertedRecords);
         processedAccounts.add(account.id);
       }
 
       if (response.removed?.length) {
-        const removedIds = response.removed.map((row) => row.transaction_id).filter(Boolean);
+        const removedIds = response.removed
+          .map((row) => row.transaction_id)
+          .filter(Boolean);
         if (removedIds.length) {
           await params.supabase
             .from("expenses")
-            .delete()
+            .update({
+              deleted_at: new Date().toISOString(),
+              deleted_reason: "provider_removed",
+            })
             .eq("provider", PLAID_PROVIDER)
             .eq("user_id", params.userId)
+            .is("deleted_at", null)
             .in("provider_transaction_id", removedIds);
           summary.removed += removedIds.length;
         }
@@ -270,6 +391,7 @@ async function syncConnection(params: {
     await params.supabase
       .from("bank_connections")
       .update({
+        cursor: cursor || null,
         plaid_cursor: cursor || null,
         last_synced_at: new Date().toISOString(),
         status: "active",
@@ -277,6 +399,13 @@ async function syncConnection(params: {
         error_message: null,
       })
       .eq("id", params.connection.id);
+
+    if (processedAccounts.size) {
+      await params.supabase
+        .from("bank_accounts")
+        .update({ last_synced_at: new Date().toISOString() })
+        .in("id", Array.from(processedAccounts));
+    }
 
     summary.accountsProcessed = processedAccounts.size;
     await auditUpdate({
@@ -288,20 +417,97 @@ async function syncConnection(params: {
       finished_at: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("[plaid-sync] Connection sync failed", params.connection.id, error);
+    console.error(
+      "[plaid-sync] Connection sync failed",
+      params.connection.id,
+      error,
+    );
     summary.status = "error";
     summary.error = error instanceof Error ? error.message : String(error);
+    const errorCode = error instanceof PlaidError ? error.code || null : null;
+
+    // Handle specific Plaid error codes
+    if (error instanceof PlaidError) {
+      // ITEM_LOGIN_REQUIRED: User needs to re-authenticate
+      if (errorCode === "ITEM_LOGIN_REQUIRED") {
+        console.log(
+          `[plaid-sync] Connection ${params.connection.id} requires re-authentication`,
+        );
+        await params.supabase
+          .from("bank_connections")
+          .update({
+            status: "needs_reauth",
+            error_code: errorCode,
+            error_message:
+              "Bank requires re-authentication. Please reconnect your account.",
+          })
+          .eq("id", params.connection.id);
+        await auditUpdate({
+          status: "failed",
+          error_message: "Bank requires re-authentication",
+          error_code: errorCode,
+          error_payload: error.details,
+          finished_at: new Date().toISOString(),
+        });
+        return summary;
+      }
+
+      // INVALID_CURSOR: Cursor is stale/invalid, reset and retry
+      if (errorCode === "INVALID_CURSOR") {
+        console.log(
+          `[plaid-sync] Invalid cursor for connection ${params.connection.id}, resetting cursor`,
+        );
+        // Reset the cursor and mark for retry
+        await params.supabase
+          .from("bank_connections")
+          .update({
+            cursor: null,
+            plaid_cursor: null,
+            error_code: null,
+            error_message: null,
+          })
+          .eq("id", params.connection.id);
+        // Update error for audit but mark as recoverable
+        summary.error = "Cursor reset - sync will retry with fresh cursor";
+        await auditUpdate({
+          status: "failed",
+          error_message: summary.error,
+          error_code: errorCode,
+          error_payload: error.details,
+          finished_at: new Date().toISOString(),
+        });
+        return summary;
+      }
+    }
+
+    // Default error handling for other errors
+    await params.supabase
+      .from("bank_connections")
+      .update({
+        status: "error",
+        error_code: errorCode,
+        error_message: summary.error,
+      })
+      .eq("id", params.connection.id);
     await auditUpdate({
       status: "failed",
       error_message: summary.error,
+      error_code: errorCode,
+      error_payload: error instanceof PlaidError ? error.details : null,
       finished_at: new Date().toISOString(),
+    });
+  } finally {
+    await params.supabase.rpc("release_bank_sync_lock", {
+      p_bank_connection_id: params.connection.id,
     });
   }
 
   return summary;
 }
 
-function groupByAccount(transactions: PlaidTransaction[]): Map<string, PlaidTransaction[]> {
+function groupByAccount(
+  transactions: PlaidTransaction[],
+): Map<string, PlaidTransaction[]> {
   const grouped = new Map<string, PlaidTransaction[]>();
   transactions.forEach((txn) => {
     if (!txn.account_id) return;
@@ -316,6 +522,7 @@ interface BankAccountRow {
   id: string;
   bank_connection_id: string;
   plaid_account_id: string;
+  provider_account_id?: string | null;
   currency: string;
   user_id?: string;
 }
@@ -323,7 +530,9 @@ interface BankAccountRow {
 interface BankConnectionRow {
   id: string;
   user_id: string;
-  plaid_access_token_encrypted: string;
-  plaid_cursor: string | null;
-  status?: string;
+  access_token_encrypted?: string | null;
+  plaid_access_token_encrypted?: string | null;
+  cursor?: string | null;
+  plaid_cursor?: string | null;
+  status: string;
 }

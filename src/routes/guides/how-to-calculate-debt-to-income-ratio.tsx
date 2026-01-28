@@ -26,7 +26,7 @@ export const Route = createFileRoute('/guides/how-to-calculate-debt-to-income-ra
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

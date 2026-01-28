@@ -79,7 +79,7 @@ export const Route = createFileRoute("/team")({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: "canonical",
           href: pageUrl,

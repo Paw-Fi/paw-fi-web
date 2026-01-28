@@ -26,7 +26,7 @@ export const Route = createFileRoute('/guides/how-to-calculate-net-worth')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,

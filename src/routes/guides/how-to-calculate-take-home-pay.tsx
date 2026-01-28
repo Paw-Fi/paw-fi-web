@@ -26,7 +26,7 @@ export const Route = createFileRoute('/guides/how-to-calculate-take-home-pay')({
 
     return {
       meta,
-      link: [
+      links: [
         {
           rel: 'canonical',
           href: pageUrl,
