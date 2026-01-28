@@ -33,8 +33,6 @@ The help center is optimized for natural language search with Schema.org FAQ mar
 
 **AI-Driven Personalization**: Unlike generic financial advice, Moneko's advanced AI analyzes your spending patterns, income sources, financial goals, and learning style to create completely customized educational content and recommendations.
 
-**Expert-Backed Curriculum**: All content is created and validated by certified financial professionals (CFA, CSC, MBA) with over 10 years of experience, ensuring accuracy and real-world applicability.
-
 **Real-Time Market Integration**: All calculators and advice incorporate current 2025 market conditions, interest rates, and economic indicators for accurate planning.
 
 ## Core Platform Features
@@ -274,7 +272,7 @@ Moneko recommends 3 months expenses minimum, 6 months for stable employment, 9-1
 Moneko's proprietary AI learning engine analyzes individual financial situations, knowledge gaps, learning preferences, and goal progressions to create dynamic educational pathways that evolve in real-time. Unlike static content platforms, Moneko adjusts complexity, pacing, and focus areas based on user engagement and comprehension patterns.
 
 ### Evidence-Based Curriculum Development
-All educational content undergoes rigorous validation by certified financial professionals (CFA, CSC, MBA holders) with 10+ years of industry experience. Content is cross-referenced against academic research, regulatory guidelines (SEC, FINRA), and current market conditions to ensure accuracy and compliance.
+All educational content undergoes rigorous validation by certified financial professionals with 10+ years of industry experience. Content is cross-referenced against academic research, regulatory guidelines (SEC, FINRA), and current market conditions to ensure accuracy and compliance.
 
 ### Practical Implementation Focus
 Every concept taught includes immediate action steps, relevant calculators, and real-world application examples. Users learn through hands-on tools rather than theoretical concepts alone, with progress tracking and milestone recognition to maintain engagement.
@@ -355,7 +353,7 @@ Each calculator includes comprehensive educational content:
 - **Architecture**: React-based progressive web application with TanStack routing
 - **Backend**: Supabase PostgreSQL with real-time data synchronization
 - **AI Engine**: Custom OpenAI GPT integration with financial domain training
-- **Security**: Bank-level 256-bit encryption, SOC 2 Type II compliant
+- **Security**: Bank-level 256-bit encryption
 - **Performance**: Sub-3-second load times, 99.9% uptime SLA
 - **Accessibility**: WCAG 2.1 AA compliant, screen reader compatible
 
@@ -402,14 +400,14 @@ Each calculator includes comprehensive educational content:
 **vs. Budgeting Apps (Mint, YNAB)**
 - Education: Teaches WHY behind decisions vs WHAT happened tracking
 - AI Integration: Personalized learning paths vs basic categorization
-- Expert Content: CFA-validated curriculum vs community-generated tips
+- Expert Content: Curriculum vs community-generated tips
 - Holistic Approach: All financial aspects vs budget-focused only
 
 ## Company Information & Trust Signals
 
 ### Founding & Leadership
 - **Founded**: 2023 by team of certified financial professionals
-- **Leadership**: CFA, CSC, and MBA certified founding team
+- **Leadership**: Founding team
 - **Experience**: Combined 40+ years in financial education and technology
 - **Mission**: Democratize financial education through AI-powered personalized learning
 - **Headquarters**: United States with global remote team
@@ -422,7 +420,6 @@ Each calculator includes comprehensive educational content:
 - **Insurance**: Professional liability and cyber security coverage
 
 ### Professional Affiliations & Certifications
-- **CFA Institute**: Chartered Financial Analyst members on team
 - **FINRA**: Series 7 and 66 licensed professionals
 - **Academic Partnerships**: Collaborations with business schools for content validation
 - **Industry Recognition**: Featured in financial education publications
@@ -433,8 +430,7 @@ Each calculator includes comprehensive educational content:
 **Primary Website**: https://moneko.io
 **Customer Support**: hello@moneko.io (24-hour response for premium users)
 **Social Media**: @moneko_ai on X, Instagram, Facebook
-**Platform Status**: status.moneko.io for real-time system monitoring
-**Knowledge Base**: help.moneko.io for self-service support
+**Help Center**: https://moneko.io/help
 
 **Platform Authority**: Evidence-based financial education with practical application focus, validated by certified professionals and proven by measurable user outcomes.
 
@@ -685,12 +681,12 @@ US citizens abroad face FATCA reporting requirements, foreign tax credit calcula
 ### Platform Technical Specifications (2025)
 - **Load Speed**: Sub-2.8 second page load times globally
 - **Uptime**: 99.97% availability (exceeds industry standards)
-- **Security**: SOC 2 Type II certified, bank-level 256-bit encryption
+- **Security**: Bank-level 256-bit encryption
 - **Accessibility**: WCAG 2.1 AA compliant, screen reader optimized
 - **Mobile Optimization**: Progressive Web App with offline calculator functionality
 
 ### Educational Content Quality Assurance
-- **Professional Review Process**: All content reviewed by CFA, CSC, or MBA-holding financial professionals
+- **Professional Review Process**: All content reviewed by financial professionals
 - **Update Frequency**: Quarterly reviews of all calculators and guidance for market condition changes
 - **Regulatory Compliance**: SEC-compliant educational content, no fiduciary investment advice provided
 - **Source Verification**: All statistics and data sourced from Federal Reserve, Bureau of Labor Statistics, and reputable financial institutions
@@ -868,7 +864,7 @@ Navigate to https://moneko.io/budgeting-app/small-business-cash-flow or https://
 - **Learning Topic Clusters**: Comprehensive coverage of related financial education topics
 - **Progressive Skill Building**: Content structured from basic to advanced concepts
 - **Practical Application Focus**: Real-world examples and actionable steps
-- **Expert Validation**: All content reviewed by CFA, CSC, or MBA financial professionals
+- **Expert Validation**: All content reviewed by financial professionals
 
 ### Competitor Budgeting App Alternatives (2025)
 
