@@ -55,6 +55,41 @@ BEGIN
   IF v_connection_id IS NOT NULL THEN
     -- Connection exists - this is a reconnect
     v_household_id := v_existing_household_id;
+    IF v_household_id IS NULL THEN
+      -- Create missing household for existing connection
+      SELECT COALESCE(
+        (
+          SELECT UPPER(uc.preferred_currency)
+          FROM public.user_contacts uc
+          WHERE uc.user_id = p_user_id
+          ORDER BY uc.updated_at DESC NULLS LAST, uc.created_at DESC NULLS LAST
+          LIMIT 1
+        ),
+        'USD'
+      ) INTO v_user_currency;
+
+      INSERT INTO public.households (name, owner_id, is_portfolio, cover_image_url, currency)
+      VALUES (p_institution_name, p_user_id, TRUE, p_institution_logo, v_user_currency)
+      RETURNING id INTO v_household_id;
+
+      INSERT INTO public.household_members (household_id, user_id, role, joined_at)
+      SELECT v_household_id, p_user_id, 'owner', NOW()
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM public.household_members hm
+        WHERE hm.household_id = v_household_id
+          AND hm.user_id = p_user_id
+      );
+
+      UPDATE public.bank_connections
+      SET household_id = v_household_id
+      WHERE id = v_connection_id;
+    END IF;
+
+    UPDATE public.households
+    SET is_portfolio = TRUE
+    WHERE id = v_household_id
+      AND is_portfolio IS DISTINCT FROM TRUE;
     
     -- Update the connection with new tokens
     -- MERGE metadata: existing keys preserved, new keys added/overwritten

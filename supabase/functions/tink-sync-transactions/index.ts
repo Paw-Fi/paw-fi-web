@@ -11,7 +11,9 @@ import {
 import {
   getTinkAccounts,
   getTinkConfig,
+  getTinkProviderByName,
   getTinkUserAccessToken,
+  listTinkCredentials,
   refreshTinkAccessToken,
   syncTinkTransactions,
   TINK_PROVIDER,
@@ -201,6 +203,39 @@ Deno.serve(async (req) => {
         `[tink-sync] Got access token for external user ${stateRecord.external_user_id}`,
       );
 
+      let institutionName = "Bank Account";
+      let institutionLogo: string | null = null;
+      try {
+        const credentials = await listTinkCredentials(
+          tokenResponse.access_token,
+        );
+        const matched = credentials.find(
+          (credential) => credential.id === body.credentialsId,
+        );
+        if (matched?.providerName) {
+          institutionName = matched.providerName;
+          try {
+            const provider = await getTinkProviderByName({
+              market: stateRecord.market,
+              name: matched.providerName,
+              accessToken: tokenResponse.access_token,
+            });
+            institutionLogo =
+              provider?.images?.icon || provider?.images?.banner || null;
+          } catch (error) {
+            console.warn(
+              "[tink-sync] Unable to resolve provider image",
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "[tink-sync] Unable to resolve provider name from credentials",
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+
       // Encrypt tokens
       const encryptedAccess = await encryptSecret(tokenResponse.access_token);
       const encryptedRefresh = tokenResponse.refresh_token
@@ -228,12 +263,14 @@ Deno.serve(async (req) => {
           p_expires_at: expiresAt,
           p_country_code: stateRecord.market,
           p_idempotency_key: null,
-          p_institution_name: "Bank Account",
-          p_institution_logo: null,
+          p_institution_name: institutionName,
+          p_institution_logo: institutionLogo,
           p_metadata: {
             scope: tokenResponse.scope || null,
             credentials_id: body.credentialsId,
             external_user_id: stateRecord.external_user_id,
+            institution_name: institutionName,
+            institution_logo: institutionLogo,
           },
         },
       );
@@ -352,7 +389,7 @@ Deno.serve(async (req) => {
     let connectionsQuery = supabase
       .from("bank_connections")
       .select(
-        "id, user_id, access_token_encrypted, refresh_token_encrypted, cursor, plaid_cursor, expires_at, status",
+        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, refresh_token_encrypted, cursor, plaid_cursor, expires_at, status",
       )
       .eq("user_id", authResult.userId)
       .eq("provider", TINK_PROVIDER)
@@ -662,6 +699,62 @@ async function syncConnection(params: {
       }
     }
 
+    let householdId = params.connection.household_id || null;
+    if (!householdId) {
+      const providerItemId = params.connection.provider_item_id;
+      if (!providerItemId) {
+        console.warn(
+          "[tink-sync] Missing provider_item_id; skipping household ensure",
+        );
+      } else {
+        const rawMeta = params.connection.metadata;
+        const connectionMeta =
+          typeof rawMeta === "object" && rawMeta !== null
+            ? (rawMeta as Record<string, unknown>)
+            : {};
+        const institutionName =
+          (connectionMeta["institution_name"] as string | undefined) ||
+          "Bank Account";
+        const institutionLogo =
+          (connectionMeta["institution_logo"] as string | undefined) || null;
+        const ensureMeta = {
+          ...connectionMeta,
+          institution_name: institutionName,
+          institution_logo: institutionLogo,
+        };
+        const { data: ensureResult, error: ensureError } =
+          await params.supabase.rpc("upsert_bank_connection_with_household", {
+            p_user_id: params.userId,
+            p_provider: TINK_PROVIDER,
+            p_provider_item_id: providerItemId,
+            p_access_token_encrypted: accessTokenEncryptedRaw,
+            p_refresh_token_encrypted:
+              params.connection.refresh_token_encrypted,
+            p_expires_at: params.connection.expires_at,
+            p_country_code: params.connection.country_code || null,
+            p_idempotency_key: null,
+            p_institution_name: institutionName,
+            p_institution_logo: institutionLogo,
+            p_metadata: ensureMeta,
+          });
+
+        if (ensureError) {
+          console.error("[tink-sync] Failed to ensure household", ensureError);
+        } else if (ensureResult && ensureResult.length) {
+          householdId = ensureResult[0].household_id || null;
+          console.log(
+            "[tink-sync] Ensured household for connection",
+            params.connection.id,
+            householdId,
+          );
+        }
+      }
+    }
+
+    if (!householdId) {
+      throw new Error("Missing household_id for bank connection");
+    }
+
     // Refresh accounts before syncing to keep account list in sync with Tink
     const freshAccounts = await getTinkAccounts(accessToken);
     if (freshAccounts?.length) {
@@ -733,6 +826,7 @@ async function syncConnection(params: {
           supabase: params.supabase,
           userId: params.userId,
           bankAccountId: account.id,
+          householdId,
           accountCurrency: account.currency,
           transactions,
         });
@@ -850,6 +944,10 @@ interface BankAccountRow {
 interface BankConnectionRow {
   id: string;
   user_id: string;
+  household_id?: string | null;
+  provider_item_id?: string | null;
+  country_code?: string | null;
+  metadata?: Record<string, unknown> | null;
   access_token_encrypted?: string | null;
   refresh_token_encrypted?: string | null;
   expires_at?: string | null;

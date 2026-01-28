@@ -1,4 +1,7 @@
-import { createClient, type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import {
+  createClient,
+  type SupabaseClient as SupabaseJsClient,
+} from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
   PLAID_PROVIDER,
   type ExpenseUpsertInput,
@@ -45,6 +48,7 @@ export interface PersistTinkTransactionsParams {
   supabase: SupabaseClient;
   userId: string;
   bankAccountId: string;
+  householdId?: string | null;
   accountCurrency: string;
   transactions: TinkTransaction[];
 }
@@ -124,12 +128,14 @@ export async function upsertPlaidAccounts(
     provider: PLAID_PROVIDER,
     plaid_account_id: account.account_id,
     provider_account_id: account.account_id,
-    name: account.name || account.official_name || `Account ${account.account_id}`,
+    name:
+      account.name || account.official_name || `Account ${account.account_id}`,
     official_name: account.official_name || null,
     mask: account.mask || null,
-    currency: account.balances?.iso_currency_code
-      || account.balances?.unofficial_currency_code
-      || "USD",
+    currency:
+      account.balances?.iso_currency_code ||
+      account.balances?.unofficial_currency_code ||
+      "USD",
     type: account.type || null,
     subtype: account.subtype || null,
     status: "active",
@@ -155,7 +161,9 @@ export interface StageTransactionsParams {
   transactions: PlaidTransaction[];
 }
 
-export async function stagePlaidTransactions(params: StageTransactionsParams): Promise<void> {
+export async function stagePlaidTransactions(
+  params: StageTransactionsParams,
+): Promise<void> {
   const payload = params.transactions
     .filter((transaction) => transaction.transaction_id)
     .map((transaction) => ({
@@ -170,7 +178,9 @@ export async function stagePlaidTransactions(params: StageTransactionsParams): P
 
   const { error } = await params.supabase
     .from("bank_transaction_raw")
-    .upsert(payload, { onConflict: "bank_account_id,provider,provider_transaction_id" });
+    .upsert(payload, {
+      onConflict: "bank_account_id,provider,provider_transaction_id",
+    });
 
   if (error) {
     throw error;
@@ -184,7 +194,9 @@ export interface StageTinkTransactionsParams {
   transactions: TinkTransaction[];
 }
 
-export async function stageTinkTransactions(params: StageTinkTransactionsParams): Promise<void> {
+export async function stageTinkTransactions(
+  params: StageTinkTransactionsParams,
+): Promise<void> {
   const payload = params.transactions
     .filter((transaction) => transaction.id)
     .map((transaction) => ({
@@ -199,7 +211,9 @@ export async function stageTinkTransactions(params: StageTinkTransactionsParams)
 
   const { error } = await params.supabase
     .from("bank_transaction_raw")
-    .upsert(payload, { onConflict: "bank_account_id,provider,provider_transaction_id" });
+    .upsert(payload, {
+      onConflict: "bank_account_id,provider,provider_transaction_id",
+    });
 
   if (error) {
     throw error;
@@ -210,7 +224,13 @@ export async function persistPlaidTransactions(
   params: PersistTransactionsParams,
 ): Promise<PersistTransactionsResult> {
   if (!params.transactions.length) {
-    return { inserted: 0, updated: 0, skipped: 0, currencyMismatches: 0, insertedRecords: [] };
+    return {
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      currencyMismatches: 0,
+      insertedRecords: [],
+    };
   }
 
   const mapped: ExpenseUpsertRecord[] = params.transactions
@@ -221,11 +241,15 @@ export async function persistPlaidTransactions(
         bankAccountId: params.bankAccountId,
         defaultCurrency: params.accountCurrency,
         transaction,
-      })
+      }),
     );
 
-  const normalized = mapped.map((record) => normalizeCurrency(record, params.accountCurrency));
-  const currencyMismatches = normalized.filter((entry) => entry.mismatch).length;
+  const normalized = mapped.map((record) =>
+    normalizeCurrency(record, params.accountCurrency),
+  );
+  const currencyMismatches = normalized.filter(
+    (entry) => entry.mismatch,
+  ).length;
   const normalizedRecords = normalized.map((entry) => entry.record);
 
   if (!mapped.length) {
@@ -239,7 +263,9 @@ export async function persistPlaidTransactions(
   }
 
   // Build lookup keys for both posted IDs and pending IDs to merge transitions
-  const postedIds = normalizedRecords.map((record) => record.provider_transaction_id);
+  const postedIds = normalizedRecords.map(
+    (record) => record.provider_transaction_id,
+  );
   const pendingIds = params.transactions
     .map((t) => t.pending_transaction_id)
     .filter((id): id is string => Boolean(id));
@@ -268,7 +294,9 @@ export async function persistPlaidTransactions(
   const inserts: typeof normalizedRecords = [];
 
   for (const record of normalizedRecords) {
-    const transaction = params.transactions.find((t) => t.transaction_id === record.provider_transaction_id);
+    const transaction = params.transactions.find(
+      (t) => t.transaction_id === record.provider_transaction_id,
+    );
     const pendingId = transaction?.pending_transaction_id;
 
     // If this is the posted version of a pending transaction, merge into the pending row
@@ -281,7 +309,10 @@ export async function persistPlaidTransactions(
 
     // If we already have this posted ID, update it
     if (existingByProviderId.has(record.provider_transaction_id)) {
-      updates.push({ ...record, id: existingByProviderId.get(record.provider_transaction_id)! });
+      updates.push({
+        ...record,
+        id: existingByProviderId.get(record.provider_transaction_id)!,
+      });
       continue;
     }
 
@@ -333,14 +364,19 @@ export async function upsertTinkAccounts(
     user_id: params.userId,
     bank_connection_id: params.bankConnectionId,
     provider: TINK_PROVIDER,
-    plaid_account_id: account.id?.startsWith("tink_") ? account.id : `tink_${account.id}`,
-    provider_account_id: account.id?.startsWith("tink_") ? account.id : `tink_${account.id}`,
+    plaid_account_id: account.id?.startsWith("tink_")
+      ? account.id
+      : `tink_${account.id}`,
+    provider_account_id: account.id?.startsWith("tink_")
+      ? account.id
+      : `tink_${account.id}`,
     name: account.name || `Account ${account.id}`,
     official_name: null,
     mask: account.accountNumber?.iban || null,
-    currency: account.balances?.booked?.currencyCode
-      || account.balances?.available?.currencyCode
-      || "USD",
+    currency:
+      account.balances?.booked?.currencyCode ||
+      account.balances?.available?.currencyCode ||
+      "USD",
     type: account.type?.name || null,
     subtype: null,
     status: "active",
@@ -363,22 +399,34 @@ export async function persistTinkTransactions(
   params: PersistTinkTransactionsParams,
 ): Promise<PersistTransactionsResult> {
   if (!params.transactions.length) {
-    return { inserted: 0, updated: 0, skipped: 0, currencyMismatches: 0, insertedRecords: [] };
+    return {
+      inserted: 0,
+      updated: 0,
+      skipped: 0,
+      currencyMismatches: 0,
+      insertedRecords: [],
+    };
   }
 
   const mapped: ExpenseUpsertRecord[] = params.transactions
     .filter((transaction) => transaction.id)
-    .map((transaction) =>
-      mapTinkTransactionToExpense({
-        userId: params.userId,
-        bankAccountId: params.bankAccountId,
-        defaultCurrency: params.accountCurrency,
-        transaction,
-      }) as ExpenseUpsertRecord
+    .map(
+      (transaction) =>
+        mapTinkTransactionToExpense({
+          userId: params.userId,
+          bankAccountId: params.bankAccountId,
+          householdId: params.householdId,
+          defaultCurrency: params.accountCurrency,
+          transaction,
+        }) as ExpenseUpsertRecord,
     );
 
-  const normalized = mapped.map((record) => normalizeCurrency(record, params.accountCurrency));
-  const currencyMismatches = normalized.filter((entry) => entry.mismatch).length;
+  const normalized = mapped.map((record) =>
+    normalizeCurrency(record, params.accountCurrency),
+  );
+  const currencyMismatches = normalized.filter(
+    (entry) => entry.mismatch,
+  ).length;
   const normalizedRecords = normalized.map((entry) => entry.record);
 
   if (!mapped.length) {
@@ -391,7 +439,9 @@ export async function persistTinkTransactions(
     };
   }
 
-  const providerIds = normalizedRecords.map((record) => record.provider_transaction_id);
+  const providerIds = normalizedRecords.map(
+    (record) => record.provider_transaction_id,
+  );
 
   const { data: existingRows, error: selectError } = await params.supabase
     .from("expenses")
@@ -416,7 +466,10 @@ export async function persistTinkTransactions(
 
   for (const record of normalizedRecords) {
     if (existingByProviderId.has(record.provider_transaction_id)) {
-      updates.push({ ...record, id: existingByProviderId.get(record.provider_transaction_id)! });
+      updates.push({
+        ...record,
+        id: existingByProviderId.get(record.provider_transaction_id)!,
+      });
       continue;
     }
     inserts.push(record);

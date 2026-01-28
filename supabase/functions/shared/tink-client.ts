@@ -215,6 +215,41 @@ async function getTinkClientAccessToken(): Promise<string> {
   return accessToken;
 }
 
+export interface TinkProviderInfo {
+  name?: string | null;
+  displayName?: string | null;
+  images?: { icon?: string | null; banner?: string | null } | null;
+}
+
+export async function getTinkProviderByName(params: {
+  market: string;
+  name: string;
+  accessToken?: string;
+}): Promise<TinkProviderInfo | null> {
+  const config = getTinkConfig();
+  const market = params.market.toUpperCase();
+  const token = params.accessToken || (await getTinkClientAccessToken());
+  const url = new URL(`${config.apiBaseUrl}/api/v1/providers/${market}`);
+  url.searchParams.set("name", params.name);
+
+  const response = await fetchWithRetry(url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        "Failed to fetch providers",
+    );
+  }
+
+  const providers = (payload?.providers || []) as TinkProviderInfo[];
+  return providers[0] || null;
+}
+
 export async function createTinkUserAuthorizationCode(params: {
   externalUserId: string;
   scopes?: string[];
@@ -602,6 +637,7 @@ export async function syncTinkTransactions(
 export interface MapTinkTransactionInput {
   userId: string;
   bankAccountId: string;
+  householdId?: string | null;
   defaultCurrency?: string | null;
   transaction: TinkTransaction;
 }
@@ -624,13 +660,13 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
     txn.merchantName ||
     "Transaction";
 
-  const categoryName =
+  const rawCategory =
     txn.categories?.pfm?.detailed ||
     txn.categories?.pfm?.primary ||
-    mapTinkTransactionTypeToCategory(txn.types?.type) ||
+    mapTinkTypeToCategoryInput(txn.types?.type) ||
     null;
-  const normalizedCategory = categoryName
-    ? normalizeCategory(categoryName)
+  const normalizedCategory = rawCategory
+    ? normalizeCategory(rawCategory)
     : null;
 
   return {
@@ -651,7 +687,7 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
     raw_provider_payload: txn,
     is_recurring: false,
     recurrence_rule: null,
-    household_id: null,
+    household_id: input.householdId || null,
     contact_id: null,
     normalized_amount_cents: amountCents,
     base_currency: currency,
@@ -659,34 +695,37 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
   };
 }
 
-function mapTinkTransactionTypeToCategory(type?: string | null): string | null {
+function mapTinkTypeToCategoryInput(type?: string | null): string | null {
   if (!type) return null;
-  const key = type.trim().toUpperCase();
-  switch (key) {
-    case "TRANSFER":
-    case "TRANSFER_IN":
-    case "TRANSFER_OUT":
-    case "CASH_WITHDRAWAL":
-      return "transfers";
-    case "PAYROLL":
-    case "SALARY":
+  const normalized = type.trim().toLowerCase().replace(/_/g, " ");
+  switch (normalized) {
+    case "default":
+    case "unknown":
+      return "other";
+    case "transfer":
+    case "transfer in":
+    case "transfer out":
+    case "cash withdrawal":
+      return "transfer";
+    case "payroll":
+    case "salary":
       return "salary";
-    case "INTEREST":
-      return "interest income";
-    case "DIVIDEND":
-      return "investments";
-    case "LOAN_PAYMENT":
-      return "loan payments";
-    case "CREDIT_CARD_PAYMENT":
-      return "debt payments";
-    case "FEE":
-    case "BANK_FEE":
-      return "bank fees";
-    case "REFUND":
-      return "refunds";
-    case "SAVINGS":
+    case "interest":
+      return "interest";
+    case "dividend":
+      return "dividend";
+    case "loan payment":
+      return "loan";
+    case "credit card payment":
+      return "debt";
+    case "fee":
+    case "bank fee":
+      return "bank fee";
+    case "refund":
+      return "refund";
+    case "savings":
       return "savings";
     default:
-      return null;
+      return normalized;
   }
 }
