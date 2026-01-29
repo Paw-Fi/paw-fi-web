@@ -37,7 +37,7 @@ Allow: /features/whatsapp-assistant
 Allow: /features/pockets-system
 Allow: /features/household-mode
 Allow: /features/ai-insights
-
+Allow: /download
 
 # Content variant landing pages with different financial focuses
 Allow: /budgeting-app/high-interest-portfolios

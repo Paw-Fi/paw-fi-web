@@ -1,4 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  GoogleGenerativeAIFetchError,
+} from "@google/generative-ai";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 import { validateCurrency } from "./currency-validator.ts";
 import {
@@ -854,6 +857,93 @@ function isTotalLike(s?: string) {
   return !!s && /(sub\s*total|subtotal|grand\s*total|total)/i.test(s);
 }
 
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function jitterDelayMs(ms: number): number {
+  const factor = 0.7 + Math.random() * 0.6;
+  return Math.max(0, Math.round(ms * factor));
+}
+
+function isRetriableGeminiError(error: unknown): boolean {
+  if (error instanceof GoogleGenerativeAIFetchError) {
+    const status = (error as any).status ?? 0;
+    return status === 429 || status === 500 || status === 503 || status === 504;
+  }
+  if (error instanceof Error) {
+    return (
+      /\b(429|500|503|504)\b/.test(error.message) ||
+      /overloaded|unavailable|resource_exhausted/i.test(error.message)
+    );
+  }
+  return false;
+}
+
+function formatGeminiError(error: unknown): string {
+  if (error instanceof GoogleGenerativeAIFetchError) {
+    const status = (error as any).status ? String((error as any).status) : "";
+    const statusText = (error as any).statusText
+      ? String((error as any).statusText)
+      : "";
+    const suffix = [status, statusText].filter(Boolean).join(" ");
+    return suffix ? `${error.message} (${suffix})` : error.message;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function generateGeminiWithRetry(params: {
+  model: any;
+  modelName: string;
+  request: any;
+  timeoutMs: number;
+}): Promise<any> {
+  const { model, modelName, request, timeoutMs } = params;
+  const startedAt = Date.now();
+  const delays = [250, 750, 1500];
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    const elapsed = Date.now() - startedAt;
+    const remaining = timeoutMs - elapsed;
+    if (remaining <= 0) {
+      throw new Error(`Model ${modelName} timed out after ${timeoutMs}ms`);
+    }
+
+    try {
+      const responsePromise = model.generateContent(request);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(`Model ${modelName} timed out after ${timeoutMs}ms`),
+            ),
+          remaining,
+        ),
+      );
+      return await Promise.race([responsePromise, timeoutPromise]);
+    } catch (error) {
+      lastError = error;
+      const formatted = formatGeminiError(error);
+
+      if (!isRetriableGeminiError(error) || attempt >= delays.length) {
+        throw new Error(formatted);
+      }
+
+      const waitMs = Math.min(
+        jitterDelayMs(delays[attempt]),
+        Math.max(0, remaining - 50),
+      );
+      console.log(
+        `[analyze-expense] ${modelName} transient failure (attempt ${attempt + 1}/${delays.length + 1}), retrying in ${waitMs}ms: ${formatted}`,
+      );
+      if (waitMs > 0) await sleepMs(waitMs);
+    }
+  }
+
+  throw new Error(formatGeminiError(lastError));
+}
+
 async function attemptAnalysis(
   genAI: GoogleGenerativeAI,
   modelName: string,
@@ -867,14 +957,6 @@ async function attemptAnalysis(
   timeoutMs: number = 30000,
   overrideContentType?: string,
 ): Promise<{ success: boolean; items?: ExpenseItem[]; error?: string }> {
-  const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(
-      () =>
-        reject(new Error(`Model ${modelName} timed out after ${timeoutMs}ms`)),
-      timeoutMs,
-    ),
-  );
-
   try {
     const model = genAI.getGenerativeModel({
       model: modelName,
@@ -882,7 +964,7 @@ async function attemptAnalysis(
       systemInstruction,
     });
 
-    const responsePromise = model.generateContent({
+    const request = {
       toolConfig: { functionCallingConfig: { mode: "AUTO" } },
       contents: [
         {
@@ -904,9 +986,14 @@ async function attemptAnalysis(
         },
       ],
       generationConfig: { maxOutputTokens: 4096 },
-    } as any);
+    } as any;
 
-    const response = await Promise.race([responsePromise, timeoutPromise]);
+    const response = await generateGeminiWithRetry({
+      model,
+      modelName,
+      request,
+      timeoutMs,
+    });
 
     const tool = getFirstFunctionCall(response);
     if (tool && tool.name === "add_transactions") {
@@ -1454,9 +1541,10 @@ export async function runAnalyzeExpense(
         "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
       ].join("\n");
 
-      // Model progression: fast model first, then more capable one as fallback
-      // Timeouts increased to allow for parsing long transaction lists
+      // Model progression: prefer stable fast model first.
+      // Preview models can be more prone to overload.
       const modelAttempts = [
+        { name: "gemini-2.5-flash-lite", timeout: 30000 },
         { name: "gemini-3-flash-preview", timeout: 30000 },
         { name: "gemini-3-pro-preview", timeout: 55000 },
       ];
@@ -1479,7 +1567,7 @@ export async function runAnalyzeExpense(
             callerDate,
             tools,
             householdContext,
-            30000,
+            timeout,
             finalContentType,
           );
 
@@ -1525,7 +1613,7 @@ export async function runAnalyzeExpense(
         try {
           const fallback = await attemptAnalysis(
             genAI,
-            "gemini-3-flash-preview",
+            "gemini-2.5-flash-lite",
             handwritingInstruction,
             body,
             base64Image,
@@ -1614,8 +1702,12 @@ export async function summarizePdfWithGemini(
 ): Promise<string | null> {
   try {
     const ai = new GoogleGenerativeAI(geminiKey);
-    const model = ai.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    const resp = await model.generateContent({
+
+    const startedAt = Date.now();
+    const totalTimeoutMs = 20000;
+    const modelNames = ["gemini-2.5-flash-lite", "gemini-3-flash-preview"];
+
+    const request = {
       contents: [
         {
           role: "user",
@@ -1630,8 +1722,31 @@ export async function summarizePdfWithGemini(
           parts: [{ inlineData: { mimeType, data: base64Data } }],
         },
       ],
-    });
-    return resp.response.text() || null;
+    } as any;
+
+    let lastError: unknown;
+    for (const modelName of modelNames) {
+      const elapsed = Date.now() - startedAt;
+      const remaining = totalTimeoutMs - elapsed;
+      if (remaining <= 0) break;
+
+      try {
+        const model = ai.getGenerativeModel({ model: modelName });
+        const resp = await generateGeminiWithRetry({
+          model,
+          modelName,
+          request,
+          timeoutMs: remaining,
+        });
+        return resp.response.text() || null;
+      } catch (e) {
+        lastError = e;
+        console.error(`PDF summary via Gemini failed (${modelName})`, e);
+      }
+    }
+
+    console.error("PDF summary via Gemini failed", lastError);
+    return null;
   } catch (e) {
     console.error("PDF summary via Gemini failed", e);
     return null;

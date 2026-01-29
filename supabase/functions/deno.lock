@@ -1,13 +1,9 @@
 {
   "version": "5",
   "specifiers": {
-    "npm:@google/generative-ai@~0.24.1": "0.24.1",
     "npm:@types/node@*": "22.15.15"
   },
   "npm": {
-    "@google/generative-ai@0.24.1": {
-      "integrity": "sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q=="
-    },
     "@types/node@22.15.15": {
       "integrity": "sha512-R5muMcZob3/Jjchn5LcO8jdKwSCbzqmPB6ruBxMcf9kbxtniZHP327s6C37iOfuw8mbKK3cAQa7sEl7afLrQ8A==",
       "dependencies": [
@@ -49,6 +45,7 @@
     "https://deno.land/std@0.224.0/encoding/base64.ts": "dd59695391584c8ffc5a296ba82bcdba6dd8a84d41a6a539fbee8e5075286eaf",
     "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno": "4e4d5e80166c1a54f3a8723ff5ccb85a4ddad00790c0f862d62fc728050234c0",
     "https://esm.sh/@google/generative-ai@0.24.1": "1b08807076eadeaddb89d41e9a2365e6980ec870416b808e58fd0ea6ac0a93d5",
+    "https://esm.sh/@google/generative-ai@0.24.1?target=deno": "00a99e986c896b8c6927769fa79e6c27f2caf2db4acc47a710317951b8577f3d",
     "https://esm.sh/@supabase/supabase-js@2.39.7": "5361671c958daa350e504d9975da64b2d6dc9e81390b985ccdafb2e3572e24e7",
     "https://esm.sh/@supabase/supabase-js@2.49.4": "d52c4d06946766d328fdd0ac2e007f52bb6d2ef7ce6103ad9f0f57d92b73e978",
     "https://esm.sh/@supabase/supabase-js@2.90.1": "fcf5e194d637ff365df76d1806e7c2f239905c4b08e83e5d95690a2b22e21a1d",
@@ -57,7 +54,6 @@
   },
   "workspace": {
     "dependencies": [
-      "npm:@google/generative-ai@~0.24.1",
       "npm:@supabase/supabase-js@^2.7.1",
       "npm:partial-json@~0.1.7"
     ]
