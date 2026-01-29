@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import {
   getAllCategories,
@@ -279,17 +280,6 @@ Deno.serve(async (req: Request) => {
 
     let userId: string | null = null;
 
-    // For non-GPT requests, userId should be in body (legacy client support)
-    if (!detection.isGpt && ("userId" in body || "user_id" in body)) {
-      const rawUserId = (body as any).userId ?? (body as any).user_id;
-      if (rawUserId) {
-        userId = sanitizeUuid(rawUserId);
-      }
-      if (!userId) {
-        return errorResponse("Invalid userId format", "VALIDATION_ERROR");
-      }
-    }
-
     let resolvedIdentityMeta: Record<string, unknown> | undefined;
 
     if (!userId && detection.isGpt) {
@@ -346,11 +336,52 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    if (!detection.isGpt) {
+      const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+          detectSessionInUrl: false,
+        },
+        global: { headers: { "X-Client-Info": "moneko-update-expense" } },
+      });
+
+      const authResult = await authenticateUserOrInternalSecret(req, supabase);
+      if (!authResult.success) {
+        return errorResponse(
+          authResult.error ?? "Authentication required",
+          "UNAUTHORIZED",
+          authResult.statusCode ?? 401,
+        );
+      }
+
+      const requestedUserIdRaw = (body as any).userId ?? (body as any).user_id;
+      const requestedUserId = requestedUserIdRaw
+        ? sanitizeUuid(String(requestedUserIdRaw))
+        : null;
+
+      userId = authResult.isInternalService
+        ? requestedUserId
+        : (authResult.userId ?? null);
+
+      if (
+        authResult.isInternalService &&
+        requestedUserIdRaw &&
+        !requestedUserId
+      ) {
+        return errorResponse("Invalid userId format", "VALIDATION_ERROR");
+      }
+
+      if (!userId) {
+        return errorResponse(
+          "userId is required for internal calls (or provide a valid JWT)",
+          "VALIDATION_ERROR",
+        );
+      }
+    }
+
     if (!userId) {
-      return errorResponse(
-        "userId is required for non-GPT requests",
-        "VALIDATION_ERROR",
-      );
+      return errorResponse("Authentication required", "UNAUTHORIZED", 401);
     }
 
     // Validate required fields

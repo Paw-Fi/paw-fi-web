@@ -6,6 +6,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -177,12 +178,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!userId && !detection.isGpt) {
-      return new Response(JSON.stringify({ error: "userId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // For non-GPT requests, derive user from JWT OR allow internal callers.
+    // NEVER trust userId from body unless the request is authenticated as internal.
 
     if (!body.amount || body.amount <= 0) {
       return new Response(
@@ -253,6 +250,30 @@ Deno.serve(async (req: Request) => {
     });
 
     let contactId: string | null = null;
+
+    if (!detection.isGpt) {
+      const authResult = await authenticateUserOrInternalSecret(req, supabase);
+      if (!authResult.success) {
+        return new Response(
+          JSON.stringify({ error: authResult.error || "Unauthorized" }),
+          {
+            status: authResult.statusCode ?? 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (authResult.isInternalService) {
+        if (!userId) {
+          return new Response(JSON.stringify({ error: "userId is required" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        userId = authResult.userId ?? null;
+      }
+    }
 
     if (userId) {
       const { data: contact, error: contactError } = await supabase

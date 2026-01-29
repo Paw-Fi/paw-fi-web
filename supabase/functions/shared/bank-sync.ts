@@ -41,6 +41,7 @@ export interface PersistTransactionsParams {
   supabase: SupabaseClient;
   userId: string;
   bankAccountId: string;
+  householdId?: string | null;
   accountCurrency: string;
   transactions: PlaidTransaction[];
 }
@@ -235,14 +236,15 @@ export async function persistPlaidTransactions(
 
   const mapped: ExpenseUpsertRecord[] = params.transactions
     .filter((transaction) => transaction.transaction_id)
-    .map((transaction) =>
-      mapPlaidTransactionToExpense({
+    .map((transaction) => ({
+      ...mapPlaidTransactionToExpense({
         userId: params.userId,
         bankAccountId: params.bankAccountId,
         defaultCurrency: params.accountCurrency,
         transaction,
       }),
-    );
+      household_id: params.householdId ?? null,
+    }));
 
   const normalized = mapped.map((record) =>
     normalizeCurrency(record, params.accountCurrency),

@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { SYSTEM_PROMPT } from "./prompt.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 if (!GEMINI_API_KEY) {
-  console.error("CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.");
+  console.error(
+    "CRITICAL ERROR: GEMINI_API_KEY is not set in Supabase Edge Function secrets.",
+  );
 }
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || "");
@@ -28,7 +30,11 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const requestData = await req.json();
-    const { message, isFirstMessage = false, withWelcomeAndResponse = false } = requestData;
+    const {
+      message,
+      isFirstMessage = false,
+      withWelcomeAndResponse = false,
+    } = requestData;
 
     if (!message && !isFirstMessage && !withWelcomeAndResponse) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
@@ -73,10 +79,10 @@ I know that talking about money can feel overwhelming, but you're in a safe, jud
       const aiResponse = result.response.text();
 
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           welcome: welcomeMessage,
           response: aiResponse,
-          coach: "moneko"
+          coach: "moneko",
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -114,18 +120,19 @@ I know that talking about money can feel overwhelming, but you're in a safe, jud
     }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         response: aiResponse,
-        coach: "moneko"
+        coach: "moneko",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown internal server error";
     console.error("Internal Server Error:", errorMessage);
-    
+
     return new Response(
       JSON.stringify({ error: "Internal Server Error", details: errorMessage }),
       {

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { corsHeaders } from "../shared/cors.ts";
 import { RewardActions } from "../shared/update-reward-actions/reward-actions.ts";
@@ -80,13 +80,13 @@ serve(async (req: Request): Promise<Response> => {
 
     if (!goalId || !userId) {
       return new Response(
-        JSON.stringify({ 
-          error: "Missing required fields: goalId and userId are required" 
+        JSON.stringify({
+          error: "Missing required fields: goalId and userId are required",
         }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -95,11 +95,13 @@ serve(async (req: Request): Promise<Response> => {
     // Get goal with current progress and milestones
     const { data: goalData, error: goalError } = await supabaseClient
       .from("financial_goals")
-      .select(`
+      .select(
+        `
         *,
         goal_milestones (*),
         goal_progress_updates (*)
-      `)
+      `,
+      )
       .eq("id", goalId)
       .eq("user_id", userId)
       .single();
@@ -107,14 +109,14 @@ serve(async (req: Request): Promise<Response> => {
     if (goalError || !goalData) {
       console.error("Goal not found:", goalError);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: "Goal not found or access denied",
-          details: goalError?.message 
+          details: goalError?.message,
         }),
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -122,23 +124,33 @@ serve(async (req: Request): Promise<Response> => {
     const currentDate = new Date();
     const startDate = new Date(goalData.start_date);
     const targetDate = new Date(goalData.target_date);
-    
-    const daysTotal = Math.ceil((targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const daysPassed = Math.ceil((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    const daysTotal = Math.ceil(
+      (targetDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const daysPassed = Math.ceil(
+      (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
     const daysRemaining = Math.max(0, daysTotal - daysPassed);
-    
+
     const progressAnalysis = {
       currentProgress: goalData.progress_percentage,
       daysToTarget: daysRemaining,
       daysTotal,
       daysPassed,
-      completedMilestones: goalData.goal_milestones?.filter((m: any) => m.status === 'completed').length || 0,
+      completedMilestones:
+        goalData.goal_milestones?.filter((m: any) => m.status === "completed")
+          .length || 0,
       totalMilestones: goalData.goal_milestones?.length || 0,
-      overdueMilestones: goalData.goal_milestones?.filter((m: any) => 
-        m.status !== 'completed' && new Date(m.due_date) < currentDate
-      ).length || 0,
+      overdueMilestones:
+        goalData.goal_milestones?.filter(
+          (m: any) =>
+            m.status !== "completed" && new Date(m.due_date) < currentDate,
+        ).length || 0,
       recentUpdates: goalData.goal_progress_updates?.slice(-5) || [],
-      monthlyProgress: calculateMonthlyProgress(goalData.goal_progress_updates || []),
+      monthlyProgress: calculateMonthlyProgress(
+        goalData.goal_progress_updates || [],
+      ),
       isOnTrack: goalData.is_on_track,
       amountRemaining: goalData.target_amount - goalData.current_amount,
       expectedProgress: daysTotal > 0 ? (daysPassed / daysTotal) * 100 : 0,
@@ -151,19 +163,28 @@ serve(async (req: Request): Promise<Response> => {
       .from("goal_insights")
       .select("created_at")
       .eq("goal_id", goalId)
-      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+      .gte(
+        "created_at",
+        new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      ) // Last 24 hours
       .limit(1);
 
     // For now, we'll always generate insights when requested to improve user experience
     // In the future, we could add a request parameter to override this check
     if (recentInsights && recentInsights.length > 0) {
-      console.log("Recent insights exist, but generating new ones as requested");
+      console.log(
+        "Recent insights exist, but generating new ones as requested",
+      );
     }
 
     // Generate AI insights
-    const aiPrompt = INSIGHTS_GENERATION_PROMPT
-      .replace("{{GOAL_DATA}}", JSON.stringify(goalData, null, 2))
-      .replace("{{PROGRESS_ANALYSIS}}", JSON.stringify(progressAnalysis, null, 2));
+    const aiPrompt = INSIGHTS_GENERATION_PROMPT.replace(
+      "{{GOAL_DATA}}",
+      JSON.stringify(goalData, null, 2),
+    ).replace(
+      "{{PROGRESS_ANALYSIS}}",
+      JSON.stringify(progressAnalysis, null, 2),
+    );
 
     console.log("Sending request to Gemini AI for insights...");
 
@@ -174,27 +195,30 @@ serve(async (req: Request): Promise<Response> => {
       temperature: 0.7,
     };
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: aiPrompt }] }],
-    }, generationConfig);
+    const result = await model.generateContent(
+      {
+        contents: [{ role: "user", parts: [{ text: aiPrompt }] }],
+      },
+      generationConfig,
+    );
 
     const aiResponseText = result.response.text();
     console.log("AI insights response received:", aiResponseText);
 
     // Clean the response text to remove markdown formatting
     let cleanedResponse = aiResponseText.trim();
-    
+
     // Remove markdown code blocks if present
     if (cleanedResponse.startsWith("```json")) {
-      cleanedResponse = cleanedResponse.replace(/^```json\s*/, '');
+      cleanedResponse = cleanedResponse.replace(/^```json\s*/, "");
     }
     if (cleanedResponse.startsWith("```")) {
-      cleanedResponse = cleanedResponse.replace(/^```\s*/, '');
+      cleanedResponse = cleanedResponse.replace(/^```\s*/, "");
     }
     if (cleanedResponse.endsWith("```")) {
-      cleanedResponse = cleanedResponse.replace(/\s*```$/, '');
+      cleanedResponse = cleanedResponse.replace(/\s*```$/, "");
     }
-    
+
     console.log("Cleaned AI response:", cleanedResponse);
 
     // Parse AI response
@@ -206,30 +230,30 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Original response:", aiResponseText);
       console.error("Cleaned response:", cleanedResponse);
       return new Response(
-        JSON.stringify({ 
-          error: "Failed to parse AI insights response", 
+        JSON.stringify({
+          error: "Failed to parse AI insights response",
           details: parseError.message,
           rawResponse: aiResponseText,
-          cleanedResponse: cleanedResponse
+          cleanedResponse: cleanedResponse,
         }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     // Validate insights structure
     if (!Array.isArray(insights)) {
       return new Response(
-        JSON.stringify({ 
-          error: "Invalid AI insights response structure", 
-          details: "Expected array of insights" 
+        JSON.stringify({
+          error: "Invalid AI insights response structure",
+          details: "Expected array of insights",
         }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -239,7 +263,7 @@ serve(async (req: Request): Promise<Response> => {
       insight_type: insight.type,
       title: insight.title,
       content: insight.content,
-      priority: insight.priority || 'medium',
+      priority: insight.priority || "medium",
       is_ai_generated: true,
       ai_confidence_score: Math.min(Math.max(insight.confidence || 0.8, 0), 1), // Clamp between 0 and 1
       expires_at: insight.expiresAt || null,
@@ -253,56 +277,60 @@ serve(async (req: Request): Promise<Response> => {
     if (insightsError) {
       console.error("Failed to save insights:", insightsError);
       return new Response(
-        JSON.stringify({ 
-          error: "Failed to save insights to database", 
-          details: insightsError.message 
+        JSON.stringify({
+          error: "Failed to save insights to database",
+          details: insightsError.message,
         }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
     console.log(`Successfully created ${newInsights?.length || 0} insights`);
 
     const insightCount = newInsights?.length || 0;
-    const responseMessage = insightCount > 0 
-      ? `💡 **Generated ${insightCount} new insight${insightCount === 1 ? '' : 's'}!** I've analyzed your goal progress and created personalized recommendations to help you stay on track.\n\n\`\`GOAL:${goalId}\`\``
-      : `📊 **Analysis complete!** I've reviewed your goal progress. Check your goal dashboard for detailed insights.\n\n\`\`GOAL:${goalId}\`\``;
+    const responseMessage =
+      insightCount > 0
+        ? `💡 **Generated ${insightCount} new insight${insightCount === 1 ? "" : "s"}!** I've analyzed your goal progress and created personalized recommendations to help you stay on track.\n\n\`\`GOAL:${goalId}\`\``
+        : `📊 **Analysis complete!** I've reviewed your goal progress. Check your goal dashboard for detailed insights.\n\n\`\`GOAL:${goalId}\`\``;
 
-    return new Response(JSON.stringify({
-      success: true,
-      insights: newInsights || [],
-      progressAnalysis,
-      message: responseMessage,
-      debug: {
-        message: "Insights generated and stored successfully",
-        timestamp: new Date().toISOString(),
-        goalId,
-        insightsCreated: newInsights?.length || 0,
+    return new Response(
+      JSON.stringify({
+        success: true,
+        insights: newInsights || [],
+        progressAnalysis,
+        message: responseMessage,
+        debug: {
+          message: "Insights generated and stored successfully",
+          timestamp: new Date().toISOString(),
+          goalId,
+          insightsCreated: newInsights?.length || 0,
+        },
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown internal server error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown internal server error";
     console.error("Internal Server Error:", errorMessage);
     if (error instanceof Error && error.stack) {
       console.error("Stack trace:", error.stack);
     }
-    
+
     return new Response(
-      JSON.stringify({ 
-        error: "Internal Server Error", 
+      JSON.stringify({
+        error: "Internal Server Error",
         details: errorMessage,
         timestamp: new Date().toISOString(),
       }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   }
 });
@@ -311,10 +339,14 @@ function calculateMonthlyProgress(progressUpdates: any[]): number {
   const oneMonthAgo = new Date();
   oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-  const recentUpdates = progressUpdates.filter(update => 
-    new Date(update.created_at) >= oneMonthAgo && 
-    update.update_type === RewardActions.GOAL_PROGRESS_UPDATED
+  const recentUpdates = progressUpdates.filter(
+    (update) =>
+      new Date(update.created_at) >= oneMonthAgo &&
+      update.update_type === RewardActions.GOAL_PROGRESS_UPDATED,
   );
 
-  return recentUpdates.reduce((total, update) => total + (update.amount_change || 0), 0);
+  return recentUpdates.reduce(
+    (total, update) => total + (update.amount_change || 0),
+    0,
+  );
 }

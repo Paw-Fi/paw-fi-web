@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     let connectionsQuery = supabase
       .from("bank_connections")
       .select(
-        "id, user_id, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, status",
+        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, status",
       )
       .eq("user_id", authResult.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -318,6 +318,63 @@ async function syncConnection(params: {
       throw new Error("Missing Plaid access token");
     }
     const accessToken = await decryptSecret(encryptedToken);
+
+    let householdId = params.connection.household_id || null;
+    if (!householdId) {
+      const providerItemId = params.connection.provider_item_id;
+      if (!providerItemId) {
+        console.warn(
+          "[plaid-sync] Missing provider_item_id; skipping household ensure",
+        );
+      } else {
+        const rawMeta = params.connection.metadata;
+        const connectionMeta =
+          typeof rawMeta === "object" && rawMeta !== null
+            ? (rawMeta as Record<string, unknown>)
+            : {};
+        const institutionName =
+          (connectionMeta["institution_name"] as string | undefined) ||
+          "Bank Account";
+        const institutionLogo =
+          (connectionMeta["institution_logo"] as string | undefined) || null;
+        const ensureMeta = {
+          ...connectionMeta,
+          institution_name: institutionName,
+          institution_logo: institutionLogo,
+        };
+
+        const { data: ensureResult, error: ensureError } =
+          await params.supabase.rpc("upsert_bank_connection_with_household", {
+            p_user_id: params.userId,
+            p_provider: PLAID_PROVIDER,
+            p_provider_item_id: providerItemId,
+            p_access_token_encrypted: encryptedToken,
+            p_refresh_token_encrypted: null,
+            p_expires_at: null,
+            p_country_code: params.connection.country_code || null,
+            p_idempotency_key: null,
+            p_institution_name: institutionName,
+            p_institution_logo: institutionLogo,
+            p_metadata: ensureMeta,
+          });
+
+        if (ensureError) {
+          console.error("[plaid-sync] Failed to ensure household", ensureError);
+        } else if (ensureResult && ensureResult.length) {
+          householdId = ensureResult[0].household_id || null;
+          console.log(
+            "[plaid-sync] Ensured household for connection",
+            params.connection.id,
+            householdId,
+          );
+        }
+      }
+    }
+
+    if (!householdId) {
+      throw new Error("Missing household_id for bank connection");
+    }
+
     let cursor: string | undefined =
       params.cursorOverride === "reset"
         ? undefined
@@ -342,6 +399,14 @@ async function syncConnection(params: {
         if (params.accountFilter && account.id !== params.accountFilter.id)
           continue;
 
+        await params.supabase
+          .from("expenses")
+          .update({ household_id: householdId })
+          .eq("provider", PLAID_PROVIDER)
+          .eq("user_id", params.userId)
+          .eq("bank_account_id", account.id)
+          .is("household_id", null);
+
         await stagePlaidTransactions({
           supabase: params.supabase,
           bankConnectionId: params.connection.id,
@@ -353,6 +418,7 @@ async function syncConnection(params: {
           supabase: params.supabase,
           userId: params.userId,
           bankAccountId: account.id,
+          householdId,
           accountCurrency: account.currency,
           transactions,
         });
@@ -530,6 +596,10 @@ interface BankAccountRow {
 interface BankConnectionRow {
   id: string;
   user_id: string;
+  household_id?: string | null;
+  provider_item_id?: string | null;
+  country_code?: string | null;
+  metadata?: unknown;
   access_token_encrypted?: string | null;
   plaid_access_token_encrypted?: string | null;
   cursor?: string | null;

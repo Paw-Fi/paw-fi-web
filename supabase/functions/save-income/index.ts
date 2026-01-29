@@ -5,6 +5,7 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -98,22 +99,19 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const body: RequestBody = await req.json();
 
-    console.log(
-      "[save-income] Full request body:",
-      JSON.stringify(body, null, 2),
-    );
+    // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule = body.recurrence_rule ??
-      (body as any).recurrenceRule;
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
     }
 
-    console.log("[save-income] recurrence_rule:", body.recurrence_rule);
+    console.log("[save-income] has recurrence_rule:", !!body.recurrence_rule);
 
     console.log("[save-income] Incoming request:", {
-      userId: body.userId,
+      userId: "[redacted]",
       amount: body.amount,
       category: body.category,
       householdId: body.householdId,
@@ -122,8 +120,49 @@ Deno.serve(async (req: Request) => {
       hasRecurrenceRule: !!body.recurrence_rule,
     });
 
-    // Validate required fields
-    const userId = sanitizeUuid(body.userId);
+    // Get environment variables
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { "X-Client-Info": "moneko-save-income" } },
+    });
+
+    // For non-GPT callers:
+    // - allow internal service calls (WhatsApp bot) with a shared secret
+    // - allow normal user JWT callers
+    const authResult = await authenticateUserOrInternalSecret(req, supabase);
+    if (!authResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: authResult.error ?? "Authentication required",
+        }),
+        {
+          status: authResult.statusCode ?? 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const userId = authResult.isInternalService
+      ? sanitizeUuid(body.userId)
+      : authResult.userId;
+
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "Valid userId is required" }),
@@ -187,33 +226,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Get environment variables
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
     // Validate and normalize currency
     const currency = validateCurrency(body.currency || "USD");
 
     const isPortfolio = body.isPortfolio === true;
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-      global: { headers: { "X-Client-Info": "moneko-save-income" } },
-    });
 
     // Resolve user contact
     let contactId: string | null = null;

@@ -1,7 +1,7 @@
 // AI Service - Robust Gemini Integration with Circuit Breaker Pattern
 // Handles AI generation with graceful degradation and consistent schema enforcement
 
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Logger } from "./logger.ts";
 
 interface AIGoalResponse {
@@ -39,9 +39,9 @@ interface AIGoalResponse {
     confidenceLevel: number;
   };
   advisorMessages: {
-    planMessage: { content: string; tone: string; };
-    insightsMessage: { content: string; tone: string; };
-    nextStepsMessage: { content: string; tone: string; };
+    planMessage: { content: string; tone: string };
+    insightsMessage: { content: string; tone: string };
+    nextStepsMessage: { content: string; tone: string };
   };
   financialProfile: {
     profileDescription: string;
@@ -60,7 +60,7 @@ interface AIGoalResponse {
 
 export class AIService {
   private genAI: GoogleGenerativeAI;
-  private circuitBreakerState: 'CLOSED' | 'OPEN' | 'HALF_OPEN' = 'CLOSED';
+  private circuitBreakerState: "CLOSED" | "OPEN" | "HALF_OPEN" = "CLOSED";
   private failureCount = 0;
   private lastFailureTime = 0;
   private readonly failureThreshold = 3;
@@ -77,36 +77,40 @@ export class AIService {
 
   async generateGoalPlan(
     goalType: string,
-    questionnaireAnswers: Record<string, any>
+    questionnaireAnswers: Record<string, any>,
   ): Promise<AIGoalResponse> {
-    
     this.logger.info("Starting AI goal plan generation", {
       goalType,
       circuitBreakerState: this.circuitBreakerState,
-      hasQuestionnaireData: Object.keys(questionnaireAnswers).length > 0
+      hasQuestionnaireData: Object.keys(questionnaireAnswers).length > 0,
     });
-    
+
     // Check circuit breaker
-    if (this.circuitBreakerState === 'OPEN') {
+    if (this.circuitBreakerState === "OPEN") {
       if (Date.now() - this.lastFailureTime > this.recoveryTimeout) {
-        this.circuitBreakerState = 'HALF_OPEN';
+        this.circuitBreakerState = "HALF_OPEN";
         this.logger.info("Circuit breaker moving to HALF_OPEN state");
       } else {
-        this.logger.error("Circuit breaker is OPEN - AI should not be using fallback!", {
-          lastFailureTime: this.lastFailureTime,
-          timeSinceLastFailure: Date.now() - this.lastFailureTime
-        });
-        throw new Error("AI service temporarily unavailable due to repeated failures");
+        this.logger.error(
+          "Circuit breaker is OPEN - AI should not be using fallback!",
+          {
+            lastFailureTime: this.lastFailureTime,
+            timeSinceLastFailure: Date.now() - this.lastFailureTime,
+          },
+        );
+        throw new Error(
+          "AI service temporarily unavailable due to repeated failures",
+        );
       }
     }
 
     try {
       this.logger.info("Calling Gemini AI API...");
       const response = await this.callGeminiAPI(goalType, questionnaireAnswers);
-      
+
       // Success - reset circuit breaker
-      if (this.circuitBreakerState === 'HALF_OPEN') {
-        this.circuitBreakerState = 'CLOSED';
+      if (this.circuitBreakerState === "HALF_OPEN") {
+        this.circuitBreakerState = "CLOSED";
         this.failureCount = 0;
         this.logger.info("Circuit breaker reset to CLOSED state");
       }
@@ -114,15 +118,14 @@ export class AIService {
       this.logger.info("AI generation successful!", {
         goalTitle: response.goal.title,
         targetAmount: response.goal.targetAmount,
-        targetDate: response.goal.targetDate
+        targetDate: response.goal.targetDate,
       });
 
       return response;
-
     } catch (error) {
       this.logger.error("AI generation failed with error", {
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
       this.handleAIFailure(error);
       throw new Error(`AI generation failed: ${error.message}`);
@@ -131,112 +134,113 @@ export class AIService {
 
   private async callGeminiAPI(
     goalType: string,
-    questionnaireAnswers: Record<string, any>
+    questionnaireAnswers: Record<string, any>,
   ): Promise<AIGoalResponse> {
-    
     // Simplified approach - no function calling, direct JSON response
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite"
+      model: "gemini-2.5-flash-lite",
     });
 
     const prompt = this.buildPrompt(goalType, questionnaireAnswers);
-    
+
     this.logger.debug("Calling Gemini API for JSON response", { goalType });
-    
+
     const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }]
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
     });
-    
+
     const responseText = result.response.text();
-    
+
     this.logger.debug("Gemini API response received", {
       responseLength: responseText.length,
-      responsePreview: responseText.substring(0, 200)
+      responsePreview: responseText.substring(0, 200),
     });
 
     // Parse the JSON response
     try {
       // Extract JSON from response (handle markdown code blocks if present)
       let jsonText = responseText;
-      
+
       // Remove markdown code block markers if present
-      if (jsonText.includes('```json')) {
-        const jsonStart = jsonText.indexOf('```json') + 7;
-        const jsonEnd = jsonText.lastIndexOf('```');
+      if (jsonText.includes("```json")) {
+        const jsonStart = jsonText.indexOf("```json") + 7;
+        const jsonEnd = jsonText.lastIndexOf("```");
         if (jsonEnd > jsonStart) {
           jsonText = jsonText.substring(jsonStart, jsonEnd);
         }
-      } else if (jsonText.includes('```')) {
-        const jsonStart = jsonText.indexOf('```') + 3;
-        const jsonEnd = jsonText.lastIndexOf('```');
+      } else if (jsonText.includes("```")) {
+        const jsonStart = jsonText.indexOf("```") + 3;
+        const jsonEnd = jsonText.lastIndexOf("```");
         if (jsonEnd > jsonStart) {
           jsonText = jsonText.substring(jsonStart, jsonEnd);
         }
       }
-      
+
       jsonText = jsonText.trim();
       this.logger.debug("Extracted JSON text", { jsonLength: jsonText.length });
-      
+
       const parsedResponse = JSON.parse(jsonText);
       this.logger.info("Successfully parsed JSON response");
-      
+
       return this.validateAndNormalizeResponse(parsedResponse);
-      
     } catch (parseError) {
       this.logger.error("Failed to parse AI JSON response", {
         error: parseError.message,
-        responseText: responseText.substring(0, 500)
+        responseText: responseText.substring(0, 500),
       });
-    
+
       // Try one more time with explicit JSON request
       this.logger.info("Attempting retry with explicit JSON format request");
-      
+
       const retryPrompt = `${prompt}
 
 The previous response could not be parsed as JSON. Please respond with ONLY a valid JSON object, no additional text or markdown formatting.`;
-      
+
       const retryResult = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: retryPrompt }] }]
+        contents: [{ role: "user", parts: [{ text: retryPrompt }] }],
       });
-      
+
       const retryResponseText = retryResult.response.text();
-      
+
       try {
         let retryJsonText = retryResponseText.trim();
-        
+
         // Clean up any remaining markdown
-        if (retryJsonText.includes('```')) {
-          const lines = retryJsonText.split('\n');
-          const cleanLines = lines.filter((line: string) => !line.trim().startsWith('```'));
-          retryJsonText = cleanLines.join('\n');
+        if (retryJsonText.includes("```")) {
+          const lines = retryJsonText.split("\n");
+          const cleanLines = lines.filter(
+            (line: string) => !line.trim().startsWith("```"),
+          );
+          retryJsonText = cleanLines.join("\n");
         }
-        
+
         const retryParsedResponse = JSON.parse(retryJsonText);
         this.logger.info("Successfully parsed retry JSON response");
-        
+
         return this.validateAndNormalizeResponse(retryParsedResponse);
-        
       } catch (retryParseError) {
         this.logger.error("Failed to parse retry JSON response", {
           error: retryParseError.message,
-          retryResponseText: retryResponseText.substring(0, 500)
+          retryResponseText: retryResponseText.substring(0, 500),
         });
-        
-        throw new Error(`AI failed to generate valid JSON response after retry. Parse errors: ${parseError.message}, ${retryParseError.message}`);
+
+        throw new Error(
+          `AI failed to generate valid JSON response after retry. Parse errors: ${parseError.message}, ${retryParseError.message}`,
+        );
       }
     }
   }
 
   private buildPrompt(goalType: string, answers: Record<string, any>): string {
-    const today = new Date().toISOString().split('T')[0];
-    
+    const today = new Date().toISOString().split("T")[0];
+
     // Log the raw questionnaire data for debugging
     this.logger.debug("Raw questionnaire data being sent to AI", {
       goalType,
       questionnaireFields: Object.keys(answers),
-      rawData: answers
+      rawData: answers,
     });
-    
+
     return `You are an advanced financial planning AI model. Your sole function is to process user financial data and respond with ONLY a single, valid JSON object. Do not include any introductory text, explanations, or markdown formatting like json before or after the object.
 
 You will be provided with a series of questions and the user's corresponding answers, detailing their current financial situation (e.g., income, expenses, assets, debts), risk tolerance, and specific long-term goals (e.g., retirement, home purchase, debt elimination).
@@ -360,19 +364,19 @@ ABSOLUTELY NO SAMPLE DATA - Replace every bracketed description with actual data
   private validateAndNormalizeResponse(args: any): AIGoalResponse {
     // MINIMAL validation - AI is single source of truth
     // Only check for required structure, do not modify any values
-    
+
     if (!args.goal) {
       throw new Error("AI must provide a goal object");
     }
-    
+
     if (!args.projections) {
       throw new Error("AI must provide projections object");
     }
-    
+
     if (!args.advisorMessages) {
       throw new Error("AI must provide advisorMessages object");
     }
-    
+
     if (!args.financialProfile) {
       throw new Error("AI must provide financialProfile object");
     }
@@ -384,7 +388,7 @@ ABSOLUTELY NO SAMPLE DATA - Replace every bracketed description with actual data
         description: args.goal.description,
         targetAmount: args.goal.targetAmount,
         targetDate: args.goal.targetDate,
-        rationale: args.goal.rationale
+        rationale: args.goal.rationale,
       },
       strategy: args.strategy,
       milestones: Array.isArray(args.milestones) ? args.milestones : [],
@@ -393,24 +397,27 @@ ABSOLUTELY NO SAMPLE DATA - Replace every bracketed description with actual data
         monthlyRequired: args.projections.monthlyRequired,
         projectedFinalAmount: args.projections.projectedFinalAmount,
         incomeReplacement: args.projections.incomeReplacement,
-        confidenceLevel: args.projections.confidenceLevel
+        confidenceLevel: args.projections.confidenceLevel,
       },
       advisorMessages: {
         planMessage: args.advisorMessages.planMessage,
         insightsMessage: args.advisorMessages.insightsMessage,
-        nextStepsMessage: args.advisorMessages.nextStepsMessage
+        nextStepsMessage: args.advisorMessages.nextStepsMessage,
       },
       financialProfile: {
         profileDescription: args.financialProfile.profileDescription,
-        profileData: args.financialProfile.profileData
-      }
+        profileData: args.financialProfile.profileData,
+      },
     };
 
-    this.logger.info("AI response structure validated - using exact AI values", {
-      targetAmount: response.goal.targetAmount,
-      monthlyRequired: response.projections.monthlyRequired,
-      targetDate: response.goal.targetDate
-    });
+    this.logger.info(
+      "AI response structure validated - using exact AI values",
+      {
+        targetAmount: response.goal.targetAmount,
+        monthlyRequired: response.projections.monthlyRequired,
+        targetDate: response.goal.targetDate,
+      },
+    );
 
     return response;
   }
@@ -426,10 +433,10 @@ ABSOLUTELY NO SAMPLE DATA - Replace every bracketed description with actual data
     this.lastFailureTime = Date.now();
 
     if (this.failureCount >= this.failureThreshold) {
-      this.circuitBreakerState = 'OPEN';
+      this.circuitBreakerState = "OPEN";
       this.logger.warn("Circuit breaker opened due to repeated failures", {
         failureCount: this.failureCount,
-        error: error.message
+        error: error.message,
       });
     }
   }

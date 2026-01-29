@@ -1,6 +1,6 @@
 // supabase/functions/gemini-structured-stream/index.ts
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.11.0";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { CHAT_SUGGESTION_PROMPT_INSTRUCTIONS } from "./prompt.ts";
 
@@ -55,7 +55,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
     const { message, history } = requestData;
-    console.log("requestData", requestData)
+    console.log("requestData", requestData);
 
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required." }), {
@@ -122,7 +122,7 @@ serve(async (req: Request): Promise<Response> => {
     // --- Core Logic for Chat Suggestions ---
     let responseText = result.response.text();
     let finalResponsePayload: string[];
-    
+
     try {
       // First try to parse as direct JSON
       finalResponsePayload = JSON.parse(responseText);
@@ -131,14 +131,14 @@ serve(async (req: Request): Promise<Response> => {
         // If that fails, try to extract JSON from markdown code blocks
         const jsonBlockRegex = /```json\s*([\s\S]*?)\s*```/i;
         const match = responseText.match(jsonBlockRegex);
-        
+
         if (match && match[1]) {
           finalResponsePayload = JSON.parse(match[1].trim());
         } else {
           // If no markdown block found, try to find raw JSON array in the text
           const arrayRegex = /\[([\s\S]*?)\]/;
           const arrayMatch = responseText.match(arrayRegex);
-          
+
           if (arrayMatch) {
             finalResponsePayload = JSON.parse(arrayMatch[0]);
           } else {
@@ -151,7 +151,7 @@ serve(async (req: Request): Promise<Response> => {
         finalResponsePayload = [
           "How can I grow my money?",
           "What are some ways to earn passive income?",
-          "How can I learn about investing?"
+          "How can I learn about investing?",
         ];
       }
     }
@@ -162,7 +162,6 @@ serve(async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown internal server error";

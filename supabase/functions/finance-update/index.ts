@@ -1,37 +1,42 @@
 // Supabase Edge Function: finance-update
 // Accepts free text + (phone OR userId), uses Gemini to derive structured update ops, then updates DB.
 
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { normalizeCurrencyCode } from "../shared/currency-normalize.ts";
 
-
-
 // Types
 interface UpdateRequest {
-  phone?: string;      // E.164 format (optional if userId provided)
-  userId?: string;     // User ID (optional if phone provided)
-  text: string;        // free text, e.g., "I spent 4 on food"
-  date?: string;       // ISO date like 2025-10-07; default today (UTC)
-  currency?: string;   // Optional currency code, default USD
-  receipt_image_url?: string;  // Optional Supabase Storage URL for receipt image
+  phone?: string; // E.164 format (optional if userId provided)
+  userId?: string; // User ID (optional if phone provided)
+  text: string; // free text, e.g., "I spent 4 on food"
+  date?: string; // ISO date like 2025-10-07; default today (UTC)
+  currency?: string; // Optional currency code, default USD
+  receipt_image_url?: string; // Optional Supabase Storage URL for receipt image
 }
 
 interface LlmResult {
   actions?: {
     set_budget?: { amount: number; currency?: string; date?: string };
-    add_expenses?: Array<{ amount: number; category?: string; currency?: string; date?: string }>;
-  }
+    add_expenses?: Array<{
+      amount: number;
+      category?: string;
+      currency?: string;
+      date?: string;
+    }>;
+  };
 }
 
 function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
-const DEBUG = Deno.env.get('DEBUG_LOG') === 'true';
-
+const DEBUG = Deno.env.get("DEBUG_LOG") === "true";
 
 function errorResponse(message: string, status = 400, details?: unknown) {
   console.error(`[finance-update] Error ${status}: ${message}`, details);
@@ -47,14 +52,14 @@ function chooseEffectiveCurrency(
   preferred: string,
   isReceipt: boolean,
 ): string {
-  const pref = (preferred || 'USD').toUpperCase();
-  const rec = (recognized || '').toUpperCase();
+  const pref = (preferred || "USD").toUpperCase();
+  const rec = (recognized || "").toUpperCase();
 
   if (!rec) return pref;
   if (rec === pref) return rec;
 
   // Treat these as ambiguous (symbols commonly confused or generic)
-  const AMBIGUOUS = new Set(['USD', 'JPY', 'CNY']);
+  const AMBIGUOUS = new Set(["USD", "JPY", "CNY"]);
 
   if (!isReceipt) {
     // For text we allow explicit overrides as recognized
@@ -75,7 +80,7 @@ async function findEffectiveBudget(
   supabase: any,
   contactId: string,
   date: string,
-  primaryCurrency: string
+  primaryCurrency: string,
 ): Promise<{ effectiveBudget: any | null; otherCurrencyBudget: any | null }> {
   // 1. Try to find budget for exact date in primary currency
   const { data: exactBudget } = await supabase
@@ -117,11 +122,11 @@ async function findEffectiveBudget(
     .maybeSingle();
 
   if (otherBudgets) {
-    console.log('[findEffectiveBudget] Found budget in different currency:', {
+    console.log("[findEffectiveBudget] Found budget in different currency:", {
       requestedCurrency: primaryCurrency,
       foundCurrency: otherBudgets.currency,
       amount: otherBudgets.amount_cents,
-      date: otherBudgets.date
+      date: otherBudgets.date,
     });
   }
 
@@ -129,14 +134,20 @@ async function findEffectiveBudget(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    if (DEBUG) console.error('config error', { hasGemini: !!GEMINI_API_KEY, hasUrl: !!SUPABASE_URL, hasKey: !!SUPABASE_SERVICE_ROLE_KEY });
+    if (DEBUG)
+      console.error("config error", {
+        hasGemini: !!GEMINI_API_KEY,
+        hasUrl: !!SUPABASE_URL,
+        hasKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      });
     return errorResponse("Server not configured", 500);
   }
 
@@ -147,11 +158,21 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { phone, userId, text, date: inputDate, currency: inputCurrency, receipt_image_url } = payload || {};
-  
+  const {
+    phone,
+    userId,
+    text,
+    date: inputDate,
+    currency: inputCurrency,
+    receipt_image_url,
+  } = payload || {};
+
   // Validate: either phone or userId must be provided
   if ((!phone && !userId) || !text || typeof text !== "string") {
-    return errorResponse("'text' is required, and either 'phone' or 'userId' must be provided", 400);
+    return errorResponse(
+      "'text' is required, and either 'phone' or 'userId' must be provided",
+      400,
+    );
   }
   if (phone && typeof phone !== "string") {
     return errorResponse("'phone' must be a string", 400);
@@ -165,31 +186,40 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid date format", 400);
   }
   const dateStr = date.toISOString().slice(0, 10); // YYYY-MM-DD
-  
+
   // CURRENCY FALLBACK HIERARCHY (when Gemini doesn't detect currency):
   // 1. Currency detected in photo/text (Gemini handles this)
   // 2. inputCurrency from request (user's selected currency for this transaction)
   // 3. preferred_currency from user_contacts table
   // 4. 'USD' as final fallback
   // Canonicalize provided currency (may be symbol/alias)
-  const providedCurrency = (normalizeCurrencyCode(inputCurrency) || inputCurrency || '').toUpperCase() || null;
+  const providedCurrency =
+    (
+      normalizeCurrencyCode(inputCurrency) ||
+      inputCurrency ||
+      ""
+    ).toUpperCase() || null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
     global: { headers: { "X-Client-Info": "moneko-finance-update" } },
   });
 
   // Find or create contact - search by phone if provided, otherwise by userId
   let contact: any = null;
   let contactErr: any = null;
-  
+
   if (phone) {
     // Search by phone number (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_currency")
       .eq("phone_e164", phone)
-      .order('id', { ascending: false })
+      .order("id", { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
@@ -199,7 +229,7 @@ Deno.serve(async (req: Request) => {
       .from("user_contacts")
       .select("id, user_id, preferred_currency, phone_e164")
       .eq("user_id", userId)
-      .order('id', { ascending: false })
+      .order("id", { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
@@ -215,14 +245,25 @@ Deno.serve(async (req: Request) => {
   // Layer 2: User's selected currency (from request)
   // Layer 3: User's preferred_currency (from database)
   // Layer 4: 'USD' (final fallback)
-  const dbPreferred = normalizeCurrencyCode(contact?.preferred_currency) || contact?.preferred_currency || null;
-  const preferredCurrency = (providedCurrency || dbPreferred || 'USD').toUpperCase();
-  
-  console.log('[finance-update] Currency fallback applied:', {
-    layer: providedCurrency ? '2-inputCurrency' : contact?.preferred_currency ? '3-preferred_currency' : '4-USD',
+  const dbPreferred =
+    normalizeCurrencyCode(contact?.preferred_currency) ||
+    contact?.preferred_currency ||
+    null;
+  const preferredCurrency = (
+    providedCurrency ||
+    dbPreferred ||
+    "USD"
+  ).toUpperCase();
+
+  console.log("[finance-update] Currency fallback applied:", {
+    layer: providedCurrency
+      ? "2-inputCurrency"
+      : contact?.preferred_currency
+        ? "3-preferred_currency"
+        : "4-USD",
     value: preferredCurrency,
     providedCurrency,
-    dbPreferredCurrency: contact?.preferred_currency
+    dbPreferredCurrency: contact?.preferred_currency,
   });
 
   if (!contactId) {
@@ -232,8 +273,13 @@ Deno.serve(async (req: Request) => {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: userId || null, preferred_currency: preferredCurrency, updated_at: new Date().toISOString() },
-          { onConflict: 'phone_e164' }
+          {
+            phone_e164: phone,
+            user_id: userId || null,
+            preferred_currency: preferredCurrency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "phone_e164" },
         )
         .select("id")
         .single();
@@ -282,9 +328,19 @@ Rules:
   try {
     const result = await model.generateContent({
       contents: [
-        { role: "user", parts: [{ text: `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}` }] },
+        {
+          role: "user",
+          parts: [
+            {
+              text: `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}`,
+            },
+          ],
+        },
       ],
-      generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 },
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 1024,
+      },
     });
     llmText = result.response.text();
   } catch (e) {
@@ -299,7 +355,11 @@ Rules:
     ops = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
   } catch (e) {
     console.error("Parse ops error", e, llmText);
-    return errorResponse("AI returned invalid JSON", 500, { llmText, contactId, dateStr });
+    return errorResponse("AI returned invalid JSON", 500, {
+      llmText,
+      contactId,
+      dateStr,
+    });
   }
 
   const actions = ops?.actions || {};
@@ -310,7 +370,7 @@ Rules:
   // Upsert budget if provided
   if (actions.set_budget?.amount && contactId) {
     const budgetCents = Math.round(actions.set_budget.amount * 100);
-    
+
     // Validate and sanitize the budget date
     let budgetDate = dateStr; // Default to caller's date (today)
     if (actions.set_budget.date) {
@@ -319,74 +379,115 @@ Rules:
       if (!isNaN(parsedDate.getTime()) && actions.set_budget.date.length >= 8) {
         budgetDate = parsedDate.toISOString().slice(0, 10);
       } else {
-        console.warn('[finance-update] Invalid budget date from AI, using default:', actions.set_budget.date);
+        console.warn(
+          "[finance-update] Invalid budget date from AI, using default:",
+          actions.set_budget.date,
+        );
       }
     }
-    
-    const budgetCurrency = (normalizeCurrencyCode(actions.set_budget.currency) || preferredCurrency).toUpperCase();
+
+    const budgetCurrency = (
+      normalizeCurrencyCode(actions.set_budget.currency) || preferredCurrency
+    ).toUpperCase();
 
     const { error: upsertErr } = await supabase
       .from("daily_budgets")
-      .upsert([{ contact_id: contactId, date: budgetDate, amount_cents: budgetCents, currency: budgetCurrency, updated_at: new Date().toISOString() }], { onConflict: "contact_id,date,currency" });  // Updated: now includes currency
+      .upsert(
+        [
+          {
+            contact_id: contactId,
+            date: budgetDate,
+            amount_cents: budgetCents,
+            currency: budgetCurrency,
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: "contact_id,date,currency" },
+      ); // Updated: now includes currency
 
     if (upsertErr) {
       console.error("budget upsert error", upsertErr);
       return errorResponse("Failed to save budget", 500);
     }
-    results.budget_set = { amount_cents: budgetCents, date: budgetDate, currency: budgetCurrency };
+    results.budget_set = {
+      amount_cents: budgetCents,
+      date: budgetDate,
+      currency: budgetCurrency,
+    };
   }
 
   // Insert expenses if provided
-  if (Array.isArray(actions.add_expenses) && actions.add_expenses.length && contactId) {
-    const rows = actions.add_expenses.map((e) => {
-      // Validate and sanitize the date
-      let expenseDate = dateStr; // Default to caller's date (today)
-      if (e.date) {
-        const parsedDate = new Date(e.date);
-        // Check if date is valid and in reasonable range (not just "20" or malformed)
-        if (!isNaN(parsedDate.getTime()) && e.date.length >= 8) {
-          expenseDate = parsedDate.toISOString().slice(0, 10);
-        } else {
-          console.warn('[finance-update] Invalid date from AI, using default:', e.date);
+  if (
+    Array.isArray(actions.add_expenses) &&
+    actions.add_expenses.length &&
+    contactId
+  ) {
+    const rows = actions.add_expenses
+      .map((e) => {
+        // Validate and sanitize the date
+        let expenseDate = dateStr; // Default to caller's date (today)
+        if (e.date) {
+          const parsedDate = new Date(e.date);
+          // Check if date is valid and in reasonable range (not just "20" or malformed)
+          if (!isNaN(parsedDate.getTime()) && e.date.length >= 8) {
+            expenseDate = parsedDate.toISOString().slice(0, 10);
+          } else {
+            console.warn(
+              "[finance-update] Invalid date from AI, using default:",
+              e.date,
+            );
+          }
         }
-      }
-      
-      // Ensure user_id is set so RLS policies (which rely on user_id) include this row
-      // Prefer contact.user_id (from DB); fallback to provided userId when available
-      const expenseUserId = (contact?.user_id as string | null) || (userId as string | null) || null;
 
-      const recognized = normalizeCurrencyCode(e.currency);
-      const finalCurrency = chooseEffectiveCurrency(recognized, preferredCurrency, !!receipt_image_url);
-      return {
-        contact_id: contactId!,
-        user_id: expenseUserId,
-        date: expenseDate,
-        amount_cents: Math.round((e.amount || 0) * 100),
-        currency: finalCurrency,
-        category: e.category || null,
-        raw_text: userText,
-        receipt_image_url: receipt_image_url || null,
-        updated_at: new Date().toISOString(),
-      };
-    }).filter(r => r.amount_cents > 0);
+        // Ensure user_id is set so RLS policies (which rely on user_id) include this row
+        // Prefer contact.user_id (from DB); fallback to provided userId when available
+        const expenseUserId =
+          (contact?.user_id as string | null) ||
+          (userId as string | null) ||
+          null;
+
+        const recognized = normalizeCurrencyCode(e.currency);
+        const finalCurrency = chooseEffectiveCurrency(
+          recognized,
+          preferredCurrency,
+          !!receipt_image_url,
+        );
+        return {
+          contact_id: contactId!,
+          user_id: expenseUserId,
+          date: expenseDate,
+          amount_cents: Math.round((e.amount || 0) * 100),
+          currency: finalCurrency,
+          category: e.category || null,
+          raw_text: userText,
+          receipt_image_url: receipt_image_url || null,
+          updated_at: new Date().toISOString(),
+        };
+      })
+      .filter((r) => r.amount_cents > 0);
 
     if (rows.length) {
-      const { data: insertedExpenses, error: insertErr } = await supabase.from("expenses").insert(rows).select("*");
+      const { data: insertedExpenses, error: insertErr } = await supabase
+        .from("expenses")
+        .insert(rows)
+        .select("*");
       if (insertErr) {
         console.error("expenses insert error", insertErr);
         return errorResponse("Failed to save expenses", 500);
       }
       results.expenses_added = rows.length;
       results.expenses = insertedExpenses; // Return full expense data
-      
-      console.log('[finance-update] Expenses inserted:', {
+
+      console.log("[finance-update] Expenses inserted:", {
         count: insertedExpenses?.length || 0,
         currencies: insertedExpenses?.map((e: any) => e.currency),
-        firstExpense: insertedExpenses?.[0] ? {
-          id: insertedExpenses[0].id,
-          currency: insertedExpenses[0].currency,
-          amount_cents: insertedExpenses[0].amount_cents
-        } : null
+        firstExpense: insertedExpenses?.[0]
+          ? {
+              id: insertedExpenses[0].id,
+              currency: insertedExpenses[0].currency,
+              amount_cents: insertedExpenses[0].amount_cents,
+            }
+          : null,
       });
     }
   }
@@ -396,29 +497,42 @@ Rules:
     // SMART: Determine which currency to use for totals
     // Priority: 1) Currency of just-added expenses, 2) Preferred currency
     let calculationCurrency = preferredCurrency.toUpperCase();
-    
+
     // If we just added expenses, use THEIR currency for totals (more intuitive)
     if (Array.isArray(results.expenses) && results.expenses.length > 0) {
-      const expenseCurrencies = new Set(results.expenses.map((e: any) => (e.currency || preferredCurrency).toUpperCase()));
-      
-      console.log('[finance-update] Smart currency detection:', {
+      const expenseCurrencies = new Set(
+        results.expenses.map((e: any) =>
+          (e.currency || preferredCurrency).toUpperCase(),
+        ),
+      );
+
+      console.log("[finance-update] Smart currency detection:", {
         expensesCount: results.expenses.length,
         detectedCurrencies: [...expenseCurrencies],
         preferredCurrency,
-        firstExpense: results.expenses[0]
+        firstExpense: results.expenses[0],
       });
-      
+
       // If all expenses are in the same currency, use that
       if (expenseCurrencies.size === 1) {
         calculationCurrency = [...expenseCurrencies][0];
-        console.log('[finance-update] Using expense currency for totals:', calculationCurrency);
+        console.log(
+          "[finance-update] Using expense currency for totals:",
+          calculationCurrency,
+        );
       } else if (expenseCurrencies.size > 1) {
-        console.log('[finance-update] Multiple currencies detected, using preferred:', preferredCurrency);
+        console.log(
+          "[finance-update] Multiple currencies detected, using preferred:",
+          preferredCurrency,
+        );
       }
     } else {
-      console.log('[finance-update] No expenses added, using preferred currency:', preferredCurrency);
+      console.log(
+        "[finance-update] No expenses added, using preferred currency:",
+        preferredCurrency,
+      );
     }
-    
+
     // Get ALL expenses for today to calculate totals by currency
     const { data: allExpenseRows } = await supabase
       .from("expenses")
@@ -429,7 +543,7 @@ Rules:
     // Group expenses by currency
     const currencyTotals = new Map<string, number>();
     (allExpenseRows || []).forEach((r: any) => {
-      const curr = (r.currency || 'USD').toUpperCase();
+      const curr = (r.currency || "USD").toUpperCase();
       const current = currencyTotals.get(curr) || 0;
       currencyTotals.set(curr, current + (r.amount_cents || 0));
     });
@@ -439,7 +553,7 @@ Rules:
       supabase,
       contactId,
       dateStr,
-      calculationCurrency
+      calculationCurrency,
     );
 
     const budgetCents = effectiveBudget?.amount_cents || 0;
@@ -451,7 +565,7 @@ Rules:
       spent_cents: totalCents,
       remaining_cents: remainingCents,
       currency: calculationCurrency,
-      all_currencies: Object.fromEntries(currencyTotals),  // Include breakdown for multi-currency support
+      all_currencies: Object.fromEntries(currencyTotals), // Include breakdown for multi-currency support
     };
 
     // Store other currency budget info for helpful error messages
@@ -464,7 +578,7 @@ Rules:
   // Determine the appropriate date for totals display
   let dateForTotals = dateStr;
   let dateLabel = dateForTotals; // Use actual date to avoid timezone issues
-  
+
   if (Array.isArray(results.expenses) && results.expenses.length) {
     const dates = new Set(results.expenses.map((r: any) => r.date));
     if (dates.size === 1) {
@@ -477,14 +591,18 @@ Rules:
   if (contactId && dateForTotals !== dateStr) {
     // SMART: Use same currency logic as above
     let calculationCurrency = preferredCurrency.toUpperCase();
-    
+
     if (Array.isArray(results.expenses) && results.expenses.length > 0) {
-      const expenseCurrencies = new Set(results.expenses.map((e: any) => (e.currency || preferredCurrency).toUpperCase()));
+      const expenseCurrencies = new Set(
+        results.expenses.map((e: any) =>
+          (e.currency || preferredCurrency).toUpperCase(),
+        ),
+      );
       if (expenseCurrencies.size === 1) {
         calculationCurrency = [...expenseCurrencies][0];
       }
     }
-    
+
     // Get ALL expenses for that date
     const { data: allExpenseRows } = await supabase
       .from("expenses")
@@ -494,17 +612,20 @@ Rules:
 
     const currencyTotals = new Map<string, number>();
     (allExpenseRows || []).forEach((r: any) => {
-      const curr = (r.currency || 'USD').toUpperCase();
+      const curr = (r.currency || "USD").toUpperCase();
       const current = currencyTotals.get(curr) || 0;
       currencyTotals.set(curr, current + (r.amount_cents || 0));
     });
 
     // Get budget for the calculation currency (with fallback to other currencies)
-    const { effectiveBudget: effectiveBudgetForDate, otherCurrencyBudget: otherCurrencyBudgetForDate } = await findEffectiveBudget(
+    const {
+      effectiveBudget: effectiveBudgetForDate,
+      otherCurrencyBudget: otherCurrencyBudgetForDate,
+    } = await findEffectiveBudget(
       supabase,
       contactId,
       dateForTotals,
-      calculationCurrency
+      calculationCurrency,
     );
 
     const budgetCents = effectiveBudgetForDate?.amount_cents || 0;
@@ -527,10 +648,10 @@ Rules:
     // CRITICAL: Update top-level currency to match totals currency
     // This ensures response.currency matches the actual calculations
     results.currency = calculationCurrency;
-    console.log('[finance-update] Final currency set:', {
+    console.log("[finance-update] Final currency set:", {
       topLevel: results.currency,
       totals: results.totals.currency,
-      match: results.currency === results.totals.currency
+      match: results.currency === results.totals.currency,
     });
   }
 
@@ -539,11 +660,16 @@ Rules:
     const code = (results.totals.currency || preferredCurrency).toUpperCase();
     const sym = getCurrencySymbol(code);
     const toMoney = (cents: number) => (cents / 100).toFixed(2);
-    const setPart = results.budget_set ? `Budget set to ${sym}${toMoney(results.budget_set.amount_cents)}. ` : "";
-    const added = results.expenses_added ? `${results.expenses_added} expense(s) logged. ` : "";
-    
+    const setPart = results.budget_set
+      ? `Budget set to ${sym}${toMoney(results.budget_set.amount_cents)}. `
+      : "";
+    const added = results.expenses_added
+      ? `${results.expenses_added} expense(s) logged. `
+      : "";
+
     // Check if budget is zero due to currency mismatch
-    const budgetMismatch = results.totals.budget_cents === 0 && results.totals.spent_cents > 0;
+    const budgetMismatch =
+      results.totals.budget_cents === 0 && results.totals.spent_cents > 0;
 
     if (budgetMismatch) {
       // Check if we found budget in another currency
@@ -551,7 +677,8 @@ Rules:
         const otherCode = results.otherCurrencyBudget.currency;
         const otherSym = getCurrencySymbol(otherCode);
         const otherAmount = toMoney(results.otherCurrencyBudget.amount_cents);
-        reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)}.\n\n` +
+        reply =
+          `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)}.\n\n` +
           `💡 Your currency is set to *${code}* but you don't have a budget in ${code} yet.\n\n` +
           `You have a budget in *${otherCode}* (${otherSym}${otherAmount}).\n\n` +
           `• Use */setCurrency ${otherCode}* to switch back\n` +

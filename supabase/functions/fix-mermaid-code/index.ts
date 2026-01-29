@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 
 // Initialize Supabase client
@@ -32,8 +32,7 @@ Follow these specific rules for the correction:
 
 Your entire response must be ONLY the corrected, complete Mermaid code block. Do not include markdown language specifiers (like \`\`\`mermaid), explanations, greetings, or any other text before or after the code.
 
-Here is the code:`
-
+Here is the code:`;
 
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight OPTIONS request
@@ -54,7 +53,7 @@ serve(async (req: Request): Promise<Response> => {
   try {
     const rawBody: string = await req.text();
     let requestData;
-    
+
     try {
       if (!rawBody || rawBody.trim() === "") {
         return new Response(
@@ -112,12 +111,17 @@ serve(async (req: Request): Promise<Response> => {
 
     const fullPrompt = `${AI_PROMPT}\n\n${mermaidCode}`;
 
-    const result = await model.generateContent({
-      contents: [{
-        role: "user",
-        parts: [{ text: fullPrompt }],
-      }],
-    }, generationConfig);
+    const result = await model.generateContent(
+      {
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: fullPrompt }],
+          },
+        ],
+      },
+      generationConfig,
+    );
 
     const response = result.response;
     let fixedCode = response.text();
@@ -134,11 +138,11 @@ serve(async (req: Request): Promise<Response> => {
 
     // Clean up the AI response
     // Remove markdown code blocks if present
-    fixedCode = fixedCode.replace(/```mermaid\n?/g, '').replace(/```\n?/g, '');
-    
+    fixedCode = fixedCode.replace(/```mermaid\n?/g, "").replace(/```\n?/g, "");
+
     // Replace literal \n with actual newlines
-    fixedCode = fixedCode.replace(/\\n/g, '\n');
-    
+    fixedCode = fixedCode.replace(/\\n/g, "\n");
+
     // Clean up any extra whitespace
     fixedCode = fixedCode.trim();
 
@@ -149,46 +153,51 @@ serve(async (req: Request): Promise<Response> => {
     if (questionId && imageOptionId) {
       try {
         // First, fetch the current question to get the existing image_options
-        const { data: currentQuestion, error: fetchError } = await supabaseClient
-          .from('user_questions')
-          .select('image_options')
-          .eq('id', questionId)
-          .single();
+        const { data: currentQuestion, error: fetchError } =
+          await supabaseClient
+            .from("user_questions")
+            .select("image_options")
+            .eq("id", questionId)
+            .single();
 
         if (fetchError) {
-          console.error('Error fetching current question:', fetchError);
+          console.error("Error fetching current question:", fetchError);
           // Don't fail the entire request, just log the error
         } else if (currentQuestion && currentQuestion.image_options) {
           // Update the specific imagePrompt in the image_options array
-          const updatedImageOptions = currentQuestion.image_options.map((option: any) => {
-            if (option.id === imageOptionId) {
-              return {
-                ...option,
-                imagePrompt: fixedCode
-              };
-            }
-            return option;
-          });
+          const updatedImageOptions = currentQuestion.image_options.map(
+            (option: any) => {
+              if (option.id === imageOptionId) {
+                return {
+                  ...option,
+                  imagePrompt: fixedCode,
+                };
+              }
+              return option;
+            },
+          );
 
           // Update the question with the modified image_options
           const { error: updateError } = await supabaseClient
-            .from('user_questions')
-            .update({ 
+            .from("user_questions")
+            .update({
               image_options: updatedImageOptions,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
             })
-            .eq('id', questionId);
+            .eq("id", questionId);
 
           if (updateError) {
-            console.error('Error updating database:', updateError);
+            console.error("Error updating database:", updateError);
             // Don't fail the entire request, just log the error
           } else {
-            console.log(`Successfully updated imagePrompt for option ${imageOptionId} in question ${questionId}`);
+            console.log(
+              `Successfully updated imagePrompt for option ${imageOptionId} in question ${questionId}`,
+            );
             databaseUpdated = true;
           }
         }
       } catch (dbError) {
-        console.error('Database update error:', dbError);
+        console.error("Database update error:", dbError);
         // Don't fail the entire request, just log the error
       }
     }
@@ -208,7 +217,6 @@ serve(async (req: Request): Promise<Response> => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );
-
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown internal server error";
@@ -217,8 +225,8 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Stack trace:", error.stack);
     }
     return new Response(
-      JSON.stringify({ 
-        error: "Internal Server Error", 
+      JSON.stringify({
+        error: "Internal Server Error",
         details: errorMessage,
         timestamp: new Date().toISOString(),
       }),

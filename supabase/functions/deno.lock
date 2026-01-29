@@ -1,9 +1,13 @@
 {
   "version": "5",
   "specifiers": {
+    "npm:@google/generative-ai@~0.24.1": "0.24.1",
     "npm:@types/node@*": "22.15.15"
   },
   "npm": {
+    "@google/generative-ai@0.24.1": {
+      "integrity": "sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q=="
+    },
     "@types/node@22.15.15": {
       "integrity": "sha512-R5muMcZob3/Jjchn5LcO8jdKwSCbzqmPB6ruBxMcf9kbxtniZHP327s6C37iOfuw8mbKK3cAQa7sEl7afLrQ8A==",
       "dependencies": [
@@ -53,8 +57,8 @@
   },
   "workspace": {
     "dependencies": [
+      "npm:@google/generative-ai@~0.24.1",
       "npm:@supabase/supabase-js@^2.7.1",
-      "npm:google-generative-ai@0.11",
       "npm:partial-json@~0.1.7"
     ]
   }

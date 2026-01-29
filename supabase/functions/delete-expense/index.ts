@@ -3,7 +3,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
-import { authenticateUser, verifyUserMatch } from "../shared/auth.ts";
+import {
+  authenticateUserOrInternalSecret,
+  verifyUserMatch,
+} from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 interface DeleteExpenseRequest {
@@ -104,29 +107,39 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Failed to prepare GPT guest user", 500);
       }
     } else {
-      // For non-GPT requests, derive user identity from the Authorization JWT.
-      // NEVER trust userId from request body.
-      const authResult = await authenticateUser(req, supabase);
-      if (!authResult.success || !authResult.userId) {
+      const authResult = await authenticateUserOrInternalSecret(req, supabase);
+      if (!authResult.success) {
         return errorResponse(
           authResult.error ?? "Authentication required",
           authResult.statusCode ?? 401,
         );
       }
-      userId = authResult.userId;
 
-      // Legacy support: if the client still sends userId, verify it matches.
+      // For internal service callers, allow body.userId. For JWT callers, never trust body.userId.
       const requestedUserIdRaw = body.userId ?? body.user_id;
-      if (requestedUserIdRaw) {
-        requestedUserId = sanitizeUuid(requestedUserIdRaw);
-        if (!requestedUserId) {
-          return errorResponse("Invalid userId format");
+      if (authResult.isInternalService) {
+        if (requestedUserIdRaw) {
+          requestedUserId = sanitizeUuid(requestedUserIdRaw);
         }
-        if (!verifyUserMatch(userId, requestedUserId)) {
-          return errorResponse(
-            "You do not have permission to delete this expense",
-            403,
-          );
+        userId = requestedUserId;
+        if (!userId) {
+          return errorResponse("Valid userId is required", 400);
+        }
+      } else {
+        userId = authResult.userId ? authResult.userId : null;
+
+        // Legacy support: if the client still sends userId, verify it matches.
+        if (requestedUserIdRaw) {
+          requestedUserId = sanitizeUuid(requestedUserIdRaw);
+          if (!requestedUserId) {
+            return errorResponse("Invalid userId format");
+          }
+          if (!userId || !verifyUserMatch(userId, requestedUserId as string)) {
+            return errorResponse(
+              "You do not have permission to delete this expense",
+              403,
+            );
+          }
         }
       }
     }

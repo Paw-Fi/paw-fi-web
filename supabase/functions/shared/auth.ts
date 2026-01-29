@@ -12,6 +12,8 @@ import {
 
 // Internal service authentication secret (for processor -> sync endpoint calls)
 const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
+// Used by twilio-whatsapp-ai-bot and other internal callers.
+const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
 
 export interface AuthResult {
   success: boolean;
@@ -123,6 +125,75 @@ export async function authenticateInternalService(
     success: true,
     isInternalService: true,
   };
+}
+
+/**
+ * Authenticate internal calls coming from other Edge Functions.
+ *
+ * Accepts either:
+ * - X-Internal-Service-Secret (preferred, reused by other internal jobs)
+ * - X-Moneko-Internal-Key (legacy/alternate, used by WhatsApp bot)
+ */
+export async function authenticateInternalSecret(
+  req: Request,
+): Promise<AuthResult> {
+  const acceptedSecrets = [INTERNAL_SERVICE_SECRET, SECRET_API_KEY]
+    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    .map((v) => v.trim());
+
+  if (acceptedSecrets.length === 0) {
+    console.error(
+      "No internal auth secret configured (INTERNAL_SERVICE_SECRET/SECRET_API_KEY)",
+    );
+    return {
+      success: false,
+      error: "Internal authentication not configured",
+      statusCode: 500,
+    };
+  }
+
+  const provided =
+    req.headers.get("X-Internal-Service-Secret") ||
+    req.headers.get("X-Moneko-Internal-Key");
+  if (!provided) {
+    return {
+      success: false,
+      error: "Missing internal authentication",
+      statusCode: 401,
+    };
+  }
+
+  const ok = acceptedSecrets.some((secret) =>
+    constantTimeCompare(provided, secret),
+  );
+  if (!ok) {
+    console.warn("Invalid internal secret attempt");
+    return {
+      success: false,
+      error: "Invalid internal authentication",
+      statusCode: 401,
+    };
+  }
+
+  return {
+    success: true,
+    isInternalService: true,
+  };
+}
+
+/**
+ * Authenticate either internal secret or user JWT.
+ *
+ * Useful when verify_jwt is disabled for server-to-server calls but we still
+ * want to allow normal user JWT callers.
+ */
+export async function authenticateUserOrInternalSecret(
+  req: Request,
+  supabase: SupabaseClient,
+): Promise<AuthResult> {
+  const internal = await authenticateInternalSecret(req);
+  if (internal.success && internal.isInternalService) return internal;
+  return authenticateUser(req, supabase);
 }
 
 /**
