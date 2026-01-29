@@ -148,6 +148,29 @@ function runBackgroundTask(task: Promise<unknown>) {
   void task;
 }
 
+async function runAnalyzeExpenseWithTimeout(
+  payload: any,
+  apiKey: string,
+  timeoutMs: number,
+  timeoutError: string,
+): Promise<any> {
+  try {
+    const analysisPromise = runAnalyzeExpense(payload, apiKey);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("timeout")), timeoutMs);
+    });
+
+    return await Promise.race([analysisPromise, timeoutPromise]);
+  } catch (error) {
+    console.error("[twilio-whatsapp-ai-bot] analyze-expense timeout/error:", error);
+    return {
+      success: false,
+      error: timeoutError,
+      language: "en",
+    };
+  }
+}
+
 function pickProcessingMessage(seed?: string | null) {
   if (!PROCESSING_ACK_MESSAGES.length) {
     return "Processing your request now. ⏳";
@@ -1728,34 +1751,17 @@ Deno.serve(async (req: Request) => {
       );
       let analysis: any = null;
       try {
-        const analysisPromise = runAnalyzeExpense(
+        analysis = await runAnalyzeExpenseWithTimeout(
           {
             userId,
             text: caption,
             currency: userCurrency,
           },
           GEMINI_API_KEY,
+          30000,
+          "The text is taking longer than expected to process. Please try again or shorten the message.",
         );
-
-        const timeoutPromise: any = new (globalThis as any).Promise(
-          (_: unknown, reject: (reason?: unknown) => void) => {
-            setTimeout(
-              () =>
-                reject(new Error("Text analysis timed out after 30 seconds")),
-              30000,
-            );
-          },
-        );
-
-        analysis = await (globalThis as any).Promise.race([
-          analysisPromise,
-          timeoutPromise,
-        ]);
-      } catch (timeoutError) {
-        console.error(
-          "[twilio-whatsapp-ai-bot] Text analysis timeout:",
-          timeoutError,
-        );
+      } catch (error) {
         analysis = {
           success: false,
           error:
@@ -1823,40 +1829,17 @@ Deno.serve(async (req: Request) => {
               // Attempt analysis with timeout and retry
               let analysis: any = null;
               try {
-                // Set a maximum timeout for the entire analysis process
-                const analysisPromise = runAnalyzeExpense(
+                analysis = await runAnalyzeExpenseWithTimeout(
                   {
                     userId,
                     image: { data: base64Data, contentType, bytes: imgBuf },
                     currency: userCurrency,
                   },
                   GEMINI_API_KEY,
+                  30000,
+                  "The image is taking longer than expected to process. Please try again with a clearer photo.",
                 );
-
-                // Add a hard timeout of 30 seconds for the entire process
-                const timeoutPromise = new (globalThis as any).Promise(
-                  (_: unknown, reject: (reason?: unknown) => void) => {
-                    setTimeout(
-                      () =>
-                        reject(
-                          new Error(
-                            "Receipt analysis timed out after 30 seconds",
-                          ),
-                        ),
-                      30000,
-                    );
-                  },
-                );
-
-                analysis = await (globalThis as any).Promise.race([
-                  analysisPromise,
-                  timeoutPromise,
-                ]);
-              } catch (timeoutError) {
-                console.error(
-                  "[twilio-whatsapp-ai-bot] Analysis timeout:",
-                  timeoutError,
-                );
+              } catch (error) {
                 analysis = {
                   success: false,
                   error:
@@ -1915,36 +1898,17 @@ Deno.serve(async (req: Request) => {
             // Attempt audio analysis with a hard timeout, similar to text/image flows
             let analysis: any = null;
             try {
-              const analysisPromise = runAnalyzeExpense(
+              analysis = await runAnalyzeExpenseWithTimeout(
                 {
                   userId,
                   audio: { data: base64Data, contentType, bytes: audioBuf },
                   currency: userCurrency,
                 },
                 GEMINI_API_KEY,
+                30000,
+                "The audio is taking longer than expected to process. Please try again by speaking clearly and mentioning the amount, currency, and date.",
               );
-
-              const timeoutPromise = new (globalThis as any).Promise(
-                (_: unknown, reject: (reason?: unknown) => void) => {
-                  setTimeout(
-                    () =>
-                      reject(
-                        new Error("Audio analysis timed out after 30 seconds"),
-                      ),
-                    30000,
-                  );
-                },
-              );
-
-              analysis = await (globalThis as any).Promise.race([
-                analysisPromise,
-                timeoutPromise,
-              ]);
-            } catch (timeoutError) {
-              console.error(
-                "[twilio-whatsapp-ai-bot] Audio analysis timeout:",
-                timeoutError,
-              );
+            } catch (error) {
               analysis = {
                 success: false,
                 error:
@@ -2006,53 +1970,106 @@ Deno.serve(async (req: Request) => {
               caption ? ` with caption "${caption}"` : ""
             }, but it is too large to process. Please ask them to send a smaller file or summarize the expense manually.]`;
           } else {
+            const cleanContentType = contentType.split(";")[0].trim();
             let preview = "";
             let parsed = false;
 
             const textLike =
               /^(text\/|application\/(json|csv|xml|javascript))/i.test(
-                contentType,
+                cleanContentType,
               ) || /\.(csv|txt|json|xml)$/i.test(mediaUrl || "");
             const isXlsx =
               /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(
-                contentType,
+                cleanContentType,
               ) || /\.xlsx$/i.test(mediaUrl || "");
             const isPdf =
-              /application\/pdf/i.test(contentType) ||
+              /application\/pdf/i.test(cleanContentType) ||
               /\.pdf$/i.test(mediaUrl || "");
 
-            if (textLike) {
-              try {
-                preview = new TextDecoder("utf-8", { fatal: false }).decode(
-                  buf.slice(0, 12000),
-                );
-                parsed = true;
-              } catch {
-                parsed = false;
+            let fileName = "attachment";
+            try {
+              const url = new URL(mediaUrl);
+              const last = url.pathname.split("/").pop() || "";
+              if (last && last.includes(".")) {
+                fileName = last;
               }
-            } else if (isXlsx) {
-              const xlsxPreview = buildXlsxPreview(buf);
-              if (xlsxPreview) {
-                preview = xlsxPreview;
-                parsed = true;
-              }
-            } else if (isPdf) {
-              const base64Data = uint8ToBase64(buf);
-              const pdfSummary = await summarizePdfWithGemini(
-                base64Data,
-                "application/pdf",
-                GEMINI_API_KEY,
-              );
-              if (pdfSummary) {
-                preview = `PDF summary:\n${pdfSummary}`;
-                parsed = true;
-              }
+            } catch (_) {}
+
+            if (fileName === "attachment") {
+              if (isPdf) fileName = "attachment.pdf";
+              else if (isXlsx) fileName = "attachment.xlsx";
+              else if (textLike) fileName = "attachment.txt";
+              else fileName = "attachment.bin";
             }
 
-            if (parsed) {
-              userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Preview: ${preview}]`;
+            const base64Data = uint8ToBase64(buf);
+            let analysis: any = null;
+            try {
+              analysis = await runAnalyzeExpenseWithTimeout(
+                {
+                  userId,
+                  text: caption || "",
+                  currency: userCurrency,
+                  attachments: [
+                    {
+                      filename: fileName,
+                      contentType: cleanContentType || "application/octet-stream",
+                      data: base64Data,
+                    },
+                  ],
+                },
+                GEMINI_API_KEY,
+                30000,
+                "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
+              );
+            } catch (error) {
+              analysis = {
+                success: false,
+                error:
+                  "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
+                language: "en",
+              };
+            }
+
+            const analysisSucceeded =
+              analysis && analysis.success && Array.isArray(analysis.items);
+            if (analysisSucceeded) {
+              userMessageContent = `[User sent a file (${cleanContentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Successfully extracted from file: ${JSON.stringify(
+                analysis.items,
+              )}. Please confirm with the user and ask if they want to save these transactions.]`;
             } else {
-              userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Content not parsed (binary).]`;
+              if (textLike) {
+                try {
+                  preview = new TextDecoder("utf-8", { fatal: false }).decode(
+                    buf.slice(0, 12000),
+                  );
+                  parsed = true;
+                } catch {
+                  parsed = false;
+                }
+              } else if (isXlsx) {
+                const xlsxPreview = buildXlsxPreview(buf);
+                if (xlsxPreview) {
+                  preview = xlsxPreview;
+                  parsed = true;
+                }
+              } else if (isPdf) {
+                const pdfSummary = await summarizePdfWithGemini(
+                  base64Data,
+                  "application/pdf",
+                  GEMINI_API_KEY,
+                );
+                if (pdfSummary) {
+                  preview = `PDF summary:\n${pdfSummary}`;
+                  parsed = true;
+                }
+              }
+
+              if (parsed) {
+                userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Preview: ${preview}]`;
+              } else {
+                userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Content not parsed (binary).]`;
+              }
             }
           }
         }

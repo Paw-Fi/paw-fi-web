@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS public.bank_connections (
   plaid_access_token_encrypted TEXT NOT NULL,
   plaid_cursor TEXT,
   institution_id UUID REFERENCES public.bank_institutions(id) ON DELETE SET NULL,
+  country_code TEXT,
+  household_id UUID REFERENCES public.households(id) ON DELETE SET NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'disabled', 'error')),
   last_synced_at TIMESTAMPTZ,
   error_code TEXT,

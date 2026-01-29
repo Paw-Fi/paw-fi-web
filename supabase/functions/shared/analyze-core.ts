@@ -20,18 +20,23 @@ function b64encode(bytes: Uint8Array): string {
   return encodeBase64(bytes);
 }
 
-function getFirstFunctionCall(response: any) {
-  const direct = response?.response?.functionCalls?.()?.[0];
-  if (direct) return direct;
+function getFunctionCalls(response: any) {
+  const direct = response?.response?.functionCalls?.();
+  if (Array.isArray(direct) && direct.length > 0) return direct;
 
   const candidates = response?.response?.candidates;
-  if (!candidates || candidates.length === 0) return null;
+  if (!candidates || candidates.length === 0) return [];
 
   const parts = candidates[0].content?.parts || [];
+  const calls: any[] = [];
   for (const p of parts) {
-    if (p.functionCall) return p.functionCall;
+    if (p.functionCall) calls.push(p.functionCall);
   }
-  return null;
+  return calls;
+}
+
+function getFirstFunctionCall(response: any) {
+  return getFunctionCalls(response)?.[0] ?? null;
 }
 
 export interface AnalyzeAttachment {
@@ -148,7 +153,7 @@ function buildTransactionSystemInstruction(
     ...(householdContext
       ? [
           "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
-          "- The caller is in a household/group context. You MUST extract split information when mentioned.",
+          "- The caller is in a household/group context. You MUST return split information for every EXPENSE item.",
           "",
           "#### 5.1 PAYER IDENTIFICATION (payerUserId)",
           "- If user mentions who paid, set payerUserId to that member's userId.",
@@ -158,7 +163,8 @@ function buildTransactionSystemInstruction(
           "",
           "#### 5.2 SPLIT EXTRACTION (customSplits) - THIS IS CRITICAL",
           "- You MUST detect and extract split information from natural language in ANY language.",
-          "- If NO split is mentioned, OMIT customSplits entirely (backend defaults to equal split).",
+          "- You MUST ALWAYS return customSplits for EXPENSE items (even when the split is equal/default).",
+          "- Always use splitType='amount' and provide memberSplits for all household members.",
           "- When returning customSplits, ALWAYS include ALL household members exactly once.",
           "",
           "**SPLIT PATTERNS TO RECOGNIZE (examples in various formats):**",
@@ -170,23 +176,12 @@ function buildTransactionSystemInstruction(
           "- '小明出30' → Xiaoming owes 30",
           "- 'lester 30, me 10' → Lester=30, Caller=10",
           "",
-          "Percentage splits (splitType='percentage'):",
-          "- '70/30 split' → First person 70%, second 30%",
-          "- 'split 60-40' → 60% and 40%",
-          "- 'lester pays 75%' → Lester=75%, caller=25%",
-          "",
-          "Shares splits (splitType='shares'):",
-          "- 'split 2:1' → First person 2 shares, second 1 share",
-          "- 'lester gets double' → Lester=2 shares, others=1 share",
-          "",
-          "Equal splits (DO NOT return customSplits):",
-          "- 'split equally', 'go halves', '平分', 'AA制', 'split 50/50 with 2 people'",
-          "",
           "**CALCULATION RULES:**",
-          "- If user specifies one person's amount, calculate the remainder for others.",
-          "- Example: Total=40, 'split 30 with lester' → Lester=30, Caller=10 (40-30)",
+          "- If user specifies one person's amount, calculate the remainder for other members.",
+          "- Example: Total=40, 'split 30 with lester' → Lester=30, Remaining members split 10.",
           "- If user specifies all amounts, use them directly.",
-          "- Always ensure amounts sum to total, percentages sum to 100.",
+          "- If user mentions an equal/default split, produce equal amounts across ALL members.",
+          "- Ensure amounts sum to the total; small rounding differences are OK (backend will remainder-adjust).",
           "",
           "**MEMBER RESOLUTION:**",
           "- Match names/aliases to userId from the provided member list.",
@@ -580,6 +575,23 @@ export function normalizeCustomSplits(
   };
 }
 
+function buildDefaultHouseholdCustomSplits(
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+  totalAmount: number,
+): CustomSplits | undefined {
+  if (!ctx) return undefined;
+  if (!Array.isArray(ctx.members) || ctx.members.length === 0) return undefined;
+
+  return normalizeCustomSplits(
+    {
+      splitType: "amount",
+      memberSplits: ctx.members.map((m) => ({ userId: m.userId })),
+    },
+    ctx,
+    totalAmount,
+  );
+}
+
 async function analyzeFromText(
   genAI: GoogleGenerativeAI,
   callerCurrency: string,
@@ -629,11 +641,13 @@ async function analyzeFromText(
     generationConfig: { maxOutputTokens: 4096 },
   } as any);
 
-  const tool = getFirstFunctionCall(response);
-  if (tool && tool.name === "add_transactions") {
-    const rawItems: any[] = Array.isArray(tool.args?.items)
-      ? tool.args.items
-      : [];
+  const toolCalls = getFunctionCalls(response).filter(
+    (call: any) => call && call.name === "add_transactions",
+  );
+  if (toolCalls.length > 0) {
+    const rawItems: any[] = toolCalls.flatMap((call: any) =>
+      Array.isArray(call.args?.items) ? call.args.items : [],
+    );
     items = rawItems
       .map((it) => {
         const itemCurrency = it.currency || callerCurrency;
@@ -659,9 +673,14 @@ async function analyzeFromText(
           resolvedType === "expense"
             ? normalizePayerUserId(it.payerUserId, householdContext)
             : undefined;
-        const customSplits =
+        const normalizedCustomSplits =
           resolvedType === "expense"
             ? normalizeCustomSplits(it.customSplits, householdContext, amount)
+            : undefined;
+        const customSplits =
+          resolvedType === "expense" && householdContext
+            ? (normalizedCustomSplits ??
+              buildDefaultHouseholdCustomSplits(householdContext, amount))
             : undefined;
 
         return {
@@ -690,6 +709,154 @@ async function analyzeFromText(
         if (!isValid) {
           console.log(
             `[analyze-expense] Text filtered invalid: ${JSON.stringify(it)}`,
+          );
+        }
+        return isValid;
+      });
+
+    if (items.length > 1) {
+      const withoutTotals = items.filter((it) => !isTotalLike(it.description));
+      if (withoutTotals.length > 0) items = withoutTotals;
+      const sums = items.map((_, i) =>
+        items
+          .filter((__, j) => i !== j)
+          .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
+      );
+      items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+    }
+  }
+
+  return items;
+}
+
+async function analyzeFromPdf(
+  genAI: GoogleGenerativeAI,
+  callerCurrency: string,
+  callerDate: string,
+  language: string,
+  base64Pdf: string,
+  contentType: string,
+  tools: any,
+  expenseCategories: string[],
+  incomeCategories: string[],
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+  typeHint?: AnalyzeRequestBody["typeHint"],
+): Promise<ExpenseItem[]> {
+  let items: ExpenseItem[] = [];
+
+  const systemInstruction = buildTransactionSystemInstruction(
+    language,
+    expenseCategories,
+    incomeCategories,
+    householdContext,
+    typeHint,
+  );
+  const modelName = "gemini-2.5-flash-lite";
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    tools,
+    systemInstruction,
+  });
+
+  const householdPrompt = householdContext
+    ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
+    : "\n";
+
+  const request = {
+    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text:
+              `Caller Currency: ${callerCurrency}\n` +
+              `Caller Date: ${callerDate}` +
+              householdPrompt +
+              "The following PDF may contain a bank statement (many rows) OR a receipt/invoice (line items + total). Apply the rules: if it's a bank feed/list, extract every transaction row across all pages; if it's a receipt, return ONE transaction for the grand total. Do not summarize. Return transactions only by calling add_transactions.",
+          },
+          {
+            inlineData: {
+              mimeType: contentType || "application/pdf",
+              data: base64Pdf,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: { maxOutputTokens: 8192 },
+  } as any;
+
+  const response = await generateGeminiWithRetry({
+    model,
+    modelName,
+    request,
+    timeoutMs: 20000,
+  });
+
+  const toolCalls = getFunctionCalls(response).filter(
+    (call: any) => call && call.name === "add_transactions",
+  );
+  if (toolCalls.length > 0) {
+    const rawItems: any[] = toolCalls.flatMap((call: any) =>
+      Array.isArray(call.args?.items) ? call.args.items : [],
+    );
+    items = rawItems
+      .map((it) => {
+        const itemCurrency = it.currency || callerCurrency;
+        const rawCategory = it.category || "other";
+        const normalizedCategory = normalizeCategory(rawCategory);
+
+        console.log(
+          `[analyze-expense] PDF raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`,
+        );
+
+        const txType = String(it.type || "").toLowerCase();
+        const resolvedType =
+          txType === "income" || txType === "expense" ? txType : undefined;
+        const amount = Math.abs(Number(it.amount));
+        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+
+        const payerUserId =
+          resolvedType === "expense"
+            ? normalizePayerUserId(it.payerUserId, householdContext)
+            : undefined;
+        const normalizedCustomSplits =
+          resolvedType === "expense"
+            ? normalizeCustomSplits(it.customSplits, householdContext, amount)
+            : undefined;
+        const customSplits =
+          resolvedType === "expense" && householdContext
+            ? (normalizedCustomSplits ??
+              buildDefaultHouseholdCustomSplits(householdContext, amount))
+            : undefined;
+
+        return {
+          type: resolvedType,
+          amount,
+          category: normalizedCategory,
+          currency: itemCurrency,
+          currencySymbol: itemCurrencySymbol,
+          date: it.date || callerDate,
+          description: it.description || "",
+          payerUserId,
+          customSplits,
+        } as ExpenseItem;
+      })
+      .filter((it) => {
+        const isValid =
+          it.type &&
+          (it.type === "income" || it.type === "expense") &&
+          Number.isFinite(it.amount) &&
+          it.amount > 0 &&
+          typeof it.category === "string" &&
+          typeof it.currency === "string" &&
+          typeof it.currencySymbol === "string" &&
+          typeof it.date === "string";
+
+        if (!isValid) {
+          console.log(
+            `[analyze-expense] PDF filtered invalid: ${JSON.stringify(it)}`,
           );
         }
         return isValid;
@@ -766,11 +933,13 @@ async function analyzeFromAudio(
     generationConfig: { maxOutputTokens: 4096 },
   } as any);
 
-  const tool = getFirstFunctionCall(response);
-  if (tool && tool.name === "add_transactions") {
-    const rawItems: any[] = Array.isArray(tool.args?.items)
-      ? tool.args.items
-      : [];
+  const toolCalls = getFunctionCalls(response).filter(
+    (call: any) => call && call.name === "add_transactions",
+  );
+  if (toolCalls.length > 0) {
+    const rawItems: any[] = toolCalls.flatMap((call: any) =>
+      Array.isArray(call.args?.items) ? call.args.items : [],
+    );
     items = rawItems
       .map((it) => {
         const itemCurrency = it.currency || callerCurrency;
@@ -791,9 +960,14 @@ async function analyzeFromAudio(
           resolvedType === "expense"
             ? normalizePayerUserId(it.payerUserId, householdContext)
             : undefined;
-        const customSplits =
+        const normalizedCustomSplits =
           resolvedType === "expense"
             ? normalizeCustomSplits(it.customSplits, householdContext, amount)
+            : undefined;
+        const customSplits =
+          resolvedType === "expense" && householdContext
+            ? (normalizedCustomSplits ??
+              buildDefaultHouseholdCustomSplits(householdContext, amount))
             : undefined;
 
         return {
@@ -995,11 +1169,13 @@ async function attemptAnalysis(
       timeoutMs,
     });
 
-    const tool = getFirstFunctionCall(response);
-    if (tool && tool.name === "add_transactions") {
-      const rawItems: any[] = Array.isArray(tool.args?.items)
-        ? tool.args.items
-        : [];
+    const toolCalls = getFunctionCalls(response).filter(
+      (call: any) => call && call.name === "add_transactions",
+    );
+    if (toolCalls.length > 0) {
+      const rawItems: any[] = toolCalls.flatMap((call: any) =>
+        Array.isArray(call.args?.items) ? call.args.items : [],
+      );
       const tempItems = rawItems
         .map((it) => {
           const itemCurrency = it.currency || callerCurrency;
@@ -1023,9 +1199,14 @@ async function attemptAnalysis(
             resolvedType === "expense"
               ? normalizePayerUserId(it.payerUserId, householdContext)
               : undefined;
-          const customSplits =
+          const normalizedCustomSplits =
             resolvedType === "expense"
               ? normalizeCustomSplits(it.customSplits, householdContext, amount)
+              : undefined;
+          const customSplits =
+            resolvedType === "expense" && householdContext
+              ? (normalizedCustomSplits ??
+                buildDefaultHouseholdCustomSplits(householdContext, amount))
               : undefined;
 
           return {
@@ -1350,35 +1531,57 @@ export async function runAnalyzeExpense(
         syntheticText = buildXlsxPreview(bytes) || "";
       } else if (isPdf) {
         const base64Data = b64encode(bytes);
-        const summary = await summarizePdfWithGemini(
-          base64Data,
-          "application/pdf",
-          geminiApiKey,
-        );
-        syntheticText = summary || "";
+        try {
+          items = await analyzeFromPdf(
+            genAI,
+            callerCurrency,
+            callerDate,
+            language,
+            base64Data,
+            contentType || "application/pdf",
+            tools,
+            expenseCategories,
+            incomeCategories,
+            householdContext,
+            typeHint,
+          );
+        } catch (e) {
+          console.error("[analyze-expense] PDF direct extraction failed", e);
+        }
+
+        if (items.length === 0) {
+          const summary = await summarizePdfWithGemini(
+            base64Data,
+            "application/pdf",
+            geminiApiKey,
+          );
+          syntheticText = summary || "";
+        }
       }
 
-      if (!syntheticText.trim()) {
-        return {
-          success: false,
-          error: "Unsupported or unreadable attachment format",
-          status: 400,
+      if (items.length === 0) {
+        if (!syntheticText.trim()) {
+          return {
+            success: false,
+            error: "Unsupported or unreadable attachment format",
+            status: 400,
+            language,
+          };
+        }
+
+        items = await analyzeFromText(
+          genAI,
+          callerCurrency,
+          callerDate,
           language,
-        };
+          syntheticText,
+          tools,
+          expenseCategories,
+          incomeCategories,
+          householdContext,
+          typeHint,
+        );
       }
-
-      items = await analyzeFromText(
-        genAI,
-        callerCurrency,
-        callerDate,
-        language,
-        syntheticText,
-        tools,
-        expenseCategories,
-        incomeCategories,
-        householdContext,
-        typeHint,
-      );
     } else if (hasText) {
       items = await analyzeFromText(
         genAI,
@@ -1704,7 +1907,7 @@ export async function summarizePdfWithGemini(
     const ai = new GoogleGenerativeAI(geminiKey);
 
     const startedAt = Date.now();
-    const totalTimeoutMs = 20000;
+    const totalTimeoutMs = 60000;
     const modelNames = ["gemini-2.5-flash-lite", "gemini-3-flash-preview"];
 
     const request = {
