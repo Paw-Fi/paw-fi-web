@@ -45,7 +45,7 @@ Overall, these changes significantly improve the user experience of the referral
     **Suggestion:**
 
     ```typescript
-    export function testFlightCtaHtml(): string {
+    export function appStoreCtaHtml(): string {
       const appleLogoUrl = sanitizeUrl(LINKS.appleLogo);
       const appleLogoImg = appleLogoUrl !== '#'
         ? `<img src="${appleLogoUrl}" alt="Apple" style="height: 20px; width: auto; margin-right: 5px;" />`
@@ -53,9 +53,9 @@ Overall, these changes significantly improve the user experience of the referral
 
       return `
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${sanitizeUrl(LINKS.testflight)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
+          <a href="${sanitizeUrl(LINKS.appStore)}" target="_blank" rel="noopener noreferrer" style="${appleButtonStyle}">
             ${appleLogoImg}
-            Download on TestFlight
+            Download on the App Store
           </a>
         </div>
       `;

@@ -27,9 +27,9 @@ export const Route = createFileRoute("/early-access")({
   component: EarlyAccessPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/early-access");
-    const title = "Moneko AI Budgeting App | Now in Public Beta on TestFlight";
+    const title = "Moneko AI Budgeting App";
     const description =
-      `Try Moneko’s AI budgeting app in public beta! Track goals, manage money, and get smart insights with the power of AI on TestFlight.`;
+      `Try Moneko’s AI budgeting app in public beta! Track goals, manage money, and get smart insights with the power of AI on the App Store.`;
     const keywords =
       "moneko mobile app, moneko beta testing, moneko waitlist, moneko early access, mobile budgeting app waitlist, personal finance app, budgeting and expense tracking, goal tracker app, AI financial education, money management tools, moneko dashboard";
 
@@ -263,7 +263,7 @@ function DevelopmentTimeline() {
         <ArcTimeline 
           data={timelineData}
           className="mb-4"
-          defaultActiveStep={{ time: "Beta & Launch", stepIndex: 0 }}
+          defaultActiveStep={{ time: "Beta & Launch", stepIndex: 2 }}
           arcConfig={{
             circleWidth: 5000,
             angleBetweenMinorSteps: 0.35,

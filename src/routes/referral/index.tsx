@@ -4,7 +4,7 @@
  * Landing page for referral system with three steps:
  * 1. Register (for new users)
  * 2. Your referral code (for existing users)
- * 3. Download TestFlight (after someone accepts)
+ * 3. Download the App Store (after someone accepts)
  *
  * Design matches couple-budgeting.tsx style with BackgroundBeamsWithCollision + DotPattern
  */
@@ -153,8 +153,8 @@ function ReferralPage() {
   const subTrialEnd = subIsTrialing ? (subscription?.current_period_end ?? null) : null;
   const subTrialEligible = !subscription || subscription.plan === 'free';
 
-  const openTestFlight =  () => {
-    window.open('https://testflight.apple.com/join/Q9rNbkN5', '_blank');
+  const openAppStore =  () => {
+    window.open('https://apps.apple.com/app/moneko/id6753925279', '_blank');
   };
 
   // Determine which view to show
@@ -276,7 +276,7 @@ function ReferralPage() {
                   trialEnd={subTrialEnd ?? trialEnd}
                   isTrialing={subIsTrialing || isTrialing}
                   trialEligible={subTrialEligible}
-                  onStartTrial={openTestFlight}
+                  onStartTrial={openAppStore}
                 />
                 <ReferralAcceptanceList acceptances={acceptedBy} />
               </div>
@@ -382,7 +382,7 @@ function ReferralPage() {
                           </h3>
                           <p className="text-muted-foreground">
                             {num === 1 && 'Copy your referral link and share it by text, WhatsApp, email, or anywhere your friend prefers.'}
-                            {num === 2 && <span className="font-semibold text-primary underline cursor-pointer" onClick={openTestFlight}>Download the app</span>}
+                            {num === 2 && <span className="font-semibold text-primary underline cursor-pointer" onClick={openAppStore}>Download the app</span>}
                             {num === 2 && ' to explore Moneko today while your friend joins.'}
                             {num === 3 && 'Your friend signs up with your link and accepts the invitation.'}
                             {num === 4 && 'After they join, you both receive lifetime premium access automatically.'}

@@ -18,7 +18,7 @@ import { coupleBudgetingKeys } from "@/hooks/use-couple-budgeting-waitlist";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 
-const TESTFLIGHT_URL = "https://testflight.apple.com/join/Q9rNbkN5"
+const APPSTORE_URL = "https://apps.apple.com/app/moneko/id6753925279"
 
 export type SelectOption = { value: string; label: string };
 export type MultiOption = { id: string; label: string };
@@ -201,7 +201,7 @@ export function FreeTrialGiveawayForm({ questions, onSubmit, userHasClaimedFromD
     setResult({});
     if(hasClaimed)
     {
-      window.location.href = TESTFLIGHT_URL;
+      window.location.href = APPSTORE_URL;
       return;
     }
 
@@ -246,7 +246,7 @@ export function FreeTrialGiveawayForm({ questions, onSubmit, userHasClaimedFromD
           interestedMobileFeatures: [],
           devicePreference: "",
         });
-        window.location.href = TESTFLIGHT_URL;
+        window.location.href = APPSTORE_URL;
       } else {
         setResult(response);
       }
@@ -304,7 +304,7 @@ export function FreeTrialGiveawayForm({ questions, onSubmit, userHasClaimedFromD
             Welcome to Moneko Beta
           </h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-          Sign in to join our public beta on TestFlight. Explore, share, and help us build a budgeting experience that feels simple and human.          </p>
+          Sign in to join our public beta on the App Store. Explore, share, and help us build a budgeting experience that feels simple and human.          </p>
           <div className="space-y-4">
             <motion.button
               onClick={() => navigate({ to: "/login", search: { redirect: "/early-access" } })}
@@ -461,12 +461,12 @@ export function FreeTrialGiveawayForm({ questions, onSubmit, userHasClaimedFromD
                     </>
                   ) : hasClaimed ? (
                     <>
-                       Try on TestFlight
+                       Download on the App Store
 <CheckCircle className="ml-2 w-5 h-5" />
                     </>
                   ) : (
                     <>
-                      Try on TestFlight
+                      Download on the App Store
         <ArrowRight className="ml-2 w-4 h-4" />
                     </>
                   )}
