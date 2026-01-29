@@ -27,6 +27,8 @@ import { useAuthQuerySync } from '@/hooks/use-auth-query-sync'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReduxProvider } from '@/providers/ReduxProvider'
 import { getQueryClient } from '@/lib/query-client'
+import { ThemeInitScript } from '@/components/theme/theme-init-script'
+import ThemeSystemListener from '@/components/theme/theme-system-listener'
 
 export const Route = createRootRoute({
   head: () => {
@@ -126,12 +128,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <PerformanceHints />
         <MonekoCriticalResources />
+        <ThemeInitScript />
         <HeadContent />
         <MonekoOrganizationData />
         <MonekoWebsiteData />
       </head>
       
       <body className="min-h-screen">      
+      <ClientOnly>
+        <ThemeSystemListener />
+      </ClientOnly>
         
       {/* Google Analytics - must be in body with ClientOnly for react-ga4 */}
       <ClientOnly>

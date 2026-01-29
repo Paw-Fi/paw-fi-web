@@ -66,6 +66,14 @@
   --halo-light-blue-mid: rgba(205, 225, 245, 0.75);
   --halo-light-blue-outer: rgba(220, 240, 252, 0.55);
 
+  /* Collision Beams Colors */
+  --collision-bg: #f5f5f5;
+  --collision-beam-from: #6366f1;
+  --collision-beam-via: #a855f7;
+  --collision-explosion-from: #6366f1;
+  --collision-explosion-to: #a855f7;
+  --collision-shadow: 0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+
   /* Gradient Animation Colors - Light Mode */
   --gradient-bg: linear-gradient(40deg, rgb(240, 235, 255), rgb(250, 245, 255));
   --gradient-first-color: var(--halo-purple);
@@ -250,6 +258,14 @@
   --halo-light-blue-mid: rgba(80, 130, 150, 0.3);
   --halo-light-blue-outer: rgba(100, 150, 170, 0.25);
 
+  /* Collision Beams Colors - Dark */
+  --collision-bg: transparent;
+  --collision-beam-from: #8B70FF;
+  --collision-beam-via: #9B82FF;
+  --collision-explosion-from: #8B70FF;
+  --collision-explosion-to: #9B82FF;
+  --collision-shadow: 0 0 24px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 4px rgba(0, 0, 0, 0.35), 0 16px 68px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+
   /* Gradient Animation Colors - Dark Mode */
   --gradient-bg: linear-gradient(40deg, rgb(20, 15, 35), rgb(30, 25, 45));
   --gradient-first-color: var(--halo-purple);
@@ -374,6 +390,191 @@
   }
 }
 
+/* Class-based dark mode (when <html class="dark"> is toggled) */
+:root.dark {
+  /* shadcn/ui dark theme - consistent HSL format */
+  --background: 224 71% 4%;
+  --foreground: 210 20% 98%;
+  --card: 224 71% 4%;
+  --card-foreground: 210 20% 98%;
+  --popover: 224 71% 4%;
+  --popover-foreground: 210 20% 98%;
+  --primary: 254 100% 70%; /* #8B70FF - Moneko brand purple dark */
+  --primary-foreground: 224 71% 4%;
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 210 20% 98%;
+  --muted: 215 28% 17%;
+  --muted-foreground: 217 11% 85%;
+  --accent: 215 28% 17%;
+  --accent-foreground: 210 20% 98%;
+  --destructive: 0 63% 63%; /* Match danger color brightness */
+  --destructive-foreground: 210 20% 98%;
+  --border: 215 28% 17%;
+  --input: 215 28% 17%;
+  --ring: 254 100% 70%;
+
+  /* Moneko dark colors */
+  --moneko-background: #0A0E1A;
+  --moneko-foreground: #F1F5F9;
+  --icon: #B388FF;
+  --moneko-secondary: #9B82FF;
+  --moneko-primary: #8B70FF;
+  --success: #1FE3B8;
+  --success-light: #0A2920;
+  --warning: #FFD04A;
+  --warning-light: #2B1F00;
+  --danger: #FF7A7A;
+  --danger-light: #2B0A0A;
+  --overlay: rgba(0, 0, 0, 0.9);
+
+  /* Dark halo colors - override the same variables */
+  --halo-bg: #0A0E1A;
+  --halo-purple: rgba(100, 75, 200, 0.4);
+  --halo-purple-mid: rgba(90, 65, 180, 0.35);
+  --halo-purple-outer: rgba(110, 85, 210, 0.25);
+
+  --halo-pink: rgba(180, 140, 185, 0.35);
+  --halo-pink-mid: rgba(170, 130, 175, 0.3);
+  --halo-pink-outer: rgba(190, 150, 195, 0.2);
+
+  --halo-blue: rgba(70, 120, 180, 0.4);
+  --halo-blue-mid: rgba(60, 110, 170, 0.35);
+  --halo-blue-outer: rgba(80, 130, 190, 0.3);
+
+  --halo-light-blue: rgba(90, 140, 160, 0.35);
+  --halo-light-blue-mid: rgba(80, 130, 150, 0.3);
+  --halo-light-blue-outer: rgba(100, 150, 170, 0.25);
+
+  /* Collision Beams Colors - Dark */
+  --collision-bg: transparent;
+  --collision-beam-from: #8B70FF;
+  --collision-beam-via: #9B82FF;
+  --collision-explosion-from: #8B70FF;
+  --collision-explosion-to: #9B82FF;
+  --collision-shadow: 0 0 24px rgba(0, 0, 0, 0.35), 0 1px 1px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 4px rgba(0, 0, 0, 0.35), 0 16px 68px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+
+  /* Gradient Animation Colors - Dark Mode */
+  --gradient-bg: linear-gradient(40deg, rgb(20, 15, 35), rgb(30, 25, 45));
+  --gradient-first-color: var(--halo-purple);
+  --gradient-second-color-rgba: rgba(180, 140, 185, 0.35);
+  --gradient-third-color-rgba: rgba(70, 120, 180, 0.4);
+  --gradient-fourth-color-rgba: rgba(90, 140, 160, 0.35);
+  --gradient-fifth-color-rgba: rgba(90, 65, 180, 0.35);
+  --gradient-pointer-color-rgba: rgba(100, 75, 200, 0.4);
+
+  /* Dark accent colors */
+  --accent-pink: #F472B6;
+  --accent-indigo: #818CF8;
+
+  /* Dark component-specific colors */
+  --card-bg: #111827;
+  --card-foreground-color: #F1F5F9;
+  --input-bg: #1F2937;
+  --input-disabled: #374151;
+  --muted-foreground-color: #d7d7d7;
+  --subtle-border: #374151;
+  --subtle-background: #1F2937;
+  --section-bg: #1F2937;
+  --section-bg-light: oklch(21% .034 264.665 / 0.9);
+  --section-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Dark pricing card specific colors */
+  --lifetime-card-bg: #2D1B4E;
+
+  /* AI Search animation background colors (dark) */
+  --ai-search-anim-bg-1: rgba(17, 24, 39, 0.6);
+  --ai-search-anim-bg-2: rgba(17, 24, 39, 0.68);
+  --ai-search-anim-bg-3: rgba(17, 24, 39, 0.75);
+  --ai-search-anim-bg-4: rgba(17, 24, 39, 0.8);
+
+  /* Dark guide/status colors */
+  --guide-completed-bg: rgba(6, 78, 59, 0.3);
+  --guide-completed-text: #86EFAC;
+  --guide-completed-icon: #22C55E;
+  --guide-next-bg: rgba(30, 58, 138, 0.3);
+  --guide-next-text: #93C5FD;
+  --guide-next-icon: #3B82F6;
+  --guide-next-ring: #1e3a8a;
+  --guide-warning-icon: #FCD34D;
+  --guide-success-icon: #34D399;
+
+  /* Dark lesson content colors */
+  --lesson-title-text: #FFFFFF;
+  --lesson-title-border: #374151;
+  --lesson-content-text: #F3F4F6;
+  --lesson-keypoint-text: #F9FAFB;
+  --lesson-progress-bg: #374151;
+  --lesson-progress-text: #FFFFFF;
+
+  /* Dark Quiz/Question colors */
+  --question-border: #4B5563;
+  --question-bg: #1F2937;
+  --question-text: #F3F4F6;
+  --question-text-secondary: #D1D5DB;
+  --question-hover-border: #6B7280;
+
+  /* Dark Success/Correct states */
+  --quiz-success-bg: rgba(6, 78, 59, 0.3);
+  --quiz-success-text: #86EFAC;
+  --quiz-success-border: #22C55E;
+  --quiz-success-icon: #34D399;
+
+  /* Dark Error/Incorrect states */
+  --quiz-error-bg: rgba(127, 29, 29, 0.3);
+  --quiz-error-text: #FCA5A5;
+  --quiz-error-border: #EF4444;
+  --quiz-error-icon: #F87171;
+
+  /* Dark Neutral/Unselected states */
+  --quiz-neutral-bg: #111827;
+  --quiz-neutral-border: #4B5563;
+  --quiz-neutral-text: #D1D5DB;
+
+  /* Dark Interactive states */
+  --quiz-selected-bg: rgba(116, 88, 255, 0.2);
+  --quiz-selected-border: #8B70FF;
+  --quiz-selected-text: #FFFFFF;
+
+  /* Dark Dragging states */
+  --quiz-dragging-bg: #374151;
+  --quiz-dragging-border: #6B7280;
+  --quiz-dragging-shadow: rgba(0, 0, 0, 0.5);
+
+  /* Dark Completion celebration */
+  --completion-confetti-1: #8B70FF;
+  --completion-confetti-2: #34D399;
+  --completion-confetti-3: #60A5FA;
+  --completion-confetti-4: #FBBF24;
+
+  /* Dark table colors */
+  --table-header: #374151;
+  --table-row-odd: #1F2937;
+  --table-row-even: #212b3b;
+
+  /* Dark chart colors */
+  --chart-primary: #8B70FF;
+  --chart-primary-transparent: rgba(139, 112, 255, 0.2);
+  --chart-success: #1FE3B8;
+  --chart-success-transparent: rgba(31, 227, 184, 0.2);
+  --chart-danger: #FF7A7A;
+  --chart-danger-transparent: rgba(255, 122, 122, 0.2);
+
+  /* Dark markdown colors */
+  --markdown-button: #374151;
+  --markdown-button-text: #F1F5F9;
+  --markdown-button-border: #4B5563;
+
+  /* Arc Timeline dark colors */
+  --step-line-active-color: #8B70FF;
+  --step-line-inactive-color: #475569;
+  --icon-active-color: #8B70FF;
+  --icon-inactive-color: #64748b;
+  --time-active-color: #f1f5f9;
+  --time-inactive-color: #9ca3af;
+  --description-color: #cbd5e1;
+  --placeholder-line-color: #374151;
+}
+
 /* Expose variables to Tailwind as theme tokens */
 @theme {
   /* Core shadcn/ui colors - direct mapping to CSS variables */
@@ -425,6 +626,13 @@
   --color-halo-light-blue: var(--halo-light-blue);
   --color-halo-light-blue-mid: var(--halo-light-blue-mid);
   --color-halo-light-blue-outer: var(--halo-light-blue-outer);
+
+  /* Collision Beams Colors */
+  --color-collision-bg: var(--collision-bg);
+  --color-collision-beam-from: var(--collision-beam-from);
+  --color-collision-beam-via: var(--collision-beam-via);
+  --color-collision-explosion-from: var(--collision-explosion-from);
+  --color-collision-explosion-to: var(--collision-explosion-to);
 
   /* Accent colors */
   --color-accent-pink: var(--accent-pink);

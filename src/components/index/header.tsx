@@ -160,6 +160,12 @@ export const HomeHeader = () => {
                                     Pricing
                                 </Link>
                             </NavigationMenuItem>
+
+                            <NavigationMenuItem>
+                                <Link to="/download" className={navigationMenuTriggerStyle() + " bg-transparent text-muted-foreground hover:text-foreground"}>
+                                    Download
+                                </Link>
+                            </NavigationMenuItem>
                         </NavigationMenuList>
                     </NavigationMenu>
                 </div>
@@ -219,6 +225,7 @@ export const HomeHeader = () => {
                             
                             <MobileLink to="/how-it-works" setIsOpen={setIsOpen} className="text-base px-2 py-3">How it Works</MobileLink>
                             <MobileLink to="/pricing" setIsOpen={setIsOpen} className="text-base px-2 py-3">Pricing</MobileLink>
+                            <MobileLink to="/download" setIsOpen={setIsOpen} className="text-base px-2 py-3">Download</MobileLink>
 
                             <div className="mt-6 space-y-3 px-2">
                                 {user ? (
@@ -271,7 +278,7 @@ export const HomeHeader = () => {
                             <Button variant="ghost" onClick={() => navigate({ to: "/login" })} className="font-medium">
                                 Log in
                             </Button>
-                            <Button
+                        <Button
                                 onClick={() => navigate({ to: "/referral"})}
                                 className="font-medium px-5 rounded-full dark:text-white"
                             >

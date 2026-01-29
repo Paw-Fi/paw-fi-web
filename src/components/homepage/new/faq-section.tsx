@@ -3,7 +3,7 @@ import faqData from "@/data/home/home-faq.json";
 import { motion, Variants } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
-interface FAQItem {
+export interface FAQItem {
   id: string;
   question: string;
   answer: string;
@@ -11,7 +11,21 @@ interface FAQItem {
 
 const faqItems: FAQItem[] = faqData;
 
-export default function FAQSection() {
+export interface FAQSectionProps {
+  items?: FAQItem[];
+  eyebrowText?: string;
+  title?: string;
+  subtitle?: string;
+  sectionClassName?: string;
+}
+
+export default function FAQSection({
+  items,
+  eyebrowText = "Frequently Asked Questions",
+  title = "Common Questions",
+  subtitle = "Everything you need to know about getting started with Moneko",
+  sectionClassName,
+}: FAQSectionProps) {
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -49,7 +63,7 @@ export default function FAQSection() {
 
   return (
     <motion.section 
-      className="relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8"
+      className={`relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8${sectionClassName ? ` ${sectionClassName}` : ""}`}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-100px" }}
@@ -59,21 +73,21 @@ export default function FAQSection() {
         {/* Section Header */}
         <motion.div className="mb-12 text-center" variants={itemVariants}>
           <div className="mb-4 text-sm font-medium text-primary">
-            Frequently Asked Questions
+            {eyebrowText}
           </div>
           
           <h2 className="text-foreground mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
-            Common Questions
+            {title}
           </h2>
           
           <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato">
-            Everything you need to know about getting started with Moneko
+            {subtitle}
           </p>
         </motion.div>
 
         {/* FAQ Items */}
         <div className="space-y-4">
-          {faqItems.map((item, index) => (
+          {(items ?? faqItems).map((item, index) => (
             <motion.div 
               key={item.id}
               className="backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer p-6 border border-white/20"

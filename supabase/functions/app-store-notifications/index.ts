@@ -5,7 +5,7 @@ import {
   SignedDataVerifier,
   type ResponseBodyV2DecodedPayload,
   type JWSTransactionDecodedPayload,
-} from "https://esm.sh/@apple/app-store-server-library@1.4.1?target=deno";
+} from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getCorsHeaders } from "../shared/cors.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
