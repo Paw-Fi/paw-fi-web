@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { TypewriterText } from "@/components/ui/TypewriterText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Apple, Smartphone, Printer, Send, X, AlertCircle } from "lucide-react";
+import { Apple, Smartphone, Printer, Send, X, AlertCircle, Download } from "lucide-react";
 
 interface GeneratedCard {
   id: string;
@@ -85,14 +85,19 @@ export function RetroBeeperSection() {
       
 
       <div className="container relative z-10 max-w-5xl mx-auto flex flex-col items-center gap-12">
-        <div className="text-center space-y-4">
-          
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white font-mono">
-            <span className="text-[#a8b343]">Moneko</span> download for iOS & Android
+        <div className="text-center space-y-8 max-w-4xl mx-auto">
+             <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 dark:text-white mb-6">
+              <span className="text-primary">Moneko</span> download for iOS & Android
             </h1>
-            <p className="text-neutral-400 max-w-xl mx-auto font-mono text-sm">             
-            Choose your platform to get the latest Moneko app. Track expenses, organize budgets with Pockets, and keep shared spending in sync—fast.
+            <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">    
+              Choose your platform to get the latest Moneko app. Track expenses, organize budgets with Pockets, and keep shared spending in sync—fast.
             </p>
+            </motion.div>
         </div>
 
         {/* The Device */}
@@ -140,7 +145,7 @@ export function RetroBeeperSection() {
                      </BeeperButton>
 
                      <BeeperButton onClick={() => handleDownloadSelect("android")} color="green">
-                        <svg viewBox="30 336.7 120.9 129.2" className="w-6 h-6">
+                        <svg viewBox="30 336.7 120.9 129.2" className="w-4 h-4">
                             <path fill="#FFD400" d="M119.2,421.2c15.3-8.4,27-14.8,28-15.3c3.2-1.7,6.5-6.2,0-9.7  c-2.1-1.1-13.4-7.3-28-15.3l-20.1,20.2L119.2,421.2z" />
                             <path fill="#FF3333" d="M99.1,401.1l-64.2,64.7c1.5,0.2,3.2-0.2,5.2-1.3  c4.2-2.3,48.8-26.7,79.1-43.3L99.1,401.1L99.1,401.1z" />
                             <path fill="#48FF48" d="M99.1,401.1l20.1-20.2c0,0-74.6-40.7-79.1-43.1  c-1.7-1-3.6-1.3-5.3-1L99.1,401.1z" />
@@ -235,7 +240,7 @@ function DraggableCard({ card, onDelete }: { card: GeneratedCard, onDelete: () =
 
                      <a href={card.text} target="_blank" rel="noopener noreferrer" 
                         className="bg-black text-white py-3 px-4 text-center text-xs font-bold uppercase hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2">
-                        <Printer className="w-3 h-3" />
+                        <Download className="w-3 h-3" />
                         DOWNLOAD NOW
                      </a>
 
