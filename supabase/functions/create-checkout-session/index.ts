@@ -55,11 +55,11 @@ function generateNonce(): string {
 
 function appendNonceToUrl(url: string, nonce: string): string {
   try {
-    const u = new URL(url);
-    // The nonce must be stable and appended by the backend.
-    // For Stripe placeholders (session_id={CHECKOUT_SESSION_ID}), this is safe.
-    u.searchParams.set("v", nonce);
-    return u.toString();
+    // IMPORTANT: We cannot use URL.searchParams because it URL-encodes the values,
+    // which breaks Stripe's {CHECKOUT_SESSION_ID} placeholder replacement.
+    // Stripe requires the placeholder to be unencoded.
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}v=${nonce}`;
   } catch {
     return url;
   }
@@ -84,7 +84,9 @@ function sanitizeRedirectUrl(
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
   if (!allowedHosts.has(parsed.hostname)) return null;
 
-  return parsed.toString();
+  // Return the original value to preserve Stripe placeholders like {CHECKOUT_SESSION_ID}
+  // URL.toString() would URL-encode the curly braces, breaking Stripe's placeholder replacement
+  return value;
 }
 
 serve(async (req: Request) => {
@@ -122,10 +124,10 @@ serve(async (req: Request) => {
     // Use authenticated userId - this is the ONLY safe userId
     const userId = authResult.userId!;
 
-    // Parse the request body (plan, billingInterval, successUrl, cancelUrl only)
+    // Parse the request body (plan, billingInterval, successUrl, cancelUrl, promoCode)
     // NOTE: isTrial is determined by backend based on subscription history (security)
     // NOTE: billingInterval is optional for Lifetime (one-time payment)
-    const { plan, billingInterval, successUrl, cancelUrl } = await req.json();
+    const { plan, billingInterval, successUrl, cancelUrl, promoCode } = await req.json();
 
     // Validate plan
     if (!plan || !isValidPlan(plan)) {
@@ -194,28 +196,95 @@ serve(async (req: Request) => {
       plan,
       billingInterval,
       priceId,
+      promoCode,
     });
 
     // SECURITY: Check if user is bound to a household subscription
     // Bound users cannot create their own subscriptions - they must unbind first
     const { data: existingSub } = await supabase
       .from("subscriptions")
-      .select("id, bound_to_user_id, bound_to_household_id, plan, status")
+      .select(
+        "id, provider, bound_to_user_id, bound_to_household_id, plan, status, stripe_subscription_id",
+      )
       .eq("user_id", userId)
       .maybeSingle();
 
     // CRITICAL: Prevent bound users from subscribing directly
     if (existingSub?.bound_to_user_id) {
-      console.error("User is bound to household subscription:", {
+      const boundToUserId = existingSub.bound_to_user_id;
+      const { data: ownerSub, error: ownerSubError } = await supabase
+        .from("subscriptions")
+        .select("plan, status, bound_to_user_id")
+        .eq("user_id", boundToUserId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (ownerSubError) {
+        console.error("Failed to verify household owner subscription:", {
+          userId,
+          boundToUserId,
+          ownerSubError,
+        });
+        return new Response(
+          JSON.stringify({ error: "Failed to verify household subscription" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const ownerHasActiveSubscription =
+        !!ownerSub &&
+        !ownerSub.bound_to_user_id &&
+        ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
+          ownerSub.status === "trialing" ||
+          (ownerSub.status === "active" && ownerSub.plan !== "free"));
+
+      if (ownerHasActiveSubscription) {
+        console.error("User is bound to active household subscription:", {
+          userId,
+          boundTo: boundToUserId,
+          household: existingSub.bound_to_household_id,
+        });
+        return new Response(
+          JSON.stringify({
+            error:
+              "You are currently sharing a household subscription. Please leave the household first to manage your own subscription.",
+            code: "BOUND_TO_HOUSEHOLD",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      console.log("Allowing checkout for bound user:", {
         userId,
-        boundTo: existingSub.bound_to_user_id,
+        boundTo: boundToUserId,
         household: existingSub.bound_to_household_id,
+        ownerPlan: ownerSub?.plan ?? null,
+        ownerStatus: ownerSub?.status ?? null,
       });
+    }
+
+    // Prevent creating a Stripe checkout when the active subscription is managed by IAP.
+    // We cannot cancel App Store / Play Store subscriptions from Stripe, so this avoids double billing.
+    if (
+      existingSub &&
+      (existingSub as any).provider &&
+      (existingSub as any).provider !== "stripe" &&
+      ["active", "trialing", "past_due", "paused"].includes(
+        String((existingSub as any).status || ""),
+      )
+    ) {
       return new Response(
         JSON.stringify({
           error:
-            "You are currently sharing a household subscription. Please leave the household first to manage your own subscription.",
-          code: "BOUND_TO_HOUSEHOLD",
+            "Your subscription is managed through an in-app purchase. Please manage billing in the App Store / Play Store.",
+          code: "SUBSCRIPTION_MANAGED_IN_APP",
         }),
         {
           status: 400,
@@ -228,8 +297,8 @@ serve(async (req: Request) => {
     // A user is eligible for trial ONLY if no subscription row exists at all
     // If a row exists (even with stripe_subscription_id = NULL), it means they had a trial before
     // Simple and secure: Only new users (no row) get trials
-    const isEligibleForTrial =
-      !existingSub || (existingSub as any).plan === "free";
+    // Only new users (no subscription row) get the trial.
+    const isEligibleForTrial = !existingSub;
 
     console.log("Trial eligibility check:", {
       hasExistingRow: !!existingSub,
@@ -373,7 +442,50 @@ serve(async (req: Request) => {
           userId,
           plan,
           priceId,
+          promoCode,
         });
+
+        // If promo code provided, look up the Stripe promotion code ID
+        let promotionCodeId: string | null = null;
+        if (promoCode) {
+          try {
+            // List promotion codes by the customer-facing code
+            const promoCodes = await stripe.promotionCodes.list({
+              code: promoCode,
+              active: true,
+              limit: 1,
+            });
+            
+            if (promoCodes.data.length > 0) {
+              promotionCodeId = promoCodes.data[0].id;
+              console.log("Found promotion code:", { code: promoCode, id: promotionCodeId });
+            } else {
+              console.error("Promotion code not found or inactive:", promoCode);
+              return new Response(
+                JSON.stringify({
+                  error: "Invalid promotion code",
+                  details: `The promotion code '${promoCode}' is not valid or has expired.`,
+                }),
+                {
+                  status: 400,
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                },
+              );
+            }
+          } catch (promoError) {
+            console.error("Error looking up promotion code:", promoError);
+            return new Response(
+              JSON.stringify({
+                error: "Invalid promotion code",
+                details: `Could not validate promotion code '${promoCode}'.`,
+              }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+        }
 
         const sessionConfig: Stripe.Checkout.SessionCreateParams = {
           customer: customerId, // CRITICAL: Always attach customer (email is already on customer)
@@ -388,7 +500,11 @@ serve(async (req: Request) => {
           mode: "payment", // ONE-TIME payment, NOT subscription
           success_url: finalSuccessUrlWithNonce,
           cancel_url: finalCancelUrlWithNonce,
-          allow_promotion_codes: true,
+          // Use discounts if promo code provided, otherwise allow promotion codes
+          ...(promotionCodeId 
+            ? { discounts: [{ promotion_code: promotionCodeId }] }
+            : { allow_promotion_codes: true }
+          ),
           // CRITICAL: Enable invoice creation for one-time payments (Stripe official invoices)
           invoice_creation: {
             enabled: true,
@@ -504,7 +620,50 @@ serve(async (req: Request) => {
         plan,
         billingInterval,
         priceId,
+        promoCode,
       });
+
+      // If promo code provided, look up the Stripe promotion code ID
+      let subscriptionPromotionCodeId: string | null = null;
+      if (promoCode) {
+        try {
+          // List promotion codes by the customer-facing code
+          const promoCodes = await stripe.promotionCodes.list({
+            code: promoCode,
+            active: true,
+            limit: 1,
+          });
+          
+          if (promoCodes.data.length > 0) {
+            subscriptionPromotionCodeId = promoCodes.data[0].id;
+            console.log("Found promotion code for subscription:", { code: promoCode, id: subscriptionPromotionCodeId });
+          } else {
+            console.error("Promotion code not found or inactive:", promoCode);
+            return new Response(
+              JSON.stringify({
+                error: "Invalid promotion code",
+                details: `The promotion code '${promoCode}' is not valid or has expired.`,
+              }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+        } catch (promoError) {
+          console.error("Error looking up promotion code:", promoError);
+          return new Response(
+            JSON.stringify({
+              error: "Invalid promotion code",
+              details: `Could not validate promotion code '${promoCode}'.`,
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
 
       // Build session config according to Stripe best practices
       const sessionConfig: Stripe.Checkout.SessionCreateParams = {
@@ -520,8 +679,11 @@ serve(async (req: Request) => {
         mode: "subscription",
         success_url: finalSuccessUrlWithNonce,
         cancel_url: finalCancelUrlWithNonce,
-        // Default: allow promotions; overridden for trial flows below
-        allow_promotion_codes: true,
+        // Use discounts if promo code provided, otherwise allow promotion codes
+        ...(subscriptionPromotionCodeId 
+          ? { discounts: [{ promotion_code: subscriptionPromotionCodeId }] }
+          : { allow_promotion_codes: true }
+        ),
         // Subscription metadata - persists on the subscription object
         subscription_data: {
           metadata: {
@@ -552,8 +714,15 @@ serve(async (req: Request) => {
             missing_payment_method: "pause", // Pause subscription if no payment method when trial ends
           },
         };
-        // Reduce visual noise on the page for trials
-        sessionConfig.allow_promotion_codes = false;
+        // For trials, only allow promo codes if explicitly provided
+        // Remove allow_promotion_codes if promo code is provided, otherwise keep it false
+        if (subscriptionPromotionCodeId) {
+          // Promo code takes precedence over allow_promotion_codes
+          delete (sessionConfig as any).allow_promotion_codes;
+          (sessionConfig as any).discounts = [{ promotion_code: subscriptionPromotionCodeId }];
+        } else {
+          sessionConfig.allow_promotion_codes = false;
+        }
         // Add reassurance copy only for trial checkout
         sessionConfig.custom_text = {
           submit: {
@@ -567,7 +736,7 @@ serve(async (req: Request) => {
         );
         sessionConfig.payment_method_collection = "always"; // Always require payment method
         sessionConfig.subscription_data!.payment_behavior = "allow_incomplete"; // CRITICAL: Checkout Sessions require 'allow_incomplete' for proper 3DS/failed payment handling
-        sessionConfig.allow_promotion_codes = true;
+        // For non-trial users, promo code handling is already set in the spread operator above
       }
 
       // Create checkout session with retry

@@ -25,7 +25,6 @@ const env = validateEnvironment();
 
 // Initialize Stripe
 const stripe = new Stripe(env.stripeSecretKey, {
-  apiVersion: "2025-07-30.basil",
   httpClient: Stripe.createFetchHttpClient(),
 });
 
@@ -156,13 +155,13 @@ serve(async (req: Request): Promise<Response> => {
           .eq("user_id", userId);
       } else {
         // Create mapping in user_stripe_mapping table if it exists
-        await supabase
-          .from("user_stripe_mapping")
-          .upsert({
+        await supabase.from("user_stripe_mapping").upsert(
+          {
             user_id: userId,
             stripe_customer_id: customerId,
-          })
-          .onConflict("user_id");
+          },
+          { onConflict: "user_id" },
+        );
       }
 
       console.log("Created new Stripe customer:", customerId);

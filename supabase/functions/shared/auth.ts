@@ -5,10 +5,15 @@
  * NEVER trust userId from request body - always derive from JWT
  */
 
-import {
-  createClient,
-  SupabaseClient,
-} from "https://esm.sh/@supabase/supabase-js@2.39.7";
+type SupabaseAuthClient = {
+  from: (table: string) => any;
+  auth: {
+    getUser: (jwt: string) => Promise<{
+      data: { user: { id: string } | null };
+      error: { message?: string } | null;
+    }>;
+  };
+};
 
 // Internal service authentication secret (for processor -> sync endpoint calls)
 const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
@@ -32,7 +37,7 @@ export interface AuthResult {
  */
 export async function authenticateUser(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: SupabaseAuthClient,
 ): Promise<AuthResult> {
   // Get Authorization header
   const authHeader = req.headers.get("Authorization");
@@ -189,7 +194,7 @@ export async function authenticateInternalSecret(
  */
 export async function authenticateUserOrInternalSecret(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: SupabaseAuthClient,
 ): Promise<AuthResult> {
   const internal = await authenticateInternalSecret(req);
   if (internal.success && internal.isInternalService) return internal;
@@ -209,7 +214,7 @@ export async function authenticateUserOrInternalSecret(
  */
 export async function authenticateUserOrInternal(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: SupabaseAuthClient,
   connectionId?: string,
 ): Promise<AuthResult> {
   // First, try internal service auth

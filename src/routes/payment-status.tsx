@@ -2,29 +2,35 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
 import { seo } from "@/utils/seo";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { toast } from "react-toastify";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCircleCheck,
-  faCircleXmark,
-  faCircleExclamation,
-  faClock,
-  faTriangleExclamation,
-} from "@fortawesome/free-solid-svg-icons";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  ArrowRight,
+  HelpCircle,
+  Receipt,
+  Calendar,
+  CreditCard,
+  RefreshCw,
+  Mail,
+} from "lucide-react";
+import { AndroidDownloadButton } from "@/components/ui/android-download-button";
+import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 
 // Define the search params type for this route
 type PaymentStatusSearchParams = {
-  status?: string; // Payment status: success, failed, canceled, pending, etc.
-  session_id?: string; // Stripe session ID for status verification
-  subscription_id?: string; // Stripe subscription ID
-  v?: string; // Public verification nonce for logged-out verify-payment
-  error?: string; // Error message
+  status?: string;
+  session_id?: string;
+  subscription_id?: string;
+  v?: string;
+  error?: string;
 };
 
 export const Route = createFileRoute("/payment-status")({
@@ -83,9 +89,27 @@ function PaymentStatusPage() {
             if (cancelled) return;
 
             if (error) {
-              console.error("Error verifying payment:", error);
+              console.error("Error verifying payment:", { error, data });
+              const errorResponse = data as any;
+              const errorMessage =
+                errorResponse?.error ||
+                errorResponse?.details ||
+                errorResponse?.message ||
+                error.message ||
+                "Failed to verify payment status";
+
               setPaymentStatus("failed");
-              setError(error.message || "Failed to verify payment status");
+              setError(errorMessage);
+              setIsLoading(false);
+              return;
+            }
+
+            if (data?.error) {
+              console.error("Error in response data:", data);
+              const errorMessage =
+                data.details || data.error || "Failed to verify payment status";
+              setPaymentStatus("failed");
+              setError(errorMessage);
               setIsLoading(false);
               return;
             }
@@ -116,14 +140,11 @@ function PaymentStatusPage() {
           if (cancelled) return;
           setPaymentStatus("failed");
           setError(
-            err instanceof Error
-              ? err.message
-              : "Failed to verify payment status",
+            err instanceof Error ? err.message : "Failed to verify payment status",
           );
           setIsLoading(false);
         }
       } else {
-        // No session ID or not success status, just show the current status
         setIsLoading(false);
       }
     };
@@ -133,11 +154,14 @@ function PaymentStatusPage() {
     return () => {
       cancelled = true;
     };
-  }, [search.session_id, search.status]);
+  }, [search.session_id, search.status, search.v]);
 
   useEffect(() => {
-    setPaymentStatus(search.status || "pending");
-  }, [search.status]);
+    // Only update from search param if not loading/verifying
+    if (!search.session_id) {
+        setPaymentStatus(search.status || "pending");
+    }
+  }, [search.status, search.session_id]);
 
   // Format subscription period end date
   const formatDate = (dateString: string | null | undefined) => {
@@ -150,257 +174,226 @@ function PaymentStatusPage() {
     }).format(date);
   };
 
+  const getStatusConfig = () => {
+    if (isLoading) {
+      return {
+        icon: <Loader2 className="h-12 w-12 animate-spin text-blue-500" />,
+        title: "Verifying Payment",
+        description: "Please wait while we confirm your transaction...",
+        color: "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200",
+        borderColor: "border-blue-200 dark:border-blue-800",
+      };
+    }
+
+    switch (paymentStatus) {
+      case "success":
+        return {
+          icon: <CheckCircle2 className="h-12 w-12 text-emerald-500" />,
+          title: "Payment Successful",
+          description: "Thank you! Your subscription is now active.",
+          color: "bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200",
+          borderColor: "border-emerald-200 dark:border-emerald-800",
+        };
+      case "failed":
+        return {
+          icon: <XCircle className="h-12 w-12 text-red-500" />,
+          title: "Payment Failed",
+          description: error || "We couldn't process your payment.",
+          color: "bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-200",
+          borderColor: "border-red-200 dark:border-red-800",
+        };
+      case "canceled":
+        return {
+          icon: <AlertCircle className="h-12 w-12 text-gray-500" />,
+          title: "Payment Canceled",
+          description: "You've canceled the payment process.",
+          color: "bg-gray-50 text-gray-900 dark:bg-gray-800/50 dark:text-gray-200",
+          borderColor: "border-gray-200 dark:border-gray-700",
+        };
+      case "pending":
+      default:
+        return {
+          icon: <Loader2 className="h-12 w-12 animate-spin text-amber-500" />,
+          title: "Payment Processing",
+          description: "Your payment is being processed. This may take a moment.",
+          color: "bg-amber-50 text-amber-900 dark:bg-amber-900/20 dark:text-amber-200",
+          borderColor: "border-amber-200 dark:border-amber-800",
+        };
+    }
+  };
+
+  const config = getStatusConfig();
+
   return (
     <AmbientHaloLayout>
-      <div className="container mx-auto min-h-screen px-4 py-12 md:py-20">
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-12">
         <motion.div
-          initial={prefersReducedMotion ? undefined : { opacity: 0, y: 20 }}
-          animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto max-w-2xl"
+          initial={prefersReducedMotion ? undefined : { opacity: 0, scale: 0.95, y: 20 }}
+          animate={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="relative w-full max-w-lg"
         >
-          <div className="mb-8 text-center">
-            <h1 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white">
-              Payment Status
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Check the status of your subscription payment
-            </p>
-          </div>
+          {/* Main Card */}
+          <div className="overflow-hidden rounded-3xl border border-white/20 bg-white/80 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+            {/* Header Section */}
+            <div className="flex flex-col items-center p-8 pb-6 text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 260,
+                  damping: 20,
+                  delay: 0.1,
+                }}
+                className={`mb-6 flex h-20 w-20 items-center justify-center rounded-full ${config.color.split(" ")[0]}`}
+              >
+                {config.icon}
+              </motion.div>
+              
+              <h1 className="mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+                {config.title}
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400">
+                {config.description}
+              </p>
+            </div>
 
-          <div className="">
-            {isLoading && (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-purple-600"></div>
-                <p className="mt-4 text-gray-600 dark:text-gray-400">
-                  Verifying payment status...
-                </p>
+            {/* Content Section */}
+            <div className="p-8 pt-0">
+              <AnimatePresence mode="wait">
+                {isLoading && (
+                   <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    key="loading"
+                   >
+                     <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-200">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                            <div>
+                                <p className="font-medium">Please do not close this page</p>
+                                <p className="mt-1 opacity-90">Closing this window might interrupt the verification process.</p>
+                            </div>
+                        </div>
+                     </div>
+                   </motion.div>
+                )}
 
-                <div className="mt-6 w-full rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-700/50 dark:bg-yellow-900/30">
-                  <div className="flex items-center">
-                    <FontAwesomeIcon
-                      icon={faTriangleExclamation}
-                      className="mr-2 h-5 w-5 text-yellow-500"
-                    />
-                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                      Important: Please do not close this page
-                    </p>
-                  </div>
-                  <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                    Closing this page while verifying your payment may affect
-                    your subscription activation.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {!isLoading && (
-              <>
-                {/* Payment Status Display */}
                 {paymentStatus === "success" && (
-                  <Alert variant="success" className="mb-6">
-                    <FontAwesomeIcon
-                      icon={faCircleCheck}
-                      className="h-5 w-5 text-green-500"
-                    />
-                    <AlertTitle>Payment Successful!</AlertTitle>
-                    <AlertDescription>
-                      <p>
-                        Thank you for your subscription. Your account has been
-                        upgraded.
-                      </p>
-
-                      {subscriptionDetails && (
-                        <div className="mt-4 rounded-lg bg-white/50 p-4 dark:bg-slate-800/50">
-                          <h3 className="mb-2 font-semibold">
-                            Subscription Details
-                          </h3>
-                          <ul className="space-y-2 text-sm">
-                            <li className="flex items-center justify-between">
-                              <span>Plan:</span>
-                              <span className="font-medium">
-                                {subscriptionDetails.plan}
-                              </span>
-                            </li>
-                            <li className="flex items-center justify-between">
-                              <span>Status:</span>
-                              <span className="font-medium">
-                                {subscriptionDetails.status}
-                              </span>
-                            </li>
-                            <li className="flex items-center justify-between">
-                              <span>Current Period Ends:</span>
-                              <span className="font-medium">
-                                {subscriptionDetails.current_period_end
-                                  ? formatDate(
-                                      subscriptionDetails.current_period_end,
-                                    )
-                                  : "No expiry (lifetime)"}
-                              </span>
-                            </li>
-                            <li className="flex items-center justify-between">
-                              <span>Auto-Renew:</span>
-                              <span className="font-medium">
-                                {subscriptionDetails.cancel_at_period_end
-                                  ? "No"
-                                  : "Yes"}
-                              </span>
-                            </li>
-                          </ul>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key="success"
+                  >
+                     {subscriptionDetails && (
+                        <div className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
+                          <div className="border-b border-slate-200 bg-slate-100/50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800">
+                            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                Subscription Details
+                            </h3>
+                          </div>
+                          <div className="p-4 space-y-3">
+                            <div className="flex justify-between text-sm">
+                                <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                    <CreditCard className="h-4 w-4" /> Plan
+                                </span>
+                                <span className="font-medium text-slate-900 dark:text-white capitalize">{subscriptionDetails.plan}</span>
+                            </div>
+                             <div className="flex justify-between text-sm">
+                                <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                    <Calendar className="h-4 w-4" /> Ends
+                                </span>
+                                <span className="font-medium text-slate-900 dark:text-white">
+                                    {subscriptionDetails.current_period_end ? formatDate(subscriptionDetails.current_period_end) : "Lifetime"}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                                    <RefreshCw className="h-4 w-4" /> Auto-renew
+                                </span>
+                                <span className="font-medium text-slate-900 dark:text-white">
+                                    {subscriptionDetails.cancel_at_period_end ? "No" : "Yes"}
+                                </span>
+                            </div>
+                          </div>
                         </div>
-                      )}
+                     )}
 
-                      <Button
-                        onClick={() => navigate({ to: "/dashboard" })}
-                        className="mt-4"
-                      >
-                        Go to Dashboard
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
+                    <div className="grid gap-3">
+                      
+                        <div className="flex gap-3 justify-center mt-2">
+                             <AndroidDownloadButton />
+                             <AppleDownloadButton />
+                        </div>
+                    </div>
+                  </motion.div>
                 )}
 
-                {paymentStatus === "failed" && (
-                  <Alert variant="destructive" className="mb-6">
-                    <FontAwesomeIcon
-                      icon={faCircleXmark}
-                      className="h-5 w-5 text-red-500"
-                    />
-                    <AlertTitle>Payment Failed</AlertTitle>
-                    <AlertDescription>
-                      <p>
-                        We couldn't process your payment.{" "}
-                        {error && `Error: ${error}`}
-                      </p>
-                      <p className="mt-2">
-                        Please try again or contact support if the problem
-                        persists.
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-4">
-                        <Button
-                          onClick={() => navigate({ to: "/pricing" })}
-                          variant="outline"
-                        >
-                          Return to Pricing
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            (window.location.href =
-                              "mailto:hello@moneko.io?subject=Payment%20Issue")
-                          }
-                        >
-                          Contact Support
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {paymentStatus === "canceled" && (
-                  <Alert className="mb-6">
-                    <FontAwesomeIcon
-                      icon={faCircleExclamation}
-                      className="h-5 w-5 text-blue-500"
-                    />
-                    <AlertTitle>Payment Canceled</AlertTitle>
-                    <AlertDescription>
-                      <p>You've canceled the payment process.</p>
-                      <Button
+                {(paymentStatus === "failed" || paymentStatus === "canceled") && (
+                   <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key="error-state"
+                    className="grid gap-3"
+                  >
+                    <Button 
+                        variant="default" 
+                        size="lg" 
+                        className="w-full"
                         onClick={() => navigate({ to: "/pricing" })}
-                        className="mt-4"
-                      >
+                    >
                         Return to Pricing
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="lg" 
+                        className="w-full"
+                         onClick={() =>
+                            (window.location.href = "mailto:hello@moneko.io?subject=Payment%20Issue")
+                          }
+                    >
+                        <Mail className="mr-2 h-4 w-4" /> Contact Support
+                    </Button>
+                  </motion.div>
                 )}
-
-                {paymentStatus === "pending" && (
-                  <Alert variant="default" className="mb-6">
-                    <FontAwesomeIcon
-                      icon={faClock}
-                      className="h-5 w-5 text-yellow-500"
-                    />
-                    <AlertTitle>Payment Processing</AlertTitle>
-                    <AlertDescription>
-                      <p>
-                        Your payment is still being processed. This may take a
-                        few moments.
-                      </p>
-                      <p className="mt-2">
-                        You'll receive an email confirmation once the payment is
-                        complete.
-                      </p>
-                      <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-700/50 dark:bg-yellow-900/30">
-                        <div className="flex items-center">
-                          <FontAwesomeIcon
-                            icon={faTriangleExclamation}
-                            className="mr-2 h-5 w-5 text-yellow-500"
-                          />
-                          <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                            Important: Please do not close this page
-                          </p>
-                        </div>
-                        <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
-                          Closing this page while your payment is processing may
-                          affect your subscription activation.
-                        </p>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-4">
+                
+                 {/* Pending Logic for Action */}
+                 {paymentStatus === "pending" && !isLoading && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }}
+                        className="grid gap-3"
+                    >
                         <Button
                           onClick={() => window.location.reload()}
                           variant="outline"
+                          size="lg"
+                          className="w-full"
                         >
-                          Check Again
+                          <RefreshCw className="mr-2 h-4 w-4" /> Check Again
                         </Button>
-                        <Button onClick={() => navigate({ to: "/dashboard" })}>
+                        <Button 
+                            variant="default"
+                            onClick={() => navigate({ to: "/dashboard" })}
+                            className="opacity-80"
+                        >
                           Go to Dashboard
                         </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
+                    </motion.div>
+                  )}
 
-                {/* Default case for unknown status */}
-                {!["success", "failed", "canceled", "pending"].includes(
-                  paymentStatus,
-                ) && (
-                  <Alert variant="default" className="mb-6">
-                    <FontAwesomeIcon
-                      icon={faTriangleExclamation}
-                      className="h-5 w-5 text-yellow-500"
-                    />
-                    <AlertTitle>Payment Status: {paymentStatus}</AlertTitle>
-                    <AlertDescription>
-                      <p>We're checking the status of your payment.</p>
-                      <div className="mt-4 flex flex-wrap gap-4">
-                        <Button onClick={() => navigate({ to: "/dashboard" })}>
-                          Go to Dashboard
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
+              </AnimatePresence>
+            </div>
 
-                {/* Help section */}
-                <div className="mt-8 rounded-lg bg-slate-100/50 p-4 dark:bg-slate-800/50">
-                  <h3 className="mb-2 text-lg font-semibold">Need Help?</h3>
-                  <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                    If you're experiencing issues with your payment or
-                    subscription, our support team is here to help.
-                  </p>
-                  <Button
-                    onClick={() =>
-                      (window.location.href = "mailto:hello@moneko.io")
-                    }
-                    variant="outline"
-                    size="sm"
-                  >
-                    Contact Support
-                  </Button>
-                </div>
-              </>
-            )}
+            {/* Footer Help */}
+             <div className="border-t border-slate-100 bg-slate-50 px-8 py-4 text-center dark:border-white/5 dark:bg-white/5">
+                <p className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                    <HelpCircle className="h-4 w-4" />
+                    <span>Need help? <a href="mailto:hello@moneko.io" className="font-medium text-emerald-600 hover:underline dark:text-emerald-400">Email us</a></span>
+                </p>
+            </div>
           </div>
         </motion.div>
       </div>

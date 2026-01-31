@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import Stripe from "https://esm.sh/stripe@13.10.0";
 import {
   Environment,
   SignedDataVerifier,
@@ -14,12 +15,19 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const appStoreBundleId = Deno.env.get("APPLE_BUNDLE_ID") || "";
 const appStoreAppId = Deno.env.get("APPLE_APP_ID") || "";
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error("Missing required SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+const stripe = stripeSecretKey
+  ? new Stripe(stripeSecretKey, {
+      httpClient: Stripe.createFetchHttpClient(),
+    })
+  : null;
 
 const appleRootCaUrls = [
   "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
@@ -76,6 +84,48 @@ function deriveStatus(transaction: JWSTransactionDecodedPayload): string {
   }
 
   return "active";
+}
+
+function looksLikeStripeSubscriptionId(value: unknown): value is string {
+  return typeof value === "string" && value.startsWith("sub_");
+}
+
+async function cancelStripeSubscriptionIfPresent(
+  userId: string,
+): Promise<void> {
+  if (!stripe) return;
+
+  const { data: existing } = await supabase
+    .from("subscriptions")
+    .select("provider, stripe_subscription_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const provider =
+    typeof existing?.provider === "string" ? existing.provider : null;
+  const stripeSubscriptionId = existing?.stripe_subscription_id;
+
+  // Heuristic: treat missing provider but present stripe subscription id as Stripe.
+  const shouldCancelStripe =
+    provider === "stripe" ||
+    (provider == null && looksLikeStripeSubscriptionId(stripeSubscriptionId));
+
+  if (!shouldCancelStripe) return;
+  if (!looksLikeStripeSubscriptionId(stripeSubscriptionId)) return;
+
+  try {
+    await stripe.subscriptions.cancel(stripeSubscriptionId, { prorate: false });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(
+      "Warning: failed to cancel Stripe subscription during App Store update",
+      {
+        userId,
+        stripeSubscriptionId,
+        error: msg,
+      },
+    );
+  }
 }
 
 async function decodeNotification(signedPayload: string): Promise<{
@@ -240,11 +290,17 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    const resolvedUserId = userId;
+
+    // Best-effort: If user switches to App Store billing, cancel any existing Stripe recurring sub
+    // to avoid double-billing.
+    await cancelStripeSubscriptionIfPresent(resolvedUserId);
+
     const status = deriveStatus(transaction);
     const expiresIso = asIsoMillis(asString(transaction.expiresDate));
 
     const subscriptionUpdate: Record<string, unknown> = {
-      user_id: userId,
+      user_id: resolvedUserId,
       provider: "app_store",
       store_product_id: storeProductId,
       plan: catalogProduct.plan,
@@ -253,6 +309,12 @@ serve(async (req: Request): Promise<Response> => {
       current_period_end:
         catalogProduct.plan === "lifetime" ? null : expiresIso,
       cancel_at_period_end: false,
+      // Provider hygiene: clear non-App-Store identifiers.
+      stripe_customer_id: null,
+      stripe_subscription_id: null,
+      play_purchase_token: null,
+      play_order_id: null,
+      play_package_name: null,
       app_store_transaction_id: transactionId,
       app_store_original_transaction_id: originalTransactionId,
       app_store_environment: environment,

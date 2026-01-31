@@ -1,11 +1,11 @@
 /**
  * Stripe Retry Utility - Production Ready
- * 
+ *
  * Implements exponential backoff retry logic for Stripe API calls
  * Handles transient errors and rate limiting
  */
 
-import Stripe from 'https://esm.sh/stripe@14.21.0';
+import Stripe from "https://esm.sh/stripe@14.21.0";
 
 interface RetryConfig {
   maxRetries?: number;
@@ -26,23 +26,23 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
  */
 function isRetryableError(error: any): boolean {
   // Network errors
-  if (error.type === 'StripeConnectionError') {
+  if (error.type === "StripeConnectionError") {
     return true;
   }
-  
+
   // API errors with retryable status codes
-  if (error.type === 'StripeAPIError') {
+  if (error.type === "StripeAPIError") {
     const statusCode = error.statusCode;
     // 429 = Rate limit
     // 500, 502, 503, 504 = Server errors
     return statusCode === 429 || (statusCode >= 500 && statusCode < 600);
   }
-  
+
   // Timeout errors
-  if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+  if (error.code === "ETIMEDOUT" || error.code === "ECONNRESET") {
     return true;
   }
-  
+
   return false;
 }
 
@@ -51,13 +51,15 @@ function isRetryableError(error: any): boolean {
  */
 function calculateDelay(
   attemptNumber: number,
-  config: Required<RetryConfig>
+  config: Required<RetryConfig>,
 ): number {
-  const delay = config.initialDelayMs * Math.pow(config.backoffMultiplier, attemptNumber - 1);
-  
+  const delay =
+    config.initialDelayMs *
+    Math.pow(config.backoffMultiplier, attemptNumber - 1);
+
   // Add jitter to prevent thundering herd
   const jitter = Math.random() * 0.3 * delay;
-  
+
   return Math.min(delay + jitter, config.maxDelayMs);
 }
 
@@ -65,12 +67,12 @@ function calculateDelay(
  * Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Execute a Stripe API call with exponential backoff retry logic
- * 
+ *
  * @param operation Function that returns a Promise (Stripe API call)
  * @param config Retry configuration
  * @returns Result of the operation
@@ -78,55 +80,60 @@ function sleep(ms: number): Promise<void> {
  */
 export async function withRetry<T>(
   operation: () => Promise<T>,
-  config: RetryConfig = {}
+  config: RetryConfig = {},
 ): Promise<T> {
   const finalConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
   let lastError: any;
-  
+
   for (let attempt = 1; attempt <= finalConfig.maxRetries + 1; attempt++) {
     try {
       const result = await operation();
-      
+
       // Log retry success if this wasn't the first attempt
       if (attempt > 1) {
         console.log(`Operation succeeded on attempt ${attempt}`);
       }
-      
+
       return result;
-    } catch (error) {
+    } catch (error: any) {
       lastError = error;
-      
+
       // Check if error is retryable
       if (!isRetryableError(error)) {
-        console.error('Non-retryable error encountered:', {
-          type: error.type,
-          code: error.code,
-          message: error.message,
+        console.error("Non-retryable error encountered:", {
+          type: error?.type,
+          code: error?.code,
+          message: error?.message,
         });
         throw error;
       }
-      
+
       // Check if we have retries left
       if (attempt > finalConfig.maxRetries) {
-        console.error(`Operation failed after ${finalConfig.maxRetries} retries`);
+        console.error(
+          `Operation failed after ${finalConfig.maxRetries} retries`,
+        );
         throw error;
       }
-      
+
       // Calculate delay for next retry
       const delay = calculateDelay(attempt, finalConfig);
-      
-      console.warn(`Retryable error on attempt ${attempt}, retrying in ${delay}ms:`, {
-        type: error.type,
-        code: error.code,
-        statusCode: error.statusCode,
-        message: error.message,
-      });
-      
+
+      console.warn(
+        `Retryable error on attempt ${attempt}, retrying in ${delay}ms:`,
+        {
+          type: error?.type,
+          code: error?.code,
+          statusCode: error?.statusCode,
+          message: error?.message,
+        },
+      );
+
       // Wait before next retry
       await sleep(delay);
     }
   }
-  
+
   // This should never be reached, but TypeScript needs it
   throw lastError;
 }
@@ -137,7 +144,7 @@ export async function withRetry<T>(
 export async function retrieveSubscriptionWithRetry(
   stripe: Stripe,
   subscriptionId: string,
-  params?: Stripe.SubscriptionRetrieveParams
+  params?: Stripe.SubscriptionRetrieveParams,
 ): Promise<Stripe.Subscription> {
   return withRetry(() => stripe.subscriptions.retrieve(subscriptionId, params));
 }
@@ -148,7 +155,7 @@ export async function retrieveSubscriptionWithRetry(
 export async function retrieveCustomerWithRetry(
   stripe: Stripe,
   customerId: string,
-  params?: Stripe.CustomerRetrieveParams
+  params?: Stripe.CustomerRetrieveParams,
 ): Promise<Stripe.Customer | Stripe.DeletedCustomer> {
   return withRetry(() => stripe.customers.retrieve(customerId, params));
 }
@@ -158,7 +165,7 @@ export async function retrieveCustomerWithRetry(
  */
 export async function retrieveUpcomingInvoiceWithRetry(
   stripe: Stripe,
-  params: Stripe.InvoiceRetrieveUpcomingParams
+  params: Stripe.InvoiceRetrieveUpcomingParams,
 ): Promise<Stripe.Invoice> {
   return withRetry(() => stripe.invoices.retrieveUpcoming(params));
 }
@@ -168,7 +175,7 @@ export async function retrieveUpcomingInvoiceWithRetry(
  */
 export async function createCheckoutSessionWithRetry(
   stripe: Stripe,
-  params: Stripe.Checkout.SessionCreateParams
+  params: Stripe.Checkout.SessionCreateParams,
 ): Promise<Stripe.Checkout.Session> {
   return withRetry(() => stripe.checkout.sessions.create(params));
 }
@@ -179,7 +186,7 @@ export async function createCheckoutSessionWithRetry(
 export async function updateSubscriptionWithRetry(
   stripe: Stripe,
   subscriptionId: string,
-  params: Stripe.SubscriptionUpdateParams
+  params: Stripe.SubscriptionUpdateParams,
 ): Promise<Stripe.Subscription> {
   return withRetry(() => stripe.subscriptions.update(subscriptionId, params));
 }
@@ -190,7 +197,7 @@ export async function updateSubscriptionWithRetry(
 export async function cancelSubscriptionWithRetry(
   stripe: Stripe,
   subscriptionId: string,
-  params?: Stripe.SubscriptionCancelParams
+  params?: Stripe.SubscriptionCancelParams,
 ): Promise<Stripe.Subscription> {
   return withRetry(() => stripe.subscriptions.cancel(subscriptionId, params));
 }
@@ -200,7 +207,7 @@ export async function cancelSubscriptionWithRetry(
  */
 export async function createCustomerWithRetry(
   stripe: Stripe,
-  params: Stripe.CustomerCreateParams
+  params: Stripe.CustomerCreateParams,
 ): Promise<Stripe.Customer> {
   return withRetry(() => stripe.customers.create(params));
 }
@@ -211,7 +218,7 @@ export async function createCustomerWithRetry(
 export async function updateCustomerWithRetry(
   stripe: Stripe,
   customerId: string,
-  params: Stripe.CustomerUpdateParams
+  params: Stripe.CustomerUpdateParams,
 ): Promise<Stripe.Customer | Stripe.DeletedCustomer> {
   return withRetry(() => stripe.customers.update(customerId, params));
 }

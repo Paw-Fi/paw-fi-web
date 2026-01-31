@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
@@ -94,6 +95,11 @@ const appStoreAppId = Deno.env.get("APPLE_APP_ID") || "";
 const googleServiceAccountJson =
   Deno.env.get("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON") || "";
 const androidPackageName = Deno.env.get("ANDROID_PACKAGE_NAME") || "";
+
+const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+const stripe = stripeSecretKey
+  ? new Stripe(stripeSecretKey, { httpClient: Stripe.createFetchHttpClient() })
+  : null;
 
 const appleRootCaUrls = [
   "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
@@ -366,24 +372,67 @@ serve(async (req: Request) => {
     // Households: bound users cannot buy their own subscription
     const { data: existingSub } = await supabase
       .from("subscriptions")
-      .select("id, bound_to_user_id")
+      .select(
+        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id",
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if ((existingSub as any)?.bound_to_user_id) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "You are currently sharing a household subscription. Please leave the household first to manage your own subscription.",
-          code: "BOUND_TO_HOUSEHOLD",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      const boundToUserId = (existingSub as any).bound_to_user_id as string;
+      const { data: ownerSub, error: ownerSubError } = await supabase
+        .from("subscriptions")
+        .select("plan, status, bound_to_user_id")
+        .eq("user_id", boundToUserId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (ownerSubError) {
+        console.error("Failed to verify household owner subscription:", {
+          userId,
+          boundToUserId,
+          ownerSubError,
+        });
+        return new Response(
+          JSON.stringify({ error: "Failed to verify household subscription" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const ownerHasActiveSubscription =
+        !!ownerSub &&
+        !ownerSub.bound_to_user_id &&
+        ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
+          ownerSub.status === "trialing" ||
+          (ownerSub.status === "active" && ownerSub.plan !== "free"));
+
+      if (ownerHasActiveSubscription) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "You are currently sharing a household subscription. Please leave the household first to manage your own subscription.",
+            code: "BOUND_TO_HOUSEHOLD",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      console.log("Household binding ignored for purchase:", {
+        userId,
+        boundToUserId,
+        boundToHouseholdId: (existingSub as any).bound_to_household_id,
+        ownerPlan: ownerSub?.plan ?? null,
+        ownerStatus: ownerSub?.status ?? null,
+      });
     }
 
     const plan = catalogProduct.plan as SubscriptionPlan;
@@ -424,8 +473,8 @@ serve(async (req: Request) => {
       if (hasJws) {
         // ============================================================
         // StoreKit 2 JWS Verification Path
-        // Decode JWS payload and validate via App Store Server API
-        // (SignedDataVerifier uses X509Certificate which Deno doesn't support)
+        // Verify signed transaction (SignedDataVerifier) and optionally
+        // cross-check revocation via App Store Server API.
         // ============================================================
         if (!appStoreBundleId) {
           return new Response(
@@ -437,19 +486,15 @@ serve(async (req: Request) => {
           );
         }
 
-        // Step 1: Decode the JWS payload (without cryptographic verification)
-        let decodedTransaction: JWSTransactionDecodedPayload;
+        // Step 1 (CRITICAL): Verify the signed transaction cryptographically.
+        // Never trust unverified JWS payloads.
+        let decodedHint: JWSTransactionDecodedPayload;
         try {
-          console.log("Decoding JWS payload...");
-          decodedTransaction = decodeJwsPayload(serverReceipt);
-          console.log("JWS payload decoded successfully");
+          decodedHint = decodeJwsPayload(serverReceipt);
         } catch (decodeError) {
           console.error("Failed to decode JWS payload:", decodeError);
           return new Response(
-            JSON.stringify({
-              error: "Invalid transaction format",
-              details: String(decodeError),
-            }),
+            JSON.stringify({ error: "Invalid transaction" }),
             {
               status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -457,7 +502,66 @@ serve(async (req: Request) => {
           );
         }
 
-        console.log("Decoded transaction from JWS:", {
+        const appAppleId = Number(appStoreAppId);
+        if (!Number.isFinite(appAppleId)) {
+          return new Response(
+            JSON.stringify({ error: "APPLE_APP_ID not configured" }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const envString = decodedHint.environment?.toLowerCase();
+        const envHint =
+          envString === "sandbox"
+            ? Environment.SANDBOX
+            : Environment.PRODUCTION;
+
+        let decodedTransaction: JWSTransactionDecodedPayload;
+        try {
+          const rootCAs = await getAppleRootCAs();
+          const verifier = new SignedDataVerifier(
+            rootCAs,
+            true,
+            envHint,
+            appStoreBundleId,
+            appAppleId,
+          );
+          decodedTransaction =
+            await verifier.verifyAndDecodeTransaction(serverReceipt);
+          environment = envHint;
+        } catch (verifyErr) {
+          try {
+            const rootCAs = await getAppleRootCAs();
+            const otherEnv =
+              envHint === Environment.SANDBOX
+                ? Environment.PRODUCTION
+                : Environment.SANDBOX;
+            const verifier = new SignedDataVerifier(
+              rootCAs,
+              true,
+              otherEnv,
+              appStoreBundleId,
+              appAppleId,
+            );
+            decodedTransaction =
+              await verifier.verifyAndDecodeTransaction(serverReceipt);
+            environment = otherEnv;
+          } catch (verifyErr2) {
+            console.error("Failed to verify JWS payload:", verifyErr2);
+            return new Response(
+              JSON.stringify({ error: "Invalid transaction signature" }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+        }
+
+        console.log("Verified transaction from JWS:", {
           transactionId: decodedTransaction.transactionId,
           originalTransactionId: decodedTransaction.originalTransactionId,
           productId: decodedTransaction.productId,
@@ -467,14 +571,6 @@ serve(async (req: Request) => {
           expiresDate: decodedTransaction.expiresDate,
           revocationDate: decodedTransaction.revocationDate,
         });
-
-        // Determine environment from the decoded payload
-        const envString = decodedTransaction.environment?.toLowerCase();
-        environment =
-          envString === "sandbox"
-            ? Environment.SANDBOX
-            : Environment.PRODUCTION;
-        console.log("Environment from JWS:", environment);
 
         // Step 2: Validate via App Store Server API (if configured)
         // IMPORTANT: We use server API for VALIDATION only (revocation check)
@@ -499,7 +595,13 @@ serve(async (req: Request) => {
               console.log("App Store Server API validation successful");
               // Only use server data for revocation check - DO NOT replace transaction data
               // Server history might contain OLD expired transactions which would corrupt our data
-              serverRevocationDate = serverTransaction.revocationDate;
+              if (
+                serverTransaction.productId === storeProductId &&
+                serverTransaction.originalTransactionId ===
+                  decodedTransaction.originalTransactionId
+              ) {
+                serverRevocationDate = serverTransaction.revocationDate;
+              }
 
               console.log("Server API check:", {
                 serverRevocationDate,
@@ -650,7 +752,8 @@ serve(async (req: Request) => {
           console.log("Final subscription status:", {
             status,
             currentPeriodEnd,
-            environment: environment === Environment.SANDBOX ? "Sandbox" : "Production",
+            environment:
+              environment === Environment.SANDBOX ? "Sandbox" : "Production",
           });
         }
       } else {
@@ -987,6 +1090,14 @@ serve(async (req: Request) => {
         plan,
         status,
         billing_interval: billingInterval,
+        bound_to_user_id: null,
+        bound_to_household_id: null,
+        // Provider hygiene: prevent mixed-source subscription rows.
+        stripe_subscription_id: null,
+        stripe_customer_id: null,
+        play_purchase_token: null,
+        play_order_id: null,
+        play_package_name: null,
         current_period_end: plan === "lifetime" ? null : currentPeriodEnd,
         cancel_at_period_end: false,
         app_store_transaction_id: transactionId,
@@ -1002,6 +1113,33 @@ serve(async (req: Request) => {
         currentPeriodEnd,
         environment: environmentString,
       });
+
+      // If user previously had a Stripe subscription, best-effort cancel it to avoid double billing.
+      if (
+        stripe &&
+        existingSub &&
+        (existingSub as any).provider === "stripe" &&
+        typeof (existingSub as any).stripe_subscription_id === "string" &&
+        (existingSub as any).stripe_subscription_id.startsWith("sub_")
+      ) {
+        try {
+          await stripe.subscriptions.cancel(
+            (existingSub as any).stripe_subscription_id,
+            {
+              prorate: false,
+            },
+          );
+        } catch (cancelError) {
+          console.error("Failed to cancel previous Stripe subscription:", {
+            userId,
+            stripe_subscription_id: (existingSub as any).stripe_subscription_id,
+            error:
+              cancelError instanceof Error
+                ? cancelError.message
+                : String(cancelError),
+          });
+        }
+      }
 
       // Upsert by user_id (one row per user, latest state)
       const { error: upsertError } = await supabase
@@ -1134,6 +1272,13 @@ serve(async (req: Request) => {
 
       const subscriptionState = asString(data.subscriptionState);
       const lineItems = Array.isArray(data.lineItems) ? data.lineItems : [];
+      const lineProductId = asString(lineItems[0]?.productId);
+      if (lineProductId && lineProductId !== storeProductId) {
+        return new Response(JSON.stringify({ error: "Product ID mismatch" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const expiryTime = asString(lineItems[0]?.expiryTime);
       orderId = asString(lineItems[0]?.orderId) || asString(data.latestOrderId);
 
@@ -1202,6 +1347,14 @@ serve(async (req: Request) => {
       plan,
       status,
       billing_interval: billingInterval,
+      bound_to_user_id: null,
+      bound_to_household_id: null,
+      // Provider hygiene: prevent mixed-source subscription rows.
+      stripe_subscription_id: null,
+      stripe_customer_id: null,
+      app_store_transaction_id: null,
+      app_store_original_transaction_id: null,
+      app_store_environment: null,
       current_period_end: isLifetime ? null : currentPeriodEnd,
       cancel_at_period_end: false,
       play_purchase_token: purchaseToken,
@@ -1209,6 +1362,33 @@ serve(async (req: Request) => {
       play_package_name: androidPackageName,
       updated_at: nowIso(),
     };
+
+    // If user previously had a Stripe subscription, best-effort cancel it to avoid double billing.
+    if (
+      stripe &&
+      existingSub &&
+      (existingSub as any).provider === "stripe" &&
+      typeof (existingSub as any).stripe_subscription_id === "string" &&
+      (existingSub as any).stripe_subscription_id.startsWith("sub_")
+    ) {
+      try {
+        await stripe.subscriptions.cancel(
+          (existingSub as any).stripe_subscription_id,
+          {
+            prorate: false,
+          },
+        );
+      } catch (cancelError) {
+        console.error("Failed to cancel previous Stripe subscription:", {
+          userId,
+          stripe_subscription_id: (existingSub as any).stripe_subscription_id,
+          error:
+            cancelError instanceof Error
+              ? cancelError.message
+              : String(cancelError),
+        });
+      }
+    }
 
     const { error: upsertError } = await supabase
       .from("subscriptions")

@@ -264,55 +264,14 @@ function CheckoutPage() {
 
       // If no user is logged in but userId param is provided (old flow - not secure)
       if (paramUserId && !user && !accessToken) {
-        setIsValidatingUser(true);
-        setCheckoutLoading(true);
-
-        try {
-          // Check if the userId exists in the database
-          const { data, error: dbError } = await supabase
-            .from("users")
-            .select("id")
-            .eq("id", paramUserId)
-            .single();
-
-          if (dbError || !data) {
-            console.error("Invalid userId provided:", paramUserId, dbError);
-            setError(
-              "Invalid user ID. Please ensure you have a valid account.",
-            );
-            setCheckoutLoading(false);
-            setIsValidatingUser(false);
-            return;
-          }
-
-          // UserId is valid, now check if they already have an active subscription
-          console.log("UserId validated successfully:", paramUserId);
-
-          // Check for existing subscription
-          const { data: subscriptionData, error: subError } = await supabase
-            .from("subscriptions")
-            .select("status, end_date")
-            .eq("user_id", paramUserId)
-            .in("status", ["active", "trialing"])
-            .single();
-
-          if (subscriptionData && !subError) {
-            console.log("User already has an active subscription");
-            setError("This account already has an active subscription.");
-            setCheckoutLoading(false);
-            setIsValidatingUser(false);
-            return;
-          }
-
-          setValidatedUserId(paramUserId);
-          setIsValidatingUser(false);
-          setCheckoutLoading(false);
-        } catch (err) {
-          console.error("Error validating userId:", err);
-          setError("Failed to validate user. Please try again.");
-          setCheckoutLoading(false);
-          setIsValidatingUser(false);
-        }
+        // Old mobile flow used to pass userId via query params without an auth session.
+        // This is no longer supported; Edge Functions must be called with a valid JWT.
+        setError(
+          "Authentication required. Please return to the app and restart checkout.",
+        );
+        setCheckoutLoading(false);
+        setIsValidatingUser(false);
+        return;
       } else if (!user && !paramUserId) {
         // No user logged in and no userId provided
         setError("Authentication required. Please log in to continue.");
@@ -537,20 +496,72 @@ function CheckoutPage() {
           checkoutBody.billingInterval = selectedBilling;
         }
 
-        const { data, error } = await supabase.functions.invoke(
-          "create-checkout-session",
-          {
-            method: "POST",
-            body: checkoutBody,
+        // Get the current session for auth header
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+
+        // Use raw fetch to have full control over error response handling
+        // Get Supabase URL from the client's internal URL or use hardcoded fallback
+        const supabaseUrl = (supabase as any).supabaseUrl || 
+          (supabase as any).rest?.url?.replace('/rest/v1', '') ||
+          'https://qbuynyxyemigtnvdujts.supabase.co';
+        const functionUrl = `${supabaseUrl}/functions/v1/create-checkout-session`;
+        
+        const fetchResponse = await fetch(functionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
           },
-        );
+          body: JSON.stringify(checkoutBody),
+        });
 
-        console.log("Stripe session created with response:", { data, error });
+        // Parse the response body
+        const data = await fetchResponse.json();
+        
+        console.log("Stripe session response:", { 
+          ok: fetchResponse.ok, 
+          status: fetchResponse.status,
+          data 
+        });
 
-        if (error) {
-          console.error("Supabase function error:", error);
+        // Handle error responses
+        if (!fetchResponse.ok) {
+          const errorMessage = data?.error || "Failed to create checkout session";
+          const errorDetails = data?.details || null;
+          const code = data?.code;
+
+          console.error("Edge Function error:", { 
+            errorMessage, 
+            errorDetails, 
+            code,
+            status: fetchResponse.status
+          });
+
+          if (code === "SUBSCRIPTION_MANAGED_IN_APP") {
+            setPaymentStatus("failed");
+            setError(
+              "Your subscription is managed through an in-app purchase. Please manage billing in the App Store / Play Store.",
+            );
+            setCheckoutLoading(false);
+            return;
+          }
+
+          if (code === "BOUND_TO_HOUSEHOLD") {
+            setPaymentStatus("failed");
+            setError(
+              "You are currently sharing a household subscription. Please leave the household first to manage your own subscription.",
+            );
+            setCheckoutLoading(false);
+            return;
+          }
+
           setPaymentStatus("failed");
-          throw new Error(error.message || "Failed to create checkout session");
+          // Use the detailed error message from the response body
+          const displayError = errorDetails 
+            ? `${errorMessage}: ${errorDetails}`
+            : errorMessage;
+          throw new Error(displayError);
         }
 
         // Check if we have a client secret or checkout URL

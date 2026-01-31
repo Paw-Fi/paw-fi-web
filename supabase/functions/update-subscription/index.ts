@@ -7,7 +7,6 @@ import { authenticateUser } from "../shared/auth.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2025-07-30.basil",
   httpClient: Stripe.createFetchHttpClient(),
 });
 
@@ -44,8 +43,16 @@ serve(async (req) => {
     // Use authenticated userId - this is the ONLY safe userId
     const userId = authResult.userId!;
 
-    // Parse the request body (action, plan, billingInterval only)
-    const { action, plan, billingInterval, prorationDate } = await req.json();
+    const body = (await req.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    const action = typeof body.action === "string" ? body.action : null;
+    const plan = typeof body.plan === "string" ? body.plan : null;
+    const billingInterval =
+      typeof body.billingInterval === "string" ? body.billingInterval : null;
+    const prorationDate =
+      typeof body.prorationDate === "number" ? body.prorationDate : null;
 
     if (!action) {
       return new Response(JSON.stringify({ error: "Action is required" }), {
@@ -127,8 +134,13 @@ serve(async (req) => {
         }
 
         // Plan hierarchy for determining upgrade vs downgrade (without lifetime)
-        const PLAN_HIERARCHY = { free: 0, plus: 1, premium: 2 };
-        const isUpgrade = PLAN_HIERARCHY[plan] > PLAN_HIERARCHY[currentPlan];
+        const PLAN_HIERARCHY: Record<string, number> = {
+          free: 0,
+          plus: 1,
+          premium: 2,
+        };
+        const isUpgrade =
+          (PLAN_HIERARCHY[plan] ?? 0) > (PLAN_HIERARCHY[currentPlan] ?? 0);
 
         // Special case: Downgrading to free plan (cancel subscription)
         if (plan === "free") {
@@ -203,7 +215,7 @@ serve(async (req) => {
         }
 
         // For existing subscriptions, update the subscription in Stripe
-        const priceId = SUBSCRIPTION_PRICES[plan][billingInterval];
+        const priceId = (SUBSCRIPTION_PRICES as any)?.[plan]?.[billingInterval];
 
         if (!priceId) {
           return new Response(
@@ -359,10 +371,10 @@ serve(async (req) => {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
-        } catch (scheduleError) {
+        } catch (scheduleError: any) {
           console.error("Error creating subscription schedule:", scheduleError);
           throw new Error(
-            `Failed to schedule downgrade: ${scheduleError.message}`,
+            `Failed to schedule downgrade: ${scheduleError?.message ?? "unknown"}`,
           );
         }
       }

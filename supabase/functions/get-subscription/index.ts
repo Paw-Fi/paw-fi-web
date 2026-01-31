@@ -6,7 +6,6 @@ import { authenticateUser } from "../shared/auth.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2025-07-30.basil",
   httpClient: Stripe.createFetchHttpClient(),
 });
 
@@ -16,10 +15,10 @@ const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 serve(async (req: Request) => {
-  try {
-    const origin = req.headers.get("origin") || "";
-    const corsHeaders = getCorsHeaders(origin);
+  const origin = req.headers.get("origin") || "";
+  const corsHeaders = getCorsHeaders(origin);
 
+  try {
     // Handle CORS preflight OPTIONS request
     if (req.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders });
@@ -81,8 +80,10 @@ serve(async (req: Request) => {
       // Map the direct subscription to match the expected format
       finalSubscription = {
         id: directSubscription.id,
+        provider: directSubscription.provider,
         plan: directSubscription.plan,
         status: directSubscription.status,
+        billing_interval: directSubscription.billing_interval,
         current_period_end: directSubscription.current_period_end,
         next_payment_date: directSubscription.cancel_at_period_end
           ? null
@@ -90,6 +91,7 @@ serve(async (req: Request) => {
         cancel_at_period_end: directSubscription.cancel_at_period_end,
         stripe_subscription_id: directSubscription.stripe_subscription_id,
         stripe_customer_id: directSubscription.stripe_customer_id,
+        store_product_id: directSubscription.store_product_id,
         created_at: directSubscription.created_at,
         updated_at: directSubscription.updated_at,
       };

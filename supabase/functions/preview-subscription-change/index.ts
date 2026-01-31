@@ -7,7 +7,6 @@ import { authenticateUser } from "../shared/auth.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2025-07-30.basil",
   httpClient: Stripe.createFetchHttpClient(),
 });
 
@@ -51,8 +50,19 @@ serve(async (req) => {
     // Use authenticated userId - this is the ONLY safe userId
     const userId = authResult.userId!;
 
-    // Parse the request body (newPlan, newBillingInterval only)
-    const { newPlan, newBillingInterval } = await req.json();
+    const body = (await req.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    const newPlan = typeof body.newPlan === "string" ? body.newPlan : null;
+    const newBillingIntervalRaw =
+      typeof body.newBillingInterval === "string"
+        ? body.newBillingInterval
+        : null;
+    const newBillingInterval =
+      newBillingIntervalRaw === "monthly" || newBillingIntervalRaw === "yearly"
+        ? newBillingIntervalRaw
+        : null;
 
     if (!newPlan) {
       return new Response(JSON.stringify({ error: "Plan is required" }), {
@@ -62,10 +72,22 @@ serve(async (req) => {
     }
 
     // Lifetime doesn't require billing interval (one-time payment)
-    if (newPlan !== "lifetime" && !newBillingInterval) {
+    if (newPlan !== "lifetime" && !newBillingIntervalRaw) {
       return new Response(
         JSON.stringify({
           error: "Billing interval is required for recurring plans",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (newPlan !== "lifetime" && !newBillingInterval) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid billing interval",
         }),
         {
           status: 400,
@@ -131,9 +153,25 @@ serve(async (req) => {
       );
     }
 
+    // At this point, newPlan is not lifetime, so billing interval must be valid.
+    const billingInterval = newBillingInterval;
+    if (!billingInterval) {
+      return new Response(
+        JSON.stringify({
+          error: "Billing interval is required for recurring plans",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Determine if this is an upgrade or downgrade (without lifetime)
-    const isUpgrade = PLAN_HIERARCHY[newPlan] > PLAN_HIERARCHY[currentPlan];
-    const isDowngrade = PLAN_HIERARCHY[newPlan] < PLAN_HIERARCHY[currentPlan];
+    const hierarchy: Record<string, number> = PLAN_HIERARCHY;
+    const isUpgrade = (hierarchy[newPlan] ?? 0) > (hierarchy[currentPlan] ?? 0);
+    const isDowngrade =
+      (hierarchy[newPlan] ?? 0) < (hierarchy[currentPlan] ?? 0);
     const isSamePlan = newPlan === currentPlan;
 
     // Special case: Downgrading to free plan (cancellation)
@@ -190,7 +228,9 @@ serve(async (req) => {
       currentPlan === "free"
     ) {
       // For new subscriptions, return basic pricing info without preview
-      const priceId = SUBSCRIPTION_PRICES[newPlan]?.[newBillingInterval];
+      const priceId = (SUBSCRIPTION_PRICES as any)?.[newPlan]?.[
+        billingInterval
+      ];
 
       if (!priceId) {
         return new Response(
@@ -212,7 +252,7 @@ serve(async (req) => {
           isDowngrade: false,
           currentPlan,
           newPlan,
-          newBillingInterval,
+          newBillingInterval: billingInterval,
           immediateCharge: price.unit_amount || 0,
           currency: price.currency,
           message: `You'll be charged ${((price.unit_amount || 0) / 100).toFixed(2)} ${price.currency.toUpperCase()} ${newBillingInterval === "monthly" ? "per month" : "per year"}`,
@@ -226,7 +266,9 @@ serve(async (req) => {
     }
 
     // For existing subscriptions, get the new price ID
-    const newPriceId = SUBSCRIPTION_PRICES[newPlan]?.[newBillingInterval];
+    const newPriceId = (SUBSCRIPTION_PRICES as any)?.[newPlan]?.[
+      billingInterval
+    ];
 
     if (!newPriceId) {
       return new Response(
@@ -277,19 +319,19 @@ serve(async (req) => {
 
       // Calculate proration amounts
       const prorationLineItems = upcomingInvoice.lines.data.filter(
-        (line) => line.proration,
+        (line: any) => line.proration,
       );
       const totalProration = prorationLineItems.reduce(
-        (sum, line) => sum + line.amount,
+        (sum: number, line: any) => sum + line.amount,
         0,
       );
 
       // Get the new recurring amount
       const recurringLineItems = upcomingInvoice.lines.data.filter(
-        (line) => !line.proration,
+        (line: any) => !line.proration,
       );
       const newRecurringAmount = recurringLineItems.reduce(
-        (sum, line) => sum + line.amount,
+        (sum: number, line: any) => sum + line.amount,
         0,
       );
 
@@ -348,7 +390,7 @@ serve(async (req) => {
             amountDue: upcomingInvoice.amount_due,
             subtotal: upcomingInvoice.subtotal,
             total: upcomingInvoice.total,
-            lineItems: upcomingInvoice.lines.data.map((line) => ({
+            lineItems: upcomingInvoice.lines.data.map((line: any) => ({
               description: line.description,
               amount: line.amount,
               proration: line.proration,
@@ -361,12 +403,12 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error previewing invoice:", error);
       return new Response(
         JSON.stringify({
           error: "Failed to preview subscription change",
-          details: error.message,
+          details: error?.message ?? "Unknown error",
         }),
         {
           status: 500,
@@ -374,12 +416,12 @@ serve(async (req) => {
         },
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in preview-subscription-change:", error);
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: error.message,
+        details: error?.message ?? "Unknown error",
       }),
       {
         status: 500,
