@@ -262,128 +262,146 @@ function PaymentStatusPage() {
             {/* Content Section */}
             <div className="p-8 pt-0">
               <AnimatePresence mode="wait">
-                {isLoading && (
-                   <motion.div
+                {isLoading ? (
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     key="loading"
-                   >
-                     <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-200">
-                        <div className="flex items-start gap-3">
-                            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-                            <div>
-                                <p className="font-medium">Please do not close this page</p>
-                                <p className="mt-1 opacity-90">Closing this window might interrupt the verification process.</p>
-                            </div>
+                  >
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 text-sm text-blue-800 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-200">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                          <p className="font-medium">Please do not close this page</p>
+                          <p className="mt-1 opacity-90">Closing this window might interrupt the verification process.</p>
                         </div>
-                     </div>
-                   </motion.div>
-                )}
-
-                {paymentStatus === "success" && (
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : paymentStatus === "success" ? (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     key="success"
+                    className="text-left"
                   >
-                     {subscriptionDetails && (
-                        <div className="mb-8 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50">
-                          <div className="border-b border-slate-200 bg-slate-100/50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800">
-                            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                Subscription Details
-                            </h3>
-                          </div>
-                          <div className="p-4 space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                                    <CreditCard className="h-4 w-4" /> Plan
-                                </span>
-                                <span className="font-medium text-slate-900 dark:text-white capitalize">{subscriptionDetails.plan}</span>
-                            </div>
-                             <div className="flex justify-between text-sm">
-                                <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                                    <Calendar className="h-4 w-4" /> Ends
-                                </span>
-                                <span className="font-medium text-slate-900 dark:text-white">
-                                    {subscriptionDetails.current_period_end ? formatDate(subscriptionDetails.current_period_end) : "Lifetime"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                                    <RefreshCw className="h-4 w-4" /> Auto-renew
-                                </span>
-                                <span className="font-medium text-slate-900 dark:text-white">
-                                    {subscriptionDetails.cancel_at_period_end ? "No" : "Yes"}
-                                </span>
-                            </div>
-                          </div>
+                    <div className="relative space-y-8 pl-10 before:absolute before:left-[17px] before:top-2 before:h-[calc(100%-20px)] before:w-0.5 before:bg-slate-100 dark:before:bg-slate-800">
+                      {/* Step 1: Upgrade Confirmed */}
+                      <div className="relative">
+                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white shadow-sm dark:border-slate-900">
+                          <span className="font-bold text-sm">1</span>
                         </div>
-                     )}
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                          Plan Upgraded
+                        </h3>
+                        {subscriptionDetails && (
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                            Your account has been successfully upgraded to the{" "}
+                            <span className="font-medium text-emerald-600 dark:text-emerald-400 capitalize">
+                              {subscriptionDetails.plan}
+                            </span>{" "}
+                            plan.
+                          </p>
+                        )}
+                      </div>
 
-                    <div className="grid gap-3">
-                      
-                        <div className="flex gap-3 justify-center mt-2">
-                             <AndroidDownloadButton />
-                             <AppleDownloadButton />
+                      {/* Step 2: Download App */}
+                      <div className="relative">
+                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-blue-500 text-white shadow-sm dark:border-slate-900">
+                          <span className="font-bold text-sm">2</span>
                         </div>
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                          Download Our App
+                        </h3>
+                        <p className="mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
+                          Get the full Moneko experience on your mobile device.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <AppleDownloadButton />
+                          <AndroidDownloadButton />
+                        </div>
+                      </div>
+
+                      {/* Step 3: Login */}
+                      <div className="relative">
+                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-slate-100 text-slate-500 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-400">
+                          <span className="font-bold text-sm">3</span>
+                        </div>
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                          Login
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                          Sign in with the same account you used for this subscription.
+                        </p>
+                      </div>
+
+                      {/* Step 4: Log Expense */}
+                      <div className="relative">
+                        <div className="absolute -left-10 top-0.5 flex h-9 w-9 items-center justify-center rounded-full border-4 border-white bg-slate-100 text-slate-500 dark:border-slate-900 dark:bg-slate-800 dark:text-slate-400">
+                          <span className="font-bold text-sm">4</span>
+                        </div>
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                          Log an Expense
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                          Start tracking your spending immediately to reach your financial goals.
+                        </p>
+                      </div>
                     </div>
+                    
+                   
                   </motion.div>
-                )}
-
-                {(paymentStatus === "failed" || paymentStatus === "canceled") && (
-                   <motion.div
+                ) : (paymentStatus === "failed" || paymentStatus === "canceled") ? (
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     key="error-state"
                     className="grid gap-3"
                   >
                     <Button 
-                        variant="default" 
-                        size="lg" 
-                        className="w-full"
-                        onClick={() => navigate({ to: "/pricing" })}
+                      variant="default" 
+                      size="lg" 
+                      className="w-full"
+                      onClick={() => navigate({ to: "/pricing" })}
                     >
-                        Return to Pricing
+                      Return to Pricing
                     </Button>
                     <Button 
-                        variant="outline" 
-                        size="lg" 
-                        className="w-full"
-                         onClick={() =>
-                            (window.location.href = "mailto:hello@moneko.io?subject=Payment%20Issue")
-                          }
+                      variant="outline" 
+                      size="lg" 
+                      className="w-full"
+                      onClick={() =>
+                        (window.location.href = "mailto:hello@moneko.io?subject=Payment%20Issue")
+                      }
                     >
-                        <Mail className="mr-2 h-4 w-4" /> Contact Support
+                      <Mail className="mr-2 h-4 w-4" /> Contact Support
                     </Button>
                   </motion.div>
-                )}
-                
-                 {/* Pending Logic for Action */}
-                 {paymentStatus === "pending" && !isLoading && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} 
-                        animate={{ opacity: 1 }}
-                        className="grid gap-3"
+                ) : paymentStatus === "pending" ? (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }}
+                    key="pending"
+                    className="grid gap-3"
+                  >
+                    <Button
+                      onClick={() => window.location.reload()}
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
                     >
-                        <Button
-                          onClick={() => window.location.reload()}
-                          variant="outline"
-                          size="lg"
-                          className="w-full"
-                        >
-                          <RefreshCw className="mr-2 h-4 w-4" /> Check Again
-                        </Button>
-                        <Button 
-                            variant="default"
-                            onClick={() => navigate({ to: "/dashboard" })}
-                            className="opacity-80"
-                        >
-                          Go to Dashboard
-                        </Button>
-                    </motion.div>
-                  )}
-
+                      <RefreshCw className="mr-2 h-4 w-4" /> Check Again
+                    </Button>
+                    <Button 
+                      variant="default"
+                      onClick={() => navigate({ to: "/dashboard" })}
+                      className="opacity-80"
+                    >
+                      Go to Dashboard
+                    </Button>
+                  </motion.div>
+                ) : null}
               </AnimatePresence>
             </div>
 
