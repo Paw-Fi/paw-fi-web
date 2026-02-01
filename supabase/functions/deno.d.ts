@@ -94,6 +94,21 @@ declare module 'https://esm.sh/@supabase/supabase-js@2.7.1' {
   export function createClient(supabaseUrl: string, supabaseKey: string, options?: SupabaseClientOptions): SupabaseClient;
 }
 
+declare module "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.mjs?no-dts" {
+  export const GlobalWorkerOptions: {
+    workerSrc: string;
+  };
+
+  export function getDocument(params: any): {
+    promise: Promise<{
+      numPages: number;
+      getPage: (pageNumber: number) => Promise<{
+        getTextContent: () => Promise<{ items: any[] }>;
+      }>;
+    }>;
+  };
+}
+
 export declare namespace Deno {
   interface Addr {
     transport: 'tcp' | 'udp';

@@ -65,12 +65,13 @@ CRITICAL RULES:
 11. **Reminders/Recurring**: Recurring transactions can include reminders; ask for frequency and whether to set a reminder if the user hints at it.
 12. **Income vs Expense**: All transactions live in the "expenses" table with type = "expense" or "income". Default to expense if unclear. Always set the type when listing, adding, updating, or recurring. For space queries, use household_id to include transactions from all members; for personal, use contact_id with household_id IS NULL.
 12. **Tooling discipline**: For add/update/delete/recurring/budget/envelope requests, call the appropriate tool. For recurring requests without a frequency, default to monthly. For incomes, set type="income".
-13. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to spaces by name only; if multiple, offer names, not IDs.
-14. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
-15. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
-16. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-17. **Financial snapshot**: For asks like “current financial situation/health/status”: provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
-18. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
+13. **Bulk imports**: When the user uploads a receipt, bank statement, or file with multiple transactions, use 'add_transactions_batch' to save them all at once (more efficient than multiple add_transaction calls). Present a summary of all items for confirmation before saving.
+14. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to spaces by name only; if multiple, offer names, not IDs.
+15. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
+16. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
+17. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
+18. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
+19. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
 
 COMMON USER INTENTS (answer directly, propose next steps):
 - Spending clarity: where money goes, why cash runs out, breakdowns by category, spot leaks, compare to norms.
@@ -1310,6 +1311,91 @@ Deno.serve(async (req: Request) => {
         },
       },
       {
+        name: "add_transactions_batch",
+        description:
+          "Add multiple transactions at once. Use this when the user uploads a receipt/statement with multiple transactions or explicitly lists several transactions to save. More efficient than calling add_transaction multiple times.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            household_id: {
+              type: "STRING",
+              description:
+                "Optional: Space ID if these are shared transactions",
+            },
+            household_name: {
+              type: "STRING",
+              description: "Optional: Space name if user provided it",
+            },
+            is_portfolio: {
+              type: "BOOLEAN",
+              description: "Optional: Whether the target space is a portfolio",
+            },
+            transactions: {
+              type: "ARRAY",
+              description: "Array of transactions to save",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  type: { type: "STRING", enum: ["expense", "income"] },
+                  amount: {
+                    type: "NUMBER",
+                    description: "Amount in major units",
+                  },
+                  category: { type: "STRING", description: "Category name" },
+                  description: {
+                    type: "STRING",
+                    description: "Description/Note",
+                  },
+                  date: { type: "STRING", description: "YYYY-MM-DD" },
+                  currency: {
+                    type: "STRING",
+                    description: "ISO Currency Code",
+                  },
+                  payer_name: {
+                    type: "STRING",
+                    description:
+                      "Shared space only: who paid (member name/email)",
+                  },
+                  split_type: {
+                    type: "STRING",
+                    enum: ["equal", "amount", "percentage", "shares"],
+                  },
+                  member_splits: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        member_name: { type: "STRING" },
+                        amount: { type: "NUMBER" },
+                        percentage: { type: "NUMBER" },
+                        shares: { type: "NUMBER" },
+                      },
+                      required: ["member_name"],
+                    },
+                  },
+                  source: {
+                    type: "STRING",
+                    description: "Income only: source label",
+                  },
+                  owner_type: {
+                    type: "STRING",
+                    enum: ["me", "partner", "household"],
+                    description: "Income only",
+                  },
+                  privacy_scope: {
+                    type: "STRING",
+                    enum: ["private", "balances_only", "full"],
+                    description: "Income only",
+                  },
+                },
+                required: ["type", "amount", "category"],
+              },
+            },
+          },
+          required: ["transactions"],
+        },
+      },
+      {
         name: "list_expenses",
         description: "List recent transactions (expenses or income).",
         parameters: {
@@ -1456,6 +1542,99 @@ Deno.serve(async (req: Request) => {
               },
             );
             toolResult = error ? { error } : { success: true, data };
+          } else if (call.name === "add_transactions_batch") {
+            // Batch save for multiple transactions
+            const rawTransactions = Array.isArray(call.args.transactions)
+              ? call.args.transactions
+              : [];
+
+            if (rawTransactions.length === 0) {
+              toolResult = { error: "No transactions provided" };
+            } else {
+              const householdId = (call.args.household_id || null) as
+                | string
+                | null;
+              const isPortfolio = call.args.is_portfolio ?? false;
+
+              // Build transactions array for the batch endpoint
+              const batchTransactions: any[] = [];
+              const defaultDate = formatDateInTimeZone(userTimezone);
+
+              for (const tx of rawTransactions) {
+                const txType =
+                  typeof tx.type === "string" && tx.type
+                    ? tx.type.toLowerCase()
+                    : "expense";
+                const dateStr = normalizeDateInput(tx.date, defaultDate);
+
+                // Resolve splits for household expenses
+                let payerUserId: string | undefined;
+                let customSplits: CustomSplits | undefined;
+
+                if (householdId && !isPortfolio && txType === "expense") {
+                  const splitConfig = await resolveHouseholdSplitConfig(
+                    supabase,
+                    householdId,
+                    userId,
+                    Number(tx.amount || 0),
+                    tx,
+                  );
+                  payerUserId = splitConfig.payerUserId;
+                  customSplits = splitConfig.customSplits;
+                }
+
+                batchTransactions.push({
+                  type: txType,
+                  amount: tx.amount,
+                  category: tx.category,
+                  currency: tx.currency || userCurrency,
+                  date: dateStr,
+                  description: tx.description,
+                  source: tx.source,
+                  ownerType: tx.owner_type || "me",
+                  privacyScope: tx.privacy_scope || "full",
+                  payerUserId,
+                  customSplits,
+                });
+              }
+
+              // Call save-transactions-batch via direct function invoke
+              // Note: App mode doesn't have EDGE_FUNCTION_KEY context, use direct DB access
+              const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
+              const internalKey = (SECRET_API_KEY || "").trim();
+
+              const { data, error } = await supabase.functions.invoke(
+                "save-transactions-batch",
+                {
+                  body: {
+                    userId,
+                    householdId,
+                    isPortfolio,
+                    transactions: batchTransactions,
+                  },
+                  headers: internalKey
+                    ? { "X-Moneko-Internal-Key": internalKey }
+                    : {},
+                },
+              );
+
+              const success = !error && data?.success === true;
+              if (success) {
+                const summary = data?.summary || {};
+                toolResult = {
+                  success: true,
+                  message: `Saved ${summary.succeeded || batchTransactions.length} of ${summary.total || batchTransactions.length} transactions`,
+                  succeeded: summary.succeeded,
+                  failed: summary.failed,
+                };
+              } else {
+                toolResult = {
+                  error:
+                    formatInvokeError(error ?? data?.error) ||
+                    "Failed to save transactions",
+                };
+              }
+            }
           } else {
             toolResult = { error: "Tool not supported in app mode" };
           }
@@ -2385,6 +2564,91 @@ Deno.serve(async (req: Request) => {
         },
       },
       {
+        name: "add_transactions_batch",
+        description:
+          "Add multiple transactions at once. Use this when the user uploads a receipt/statement with multiple transactions or explicitly lists several transactions to save. More efficient than calling add_transaction multiple times.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            household_id: {
+              type: "STRING",
+              description:
+                "Optional: Space ID if these are shared transactions",
+            },
+            household_name: {
+              type: "STRING",
+              description: "Optional: Space name if user provided it",
+            },
+            is_portfolio: {
+              type: "BOOLEAN",
+              description: "Optional: Whether the target space is a portfolio",
+            },
+            transactions: {
+              type: "ARRAY",
+              description: "Array of transactions to save",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  type: { type: "STRING", enum: ["expense", "income"] },
+                  amount: {
+                    type: "NUMBER",
+                    description: "Amount in major units",
+                  },
+                  category: { type: "STRING", description: "Category name" },
+                  description: {
+                    type: "STRING",
+                    description: "Description/Note",
+                  },
+                  date: { type: "STRING", description: "YYYY-MM-DD" },
+                  currency: {
+                    type: "STRING",
+                    description: "ISO Currency Code",
+                  },
+                  payer_name: {
+                    type: "STRING",
+                    description:
+                      "Shared space only: who paid (member name/email)",
+                  },
+                  split_type: {
+                    type: "STRING",
+                    enum: ["equal", "amount", "percentage", "shares"],
+                  },
+                  member_splits: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        member_name: { type: "STRING" },
+                        amount: { type: "NUMBER" },
+                        percentage: { type: "NUMBER" },
+                        shares: { type: "NUMBER" },
+                      },
+                      required: ["member_name"],
+                    },
+                  },
+                  source: {
+                    type: "STRING",
+                    description: "Income only: source label",
+                  },
+                  owner_type: {
+                    type: "STRING",
+                    enum: ["me", "partner", "household"],
+                    description: "Income only",
+                  },
+                  privacy_scope: {
+                    type: "STRING",
+                    enum: ["private", "balances_only", "full"],
+                    description: "Income only",
+                  },
+                },
+                required: ["type", "amount", "category"],
+              },
+            },
+          },
+          required: ["transactions"],
+        },
+      },
+      {
         name: "update_transaction",
         description: "Update an existing expense transaction.",
         parameters: {
@@ -2971,6 +3235,121 @@ Deno.serve(async (req: Request) => {
                   formatted,
                 });
               }
+            }
+          } else if (call.name === "add_transactions_batch") {
+            // Batch save for multiple transactions (from receipts, bank statements, etc.)
+            const rawTransactions = Array.isArray(call.args.transactions)
+              ? call.args.transactions
+              : [];
+
+            if (rawTransactions.length === 0) {
+              toolResult = { error: "No transactions provided" };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+
+            // Resolve household context
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const isPortfolio =
+              call.args.is_portfolio ?? spaceMeta?.isPortfolio ?? false;
+
+            // Build transactions array for the batch endpoint
+            const batchTransactions: any[] = [];
+            const defaultDate = formatDateInTimeZone(userTimezone);
+
+            for (const tx of rawTransactions) {
+              const txType =
+                typeof tx.type === "string" && tx.type
+                  ? tx.type.toLowerCase()
+                  : "expense";
+              const dateStr = normalizeDateInput(tx.date, defaultDate);
+
+              // Resolve splits for household expenses
+              let payerUserId: string | undefined;
+              let customSplits: CustomSplits | undefined;
+
+              if (householdId && !isPortfolio && txType === "expense") {
+                const splitConfig = await resolveHouseholdSplitConfig(
+                  supabase,
+                  householdId,
+                  userId,
+                  Number(tx.amount || 0),
+                  tx,
+                );
+                payerUserId = splitConfig.payerUserId;
+                customSplits = splitConfig.customSplits;
+              }
+
+              batchTransactions.push({
+                type: txType,
+                amount: tx.amount,
+                category: tx.category,
+                currency: tx.currency || userCurrency,
+                date: dateStr,
+                description: tx.description,
+                source: tx.source,
+                ownerType: tx.owner_type || "me",
+                privacyScope: tx.privacy_scope || "full",
+                payerUserId,
+                customSplits,
+              });
+            }
+
+            // Call save-transactions-batch
+            const batchPayload = {
+              userId,
+              householdId,
+              isPortfolio,
+              transactions: batchTransactions,
+            };
+
+            console.log(
+              `[twilio-whatsapp-ai-bot] add_transactions_batch: saving ${batchTransactions.length} transactions`,
+              { householdId, isPortfolio },
+            );
+
+            const { data, error } = await supabase.functions.invoke(
+              "save-transactions-batch",
+              {
+                body: batchPayload,
+                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+              },
+            );
+
+            const success = !error && data?.success === true;
+            if (success) {
+              const summary = data?.summary || {};
+              toolResult = {
+                success: true,
+                message: `Saved ${summary.succeeded || batchTransactions.length} of ${summary.total || batchTransactions.length} transactions`,
+                succeeded: summary.succeeded,
+                failed: summary.failed,
+              };
+            } else {
+              const formatted = formatInvokeError(error ?? data?.error);
+              if (WHATSAPP_DEBUG)
+                debugNotes.push(`add_transactions_batch error: ${formatted}`);
+              console.error(
+                "[twilio-whatsapp-ai-bot] add_transactions_batch error",
+                { error, formatted },
+              );
+              toolResult = {
+                error: formatted || "Failed to save transactions",
+              };
             }
           } else if (call.name === "update_transaction") {
             // First validate the expense_id exists and belongs to this user

@@ -7,6 +7,9 @@
       "dom.asynciterable",
       "deno.ns"
     ],
+    "types": [
+      "./deno.d.ts"
+    ],
     "strict": true,
     "allowJs": true,
     "allowImportingTsExtensions": true
