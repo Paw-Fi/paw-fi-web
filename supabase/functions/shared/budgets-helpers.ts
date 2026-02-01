@@ -1,4 +1,7 @@
-import { createClient, type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import {
+  createClient,
+  type SupabaseClient as SupabaseJsClient,
+} from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCurrencySymbol } from "./currency-symbols.ts";
 
 export type SupabaseClient = SupabaseJsClient;
@@ -7,7 +10,10 @@ function parseMonthRangeUtc(periodMonth: string | undefined | null): {
   monthStartStr: string;
   nextMonthStr: string;
 } {
-  const raw = (periodMonth || new Date().toISOString().slice(0, 10)).slice(0, 7);
+  const raw = (periodMonth || new Date().toISOString().slice(0, 10)).slice(
+    0,
+    7,
+  );
   const parts = raw.split("-");
   const year = Number(parts[0] || "0");
   const month = Number(parts[1] || "1");
@@ -28,7 +34,7 @@ export async function createOrUpdateBudget(
   period_month: string,
   currency: string,
   total_budget_cents: number,
-  isPortfolio: boolean = false
+  isPortfolio: boolean = false,
 ) {
   const payload: any = {
     user_id: userId,
@@ -56,8 +62,16 @@ export async function upsertEnvelope(
   householdId: string | null,
   name: string,
   percentage: number,
-  currency: string
+  currency: string,
+  totalBudgetCents?: number | null,
 ) {
+  // Compute budget_amount_cents if total is known
+  // This ensures the canonical amount is set, not just derived by trigger
+  const budgetAmountCents =
+    totalBudgetCents != null && Number.isFinite(totalBudgetCents)
+      ? Math.round((percentage / 100) * totalBudgetCents)
+      : undefined;
+
   const payload: any = {
     budget_id: budgetId,
     user_id: userId,
@@ -66,28 +80,39 @@ export async function upsertEnvelope(
     budget_percentage: percentage,
     currency,
     updated_at: new Date().toISOString(),
+    // Only include budget_amount_cents if we have a valid value
+    ...(budgetAmountCents !== undefined
+      ? { budget_amount_cents: budgetAmountCents }
+      : {}),
   };
-  return supabase.from("budget_envelopes").upsert(payload, { onConflict: "budget_id,name" }).select().maybeSingle();
+  return supabase
+    .from("budget_envelopes")
+    .upsert(payload, { onConflict: "budget_id,name" })
+    .select()
+    .maybeSingle();
 }
 
 export async function upsertEnvelopeAllocation(
   supabase: SupabaseClient,
   envelopeId: string,
   period_month: string,
-  amount_cents: number
+  amount_cents: number,
 ) {
-  return supabase.from("envelope_allocations").upsert({
-    envelope_id: envelopeId,
-    period_month,
-    amount_cents,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "envelope_id,period_month" });
+  return supabase.from("envelope_allocations").upsert(
+    {
+      envelope_id: envelopeId,
+      period_month,
+      amount_cents,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "envelope_id,period_month" },
+  );
 }
 
 export async function upsertEnvelopeCategoryLink(
   supabase: SupabaseClient,
   envelopeId: string,
-  category: string
+  category: string,
 ) {
   if (typeof category !== "string") {
     return { data: null, error: null } as const;
@@ -96,11 +121,14 @@ export async function upsertEnvelopeCategoryLink(
   if (!normalized) {
     return { data: null, error: null } as const;
   }
-  return supabase.from("envelope_category_links").upsert({
-    envelope_id: envelopeId,
-    category: normalized,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: "envelope_id,category" });
+  return supabase.from("envelope_category_links").upsert(
+    {
+      envelope_id: envelopeId,
+      category: normalized,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "envelope_id,category" },
+  );
 }
 
 export async function getBudgetStatusDirect(
@@ -109,7 +137,7 @@ export async function getBudgetStatusDirect(
   householdId: string | null,
   period_month: string,
   currency: string,
-  isPortfolio: boolean = false
+  isPortfolio: boolean = false,
 ) {
   // Normalize to month range
   const { monthStartStr, nextMonthStr } = parseMonthRangeUtc(period_month);
@@ -125,7 +153,9 @@ export async function getBudgetStatusDirect(
     .limit(1);
 
   if (householdId) {
-    budgetQuery = budgetQuery.eq("household_id", householdId).eq("is_portfolio", isPortfolio === true);
+    budgetQuery = budgetQuery
+      .eq("household_id", householdId)
+      .eq("is_portfolio", isPortfolio === true);
   } else {
     budgetQuery = budgetQuery.is("household_id", null).is("is_portfolio", null);
   }
@@ -137,7 +167,7 @@ export async function getBudgetStatusDirect(
 
   const { data: envelopes, error: envErr } = await supabase
     .from("budget_envelopes")
-    .select("id, name, budget_percentage, currency")
+    .select("id, name, budget_percentage, budget_amount_cents, currency")
     .eq("budget_id", budget.id);
   if (envErr) return { error: envErr };
 
@@ -175,7 +205,9 @@ export async function getBudgetStatusDirect(
   // Fetch expenses for the month to compute spending
   let expensesQuery = supabase
     .from("expenses")
-    .select("amount_cents, category, currency, date, household_id, user_id, type")
+    .select(
+      "amount_cents, category, currency, date, household_id, user_id, type",
+    )
     .eq("type", "expense")
     .eq("currency", currency)
     .gte("date", monthStartStr)
@@ -188,7 +220,9 @@ export async function getBudgetStatusDirect(
       expensesQuery = expensesQuery.eq("user_id", userId);
     }
   } else {
-    expensesQuery = expensesQuery.eq("user_id", userId).is("household_id", null);
+    expensesQuery = expensesQuery
+      .eq("user_id", userId)
+      .is("household_id", null);
   }
 
   const { data: expenses, error: expErr } = await expensesQuery;
@@ -216,9 +250,16 @@ export async function getBudgetStatusDirect(
   }
 
   const envelopeStatus = (envelopes || []).map((e: any) => {
-    const alloc = allocMap[e.id] != null
-      ? allocMap[e.id]
-      : Math.round((e.budget_percentage || 0) / 100 * (budget.total_budget_cents || 0));
+    // Read precedence: allocation(period_month) → budget_amount_cents → derived from percentage
+    const alloc =
+      allocMap[e.id] != null
+        ? allocMap[e.id]
+        : e.budget_amount_cents != null
+          ? Number(e.budget_amount_cents)
+          : Math.round(
+              ((e.budget_percentage || 0) / 100) *
+                (budget.total_budget_cents || 0),
+            );
     const spent = spentMap[e.id] != null ? spentMap[e.id] : 0;
     return {
       id: e.id,
@@ -229,7 +270,10 @@ export async function getBudgetStatusDirect(
     };
   });
 
-  const totalAllocated = envelopeStatus.reduce((s: number, e: any) => s + (e.allocated_cents || 0), 0);
+  const totalAllocated = envelopeStatus.reduce(
+    (s: number, e: any) => s + (e.allocated_cents || 0),
+    0,
+  );
   const totalSpentAll = totalSpent;
 
   return {
@@ -239,13 +283,24 @@ export async function getBudgetStatusDirect(
       budget_cents: budget.total_budget_cents || 0,
       allocated_cents: totalAllocated,
       spent_cents: totalSpentAll,
-      remaining_cents: Math.max((budget.total_budget_cents || 0) - totalSpentAll, 0),
+      remaining_cents: Math.max(
+        (budget.total_budget_cents || 0) - totalSpentAll,
+        0,
+      ),
     },
-    chart: buildBudgetGauge(budget.total_budget_cents || 0, totalSpentAll, currency),
+    chart: buildBudgetGauge(
+      budget.total_budget_cents || 0,
+      totalSpentAll,
+      currency,
+    ),
   };
 }
 
-function buildBudgetGauge(total_cents: number, spent_cents: number, currency: string) {
+function buildBudgetGauge(
+  total_cents: number,
+  spent_cents: number,
+  currency: string,
+) {
   if (!total_cents) return null;
   const totalMajor = Math.max(total_cents / 100, 0);
   const spentMajor = Math.max(spent_cents / 100, 0);

@@ -102,7 +102,9 @@ const defaultAppStoreEnvironment = isProductionEnv
   ? Environment.PRODUCTION
   : Environment.SANDBOX;
 
-console.log(`🌍 Environment config: ENV="${envSecret}", isProduction=${isProductionEnv}, defaultAppStoreEnv=${isProductionEnv ? "Production" : "Sandbox"}`);
+console.log(
+  `🌍 Environment config: ENV="${envSecret}", isProduction=${isProductionEnv}, defaultAppStoreEnv=${isProductionEnv ? "Production" : "Sandbox"}`,
+);
 
 // APP_STORE_SHARED_SECRET
 // Where to get it:
@@ -290,7 +292,7 @@ function decodeJwsPayload(jws: string): JWSTransactionDecodedPayload {
  * Fetches and validates a transaction from the App Store Server API.
  * This is the primary validation method since Deno doesn't support crypto.X509Certificate
  * which is required for local JWS signature verification.
- * 
+ *
  * The App Store Server API response is trusted because:
  * 1. We authenticate with Apple using our private key
  * 2. The response comes directly from Apple's servers over HTTPS
@@ -560,7 +562,7 @@ serve(async (req: Request) => {
         // ============================================================
         // Deno doesn't support crypto.X509Certificate which the
         // @apple/app-store-server-library's SignedDataVerifier requires.
-        // 
+        //
         // Instead, we validate the transaction via the App Store Server API:
         // 1. Decode the JWS payload (without crypto verification) to get IDs
         // 2. Call App Store Server API to fetch and validate the transaction
@@ -577,9 +579,9 @@ serve(async (req: Request) => {
             received: decodedHint.bundleId,
           });
           return new Response(
-            JSON.stringify({ 
+            JSON.stringify({
               error: "Bundle ID mismatch",
-              details: `Expected ${appStoreBundleId}, got ${decodedHint.bundleId}`
+              details: `Expected ${appStoreBundleId}, got ${decodedHint.bundleId}`,
             }),
             {
               status: 400,
@@ -591,7 +593,10 @@ serve(async (req: Request) => {
         // Try to validate via App Store Server API (preferred method for Deno)
         if (isAppleServerApiConfigured() && decodedHint.originalTransactionId) {
           console.log("🔐 Validating transaction via App Store Server API...");
-          console.log("🔐 Original Transaction ID:", decodedHint.originalTransactionId);
+          console.log(
+            "🔐 Original Transaction ID:",
+            decodedHint.originalTransactionId,
+          );
           console.log("🔐 Environment hint:", envHint);
 
           try {
@@ -603,9 +608,10 @@ serve(async (req: Request) => {
 
             // If not found, try the other environment
             if (!serverTransaction) {
-              const otherEnv = envHint === Environment.SANDBOX 
-                ? Environment.PRODUCTION 
-                : Environment.SANDBOX;
+              const otherEnv =
+                envHint === Environment.SANDBOX
+                  ? Environment.PRODUCTION
+                  : Environment.SANDBOX;
               console.log("🔐 Retrying with environment:", otherEnv);
               serverTransaction = await fetchLatestAppStoreTransaction({
                 originalTransactionId: decodedHint.originalTransactionId,
@@ -619,56 +625,123 @@ serve(async (req: Request) => {
             }
 
             if (serverTransaction) {
-              console.log("✅ Transaction validated via App Store Server API:", {
-                transactionId: serverTransaction.transactionId,
-                originalTransactionId: serverTransaction.originalTransactionId,
-                productId: serverTransaction.productId,
-                environment: serverTransaction.environment,
-              });
+              console.log(
+                "✅ Transaction validated via App Store Server API:",
+                {
+                  transactionId: serverTransaction.transactionId,
+                  originalTransactionId:
+                    serverTransaction.originalTransactionId,
+                  productId: serverTransaction.productId,
+                  environment: serverTransaction.environment,
+                },
+              );
 
               // Use the server-validated transaction data
               decodedTransaction = serverTransaction;
               serverRevocationDate = serverTransaction.revocationDate;
             } else {
-              // Server API didn't return a transaction - fall back to decoded hint
-              // This can happen for very new transactions that haven't propagated yet
-              console.warn("⚠️ App Store Server API returned no transaction, using decoded JWS data");
+              // Server API didn't return a transaction
+              // SECURITY: In production, we MUST fail-closed - no fallback to unverified JWS
+              if (isProductionEnv) {
+                console.error(
+                  "🚨 PRODUCTION SECURITY: App Store Server API returned no transaction. Rejecting request.",
+                );
+                console.error(
+                  "🚨 This could indicate: (1) Very new transaction not yet propagated, (2) Invalid transaction ID, or (3) Fraudulent request.",
+                );
+                return new Response(
+                  JSON.stringify({
+                    error: "Transaction verification failed",
+                    details:
+                      "Could not verify transaction with Apple. Please try again in a few moments.",
+                  }),
+                  {
+                    status: 400,
+                    headers: {
+                      ...corsHeaders,
+                      "Content-Type": "application/json",
+                    },
+                  },
+                );
+              }
+              // In DEV/Sandbox, allow fallback for testing convenience
+              console.warn(
+                "⚠️ DEV MODE: App Store Server API returned no transaction, using decoded JWS data (unverified)",
+              );
               decodedTransaction = decodedHint;
               environment = envHint;
             }
           } catch (apiError) {
-            // API call failed - fall back to decoded hint with a warning
-            console.warn("⚠️ App Store Server API call failed:", apiError instanceof Error ? apiError.message : apiError);
-            console.log("⚠️ Falling back to decoded JWS data (unverified)");
-            decodedTransaction = decodedHint;
-            
-            // PRODUCTION SAFEGUARD: In production mode, if the JWS claims Sandbox but
-            // our server is configured for Production, this is suspicious.
-            // Log a prominent warning but use the server's configured environment.
-            if (isProductionEnv && envHint === Environment.SANDBOX) {
-              console.warn("🚨 PRODUCTION SAFEGUARD: JWS claims Sandbox environment but server is in Production mode.");
-              console.warn("🚨 This could indicate: (1) Sandbox Apple ID used in production, (2) TestFlight purchase, or (3) Fraudulent transaction.");
-              console.warn("🚨 Using server's Production environment setting. Verify APPLE_APP_STORE_PRIVATE_KEY is correctly formatted.");
-              environment = defaultAppStoreEnvironment; // Use Production as configured
-            } else {
-              environment = envHint;
+            // API call failed
+            // SECURITY: In production, we MUST fail-closed - no fallback to unverified JWS
+            if (isProductionEnv) {
+              console.error(
+                "🚨 PRODUCTION SECURITY: App Store Server API call failed. Rejecting request.",
+              );
+              console.error(
+                "🚨 Error:",
+                apiError instanceof Error ? apiError.message : apiError,
+              );
+              console.error(
+                "🚨 Verify APPLE_APP_STORE_* environment variables are correctly configured.",
+              );
+              return new Response(
+                JSON.stringify({
+                  error: "Transaction verification failed",
+                  details:
+                    "Could not verify transaction with Apple. Please try again later.",
+                }),
+                {
+                  status: 500,
+                  headers: {
+                    ...corsHeaders,
+                    "Content-Type": "application/json",
+                  },
+                },
+              );
             }
-          }
-        } else {
-          // App Store Server API not configured - use decoded hint
-          // This is less secure but allows the function to work without full API setup
-          console.warn("⚠️ App Store Server API not configured, using decoded JWS data (unverified)");
-          console.log("⚠️ Configure APPLE_APP_STORE_* env vars for secure validation");
-          decodedTransaction = decodedHint;
-          
-          // PRODUCTION SAFEGUARD: Same logic as API failure case
-          if (isProductionEnv && envHint === Environment.SANDBOX) {
-            console.warn("🚨 PRODUCTION SAFEGUARD: JWS claims Sandbox but server is in Production mode.");
-            console.warn("🚨 Using server's Production environment setting.");
-            environment = defaultAppStoreEnvironment;
-          } else {
+            // In DEV/Sandbox, allow fallback for testing convenience
+            console.warn(
+              "⚠️ DEV MODE: App Store Server API call failed:",
+              apiError instanceof Error ? apiError.message : apiError,
+            );
+            console.warn(
+              "⚠️ DEV MODE: Falling back to decoded JWS data (unverified)",
+            );
+            decodedTransaction = decodedHint;
             environment = envHint;
           }
+        } else {
+          // App Store Server API not configured
+          // SECURITY: In production, this is a misconfiguration - we MUST reject
+          if (isProductionEnv) {
+            console.error(
+              "🚨 PRODUCTION SECURITY: App Store Server API not configured. Rejecting request.",
+            );
+            console.error(
+              "🚨 Configure APPLE_APP_STORE_ISSUER_ID, APPLE_APP_STORE_KEY_ID, APPLE_APP_STORE_PRIVATE_KEY, and APPLE_BUNDLE_ID.",
+            );
+            return new Response(
+              JSON.stringify({
+                error: "Server configuration error",
+                details:
+                  "IAP verification is not properly configured. Please contact support.",
+              }),
+              {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+          // In DEV/Sandbox, allow fallback for testing without full API setup
+          console.warn(
+            "⚠️ DEV MODE: App Store Server API not configured, using decoded JWS data (unverified)",
+          );
+          console.warn(
+            "⚠️ Configure APPLE_APP_STORE_* env vars for secure validation",
+          );
+          decodedTransaction = decodedHint;
+          environment = envHint;
         }
 
         console.log("Transaction data to use:", {

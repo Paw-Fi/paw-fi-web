@@ -162,7 +162,10 @@ async function runAnalyzeExpenseWithTimeout(
 
     return await Promise.race([analysisPromise, timeoutPromise]);
   } catch (error) {
-    console.error("[twilio-whatsapp-ai-bot] analyze-expense timeout/error:", error);
+    console.error(
+      "[twilio-whatsapp-ai-bot] analyze-expense timeout/error:",
+      error,
+    );
     return {
       success: false,
       error: timeoutError,
@@ -469,7 +472,7 @@ async function resolveEnvelopeByName(
   if (!normalized) return { data: null, error: null } as const;
   const { data, error } = await supabase
     .from("budget_envelopes")
-    .select("id, name, budget_percentage")
+    .select("id, name, budget_percentage, budget_amount_cents")
     .eq("budget_id", budgetId);
   if (error || !data) return { data: null, error } as const;
   const found = (data as any[]).find(
@@ -2013,7 +2016,8 @@ Deno.serve(async (req: Request) => {
                   attachments: [
                     {
                       filename: fileName,
-                      contentType: cleanContentType || "application/octet-stream",
+                      contentType:
+                        cleanContentType || "application/octet-stream",
                       data: base64Data,
                     },
                   ],
@@ -3582,7 +3586,9 @@ Deno.serve(async (req: Request) => {
                   } else {
                     const { data: envelopes } = await supabase
                       .from("budget_envelopes")
-                      .select("id, name, budget_percentage")
+                      .select(
+                        "id, name, budget_percentage, budget_amount_cents",
+                      )
                       .eq("budget_id", budgetRow.id);
                     const existingPct = envelope?.budget_percentage;
                     const desiredPctRaw =
@@ -3603,6 +3609,12 @@ Deno.serve(async (req: Request) => {
                         ? rebalancePocketPercentages(desiredPct, others)
                         : {};
 
+                    // Compute budget_amount_cents from percentage and total budget
+                    const totalBudgetCents = budgetRow.total_budget_cents || 0;
+                    const desiredAmountCents = Math.round(
+                      (desiredPct / 100) * totalBudgetCents,
+                    );
+
                     let envelopeId = envelope?.id as string | undefined;
                     if (envelopeId) {
                       await supabase
@@ -3611,6 +3623,7 @@ Deno.serve(async (req: Request) => {
                           name: newName || name,
                           budget_id: budgetRow.id,
                           budget_percentage: desiredPct,
+                          budget_amount_cents: desiredAmountCents,
                           updated_at: new Date().toISOString(),
                           ...(color ? { color } : {}),
                           ...(icon ? { icon } : {}),
@@ -3626,6 +3639,7 @@ Deno.serve(async (req: Request) => {
                           budget_id: budgetRow.id,
                           name: newName || name,
                           budget_percentage: desiredPct,
+                          budget_amount_cents: desiredAmountCents,
                           household_id: householdId,
                           currency: userCurrency,
                           color: color ?? null,
@@ -3652,6 +3666,14 @@ Deno.serve(async (req: Request) => {
                         );
                       }
 
+                      // Upsert envelope_allocation for the edited pocket (mobile reads allocations first)
+                      await upsertEnvelopeAllocation(
+                        supabase,
+                        envelopeId,
+                        period_month,
+                        desiredAmountCents,
+                      );
+
                       if (pctInput != null) {
                         if (desiredPct >= 100 && others.length > 0) {
                           for (const other of others) {
@@ -3659,19 +3681,39 @@ Deno.serve(async (req: Request) => {
                               .from("budget_envelopes")
                               .update({
                                 budget_percentage: 0,
+                                budget_amount_cents: 0,
                                 updated_at: new Date().toISOString(),
                               })
                               .eq("id", other.id);
+                            // Also upsert allocation for rebalanced pocket
+                            await upsertEnvelopeAllocation(
+                              supabase,
+                              other.id,
+                              period_month,
+                              0,
+                            );
                           }
                         } else {
                           for (const entry of Object.entries(adjustedOthers)) {
+                            const adjustedPct = entry[1] as number;
+                            const adjustedAmountCents = Math.round(
+                              (adjustedPct / 100) * totalBudgetCents,
+                            );
                             await supabase
                               .from("budget_envelopes")
                               .update({
-                                budget_percentage: entry[1],
+                                budget_percentage: adjustedPct,
+                                budget_amount_cents: adjustedAmountCents,
                                 updated_at: new Date().toISOString(),
                               })
                               .eq("id", entry[0]);
+                            // Also upsert allocation for rebalanced pocket
+                            await upsertEnvelopeAllocation(
+                              supabase,
+                              entry[0],
+                              period_month,
+                              adjustedAmountCents,
+                            );
                           }
                         }
                       }
