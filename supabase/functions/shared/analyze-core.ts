@@ -1,3 +1,35 @@
+// Suppress Deno microtask warnings and polyfill warnings BEFORE importing PDF.js
+// This is critical - must happen before PDF.js initialization
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  const message = args[0];
+  if (
+    typeof message === "string" &&
+    (message.includes("Deno.core.runMicrotasks() is not supported") ||
+      message.includes("Setting up fake worker failed") ||
+      message.includes("event loop error"))
+  ) {
+    // Suppress these known serverless environment warnings
+    return;
+  }
+  originalConsoleError(...args);
+};
+
+const originalConsoleWarn = console.warn;
+console.warn = (...args: any[]) => {
+  const message = args[0];
+  if (
+    typeof message === "string" &&
+    (message.includes("Cannot polyfill") ||
+      message.includes("rendering may be broken") ||
+      message.includes("__Process$.getBuiltinModule is not a function"))
+  ) {
+    // Suppress these known polyfill warnings in serverless
+    return;
+  }
+  originalConsoleWarn(...args);
+};
+
 import {
   GoogleGenerativeAI,
   GoogleGenerativeAIFetchError,
@@ -11,12 +43,14 @@ import {
 } from "./category-colors.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
 
-// unpdf for serverless PDF text extraction (faster than vision for text-based PDFs)
-import {
-  getDocument as getPdfDocument,
-  GlobalWorkerOptions,
-} from "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.mjs?no-dts";
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+
+// Google Cloud Document AI for efficient PDF text extraction
+const DOCUMENT_AI_ENDPOINT =
+  "https://us-documentai.googleapis.com/v1/projects/1075784863194/locations/us/processors/26186df0eef1dad9:process";
+const GOOGLE_CLOUD_SERVICE_ACCOUNT =
+  Deno.env.get("GOOGLE_CLOUD_SERVICE_ACCOUNT") || "";
+const DEBUG_LOGS = Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -28,77 +62,914 @@ function b64encode(bytes: Uint8Array): string {
 }
 
 /**
- * Extracts text from a PDF using unpdf library (serverless-compatible PDF.js).
- * This is 5-10x faster than vision-based PDF analysis for text-based PDFs.
- * Returns null if PDF is image-based (scanned) or extraction fails.
- * Also returns per-page text for parallel processing of large documents.
+ * Generates an OAuth2 access token from Google Cloud service account credentials.
+ * Uses JWT signing to authenticate with Google's OAuth2 endpoint.
+ */
+async function getGoogleCloudAccessToken(): Promise<string | null> {
+  try {
+    // Parse service account JSON (handle if it's stored as-is or needs decoding)
+    let serviceAccountJson = GOOGLE_CLOUD_SERVICE_ACCOUNT;
+
+    // Check if it's a valid JSON string
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (parseError) {
+      console.log(
+        "[analyze-expense] Service account JSON parse error, checking format",
+      );
+      return null;
+    }
+
+    if (!serviceAccount.private_key || !serviceAccount.client_email) {
+      console.log(
+        "[analyze-expense] Service account missing required fields (private_key or client_email)",
+      );
+      return null;
+    }
+
+    // Create JWT header and claims
+    const now = Math.floor(Date.now() / 1000);
+    const header = {
+      alg: "RS256",
+      typ: "JWT",
+    };
+
+    const claims = {
+      iss: serviceAccount.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now,
+    };
+
+    // Encode header and claims
+    const encodedHeader = btoa(JSON.stringify(header))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+    const encodedClaims = btoa(JSON.stringify(claims))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+    const signatureInput = `${encodedHeader}.${encodedClaims}`;
+
+    // Import private key for signing
+    const privateKey = serviceAccount.private_key;
+    const pemHeader = "-----BEGIN PRIVATE KEY-----";
+    const pemFooter = "-----END PRIVATE KEY-----";
+
+    // Extract the base64 content between the PEM headers
+    let pemContents = privateKey;
+    if (pemContents.includes(pemHeader)) {
+      pemContents = pemContents.split(pemHeader)[1];
+    }
+    if (pemContents.includes(pemFooter)) {
+      pemContents = pemContents.split(pemFooter)[0];
+    }
+
+    // Remove all whitespace including newlines
+    pemContents = pemContents.replace(/\s+/g, "");
+
+    // Decode base64 to binary
+    let binaryKey;
+    try {
+      binaryKey = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+    } catch (decodeError) {
+      console.log(
+        "[analyze-expense] Failed to decode base64 private key:",
+        decodeError instanceof Error
+          ? decodeError.message
+          : String(decodeError),
+      );
+      return null;
+    }
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "pkcs8",
+      binaryKey,
+      {
+        name: "RSASSA-PKCS1-v1_5",
+        hash: "SHA-256",
+      },
+      false,
+      ["sign"],
+    );
+
+    // Sign the JWT
+    const signature = await crypto.subtle.sign(
+      "RSASSA-PKCS1-v1_5",
+      cryptoKey,
+      new TextEncoder().encode(signatureInput),
+    );
+
+    const signatureArray = new Uint8Array(signature);
+    const signatureChars = [];
+    for (let i = 0; i < signatureArray.length; i++) {
+      signatureChars.push(String.fromCharCode(signatureArray[i]));
+    }
+    const encodedSignature = btoa(signatureChars.join(""))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+    const jwt = `${signatureInput}.${encodedSignature}`;
+
+    // Exchange JWT for access token
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      console.log(`[analyze-expense] Failed to get access token: ${errorText}`);
+      return null;
+    }
+
+    const tokenData = await tokenResponse.json();
+    return tokenData.access_token;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.log(
+      `[analyze-expense] Error generating access token: ${errorMessage}`,
+    );
+    return null;
+  }
+}
+
+function textAnchorToText(textAnchor: any, fullText: string): string {
+  if (!textAnchor || !Array.isArray(textAnchor.textSegments)) return "";
+  const segments = textAnchor.textSegments;
+  let content = "";
+  for (const segment of segments) {
+    const start = Number(segment.startIndex ?? 0);
+    const end = Number(segment.endIndex ?? fullText.length);
+    if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+      content += fullText.substring(start, end);
+    }
+  }
+  return content;
+}
+
+function normalizeDocumentText(text: string): string {
+  return text
+    .replace(/\r/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s+/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function injectStatementLineBreaks(text: string): string {
+  let result = text;
+  const datePatterns = [
+    /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4}\b/g,
+    /\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\s+\d{4}\b/g,
+    /\b\d{4}-\d{2}-\d{2}\b/g,
+    /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
+  ];
+
+  for (const pattern of datePatterns) {
+    result = result.replace(pattern, "\n$&");
+  }
+
+  return normalizeDocumentText(result);
+}
+
+function extractTransactionLines(text: string): string[] {
+  const lines = text.split(/\n/).map((line) => line.trim());
+  const amountPattern = /(€|\$|£|¥|₹)\s?\d|\d{1,3}(?:[.,]\d{3})*[.,]\d{2}/;
+  const noisePattern =
+    /(opening balance|closing balance|balance summary|statement generated|total money out|total money in)/i;
+
+  return lines.filter(
+    (line) =>
+      line.length > 6 && amountPattern.test(line) && !noisePattern.test(line),
+  );
+}
+
+const MONTH_MAP: Record<string, number> = {
+  jan: 1,
+  january: 1,
+  feb: 2,
+  february: 2,
+  mar: 3,
+  march: 3,
+  apr: 4,
+  april: 4,
+  may: 5,
+  jun: 6,
+  june: 6,
+  jul: 7,
+  july: 7,
+  aug: 8,
+  august: 8,
+  sep: 9,
+  sept: 9,
+  september: 9,
+  oct: 10,
+  october: 10,
+  nov: 11,
+  november: 11,
+  dec: 12,
+  december: 12,
+};
+
+function formatDateParts(year: number, month: number, day: number): string {
+  const yyyy = String(year).padStart(4, "0");
+  const mm = String(month).padStart(2, "0");
+  const dd = String(day).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseDateFromText(line: string, callerDate: string): string | null {
+  const monthNameRegex =
+    /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i;
+  const monthFirstRegex = new RegExp(
+    `${monthNameRegex.source}\s+(\d{1,2})(?:,\s*(\d{2,4}))?`,
+    "i",
+  );
+  const dayFirstRegex = new RegExp(
+    `(\d{1,2})\s+${monthNameRegex.source}(?:\s+(\d{2,4}))?`,
+    "i",
+  );
+
+  const yearFromCaller =
+    Number(callerDate.slice(0, 4)) || new Date().getFullYear();
+
+  const monthFirstMatch = line.match(monthFirstRegex);
+  if (monthFirstMatch) {
+    const monthToken = monthFirstMatch[0].split(/\s+/)[0].toLowerCase();
+    const month = MONTH_MAP[monthToken] || MONTH_MAP[monthToken.slice(0, 3)];
+    const day = Number(monthFirstMatch[1]);
+    const yearRaw = monthFirstMatch[2];
+    const year = yearRaw
+      ? Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw)
+      : yearFromCaller;
+    if (month && day) return formatDateParts(year, month, day);
+  }
+
+  const dayFirstMatch = line.match(dayFirstRegex);
+  if (dayFirstMatch) {
+    const monthToken = dayFirstMatch[0]
+      .split(/\s+/)
+      .find((token) => monthNameRegex.test(token))
+      ?.toLowerCase();
+    const month = monthToken
+      ? MONTH_MAP[monthToken] || MONTH_MAP[monthToken.slice(0, 3)]
+      : undefined;
+    const day = Number(dayFirstMatch[1]);
+    const yearRaw = dayFirstMatch[2];
+    const year = yearRaw
+      ? Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw)
+      : yearFromCaller;
+    if (month && day) return formatDateParts(year, month, day);
+  }
+
+  const isoMatch = line.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (isoMatch) {
+    return formatDateParts(
+      Number(isoMatch[1]),
+      Number(isoMatch[2]),
+      Number(isoMatch[3]),
+    );
+  }
+
+  const numericMatch = line.match(
+    /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/,
+  );
+  if (numericMatch) {
+    const first = Number(numericMatch[1]);
+    const second = Number(numericMatch[2]);
+    const yearRaw = numericMatch[3];
+    const year = Number(yearRaw.length === 2 ? `20${yearRaw}` : yearRaw);
+    if (first > 12 && second <= 12) {
+      return formatDateParts(year, second, first);
+    }
+    if (second > 12 && first <= 12) {
+      return formatDateParts(year, first, second);
+    }
+    return formatDateParts(year, second, first);
+  }
+
+  return null;
+}
+
+function normalizeAmountString(value: string): number | null {
+  const cleaned = value.replace(/[^0-9,.-]/g, "");
+  if (!cleaned || cleaned === "-" || cleaned === ".") return null;
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
+  let normalized = cleaned;
+  if (lastComma > lastDot) {
+    normalized = cleaned.replace(/\./g, "").replace(/,/g, ".");
+  } else {
+    normalized = cleaned.replace(/,/g, "");
+  }
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? Math.abs(parsed) : null;
+}
+
+function extractAmountTokens(line: string): { raw: string; value: number }[] {
+  const tokens: { raw: string; value: number }[] = [];
+  const regex =
+    /(€|\$|£|¥|₹)?\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})|\d+(?:[.,]\d{2})/g;
+  const matches = line.match(regex) || [];
+  for (const match of matches) {
+    const value = normalizeAmountString(match);
+    if (value && value >= 0.01) {
+      tokens.push({ raw: match, value });
+    }
+  }
+  return tokens;
+}
+
+function detectCurrencyFromText(line: string, callerCurrency: string): string {
+  if (/€/.test(line)) return "EUR";
+  if (/£/.test(line)) return "GBP";
+  if (/\$/.test(line)) return "USD";
+  if (/¥/.test(line)) return "JPY";
+  if (/₹/.test(line)) return "INR";
+  const isoMatch = line.match(/\b([A-Z]{3})\b/);
+  if (isoMatch) return isoMatch[1];
+  return callerCurrency;
+}
+
+function inferTypeFromText(line: string): "expense" | "income" {
+  const normalized = line.toLowerCase();
+  if (
+    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from)/.test(
+      normalized,
+    )
+  ) {
+    return "income";
+  }
+  if (
+    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to)/.test(
+      normalized,
+    )
+  ) {
+    return "expense";
+  }
+  return "expense";
+}
+
+function stripAmountsAndDates(text: string): string {
+  let cleaned = text
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
+    .replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, " ")
+    .replace(
+      /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{2,4})?\b/gi,
+      " ",
+    )
+    .replace(
+      /\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b/gi,
+      " ",
+    );
+
+  cleaned = cleaned.replace(
+    /(€|\$|£|¥|₹)?\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})/g,
+    " ",
+  );
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
+  return cleaned;
+}
+
+function splitLineByDateSegments(line: string, callerDate: string): string[] {
+  const segments: string[] = [];
+  const dateRegex = new RegExp(
+    "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[^\n]{0,20}d{1,2}(?:,s*d{2,4})?|\bd{1,2}[/-]d{1,2}[/-]d{2,4}\b|\bd{4}-d{2}-d{2}\b",
+    "g",
+  );
+
+  let match: RegExpExecArray | null;
+  const indices: number[] = [];
+  while ((match = dateRegex.exec(line)) !== null) {
+    indices.push(match.index);
+  }
+
+  if (indices.length <= 1) return [line];
+
+  for (let i = 0; i < indices.length; i++) {
+    const start = indices[i];
+    const end = i + 1 < indices.length ? indices[i + 1] : line.length;
+    const segment = line.slice(start, end).trim();
+    if (segment && parseDateFromText(segment, callerDate)) {
+      segments.push(segment);
+    }
+  }
+
+  return segments.length > 0 ? segments : [line];
+}
+
+function buildStatementRecords(
+  lines: string[],
+  callerDate: string,
+): { text: string; date: string | null }[] {
+  const records: { text: string; date: string | null }[] = [];
+  let currentText = "";
+  let currentDate: string | null = null;
+
+  for (const rawLine of lines) {
+    const expanded = splitLineByDateSegments(rawLine, callerDate);
+    for (const line of expanded) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const detectedDate = parseDateFromText(trimmed, callerDate);
+      if (detectedDate) {
+        if (currentText) {
+          records.push({ text: currentText.trim(), date: currentDate });
+        }
+        currentText = trimmed;
+        currentDate = detectedDate;
+      } else if (currentText) {
+        currentText = `${currentText} ${trimmed}`;
+      } else {
+        currentText = trimmed;
+      }
+    }
+  }
+
+  if (currentText) {
+    records.push({ text: currentText.trim(), date: currentDate });
+  }
+
+  return records;
+}
+
+function buildDeterministicCandidates(
+  text: string,
+  callerDate: string,
+  callerCurrency: string,
+  candidateLines?: string[],
+): Array<{
+  type: "expense" | "income";
+  amount: number;
+  currency: string;
+  date: string;
+  description: string;
+}> {
+  const normalized = injectStatementLineBreaks(text);
+  const lines = (
+    candidateLines && candidateLines.length > 0
+      ? candidateLines
+      : normalized.split(/\n/)
+  ).map((line) => line.trim());
+  const records = buildStatementRecords(lines, callerDate);
+  const candidates: Array<{
+    type: "expense" | "income";
+    amount: number;
+    currency: string;
+    date: string;
+    description: string;
+  }> = [];
+
+  let lastSeenDate = callerDate;
+  let columnMap: {
+    date?: number;
+    description?: number;
+    moneyOut?: number;
+    moneyIn?: number;
+    amount?: number;
+    balance?: number;
+  } | null = null;
+
+  for (const record of records) {
+    const rawText = record.text;
+    const lower = rawText.toLowerCase();
+
+    if (
+      /(opening balance|closing balance|balance summary|statement generated|total money out|total money in)/.test(
+        lower,
+      )
+    ) {
+      continue;
+    }
+
+    const parts = rawText.split("|").map((part) => part.trim());
+    if (parts.length >= 3) {
+      const header = parts.map((part) => part.toLowerCase());
+      if (
+        header.some((part) => part.includes("date")) &&
+        (header.some((part) => part.includes("money out")) ||
+          header.some((part) => part.includes("money in")) ||
+          header.some((part) => part.includes("balance")))
+      ) {
+        columnMap = {
+          date: header.findIndex((part) => part.includes("date")),
+          description: header.findIndex((part) =>
+            /(description|merchant|details)/.test(part),
+          ),
+          moneyOut: header.findIndex((part) => part.includes("money out")),
+          moneyIn: header.findIndex((part) => part.includes("money in")),
+          amount: header.findIndex((part) => part.includes("amount")),
+          balance: header.findIndex((part) => part.includes("balance")),
+        };
+        continue;
+      }
+    }
+
+    const recordDate = record.date || parseDateFromText(rawText, callerDate);
+    if (recordDate) {
+      lastSeenDate = recordDate;
+    }
+
+    if (columnMap && parts.length >= 3) {
+      const datePart =
+        columnMap.date !== undefined && columnMap.date >= 0
+          ? parts[columnMap.date]
+          : "";
+      const descriptionPart =
+        columnMap.description !== undefined && columnMap.description >= 0
+          ? parts[columnMap.description]
+          : rawText;
+      const moneyOutPart =
+        columnMap.moneyOut !== undefined && columnMap.moneyOut >= 0
+          ? parts[columnMap.moneyOut]
+          : "";
+      const moneyInPart =
+        columnMap.moneyIn !== undefined && columnMap.moneyIn >= 0
+          ? parts[columnMap.moneyIn]
+          : "";
+      const amountPart =
+        columnMap.amount !== undefined && columnMap.amount >= 0
+          ? parts[columnMap.amount]
+          : "";
+
+      const dateValue =
+        parseDateFromText(datePart, callerDate) || recordDate || lastSeenDate;
+      const moneyOutTokens = extractAmountTokens(moneyOutPart);
+      const moneyInTokens = extractAmountTokens(moneyInPart);
+      const amountTokens = extractAmountTokens(amountPart);
+
+      if (moneyOutTokens.length > 0) {
+        candidates.push({
+          type: "expense",
+          amount: moneyOutTokens[0].value,
+          currency: detectCurrencyFromText(moneyOutPart, callerCurrency),
+          date: dateValue,
+          description: descriptionPart || stripAmountsAndDates(rawText),
+        });
+        continue;
+      }
+
+      if (moneyInTokens.length > 0) {
+        candidates.push({
+          type: "income",
+          amount: moneyInTokens[0].value,
+          currency: detectCurrencyFromText(moneyInPart, callerCurrency),
+          date: dateValue,
+          description: descriptionPart || stripAmountsAndDates(rawText),
+        });
+        continue;
+      }
+
+      if (amountTokens.length > 0) {
+        candidates.push({
+          type: inferTypeFromText(rawText),
+          amount: amountTokens[0].value,
+          currency: detectCurrencyFromText(amountPart, callerCurrency),
+          date: dateValue,
+          description: descriptionPart || stripAmountsAndDates(rawText),
+        });
+        continue;
+      }
+    }
+
+    const tokens = extractAmountTokens(rawText);
+    if (tokens.length === 0) continue;
+
+    const amount = tokens[0].value;
+    const dateValue = recordDate || lastSeenDate || callerDate;
+    const description = stripAmountsAndDates(rawText) || rawText;
+    candidates.push({
+      type: inferTypeFromText(rawText),
+      amount,
+      currency: detectCurrencyFromText(rawText, callerCurrency),
+      date: dateValue,
+      description,
+    });
+  }
+
+  return candidates;
+}
+
+function extractStatementTotals(text: string): {
+  totalOut?: number;
+  totalIn?: number;
+} {
+  const normalized = text.replace(/\s+/g, " ");
+  const totals: { totalOut?: number; totalIn?: number } = {};
+
+  const moneyOutMatch = normalized.match(
+    /(total\s+money\s+out|money\s+out\s+total|total\s+out)\s*([€\$£¥₹]?\s?[0-9.,]+)/i,
+  );
+  if (moneyOutMatch?.[2]) {
+    const amount = normalizeAmountString(moneyOutMatch[2]);
+    if (amount) totals.totalOut = amount;
+  }
+
+  const moneyInMatch = normalized.match(
+    /(total\s+money\s+in|money\s+in\s+total|total\s+in)\s*([€\$£¥₹]?\s?[0-9.,]+)/i,
+  );
+  if (moneyInMatch?.[2]) {
+    const amount = normalizeAmountString(moneyInMatch[2]);
+    if (amount) totals.totalIn = amount;
+  }
+
+  return totals;
+}
+
+function reconcileStatementTotals(text: string, items: ExpenseItem[]): void {
+  const { totalOut, totalIn } = extractStatementTotals(text);
+  if (!totalOut && !totalIn) return;
+
+  const sumOut = items
+    .filter((item) => item.type === "expense")
+    .reduce((acc, item) => acc + item.amount, 0);
+  const sumIn = items
+    .filter((item) => item.type === "income")
+    .reduce((acc, item) => acc + item.amount, 0);
+
+  const tolerance = 0.01;
+
+  if (totalOut && Math.abs(totalOut - sumOut) > tolerance) {
+    console.warn(
+      `[analyze-expense] Reconciliation warning: money out total ${totalOut.toFixed(
+        2,
+      )} vs extracted ${sumOut.toFixed(2)} (diff ${(totalOut - sumOut).toFixed(2)})`,
+    );
+  }
+
+  if (totalIn && Math.abs(totalIn - sumIn) > tolerance) {
+    console.warn(
+      `[analyze-expense] Reconciliation warning: money in total ${totalIn.toFixed(
+        2,
+      )} vs extracted ${sumIn.toFixed(2)} (diff ${(totalIn - sumIn).toFixed(2)})`,
+    );
+  }
+}
+
+async function resolveCandidateCategories(
+  genAI: GoogleGenerativeAI,
+  candidates: Array<{
+    type: "expense" | "income";
+    amount: number;
+    currency: string;
+    date: string;
+    description: string;
+  }>,
+  expenseCategories: string[],
+  incomeCategories: string[],
+  language: string,
+): Promise<string[]> {
+  const tools: any = [
+    {
+      functionDeclarations: [
+        {
+          name: "categorize_transactions",
+          description: "Return categories for each transaction in order.",
+          parameters: {
+            type: "object",
+            properties: {
+              categories: {
+                type: "array",
+                items: { type: "string" },
+              },
+            },
+            required: ["categories"],
+          },
+        },
+      ],
+    },
+  ];
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+    tools: tools as any,
+  });
+
+  const response = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `You are a transaction categorization engine.\nReturn exactly ${candidates.length} categories in the same order as the input.\nUse only the allowed categories.\nExpense categories: ${expenseCategories.join(", ")}\nIncome categories: ${incomeCategories.join(", ")}\nLanguage: ${language}\n\nTransactions:\n${candidates
+              .map(
+                (item, index) =>
+                  `${index + 1}. ${item.type.toUpperCase()} | ${item.date} | ${item.description} | ${item.amount} ${item.currency}`,
+              )
+              .join("\n")}`,
+          },
+        ],
+      },
+    ],
+    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    generationConfig: { maxOutputTokens: 4096 },
+  } as any);
+
+  const toolCalls = getFunctionCalls(response).filter(
+    (call: any) => call && call.name === "categorize_transactions",
+  );
+
+  if (toolCalls.length > 0) {
+    const categories = toolCalls.flatMap((call: any) =>
+      Array.isArray(call.args?.categories) ? call.args.categories : [],
+    );
+    if (categories.length === candidates.length) {
+      return categories.map((cat: string) => normalizeCategory(cat));
+    }
+  }
+
+  return candidates.map((candidate) =>
+    normalizeCategory(candidate.description),
+  );
+}
+
+function buildTableRowTexts(page: any, fullText: string): string[] {
+  if (!page || !Array.isArray(page.tables)) return [];
+  const rows: string[] = [];
+
+  for (const table of page.tables) {
+    const tableRows = [...(table.headerRows ?? []), ...(table.bodyRows ?? [])];
+
+    for (const row of tableRows) {
+      const cells = Array.isArray(row.cells) ? row.cells : [];
+      const cellTexts: string[] = [];
+      for (const cell of cells) {
+        const cellText = textAnchorToText(cell.layout?.textAnchor, fullText)
+          .replace(/\s+/g, " ")
+          .trim();
+        if (cellText.length > 0) {
+          cellTexts.push(cellText);
+        }
+      }
+
+      if (cellTexts.length > 0) {
+        rows.push(cellTexts.join(" | "));
+      }
+    }
+  }
+
+  return rows;
+}
+
+function buildLineTexts(page: any, fullText: string): string[] {
+  if (!page || !Array.isArray(page.lines)) return [];
+  const lines: string[] = [];
+
+  for (const line of page.lines) {
+    const lineText = textAnchorToText(line.layout?.textAnchor, fullText)
+      .replace(/\s+/g, " ")
+      .trim();
+    if (lineText) {
+      lines.push(lineText);
+    }
+  }
+
+  return lines;
+}
+
+function buildPageTextFromDocumentAiPage(page: any, fullText: string): string {
+  const tableRows = buildTableRowTexts(page, fullText);
+  if (tableRows.length > 0) {
+    return tableRows.join("\n");
+  }
+
+  const lineTexts = buildLineTexts(page, fullText);
+  if (lineTexts.length > 0) {
+    return lineTexts.join("\n");
+  }
+
+  if (page?.layout?.textAnchor) {
+    return textAnchorToText(page.layout.textAnchor, fullText);
+  }
+
+  return "";
+}
+
+/**
+ * Extracts text from PDF using Google Cloud Document AI.
+ * This reduces token usage by 80-90% compared to sending raw PDFs to Gemini.
+ * Falls back to Gemini's native processing if Document AI is not configured.
  */
 async function extractPdfText(
   base64Pdf: string,
 ): Promise<{ text: string; pageCount: number; pages?: string[] } | null> {
+  // Check if Document AI service account is configured
+  if (!GOOGLE_CLOUD_SERVICE_ACCOUNT) {
+    console.log(
+      "[analyze-expense] PDF: Document AI service account not configured, will use Gemini native processing",
+    );
+    return null;
+  }
+
   try {
-    // Decode base64 to bytes
-    const pdfBytes = decodeBase64(base64Pdf);
+    console.log(
+      "[analyze-expense] PDF: Extracting text with Google Cloud Document AI",
+    );
 
-    // Ensure we don't require a separate worker in the edge runtime
-    // (pdf.js defaults to using a worker in browser-like environments)
-    GlobalWorkerOptions.workerSrc = "";
-
-    const loadingTask = getPdfDocument({
-      data: new Uint8Array(pdfBytes),
-      disableWorker: true,
-    });
-    const pdf = await loadingTask.promise;
-
-    const totalPages = pdf.numPages;
-    const pageTexts: string[] = [];
-
-    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
-      const page = await pdf.getPage(pageNumber);
-      const textContent = await page.getTextContent();
-      const strings = (textContent.items as Array<{ str?: string }>).map((it) =>
-        typeof it?.str === "string" ? it.str : ""
+    // Generate OAuth2 access token from service account
+    const accessToken = await getGoogleCloudAccessToken();
+    if (!accessToken) {
+      console.log(
+        "[analyze-expense] PDF: Failed to get access token, will use Gemini native processing",
       );
-      const pageText = strings.join(" ").replace(/\s+/g, " ").trim();
-      pageTexts.push(pageText);
+      return null;
     }
 
-    // Extract text from all pages (merged for single-pass analysis)
-    const cleanText = pageTexts.join("\n\n").trim();
-    const hasSubstantialText = cleanText.length > 50; // Arbitrary threshold
+    // Call Document AI API with OAuth2 token
+    const response = await fetch(DOCUMENT_AI_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        rawDocument: {
+          content: base64Pdf,
+          mimeType: "application/pdf",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(
+        `[analyze-expense] PDF: Document AI failed (${response.status}): ${errorText}`,
+      );
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (!data.document || !data.document.text) {
+      console.log("[analyze-expense] PDF: No text extracted from Document AI");
+      return null;
+    }
+
+    const fullText = data.document.text;
+    const pages = data.document.pages || [];
+    const totalPages = pages.length;
+
+    // Extract per-page text for parallel processing
+    const pageTexts: string[] = [];
+    for (const page of pages) {
+      const pageText = buildPageTextFromDocumentAiPage(page, fullText);
+      const cleaned = normalizeDocumentText(pageText);
+      if (cleaned.length > 0) {
+        pageTexts.push(cleaned);
+      }
+    }
+
+    // Validate extracted text
+    const fallbackText = normalizeDocumentText(fullText);
+    const cleanText =
+      pageTexts.length > 0
+        ? normalizeDocumentText(pageTexts.join("\n\n"))
+        : fallbackText;
+    const hasSubstantialText = cleanText.length > 50;
     const hasTransactionLikeContent =
       /\d+\.\d{2}|\$|€|£|¥|₹/.test(cleanText) || // Has currency-like amounts
       /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(cleanText); // Has date-like patterns
 
     if (hasSubstantialText && hasTransactionLikeContent) {
-      // For large PDFs (>3 pages), also extract per-page text for parallel processing
-      let pages: string[] | undefined;
-      if (totalPages > 3) {
-        try {
-          pages = pageTexts.map((p) => p.trim()).filter((p) => p.length > 0);
-        } catch {
-          // Fall back to merged text if per-page extraction fails
-        }
+      // For large PDFs (>3 pages), provide per-page text for parallel processing
+      let pagesForProcessing: string[] | undefined;
+      if (totalPages > 3 && pageTexts.length > 1) {
+        pagesForProcessing = pageTexts.filter((p) => p.length > 0);
       }
 
       console.log(
-        `[analyze-expense] PDF text extraction success: ${totalPages} pages, ${cleanText.length} chars` +
-          (pages
-            ? `, ${pages.length} page chunks for parallel processing`
+        `[analyze-expense] ✅ PDF: Document AI extraction SUCCESS - ${totalPages} pages, ${cleanText.length} chars` +
+          (pagesForProcessing
+            ? `, ${pagesForProcessing.length} page chunks for parallel processing`
             : ""),
       );
-      return { text: cleanText, pageCount: totalPages, pages };
+      console.log(
+        "[analyze-expense] 🚀 Using Document AI (not Gemini vision mode)",
+      );
+
+      return {
+        text: cleanText,
+        pageCount: totalPages,
+        pages: pagesForProcessing,
+      };
     }
 
-    // PDF might be image-based or have very little text
     console.log(
-      `[analyze-expense] PDF text extraction: insufficient text (${cleanText.length} chars, has transaction patterns: ${hasTransactionLikeContent})`,
+      `[analyze-expense] PDF: Insufficient text from Document AI (${cleanText.length} chars, has transaction patterns: ${hasTransactionLikeContent})`,
     );
     return null;
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.log(
-      `[analyze-expense] PDF text extraction failed:`,
-      error instanceof Error ? error.message : String(error),
+      `[analyze-expense] PDF: Document AI extraction failed: ${errorMessage}`,
     );
     return null;
   }
@@ -775,6 +1646,31 @@ async function analyzeFromText(
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
     : "\n";
 
+  const normalizedText = injectStatementLineBreaks(bodyText);
+  const transactionLines = extractTransactionLines(normalizedText);
+  const deterministicCandidates = buildDeterministicCandidates(
+    normalizedText,
+    callerDate,
+    callerCurrency,
+    transactionLines.length >= 20 ? transactionLines : undefined,
+  );
+  const analysisText =
+    transactionLines.length >= 20
+      ? transactionLines.join("\n")
+      : normalizedText;
+
+  if (DEBUG_LOGS && transactionLines.length >= 20) {
+    console.log(
+      `[analyze-expense] Text: Using ${transactionLines.length} transaction-like lines for analysis`,
+    );
+  }
+
+  if (deterministicCandidates.length > 0) {
+    console.log(
+      `[analyze-expense] Text: Deterministic parser found ${deterministicCandidates.length} candidates`,
+    );
+  }
+
   // Check if text is large enough to require chunking
   // ~12000 chars is roughly 3000-4000 tokens input, leaving room for output
   const CHUNK_THRESHOLD = 12000;
@@ -786,33 +1682,39 @@ async function analyzeFromText(
     textChunks = [];
     let currentChunk = "";
     for (const page of preChunkedPages) {
-      if (page.length > CHUNK_THRESHOLD) {
+      const processedPage = injectStatementLineBreaks(page);
+      if (processedPage.length > CHUNK_THRESHOLD) {
         // Page is too large, flush current and split this page
         if (currentChunk.trim()) textChunks.push(currentChunk.trim());
-        textChunks.push(...splitTextIntoChunks(page, CHUNK_THRESHOLD));
+        textChunks.push(...splitTextIntoChunks(processedPage, CHUNK_THRESHOLD));
         currentChunk = "";
-      } else if (currentChunk.length + page.length + 2 > CHUNK_THRESHOLD) {
+      } else if (
+        currentChunk.length + processedPage.length + 2 >
+        CHUNK_THRESHOLD
+      ) {
         // Adding this page would exceed limit, flush current
         if (currentChunk.trim()) textChunks.push(currentChunk.trim());
-        currentChunk = page;
+        currentChunk = processedPage;
       } else {
         // Combine pages
-        currentChunk += (currentChunk ? "\n\n" : "") + page;
+        currentChunk += (currentChunk ? "\n\n" : "") + processedPage;
       }
     }
     if (currentChunk.trim()) textChunks.push(currentChunk.trim());
   } else {
     textChunks =
-      bodyText.length > CHUNK_THRESHOLD
-        ? splitTextIntoChunks(bodyText, CHUNK_THRESHOLD)
-        : [bodyText];
+      analysisText.length > CHUNK_THRESHOLD
+        ? splitTextIntoChunks(analysisText, CHUNK_THRESHOLD)
+        : [analysisText];
   }
 
   const isMultiChunk = textChunks.length > 1;
 
-  console.log(
-    `[analyze-expense] Text: Processing ${textChunks.length} chunk(s) ${isMultiChunk ? "IN PARALLEL" : ""}, total length=${bodyText.length}`,
-  );
+  if (DEBUG_LOGS) {
+    console.log(
+      `[analyze-expense] Text: Processing ${textChunks.length} chunk(s) ${isMultiChunk ? "IN PARALLEL" : ""}, total length=${analysisText.length}`,
+    );
+  }
 
   // Report progress: starting chunk analysis
   if (onProgress && textChunks.length > 0) {
@@ -822,6 +1724,41 @@ async function analyzeFromText(
       total: textChunks.length,
       message: `Processing ${textChunks.length} chunk(s)`,
     });
+  }
+
+  // Deterministic path for statement-like inputs: reduce LLM to categorization only
+  if (deterministicCandidates.length >= 30) {
+    const categories = await resolveCandidateCategories(
+      genAI,
+      deterministicCandidates,
+      expenseCategories,
+      incomeCategories,
+      language,
+    );
+
+    const deterministicItems: ExpenseItem[] = deterministicCandidates.map(
+      (candidate, index) => {
+        const category = categories[index] || "other";
+        const itemCurrency = candidate.currency || callerCurrency;
+        const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
+        return {
+          type: candidate.type,
+          amount: candidate.amount,
+          category,
+          currency: itemCurrency,
+          currencySymbol: itemCurrencySymbol,
+          date: candidate.date || callerDate,
+          description: candidate.description || "",
+        };
+      },
+    );
+
+    const cleaned = deduplicateAndCleanItems(deterministicItems);
+    reconcileStatementTotals(normalizedText, cleaned);
+    console.log(
+      `[analyze-expense] Text: Deterministic final count ${cleaned.length} (from ${deterministicCandidates.length} raw)`,
+    );
+    return cleaned;
   }
 
   // Process single chunk directly (no parallelism needed)
@@ -856,9 +1793,11 @@ async function analyzeFromText(
     const batchEnd = Math.min(batchStart + MAX_CONCURRENT, textChunks.length);
     const batchChunks = textChunks.slice(batchStart, batchEnd);
 
-    console.log(
-      `[analyze-expense] Text: Processing parallel batch ${Math.floor(batchStart / MAX_CONCURRENT) + 1}/${Math.ceil(textChunks.length / MAX_CONCURRENT)} (chunks ${batchStart + 1}-${batchEnd})`,
-    );
+    if (DEBUG_LOGS) {
+      console.log(
+        `[analyze-expense] Text: Processing parallel batch ${Math.floor(batchStart / MAX_CONCURRENT) + 1}/${Math.ceil(textChunks.length / MAX_CONCURRENT)} (chunks ${batchStart + 1}-${batchEnd})`,
+      );
+    }
 
     const batchPromises = batchChunks.map((chunk, idx) =>
       processTextChunk(
@@ -931,6 +1870,14 @@ async function processTextChunk(
 ): Promise<ExpenseItem[]> {
   const isMultiChunk = totalChunks > 1;
 
+  // Log a preview of the chunk being processed
+  if (DEBUG_LOGS) {
+    const chunkPreview = chunk.substring(0, 500).replace(/\n/g, " ");
+    console.log(
+      `[analyze-expense] Text-chunk${chunkIndex + 1} preview (${chunk.length} chars): ${chunkPreview}...`,
+    );
+  }
+
   const chunkPrompt = isMultiChunk
     ? `BULK IMPORT - Part ${chunkIndex + 1} of ${totalChunks}:
 Extract ALL transactions from this text segment. Each line that contains an amount should be treated as a separate transaction.
@@ -988,9 +1935,11 @@ Do NOT summarize - extract every single transaction.
       description: item.description || (isMultiChunk ? "" : originalText),
     }));
 
-    console.log(
-      `[analyze-expense] Text: Chunk ${chunkIndex + 1} extracted ${itemsWithDesc.length} items`,
-    );
+    if (DEBUG_LOGS) {
+      console.log(
+        `[analyze-expense] Text: Chunk ${chunkIndex + 1} extracted ${itemsWithDesc.length} items`,
+      );
+    }
     return itemsWithDesc;
   }
 
@@ -1013,9 +1962,11 @@ function processRawItems(
       const rawCategory = it.category || "other";
       const normalizedCategory = normalizeCategory(rawCategory);
 
-      console.log(
-        `[analyze-expense] ${logPrefix} raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`,
-      );
+      if (DEBUG_LOGS) {
+        console.log(
+          `[analyze-expense] ${logPrefix} raw: amount=${it.amount}, category="${rawCategory}" -> "${normalizedCategory}"`,
+        );
+      }
 
       const txType = String(it.type || "").toLowerCase();
       const resolvedType =
@@ -1038,7 +1989,7 @@ function processRawItems(
           : undefined;
 
       // Log household split details for debugging
-      if (householdContext && resolvedType === "expense") {
+      if (DEBUG_LOGS && householdContext && resolvedType === "expense") {
         console.log(
           `[analyze-expense] ${logPrefix} household split: payerUserId=${payerUserId || "(caller)"}, ` +
             `rawCustomSplits=${JSON.stringify(it.customSplits)}, ` +
@@ -1069,7 +2020,7 @@ function processRawItems(
         typeof it.currencySymbol === "string" &&
         typeof it.date === "string";
 
-      if (!isValid) {
+      if (DEBUG_LOGS && !isValid) {
         console.log(
           `[analyze-expense] ${logPrefix} filtered invalid: ${JSON.stringify(
             it,
@@ -1099,13 +2050,17 @@ function deduplicateAndCleanItems(items: ExpenseItem[]): ExpenseItem[] {
   result = result.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
 
   // Deduplicate by (date, amount, description) composite key
+  // Be conservative when description is missing to avoid dropping valid rows
   const seen = new Set<string>();
   return result.filter((item) => {
-    const key = `${item.date}|${item.amount.toFixed(2)}|${(
-      item.description || ""
-    )
-      .toLowerCase()
-      .slice(0, 50)}`;
+    const normalizedDescription = (item.description || "").toLowerCase().trim();
+    if (normalizedDescription.length < 3) {
+      return true;
+    }
+    const key = `${item.date}|${item.amount.toFixed(2)}|${normalizedDescription.slice(
+      0,
+      50,
+    )}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -1226,10 +2181,11 @@ async function analyzeFromPdfVision(
     typeHint,
   );
 
-  // Model progression for PDF analysis with higher token limits
+  // Model progression for PDF analysis with higher token limits and extended timeouts
+  // Increased timeouts to 3 minutes for large PDFs with many transactions
   const modelConfigs = [
-    { name: "gemini-2.5-flash-lite", timeout: 90000, maxTokens: 65536 },
-    { name: "gemini-3-flash-preview", timeout: 90000, maxTokens: 65536 },
+    { name: "gemini-2.5-flash-lite", timeout: 180000, maxTokens: 65536 },
+    { name: "gemini-3-flash-preview", timeout: 180000, maxTokens: 65536 },
   ];
 
   const householdPrompt = householdContext
@@ -1776,22 +2732,24 @@ export async function runAnalyzeExpense(
     const incomeCategories = getIncomeCategories();
 
     // Debug: Log categories being passed to AI
-    console.log(
-      `[analyze-expense] Expense categories count: ${expenseCategories.length}`,
-    );
-    console.log(
-      `[analyze-expense] Income categories count: ${incomeCategories.length}`,
-    );
-    console.log(
-      `[analyze-expense] Expense categories include 'food': ${expenseCategories.includes(
-        "food",
-      )}`,
-    );
-    console.log(
-      `[analyze-expense] Expense categories include 'food & drinks': ${expenseCategories.includes(
-        "food & drinks",
-      )}`,
-    );
+    if (DEBUG_LOGS) {
+      console.log(
+        `[analyze-expense] Expense categories count: ${expenseCategories.length}`,
+      );
+      console.log(
+        `[analyze-expense] Income categories count: ${incomeCategories.length}`,
+      );
+      console.log(
+        `[analyze-expense] Expense categories include 'food': ${expenseCategories.includes(
+          "food",
+        )}`,
+      );
+      console.log(
+        `[analyze-expense] Expense categories include 'food & drinks': ${expenseCategories.includes(
+          "food & drinks",
+        )}`,
+      );
+    }
 
     let lastError = "";
 
