@@ -16,7 +16,9 @@
     "deploy:functions:prod": "node scripts/deploy-functions.js prod",
     "upgrade:lifetime": "node scripts/upgrade-to-lifetime.js",
     "upgrade:annual": "node scripts/upgrade-to-annual.js",
-    "downgrade:free": "node scripts/downgrade-to-free.js"
+    "downgrade:free": "node scripts/downgrade-to-free.js",
+    "email:test": "node scripts/send-bulk-emails.js --test",
+    "email:send": "node scripts/send-bulk-emails.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -99,6 +101,7 @@
     "redaxios": "^0.5.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
+    "resend": "^4.0.1",
     "rough-notation": "^0.5.1",
     "sass": "^1.93.2",
     "stripe": "^20.0.0",

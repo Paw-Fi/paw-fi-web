@@ -1,6 +1,6 @@
 /**
  * Subscription Constants - Production Ready
- * 
+ *
  * Centralized constants for subscription management
  * Following Stripe best practices and API version 2023-10-16
  */
@@ -18,31 +18,35 @@ export type PlanType = keyof typeof PLAN_HIERARCHY;
 
 // Billing intervals
 export const BILLING_INTERVALS = {
-  monthly: 'monthly',
-  yearly: 'yearly',
+  monthly: "monthly",
+  yearly: "yearly",
 } as const;
 
 export type BillingInterval = keyof typeof BILLING_INTERVALS;
 
 // Subscription statuses from Stripe
 export const SUBSCRIPTION_STATUS = {
-  active: 'active',
-  trialing: 'trialing',
-  past_due: 'past_due',
-  canceled: 'canceled',
-  incomplete: 'incomplete',
-  incomplete_expired: 'incomplete_expired',
-  unpaid: 'unpaid',
-  paused: 'paused',
+  active: "active",
+  trialing: "trialing",
+  past_due: "past_due",
+  canceled: "canceled",
+  incomplete: "incomplete",
+  incomplete_expired: "incomplete_expired",
+  unpaid: "unpaid",
+  paused: "paused",
 } as const;
 
 export type SubscriptionStatus = keyof typeof SUBSCRIPTION_STATUS;
 
 // Active subscription statuses that grant access
-export const ACTIVE_STATUSES: SubscriptionStatus[] = ['active', 'trialing'];
+export const ACTIVE_STATUSES: SubscriptionStatus[] = ["active", "trialing"];
 
 // Statuses that indicate subscription is in good standing
-export const GOOD_STANDING_STATUSES: SubscriptionStatus[] = ['active', 'trialing', 'past_due'];
+export const GOOD_STANDING_STATUSES: SubscriptionStatus[] = [
+  "active",
+  "trialing",
+  "past_due",
+];
 
 // Trial period in days
 export const TRIAL_PERIOD_DAYS = 30;
@@ -55,27 +59,27 @@ export const PAYMENT_RETRY_CONFIG = {
 
 // Webhook event types we handle
 export const HANDLED_WEBHOOK_EVENTS = [
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-  'customer.subscription.trial_will_end',
-  'invoice.payment_succeeded',
-  'invoice.payment_failed',
-  'invoice.finalized',
-  'payment_method.attached',
-  'payment_method.detached',
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "customer.subscription.trial_will_end",
+  "invoice.payment_succeeded",
+  "invoice.payment_failed",
+  "invoice.finalized",
+  "payment_method.attached",
+  "payment_method.detached",
 ] as const;
 
-export type HandledWebhookEvent = typeof HANDLED_WEBHOOK_EVENTS[number];
+export type HandledWebhookEvent = (typeof HANDLED_WEBHOOK_EVENTS)[number];
 
 // Subscription change types for email notifications
 export const CHANGE_TYPES = {
-  created: 'created',
-  upgraded: 'upgraded',
-  downgraded: 'downgraded',
-  renewal: 'renewal',
-  canceled: 'canceled',
-  interval_changed: 'interval_changed',
+  created: "created",
+  upgraded: "upgraded",
+  downgraded: "downgraded",
+  renewal: "renewal",
+  canceled: "canceled",
+  interval_changed: "interval_changed",
 } as const;
 
 export type ChangeType = keyof typeof CHANGE_TYPES;
@@ -101,25 +105,25 @@ export function getChangeType(
   fromPlan: PlanType,
   toPlan: PlanType,
   fromInterval?: BillingInterval,
-  toInterval?: BillingInterval
+  toInterval?: BillingInterval,
 ): ChangeType {
-  if (fromPlan === 'free' && toPlan !== 'free') {
-    return 'created';
+  if (fromPlan === "free" && toPlan !== "free") {
+    return "created";
   }
-  
-  if (toPlan === 'free') {
-    return 'canceled';
+
+  if (toPlan === "free") {
+    return "canceled";
   }
-  
+
   if (fromPlan !== toPlan) {
-    return isUpgrade(fromPlan, toPlan) ? 'upgraded' : 'downgraded';
+    return isUpgrade(fromPlan, toPlan) ? "upgraded" : "downgraded";
   }
-  
+
   if (fromInterval && toInterval && fromInterval !== toInterval) {
-    return 'interval_changed';
+    return "interval_changed";
   }
-  
-  return 'renewal';
+
+  return "renewal";
 }
 
 /**

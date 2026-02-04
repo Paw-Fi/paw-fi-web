@@ -15,6 +15,7 @@ Allow: /about
 Allow: /contact
 Allow: /how-it-works
 Allow: /pricing
+Allow: /promo
 Allow: /team
 Allow: /privacy-policy
 Allow: /terms-of-service
@@ -180,6 +181,7 @@ Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
+Allow: /promo
 Crawl-delay: 1
 
 User-agent: OpenAI-ChatGPT
@@ -189,6 +191,7 @@ Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
+Allow: /promo
 Crawl-delay: 1
 
 User-agent: Claude-Web
@@ -198,6 +201,7 @@ Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
+Allow: /promo
 Crawl-delay: 1
 
 User-agent: Anthropic-AI
@@ -219,6 +223,7 @@ Allow: /help
 Allow: /guides/
 Allow: /calculators/
 Allow: /budgeting-app/
+Allow: /promo
 Crawl-delay: 1
 
 User-agent: PerplexityBot

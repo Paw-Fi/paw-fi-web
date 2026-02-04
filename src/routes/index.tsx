@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect, useState, type CSSProperties } from "react";
 import type { ReactNode } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { Helmet } from "@dr.pogodin/react-helmet";
+import { ArrowRight, X } from "lucide-react";
 
 // V2 Components
 import { HeroV2 } from "@/components/homepage/v2/hero-v2";
@@ -58,6 +60,19 @@ export const Route = createFileRoute("/")({
 
 export default function HomePage() {
   const pageUrl = getCanonicalUrl("/");
+
+  const promoBannerStorageKey = "moneko-home-promo-banner-dismissed-v1";
+  const [shouldShowPromoBanner, setShouldShowPromoBanner] = useState(false);
+
+  useEffect(() => {
+    const isDismissed = window.localStorage.getItem(promoBannerStorageKey) === "1";
+    setShouldShowPromoBanner(!isDismissed);
+  }, []);
+
+  const handleDismissPromoBanner = () => {
+    window.localStorage.setItem(promoBannerStorageKey, "1");
+    setShouldShowPromoBanner(false);
+  };
 
   const featureLinks = {
     whatsapp: { href: "/features/whatsapp-assistant", label: "WhatsApp budgeting assistant" },
@@ -235,12 +250,53 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background font-sans selection:bg-primary/20">
+    <div
+      className="home-banner-aware relative min-h-screen bg-background font-sans selection:bg-primary/20"
+      style={
+        {
+          "--home-banner-offset": shouldShowPromoBanner ? "44px" : "0px",
+        } as CSSProperties
+      }
+    >
       <Helmet>
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
+        <style>
+          {`.home-banner-aware header.fixed.top-0{top:var(--home-banner-offset,0px);}`}
+        </style>
       </Helmet>
 
       <AmbientHalo />
+
+      {shouldShowPromoBanner && (
+        <div className="fixed inset-x-0 top-0 z-[60] h-11 border-b border-white/10 bg-gradient-to-r from-primary/18 via-background/70 to-background/70 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+          <div className="relative mx-auto flex h-11 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
+            <div className="absolute left-1/2 top-1/2 flex w-full max-w-[min(640px,calc(100vw-96px))] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2 text-sm">
+              <span className="inline-flex flex-shrink-0 items-center rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                Limited offer
+              </span>
+              <span className="min-w-0 truncate text-muted-foreground">
+                Get <span className="font-semibold text-foreground">$0.99 for 1 year</span> of Moneko Premium.
+              </span>
+              <Link
+                to="/promo"
+                className="group inline-flex flex-shrink-0 items-center gap-1 font-semibold text-primary hover:text-primary/80"
+              >
+                Claim now
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDismissPromoBanner}
+              className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-primary/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              aria-label="Dismiss news banner"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <HomeHeader />
 

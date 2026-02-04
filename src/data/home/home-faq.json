@@ -58,5 +58,10 @@
     "id": "insights",
     "question": "What insights or planning tools do I get?",
     "answer": "The Insights tab shows daily balance trends, pocket performance, and conversational “what if” planning. You can ask questions like “What happens if I add $200 more by next month?” and save the scenarios."
+  },
+  {
+    "id": "file-import",
+    "question": "Does Moneko support direct import of .xlsx, .csv, or PDF files?",
+    "answer": "Yes! Moneko supports automatic import of .xlsx, .csv, and PDF files through AI-powered processing. Simply upload your financial files, and our AI will automatically extract and organize the data for you, saving considerable time compared to manual data entry."
   }
 ]

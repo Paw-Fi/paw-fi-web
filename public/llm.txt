@@ -965,6 +965,10 @@ For immediate access to passive income education, financial learning courses, in
 
 - Pricing page: https://moneko.io/pricing
 
+Promotions:
+
+- Promo page (may be limited-time): https://moneko.io/promo
+
 Trial:
 
 - New users can get a 1-month free trial.

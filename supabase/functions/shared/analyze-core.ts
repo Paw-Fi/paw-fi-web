@@ -3,11 +3,20 @@
 const originalConsoleError = console.error;
 console.error = (...args: any[]) => {
   const message = args[0];
+  const joined = args
+    .map((arg: any) =>
+      typeof arg === "string" ? arg : arg instanceof Error ? arg.message : "",
+    )
+    .filter(Boolean)
+    .join(" ");
   if (
-    typeof message === "string" &&
-    (message.includes("Deno.core.runMicrotasks() is not supported") ||
-      message.includes("Setting up fake worker failed") ||
-      message.includes("event loop error"))
+    (typeof message === "string" || joined) &&
+    (String(message).includes("Deno.core.runMicrotasks() is not supported") ||
+      String(message).includes("Setting up fake worker failed") ||
+      String(message).includes("event loop error") ||
+      joined.includes("Deno.core.runMicrotasks() is not supported") ||
+      joined.includes("Setting up fake worker failed") ||
+      joined.includes("event loop error"))
   ) {
     // Suppress these known serverless environment warnings
     return;
@@ -18,11 +27,22 @@ console.error = (...args: any[]) => {
 const originalConsoleWarn = console.warn;
 console.warn = (...args: any[]) => {
   const message = args[0];
+  const joined = args
+    .map((arg: any) =>
+      typeof arg === "string" ? arg : arg instanceof Error ? arg.message : "",
+    )
+    .filter(Boolean)
+    .join(" ");
   if (
-    typeof message === "string" &&
-    (message.includes("Cannot polyfill") ||
-      message.includes("rendering may be broken") ||
-      message.includes("__Process$.getBuiltinModule is not a function"))
+    (typeof message === "string" || joined) &&
+    (String(message).includes("Cannot polyfill") ||
+      String(message).includes("rendering may be broken") ||
+      String(message).includes(
+        "__Process$.getBuiltinModule is not a function",
+      ) ||
+      joined.includes("Cannot polyfill") ||
+      joined.includes("rendering may be broken") ||
+      joined.includes("__Process$.getBuiltinModule is not a function"))
   ) {
     // Suppress these known polyfill warnings in serverless
     return;
@@ -242,7 +262,8 @@ function injectStatementLineBreaks(text: string): string {
 
 function extractTransactionLines(text: string): string[] {
   const lines = text.split(/\n/).map((line) => line.trim());
-  const amountPattern = /(€|\$|£|¥|₹)\s?\d|\d{1,3}(?:[.,]\d{3})*[.,]\d{2}/;
+  const amountPattern =
+    /(€|\$|£|¥|₹)\s?\d|\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?|\b\d{1,3}(?:,\d{3})+\b/;
   const noisePattern =
     /(opening balance|closing balance|balance summary|statement generated|total money out|total money in)/i;
 
@@ -377,9 +398,13 @@ function normalizeAmountString(value: string): number | null {
 function extractAmountTokens(line: string): { raw: string; value: number }[] {
   const tokens: { raw: string; value: number }[] = [];
   const regex =
-    /(€|\$|£|¥|₹)?\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})|\d+(?:[.,]\d{2})/g;
+    /(€|\$|£|¥|₹)?\s?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?|\b\d{1,3}(?:,\d{3})+\b|\b\d+\b/g;
   const matches = line.match(regex) || [];
   for (const match of matches) {
+    const trimmed = match.trim();
+    if (/^\d{4}$/.test(trimmed) && !/(€|\$|£|¥|₹)/.test(trimmed)) {
+      continue;
+    }
     const value = normalizeAmountString(match);
     if (value && value >= 0.01) {
       tokens.push({ raw: match, value });
@@ -658,6 +683,309 @@ function buildDeterministicCandidates(
   return candidates;
 }
 
+function buildItemsFromDeterministicCandidates(
+  candidates: Array<{
+    type: "expense" | "income";
+    amount: number;
+    currency: string;
+    date: string;
+    description: string;
+  }>,
+  callerCurrency: string,
+  callerDate: string,
+): ExpenseItem[] {
+  return candidates.map((candidate) => {
+    const itemCurrency = candidate.currency || callerCurrency;
+    return {
+      type: candidate.type,
+      amount: candidate.amount,
+      category: normalizeCategory(candidate.description),
+      currency: itemCurrency,
+      currencySymbol: getCurrencySymbol(itemCurrency),
+      date: candidate.date || callerDate,
+      description: candidate.description || "",
+    };
+  });
+}
+
+function extractDeterministicItemsFromText(
+  text: string,
+  callerDate: string,
+  callerCurrency: string,
+): ExpenseItem[] {
+  const normalizedText = injectStatementLineBreaks(text);
+  const transactionLines = extractTransactionLines(normalizedText);
+  const candidates = buildDeterministicCandidates(
+    normalizedText,
+    callerDate,
+    callerCurrency,
+    transactionLines.length >= 10 ? transactionLines : undefined,
+  );
+  if (candidates.length === 0) return [];
+  const items = buildItemsFromDeterministicCandidates(
+    candidates,
+    callerCurrency,
+    callerDate,
+  );
+  const cleaned = deduplicateAndCleanItems(items);
+  reconcileStatementTotals(normalizedText, cleaned);
+  return cleaned;
+}
+
+function extractStatementItemsFromText(
+  text: string,
+  callerDate: string,
+  callerCurrency: string,
+): ExpenseItem[] {
+  const rawLines = text.split(/\n/).map((line) => line.trim());
+  const lines = rawLines.filter(Boolean);
+  return extractStatementItemsFromLines(
+    lines,
+    callerDate,
+    callerCurrency,
+    text,
+  );
+}
+
+function extractStatementItemsFromLines(
+  lines: string[],
+  callerDate: string,
+  callerCurrency: string,
+  rawTextForDebug?: string,
+): ExpenseItem[] {
+  const candidates: Array<{
+    type: "expense" | "income";
+    amount: number;
+    currency: string;
+    date: string;
+    description: string;
+  }> = [];
+
+  let pendingDate: string | null = null;
+  let pendingText = "";
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+
+    const hasTotalNoise = /\b(balance|total|subtotal|opening|closing)\b/i.test(
+      line,
+    );
+    if (hasTotalNoise) continue;
+
+    const dateValue = parseDateFromText(line, callerDate);
+    const amountTokens = extractAmountTokens(line);
+
+    if (dateValue && amountTokens.length > 0) {
+      const amount = amountTokens[amountTokens.length - 1].value;
+      const currency = detectCurrencyFromText(line, callerCurrency);
+      const description = stripAmountsAndDates(line) || line;
+      if (!isTotalLike(description)) {
+        candidates.push({
+          type: inferTypeFromText(line),
+          amount,
+          currency,
+          date: dateValue,
+          description,
+        });
+      }
+      pendingDate = null;
+      pendingText = "";
+      continue;
+    }
+
+    if (dateValue && amountTokens.length === 0) {
+      pendingDate = dateValue;
+      pendingText = line;
+      continue;
+    }
+
+    if (!dateValue && amountTokens.length > 0 && pendingDate) {
+      const combined = `${pendingText} ${line}`.trim();
+      const combinedTokens = extractAmountTokens(combined);
+      if (combinedTokens.length > 0) {
+        const amount = combinedTokens[combinedTokens.length - 1].value;
+        const currency = detectCurrencyFromText(combined, callerCurrency);
+        const description = stripAmountsAndDates(combined) || combined;
+        if (!isTotalLike(description)) {
+          candidates.push({
+            type: inferTypeFromText(combined),
+            amount,
+            currency,
+            date: pendingDate,
+            description,
+          });
+        }
+      }
+      pendingDate = null;
+      pendingText = "";
+      continue;
+    }
+
+    if (pendingDate) {
+      pendingText = `${pendingText} ${line}`.trim();
+    }
+  }
+
+  if (DEBUG_LOGS) {
+    console.log(
+      `[analyze-expense] PDF: Statement-mode candidates ${candidates.length}`,
+    );
+    if (candidates.length === 0) {
+      const sample = lines
+        .slice(0, 20)
+        .map((line) =>
+          line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*")),
+        );
+      console.log(
+        `[analyze-expense] PDF: Statement-mode sample lines (masked):\n${sample.join(
+          "\n",
+        )}`,
+      );
+    }
+  }
+
+  if (candidates.length === 0) {
+    const dateRegex = new RegExp(
+      "\\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[^\n]{0,12}\\d{1,2}(?:,\\s*\\d{2,4})?|\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b",
+      "g",
+    );
+    const sourceText = rawTextForDebug ?? lines.join("\n");
+    const matches = Array.from(sourceText.matchAll(dateRegex));
+    const segments: string[] = [];
+    for (let i = 0; i < matches.length; i++) {
+      const start = matches[i].index ?? 0;
+      const end =
+        i + 1 < matches.length
+          ? (matches[i + 1].index ?? sourceText.length)
+          : sourceText.length;
+      const segment = sourceText.slice(start, end).replace(/\s+/g, " ").trim();
+      if (segment.length > 0) segments.push(segment);
+    }
+
+    for (const segment of segments) {
+      const dateValue = parseDateFromText(segment, callerDate);
+      if (!dateValue) continue;
+      const tokens = extractAmountTokens(segment);
+      if (tokens.length === 0) continue;
+      const amount = tokens[tokens.length - 1].value;
+      const currency = detectCurrencyFromText(segment, callerCurrency);
+      const description = stripAmountsAndDates(segment) || segment;
+      if (isTotalLike(description)) continue;
+      candidates.push({
+        type: inferTypeFromText(segment),
+        amount,
+        currency,
+        date: dateValue,
+        description,
+      });
+    }
+  }
+
+  if (candidates.length === 0) return [];
+  const items = buildItemsFromDeterministicCandidates(
+    candidates,
+    callerCurrency,
+    callerDate,
+  );
+  return deduplicateAndCleanItems(items);
+}
+
+function extractDeterministicItemsFromTableRows(
+  rows: string[],
+  callerDate: string,
+  callerCurrency: string,
+): ExpenseItem[] {
+  if (!rows || rows.length === 0) return [];
+  const parsedRows = rows
+    .map((row) => row.split("|").map((cell) => cell.trim()))
+    .filter((row) => row.some((cell) => cell.length > 0));
+  if (parsedRows.length === 0) return [];
+
+  const headerMap = detectHeaderMap(parsedRows[0]);
+  const startIndex = headerMap ? 1 : 0;
+  const candidates: Array<{
+    type: "expense" | "income";
+    amount: number;
+    currency: string;
+    date: string;
+    description: string;
+  }> = [];
+
+  for (let i = startIndex; i < parsedRows.length; i++) {
+    const row = parsedRows[i];
+    const joined = row.filter(Boolean).join(" | ");
+    if (!joined) continue;
+
+    const dateText =
+      headerMap && headerMap.date >= 0 ? row[headerMap.date] : joined;
+    const descriptionText =
+      headerMap && headerMap.description >= 0
+        ? row[headerMap.description]
+        : stripAmountsAndDates(joined) || joined;
+    const currencyText =
+      headerMap && headerMap.currency >= 0 ? row[headerMap.currency] : joined;
+
+    let amountValue: number | null = null;
+    let type: "expense" | "income" = "expense";
+
+    if (headerMap && headerMap.moneyOut >= 0) {
+      const parsed = parseSignedAmountFromCell(row[headerMap.moneyOut]);
+      if (parsed) {
+        amountValue = parsed.amount;
+        type = "expense";
+      }
+    }
+
+    if (amountValue === null && headerMap && headerMap.moneyIn >= 0) {
+      const parsed = parseSignedAmountFromCell(row[headerMap.moneyIn]);
+      if (parsed) {
+        amountValue = parsed.amount;
+        type = "income";
+      }
+    }
+
+    if (amountValue === null && headerMap && headerMap.amount >= 0) {
+      const parsed = parseSignedAmountFromCell(row[headerMap.amount]);
+      if (parsed) {
+        amountValue = parsed.amount;
+        type = parsed.isNegative ? "expense" : inferTypeFromText(joined);
+      }
+    }
+
+    if (amountValue === null) {
+      const tokens = extractAmountTokens(joined);
+      if (tokens.length > 0) {
+        amountValue = tokens[0].value;
+        type = inferTypeFromText(joined);
+      }
+    }
+
+    if (!amountValue) continue;
+    if (isTotalLike(descriptionText)) continue;
+
+    const dateValue = parseDateFromText(dateText, callerDate) || callerDate;
+    const currency =
+      detectCurrencyFromText(currencyText, callerCurrency) || callerCurrency;
+
+    candidates.push({
+      type,
+      amount: amountValue,
+      currency,
+      date: dateValue,
+      description: descriptionText || "",
+    });
+  }
+
+  if (candidates.length === 0) return [];
+  const items = buildItemsFromDeterministicCandidates(
+    candidates,
+    callerCurrency,
+    callerDate,
+  );
+  return deduplicateAndCleanItems(items);
+}
+
 function extractStatementTotals(text: string): {
   totalOut?: number;
   totalIn?: number;
@@ -835,6 +1163,13 @@ function buildLineTexts(page: any, fullText: string): string[] {
   return lines;
 }
 
+function buildColumnRowTextsFromLines(lines: string[]): string[] {
+  if (!lines || lines.length === 0) return [];
+  return lines
+    .map((line) => line.replace(/\s{2,}/g, " | ").trim())
+    .filter((line) => line.includes("|"));
+}
+
 function buildPageTextFromDocumentAiPage(page: any, fullText: string): string {
   const tableRows = buildTableRowTexts(page, fullText);
   if (tableRows.length > 0) {
@@ -858,9 +1193,13 @@ function buildPageTextFromDocumentAiPage(page: any, fullText: string): string {
  * This reduces token usage by 80-90% compared to sending raw PDFs to Gemini.
  * Falls back to Gemini's native processing if Document AI is not configured.
  */
-async function extractPdfText(
-  base64Pdf: string,
-): Promise<{ text: string; pageCount: number; pages?: string[] } | null> {
+async function extractPdfText(base64Pdf: string): Promise<{
+  text: string;
+  pageCount: number;
+  pages?: string[];
+  tableRows?: string[];
+  lineTexts?: string[];
+} | null> {
   // Check if Document AI service account is configured
   if (!GOOGLE_CLOUD_SERVICE_ACCOUNT) {
     console.log(
@@ -919,11 +1258,30 @@ async function extractPdfText(
 
     // Extract per-page text for parallel processing
     const pageTexts: string[] = [];
+    const tableRows: string[] = [];
+    const inferredRows: string[] = [];
+    const collectedLineTexts: string[] = [];
     for (const page of pages) {
+      const pageTableRows = buildTableRowTexts(page, fullText);
+      if (pageTableRows.length > 0) {
+        tableRows.push(...pageTableRows);
+      }
+      const pageLineTexts = buildLineTexts(page, fullText);
+      const columnRows = buildColumnRowTextsFromLines(pageLineTexts);
+      if (columnRows.length > 0) {
+        inferredRows.push(...columnRows);
+      }
+      if (pageLineTexts.length > 0) {
+        collectedLineTexts.push(...pageLineTexts);
+      }
       const pageText = buildPageTextFromDocumentAiPage(page, fullText);
       const cleaned = normalizeDocumentText(pageText);
       if (cleaned.length > 0) {
         pageTexts.push(cleaned);
+        const extraRows = buildColumnRowTextsFromLines(cleaned.split("\n"));
+        if (extraRows.length > 0) {
+          inferredRows.push(...extraRows);
+        }
       }
     }
 
@@ -955,10 +1313,20 @@ async function extractPdfText(
         "[analyze-expense] 🚀 Using Document AI (not Gemini vision mode)",
       );
 
+      const finalTableRows =
+        tableRows.length > 0
+          ? tableRows
+          : inferredRows.length > 0
+            ? inferredRows
+            : undefined;
+
       return {
         text: cleanText,
         pageCount: totalPages,
         pages: pagesForProcessing,
+        tableRows: finalTableRows,
+        lineTexts:
+          collectedLineTexts.length > 0 ? collectedLineTexts : undefined,
       };
     }
 
@@ -1615,6 +1983,265 @@ function splitTextIntoChunks(
   return chunks;
 }
 
+function extractJsonObject(text: string): Record<string, unknown> | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const withoutFence = trimmed
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  const tryParse = (value: string) => {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const direct = tryParse(withoutFence);
+  if (direct) return direct as Record<string, unknown>;
+
+  const start = withoutFence.indexOf("{");
+  const end = withoutFence.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    const sliced = withoutFence.slice(start, end + 1);
+    const parsed = tryParse(sliced);
+    if (parsed) return parsed as Record<string, unknown>;
+  }
+
+  return null;
+}
+
+async function preprocessExtractedTextWithGemini(
+  genAI: GoogleGenerativeAI,
+  rawText: string,
+  sourceLabel: string,
+  onProgress?: ProgressCallback,
+): Promise<string | null> {
+  const trimmed = rawText.trim();
+  if (!trimmed) return null;
+
+  if (onProgress) {
+    onProgress({
+      type: "extracting_text",
+      message: "Normalizing extracted text",
+    });
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash-lite",
+  });
+
+  const schemaLine =
+    '{"formatVersion":1,"source":"' +
+    sourceLabel +
+    '","normalizedText":"string","lines":["string"],"tables":[["string"]]}';
+
+  try {
+    const request = {
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: [
+                "You are a document normalization engine. Convert the raw extracted content into a JSON object without losing any information.",
+                "Return ONLY valid JSON, no markdown fences, no commentary.",
+                "",
+                "Required JSON schema (all keys required):",
+                schemaLine,
+                "",
+                "Rules:",
+                "- Preserve all content from the input. If unsure, include it in normalizedText and lines.",
+                "- normalizedText should be a cleaned version with line breaks kept.",
+                "- lines should include every meaningful line in order.",
+                "- tables should capture row-like data if present; otherwise return an empty array.",
+                "",
+                "Raw content:",
+                trimmed,
+              ].join("\n"),
+            },
+          ],
+        },
+      ],
+      generationConfig: { maxOutputTokens: 8192 },
+    } as any;
+
+    const response = await generateGeminiWithRetry({
+      model,
+      modelName: "gemini-2.5-flash-lite",
+      request,
+      timeoutMs: 30000,
+    });
+
+    const responseText = response?.response?.text?.() || "";
+    const parsed = extractJsonObject(responseText);
+    if (!parsed) return null;
+
+    return JSON.stringify(parsed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `[analyze-expense] Preprocess normalization failed: ${message}`,
+    );
+    return null;
+  }
+}
+
+async function extractTransactionsJsonWithGemini(
+  genAI: GoogleGenerativeAI,
+  rawText: string,
+  callerCurrency: string,
+  callerDate: string,
+): Promise<string | null> {
+  const trimmed = rawText.trim();
+  if (!trimmed) return null;
+
+  const modelName = "gemini-2.5-flash-lite";
+  const model = genAI.getGenerativeModel({ model: modelName });
+  const request = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: [
+              "You are a transaction extraction engine for bank statements and exports.",
+              "Extract every transaction row from the raw text and return ONLY valid JSON.",
+              "No markdown, no commentary, no extra keys.",
+              "",
+              "Required JSON schema:",
+              '{"transactions":[{"date":"YYYY-MM-DD","description":"string","amount":0,"currency":"USD","type":"expense|income"}]}',
+              "",
+              "Rules:",
+              "- Return ALL transactions; never summarize or collapse into totals.",
+              "- Skip opening/closing balance lines and totals.",
+              "- Use caller date if no date is present in a row.",
+              "- Use caller currency if missing.",
+              `Caller Date: ${callerDate}`,
+              `Caller Currency: ${callerCurrency}`,
+              "",
+              "Raw content:",
+              trimmed,
+            ].join("\n"),
+          },
+        ],
+      },
+    ],
+    generationConfig: { maxOutputTokens: 8192 },
+  } as any;
+
+  try {
+    const response = await generateGeminiWithRetry({
+      model,
+      modelName,
+      request,
+      timeoutMs: 60000,
+    });
+    const responseText = response?.response?.text?.() || "";
+    const parsed = extractJsonObject(responseText);
+    if (!parsed) return null;
+    return JSON.stringify(parsed);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `[analyze-expense] Transaction JSON extraction failed: ${message}`,
+    );
+    return null;
+  }
+}
+
+function mergeTransactionJsonSnippets(snippets: string[]): string | null {
+  const all: Array<{
+    date?: string;
+    description?: string;
+    amount?: number;
+    currency?: string;
+    type?: string;
+  }> = [];
+
+  for (const snippet of snippets) {
+    if (!snippet) continue;
+    const parsed = extractJsonObject(snippet) as any;
+    const items = Array.isArray(parsed?.transactions)
+      ? parsed.transactions
+      : [];
+    for (const item of items) {
+      all.push(item || {});
+    }
+  }
+
+  if (all.length === 0) return null;
+
+  const seen = new Set<string>();
+  const deduped = all.filter((item) => {
+    const key = `${item.date || ""}|${item.amount || ""}|${(
+      item.description || ""
+    )
+      .toLowerCase()
+      .slice(0, 50)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return JSON.stringify({ transactions: deduped });
+}
+
+function parseTransactionsJsonToItems(
+  jsonText: string,
+  callerCurrency: string,
+  callerDate: string,
+): ExpenseItem[] {
+  const parsed = extractJsonObject(jsonText) as any;
+  const items = Array.isArray(parsed?.transactions) ? parsed.transactions : [];
+  if (items.length === 0) return [];
+
+  const results: ExpenseItem[] = [];
+  for (const item of items) {
+    const rawDescription =
+      typeof item?.description === "string"
+        ? item.description
+        : item?.description != null
+          ? String(item.description)
+          : "";
+    const description = rawDescription
+      .trim()
+      .replace(/^description\s*[:=]\s*/i, "")
+      .replace(/^"+|"+$/g, "");
+    const amount = Math.abs(Number(item?.amount));
+    if (!Number.isFinite(amount) || amount <= 0) continue;
+
+    const currency =
+      typeof item?.currency === "string" && item.currency.trim()
+        ? item.currency.trim()
+        : callerCurrency;
+    const dateValue =
+      typeof item?.date === "string"
+        ? parseDateFromText(item.date, callerDate) || item.date
+        : callerDate;
+    const typeRaw = String(item?.type || "").toLowerCase();
+    const type =
+      typeRaw === "income" || typeRaw === "expense"
+        ? (typeRaw as "income" | "expense")
+        : inferTypeFromText(description);
+
+    results.push({
+      type,
+      amount,
+      category: normalizeCategory(description),
+      currency,
+      currencySymbol: getCurrencySymbol(currency),
+      date: typeof dateValue === "string" ? dateValue : callerDate,
+      description,
+    });
+  }
+
+  return deduplicateAndCleanItems(results);
+}
+
 /**
  * Text Analysis with parallel chunking support for large inputs.
  * Splits text into manageable chunks and processes them in parallel, then aggregates results.
@@ -1763,21 +2390,40 @@ async function analyzeFromText(
 
   // Process single chunk directly (no parallelism needed)
   if (!isMultiChunk) {
-    const items = await processTextChunk(
-      genAI,
-      textChunks[0],
-      callerCurrency,
-      callerDate,
-      language,
-      tools,
-      systemInstruction,
-      householdPrompt,
-      householdContext,
-      0,
-      1,
-      bodyText,
-    );
-    return deduplicateAndCleanItems(items);
+    try {
+      const items = await processTextChunk(
+        genAI,
+        textChunks[0],
+        callerCurrency,
+        callerDate,
+        language,
+        tools,
+        systemInstruction,
+        householdPrompt,
+        householdContext,
+        0,
+        1,
+        bodyText,
+      );
+      return deduplicateAndCleanItems(items);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`[analyze-expense] Text: LLM failed: ${message}`);
+      if (deterministicCandidates.length > 0) {
+        console.warn(
+          `[analyze-expense] Text: Falling back to deterministic candidates (${deterministicCandidates.length})`,
+        );
+        const fallbackItems = buildItemsFromDeterministicCandidates(
+          deterministicCandidates,
+          callerCurrency,
+          callerDate,
+        );
+        const cleaned = deduplicateAndCleanItems(fallbackItems);
+        reconcileStatementTotals(normalizedText, cleaned);
+        return cleaned;
+      }
+      return [];
+    }
   }
 
   // PARALLEL PROCESSING: Process all chunks concurrently with concurrency limit
@@ -1842,7 +2488,19 @@ async function analyzeFromText(
   }
 
   // Final deduplication and cleanup
-  const cleanedItems = deduplicateAndCleanItems(allItems);
+  let cleanedItems = deduplicateAndCleanItems(allItems);
+  if (cleanedItems.length === 0 && deterministicCandidates.length > 0) {
+    console.warn(
+      `[analyze-expense] Text: Falling back to deterministic candidates (${deterministicCandidates.length})`,
+    );
+    const fallbackItems = buildItemsFromDeterministicCandidates(
+      deterministicCandidates,
+      callerCurrency,
+      callerDate,
+    );
+    cleanedItems = deduplicateAndCleanItems(fallbackItems);
+    reconcileStatementTotals(normalizedText, cleanedItems);
+  }
   console.log(
     `[analyze-expense] Text: Final count after dedup: ${cleanedItems.length} items (from ${allItems.length} raw)`,
   );
@@ -1886,13 +2544,14 @@ Do NOT summarize - extract every single transaction.
 `
     : "";
 
+  const modelName = "gemini-2.5-flash-lite";
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
+    model: modelName,
     tools,
     systemInstruction,
   });
 
-  const response = await model.generateContent({
+  const request = {
     contents: [
       {
         role: "user",
@@ -1910,7 +2569,14 @@ Do NOT summarize - extract every single transaction.
     ],
     toolConfig: { functionCallingConfig: { mode: "AUTO" } },
     generationConfig: { maxOutputTokens: 32768 },
-  } as any);
+  } as any;
+
+  const response = await generateGeminiWithRetry({
+    model,
+    modelName,
+    request,
+    timeoutMs: 60000,
+  });
 
   const toolCalls = getFunctionCalls(response).filter(
     (call: any) => call && call.name === "add_transactions",
@@ -2100,6 +2766,10 @@ async function analyzeFromPdf(
   const textResult = await extractPdfText(base64Pdf);
 
   if (textResult && textResult.text.length > 0) {
+    const rawText =
+      textResult.pages && textResult.pages.length > 0
+        ? textResult.pages.join("\n\n")
+        : textResult.text;
     const hasPageChunks = textResult.pages && textResult.pages.length > 1;
     console.log(
       `[analyze-expense] PDF: Using text mode (${textResult.pageCount} pages, ${textResult.text.length} chars)` +
@@ -2107,20 +2777,207 @@ async function analyzeFromPdf(
           ? ` with ${textResult.pages!.length} page chunks for parallel processing`
           : ""),
     );
-    // Use text-based analysis with parallel page processing if available
+    if (DEBUG_LOGS) {
+      console.log(
+        `[analyze-expense] PDF: Table rows available: ${textResult.tableRows?.length ?? 0}`,
+      );
+      if (textResult.lineTexts && textResult.lineTexts.length > 0) {
+        const sample = textResult.lineTexts
+          .slice(0, 15)
+          .map((line) =>
+            line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*")),
+          );
+        console.log(
+          `[analyze-expense] PDF: Line text sample (masked):\n${sample.join(
+            "\n",
+          )}`,
+        );
+      }
+    }
+    const hasLineDates = textResult.lineTexts
+      ? textResult.lineTexts.some(
+          (line) => !!parseDateFromText(line, callerDate),
+        )
+      : false;
+
+    if (textResult.tableRows && textResult.tableRows.length > 0) {
+      const tableItems = extractDeterministicItemsFromTableRows(
+        textResult.tableRows,
+        callerDate,
+        callerCurrency,
+      );
+      if (tableItems.length > 0) {
+        console.log(
+          `[analyze-expense] PDF: Table-row extraction produced ${tableItems.length} item(s)`,
+        );
+        return tableItems;
+      }
+      console.log(
+        "[analyze-expense] PDF: Table-row extraction empty, falling back to text",
+      );
+    }
+    if (textResult.lineTexts && textResult.lineTexts.length > 0) {
+      const lineItems = extractStatementItemsFromLines(
+        textResult.lineTexts,
+        callerDate,
+        callerCurrency,
+        rawText,
+      );
+      if (lineItems.length > 0) {
+        console.log(
+          `[analyze-expense] PDF: Line-based statement extraction produced ${lineItems.length} item(s)`,
+        );
+        return lineItems;
+      }
+      console.log(
+        "[analyze-expense] PDF: Line-based statement extraction empty, falling back",
+      );
+    }
+
+    const transactionJson = await extractTransactionsJsonWithGemini(
+      genAI,
+      rawText,
+      callerCurrency,
+      callerDate,
+    );
+    if (transactionJson) {
+      console.log(
+        "[analyze-expense] PDF: Using Gemini transaction JSON for analysis",
+      );
+      const parsedItems = parseTransactionsJsonToItems(
+        transactionJson,
+        callerCurrency,
+        callerDate,
+      );
+      if (parsedItems.length > 0) {
+        return parsedItems;
+      }
+      console.warn(
+        "[analyze-expense] PDF: Transaction JSON parsed empty, falling back to analyzer",
+      );
+      return analyzeFromText(
+        genAI,
+        callerCurrency,
+        callerDate,
+        language,
+        transactionJson,
+        tools,
+        expenseCategories,
+        incomeCategories,
+        householdContext,
+        typeHint,
+        undefined,
+        onProgress,
+      );
+    }
+
+    if (textResult.pages && textResult.pages.length > 0) {
+      const snippets: string[] = [];
+      for (const page of textResult.pages) {
+        const pageJson = await extractTransactionsJsonWithGemini(
+          genAI,
+          page,
+          callerCurrency,
+          callerDate,
+        );
+        if (pageJson) snippets.push(pageJson);
+      }
+      const mergedJson = mergeTransactionJsonSnippets(snippets);
+      if (mergedJson) {
+        console.log(
+          "[analyze-expense] PDF: Using per-page Gemini transaction JSON for analysis",
+        );
+        const parsedItems = parseTransactionsJsonToItems(
+          mergedJson,
+          callerCurrency,
+          callerDate,
+        );
+        if (parsedItems.length > 0) {
+          return parsedItems;
+        }
+        console.warn(
+          "[analyze-expense] PDF: Per-page JSON parsed empty, falling back to analyzer",
+        );
+        return analyzeFromText(
+          genAI,
+          callerCurrency,
+          callerDate,
+          language,
+          mergedJson,
+          tools,
+          expenseCategories,
+          incomeCategories,
+          householdContext,
+          typeHint,
+          undefined,
+          onProgress,
+        );
+      }
+    }
+
+    if (!hasLineDates) {
+      console.log(
+        "[analyze-expense] PDF: No line-level dates found, forcing vision OCR",
+      );
+      return analyzeFromPdfVision(
+        genAI,
+        callerCurrency,
+        callerDate,
+        language,
+        base64Pdf,
+        contentType,
+        tools,
+        expenseCategories,
+        incomeCategories,
+        householdContext,
+        typeHint,
+      );
+    }
+    const statementItems = extractStatementItemsFromText(
+      rawText,
+      callerDate,
+      callerCurrency,
+    );
+    if (statementItems.length > 0) {
+      console.log(
+        `[analyze-expense] PDF: Statement-mode extraction produced ${statementItems.length} item(s)`,
+      );
+      return statementItems;
+    }
+    console.log(
+      "[analyze-expense] PDF: Statement-mode extraction empty, falling back",
+    );
+    const deterministicItems = extractDeterministicItemsFromText(
+      rawText,
+      callerDate,
+      callerCurrency,
+    );
+    if (deterministicItems.length > 0) {
+      console.log(
+        `[analyze-expense] PDF: Deterministic extraction produced ${deterministicItems.length} item(s)`,
+      );
+      return deterministicItems;
+    }
+    console.log(
+      "[analyze-expense] PDF: Deterministic text extraction empty, falling back to LLM",
+    );
+
+    console.log(
+      "[analyze-expense] PDF: Deterministic extraction empty, falling back to LLM text parsing",
+    );
     return analyzeFromText(
       genAI,
       callerCurrency,
       callerDate,
       language,
-      textResult.text,
+      rawText,
       tools,
       expenseCategories,
       incomeCategories,
       householdContext,
       typeHint,
-      textResult.pages, // Pass pre-chunked pages for parallel processing
-      onProgress, // Pass progress callback
+      textResult.pages,
+      onProgress,
     );
   }
 
@@ -2890,7 +3747,20 @@ export async function runAnalyzeExpense(
           syntheticText = "";
         }
       } else if (isSpreadsheet) {
-        syntheticText = buildXlsxPreview(bytes) || "";
+        items = extractXlsxTransactions(bytes, callerDate, callerCurrency);
+        if (DEBUG_LOGS) {
+          console.log(
+            `[analyze-expense] XLSX: Deterministic extraction produced ${items.length} item(s)`,
+          );
+        }
+        if (items.length === 0) {
+          syntheticText = buildXlsxPreview(bytes) || "";
+          if (DEBUG_LOGS) {
+            console.log(
+              `[analyze-expense] XLSX: Deterministic extraction empty, falling back to preview (${syntheticText.length} chars)`,
+            );
+          }
+        }
       } else if (isPdf) {
         const base64Data = b64encode(bytes);
 
@@ -2928,6 +3798,15 @@ export async function runAnalyzeExpense(
             geminiApiKey,
           );
           syntheticText = summary || "";
+          if (syntheticText) {
+            const normalized = await preprocessExtractedTextWithGemini(
+              genAI,
+              syntheticText,
+              "pdf_gemini_summary",
+              onProgress,
+            );
+            if (normalized) syntheticText = normalized;
+          }
         }
       }
 
@@ -2937,6 +3816,33 @@ export async function runAnalyzeExpense(
             success: false,
             error: "Unsupported or unreadable attachment format",
             status: 400,
+            language,
+          };
+        }
+
+        if (!isSpreadsheet) {
+          const transactionJson = await extractTransactionsJsonWithGemini(
+            genAI,
+            syntheticText,
+            callerCurrency,
+            callerDate,
+          );
+          if (transactionJson) {
+            const parsedItems = parseTransactionsJsonToItems(
+              transactionJson,
+              callerCurrency,
+              callerDate,
+            );
+            if (parsedItems.length > 0) {
+              items = parsedItems;
+            }
+          }
+        }
+
+        if (items.length > 0) {
+          return {
+            success: true,
+            items,
             language,
           };
         }
@@ -3260,33 +4166,280 @@ export async function runAnalyzeExpense(
 export function buildXlsxPreview(buf: Uint8Array): string | null {
   try {
     const wb = XLSX.read(buf, { type: "array" });
-    const sheetName = wb.SheetNames[0];
-    if (!sheetName) return null;
-    const sheet = wb.Sheets[sheetName];
-    const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const sheetNames = Array.isArray(wb.SheetNames) ? wb.SheetNames : [];
+    if (sheetNames.length === 0) return null;
 
     // Increased from 20 rows to 500 rows to capture more transactions
     // Each row is limited to 12 columns (up from 8) for better transaction data capture
-    const MAX_ROWS = 500;
+    const MAX_ROWS_PER_SHEET = 500;
     const MAX_COLS = 12;
+    const MAX_TOTAL_ROWS = 1500;
 
-    const limited = rows
-      .slice(0, MAX_ROWS)
-      .map((r) => (Array.isArray(r) ? r.slice(0, MAX_COLS) : r));
+    let totalRows = 0;
+    const sheetBlocks: string[] = [];
 
-    const previewLines = limited.map((r: any) => JSON.stringify(r));
+    for (const sheetName of sheetNames) {
+      if (totalRows >= MAX_TOTAL_ROWS) break;
+      const sheet = wb.Sheets[sheetName];
+      if (!sheet) continue;
+      const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+
+      const remaining = MAX_TOTAL_ROWS - totalRows;
+      const rowLimit = Math.min(MAX_ROWS_PER_SHEET, remaining);
+      const limited = rows
+        .slice(0, rowLimit)
+        .map((r) => (Array.isArray(r) ? r.slice(0, MAX_COLS) : r));
+      if (limited.length === 0) continue;
+
+      totalRows += limited.length;
+      const previewLines = limited.map((r: any) => JSON.stringify(r));
+      sheetBlocks.push(
+        `Sheet "${sheetName}" data (${limited.length} of ${rows.length} rows):\n${previewLines.join(
+          "\n",
+        )}`,
+      );
+
+      console.log(
+        `[analyze-expense] XLSX: Sheet "${sheetName}" processed ${limited.length} of ${rows.length} rows`,
+      );
+    }
+
+    if (sheetBlocks.length === 0) return null;
 
     console.log(
-      `[analyze-expense] XLSX: Processing ${limited.length} of ${rows.length} total rows`,
+      `[analyze-expense] XLSX: Total processed ${totalRows} row(s) across ${sheetBlocks.length} sheet(s)`,
     );
 
-    return `Sheet "${sheetName}" data (${limited.length} of ${rows.length} rows):\n${previewLines.join(
-      "\n",
-    )}`;
+    return sheetBlocks.join("\n\n");
   } catch (e) {
     console.error("XLSX parse error", e);
     return null;
+  }
+}
+
+function extractCellText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (value instanceof Date) return value.toISOString();
+  return String(value).trim();
+}
+
+function parseSignedAmountFromCell(
+  value: unknown,
+): { amount: number; isNegative: boolean } | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return { amount: Math.abs(value), isNegative: value < 0 };
+  }
+
+  const text = extractCellText(value);
+  if (!text) return null;
+  const hasNegative = /^\s*-/.test(text) || /\(.*\)/.test(text);
+  const normalized = normalizeAmountString(text);
+  if (normalized === null) return null;
+  return { amount: normalized, isNegative: hasNegative };
+}
+
+function detectHeaderMap(row: string[]) {
+  const header = row.map((cell: string) => cell.toLowerCase());
+  const hasDate = header.some((cell) =>
+    /date|posted|transaction date/.test(cell),
+  );
+  const hasAmount = header.some((cell) => /amount|amt|value/.test(cell));
+  if (!hasDate || !hasAmount) return null;
+
+  const indexOf = (regex: RegExp) =>
+    header.findIndex((cell) => regex.test(cell));
+  return {
+    date: indexOf(/date|posted|transaction date/),
+    description: indexOf(
+      /description|details|merchant|memo|narration|reference/,
+    ),
+    amount: indexOf(/amount|amt|value/),
+    moneyOut: indexOf(/debit|money out|withdrawal|paid/),
+    moneyIn: indexOf(/credit|money in|deposit|received/),
+    currency: indexOf(/currency|ccy/),
+  };
+}
+
+function extractXlsxTransactions(
+  buf: Uint8Array,
+  callerDate: string,
+  callerCurrency: string,
+): ExpenseItem[] {
+  try {
+    const wb = XLSX.read(buf, { type: "array" });
+    const sheetNames = Array.isArray(wb.SheetNames) ? wb.SheetNames : [];
+    if (sheetNames.length === 0) return [];
+
+    const items: ExpenseItem[] = [];
+    const MAX_ROWS_PER_SHEET = 2000;
+    const headerNoisePattern =
+      /(exported at|date range|balance summary|statement generated|opening balance|closing balance|total|account transactions|pending|reverted)/i;
+
+    for (const sheetName of sheetNames) {
+      const sheet = wb.Sheets[sheetName];
+      if (!sheet) continue;
+      const rows: any[] = XLSX.utils.sheet_to_json(sheet, {
+        header: 1,
+        raw: true,
+      });
+      if (!Array.isArray(rows) || rows.length === 0) continue;
+
+      if (DEBUG_LOGS) {
+        console.log(
+          `[analyze-expense] XLSX: Scanning sheet "${sheetName}" with ${rows.length} row(s)`,
+        );
+      }
+
+      let headerMap: {
+        date: number;
+        description: number;
+        amount: number;
+        moneyOut: number;
+        moneyIn: number;
+        currency: number;
+      } | null = null;
+      let startRow = 0;
+
+      for (let i = 0; i < Math.min(rows.length, 25); i++) {
+        const row = Array.isArray(rows[i]) ? rows[i] : [];
+        const rowText = row.map((cell: unknown) => extractCellText(cell));
+        const detected = detectHeaderMap(rowText);
+        if (detected) {
+          headerMap = detected;
+          startRow = i + 1;
+          if (DEBUG_LOGS) {
+            console.log(
+              `[analyze-expense] XLSX: Header detected in sheet "${sheetName}" at row ${i + 1} (date=${detected.date}, description=${detected.description}, amount=${detected.amount}, moneyOut=${detected.moneyOut}, moneyIn=${detected.moneyIn}, currency=${detected.currency})`,
+            );
+          }
+          break;
+        }
+      }
+
+      if (DEBUG_LOGS && !headerMap) {
+        console.log(
+          `[analyze-expense] XLSX: No header detected in sheet "${sheetName}"; using row heuristics`,
+        );
+      }
+
+      const limit = Math.min(rows.length, startRow + MAX_ROWS_PER_SHEET);
+      let sheetItems = 0;
+      let amountRows = 0;
+      for (let i = startRow; i < limit; i++) {
+        const row = Array.isArray(rows[i]) ? rows[i] : [];
+        if (row.length === 0) continue;
+        const cells = row.map((cell: unknown) => extractCellText(cell));
+        const joined = cells.filter(Boolean).join(" | ");
+        if (!joined) continue;
+        if (headerNoisePattern.test(joined)) continue;
+
+        const dateText =
+          headerMap && headerMap.date >= 0 ? cells[headerMap.date] : joined;
+        const rowDate = parseDateFromText(dateText, callerDate);
+        if (!headerMap && !rowDate) continue;
+        const descriptionText =
+          headerMap && headerMap.description >= 0
+            ? cells[headerMap.description]
+            : stripAmountsAndDates(joined) || joined;
+        const currencyText =
+          headerMap && headerMap.currency >= 0
+            ? cells[headerMap.currency]
+            : joined;
+
+        let amountValue: number | null = null;
+        let type: "expense" | "income" = "expense";
+
+        if (headerMap && headerMap.moneyOut >= 0) {
+          const moneyOutCell = cells[headerMap.moneyOut];
+          const parsed = parseSignedAmountFromCell(moneyOutCell);
+          if (parsed) {
+            amountValue = parsed.amount;
+            type = "expense";
+          }
+        }
+
+        if (amountValue === null && headerMap && headerMap.moneyIn >= 0) {
+          const moneyInCell = cells[headerMap.moneyIn];
+          const parsed = parseSignedAmountFromCell(moneyInCell);
+          if (parsed) {
+            amountValue = parsed.amount;
+            type = "income";
+          }
+        }
+
+        if (amountValue === null && headerMap && headerMap.amount >= 0) {
+          const amountCell = cells[headerMap.amount];
+          const parsed = parseSignedAmountFromCell(amountCell);
+          if (parsed) {
+            amountValue = parsed.amount;
+            type = parsed.isNegative ? "expense" : inferTypeFromText(joined);
+          }
+        }
+
+        if (amountValue === null) {
+          const tokens = extractAmountTokens(joined);
+          if (tokens.length > 0) {
+            amountValue = tokens[0].value;
+            type = inferTypeFromText(joined);
+          } else {
+            for (const cell of cells) {
+              const parsed = parseSignedAmountFromCell(cell);
+              if (parsed) {
+                amountValue = parsed.amount;
+                type = parsed.isNegative
+                  ? "expense"
+                  : inferTypeFromText(joined);
+                break;
+              }
+            }
+          }
+        }
+
+        if (!amountValue) continue;
+        if (
+          amountValue >= 1900 &&
+          amountValue <= 2100 &&
+          !/[€$£¥₹]/.test(joined)
+        ) {
+          continue;
+        }
+
+        amountRows += 1;
+
+        const dateValue = rowDate || callerDate;
+        const currency =
+          detectCurrencyFromText(currencyText, callerCurrency) ||
+          callerCurrency;
+
+        if (headerNoisePattern.test(descriptionText)) continue;
+
+        items.push({
+          type,
+          amount: amountValue,
+          category: normalizeCategory(descriptionText),
+          currency,
+          currencySymbol: getCurrencySymbol(currency),
+          date: dateValue,
+          description: descriptionText || "",
+        });
+        sheetItems += 1;
+      }
+
+      if (DEBUG_LOGS) {
+        console.log(
+          `[analyze-expense] XLSX: Sheet "${sheetName}" parsed ${sheetItems} item(s) from ${limit - startRow} row(s) (amount-like rows=${amountRows})`,
+        );
+      }
+    }
+
+    return items;
+  } catch (e) {
+    console.error("XLSX deterministic parse error", e);
+    return [];
   }
 }
 
