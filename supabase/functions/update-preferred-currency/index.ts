@@ -7,13 +7,16 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 
 // Types
 interface SetBudgetRequest {
-  phone?: string;      // E.164 format (optional if userId provided)
-  userId?: string;     // User ID (optional if phone provided) 
-  currency: string;   // currency code, default USD
+  phone?: string; // E.164 format (optional if userId provided)
+  userId?: string; // User ID (optional if phone provided)
+  currency: string; // currency code, default USD
 }
 
 function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 function errorResponse(message: string, status = 400, details?: unknown) {
@@ -21,14 +24,45 @@ function errorResponse(message: string, status = 400, details?: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  
+
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return errorResponse("Server not configured", 500);
+  }
+
+  // If the caller provides an Authorization header, verify it and lock the
+  // request to the authenticated user. This prevents arbitrary userId updates.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : null;
+
+  let authedUserId: string | null = null;
+  if (bearerToken) {
+    if (!SUPABASE_ANON_KEY) {
+      return errorResponse("Server not configured", 500);
+    }
+    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-update-preferred-currency" },
+      },
+    });
+    const { data, error } = await authClient.auth.getUser(bearerToken);
+    if (error || !data?.user?.id) {
+      return errorResponse("Unauthorized", 401);
+    }
+    authedUserId = data.user.id;
   }
 
   let payload: SetBudgetRequest;
@@ -38,9 +72,16 @@ Deno.serve(async (req: Request) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { phone, userId, currency: inputCurrency } = payload || {};
-  console.log("payload", payload);
-  
+  let { phone, userId, currency: inputCurrency } = payload || {};
+
+  if (authedUserId) {
+    if (userId && userId !== authedUserId) {
+      return errorResponse("Forbidden", 403);
+    }
+    userId = authedUserId;
+    phone = undefined;
+  }
+
   // Validate: either phone or userId must be provided
   if (!phone && !userId) {
     return errorResponse("Either 'phone' or 'userId' must be provided", 400);
@@ -55,21 +96,27 @@ Deno.serve(async (req: Request) => {
   const providedCurrency = validateCurrency(inputCurrency);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    global: { headers: { "X-Client-Info": "moneko-set-budget" } },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: { "X-Client-Info": "moneko-update-preferred-currency" },
+    },
   });
 
   // Find or create contact - search by phone if provided, otherwise by userId
   let contact: any = null;
   let contactErr: any = null;
-  
+
   if (phone) {
     // Search by phone number (handle duplicates by getting most recent)
     const result = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_currency")
       .eq("phone_e164", phone)
-      .order('id', { ascending: false })
+      .order("id", { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
@@ -79,7 +126,7 @@ Deno.serve(async (req: Request) => {
       .from("user_contacts")
       .select("id, user_id, preferred_currency, phone_e164")
       .eq("user_id", userId)
-      .order('id', { ascending: false })
+      .order("id", { ascending: false })
       .limit(1);
     contact = result.data?.[0] ?? null;
     contactErr = result.error;
@@ -98,8 +145,13 @@ Deno.serve(async (req: Request) => {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: userId || null, preferred_currency: providedCurrency, updated_at: new Date().toISOString() },
-          { onConflict: 'phone_e164' }
+          {
+            phone_e164: phone,
+            user_id: userId || null,
+            preferred_currency: providedCurrency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "phone_e164" },
         )
         .select("id")
         .single();
@@ -132,10 +184,10 @@ Deno.serve(async (req: Request) => {
     console.error("contact update error", updateErr);
     return errorResponse("Failed to update contact", 500);
   }
-  const results={
+  const results = {
     contactId,
     preferredCurrency: providedCurrency,
-  }
+  };
 
   return jsonResponse({ ok: true, results });
 });
