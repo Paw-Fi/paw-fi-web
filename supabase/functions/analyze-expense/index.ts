@@ -19,6 +19,53 @@ function formatSSEEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+function resolveProgressMessage(
+  event: ProgressEvent,
+  body: AnalyzeRequestBody,
+): string {
+  if (typeof event.message === "string" && event.message.trim().length > 0) {
+    return event.message;
+  }
+
+  if (body.image) {
+    switch (event.type) {
+      case "started":
+        return "Reading receipt image...";
+      case "processing_vision":
+        return "Analyzing receipt details...";
+      default:
+        return "Analyzing receipt...";
+    }
+  }
+
+  switch (event.type) {
+    case "started":
+      return "Starting analysis...";
+    case "extracting_text":
+      return "Extracting text...";
+    case "analyzing_chunk":
+      return "Analyzing transactions...";
+    case "processing_vision":
+      return "Analyzing scanned document...";
+    case "complete":
+      return "Finalizing results...";
+    default:
+      return "Processing...";
+  }
+}
+
+function mapProgressEvent(
+  event: ProgressEvent,
+  body: AnalyzeRequestBody,
+): Record<string, unknown> {
+  return {
+    stage: event.type,
+    message: resolveProgressMessage(event, body),
+    currentItem: event.current,
+    totalItems: event.total,
+  };
+}
+
 /**
  * Creates a readable stream that sends SSE events during analysis
  */
@@ -33,7 +80,8 @@ function createSSEStream(
       try {
         // Create progress callback that sends SSE events
         const onProgress: ProgressCallback = (event: ProgressEvent) => {
-          const sseMessage = formatSSEEvent("progress", event);
+          const payload = mapProgressEvent(event, body);
+          const sseMessage = formatSSEEvent("progress", payload);
           controller.enqueue(encoder.encode(sseMessage));
         };
 
