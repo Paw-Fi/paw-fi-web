@@ -407,7 +407,8 @@ Deno.serve(async (req: Request) => {
         }
 
         if (resolvedHouseholdId && !isPortfolio) {
-          for (const income of insertedIncome) {
+          if (insertedIncome.length === 1) {
+            const income = insertedIncome[0];
             const { error: notifyError } = await supabase.rpc(
               "notify_household_members_expense",
               {
@@ -433,6 +434,37 @@ Deno.serve(async (req: Request) => {
                 "[save-transactions-batch] Error creating income notifications:",
                 notifyError,
               );
+            }
+          } else if (insertedIncome.length > 1) {
+            const recipients = householdMembers
+              .map((member) => member.user_id)
+              .filter((memberId) => memberId !== userId);
+            if (recipients.length > 0) {
+              const now = new Date().toISOString();
+              const payload = {
+                actor_name: actorName,
+                actor_user_id: userId,
+                batch_count: insertedIncome.length,
+                household_id: resolvedHouseholdId,
+              };
+              const notifications = recipients.map((recipientId) => ({
+                household_id: resolvedHouseholdId,
+                user_id: recipientId,
+                event_type: "income_added",
+                payload,
+                created_at: now,
+              }));
+
+              const { error: notifyError } = await supabase
+                .from("notification_events")
+                .insert(notifications);
+
+              if (notifyError) {
+                console.error(
+                  "[save-transactions-batch] Error creating bulk income notifications:",
+                  notifyError,
+                );
+              }
             }
           }
         }
@@ -703,7 +735,8 @@ Deno.serve(async (req: Request) => {
         }
 
         if (resolvedHouseholdId && !isPortfolio) {
-          for (const expense of insertedExpenses) {
+          if (insertedExpenses.length === 1) {
+            const expense = insertedExpenses[0];
             const { error: notifyError } = await supabase.rpc(
               "notify_household_members_expense",
               {
@@ -726,6 +759,37 @@ Deno.serve(async (req: Request) => {
                 "[save-transactions-batch] Error creating expense notifications:",
                 notifyError,
               );
+            }
+          } else if (insertedExpenses.length > 1) {
+            const recipients = householdMembers
+              .map((member) => member.user_id)
+              .filter((memberId) => memberId !== userId);
+            if (recipients.length > 0) {
+              const now = new Date().toISOString();
+              const payload = {
+                actor_name: actorName,
+                actor_user_id: userId,
+                batch_count: insertedExpenses.length,
+                household_id: resolvedHouseholdId,
+              };
+              const notifications = recipients.map((recipientId) => ({
+                household_id: resolvedHouseholdId,
+                user_id: recipientId,
+                event_type: "expense_added",
+                payload,
+                created_at: now,
+              }));
+
+              const { error: notifyError } = await supabase
+                .from("notification_events")
+                .insert(notifications);
+
+              if (notifyError) {
+                console.error(
+                  "[save-transactions-batch] Error creating bulk expense notifications:",
+                  notifyError,
+                );
+              }
             }
           }
         }

@@ -10,6 +10,8 @@ import {
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 
 interface DeleteExpenseRequest {
+  expenseIds?: string;
+  expense_ids?: string;
   expenseId?: string;
   expense_id?: string;
   userId?: string;
@@ -23,6 +25,23 @@ function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
+
+function parseExpenseIds(body: DeleteExpenseRequest): string[] {
+  const raw =
+    body.expenseIds ?? body.expense_ids ?? body.expenseId ?? body.expense_id;
+  if (!raw) return [];
+  const rawString = Array.isArray(raw) ? raw.join(",") : String(raw);
+  const parts = rawString
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  const unique = new Set<string>();
+  for (const part of parts) {
+    const sanitized = sanitizeUuid(part);
+    if (sanitized) unique.add(sanitized);
+  }
+  return Array.from(unique);
 }
 
 function errorResponse(message: string, status = 400) {
@@ -48,10 +67,10 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: DeleteExpenseRequest = await req.json();
-    const expenseIdRaw = body?.expenseId ?? body?.expense_id;
-    if (!expenseIdRaw) return errorResponse("expenseId is required");
-    const expenseId = sanitizeUuid(expenseIdRaw);
-    if (!expenseId) return errorResponse("Invalid expenseId format");
+    const expenseIds = parseExpenseIds(body);
+    if (expenseIds.length === 0) {
+      return errorResponse("expenseIds or expenseId is required");
+    }
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
@@ -148,193 +167,276 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Authentication required", 401);
     }
 
-    // Fetch expense to verify ownership and obtain household info
-    const { data: expense, error } = await supabase
+    // Fetch expenses to verify ownership and obtain household info
+    const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
         "id, user_id, household_id, amount_cents, currency, raw_text, category, date, type",
       )
-      .eq("id", expenseId)
-      .single();
+      .in("id", expenseIds);
 
-    if (error || !expense) {
+    if (error || !expenses) {
       return errorResponse("Expense not found", 404);
     }
 
-    const expenseHouseholdId = (expense as any)?.household_id as
-      | string
-      | null
-      | undefined;
-    let isPortfolioHousehold = false;
-    if (expenseHouseholdId) {
-      const { data: householdRow, error: householdError } = await supabase
-        .from("households")
-        .select("is_portfolio")
-        .eq("id", expenseHouseholdId)
-        .maybeSingle();
+    const expenseById = new Map(
+      expenses.map((expense) => [expense.id, expense]),
+    );
+    const missingIds = expenseIds.filter((id) => !expenseById.has(id));
 
-      if (householdError) {
-        console.warn(
-          "[delete-expense] Failed to load household.is_portfolio; treating as non-portfolio",
-          householdError,
-        );
-      } else {
-        isPortfolioHousehold = householdRow?.is_portfolio === true;
-      }
+    const householdIds = Array.from(
+      new Set(
+        expenses
+          .map((expense) => expense.household_id as string | null | undefined)
+          .filter((id): id is string => !!id),
+      ),
+    );
+
+    const { data: householdRows } = householdIds.length
+      ? await supabase
+          .from("households")
+          .select("id, is_portfolio")
+          .in("id", householdIds)
+      : { data: [] as { id: string; is_portfolio: boolean | null }[] };
+
+    const householdPortfolioMap = new Map(
+      (householdRows || []).map((row) => [row.id, row.is_portfolio === true]),
+    );
+
+    const nonPortfolioHouseholdIds = householdIds.filter(
+      (id) => householdPortfolioMap.get(id) !== true,
+    );
+
+    const { data: membershipRows } =
+      nonPortfolioHouseholdIds.length > 0
+        ? await supabase
+            .from("household_members")
+            .select("household_id")
+            .eq("user_id", userId)
+            .in("household_id", nonPortfolioHouseholdIds)
+        : { data: [] as { household_id: string }[] };
+
+    const membershipSet = new Set(
+      (membershipRows || []).map((row) => row.household_id),
+    );
+
+    const failedIds: { id: string; reason: string }[] = [];
+    for (const id of missingIds) {
+      failedIds.push({ id, reason: "not_found" });
     }
 
-    // For GPT requests, only allow personal expenses (no household_id)
-    if (detection.isGpt && expense.household_id) {
-      console.warn(
-        "[delete-expense] GPT attempt to delete household expense:",
-        expenseId,
-      );
-      return errorResponse("GPT cannot delete household expenses", 403);
-    }
+    const allowedExpenseIds: string[] = [];
+    for (const id of expenseIds) {
+      const expense = expenseById.get(id);
+      if (!expense) continue;
 
-    // For non-GPT requests, verify ownership via expenses.user_id
-    if (!detection.isGpt) {
       const expenseUserId = (expense as any)?.user_id as string | undefined;
       if (!expenseUserId) {
-        return errorResponse(
-          "You do not have permission to delete this expense",
-          403,
-        );
+        failedIds.push({ id, reason: "missing_owner" });
+        continue;
       }
 
-      // Personal transactions: only the owner can delete.
-      if (!expense.household_id && expenseUserId !== userId) {
-        return errorResponse(
-          "You do not have permission to delete this expense",
-          403,
-        );
-      }
+      const householdId = (expense as any)?.household_id as
+        | string
+        | null
+        | undefined;
+      const isPortfolioHousehold = householdId
+        ? householdPortfolioMap.get(householdId) === true
+        : false;
 
-      // Portfolio household transactions behave like personal transactions.
-      if (
-        expense.household_id &&
-        isPortfolioHousehold &&
-        expenseUserId !== userId
-      ) {
-        return errorResponse(
-          "You do not have permission to delete this expense",
-          403,
-        );
-      }
-
-      // Household transactions: any household member can delete.
-      if (
-        expense.household_id &&
-        !isPortfolioHousehold &&
-        expenseUserId !== userId
-      ) {
-        const { data: member, error: memberError } = await supabase
-          .from("household_members")
-          .select("id")
-          .eq("household_id", expense.household_id)
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (memberError) {
-          console.error(
-            "[delete-expense] Failed to verify household membership:",
-            memberError,
-          );
-          return errorResponse("Failed to verify household membership", 500);
+      let allowed = false;
+      if (detection.isGpt) {
+        if (!householdId && expenseUserId === userId) {
+          allowed = true;
+        } else {
+          failedIds.push({ id, reason: "gpt_forbidden_household" });
         }
+      } else {
+        if (!householdId) {
+          allowed = expenseUserId === userId;
+        } else if (isPortfolioHousehold) {
+          allowed = expenseUserId === userId;
+        } else {
+          allowed = membershipSet.has(householdId);
+        }
+        if (!allowed) {
+          failedIds.push({ id, reason: "forbidden" });
+        }
+      }
 
-        if (!member) {
+      if (allowed) {
+        allowedExpenseIds.push(id);
+      }
+    }
+
+    if (allowedExpenseIds.length === 0) {
+      if (expenseIds.length === 1) {
+        const reason = failedIds[0]?.reason ?? "unknown";
+        if (reason === "not_found") {
+          return errorResponse("Expense not found", 404);
+        }
+        if (
+          reason === "missing_owner" ||
+          reason === "forbidden" ||
+          reason === "gpt_forbidden_household"
+        ) {
           return errorResponse(
             "You do not have permission to delete this expense",
             403,
           );
         }
       }
-    } else {
-      // For GPT, verify by user_id field directly
-      if (expense.user_id !== userId) {
-        return errorResponse(
-          "You do not have permission to delete this expense",
-          403,
-        );
-      }
+      return new Response(
+        JSON.stringify({
+          success: false,
+          deletedCount: 0,
+          failedCount: failedIds.length,
+          failedIds,
+          resolvedUserId: userId,
+          meta: resolvedIdentityMeta,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    // Delete the expense
+    // Delete the expenses
     const { error: delError } = await supabase
       .from("expenses")
       .delete()
-      .eq("id", expenseId);
+      .in("id", allowedExpenseIds);
 
     if (delError) return errorResponse("Failed to delete expense", 500);
 
-    console.log("[delete-expense] Successfully deleted expense", {
-      expenseId,
+    console.log("[delete-expense] Successfully deleted expenses", {
+      expenseIds: allowedExpenseIds,
       userId,
-      category: expense.category,
-      amount: expense.amount_cents / 100,
     });
 
     // For non-GPT requests, notify household members if this was a shared expense
-    if (!detection.isGpt && expense.household_id && !isPortfolioHousehold) {
-      console.log(
-        "[delete-expense] Notifying household members about deletion for household:",
-        expense.household_id,
-      );
+    if (!detection.isGpt) {
+      const deletedExpenses = allowedExpenseIds
+        .map((id) => expenseById.get(id))
+        .filter(Boolean) as any[];
 
-      // Resolve actor display name
-      let actorName = "Someone";
-      try {
-        const { data: appUser } = await supabase
-          .from("users")
-          .select("full_name")
-          .eq("id", userId)
-          .maybeSingle();
-        if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
-          actorName = appUser.full_name as string;
+      const sharedCounts = new Map<string, number>();
+      for (const expense of deletedExpenses) {
+        const householdId = expense.household_id as string | null | undefined;
+        if (!householdId) continue;
+        if (householdPortfolioMap.get(householdId) === true) continue;
+        sharedCounts.set(householdId, (sharedCounts.get(householdId) ?? 0) + 1);
+      }
+
+      if (sharedCounts.size > 0) {
+        // Resolve actor display name
+        let actorName = "Someone";
+        try {
+          const { data: appUser } = await supabase
+            .from("users")
+            .select("full_name")
+            .eq("id", userId)
+            .maybeSingle();
+          if (
+            appUser?.full_name &&
+            String(appUser.full_name).trim().length > 0
+          ) {
+            actorName = appUser.full_name as string;
+          }
+        } catch (_) {}
+
+        if (allowedExpenseIds.length === 1 && deletedExpenses.length === 1) {
+          const expense = deletedExpenses[0];
+          const householdId = expense.household_id as string | null | undefined;
+          if (householdId && householdPortfolioMap.get(householdId) !== true) {
+            console.log(
+              "[delete-expense] Notifying household members about deletion for household:",
+              householdId,
+            );
+            const { error: notifyError } = await supabase.rpc(
+              "notify_household_members_expense",
+              {
+                p_household_id: householdId,
+                p_expense_id: expense.id,
+                p_actor_user_id: userId,
+                p_event_type: "expense_deleted",
+                p_expense_data: {
+                  actor_name: actorName,
+                  amount_cents: expense.amount_cents,
+                  currency: expense.currency,
+                  raw_text: expense.raw_text,
+                  category: expense.category,
+                  date: expense.date,
+                },
+              },
+            );
+
+            if (notifyError) {
+              console.error(
+                "[delete-expense] Error creating notifications:",
+                notifyError,
+              );
+            }
+          }
+        } else {
+          const now = new Date().toISOString();
+          for (const [householdId, count] of sharedCounts.entries()) {
+            const { data: members } = await supabase
+              .from("household_members")
+              .select("user_id")
+              .eq("household_id", householdId)
+              .neq("user_id", userId);
+
+            if (!members || members.length === 0) continue;
+
+            const notificationPayload = {
+              actor_name: actorName,
+              actor_user_id: userId,
+              batch_count: count,
+              household_id: householdId,
+            };
+
+            const notifications = members.map((member) => ({
+              household_id: householdId,
+              user_id: member.user_id,
+              event_type: "expense_deleted",
+              payload: notificationPayload,
+              created_at: now,
+            }));
+
+            const { error: insertError } = await supabase
+              .from("notification_events")
+              .insert(notifications);
+
+            if (insertError) {
+              console.error(
+                "[delete-expense] Error creating bulk delete notifications:",
+                insertError,
+              );
+            }
+          }
         }
-      } catch (_) {}
-
-      const { error: notifyError } = await supabase.rpc(
-        "notify_household_members_expense",
-        {
-          p_household_id: expense.household_id,
-          p_expense_id: expenseId,
-          p_actor_user_id: userId,
-          p_event_type: "expense_deleted",
-          p_expense_data: {
-            actor_name: actorName,
-            amount_cents: expense.amount_cents,
-            currency: expense.currency,
-            raw_text: expense.raw_text,
-            category: expense.category,
-            date: expense.date,
-          },
-        },
-      );
-
-      if (notifyError) {
-        console.error(
-          "[delete-expense] Error creating notifications:",
-          notifyError,
-        );
-        // Don't fail the request, just log the error
-      } else {
-        console.log(
-          "[delete-expense] Notifications created for household members",
-        );
       }
     }
 
     const responseData: any = {
-      success: true,
+      success: failedIds.length === 0,
+      deletedCount: allowedExpenseIds.length,
+      failedCount: failedIds.length,
+      failedIds,
       resolvedUserId: userId,
       meta: resolvedIdentityMeta,
     };
 
     // For non-GPT requests, include shared flag
     if (!detection.isGpt) {
-      responseData.shared = !!expense.household_id && !isPortfolioHousehold;
+      const hasShared = Array.from(expenseById.values()).some((expense) => {
+        const householdId = expense.household_id as string | null | undefined;
+        if (!householdId) return false;
+        return householdPortfolioMap.get(householdId) !== true;
+      });
+      responseData.shared = hasShared;
     }
 
     return new Response(JSON.stringify(responseData), {

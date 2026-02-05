@@ -3674,7 +3674,7 @@ Deno.serve(async (req: Request) => {
             const { data, error } = await supabase.functions.invoke(
               "delete-expense",
               {
-                body: { userId, expenseId: rawExpenseId },
+                body: { userId, expenseIds: rawExpenseId },
                 headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
               },
             );
@@ -4465,7 +4465,7 @@ Deno.serve(async (req: Request) => {
               const { data, error } = await supabase.functions.invoke(
                 "delete-expense",
                 {
-                  body: { userId, expenseId: call.args.expense_id },
+                  body: { userId, expenseIds: call.args.expense_id },
                   headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
                 },
               );

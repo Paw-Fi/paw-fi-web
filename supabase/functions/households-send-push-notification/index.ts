@@ -1123,6 +1123,16 @@ function buildNotificationMessage(
 
   switch (eventType) {
     case "expense_added": {
+      const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
+      if (batchCount > 1) {
+        return {
+          title: actor,
+          body: `added ${batchCount} expenses to ${householdName}`,
+          data: {
+            household_id: payload.household_id || "",
+          },
+        };
+      }
       const note = (payload.expense_data?.note || "").toString().trim();
       const code = (recipientSplit?.currency ||
         payload.expense_data?.currency) as string | undefined;
@@ -1197,6 +1207,16 @@ function buildNotificationMessage(
     }
 
     case "expense_deleted": {
+      const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
+      if (batchCount > 1) {
+        return {
+          title: actor,
+          body: `deleted ${batchCount} expenses from ${householdName}`,
+          data: {
+            household_id: payload.household_id || "",
+          },
+        };
+      }
       const code = payload.expense_data?.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
       const cents = Number(payload.expense_data?.amount_cents ?? 0);
@@ -1297,6 +1317,36 @@ function buildNotificationMessage(
         body: `created a ${amount} expense split for you in ${householdName}`,
         data: {
           split_id: payload.split_id || "",
+          household_id: payload.household_id || "",
+        },
+      };
+    }
+
+    case "income_added": {
+      const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
+      if (batchCount > 1) {
+        return {
+          title: actor,
+          body: `added ${batchCount} income entries to ${householdName}`,
+          data: {
+            household_id: payload.household_id || "",
+          },
+        };
+      }
+
+      const code = payload.expense_data?.currency as string | undefined;
+      const symbol = getCurrencySymbol(code);
+      const cents = Number(payload.expense_data?.amount_cents ?? 0);
+      const amount = `${symbol}${(cents / 100).toFixed(2)}`;
+      const source = String(payload.expense_data?.source ?? "").trim();
+      const body = source
+        ? `added ${amount} income from ${source} in ${householdName}`
+        : `added ${amount} income in ${householdName}`;
+
+      return {
+        title: actor,
+        body,
+        data: {
           household_id: payload.household_id || "",
         },
       };
