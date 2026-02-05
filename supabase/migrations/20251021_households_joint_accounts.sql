@@ -38,6 +38,9 @@ CREATE TYPE notification_event_type AS ENUM (
   'split_settled',
   'expense_added',
   'expense_edited',
+  'expense_deleted',
+  'income_added',
+  'income_edited',
   'member_reminded'
 );
 
@@ -1011,4 +1014,3 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.notify_household_members_expense IS 'Creates notification events for all household members except the actor on expense add/edit';
-

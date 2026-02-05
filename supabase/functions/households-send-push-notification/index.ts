@@ -103,6 +103,14 @@ type RecipientSplitContext = {
   currency: string | null;
 };
 
+type SettlementNoteLookup = {
+  householdId: string;
+  actorUserId: string;
+  otherUserId: string;
+  amountCents?: number | null;
+  currency?: string | null;
+};
+
 async function getRecipientSplitContext(
   expenseId: string,
   targetUserId: string,
@@ -146,6 +154,135 @@ async function getRecipientSplitContext(
       currency: null,
     };
   }
+}
+
+function getSettlementAmountCents(payload: Record<string, any>): number | null {
+  const rawAmount =
+    payload.amount_cents ?? payload.amounts_before?.net_pay_cents;
+  const amount = Number(rawAmount);
+  if (!Number.isFinite(amount)) return null;
+  const normalized = Math.abs(amount);
+  return normalized > 0 ? normalized : null;
+}
+
+function getSettlementNote(payload: Record<string, any>): string | null {
+  const candidates = [
+    payload.settlement_note,
+    payload.message,
+    payload.note,
+    payload.settlement_message,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+async function resolveUserDisplayName(userId?: string): Promise<string | null> {
+  if (!userId || userId.trim().length === 0) return null;
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("full_name, email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) return null;
+    const fullName =
+      typeof data?.full_name === "string" ? data.full_name.trim() : "";
+    if (fullName.length > 0) return fullName;
+    const email = typeof data?.email === "string" ? data.email.trim() : "";
+    return email.length > 0 ? email : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function resolveSettlementNote(
+  lookup: SettlementNoteLookup,
+): Promise<string | null> {
+  try {
+    let query = supabase
+      .from("household_settlement_events")
+      .select("settlement_note")
+      .eq("household_id", lookup.householdId)
+      .eq("actor_user_id", lookup.actorUserId)
+      .or(
+        `payer_user_id.eq.${lookup.otherUserId},participant_user_id.eq.${lookup.otherUserId}`,
+      );
+
+    if (lookup.amountCents && lookup.amountCents > 0) {
+      query = query.eq("amount_cents", lookup.amountCents);
+    }
+    if (lookup.currency && lookup.currency.trim().length > 0) {
+      query = query.eq("currency", lookup.currency.trim().toUpperCase());
+    }
+
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return null;
+    const note =
+      typeof data?.settlement_note === "string"
+        ? data.settlement_note.trim()
+        : "";
+    return note.length > 0 ? note : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function enrichSettlementPayload(
+  payload: Record<string, any>,
+  householdId?: string,
+): Promise<Record<string, any>> {
+  const actorId =
+    payload.actor_user_id || payload.from_user_id || payload.settled_by_user_id;
+  const otherUserId = payload.to_user_id;
+  const rawActorName =
+    typeof payload.actor_name === "string" ? payload.actor_name.trim() : "";
+  const existingActorName =
+    rawActorName && rawActorName.toLowerCase() !== "someone"
+      ? rawActorName
+      : "";
+  const existingNote = getSettlementNote(payload);
+
+  let actorName = existingActorName;
+  let settlementNote = existingNote;
+
+  if (!actorName && typeof actorId === "string") {
+    const resolved = await resolveUserDisplayName(actorId);
+    if (resolved) actorName = resolved;
+  }
+
+  if (
+    !settlementNote &&
+    householdId &&
+    typeof actorId === "string" &&
+    typeof otherUserId === "string"
+  ) {
+    const amountCents = getSettlementAmountCents(payload);
+    const currency =
+      typeof payload.currency === "string" ? payload.currency : null;
+    const resolved = await resolveSettlementNote({
+      householdId,
+      actorUserId: actorId,
+      otherUserId,
+      amountCents,
+      currency,
+    });
+    if (resolved) settlementNote = resolved;
+  }
+
+  if (!actorName && !settlementNote) return payload;
+
+  return {
+    ...payload,
+    ...(actorName ? { actor_name: actorName } : {}),
+    ...(settlementNote ? { settlement_note: settlementNote } : {}),
+  };
 }
 
 /**
@@ -344,9 +481,9 @@ function buildDeepLink(
       // Navigate directly to invitation acceptance
       // Mobile expects: moneko://households/join?token=...
       if (data.invite_token) {
-        return `${appScheme}households/join?token=${
-          encodeURIComponent(data.invite_token)
-        }`;
+        return `${appScheme}households/join?token=${encodeURIComponent(
+          data.invite_token,
+        )}`;
       }
       break;
 
@@ -380,7 +517,8 @@ async function sendFCMv1Notification(
   try {
     // Build deep link for navigation
     const deepLink = buildDeepLink(data.event_type, data);
-    const isWeb = typeof platform === "string" &&
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
 
     // Enhanced data payload with deep link and click action
@@ -439,13 +577,13 @@ async function sendFCMv1Notification(
         // WebPush only: safe to set link
         ...(isWeb
           ? {
-            webpush: {
-              data: enhancedData,
-              fcm_options: {
-                link: deepLink || "/home",
+              webpush: {
+                data: enhancedData,
+                fcm_options: {
+                  link: deepLink || "/home",
+                },
               },
-            },
-          }
+            }
           : {}),
       },
     };
@@ -483,7 +621,8 @@ async function sendFCMv1Notification(
         const status = parsed?.error?.status || "";
         const message = parsed?.error?.message || "";
         const details = parsed?.error?.details || [];
-        const hasUnregistered = status === "NOT_FOUND" ||
+        const hasUnregistered =
+          status === "NOT_FOUND" ||
           details?.some((d: any) => d?.errorCode === "UNREGISTERED") ||
           /UNREGISTERED/i.test(message) ||
           /No matching registration token/i.test(message) ||
@@ -554,17 +693,17 @@ serve(async (req: Request) => {
     const raw = await req.json();
 
     // Database Webhooks envelope detection
-    const isDbWebhook = raw && typeof raw === "object" && "type" in raw &&
-      "record" in raw;
+    const isDbWebhook =
+      raw && typeof raw === "object" && "type" in raw && "record" in raw;
 
     const body: NotificationPayload = isDbWebhook
       ? {
-        notification_event_id: raw.record?.id,
-        household_id: raw.record?.household_id,
-        user_id: raw.record?.user_id,
-        event_type: raw.record?.event_type,
-        payload: raw.record?.payload ?? {},
-      }
+          notification_event_id: raw.record?.id,
+          household_id: raw.record?.household_id,
+          user_id: raw.record?.user_id,
+          event_type: raw.record?.event_type,
+          payload: raw.record?.payload ?? {},
+        }
       : raw;
 
     const {
@@ -678,8 +817,10 @@ serve(async (req: Request) => {
       );
     }
 
-    const isExpenseEvent = event_type === "expense_added" ||
-      event_type === "expense_edited";
+    const isExpenseEvent =
+      event_type === "expense_added" ||
+      event_type === "expense_edited" ||
+      event_type === "expense_deleted";
     const isLogExpenseReminder = event_type === "log_expense_reminder";
 
     // Get user's notification preferences
@@ -691,7 +832,7 @@ serve(async (req: Request) => {
       .single();
 
     // Check if notifications are disabled for this user
-    if (prefs && !prefs.enable_nudges) {
+    if (!isExpenseEvent && prefs && !prefs.enable_nudges) {
       console.log("[send-push] User has disabled notifications");
       await supabase
         .from("notification_events")
@@ -753,13 +894,14 @@ serve(async (req: Request) => {
         const startParts = prefs.nudge_quiet_hours_start.split(":");
         const endParts = prefs.nudge_quiet_hours_end.split(":");
 
-        const startMinutes = parseInt(startParts[0]) * 60 +
-          parseInt(startParts[1]);
+        const startMinutes =
+          parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
         const endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
 
-        const inQuietHours = startMinutes < endMinutes
-          ? currentTime >= startMinutes && currentTime < endMinutes
-          : currentTime >= startMinutes || currentTime < endMinutes;
+        const inQuietHours =
+          startMinutes < endMinutes
+            ? currentTime >= startMinutes && currentTime < endMinutes
+            : currentTime >= startMinutes || currentTime < endMinutes;
 
         if (inQuietHours) {
           console.log("[send-push] Currently in quiet hours, will retry later");
@@ -831,7 +973,7 @@ serve(async (req: Request) => {
       tokens: devices.map((d: any) =>
         d.push_token
           ? `${d.push_token.slice(0, 8)}...${d.push_token.slice(-6)}`
-          : "null"
+          : "null",
       ),
       platform: devices.map((d: any) => d.platform),
     });
@@ -861,9 +1003,13 @@ serve(async (req: Request) => {
         payload?.expense_data?.expense_id) as string;
       recipientSplit = await getRecipientSplitContext(expId, user_id);
     }
+    const hydratedPayload =
+      event_type === "settlement_completed" || event_type === "split_settled"
+        ? await enrichSettlementPayload(payload, household_id)
+        : payload;
     const notificationMessage = buildNotificationMessage(
       event_type,
-      payload,
+      hydratedPayload,
       recipientSplit,
     );
 
@@ -900,9 +1046,10 @@ serve(async (req: Request) => {
       .update({
         is_sent: sentCount > 0,
         sent_at: sentCount > 0 ? new Date().toISOString() : null,
-        delivery_error: failedCount > 0
-          ? `Sent to ${sentCount}/${devices.length} devices`
-          : null,
+        delivery_error:
+          failedCount > 0
+            ? `Sent to ${sentCount}/${devices.length} devices`
+            : null,
       })
       .eq("id", notification_event_id);
 
@@ -935,9 +1082,8 @@ serve(async (req: Request) => {
         .update({
           retry_count: 1,
           last_retry_at: new Date().toISOString(),
-          delivery_error: error instanceof Error
-            ? error.message
-            : String(error),
+          delivery_error:
+            error instanceof Error ? error.message : String(error),
         })
         .eq("id", body.notification_event_id);
     } catch (updateError) {
@@ -989,11 +1135,11 @@ function buildNotificationMessage(
 
       const body = isSplit
         ? `split ${amount} expense with you${
-          note ? `: ${note}` : ` in ${householdName}`
-        }`
+            note ? `: ${note}` : ` in ${householdName}`
+          }`
         : `added ${amount} expense${
-          note ? `: ${note}` : ` to ${householdName}`
-        }`;
+            note ? `: ${note}` : ` to ${householdName}`
+          }`;
 
       return {
         title: actor,
@@ -1020,9 +1166,9 @@ function buildNotificationMessage(
         if (fields.indexOf("amount_cents") !== -1) {
           const oldC = Number(payload.expense_data?.old_amount_cents ?? 0);
           const newC = Number(payload.expense_data?.new_amount_cents ?? 0);
-          body = `changed expense amount from ${symbol}${
-            (oldC / 100).toFixed(2)
-          } to ${symbol}${(newC / 100).toFixed(2)}`;
+          body = `changed expense amount from ${symbol}${(oldC / 100).toFixed(
+            2,
+          )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
           const newCat = String(payload.expense_data?.new_category ?? "");
           body = `changed expense category to ${newCat}`;
@@ -1077,9 +1223,9 @@ function buildNotificationMessage(
 
       return {
         title: `${budgetName} Budget`,
-        body: `⚠️ ${percentage}% used - ${symbol}${
-          spentAmount.toFixed(2)
-        } of ${symbol}${budgetAmount.toFixed(2)} spent in ${householdName}`,
+        body: `⚠️ ${percentage}% used - ${symbol}${spentAmount.toFixed(
+          2,
+        )} of ${symbol}${budgetAmount.toFixed(2)} spent in ${householdName}`,
         data: {
           budget_id: payload.budget_id || "",
           budget_name: budgetName,
@@ -1101,8 +1247,7 @@ function buildNotificationMessage(
 
       return {
         title: `${budgetName} Budget`,
-        body:
-          `🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
+        body: `🚨 Over budget! ${percentage}% used - ${symbol}${overAmount} over limit in ${householdName}`,
         data: {
           budget_id: payload.budget_id || "",
           budget_name: budgetName,
@@ -1161,9 +1306,10 @@ function buildNotificationMessage(
       const senderName = (payload.sender_name || "A member") as string;
       const customMessage = payload.message as string | undefined;
 
-      const body = customMessage && customMessage.trim().length > 0
-        ? customMessage
-        : `sent you a spending reminder for ${householdName}`;
+      const body =
+        customMessage && customMessage.trim().length > 0
+          ? customMessage
+          : `sent you a spending reminder for ${householdName}`;
 
       return {
         title: senderName,
@@ -1248,12 +1394,15 @@ function buildNotificationMessage(
       );
 
       // First-person toward the recipient: actor settled with you
+      const note = getSettlementNote(payload);
       const title = actorName;
-      const body = netPayCents > 0
-        ? `settled ${symbol}${
-          (netPayCents / 100).toFixed(2)
-        } with you in ${householdName}`
-        : `settled up with you in ${householdName}`;
+      const baseBody =
+        netPayCents > 0
+          ? `settled ${symbol}${(netPayCents / 100).toFixed(
+              2,
+            )} with you in ${householdName}`
+          : `settled up with you in ${householdName}`;
+      const body = note ? `${baseBody}: ${note}` : baseBody;
 
       return {
         title,
@@ -1277,8 +1426,7 @@ function buildNotificationMessage(
         data: {
           invite_id: payload.invite_id || "",
           household_id: payload.household_id || "",
-          deep_link:
-            `moneko://household/${payload.household_id}/settings?tab=2`,
+          deep_link: `moneko://household/${payload.household_id}/settings?tab=2`,
         },
       };
     }
@@ -1311,9 +1459,9 @@ function buildNotificationMessage(
           invite_id: payload.invite_id || "",
           invite_token: payload.invite_token || "",
           household_id: payload.household_id || "",
-          deep_link: `moneko://households/join?token=${
-            encodeURIComponent(String(payload.invite_token || ""))
-          }`,
+          deep_link: `moneko://households/join?token=${encodeURIComponent(
+            String(payload.invite_token || ""),
+          )}`,
         },
       };
     }

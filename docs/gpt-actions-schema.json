@@ -170,7 +170,7 @@
             "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
-         "x-openai-isConsequential": false,
+        "x-openai-isConsequential": false,
         "operationId": "analyzeExpense",
         "summary": "Analyze text or image for transaction details (expense or income)",
         "description": "Parses transaction information from raw text or receipt imagery without saving to the database, and classifies each item as expense or income. GPT callers rely on OpenAI headers for identity.",
@@ -290,7 +290,7 @@
             "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
-         "x-openai-isConsequential": false,
+        "x-openai-isConsequential": false,
         "operationId": "setBudget",
         "summary": "Set the user's daily budget",
         "description": "Creates or updates the caller's daily budget for a specific date. GPT callers must include a date so the backend can align with the user's timezone without relying on server time.",
@@ -360,7 +360,7 @@
             "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
-         "x-openai-isConsequential": false,
+        "x-openai-isConsequential": false,
         "operationId": "getBudget",
         "summary": "Retrieve the user's daily budget and projections",
         "description": "Fetches the most recent daily budget in a currency and reports spend-to-date against the requested day. GPT callers must send the date they want totals for so calculations match the user's timezone.",
@@ -430,7 +430,7 @@
             "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBib3Bjc21yY3lrZHpiaWxwaWxmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDE4NzMzMCwiZXhwIjoyMDU5NzYzMzMwfQ.m9tl4Z-i_VCLA6gteOxspCMJfTcgvu5kKvPEnREPOcM"
           }
         },
-         "x-openai-isConsequential": false,
+        "x-openai-isConsequential": false,
         "operationId": "deleteExpense",
         "summary": "Delete an expense entry",
         "description": "Permanently removes an expense from the user's personal budget. GPT callers rely on OpenAI headers for identity; no userId parameter is needed.",
@@ -598,12 +598,7 @@
     "schemas": {
       "SaveExpenseRequest": {
         "type": "object",
-        "required": [
-          "amount",
-          "category",
-          "currency",
-          "date"
-        ],
+        "required": ["amount", "category", "currency", "date"],
         "properties": {
           "amount": {
             "type": "number",
@@ -669,20 +664,14 @@
             "type": "string"
           },
           "receipt_image_url": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "created_at": {
             "type": "string",
             "format": "date-time"
           },
           "updated_at": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "date-time"
           }
         },
@@ -693,9 +682,7 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           },
           "data": {
             "$ref": "#/components/schemas/Expense"
@@ -715,11 +702,7 @@
             "description": "Additional metadata about identity resolution, including guest creation flags."
           }
         },
-        "required": [
-          "success",
-          "data",
-          "shared"
-        ]
+        "required": ["success", "data", "shared"]
       },
       "AnalyzeExpenseRequest": {
         "type": "object",
@@ -740,10 +723,7 @@
                 "description": "Image MIME type such as image/jpeg."
               }
             },
-            "required": [
-              "data",
-              "contentType"
-            ],
+            "required": ["data", "contentType"],
             "additionalProperties": false
           },
           "date": {
@@ -762,14 +742,10 @@
         "additionalProperties": false,
         "oneOf": [
           {
-            "required": [
-              "text"
-            ]
+            "required": ["text"]
           },
           {
-            "required": [
-              "image"
-            ]
+            "required": ["image"]
           }
         ]
       },
@@ -778,9 +754,7 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           },
           "data": {
             "type": "object",
@@ -810,9 +784,7 @@
       },
       "SetBudgetRequest": {
         "type": "object",
-        "required": [
-          "amount"
-        ],
+        "required": ["amount"],
         "properties": {
           "phone": {
             "type": "string",
@@ -941,10 +913,7 @@
                 "type": "string"
               },
               "dayRequested": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+                "type": ["integer", "null"]
               },
               "dayApplied": {
                 "type": "integer"
@@ -1082,10 +1051,7 @@
             "description": "Normalized category label."
           },
           "raw_text": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "Original raw text associated with the expense, when available."
           },
           "amount_cents": {
@@ -1097,25 +1063,16 @@
             "description": "ISO 4217 currency code."
           },
           "receipt_image_url": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "Optional receipt image URL."
           },
           "split_group_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "uuid",
             "description": "Split group identifier when this expense is part of a household split."
           },
           "household_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "uuid",
             "description": "Household identifier when this expense belongs to a household."
           },
@@ -1124,10 +1081,7 @@
             "description": "Whether this expense is part of a recurring series."
           },
           "recurrence_rule": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "Recurrence rule for recurring expenses, when defined."
           },
           "attachments": {
@@ -1142,10 +1096,7 @@
             "format": "date-time"
           },
           "contact_id": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "format": "uuid"
           },
           "user_id": {
@@ -1160,9 +1111,7 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           },
           "data": {
             "type": "array",
@@ -1202,22 +1151,13 @@
                 "type": "object",
                 "properties": {
                   "startDate": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "endDate": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "currency": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   },
                   "includeRecurring": {
                     "type": "boolean"
@@ -1268,9 +1208,7 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           },
           "data": {
             "type": "object",
@@ -1308,17 +1246,11 @@
                     "type": "boolean"
                   },
                   "householdId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": ["string", "null"],
                     "format": "uuid"
                   },
                   "currency": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": ["string", "null"]
                   }
                 }
               },
@@ -1432,14 +1364,15 @@
       },
       "DeleteExpenseRequest": {
         "type": "object",
-        "required": [
-          "expenseId"
-        ],
         "properties": {
+          "expenseIds": {
+            "type": "string",
+            "description": "Comma-separated list of expense UUIDs to delete."
+          },
           "expenseId": {
             "type": "string",
             "format": "uuid",
-            "description": "Expense UUID to delete."
+            "description": "Expense UUID to delete (legacy; prefer expenseIds)."
           }
         },
         "additionalProperties": false
@@ -1449,9 +1382,7 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           },
           "resolvedUserId": {
             "type": "string",
@@ -1463,16 +1394,11 @@
             "description": "Additional metadata about identity resolution, including guest creation flags."
           }
         },
-        "required": [
-          "success"
-        ]
+        "required": ["success"]
       },
       "UpdateExpenseRequest": {
         "type": "object",
-        "required": [
-          "expenseId",
-          "updates"
-        ],
+        "required": ["expenseId", "updates"],
         "properties": {
           "expenseId": {
             "type": "string",
@@ -1515,9 +1441,7 @@
         "properties": {
           "success": {
             "type": "boolean",
-            "enum": [
-              true
-            ]
+            "enum": [true]
           },
           "data": {
             "type": "object",
@@ -1533,10 +1457,7 @@
             "description": "Additional metadata about identity resolution, including guest creation flags."
           }
         },
-        "required": [
-          "success",
-          "data"
-        ]
+        "required": ["success", "data"]
       }
     }
   }

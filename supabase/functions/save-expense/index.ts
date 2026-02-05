@@ -109,6 +109,7 @@ interface RequestBody {
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
+  breakdown?: string[]; // Optional receipt line items
   receiptImageUrl?: string; // Optional receipt image URL
   householdId?: string; // If provided, share with this household
   isPortfolio?: boolean; // If true, treat as personal even with householdId
@@ -386,6 +387,7 @@ Deno.serve(async (req: Request) => {
         date: body.date,
         raw_text: body.description || "",
         currency: currency,
+        breakdown: body.breakdown ?? null,
         receipt_image_url: body.receiptImageUrl || null,
         created_at: body.clientCreatedAt || new Date().toISOString(),
         is_recurring: body.isRecurring || false,

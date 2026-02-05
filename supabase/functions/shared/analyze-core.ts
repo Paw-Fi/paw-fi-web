@@ -1426,6 +1426,7 @@ export interface ExpenseItem {
   currencySymbol: string;
   date: string;
   description?: string;
+  breakdown?: string[];
   payerUserId?: string;
   customSplits?: CustomSplits;
 }

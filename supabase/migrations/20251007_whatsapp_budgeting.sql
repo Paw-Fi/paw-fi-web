@@ -73,6 +73,7 @@ create table if not exists public.expenses (
   currency text default 'USD',
   category text,
   raw_text text,
+  breakdown jsonb,
   receipt_image_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -82,3 +83,4 @@ create index if not exists idx_expenses_contact_date on public.expenses(contact_
 
 comment on table public.expenses is 'Individual expense entries extracted from free text';
 comment on column public.expenses.receipt_image_url is 'Supabase Storage URL for receipt image if uploaded via WhatsApp';
+comment on column public.expenses.breakdown is 'Receipt line item breakdown entries';

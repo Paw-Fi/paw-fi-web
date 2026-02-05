@@ -108,6 +108,7 @@ interface TransactionItem {
   date: string;
   clientCreatedAt?: string;
   description?: string;
+  breakdown?: string[];
   receiptImageUrl?: string;
   customSplits?: CustomSplits;
   payerUserId?: string;
@@ -230,6 +231,18 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    let actorName = "Someone";
+    try {
+      const { data: appUser } = await supabase
+        .from("users")
+        .select("full_name")
+        .eq("id", userId)
+        .maybeSingle();
+      if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
+        actorName = appUser.full_name as string;
+      }
+    } catch (_) {}
+
     // Resolve user contact
     let contactId: string | null = null;
     const { data: contact } = await supabase
@@ -315,6 +328,7 @@ Deno.serve(async (req: Request) => {
         date: tx.date,
         raw_text: tx.description || "",
         currency: currency,
+        breakdown: tx.breakdown ?? null,
         receipt_image_url: tx.receiptImageUrl || null,
         created_at: tx.clientCreatedAt || new Date().toISOString(),
         household_id: isPortfolio ? requestedHouseholdId : null,
@@ -390,6 +404,37 @@ Deno.serve(async (req: Request) => {
             success: true,
             data: insertedIncome[i],
           });
+        }
+
+        if (resolvedHouseholdId && !isPortfolio) {
+          for (const income of insertedIncome) {
+            const { error: notifyError } = await supabase.rpc(
+              "notify_household_members_expense",
+              {
+                p_household_id: resolvedHouseholdId,
+                p_expense_id: income.id,
+                p_actor_user_id: userId,
+                p_event_type: "income_added",
+                p_expense_data: {
+                  actor_name: actorName,
+                  amount_cents: income.amount_cents,
+                  currency: income.currency,
+                  category: income.category,
+                  source: income.source || "",
+                  note: income.raw_text || "",
+                  privacy_scope: income.privacy_scope,
+                  owner_type: income.owner_type,
+                },
+              },
+            );
+
+            if (notifyError) {
+              console.error(
+                "[save-transactions-batch] Error creating income notifications:",
+                notifyError,
+              );
+            }
+          }
         }
       }
     }
@@ -520,10 +565,14 @@ Deno.serve(async (req: Request) => {
                 amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
               }));
             } else if (splitType === "amount" && customSplits) {
-              const cents = customSplits.memberSplits.map((s) =>
+              const memberSplits = customSplits.memberSplits as MemberSplit[];
+              const cents = memberSplits.map((s) =>
                 Math.max(0, Math.round((normalizeAmount(s.amount) || 0) * 100)),
               );
-              const sumCents = cents.reduce((sum, v) => sum + v, 0);
+              const sumCents = cents.reduce(
+                (sum: number, v: number) => sum + v,
+                0,
+              );
               const diff = amountCents - sumCents;
               if (diff !== 0 && cents.length > 0) {
                 cents[cents.length - 1] = Math.max(
@@ -531,32 +580,34 @@ Deno.serve(async (req: Request) => {
                   cents[cents.length - 1] + diff,
                 );
               }
-              lines = customSplits.memberSplits.map((s, idx) => ({
+              lines = memberSplits.map((s, idx) => ({
                 user_id: s.userId,
                 amount_cents: cents[idx] ?? 0,
               }));
             } else if (splitType === "percentage" && customSplits) {
-              const weights = customSplits.memberSplits.map(
+              const memberSplits = customSplits.memberSplits as MemberSplit[];
+              const weights = memberSplits.map(
                 (s) => normalizePercentage(s.percentage) || 0,
               );
               const allocatedCents = allocateCentsByWeights(
                 amountCents,
                 weights,
               );
-              lines = customSplits.memberSplits.map((s, idx) => ({
+              lines = memberSplits.map((s, idx) => ({
                 user_id: s.userId,
                 amount_cents: allocatedCents[idx] ?? 0,
                 percentage: normalizePercentage(s.percentage),
               }));
             } else if (splitType === "shares" && customSplits) {
-              const weights = customSplits.memberSplits.map(
+              const memberSplits = customSplits.memberSplits as MemberSplit[];
+              const weights = memberSplits.map(
                 (s) => normalizeShares(s.shares) || 0,
               );
               const allocatedCents = allocateCentsByWeights(
                 amountCents,
                 weights,
               );
-              lines = customSplits.memberSplits.map((s, idx) => ({
+              lines = memberSplits.map((s, idx) => ({
                 user_id: s.userId,
                 amount_cents: allocatedCents[idx] ?? 0,
                 shares: normalizeShares(s.shares),
@@ -649,6 +700,34 @@ Deno.serve(async (req: Request) => {
             success: true,
             data: refreshed,
           });
+        }
+
+        if (resolvedHouseholdId && !isPortfolio) {
+          for (const expense of insertedExpenses) {
+            const { error: notifyError } = await supabase.rpc(
+              "notify_household_members_expense",
+              {
+                p_household_id: resolvedHouseholdId,
+                p_expense_id: expense.id,
+                p_actor_user_id: userId,
+                p_event_type: "expense_added",
+                p_expense_data: {
+                  actor_name: actorName,
+                  amount_cents: expense.amount_cents,
+                  currency: expense.currency,
+                  category: expense.category,
+                  note: expense.raw_text || "",
+                },
+              },
+            );
+
+            if (notifyError) {
+              console.error(
+                "[save-transactions-batch] Error creating expense notifications:",
+                notifyError,
+              );
+            }
+          }
         }
       }
     }

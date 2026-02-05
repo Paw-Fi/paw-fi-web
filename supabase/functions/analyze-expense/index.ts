@@ -66,6 +66,146 @@ function mapProgressEvent(
   };
 }
 
+function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
+  const hasPrimaryInput = Boolean(body.text || body.image || body.audio);
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
+  return hasPrimaryInput && !hasAttachments;
+}
+
+function formatBreakdownAmount(item: any): string {
+  const amount = Number(item?.amount);
+  if (!Number.isFinite(amount)) return "";
+  const formatted = amount.toFixed(2);
+  const symbol =
+    typeof item?.currencySymbol === "string" &&
+    item.currencySymbol.trim().length > 0
+      ? item.currencySymbol.trim()
+      : "";
+  const currency =
+    typeof item?.currency === "string" && item.currency.trim().length > 0
+      ? item.currency.trim()
+      : "";
+  if (symbol) return `${symbol}${formatted}`;
+  if (currency) return `${formatted} ${currency}`;
+  return formatted;
+}
+
+function buildReceiptBreakdown(items: any[]): string[] {
+  return items
+    .map((item) => {
+      const desc =
+        typeof item?.description === "string" ? item.description.trim() : "";
+      const amountText = formatBreakdownAmount(item);
+      if (!amountText && !desc) return "";
+      if (!amountText) return desc;
+      if (!desc) return `Item ${amountText}`;
+      return `${desc} ${amountText}`;
+    })
+    .filter((line) => line.length > 0);
+}
+
+function pickReceiptDescription(items: any[]): string {
+  const candidates = items
+    .map((item) =>
+      typeof item?.description === "string" ? item.description.trim() : "",
+    )
+    .filter((value) => value.length > 0);
+  if (candidates.length === 0) return "Receipt";
+
+  const withoutDigits = candidates.filter((value) => !/\d/.test(value));
+  const ranked = withoutDigits.length > 0 ? withoutDigits : candidates;
+  let best = ranked[0];
+  for (let i = 1; i < ranked.length; i++) {
+    const current = ranked[i];
+    const bestWords = best.split(/\s+/).length;
+    const currentWords = current.split(/\s+/).length;
+    if (
+      currentWords < bestWords ||
+      (currentWords === bestWords && current.length < best.length)
+    ) {
+      best = current;
+    }
+  }
+  return best;
+}
+
+function isTotalLike(description: unknown): boolean {
+  if (typeof description !== "string") return false;
+  return /(sub\s*total|subtotal|grand\s*total|total)/i.test(description);
+}
+
+function resolveReceiptCategory(items: any[]): string | undefined {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (typeof item?.category !== "string") continue;
+    const trimmed = item.category.trim();
+    if (!trimmed) continue;
+    counts.set(trimmed, (counts.get(trimmed) ?? 0) + 1);
+  }
+  let best: string | undefined;
+  let bestCount = 0;
+  for (const [category, count] of counts.entries()) {
+    if (count > bestCount) {
+      best = category;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+function collapseReceiptItems(
+  items: any[] | undefined,
+  body: AnalyzeRequestBody,
+): any[] | undefined {
+  if (!Array.isArray(items) || items.length <= 1) return items;
+  if (!shouldCollapseReceipt(body)) return items;
+
+  const filteredItems =
+    items.length > 1
+      ? items.filter((item) => !isTotalLike(item?.description))
+      : items;
+  const workingItems = filteredItems.length > 0 ? filteredItems : items;
+
+  const totalAmount = workingItems.reduce((sum, item) => {
+    const amount = Number(item?.amount);
+    return Number.isFinite(amount) ? sum + amount : sum;
+  }, 0);
+
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) return items;
+
+  const primary = workingItems[0] ?? {};
+  const breakdown = buildReceiptBreakdown(workingItems);
+  const category =
+    resolveReceiptCategory(workingItems) || primary.category || "other";
+  const description = pickReceiptDescription(workingItems);
+  const type = workingItems.some((item) => item?.type === "expense")
+    ? "expense"
+    : "income";
+  const splitSource = workingItems.find(
+    (item) => item?.payerUserId || item?.customSplits,
+  );
+
+  return [
+    {
+      type,
+      amount: Number(totalAmount.toFixed(2)),
+      category,
+      currency: primary.currency || body.currency || "USD",
+      currencySymbol: primary.currencySymbol || "$",
+      date: primary.date || body.date || new Date().toISOString().split("T")[0],
+      description,
+      breakdown,
+      ...(splitSource?.payerUserId
+        ? { payerUserId: splitSource.payerUserId }
+        : {}),
+      ...(splitSource?.customSplits
+        ? { customSplits: splitSource.customSplits }
+        : {}),
+    },
+  ];
+}
+
 /**
  * Creates a readable stream that sends SSE events during analysis
  */
@@ -104,10 +244,11 @@ function createSSEStream(
 
         // Send final result as complete event
         if (result.success) {
+          const collapsedItems = collapseReceiptItems(result.items, body);
           const completeData = {
             success: true,
             data: {
-              items: result.items,
+              items: collapsedItems ?? result.items,
               isAnalyzed: true,
               language: result.language,
             },
@@ -331,7 +472,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         data: {
-          items: result.items,
+          items: collapseReceiptItems(result.items, body) ?? result.items,
           isAnalyzed: true,
           language: result.language,
         },
