@@ -1792,9 +1792,12 @@ Deno.serve(async (req: Request) => {
     await supabase
       .from("whatsapp_verifications")
       .delete()
-      .eq("phone_e164", from)
+      .eq("channel", "whatsapp")
+      .eq("subject", from)
       .eq("verified", false);
     await supabase.from("whatsapp_verifications").insert({
+      channel: "whatsapp",
+      subject: from,
       phone_e164: from,
       verification_code: code,
       expires_at: expiresAt.toISOString(),
@@ -1899,6 +1902,7 @@ Deno.serve(async (req: Request) => {
         user_id: userId,
         session_id: whatsappSessionId,
         model: MODEL_NAME,
+        channel: "whatsapp",
       })
       .select()
       .single();
