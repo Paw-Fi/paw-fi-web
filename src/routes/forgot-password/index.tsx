@@ -2,7 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import authBg from "@/assets/images/auth/auth-bg.webp";
 import authBgPng from "@/assets/images/auth/auth-bg.png";
 import { MonekoIcon } from "@/components/shared/moneko-icon";
@@ -64,54 +64,22 @@ export function ForgotPassword() {
         ]}
       />
 
-      <div className="bg-moneko-background grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        <div className="relative flex flex-col">
-          <div className="flex items-center justify-between px-6 py-4">
+      <div className="bg-moneko-background h-screen flex w-screen flex-col px-6 lg:py-4">
             <MonekoIcon />
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Button asChild size="sm" variant="outline">
-                <Link to="/login">Sign in</Link>
-              </Button>
-            </div>
-          </div>
 
-          <div className="flex flex-1 items-center">
-            <div className="mx-auto w-full max-w-md px-6 py-8">
+          <div className="flex flex-1 items-center justify-center">
+            <div className="mx-auto w-full lg:max-w-md">
               <div className="space-y-4">
-                <Dialog open>
-                  <DialogContent>
+                <Card>
+                  <CardContent className="pt-6">
                     <ForgotPasswordForm initialEmail={email} />
-                  </DialogContent>
-                </Dialog>
-              </div>
+                  </CardContent>
+                </Card>
             </div>
           </div>
         </div>
 
-        <div className="relative m-4 ml-0 hidden overflow-hidden rounded-3xl lg:block">
-          <OptimizedImage
-            src={authBgPng}
-            webpSrc={authBg}
-            alt="Secure password recovery for your Moneko account"
-            className="absolute inset-0 h-full w-full object-cover dark:brightness-90 dark:contrast-80"
-            priority={true}
-            loading="eager"
-            width={1080}
-            height={1080}
-          />
-
-          <div className="bg-overlay/80 dark:text-moneko-foreground absolute right-6 bottom-6 left-6 rounded-lg p-4 text-white backdrop-blur-sm">
-            <h3 className="dark:text-moneko-foreground mb-2 font-semibold text-white">
-              Secure Account Recovery
-            </h3>
-            <ul className="dark:text-moneko-foreground space-y-1 text-sm text-white opacity-90">
-              <li>• Time-limited reset links</li>
-              <li>• Bank-level encryption</li>
-              <li>• SOC 2 compliant security</li>
-              <li>• Trusted by 50,000+ users</li>
-            </ul>
-          </div>
-        </div>
+      
       </div>
     </>
   );

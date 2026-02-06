@@ -1,16 +1,10 @@
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/auth-context";
-import { CheckCircle2, Mail } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 interface ForgotPasswordFormProps {
   initialEmail?: string;
@@ -66,17 +60,17 @@ export function ForgotPasswordForm({ initialEmail }: ForgotPasswordFormProps) {
   const isDisabled = isSending || resetSent;
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="text-moneko-foreground">
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <h2 className="text-moneko-foreground text-lg font-semibold">
           Reset your password
-        </DialogTitle>
-        <DialogDescription>
+        </h2>
+        <p className="text-muted-foreground text-sm">
           {resetSent
             ? "We've sent a password reset link to your email."
             : "Enter your email and we will send you a password reset link."}
-        </DialogDescription>
-      </DialogHeader>
+        </p>
+      </div>
 
       {resetError && (
         <Alert variant="destructive">
@@ -118,15 +112,16 @@ export function ForgotPasswordForm({ initialEmail }: ForgotPasswordFormProps) {
         />
       </div>
 
-      <DialogFooter>
+      <div className="flex flex-col items-stretch pt-2">
         {resetSent && (
           <div className="mb-4 flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2">
               <p className="text-xs">Check your spam or junk folder.</p>
             </div>
             {countdown > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Resend available in <span className="font-mono font-semibold">{countdown}s</span>
+              <p className="text-muted-foreground text-xs">
+                Resend available in{" "}
+                <span className="font-mono font-semibold">{countdown}s</span>
               </p>
             )}
           </div>
@@ -138,12 +133,12 @@ export function ForgotPasswordForm({ initialEmail }: ForgotPasswordFormProps) {
           {isSending
             ? "Sending…"
             : resetSent && !canResend
-            ? `Resend in ${countdown}s`
-            : resetSent
-            ? "Send new link"
-            : "Send reset link"}
+              ? `Resend in ${countdown}s`
+              : resetSent
+                ? "Send new link"
+                : "Send reset link"}
         </Button>
-      </DialogFooter>
-    </>
+      </div>
+    </div>
   );
 }
