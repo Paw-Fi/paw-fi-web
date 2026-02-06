@@ -163,13 +163,13 @@ export const planData: Record<string, PlanData> = {
     title: "Plus",
     subtitle: "Full AI budgeting plan for faster capture + scenario planning",
     description: "Upgrade for WhatsApp expense tracking (where available), receipt/voice capture (where available), and scenario insights.",
-    monthlyPrice: 5.99,
-    yearlyPrice: 29.99,
+    monthlyPrice: 2.99,
+    yearlyPrice: 9.99,
     compareAtMonthlyPrice: 7.99,
     compareAtYearlyPrice: 59.99,
-    annualTotal: 29.99,
-    priceMonthly: "$5.99",
-    priceYearly: "$29.99",
+    annualTotal: 9.99,
+    priceMonthly: "$2.99",
+    priceYearly: "$9.99",
     compareAtPriceMonthly: "$7.99",
     compareAtPriceYearly: "$59.99",
     priceFrequencyText: "/month",
@@ -216,11 +216,11 @@ export const planData: Record<string, PlanData> = {
     title: "Lifetime",
     subtitle: "All features — one-time payment, lifetime access",
     description: "A limited-time one-time payment option for lifetime access.",
-    monthlyPrice: 39.99,
-    yearlyPrice: 39.99,
-    annualTotal: 39.99,
-    priceMonthly: "$39.99",
-    priceYearly: "$39.99",
+    monthlyPrice: 19.99,
+    yearlyPrice: 19.99,
+    annualTotal: 19.99,
+    priceMonthly: "$19.99",
+    priceYearly: "$19.99",
     priceFrequencyText: "",
     highlight: false,
     actionText: "Secure Lifetime Access",
@@ -268,27 +268,67 @@ export function getPlanOptions(): PlanOption[] {
   }));
 }
 
-// Helper function to get pricing tiers for PricingPage
-export function getPricingTiers(isYearly: boolean = false): PricingTier[] {
-  return Object.values(planData).map(plan => ({
-    title: plan.title,
-    subtitle: plan.subtitle,
-    priceMonthly: plan.priceMonthly,
-    priceYearly: plan.priceYearly,
-    compareAtPriceMonthly: plan.compareAtPriceMonthly,
-    compareAtPriceYearly: plan.compareAtPriceYearly,
-    annualTotal: plan.annualTotal,
-    priceFrequencyText: isYearly ? "/year" : plan.priceFrequencyText,
-    description: plan.description,
-    features: plan.featureItems,
-    actionText: plan.actionText,
-    actionLink: plan.actionLink,
-    highlight: plan.highlight,
-    trialText: plan.trialText,
-    audienceText: plan.audienceText,
-    badgeText: plan.badgeText,
-    bgColor: plan.bgColor,
-    textColor: plan.textColor,
-    borderColor: plan.borderColor,
-  }));
+// Helper function to get pricing tiers for PricingPage with 3 separate plans
+export function getPricingTiers(): PricingTier[] {
+  // Plus Monthly
+  const plusMonthly: PricingTier = {
+    title: planData.plus.title,
+    subtitle: "Monthly subscription to Moneko Plus",
+    priceMonthly: "$2.99",
+    compareAtPriceMonthly: "$7.99",
+    priceFrequencyText: "/month",
+    description: planData.plus.description,
+    features: planData.plus.featureItems,
+    actionText: "Subscribe Monthly",
+    actionLink: "/checkout?plan=plus&billing=monthly",
+    highlight: false,
+    trialText: planData.plus.trialText,
+    audienceText: planData.plus.audienceText,
+    badgeText: "Early Bird",
+    bgColor: planData.plus.bgColor,
+    textColor: planData.plus.textColor,
+    borderColor: planData.plus.borderColor,
+  };
+
+  // Plus Yearly
+  const plusYearly: PricingTier = {
+    title: planData.plus.title + " Yearly",
+    subtitle: "Best value — annual subscription to Moneko Plus",
+    priceMonthly: "$9.99",
+    compareAtPriceMonthly: "$59.99",
+    priceFrequencyText: "/year",
+    description: planData.plus.description,
+    features: planData.plus.featureItems,
+    actionText: "Subscribe Yearly",
+    actionLink: "/checkout?plan=plus&billing=yearly",
+    highlight: true,
+    popular: true,
+    trialText: planData.plus.trialText,
+    audienceText: planData.plus.audienceText,
+    badgeText: "Best Value",
+    bgColor: planData.plus.bgColor,
+    textColor: planData.plus.textColor,
+    borderColor: planData.plus.borderColor,
+  };
+
+  // Lifetime
+  const lifetime: PricingTier = {
+    title: planData.premium.title,
+    subtitle: planData.premium.subtitle,
+    priceMonthly: "$19.99",
+    priceFrequencyText: "",
+    description: planData.premium.description,
+    features: planData.premium.featureItems,
+    actionText: "Get Lifetime Access",
+    actionLink: "/checkout?plan=lifetime",
+    highlight: false,
+    trialText: planData.premium.trialText,
+    audienceText: planData.premium.audienceText,
+    badgeText: "Limited Time",
+    bgColor: planData.premium.bgColor,
+    textColor: planData.premium.textColor,
+    borderColor: planData.premium.borderColor,
+  };
+
+  return [plusMonthly, plusYearly, lifetime];
 }

@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Variants, motion } from "framer-motion";
 import { seo } from "@/utils/seo";
 import { AmbientHaloLayout } from "@/layouts/ambient-halo-layout";
-import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { toast } from "react-toastify";
@@ -30,9 +29,9 @@ export const Route = createFileRoute("/pricing")({
     const meta = seo({
       title: "Moneko Pricing | AI Budgeting App Plans for Individuals & Households",
       description:
-        "Compare Moneko pricing and choose the right plan. Starter is free. Plus is $5.99/month or $29.99/year (promo). A limited-time Lifetime plan is $39.99 one-time. Moneko helps with fast capture, pockets (digital envelopes), recurring items, household mode, and optional WhatsApp expense tracking (where available).",
+        "Choose your Moneko plan. Plus Monthly at $2.99/month, Plus Yearly at $9.99/year (Best Value), or Lifetime at $19.99 one-time. Moneko helps with fast capture, pockets (digital envelopes), recurring items, household mode, and optional WhatsApp expense tracking.",
       keywords:
-        "moneko pricing, moneko plans, AI budgeting app pricing, budgeting app pricing, envelope budgeting app pricing, household budgeting app pricing, budgeting app for couples pricing, WhatsApp expense tracker pricing, personal finance app subscription, lifetime access budgeting app",
+        "moneko pricing, moneko plans, AI budgeting app pricing, budgeting app subscription, envelope budgeting app, household budgeting app, WhatsApp expense tracker, personal finance app subscription, lifetime access budgeting app",
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
@@ -60,31 +59,20 @@ export const Route = createFileRoute("/pricing")({
         itemListElement: [
           {
             "@type": "Offer",
-            name: "Moneko Starter Plan - Free Forever",
-            price: "0",
+            name: "Moneko Plus Monthly",
+            price: "2.99",
             priceCurrency: "USD",
-            description:
-              "Free dashboard to start budgeting with pockets (envelopes), recurring items, and personal vs household modes.",
+            description: "Monthly subscription to Moneko Plus with full AI budgeting features.",
             url: pageUrl,
             availability: "https://schema.org/InStock",
             category: "Digital Good",
           },
           {
             "@type": "Offer",
-            name: "Moneko Plus Plan (Monthly)",
-            price: "5.99",
+            name: "Moneko Plus Annual",
+            price: "9.99",
             priceCurrency: "USD",
-            description: "Monthly pricing for the Plus plan.",
-            url: pageUrl,
-            availability: "https://schema.org/InStock",
-            category: "Digital Good",
-          },
-          {
-            "@type": "Offer",
-            name: "Moneko Plus Plan (Annual)",
-            price: "29.99",
-            priceCurrency: "USD",
-            description: "Early Bird promo annual pricing for the Plus plan.",
+            description: "Annual subscription to Moneko Plus — best value plan.",
             url: pageUrl,
             availability: "https://schema.org/InStock",
             category: "Digital Good",
@@ -92,7 +80,7 @@ export const Route = createFileRoute("/pricing")({
           {
             "@type": "Offer",
             name: "Moneko Lifetime Plan",
-            price: "39.99",
+            price: "19.99",
             priceCurrency: "USD",
             description:
               "Limited-time lifetime access offer — one-time payment for access.",
@@ -149,14 +137,12 @@ const cardVariants: Variants = {
 };
 
 function PricingPage() {
-  const [isAnnual, setIsAnnual] = useState(true);
   const prefersReducedMotion = usePrefersReducedMotion();
-  const [billingPeriodMessage, setBillingPeriodMessage] = useState("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get pricing tiers from shared data module
-  const pricingTiers = getPricingTiers(isAnnual);
+  // Get pricing tiers from shared data module (3 plans: Monthly, Yearly, Lifetime)
+  const pricingTiers = getPricingTiers();
 
   // CRITICAL FIX: Reset loading state on component mount to prevent stuck loading from previous navigations
   // This fixes the issue where loading modal persists when navigating from other pages via <Link>
@@ -171,10 +157,6 @@ function PricingPage() {
       answer: "Yes. You can change plans from your account settings. Plan changes and billing dates are handled by Stripe based on your current subscription.",
     },
     {
-      question: "Do you offer a free plan?",
-      answer: "Yes. Starter is free so you can try core budgeting features like pockets (digital envelopes), recurring items, and personal vs household budgets.",
-    },
-    {
       question: "What payment methods do you accept?",
       answer: "We accept major credit cards. Payments are processed through Stripe.",
     },
@@ -184,12 +166,11 @@ function PricingPage() {
     },
     {
       question: "What is your cancellation and refund policy?",
-      answer: "You can cancel anytime from account settings. For billing questions (including refunds), contact hello@moneko.io and we’ll help based on your payment details.",
+      answer: "You can cancel anytime from account settings. For billing questions (including refunds), contact hello@moneko.io and we'll help based on your payment details.",
     },
     {
       question: "What does the AI help with in Moneko?",
-      answer: "Moneko supports faster capture (text, receipt photos, voice notes where available), smarter categorization workflows, and scenario-style insights (" +
-        "'what if' planning) to help you understand spending patterns and make informed budgeting decisions.",
+      answer: "Moneko supports faster capture (text, receipt photos, voice notes where available), smarter categorization workflows, and scenario-style insights ('what if' planning) to help you understand spending patterns and make informed budgeting decisions.",
     },
     {
       question: "Do you offer discounts?",
@@ -201,14 +182,7 @@ function PricingPage() {
     }
   ];
 
-  const handleBillingToggle = (toggled: boolean) => {
-    setIsAnnual(toggled);
-    setBillingPeriodMessage(
-      toggled ? "Displaying annual pricing." : "Displaying monthly pricing.",
-    );
-  };
-
-  const handleSubscribe = async (plan: string) => {
+  const handleSubscribe = async (plan: string, billingInterval?: string) => {
     try {
       // Show loading indicator during async user check
       setIsLoading(true);
@@ -235,18 +209,18 @@ function PricingPage() {
         console.log('Pricing page - Creating checkout for Lifetime (one-time payment)');
         navigate({
           to: "/checkout",
-          search: { plan: "lifetime" }, // No billing interval for Lifetime
+          search: { plan: "lifetime" },
         });
         return;
       }
 
       // Recurring plans (Plus): require billing interval
-      const billingInterval = isAnnual ? "yearly" : "monthly";
-      console.log('Pricing page - Creating checkout with:', { plan, billingInterval });
+      const interval = billingInterval || "monthly";
+      console.log('Pricing page - Creating checkout with:', { plan, billingInterval: interval });
 
       navigate({
         to: "/checkout",
-        search: { plan, billing: billingInterval },
+        search: { plan, billing: interval },
       });
     } catch (err) {
       console.error("Error handling subscription:", err);
@@ -328,28 +302,8 @@ function PricingPage() {
             className="mx-auto max-w-3xl text-base text-muted-foreground-color sm:text-lg mb-10"
             variants={itemVariants}
           >
-            Compare plans for Moneko, an AI-assisted budgeting app built for fast expense capture, pockets (digital envelopes), recurring items, personal vs household budgets, and scenario planning. Use the web app, and optionally track spending via the WhatsApp assistant (where available).
+            Choose your Moneko plan. All plans include full AI budgeting features including fast expense capture, pockets (digital envelopes), recurring items, household mode, and WhatsApp assistant (where available).
           </motion.p>
-
-          <motion.div
-            className="mt-10 flex justify-center items-center gap-4"
-            variants={itemVariants}
-          >
-            <span className="text-base font-medium text-muted-foreground-color">Monthly</span>
-            <Switch
-              labelLeft=""
-              labelRight=""
-              onToggle={handleBillingToggle}
-              initialToggled={isAnnual}
-              srText="Toggle billing period"
-            />
-            <span className="text-base font-medium text-foreground">Annually (Best value)</span>
-          </motion.div>
-          <p
-            className="mt-4 text-sm text-muted-foreground-color sr-only"
-          >
-            Early Bird promo: Plus was $7.99/month or $59.99/year.
-          </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 sr-only">
             <a className="text-sm text-primary hover:text-primary/80 underline underline-offset-4" href="/features/pockets-system">
@@ -374,9 +328,6 @@ function PricingPage() {
               Cookies
             </a>
           </div>
-          <span className="sr-only" aria-live="polite" aria-atomic="true">
-            {billingPeriodMessage}
-          </span>
         </motion.header>
 
         <motion.div 
@@ -389,10 +340,9 @@ function PricingPage() {
         >
           {pricingTiers.map((tier) => {
             const isLifetime = tier.title === "Lifetime";
-            const isPlusPlan = tier.title === "Plus";
-            const showCompareAt = isPlusPlan && (!!tier.compareAtPriceMonthly || !!tier.compareAtPriceYearly);
-            const compareAtPrice = isAnnual ? tier.compareAtPriceYearly : tier.compareAtPriceMonthly;
-            const currentPrice = isAnnual && !isLifetime ? tier.priceYearly : tier.priceMonthly;
+            const isYearly = tier.title === "Plus Yearly";
+            const isMonthly = tier.title === "Plus";
+            const currentPrice = tier.priceMonthly;
 
             return (
               <motion.div
@@ -406,8 +356,8 @@ function PricingPage() {
                     className={classNames(
                       "absolute -top-3 left-1/2 -translate-x-1/2 z-10",
                       {
-                        "bg-primary text-primary-foreground": tier.badgeText === "Most Popular",
-                        "bg-muted text-muted-foreground": tier.badgeText !== "Most Popular",
+                        "bg-primary text-primary-foreground": tier.badgeText === "Best Value",
+                        "bg-muted text-muted-foreground": tier.badgeText !== "Best Value",
                       },
                     )}
                   >
@@ -424,11 +374,17 @@ function PricingPage() {
                   }
                 )}>
                   <CardHeader className="text-center pb-8 pt-8">
-                    {/* Show annual pricing banner inside card below badge */}
-                    {isPlusPlan && isAnnual && (
+                    {isYearly && (
                       <div className="text-center mb-4">
                         <span className="text-base font-semibold text-primary">
-                        Early Bird: $29.99/year (was $59.99)
+                        Early Bird: $9.99/year (was $59.99)
+                        </span>
+                      </div>
+                    )}
+                    {isMonthly && (
+                      <div className="text-center mb-4">
+                        <span className="text-base font-semibold text-primary">
+                        Early Bird: $2.99/month (was $7.99)
                         </span>
                       </div>
                     )}
@@ -451,11 +407,11 @@ function PricingPage() {
                   <CardContent className="pt-0 px-8 pb-8">
                     <div className="mb-6 text-center">
                       <div className="flex items-baseline justify-center gap-3 mb-2">
-                        {showCompareAt && compareAtPrice ? (
+                        {tier.compareAtPriceMonthly && (
                           <span className="text-lg font-semibold text-muted-foreground line-through">
-                            {compareAtPrice}
+                            {tier.compareAtPriceMonthly}
                           </span>
-                        ) : null}
+                        )}
                         <span className="text-5xl font-bold text-foreground tracking-tight">
                           {currentPrice}
                         </span>
@@ -463,34 +419,19 @@ function PricingPage() {
 
                       {/* Price label and additional info */}
                       {isLifetime ? (
-                        <p className="text-sm text-muted-foreground mt-1">USD / one-time</p>
+                        <p className="text-sm text-muted-foreground mt-1">USD / one-time payment</p>
                       ) : (
                         <p className="text-sm text-muted-foreground mt-1">
-                          USD / {isAnnual ? "year" : "month"}
+                          USD {tier.priceFrequencyText}
                         </p>
                       )}
-
-                      {tier.title === "Starter" && (
-                        <p className="text-sm font-semibold text-foreground mt-2">
-                          Free Forever
-                        </p>
-                      )}
-
 
                       {isLifetime && (
                         <p className="text-sm text-muted-foreground mt-1">
                           Limited-time lifetime access offer. Availability and terms may change.
                         </p>
                       )}
-
-                      {isPlusPlan && !isAnnual && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Early Bird: $5.99/month (was $7.99)
-                        </p>
-                      )}
                     </div>
-
-                    
 
                     <Button
                       className={classNames(
@@ -501,18 +442,14 @@ function PricingPage() {
                       )}
                       variant={tier.highlight ? "default" : "outline"}
                       onClick={() => {
-                        const lowerTitle = tier.title.toLowerCase();
-                        // Free plan -> registration
-                        if (lowerTitle === "starter" || lowerTitle === "free") {
-                          navigate({ to: "/register", search: { redirect: "/pricing", code: undefined } });
-                          return;
-                        }
-
                         // Map plan id based on tier title
-                        const planParam = lowerTitle === "plus" ? "plus" : "lifetime";
-
-                        // Proceed to checkout flow
-                        handleSubscribe(planParam);
+                        if (isLifetime) {
+                          handleSubscribe("lifetime");
+                        } else if (isYearly) {
+                          handleSubscribe("plus", "yearly");
+                        } else {
+                          handleSubscribe("plus", "monthly");
+                        }
                       }}
                     >
                       {tier.actionText}
@@ -599,9 +536,7 @@ function PricingPage() {
             </CardHeader>
             <CardContent>
               <CardDescription className="text-base max-w-lg mx-auto mb-6 text-muted-foreground-color">
-               Start with our Free plan to explore core features, or dive deeper
-              with Plus. You can always upgrade as your budgeting needs
-               grow.
+               All plans include the same great features. Choose monthly for flexibility, yearly to save 70%, or lifetime for permanent access. You can always change your plan later.
              </CardDescription>
               <Button variant="link" className="text-primary hover:text-primary/80" asChild>
                 <a href="mailto:hello@moneko.io" className="inline-flex items-center gap-2">
