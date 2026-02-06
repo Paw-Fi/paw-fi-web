@@ -2,6 +2,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import authBg from "@/assets/images/auth/auth-bg.webp";
 import authBgPng from "@/assets/images/auth/auth-bg.png";
 import { MonekoIcon } from "@/components/shared/moneko-icon";
@@ -68,7 +69,6 @@ export function ForgotPassword() {
           <div className="flex items-center justify-between px-6 py-4">
             <MonekoIcon />
             <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <span>Remembered your password?</span>
               <Button asChild size="sm" variant="outline">
                 <Link to="/login">Sign in</Link>
               </Button>
@@ -78,7 +78,11 @@ export function ForgotPassword() {
           <div className="flex flex-1 items-center">
             <div className="mx-auto w-full max-w-md px-6 py-8">
               <div className="space-y-4">
-                <ForgotPasswordForm initialEmail={email} />
+                <Dialog open>
+                  <DialogContent>
+                    <ForgotPasswordForm initialEmail={email} />
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
