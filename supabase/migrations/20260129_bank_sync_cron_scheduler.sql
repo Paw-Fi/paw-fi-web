@@ -31,13 +31,13 @@ SELECT cron.schedule(
   $$
     SELECT
       CASE 
-        WHEN current_setting('app.settings.supabase_url', true) IS NULL 
-             OR current_setting('app.settings.internal_service_secret', true) IS NULL
-        THEN NULL  -- Skip if settings not configured (logs warning but doesn't error)
+        WHEN (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1) IS NULL 
+             OR (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'internal_service_secret' LIMIT 1) IS NULL
+        THEN NULL  -- Skip if vault secrets not configured (logs warning but doesn't error)
         ELSE net.http_post(
-          url := current_setting('app.settings.supabase_url', true) || '/functions/v1/bank-sync-processor',
+          url := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1) || '/functions/v1/bank-sync-processor',
           headers := jsonb_build_object(
-            'X-Internal-Service-Secret', current_setting('app.settings.internal_service_secret', true),
+            'X-Internal-Service-Secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'internal_service_secret' LIMIT 1),
             'Content-Type', 'application/json'
           ),
           body := '{}'::jsonb
@@ -72,16 +72,15 @@ SELECT cron.schedule(
 -- 3. VERIFY APP SETTINGS ARE CONFIGURED
 -- ====================
 
--- Note: The following app settings must be configured in the database:
---   ALTER DATABASE postgres SET app.settings.supabase_url = 'https://your-project.supabase.co';
---   ALTER DATABASE postgres SET app.settings.internal_service_secret = 'your-internal-secret';
+-- Note: The following vault secrets must be configured:
+--   SELECT vault.create_secret('https://your-project.supabase.co', 'supabase_url');
+--   SELECT vault.create_secret('your-internal-secret', 'internal_service_secret');
 --
 -- The internal_service_secret must match the INTERNAL_SERVICE_SECRET environment variable
 -- configured in the Edge Functions.
 --
--- To verify settings are configured, run:
---   SELECT current_setting('app.settings.supabase_url', true);
---   SELECT current_setting('app.settings.internal_service_secret', true);
+-- To verify secrets are configured, run:
+--   SELECT name FROM vault.decrypted_secrets WHERE name IN ('supabase_url', 'internal_service_secret');
 
 -- Helper function to verify cron job configuration
 CREATE OR REPLACE FUNCTION public.verify_bank_sync_cron_config()
@@ -100,26 +99,23 @@ BEGIN
   SELECT 
     'supabase_url'::TEXT,
     CASE 
-      WHEN current_setting('app.settings.supabase_url', true) IS NOT NULL 
-           AND current_setting('app.settings.supabase_url', true) != ''
+      WHEN (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1) IS NOT NULL
       THEN 'OK'::TEXT
       ELSE 'MISSING'::TEXT
     END,
-    COALESCE(current_setting('app.settings.supabase_url', true), 'Not configured')::TEXT;
+    COALESCE((SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'supabase_url' LIMIT 1), 'Not configured')::TEXT;
   
-  -- Check internal_service_secret setting
+  -- Check internal_service_secret vault secret
   RETURN QUERY
   SELECT 
     'internal_service_secret'::TEXT,
     CASE 
-      WHEN current_setting('app.settings.internal_service_secret', true) IS NOT NULL 
-           AND current_setting('app.settings.internal_service_secret', true) != ''
+      WHEN (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'internal_service_secret' LIMIT 1) IS NOT NULL
       THEN 'OK'::TEXT
       ELSE 'MISSING'::TEXT
     END,
     CASE 
-      WHEN current_setting('app.settings.internal_service_secret', true) IS NOT NULL 
-           AND current_setting('app.settings.internal_service_secret', true) != ''
+      WHEN (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'internal_service_secret' LIMIT 1) IS NOT NULL
       THEN '***configured***'::TEXT
       ELSE 'Not configured'::TEXT
     END;
@@ -169,9 +165,9 @@ BEGIN
   RAISE NOTICE 'Cron job scheduled: bank-sync-processor (every 5 minutes)';
   RAISE NOTICE 'Cron job scheduled: cleanup-tink-auth-states (daily at 3 AM UTC)';
   RAISE NOTICE '';
-  RAISE NOTICE 'IMPORTANT: Ensure app.settings are configured:';
-  RAISE NOTICE '  ALTER DATABASE postgres SET app.settings.supabase_url = ''https://your-project.supabase.co'';';
-  RAISE NOTICE '  ALTER DATABASE postgres SET app.settings.internal_service_secret = ''your-internal-secret'';';
+  RAISE NOTICE 'IMPORTANT: Ensure vault secrets are configured:';
+  RAISE NOTICE '  SELECT vault.create_secret(''https://your-project.supabase.co'', ''supabase_url'');';
+  RAISE NOTICE '  SELECT vault.create_secret(''your-internal-secret'', ''internal_service_secret'');';
   RAISE NOTICE '';
   RAISE NOTICE 'Run SELECT * FROM public.verify_bank_sync_cron_config(); to verify configuration.';
 END $$;

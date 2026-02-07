@@ -328,23 +328,25 @@ Deno.serve(async (req: Request) => {
     }
     const localSlot = Math.floor(localMinute / slotMins);
     const targetSlot = anchorHour != null ? anchorSlot : (strHash(`${userId}:${fmtLocalDate(tz, now)}:slot`) % slotCount);
-    if (localHour !== targetHour || localSlot !== targetSlot) {
+    // Accept target slot OR the next slot to create a 30-min effective window
+    const slotMatch = localSlot === targetSlot || localSlot === (targetSlot + 1) % slotCount;
+    if (localHour !== targetHour || !slotMatch) {
       skippedHour++;
       continue;
     }
 
-    // Cadence: <=3 days daily; <=14 days every 3rd day; >14 weekly
+    // Cadence: <=3 days daily; 4-14 days every 2nd day; >14 every 3rd day; never-logged every 3rd day
     let shouldSend = false;
     if (!lastExpenseAt) {
-      // Never logged: gentle weekly cadence (use day-of-month pivot)
+      // Never logged: every 3rd day (use day-of-month pivot)
       const dom = getLocalDayOfMonth(tz, now);
-      shouldSend = dom % 7 === 0; // roughly weekly, varies by user/date
+      shouldSend = dom % 3 === 0;
     } else if (inactivityDays <= 3) {
       shouldSend = true;
     } else if (inactivityDays <= 14) {
-      shouldSend = inactivityDays % 3 === 0;
+      shouldSend = inactivityDays % 2 === 0;
     } else {
-      shouldSend = inactivityDays % 7 === 0;
+      shouldSend = inactivityDays % 3 === 0;
     }
 
     if (!shouldSend) {

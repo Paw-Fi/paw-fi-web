@@ -89,7 +89,7 @@ echo ""
 
 # Step 12: Deploy expense-daily-nudges (SERVICE ROLE - called by cron)
 echo "📦 [12/12] Deploying expense-daily-nudges function..."
-supabase functions deploy expense-daily-nudges --project-ref $PROJECT_REF
+supabase functions deploy expense-daily-nudges --project-ref $PROJECT_REF --no-verify-jwt
 echo "✅ expense-daily-nudges deployed"
 echo ""
 
