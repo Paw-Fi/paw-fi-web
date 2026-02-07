@@ -20,15 +20,15 @@ echo "════════════════════════�
 echo ""
 
 # Step 1: Deploy Twilio WhatsApp entrypoints (CRITICAL)
-echo "📦 [1/18] Deploying twilio-whatsapp-ai-bot function..."
-supabase functions deploy twilio-whatsapp-ai-bot --project-ref "$PROJECT_REF" --no-verify-jwt
-echo "✅ twilio-whatsapp-ai-bot deployed"
-echo ""
+# echo "📦 [1/18] Deploying twilio-whatsapp-ai-bot function..."
+# supabase functions deploy twilio-whatsapp-ai-bot --project-ref "$PROJECT_REF" --no-verify-jwt
+# echo "✅ twilio-whatsapp-ai-bot deployed"
+# echo ""
 
-echo "📦 [2/18] Deploying twilio-whatsapp-fallback function..."
-supabase functions deploy twilio-whatsapp-fallback --project-ref "$PROJECT_REF" --no-verify-jwt
-echo "✅ twilio-whatsapp-fallback deployed"
-echo ""
+# echo "📦 [2/18] Deploying twilio-whatsapp-fallback function..."
+# supabase functions deploy twilio-whatsapp-fallback --project-ref "$PROJECT_REF" --no-verify-jwt
+# echo "✅ twilio-whatsapp-fallback deployed"
+# echo ""
 
 # Step 2: Deploy finance-update
 echo "📦 [3/18] Deploying finance-update function..."

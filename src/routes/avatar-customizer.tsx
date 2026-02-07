@@ -415,7 +415,7 @@ function AvatarCustomizer() {
           navigate({ to: redirect as any })
         }
       } else {
-        navigate({ to: '/dashboard' })
+        navigate({ to: '/download' })
       }
     } else {
       toast.error(result.error || 'Failed to skip avatar creation. Please try again.', {

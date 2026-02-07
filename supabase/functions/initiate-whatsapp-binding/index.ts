@@ -20,16 +20,21 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID")!;
   const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!;
-  const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get("TWILIO_MESSAGING_SERVICE_SID");
+  const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get(
+    "TWILIO_MESSAGING_SERVICE_SID",
+  );
 
   try {
     const { phone } = await req.json();
 
     if (!phone || typeof phone !== "string") {
-      return new Response(JSON.stringify({ error: "Phone number is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Phone number is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Get authenticated user
@@ -43,7 +48,10 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -60,14 +68,18 @@ Deno.serve(async (req: Request) => {
     const { count } = await supabase
       .from("whatsapp_verifications")
       .select("*", { count: "exact", head: true })
-      .eq("phone_e164", phoneE164)
+      .eq("channel", "whatsapp")
+      .eq("subject", phoneE164)
       .gte("created_at", oneHourAgo);
 
     if (count && count >= 3) {
-      return new Response(JSON.stringify({ error: "Too many attempts. Please try again later." }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Too many attempts. Please try again later." }),
+        {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Generate 6-digit OTP
@@ -78,6 +90,8 @@ Deno.serve(async (req: Request) => {
     const { error: insertError } = await supabase
       .from("whatsapp_verifications")
       .insert({
+        channel: "whatsapp",
+        subject: phoneE164,
         phone_e164: phoneE164,
         verification_code: code,
         user_id: user.id,
@@ -86,19 +100,23 @@ Deno.serve(async (req: Request) => {
 
     if (insertError) {
       console.error("Failed to store verification:", insertError);
-      return new Response(JSON.stringify({ error: "Failed to generate verification code" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Failed to generate verification code" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Send OTP via Twilio WhatsApp
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
     const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-    
+
     // Get the app URL for the verification link
-    const appUrl = Deno.env.get('ALLOWED_ORIGINS') || 'https://moneko.io';
-    const verificationUrl = `${appUrl}/verify-whatsapp?otp=${code}`;
+    const appUrl = Deno.env.get("ALLOWED_ORIGINS") || "https://moneko.io";
+    const baseUrl = appUrl.split(",")[0]?.trim() || "https://moneko.io";
+    const verificationUrl = `${baseUrl}/verify-whatsapp?otp=${code}`;
 
     // Use Messaging Service SID if available (for WhatsApp Business Account)
     const twilioParams: Record<string, string> = {
@@ -109,10 +127,13 @@ Deno.serve(async (req: Request) => {
     if (TWILIO_MESSAGING_SERVICE_SID) {
       twilioParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
     } else {
-     return new Response(JSON.stringify({ error: "Missing Messaging Service SID" }), {
-       status: 500,
-       headers: { ...corsHeaders, "Content-Type": "application/json" },
-     });
+      return new Response(
+        JSON.stringify({ error: "Missing Messaging Service SID" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const twilioBody = new URLSearchParams(twilioParams);
@@ -129,10 +150,13 @@ Deno.serve(async (req: Request) => {
     if (!twilioResponse.ok) {
       const error = await twilioResponse.text();
       console.error("Twilio error:", error);
-      return new Response(JSON.stringify({ error: "Failed to send verification code" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Failed to send verification code" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     return new Response(
@@ -143,7 +167,7 @@ Deno.serve(async (req: Request) => {
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      },
     );
   } catch (error) {
     console.error("Error:", error);
