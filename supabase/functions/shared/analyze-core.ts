@@ -4024,6 +4024,24 @@ export async function runAnalyzeExpense(
         "- Pattern: '[Merchant] [Short Summary of Items]'",
         `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
 
+        ...(householdContext
+          ? [
+              "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
+              "- The caller is in a household/group context. Return split information for every EXPENSE item.",
+              "- The expense tracking logic: WHO paid the bill, and HOW MUCH does each person OWE.",
+              "",
+              "#### 5.1 PAYER IDENTIFICATION (payerUserId) - WHO PAID THE BILL",
+              "- Default payer = caller (the user logging the expense). OMIT payerUserId if caller paid.",
+              "- Set payerUserId ONLY when someone ELSE paid the bill.",
+              "- Use ONLY userId from the provided member list. Never output names/emails.",
+              "",
+              "#### 5.2 SPLIT EXTRACTION (customSplits) - HOW MUCH EACH PERSON OWES",
+              "- For image/receipt inputs, default to EQUAL split among ALL household members.",
+              "- OMIT customSplits entirely to let the system apply equal splits automatically.",
+              "- Only provide customSplits if the image clearly shows per-person amounts or annotations.",
+            ]
+          : []),
+
         "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
       ].join("\n");
 

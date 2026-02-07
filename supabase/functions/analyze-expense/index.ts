@@ -67,10 +67,10 @@ function mapProgressEvent(
 }
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
-  const hasPrimaryInput = Boolean(body.text || body.image || body.audio);
+  const hasImage = Boolean(body.image);
   const hasAttachments =
     Array.isArray(body.attachments) && body.attachments.length > 0;
-  return hasPrimaryInput && !hasAttachments;
+  return hasImage && !hasAttachments;
 }
 
 function formatBreakdownAmount(item: any): string {
@@ -198,9 +198,6 @@ function collapseReceiptItems(
       breakdown,
       ...(splitSource?.payerUserId
         ? { payerUserId: splitSource.payerUserId }
-        : {}),
-      ...(splitSource?.customSplits
-        ? { customSplits: splitSource.customSplits }
         : {}),
     },
   ];

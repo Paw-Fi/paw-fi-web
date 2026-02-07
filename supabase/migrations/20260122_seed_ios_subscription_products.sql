@@ -33,18 +33,18 @@ SELECT
   x.sort_order
 FROM (
   VALUES
-    -- Lifetime early bird: one-time purchase, will be removed after sale
+    -- Monthly subscription
     (
       'ios',
-      'lifetime',
+      'plus',
+      'monthly',
+      'monthly',
+      'Monthly',
+      'Flexible. Cancel anytime.',
       NULL,
-      'lifetime_earlybird',
-      'Lifetime',
-      'Pay once, own it forever.',
-      'EARLY BIRD',
       FALSE,
-      39.99::numeric,
-      NULL::numeric,
+      5.99::numeric,
+      7.99::numeric,
       TRUE,
       0
     ),
@@ -63,18 +63,18 @@ FROM (
       TRUE,
       10
     ),
-    -- Monthly subscription
+    -- Lifetime early bird: one-time purchase, will be removed after sale
     (
       'ios',
-      'plus',
-      'monthly',
-      'monthly',
-      'Monthly',
-      'Flexible. Cancel anytime.',
+      'lifetime',
       NULL,
+      'lifetime_earlybird',
+      'Lifetime',
+      'Pay once, own it forever.',
+      'EARLY BIRD',
       FALSE,
-      5.99::numeric,
-      7.99::numeric,
+      39.99::numeric,
+      NULL::numeric,
       TRUE,
       20
     )
