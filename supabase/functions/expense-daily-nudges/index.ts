@@ -106,9 +106,17 @@ function inQuiet(hour: number, quietStart: number, quietEnd: number) {
   return hour >= quietStart || hour < quietEnd;
 }
 
-function computeTargetHour(userId: string, tz: string, date: Date, allowed: number[], quietStart: number, quietEnd: number) {
+function computeTargetHour(
+  userId: string,
+  tz: string,
+  date: Date,
+  allowed: number[],
+  quietStart: number,
+  quietEnd: number,
+) {
   const localDate = fmtLocalDate(tz, date);
-  const baseIdx = strHash(`${userId}:${localDate}`) % Math.max(1, allowed.length);
+  const baseIdx =
+    strHash(`${userId}:${localDate}`) % Math.max(1, allowed.length);
   let idx = baseIdx;
   for (let i = 0; i < allowed.length; i++) {
     const hour = allowed[idx % allowed.length];
@@ -153,250 +161,382 @@ Deno.serve(async (req: Request) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
     global: { headers: { "X-Client-Info": "moneko-expense-daily-nudges" } },
   });
 
-  let body: any = {};
+  // Best-effort single-runner guard to avoid overlapping cron invocations.
+  // If the lock functions are missing (during rollout), we continue without the guard.
+  const advisoryLockKey = 6020900001;
+  let lockHeld = false;
   try {
-    body = await req.json().catch(() => ({}));
-  } catch {}
-
-  const now = new Date();
-  const allowedHours: number[] = Array.isArray(body.allowedHours)
-    ? (body.allowedHours as any[])
-        .map((x) => Number(x))
-        .filter((h) => Number.isFinite(h) && h >= 0 && h <= 23)
-    : [9,10,11,12,13,14,15,16,17,18,19,20];
-  const quietStart = Number.isFinite(Number(body.quietStart)) ? Number(body.quietStart) : 22;
-  const quietEnd = Number.isFinite(Number(body.quietEnd)) ? Number(body.quietEnd) : 8;
-  const minHoursBetween = Number(body.minHoursBetween ?? 24);
-  const slotMins = Math.min(60, Math.max(1, Number(body.slotMins ?? 60))); // 60 = top-of-hour, set 15/30 if cron supports
-  const slotCount = Math.max(1, Math.floor(60 / slotMins));
-
-  // Fetch latest contact per user (to get timezone)
-  const { data: contactRows, error: contactErr } = await supabase
-    .from("user_contacts")
-    .select("user_id, preferred_timezone, created_at")
-    .not("user_id", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(10000);
-
-  if (contactErr) {
-    console.error("[expense-daily-nudges] user_contacts select error", contactErr);
-    return new Response(JSON.stringify({ error: "Failed to load contacts" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const { data: acquired, error: lockErr } = await supabase.rpc(
+      "try_advisory_lock",
+      { p_key: advisoryLockKey },
+    );
+    if (lockErr) {
+      console.warn(
+        "[expense-daily-nudges] advisory lock error (continuing)",
+        lockErr,
+      );
+    } else if (acquired === false) {
+      return new Response(
+        JSON.stringify({ ok: true, skipped: "already_running" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    } else {
+      lockHeld = true;
+    }
+  } catch (e) {
+    console.warn("[expense-daily-nudges] advisory lock threw (continuing)", e);
   }
 
-  // Deduplicate by user_id, keep most recent
-  const latestByUser = new Map<string, ContactRow>();
-  for (const row of (contactRows || []) as ContactRow[]) {
-    if (!row.user_id) continue;
-    if (!latestByUser.has(row.user_id)) latestByUser.set(row.user_id, row);
-  }
+  try {
+    let body: any = {};
+    try {
+      body = await req.json().catch(() => ({}));
+    } catch {}
 
-  const last24hIso = new Date(now.getTime() - minHoursBetween * 60 * 60 * 1000).toISOString();
-  const userIds = Array.from(latestByUser.keys());
-  const recentReminderUsers = new Set<string>();
-  const lastExpenseByUser = new Map<string, LastExpenseRow>();
-  const reminderStatsByUser = new Map<string, ReminderStats>();
-  const statsLookbackDays = 30;
-  const softPauseAfter = 4;
-  const softPauseDays = 7;
-  const statsSinceIso = new Date(now.getTime() - statsLookbackDays * 24 * 60 * 60 * 1000).toISOString();
-  const chunkSize = 500;
+    const now = new Date();
+    const allowedHours: number[] = Array.isArray(body.allowedHours)
+      ? (body.allowedHours as any[])
+          .map((x) => Number(x))
+          .filter((h) => Number.isFinite(h) && h >= 0 && h <= 23)
+      : [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+    const quietStart = Number.isFinite(Number(body.quietStart))
+      ? Number(body.quietStart)
+      : 22;
+    const quietEnd = Number.isFinite(Number(body.quietEnd))
+      ? Number(body.quietEnd)
+      : 8;
+    const minHoursBetween = Number(body.minHoursBetween ?? 24);
+    const slotMins = Math.min(60, Math.max(1, Number(body.slotMins ?? 60))); // 60 = top-of-hour, set 15/30 if cron supports
+    const slotCount = Math.max(1, Math.floor(60 / slotMins));
 
-  for (let i = 0; i < userIds.length; i += chunkSize) {
-    const chunk = userIds.slice(i, i + chunkSize);
+    // Fetch latest contact per user (to get timezone)
+    const { data: contactRows, error: contactErr } = await supabase
+      .from("user_contacts")
+      .select("user_id, preferred_timezone, created_at")
+      .not("user_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(10000);
 
-    const { data: reminderRows, error: reminderErr } = await supabase
-      .from("notification_events")
-      .select("user_id")
-      .eq("event_type", "log_expense_reminder")
-      .gte("created_at", last24hIso)
-      .in("user_id", chunk);
-
-    if (reminderErr) {
-      console.warn("[expense-daily-nudges] recent reminder batch error", reminderErr);
+    if (contactErr) {
+      console.error(
+        "[expense-daily-nudges] user_contacts select error",
+        contactErr,
+      );
+      return new Response(
+        JSON.stringify({ error: "Failed to load contacts" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    (reminderRows || []).forEach((row: { user_id: string | null }) => {
-      if (row?.user_id) recentReminderUsers.add(row.user_id);
-    });
-
-    const { data: lastExpenseRows, error: lastExpenseErr } = await supabase
-      .rpc("get_last_expense_per_user", { p_user_ids: chunk });
-
-    if (lastExpenseErr) {
-      console.warn("[expense-daily-nudges] last expense batch error", lastExpenseErr);
+    // Deduplicate by user_id, keep most recent
+    const latestByUser = new Map<string, ContactRow>();
+    for (const row of (contactRows || []) as ContactRow[]) {
+      if (!row.user_id) continue;
+      if (!latestByUser.has(row.user_id)) latestByUser.set(row.user_id, row);
     }
 
-    (lastExpenseRows || []).forEach((row: LastExpenseRow) => {
-      if (row?.user_id) {
-        lastExpenseByUser.set(row.user_id, row);
+    const last24hIso = new Date(
+      now.getTime() - minHoursBetween * 60 * 60 * 1000,
+    ).toISOString();
+    const userIds = Array.from(latestByUser.keys());
+    const recentReminderUsers = new Set<string>();
+    const lastExpenseByUser = new Map<string, LastExpenseRow>();
+    const reminderStatsByUser = new Map<string, ReminderStats>();
+    const statsLookbackDays = 30;
+    const softPauseAfter = 4;
+    const softPauseDays = 7;
+    const statsSinceIso = new Date(
+      now.getTime() - statsLookbackDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const chunkSize = 500;
+    let recentReminderGuardFailed = false;
+
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+      const chunk = userIds.slice(i, i + chunkSize);
+
+      const { data: reminderRows, error: reminderErr } = await supabase
+        .from("notification_events")
+        .select("user_id")
+        .eq("event_type", "log_expense_reminder")
+        .gte("created_at", last24hIso)
+        .in("user_id", chunk);
+
+      if (reminderErr) {
+        // If this guard is incomplete, we can create duplicates on the next cron tick.
+        // Fail the run so the next invocation can retry with complete data.
+        console.error(
+          "[expense-daily-nudges] recent reminder batch error",
+          reminderErr,
+        );
+        recentReminderGuardFailed = true;
+        break;
       }
-    });
 
-    const { data: reminderStatsRows, error: reminderStatsErr } = await supabase
-      .from("notification_events")
-      .select("user_id, created_at")
-      .eq("event_type", "log_expense_reminder")
-      .gte("created_at", statsSinceIso)
-      .in("user_id", chunk);
+      (reminderRows || []).forEach((row: { user_id: string | null }) => {
+        if (row?.user_id) recentReminderUsers.add(row.user_id);
+      });
 
-    if (reminderStatsErr) {
-      console.warn("[expense-daily-nudges] reminder stats batch error", reminderStatsErr);
-    }
+      const { data: lastExpenseRows, error: lastExpenseErr } =
+        await supabase.rpc("get_last_expense_per_user", { p_user_ids: chunk });
 
-    (reminderStatsRows || []).forEach((row: { user_id: string | null; created_at: string | null }) => {
-      if (!row?.user_id || !row?.created_at) return;
-      const existing = reminderStatsByUser.get(row.user_id) || { count: 0, last_at: row.created_at };
-      existing.count += 1;
-      if (!existing.last_at || row.created_at > existing.last_at) {
-        existing.last_at = row.created_at;
+      if (lastExpenseErr) {
+        console.warn(
+          "[expense-daily-nudges] last expense batch error",
+          lastExpenseErr,
+        );
       }
-      reminderStatsByUser.set(row.user_id, existing);
-    });
-  }
-  let toInsert: any[] = [];
-  let scanned = 0;
-  let skippedHour = 0;
-  let skippedRecentExpense = 0;
-  let skippedRecentReminder = 0;
-  let cadenceSkipped = 0;
-  let softPauseSkipped = 0;
 
-  for (const [userId, contact] of latestByUser.entries()) {
-    scanned++;
-    const tz = contact.preferred_timezone || "UTC";
-    const { hour: localHour, minute: localMinute } = getLocalHM(tz, now);
+      (lastExpenseRows || []).forEach((row: LastExpenseRow) => {
+        if (row?.user_id) {
+          lastExpenseByUser.set(row.user_id, row);
+        }
+      });
 
-    // Skip if a reminder was sent in last 24h
-    if (recentReminderUsers.has(userId)) {
-      skippedRecentReminder++;
-      continue;
+      const { data: reminderStatsRows, error: reminderStatsErr } =
+        await supabase
+          .from("notification_events")
+          .select("user_id, created_at")
+          .eq("event_type", "log_expense_reminder")
+          .gte("created_at", statsSinceIso)
+          .in("user_id", chunk);
+
+      if (reminderStatsErr) {
+        console.warn(
+          "[expense-daily-nudges] reminder stats batch error",
+          reminderStatsErr,
+        );
+      }
+
+      (reminderStatsRows || []).forEach(
+        (row: { user_id: string | null; created_at: string | null }) => {
+          if (!row?.user_id || !row?.created_at) return;
+          const existing = reminderStatsByUser.get(row.user_id) || {
+            count: 0,
+            last_at: row.created_at,
+          };
+          existing.count += 1;
+          if (!existing.last_at || row.created_at > existing.last_at) {
+            existing.last_at = row.created_at;
+          }
+          reminderStatsByUser.set(row.user_id, existing);
+        },
+      );
     }
 
-    let inactivityDays = 9999;
-    let recentWithin24h = false;
-    let anchorHour: number | null = null;
-    let anchorSlot: number = 0;
-    const lastExpense = lastExpenseByUser.get(userId);
-    const lastExpenseAt = lastExpense?.last_created_at || null;
-    if (lastExpenseAt) {
-      const lastTs = new Date(lastExpenseAt).getTime();
-      inactivityDays = Math.max(1, Math.floor((now.getTime() - lastTs) / (1000 * 60 * 60 * 24)));
-      recentWithin24h = (now.getTime() - lastTs) < (minHoursBetween * 60 * 60 * 1000);
-      // derive local hour/min from last expense
-      const lastHM = getLocalHM(tz, new Date(lastExpenseAt));
-      anchorHour = findNearestAllowedHour(lastHM.hour, allowedHours);
-      const baseSlot = Math.floor(lastHM.minute / slotMins);
-      const jitterSlots = strHash(`${userId}:${fmtLocalDate(tz, now)}:slot`) % slotCount;
-      anchorSlot = (baseSlot + jitterSlots) % slotCount;
+    if (recentReminderGuardFailed) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Failed to load recent reminders; aborting to avoid duplicates",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    if (recentWithin24h) {
-      skippedRecentExpense++;
-      continue;
-    }
+    let toInsert: any[] = [];
+    let scanned = 0;
+    let skippedHour = 0;
+    let skippedRecentExpense = 0;
+    let skippedRecentReminder = 0;
+    let cadenceSkipped = 0;
+    let softPauseSkipped = 0;
 
-    const reminderStats = reminderStatsByUser.get(userId);
-    if (reminderStats && reminderStats.count >= softPauseAfter && reminderStats.last_at) {
-      const lastReminderTs = new Date(reminderStats.last_at).getTime();
-      const lastExpenseTs = lastExpenseAt ? new Date(lastExpenseAt).getTime() : null;
-      const hasPostReminderExpense = lastExpenseTs !== null && lastExpenseTs > lastReminderTs;
-      if (!hasPostReminderExpense) {
-        const daysSinceLastReminder = (now.getTime() - lastReminderTs) / (1000 * 60 * 60 * 24);
-        if (daysSinceLastReminder < softPauseDays) {
-          softPauseSkipped++;
-          continue;
+    for (const [userId, contact] of latestByUser.entries()) {
+      scanned++;
+      const tz = contact.preferred_timezone || "UTC";
+      const { hour: localHour, minute: localMinute } = getLocalHM(tz, now);
+
+      // Skip if a reminder was sent in last 24h
+      if (recentReminderUsers.has(userId)) {
+        skippedRecentReminder++;
+        continue;
+      }
+
+      let inactivityDays = 9999;
+      let recentWithin24h = false;
+      let anchorHour: number | null = null;
+      let anchorSlot: number = 0;
+      const lastExpense = lastExpenseByUser.get(userId);
+      const lastExpenseAt = lastExpense?.last_created_at || null;
+      if (lastExpenseAt) {
+        const lastTs = new Date(lastExpenseAt).getTime();
+        inactivityDays = Math.max(
+          1,
+          Math.floor((now.getTime() - lastTs) / (1000 * 60 * 60 * 24)),
+        );
+        recentWithin24h =
+          now.getTime() - lastTs < minHoursBetween * 60 * 60 * 1000;
+        // derive local hour/min from last expense
+        const lastHM = getLocalHM(tz, new Date(lastExpenseAt));
+        anchorHour = findNearestAllowedHour(lastHM.hour, allowedHours);
+        const baseSlot = Math.floor(lastHM.minute / slotMins);
+        const jitterSlots =
+          strHash(`${userId}:${fmtLocalDate(tz, now)}:slot`) % slotCount;
+        anchorSlot = (baseSlot + jitterSlots) % slotCount;
+      }
+
+      if (recentWithin24h) {
+        skippedRecentExpense++;
+        continue;
+      }
+
+      const reminderStats = reminderStatsByUser.get(userId);
+      if (
+        reminderStats &&
+        reminderStats.count >= softPauseAfter &&
+        reminderStats.last_at
+      ) {
+        const lastReminderTs = new Date(reminderStats.last_at).getTime();
+        const lastExpenseTs = lastExpenseAt
+          ? new Date(lastExpenseAt).getTime()
+          : null;
+        const hasPostReminderExpense =
+          lastExpenseTs !== null && lastExpenseTs > lastReminderTs;
+        if (!hasPostReminderExpense) {
+          const daysSinceLastReminder =
+            (now.getTime() - lastReminderTs) / (1000 * 60 * 60 * 24);
+          if (daysSinceLastReminder < softPauseDays) {
+            softPauseSkipped++;
+            continue;
+          }
         }
       }
+
+      // Determine today's target hour and slot
+      let targetHour =
+        anchorHour ??
+        computeTargetHour(userId, tz, now, allowedHours, quietStart, quietEnd);
+      // roll forward if target falls in quiet hours
+      if (inQuiet(targetHour, quietStart, quietEnd)) {
+        const startIdx = allowedHours.indexOf(targetHour);
+        for (let i = 1; i <= allowedHours.length; i++) {
+          const h = allowedHours[(startIdx + i) % allowedHours.length];
+          if (!inQuiet(h, quietStart, quietEnd)) {
+            targetHour = h;
+            break;
+          }
+        }
+      }
+      const localSlot = Math.floor(localMinute / slotMins);
+      const targetSlot =
+        anchorHour != null
+          ? anchorSlot
+          : strHash(`${userId}:${fmtLocalDate(tz, now)}:slot`) % slotCount;
+      // Accept target slot OR the next slot to create a 30-min effective window
+      const slotMatch =
+        localSlot === targetSlot || localSlot === (targetSlot + 1) % slotCount;
+      if (localHour !== targetHour || !slotMatch) {
+        skippedHour++;
+        continue;
+      }
+
+      // Cadence: <=3 days daily; 4-14 days every 2nd day; >14 every 3rd day; never-logged every 3rd day
+      let shouldSend = false;
+      if (!lastExpenseAt) {
+        // Never logged: every 3rd day (use day-of-month pivot)
+        const dom = getLocalDayOfMonth(tz, now);
+        shouldSend = dom % 3 === 0;
+      } else if (inactivityDays <= 3) {
+        shouldSend = true;
+      } else if (inactivityDays <= 14) {
+        shouldSend = inactivityDays % 2 === 0;
+      } else {
+        shouldSend = inactivityDays % 3 === 0;
+      }
+
+      if (!shouldSend) {
+        cadenceSkipped++;
+        continue;
+      }
+
+      const localDate = fmtLocalDate(tz, now);
+      const payload: Record<string, any> = {
+        user_id: userId,
+        local_date: localDate,
+        timezone: tz,
+        inactivity_days: inactivityDays,
+        quiet_start: quietStart,
+        quiet_end: quietEnd,
+      };
+
+      if (lastExpense?.last_amount_cents != null)
+        payload.last_amount_cents = lastExpense.last_amount_cents;
+      if (lastExpense?.last_currency)
+        payload.last_currency = lastExpense.last_currency;
+      if (lastExpense?.last_category)
+        payload.last_category = lastExpense.last_category;
+      if (lastExpense?.last_source)
+        payload.last_source = lastExpense.last_source;
+      if (lastExpense?.last_raw_text)
+        payload.last_raw_text = lastExpense.last_raw_text;
+
+      toInsert.push({
+        user_id: userId,
+        event_type: "log_expense_reminder",
+        // DB-backed idempotency key: at most one per user/event_type/local_date
+        local_date: localDate,
+        payload,
+      });
     }
 
-    // Determine today's target hour and slot
-    let targetHour = anchorHour ?? computeTargetHour(userId, tz, now, allowedHours, quietStart, quietEnd);
-    // roll forward if target falls in quiet hours
-    if (inQuiet(targetHour, quietStart, quietEnd)) {
-      const startIdx = allowedHours.indexOf(targetHour);
-      for (let i = 1; i <= allowedHours.length; i++) {
-        const h = allowedHours[(startIdx + i) % allowedHours.length];
-        if (!inQuiet(h, quietStart, quietEnd)) { targetHour = h; break; }
+    let inserted = 0;
+    if (toInsert.length) {
+      const { data: insertedRows, error: insertErr } = await supabase
+        .from("notification_events")
+        .upsert(toInsert, {
+          onConflict: "user_id,event_type,local_date",
+          ignoreDuplicates: true,
+        })
+        .select("id");
+      if (insertErr) {
+        console.error("[expense-daily-nudges] insert error", insertErr);
+      } else {
+        inserted = insertedRows?.length || 0;
       }
     }
-    const localSlot = Math.floor(localMinute / slotMins);
-    const targetSlot = anchorHour != null ? anchorSlot : (strHash(`${userId}:${fmtLocalDate(tz, now)}:slot`) % slotCount);
-    // Accept target slot OR the next slot to create a 30-min effective window
-    const slotMatch = localSlot === targetSlot || localSlot === (targetSlot + 1) % slotCount;
-    if (localHour !== targetHour || !slotMatch) {
-      skippedHour++;
-      continue;
-    }
 
-    // Cadence: <=3 days daily; 4-14 days every 2nd day; >14 every 3rd day; never-logged every 3rd day
-    let shouldSend = false;
-    if (!lastExpenseAt) {
-      // Never logged: every 3rd day (use day-of-month pivot)
-      const dom = getLocalDayOfMonth(tz, now);
-      shouldSend = dom % 3 === 0;
-    } else if (inactivityDays <= 3) {
-      shouldSend = true;
-    } else if (inactivityDays <= 14) {
-      shouldSend = inactivityDays % 2 === 0;
-    } else {
-      shouldSend = inactivityDays % 3 === 0;
-    }
-
-    if (!shouldSend) {
-      cadenceSkipped++;
-      continue;
-    }
-
-    const localDate = fmtLocalDate(tz, now);
-    const payload: Record<string, any> = {
-      user_id: userId,
-      local_date: localDate,
-      timezone: tz,
-      inactivity_days: inactivityDays,
-      quiet_start: quietStart,
-      quiet_end: quietEnd,
-    };
-
-    if (lastExpense?.last_amount_cents != null) payload.last_amount_cents = lastExpense.last_amount_cents;
-    if (lastExpense?.last_currency) payload.last_currency = lastExpense.last_currency;
-    if (lastExpense?.last_category) payload.last_category = lastExpense.last_category;
-    if (lastExpense?.last_source) payload.last_source = lastExpense.last_source;
-    if (lastExpense?.last_raw_text) payload.last_raw_text = lastExpense.last_raw_text;
-
-    toInsert.push({
-      user_id: userId,
-      event_type: "log_expense_reminder",
-      payload,
-    });
-  }
-
-  let inserted = 0;
-  if (toInsert.length) {
-    const { data: insertedRows, error: insertErr } = await supabase
-      .from("notification_events")
-      .insert(toInsert)
-      .select("id");
-    if (insertErr) {
-      console.error("[expense-daily-nudges] insert error", insertErr);
-    } else {
-      inserted = insertedRows?.length || 0;
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        scanned,
+        inserted,
+        skipped: {
+          hour: skippedHour,
+          recentExpense: skippedRecentExpense,
+          recentReminder: skippedRecentReminder,
+          cadence: cadenceSkipped,
+          softPause: softPauseSkipped,
+        },
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  } finally {
+    if (lockHeld) {
+      try {
+        await supabase.rpc("advisory_unlock", { p_key: advisoryLockKey });
+      } catch (e) {
+        console.warn("[expense-daily-nudges] advisory unlock threw", e);
+      }
     }
   }
-
-  return new Response(
-    JSON.stringify({
-      ok: true,
-      scanned,
-      inserted,
-      skipped: { hour: skippedHour, recentExpense: skippedRecentExpense, recentReminder: skippedRecentReminder, cadence: cadenceSkipped, softPause: softPauseSkipped },
-    }),
-    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-  );
 });
