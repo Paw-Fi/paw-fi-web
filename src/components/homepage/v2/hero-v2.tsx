@@ -37,11 +37,11 @@ export function HeroV2() {
               <div className="flex -space-x-2">
                  {[1, 2, 3, 4].map((i) => (
                     <div key={i} className={`h-8 w-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[10px] font-bold ${i === 4 ? 'bg-primary/20 text-primary' : 'bg-gray-200'}`}>
-                        {i === 4 ? '+2k' : ''}
+                        {i === 4 ? '+6k' : ''}
                     </div>
                  ))}
               </div>
-              <p>Join 2,000+ early users</p>
+              <p>Join 6,000+ early users</p>
             </div>
           </div>
 

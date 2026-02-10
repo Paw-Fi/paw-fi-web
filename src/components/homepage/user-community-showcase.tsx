@@ -1,42 +1,83 @@
-import React from 'react';
-import { motion, Variants } from 'framer-motion';
-import { NumberTicker } from '@/components/ui/number-ticker';
-import { Marquee } from '@/components/ui/marquee';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users } from 'lucide-react';
-import { useCommunityStats } from '@/hooks/use-community-stats';
-
-interface User {
-  id: string;
-  email: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-  created_at: string;
-}
+import React from "react";
+import { motion, Variants } from "framer-motion";
+import { useNavigate } from "@tanstack/react-router";
+import { Star } from "lucide-react";
+import { Marquee } from "@/components/ui/marquee";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { useCommunityStats } from "@/hooks/use-community-stats";
+import {
+  appStoreReviews,
+  APP_STORE_RATING,
+  TOTAL_REVIEW_COUNT,
+  type Review,
+} from "@/data/app-store-reviews";
 
 /**
- * Encrypts email address for privacy protection
- * Format: first 2 chars + **** + last 2 chars before @ + @domain.com
- * Example: john.doe@example.com -> jo****oe@example.com
+ * Star Rating Component - Displays partial stars for decimal ratings
  */
-const encryptEmail = (email: string | null | undefined): string => {
-  if (!email) return '****';
+interface StarRatingProps {
+  rating: number;
+  maxStars?: number;
+  size?: number;
+  className?: string;
+}
 
-  const [localPart, domain] = email.split('@');
-  
-  if (!localPart || !domain) return '****';
-  
-  if (localPart.length <= 4) {
-    // For very short email addresses, show only first char
-    return `${localPart.charAt(0)}****`;
-  }
-  
-  const firstTwo = localPart.slice(0, 2);
-  const lastTwo = localPart.slice(-2);
-  
-  return `${firstTwo}****${lastTwo}`;
+const StarRating: React.FC<StarRatingProps> = ({
+  rating,
+  maxStars = 5,
+  size = 20,
+  className = "",
+}) => {
+  return (
+    <div className={`flex items-center gap-0.5 ${className}`}>
+      {Array.from({ length: maxStars }).map((_, index) => {
+        const fillPercentage = Math.min(Math.max(rating - index, 0), 1) * 100;
+
+        return (
+          <div key={index} className="relative">
+            {/* Background star (empty) */}
+            <Star
+              size={size}
+              className="text-yellow-500/30"
+              fill="currentColor"
+            />
+            {/* Filled star with clip */}
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{ width: `${fillPercentage}%` }}
+            >
+              <Star
+                size={size}
+                className="text-yellow-500"
+                fill="currentColor"
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
+// App Store and Play Store URLs
+const APP_STORE_URL = "https://apps.apple.com/app/moneko/id6753925279";
+const PLAY_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.moneko.app";
+
+/**
+ * Detect user platform based on user agent
+ */
+const getUserPlatform = (): "ios" | "android" | "web" => {
+  const userAgent = navigator.userAgent.toLowerCase();
+
+  if (/iphone|ipad|ipod/.test(userAgent)) {
+    return "ios";
+  }
+  if (/android/.test(userAgent)) {
+    return "android";
+  }
+  return "web";
+};
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -62,139 +103,179 @@ const itemVariants: Variants = {
   },
 };
 
-interface UserCardProps {
-  user: User;
+interface ReviewCardProps {
+  review: Review;
+  onClick?: () => void;
 }
 
-const UserCard: React.FC<UserCardProps> = ({ user }) => {
-  const initials = user.full_name
-    ?.split(' ')
-    .map((n) => n.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || (user.email ? user.email.charAt(0).toUpperCase() : '?');
+const ReviewCard: React.FC<ReviewCardProps> = ({ review, onClick }) => {
+  const { rating, title, body, reviewerNickname, createdDate, territory } =
+    review;
 
   return (
     <motion.div
-      className="flex items-center gap-3 px-4 py-3 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 border border-subtle-border/30 min-w-[240px]"
-      whileHover={{ y: -2 }}
+      className="border-subtle-border/30 flex max-w-[320px] min-w-[280px] cursor-pointer flex-col gap-2 rounded-2xl border bg-white/60 px-4 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:shadow-md dark:bg-slate-900/60"
+      whileHover={{ y: -2, scale: 1.02 }}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          onClick?.();
+        }
+      }}
     >
-      <Avatar className="size-10 ring-2 ring-background shadow-sm">
-        {user.avatar_url ? (
-          <AvatarImage src={user.avatar_url} alt={user.full_name || 'User'} />
-        ) : null}
-        <AvatarFallback className="bg-gradient-to-br from-moneko-primary to-moneko-secondary text-white font-medium text-sm">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-       
-        <div className="text-xs text-muted-foreground truncate">
-          {encryptEmail(user.email)}
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-foreground font-medium">{reviewerNickname}</span>
+        <span className="text-yellow-500">
+          {"★".repeat(rating)}
+          {"☆".repeat(5 - rating)}
+        </span>
+      </div>
+      <h4 className="text-foreground text-sm font-semibold">{title}</h4>
+      <p className="text-muted-foreground line-clamp-3 text-xs">{body}</p>
+      <div className="text-muted-foreground mt-1 flex items-center justify-between text-xs">
+        <span>{territory}</span>
+        <span>{new Date(createdDate).toLocaleDateString()}</span>
       </div>
     </motion.div>
   );
 };
 
 export function UserCommunityShowcase() {
-  // Use TanStack Query hook for data fetching with caching
-  const { data, isLoading, error } = useCommunityStats();
+  const navigate = useNavigate();
 
-  const totalUsers = data?.totalUsers;
-  const displayUsers = data?.displayUsers?.length ? data.displayUsers : [];
+  // Use hardcoded reviews - no API needed!
+  const reviews = appStoreReviews;
+  const displayRating = APP_STORE_RATING;
+  const totalReviews = TOTAL_REVIEW_COUNT;
+
+  // Fetch real-time user count from Supabase
+  const { data: communityStats, isLoading: isLoadingUsers } =
+    useCommunityStats();
+  const totalUsers = communityStats?.totalUsers;
+
+  /**
+   * Handle review card click - navigate to appropriate store
+   */
+  const handleReviewClick = () => {
+    const platform = getUserPlatform();
+
+    switch (platform) {
+      case "ios":
+        window.open(APP_STORE_URL, "_blank");
+        break;
+      case "android":
+        window.open(PLAY_STORE_URL, "_blank");
+        break;
+      case "web":
+      default:
+        navigate({ to: "/download" });
+        break;
+    }
+  };
 
   return (
-    <section className="relative z-10 px-4 py-20 sm:px-6 lg:px-8 overflow-hidden">
-      <div className="mx-auto max-w-7xl w-full">
+    <section className="relative z-10 overflow-hidden px-4 py-20 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: "-100px" }}
           className="space-y-16"
         >
           {/* Header Section */}
-          <motion.div variants={itemVariants} className="text-center space-y-6">
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-moneko-primary/10 to-moneko-secondary/10 dark:from-moneko-primary/20 dark:to-moneko-secondary/20 rounded-full border border-moneko-primary/20">
-              <Users className="size-5 text-moneko-primary" />
-              <span className="text-sm font-medium text-foreground">
-                Growing Community
+          <motion.div variants={itemVariants} className="space-y-6 text-center">
+            <div className="from-moneko-primary/10 to-moneko-secondary/10 dark:from-moneko-primary/20 dark:to-moneko-secondary/20 border-moneko-primary/20 inline-flex items-center gap-3 rounded-full border bg-gradient-to-r px-6 py-3">
+              <StarRating rating={APP_STORE_RATING} size={18} />
+              <span className="text-foreground text-sm font-medium">
+                {APP_STORE_RATING}/5 rating
               </span>
             </div>
 
-            {typeof totalUsers === 'number' ? (
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-light text-foreground">
-                <span className="font-medium bg-gradient-to-r from-moneko-primary to-moneko-secondary bg-clip-text text-transparent">
+            <h2 className="text-foreground text-4xl font-light sm:text-5xl md:text-6xl">
+              <span className="from-moneko-primary to-moneko-secondary bg-gradient-to-r bg-clip-text font-medium text-transparent">
+                {displayRating}/5
+              </span>{" "}
+              App Store rating
+            </h2>
+
+            {/* Real-time user count from Supabase */}
+            {typeof totalUsers === "number" && (
+              <div className="text-muted-foreground flex items-center justify-center gap-2 text-xl">
+                <span className="text-foreground font-medium">
                   <NumberTicker
                     value={totalUsers}
-                    className="inline-block font-medium bg-gradient-to-r from-moneko-primary to-moneko-secondary bg-clip-text text-transparent"
+                    className="inline-block font-medium"
                   />
                 </span>
-                {' '}people have already joined
-              </h2>
-            ) : (
-              <h2 className="text-4xl sm:text-5xl md:text-6xl font-light text-foreground">
-                Join our growing community
-              </h2>
+                <span>people have already joined</span>
+              </div>
+            )}
+            {isLoadingUsers && (
+              <div className="text-muted-foreground text-sm">
+                Loading community stats...
+              </div>
             )}
 
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Join people using Moneko to build healthier budgeting habits.
+            <p className="text-muted-foreground mx-auto max-w-2xl text-lg sm:text-xl">
+              See what our users are saying about Moneko
             </p>
           </motion.div>
 
-          {/* Marquee Section */}
-          {!isLoading && displayUsers.length > 0 && (
+          {/* Reviews Marquee Section */}
+          {reviews.length > 0 && (
             <div className="space-y-6">
-              {/* First row - users 0-9 (normal direction) */}
-              <Marquee pauseOnHover className="[--duration:40s]">
-                {displayUsers.slice(0, Math.min(10, displayUsers.length)).map((user) => (
-                  <UserCard key={`row1-${user.id}`} user={user} />
-                ))}
+              {/* First row - reviews 0-9 (normal direction) */}
+              <Marquee pauseOnHover className="[--duration:70s]">
+                {reviews
+                  .slice(0, Math.min(10, reviews.length))
+                  .map((review) => (
+                    <ReviewCard
+                      key={`row1-${review.id}`}
+                      review={review}
+                      onClick={handleReviewClick}
+                    />
+                  ))}
               </Marquee>
 
-              {/* Second row - users 10-19 (reverse direction) */}
-              {displayUsers.length >= 10 && (
-                <Marquee reverse pauseOnHover className="[--duration:45s]">
-                  {displayUsers.slice(10, Math.min(20, displayUsers.length)).map((user) => (
-                    <UserCard key={`row2-${user.id}`} user={user} />
-                  ))}
+              {/* Second row - reviews 10-19 (reverse direction) */}
+              {reviews.length >= 10 && (
+                <Marquee reverse pauseOnHover className="[--duration:65s]">
+                  {reviews
+                    .slice(10, Math.min(20, reviews.length))
+                    .map((review) => (
+                      <ReviewCard
+                        key={`row2-${review.id}`}
+                        review={review}
+                        onClick={handleReviewClick}
+                      />
+                    ))}
                 </Marquee>
               )}
 
-              {/* Third row - users 20-29 (normal direction) - NO DUPLICATES */}
-              {displayUsers.length >= 20 && (
-                <Marquee pauseOnHover className="[--duration:50s]">
-                  {displayUsers.slice(20, Math.min(30, displayUsers.length)).map((user) => (
-                    <UserCard key={`row3-${user.id}`} user={user} />
-                  ))}
+              {/* Third row - reviews 20-29 (normal direction) */}
+              {reviews.length >= 20 && (
+                <Marquee pauseOnHover className="[--duration:70s]">
+                  {reviews
+                    .slice(20, Math.min(30, reviews.length))
+                    .map((review) => (
+                      <ReviewCard
+                        key={`row3-${review.id}`}
+                        review={review}
+                        onClick={handleReviewClick}
+                      />
+                    ))}
                 </Marquee>
               )}
             </div>
-          )}
-
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-moneko-primary"></div>
-            </div>
-          )}
-
-          {/* Empty State (only show if not loading and no users) */}
-          {!isLoading && displayUsers.length === 0 && (
-            <motion.div
-              variants={itemVariants}
-              className="text-center py-12 text-muted-foreground"
-            >
-              Be among the first to join our community!
-            </motion.div>
           )}
 
           {/* Call to Action */}
           <motion.div variants={itemVariants} className="text-center">
-            <p className="text-sm text-muted-foreground">
-              Join these members and start making smarter financial decisions today
+            <p className="text-muted-foreground text-sm">
+              Download Moneko and join thousands of happy users
             </p>
           </motion.div>
         </motion.div>

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 /**
+ * Last sent: 04/02/2026 @ 11:57
  * Bulk Email Sender Script
  * 
  * This script fetches users from Supabase based on a custom SQL query
