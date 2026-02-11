@@ -365,7 +365,7 @@ export default function ChangelogPage() {
             className="mt-24 text-center pb-20"
           >
             <p className="text-muted-foreground text-sm">
-              Have a feature request? <a href="mailto:support@moneko.io" className="text-primary hover:text-primary/80 transition-colors font-medium">Send us an email</a>
+              Have a feature request? <a href="mailto:hello@moneko.io" className="text-primary hover:text-primary/80 transition-colors font-medium">Send us an email</a>
             </p>
           </motion.div>
         </div>

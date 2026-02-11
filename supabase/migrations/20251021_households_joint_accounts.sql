@@ -245,7 +245,7 @@ CREATE TABLE IF NOT EXISTS public.expense_split_lines (
   -- Settlement tracking (auto-accepted by default for better UX)
   is_settled BOOLEAN DEFAULT true,
   settled_at TIMESTAMPTZ DEFAULT NOW(),
-  settled_by_user_id UUID REFERENCES auth.users(id),
+  settled_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   settlement_note TEXT,
 
   -- Metadata

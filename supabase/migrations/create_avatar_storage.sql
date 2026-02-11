@@ -38,10 +38,22 @@ CREATE POLICY "Users can delete their own avatar" ON storage.objects
 CREATE OR REPLACE FUNCTION delete_user_avatar()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Delete avatar from storage (try both extensions)
-  DELETE FROM storage.objects 
-  WHERE bucket_id = 'avatars' 
-  AND (name = OLD.id::text || '/avatar.png' OR name = OLD.id::text || '/avatar.jpg');
+  -- Best-effort cleanup.
+  -- Some environments disallow direct DML on storage.objects and require Storage API.
+  -- Never block account deletion on avatar cleanup failures.
+  BEGIN
+    DELETE FROM storage.objects
+    WHERE bucket_id = 'avatars'
+      AND (
+        name = OLD.id::text || '/avatar.png'
+        OR name = OLD.id::text || '/avatar.jpg'
+        OR name = OLD.id::text || '/avatar.jpeg'
+        OR name = OLD.id::text || '/avatar.webp'
+      );
+  EXCEPTION
+    WHEN OTHERS THEN
+      NULL;
+  END;
   
   RETURN OLD;
 END;

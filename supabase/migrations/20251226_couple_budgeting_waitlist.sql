@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS couple_budgeting_waitlist (
     mobile_app_priorities TEXT[], -- Array of mobile app priorities
     interested_mobile_features TEXT[], -- Array of interested mobile features
     device_preference VARCHAR(50), -- ios, android, desktop
-    user_id UUID REFERENCES auth.users(id),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     waitlist_type VARCHAR(50) DEFAULT 'couple_budgeting', -- To distinguish from other waitlists
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

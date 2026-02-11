@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS early_access_claims (
     financial_goals TEXT[], -- Array of financial goals
     interested_features TEXT[], -- Array of interested features
     interests TEXT[], -- Legacy field for backward compatibility
-    user_id UUID REFERENCES auth.users(id),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
