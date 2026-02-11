@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { blogs as staticBlogs } from "@/data/blogs/blogs";
@@ -15,13 +15,6 @@ import { fetchSubredditBlogs } from "@/services/reddit-blog-service";
 
 export const Route = createFileRoute("/blogs/")({
   loader: async () => {
-    try {
-      const redditBlogs = await fetchSubredditBlogs();
-      return { blogs: [...redditBlogs, ...staticBlogs] };
-    } catch (_error) {
-      // Fallback to static blogs when Reddit API is unavailable.
-    }
-
     return { blogs: staticBlogs };
   },
   component: BlogsPage,
@@ -102,9 +95,34 @@ export const Route = createFileRoute("/blogs/")({
 });
 
 function BlogsPage() {
-  const { blogs } = Route.useLoaderData();
+  const { blogs: initialBlogs } = Route.useLoaderData();
+  const [blogs, setBlogs] = useState(initialBlogs);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void fetchSubredditBlogs()
+      .then((redditBlogs) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setBlogs([...redditBlogs, ...staticBlogs]);
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setBlogs(staticBlogs);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const availableTags = useMemo(() => getUniqueTagsFromBlogs(blogs), [blogs]);
 
@@ -151,7 +169,7 @@ function BlogsPage() {
   return (
     <AmbientHaloLayout>
       <HomeHeader />
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 mt-24">
+      <div className="mx-auto mt-24 max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -161,7 +179,7 @@ function BlogsPage() {
           <h1 className="mb-6 text-5xl font-bold tracking-tight text-slate-900 md:text-7xl dark:text-white">
             Moneko Financial Education Blog
           </h1>
-          <h2 className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl mx-auto">
+          <h2 className="mx-auto max-w-2xl text-xl leading-relaxed text-slate-600 dark:text-slate-400">
             Expert insights and practical advice from Moneko to help you
             navigate your financial journey with confidence and master your
             money.
