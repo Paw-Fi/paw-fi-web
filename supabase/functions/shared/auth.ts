@@ -19,6 +19,8 @@ type SupabaseAuthClient = {
 const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
 // Used by twilio-whatsapp-ai-bot and other internal callers.
 const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
+// Used by telegram functions and deploy-telegram-functions.sh
+const EDGE_FUNCTION_KEY = Deno.env.get("EDGE_FUNCTION_KEY");
 
 export interface AuthResult {
   success: boolean;
@@ -142,13 +144,17 @@ export async function authenticateInternalService(
 export async function authenticateInternalSecret(
   req: Request,
 ): Promise<AuthResult> {
-  const acceptedSecrets = [INTERNAL_SERVICE_SECRET, SECRET_API_KEY]
+  const acceptedSecrets = [
+    INTERNAL_SERVICE_SECRET,
+    SECRET_API_KEY,
+    EDGE_FUNCTION_KEY,
+  ]
     .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
     .map((v) => v.trim());
 
   if (acceptedSecrets.length === 0) {
     console.error(
-      "No internal auth secret configured (INTERNAL_SERVICE_SECRET/SECRET_API_KEY)",
+      "No internal auth secret configured (INTERNAL_SERVICE_SECRET/SECRET_API_KEY/EDGE_FUNCTION_KEY)",
     );
     return {
       success: false,

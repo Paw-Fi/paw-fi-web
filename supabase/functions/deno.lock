@@ -48,6 +48,7 @@
     "https://deno.land/std@0.224.0/encoding/_util.ts": "beacef316c1255da9bc8e95afb1fa56ed69baef919c88dc06ae6cb7a6103d376",
     "https://deno.land/std@0.224.0/encoding/base64.ts": "dd59695391584c8ffc5a296ba82bcdba6dd8a84d41a6a539fbee8e5075286eaf",
     "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno": "4e4d5e80166c1a54f3a8723ff5ccb85a4ddad00790c0f862d62fc728050234c0",
+    "https://esm.sh/@google/generative-ai@0.17.0": "1fcb423423fcedce273eb284afeecc274fa4295c1869dcf0c4b57a431d8c9f63",
     "https://esm.sh/@google/generative-ai@0.24.1": "1b08807076eadeaddb89d41e9a2365e6980ec870416b808e58fd0ea6ac0a93d5",
     "https://esm.sh/@google/generative-ai@0.24.1/deno/generative-ai.mjs": "08c9716071f5f129a462eb9c71ebaa7f0597d1ef5005ef995fd606f3f0f7f073",
     "https://esm.sh/@google/generative-ai@0.24.1?target=deno": "00a99e986c896b8c6927769fa79e6c27f2caf2db4acc47a710317951b8577f3d",

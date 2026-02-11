@@ -96,10 +96,36 @@ WHATSAPP BUDGET FLOW (WhatsApp only):
 const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
 const PROCESSING_ACK_MESSAGES = [
-  "Got it! I’m processing that now—this might take a moment. ⏳",
-  "Thanks! I’m working on it now and will reply shortly. 🧾",
-  "On it! I’m crunching the details—back soon. 🤖",
-  "Working on it now. I’ll send the details in a bit. ✨",
+      "I’m looking into that for you now.",
+    "One moment while I process your request.",
+    "I am gathering the information you requested.",
+    "Just a moment while I review those details.",
+    "Processing your inquiry. Stand by, please.",
+    "I’m working on a response for you.",
+    "Checking my records for the most accurate information.",
+    "I’m analyzing your request now.",
+    "One second while I pull up that information.",
+    "I am currently formulating your answer.",
+    "Retrieving the requested data. One moment.",
+    "I'm reviewing the specifics of your message.",
+    "Stand by while I finalize your request.",
+    "I am cross-referencing that for you now.",
+    "Just a moment while I prepare the details.",
+    "I’m prioritizing your request. Please wait.",
+    "Searching for the most relevant information.",
+    "I will have an answer for you in just a moment.",
+    "Thank you for your patience; I'm looking into this.",
+    "I am currently processing your input.",
+    "Just a quick second while I verify those details.",
+    "Reviewing your request to ensure accuracy.",
+    "I’m pulling together the information you need.",
+    "One moment while I sync with the database.",
+    "Briefly reviewing your input now.",
+    "I am preparing a detailed response for you.",
+    "Just a moment while I look into that.",
+    "Processing... I'll be with you in a second.",
+    "Checking the available data to assist you.",
+    "I am currently working on your request."
 ];
 const PROCESSING_ACK_DELAY_MS = 3000;
 const IDEMPOTENCY_TTL_MINUTES = 60;

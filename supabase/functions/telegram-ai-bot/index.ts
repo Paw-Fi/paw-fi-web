@@ -44,8 +44,7 @@ import {
 } from "../shared/telegram-parity.ts";
 
 const MODEL_NAME = "gemini-2.5-flash";
-const SYSTEM_INSTRUCTION =
-  `You are Moneko, a helpful and friendly financial assistant on Telegram.
+const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
@@ -81,11 +80,37 @@ CURRENT CONTEXT:
 `;
 
 const PROCESSING_ACK_MESSAGES = [
-  "Got it! I’m processing that now—this might take a moment. ⏳",
-  "Thanks! I’m working on it now and will reply shortly. 🧾",
-  "On it! I’m crunching the details—back soon. 🤖",
-  "Working on it now. I’ll send the details in a bit. ✨",
-];
+    "I’m looking into that for you now.",
+    "One moment while I process your request.",
+    "I am gathering the information you requested.",
+    "Just a moment while I review those details.",
+    "Processing your inquiry. Stand by, please.",
+    "I’m working on a response for you.",
+    "Checking my records for the most accurate information.",
+    "I’m analyzing your request now.",
+    "One second while I pull up that information.",
+    "I am currently formulating your answer.",
+    "Retrieving the requested data. One moment.",
+    "I'm reviewing the specifics of your message.",
+    "Stand by while I finalize your request.",
+    "I am cross-referencing that for you now.",
+    "Just a moment while I prepare the details.",
+    "I’m prioritizing your request. Please wait.",
+    "Searching for the most relevant information.",
+    "I will have an answer for you in just a moment.",
+    "Thank you for your patience; I'm looking into this.",
+    "I am currently processing your input.",
+    "Just a quick second while I verify those details.",
+    "Reviewing your request to ensure accuracy.",
+    "I’m pulling together the information you need.",
+    "One moment while I sync with the database.",
+    "Briefly reviewing your input now.",
+    "I am preparing a detailed response for you.",
+    "Just a moment while I look into that.",
+    "Processing... I'll be with you in a second.",
+    "Checking the available data to assist you.",
+    "I am currently working on your request."
+]
 const PROCESSING_ACK_DELAY_MS = 3000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
@@ -93,6 +118,29 @@ const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 type TelegramUpdate = {
   update_id?: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
+};
+
+type TelegramInlineKeyboardButton = {
+  text: string;
+  url?: string;
+  callback_data?: string;
+};
+
+type TelegramInlineKeyboardMarkup = {
+  inline_keyboard: TelegramInlineKeyboardButton[][];
+};
+
+type TelegramChoiceOption = {
+  index: number;
+  label: string;
+};
+
+type TelegramCallbackQuery = {
+  id: string;
+  data?: string;
+  message?: TelegramMessage;
+  from?: { id?: number };
 };
 
 type TelegramMessage = {
@@ -205,11 +253,9 @@ async function getTelegramFile(
   token: string,
   fileId: string,
 ): Promise<{ file_path?: string; file_size?: number } | null> {
-  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${
-    encodeURIComponent(
-      fileId,
-    )
-  }`;
+  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(
+    fileId,
+  )}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const payload = await res.json();
@@ -231,12 +277,30 @@ async function sendTelegramMessage(
   token: string,
   chatId: number,
   text: string,
+  replyMarkup?: TelegramInlineKeyboardMarkup,
 ) {
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      reply_markup: replyMarkup,
+    }),
+  });
+  return res.ok;
+}
+
+async function answerTelegramCallbackQuery(
+  token: string,
+  callbackQueryId: string,
+) {
+  const url = `https://api.telegram.org/bot${token}/answerCallbackQuery`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ callback_query_id: callbackQueryId }),
   });
   return res.ok;
 }
@@ -245,8 +309,75 @@ function normalizeText(input?: string | null) {
   return (input || "").trim();
 }
 
+function resolvePublicBaseUrl() {
+  const explicitBaseUrl =
+    Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
+    Deno.env.get("WEB_APP_URL") ||
+    Deno.env.get("PUBLIC_APP_URL") ||
+    Deno.env.get("NEXT_PUBLIC_APP_URL") ||
+    Deno.env.get("SITE_URL");
+
+  if (explicitBaseUrl && /^https?:\/\//i.test(explicitBaseUrl.trim())) {
+    return explicitBaseUrl.trim().replace(/\/$/, "");
+  }
+
+  const allowedOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => /^https?:\/\//i.test(value));
+
+  if (allowedOrigins.length > 0) {
+    return allowedOrigins[0].replace(/\/$/, "");
+  }
+
+  return "https://moneko.io";
+}
+
 function isStartVerification(text: string) {
   return normalizeText(text).toLowerCase() === "start verification";
+}
+
+function extractNumberedOptions(text: string): TelegramChoiceOption[] {
+  const options: TelegramChoiceOption[] = [];
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    const match = line.match(/^(\d{1,2})[.)]\s+(.+)$/);
+    if (!match) continue;
+    const index = Number(match[1]);
+    const label = match[2].trim();
+    if (!Number.isFinite(index) || index <= 0 || !label) continue;
+    options.push({ index, label });
+    if (options.length >= 8) break;
+  }
+  return options;
+}
+
+function buildChoiceKeyboard(
+  text: string,
+): TelegramInlineKeyboardMarkup | undefined {
+  const options = extractNumberedOptions(text);
+  if (!options.length) return undefined;
+  return {
+    inline_keyboard: options.map((option) => [
+      {
+        text: `${option.index}. ${option.label}`.slice(0, 64),
+        callback_data: `pick_option:${option.index}`,
+      },
+    ]),
+  };
+}
+
+function resolveTextFromCallbackChoice(
+  callbackData: string,
+  sourceText: string,
+): string | null {
+  if (!callbackData.startsWith("pick_option:")) return null;
+  const index = Number(callbackData.split(":")[1]);
+  if (!Number.isFinite(index)) return null;
+  const options = extractNumberedOptions(sourceText);
+  const option = options.find((item) => item.index === index);
+  if (!option) return null;
+  return `${option.index}. ${option.label}`;
 }
 
 function normalizeNameForMatch(value: string) {
@@ -347,9 +478,8 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount = typeof split?.amount === "number"
-        ? Math.max(0, split.amount)
-        : null;
+      const amount =
+        typeof split?.amount === "number" ? Math.max(0, split.amount) : null;
       if (amount == null) missing.push(id);
       else specifiedSum += amount;
     }
@@ -358,9 +488,10 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount = typeof split?.amount === "number"
-        ? Math.max(0, split.amount)
-        : perMissing;
+      const amount =
+        typeof split?.amount === "number"
+          ? Math.max(0, split.amount)
+          : perMissing;
       fullSplits.push({ userId: id, amount });
     }
   } else if (inferredType === "percentage") {
@@ -368,9 +499,10 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage = typeof split?.percentage === "number"
-        ? Math.max(0, Math.min(100, split.percentage))
-        : null;
+      const percentage =
+        typeof split?.percentage === "number"
+          ? Math.max(0, Math.min(100, split.percentage))
+          : null;
       if (percentage == null) missing.push(id);
       else specifiedSum += percentage;
     }
@@ -379,17 +511,19 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage = typeof split?.percentage === "number"
-        ? Math.max(0, Math.min(100, split.percentage))
-        : perMissing;
+      const percentage =
+        typeof split?.percentage === "number"
+          ? Math.max(0, Math.min(100, split.percentage))
+          : perMissing;
       fullSplits.push({ userId: id, percentage });
     }
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const split = byId.get(id);
-      const shares = typeof split?.shares === "number"
-        ? Math.max(1, Math.trunc(split.shares))
-        : 1;
+      const shares =
+        typeof split?.shares === "number"
+          ? Math.max(1, Math.trunc(split.shares))
+          : 1;
       fullSplits.push({ userId: id, shares });
     }
   }
@@ -411,25 +545,31 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
-  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+  const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+  const TELEGRAM_WEBHOOK_SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET")!;
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
   const EDGE_FUNCTION_KEY = Deno.env.get("EDGE_FUNCTION_KEY") || "";
 
-  if (
-    !TELEGRAM_BOT_TOKEN ||
-    !SUPABASE_URL ||
-    !SUPABASE_SERVICE_ROLE_KEY ||
-    !GEMINI_API_KEY
-  ) {
-    console.error("Missing environment variables");
+  const missingEnv: string[] = [];
+  if (!TELEGRAM_BOT_TOKEN) missingEnv.push("TELEGRAM_BOT_TOKEN");
+  if (!TELEGRAM_WEBHOOK_SECRET) missingEnv.push("TELEGRAM_WEBHOOK_SECRET");
+  if (!SUPABASE_URL) missingEnv.push("SUPABASE_URL");
+  if (!SUPABASE_SERVICE_ROLE_KEY) missingEnv.push("SUPABASE_SERVICE_ROLE_KEY");
+  if (!GEMINI_API_KEY) missingEnv.push("GEMINI_API_KEY");
+
+  if (missingEnv.length) {
+    console.error(
+      `[telegram-ai-bot] Missing required environment variables: ${missingEnv.join(", ")}`,
+    );
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
-  const secretHeader = req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
+  const secretHeader =
+    req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
     req.headers.get("x-telegram-bot-api-secret-token");
-  if (secretHeader !== TELEGRAM_BOT_TOKEN) {
+  if (secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
     return jsonResponse({ ok: true });
   }
 
@@ -440,16 +580,24 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: true });
   }
 
-  const message = update?.message;
+  const callbackQuery = update?.callback_query;
+  const message = update?.message ?? callbackQuery?.message;
+  const callbackData = normalizeText(callbackQuery?.data || "");
   const chatId = message?.chat?.id;
   const messageId = message?.message_id ?? update?.update_id;
   if (!chatId || !messageId) {
     return jsonResponse({ ok: true });
   }
 
+  if (callbackQuery?.id) {
+    await answerTelegramCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+  }
+
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const idempotencyKey = `telegram:${chatId}:${messageId}`;
-  const processingAckMessage = pickProcessingMessage(String(chatId));
+  const idempotencyKey = callbackQuery?.id
+    ? `telegram:${chatId}:callback:${callbackQuery.id}`
+    : `telegram:${chatId}:${messageId}`;
+  const processingAckMessage = pickProcessingMessage();
 
   const reserve = await reserveIdempotency(
     supabase,
@@ -464,6 +612,7 @@ Deno.serve(async (req: Request) => {
         TELEGRAM_BOT_TOKEN,
         chatId,
         cached.response_text,
+        buildChoiceKeyboard(cached.response_text),
       );
     }
     return jsonResponse({ ok: true });
@@ -480,21 +629,34 @@ Deno.serve(async (req: Request) => {
 
         const contact = contextData
           ? {
-            id: contextData.contact_id,
-            user_id: contextData.user_id,
-            verified: contextData.verified,
-            preferred_currency: contextData.preferred_currency,
-            preferred_language: contextData.preferred_language,
-            preferred_timezone: contextData.preferred_timezone,
-          }
+              id: contextData.contact_id,
+              user_id: contextData.user_id,
+              verified: contextData.verified,
+              preferred_currency: contextData.preferred_currency,
+              preferred_language: contextData.preferred_language,
+              preferred_timezone: contextData.preferred_timezone,
+            }
           : null;
 
         if (contextError) {
           debugNotes.push(`context error: ${formatInvokeError(contextError)}`);
         }
 
-        const text = normalizeText(message?.text);
-        if (text && isStartVerification(text)) {
+        const originalMessageText = normalizeText(
+          message?.text || message?.caption || "",
+        );
+        const callbackChoiceText = resolveTextFromCallbackChoice(
+          callbackData,
+          normalizeText(message?.text),
+        );
+        const incomingText =
+          callbackData === "start_verification"
+            ? "start verification"
+            : callbackChoiceText ||
+              (callbackData.startsWith("pick_option:")
+                ? callbackData.replace("pick_option:", "").trim()
+                : originalMessageText);
+        if (incomingText && isStartVerification(incomingText)) {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -513,11 +675,19 @@ Deno.serve(async (req: Request) => {
             expires_at: expiresAt.toISOString(),
           });
 
-          const appUrl = Deno.env.get("ALLOWED_ORIGINS") || "https://moneko.io";
-          const baseUrl = appUrl.split(",")[0]?.trim() || "https://moneko.io";
+          const baseUrl = resolvePublicBaseUrl();
           const verificationUrl = buildTelegramVerificationUrl(baseUrl, code);
           const msg = buildTelegramVerificationMessage(code, verificationUrl);
-          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, msg);
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, msg, {
+            inline_keyboard: [
+              [
+                {
+                  text: "Verify in Moneko",
+                  url: verificationUrl,
+                },
+              ],
+            ],
+          });
           await updateIdempotency(supabase, idempotencyKey, {
             status: "done",
             response_text: msg,
@@ -527,8 +697,17 @@ Deno.serve(async (req: Request) => {
 
         if (!contact || !contact.verified || !contact.user_id) {
           const prompt =
-            "🔐 Account Not Verified\n\nTo use Moneko, you need to verify this Telegram chat.\n\nReply with: Start Verification";
-          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, prompt);
+            "🔐 Account Not Verified\n\nTo use Moneko, start verification below.";
+          await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, prompt, {
+            inline_keyboard: [
+              [
+                {
+                  text: "Start Verification",
+                  callback_data: "start_verification",
+                },
+              ],
+            ],
+          });
           await updateIdempotency(supabase, idempotencyKey, {
             status: "done",
             response_text: prompt,
@@ -538,9 +717,9 @@ Deno.serve(async (req: Request) => {
 
         const subscription = contextData
           ? {
-            plan: contextData.subscription_plan,
-            status: contextData.subscription_status,
-          }
+              plan: contextData.subscription_plan,
+              status: contextData.subscription_status,
+            }
           : null;
         if (isFreeUser(subscription)) {
           const nonSubscriberMessage =
@@ -623,9 +802,7 @@ Deno.serve(async (req: Request) => {
           return;
         }
 
-        let userMessageContent = normalizeText(
-          message?.text || message?.caption || "",
-        );
+        let userMessageContent = incomingText;
 
         if (
           !message?.photo &&
@@ -650,12 +827,9 @@ Deno.serve(async (req: Request) => {
             analysis = { success: false };
           }
           if (analysis?.success && analysis?.items) {
-            userMessageContent =
-              `[User message: "${userMessageContent}". Successfully extracted from text: ${
-                JSON.stringify(
-                  analysis.items,
-                )
-              }. Please confirm with the user and ask if they want to save these transactions.]`;
+            userMessageContent = `[User message: "${userMessageContent}". Successfully extracted from text: ${JSON.stringify(
+              analysis.items,
+            )}. Please confirm with the user and ask if they want to save these transactions.]`;
           }
         }
 
@@ -692,11 +866,9 @@ Deno.serve(async (req: Request) => {
               if (analysis?.success && analysis?.items) {
                 userMessageContent = `[User uploaded an image${
                   message.caption ? ` with caption "${message.caption}"` : ""
-                }. Successfully extracted from receipt: ${
-                  JSON.stringify(
-                    analysis.items,
-                  )
-                }. Please confirm with the user and ask if they want to save these transactions.]`;
+                }. Successfully extracted from receipt: ${JSON.stringify(
+                  analysis.items,
+                )}. Please confirm with the user and ask if they want to save these transactions.]`;
               } else {
                 userMessageContent = `[User uploaded an image${
                   message.caption ? ` with caption "${message.caption}"` : ""
@@ -738,22 +910,17 @@ Deno.serve(async (req: Request) => {
                 "The audio is taking longer than expected to process. Please try again by speaking clearly.",
               );
               if (analysis?.success && analysis?.items) {
-                userMessageContent =
-                  `[User sent a voice message. Successfully extracted from audio: ${
-                    JSON.stringify(
-                      analysis.items,
-                    )
-                  }. Please confirm with the user and ask if they want to save these transactions.]`;
+                userMessageContent = `[User sent a voice message. Successfully extracted from audio: ${JSON.stringify(
+                  analysis.items,
+                )}. Please confirm with the user and ask if they want to save these transactions.]`;
               } else {
-                userMessageContent =
-                  `[User sent a voice message, but analysis failed: ${
-                    analysis?.error ||
-                    "Could not extract expense information from the audio. Please try again."
-                  }. Please help the user by suggesting they try again or type the expense manually.]`;
+                userMessageContent = `[User sent a voice message, but analysis failed: ${
+                  analysis?.error ||
+                  "Could not extract expense information from the audio. Please try again."
+                }. Please help the user by suggesting they try again or type the expense manually.]`;
               }
             } else {
-              userMessageContent =
-                `[User sent a voice message, but the file is too large to process. Please ask them to send a shorter clip.]`;
+              userMessageContent = `[User sent a voice message, but the file is too large to process. Please ask them to send a shorter clip.]`;
             }
           }
         } else if (doc?.file_id) {
@@ -772,11 +939,11 @@ Deno.serve(async (req: Request) => {
                 .split(";")[0]
                 .trim();
               const isXlsx =
-                /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i
-                  .test(
-                    cleanContentType,
-                  ) || /\.xlsx$/i.test(doc.file_name || "");
-              const isPdf = /application\/pdf/i.test(cleanContentType) ||
+                /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(
+                  cleanContentType,
+                ) || /\.xlsx$/i.test(doc.file_name || "");
+              const isPdf =
+                /application\/pdf/i.test(cleanContentType) ||
                 /\.pdf$/i.test(doc.file_name || "");
               let preview = "";
               let parsed = false;
@@ -823,8 +990,7 @@ Deno.serve(async (req: Request) => {
                 }, ${buf.length} bytes)${captionNote}. Content not parsed (binary).]`;
               }
             } else {
-              userMessageContent =
-                `[User sent a file, but it is too large to process. Please ask them to send a smaller file.]`;
+              userMessageContent = `[User sent a file, but it is too large to process. Please ask them to send a smaller file.]`;
             }
           }
         }
@@ -1084,7 +1250,7 @@ Deno.serve(async (req: Request) => {
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
                 is_portfolio: { type: "BOOLEAN" },
-                pockets: { type: "ARRAY" },
+                pockets: { type: "ARRAY", items: { type: "OBJECT" } },
               },
               required: ["amount"],
             },
@@ -1101,7 +1267,7 @@ Deno.serve(async (req: Request) => {
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
                 is_portfolio: { type: "BOOLEAN" },
-                pockets: { type: "ARRAY" },
+                pockets: { type: "ARRAY", items: { type: "OBJECT" } },
               },
             },
           },
@@ -1116,7 +1282,7 @@ Deno.serve(async (req: Request) => {
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
                 is_portfolio: { type: "BOOLEAN" },
-                pockets: { type: "ARRAY" },
+                pockets: { type: "ARRAY", items: { type: "OBJECT" } },
               },
               required: ["amount"],
             },
@@ -1129,7 +1295,7 @@ Deno.serve(async (req: Request) => {
               properties: {
                 name: { type: "STRING" },
                 percentage: { type: "NUMBER" },
-                categories: { type: "ARRAY" },
+                categories: { type: "ARRAY", items: { type: "STRING" } },
                 date: { type: "STRING" },
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
@@ -1183,7 +1349,19 @@ Deno.serve(async (req: Request) => {
                   type: "STRING",
                   enum: ["equal", "amount", "percentage", "shares"],
                 },
-                member_splits: { type: "ARRAY" },
+                member_splits: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      member_name: { type: "STRING" },
+                      amount: { type: "NUMBER" },
+                      percentage: { type: "NUMBER" },
+                      shares: { type: "NUMBER" },
+                    },
+                    required: ["member_name"],
+                  },
+                },
                 frequency: { type: "STRING" },
                 type: { type: "STRING", enum: ["expense", "income"] },
               },
@@ -1234,8 +1412,8 @@ Deno.serve(async (req: Request) => {
                     startDate: call.args.start_date,
                     endDate: call.args.end_date,
                     householdId,
-                    isPortfolio: spaceMeta?.isPortfolio ??
-                      call.args.is_portfolio === true,
+                    isPortfolio:
+                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     portfolioHouseholdIds: householdId
                       ? undefined
                       : portfolioSpaceIds,
@@ -1270,17 +1448,17 @@ Deno.serve(async (req: Request) => {
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
                 }
-                const isHouseholdExpense = !!householdId &&
-                  (call.args.type || "expense") === "expense";
+                const isHouseholdExpense =
+                  !!householdId && (call.args.type || "expense") === "expense";
                 const splitConfig =
                   isHouseholdExpense && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId!,
-                      userId,
-                      amount,
-                      call.args,
-                    )
+                        supabase,
+                        householdId!,
+                        userId,
+                        amount,
+                        call.args,
+                      )
                     : {};
                 const { data, error } = await saveExpenseDirect(
                   supabase,
@@ -1294,8 +1472,8 @@ Deno.serve(async (req: Request) => {
                     currency: call.args.currency || userCurrency,
                     type: call.args.type || "expense",
                     householdId,
-                    isPortfolio: spaceMeta?.isPortfolio ??
-                      call.args.is_portfolio === true,
+                    isPortfolio:
+                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     isRecurring: call.args.is_recurring === true,
                     recurrence_rule: call.args.recurrence_rule,
                     payerUserId: splitConfig.payerUserId,
@@ -1325,17 +1503,18 @@ Deno.serve(async (req: Request) => {
                 const results: any[] = [];
                 for (const row of rows) {
                   const amount = Number(row.amount || 0);
-                  const splitConfig = householdId &&
-                      !spaceMeta?.isPortfolio &&
-                      row.type !== "income"
-                    ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId,
-                      userId,
-                      amount,
-                      row,
-                    )
-                    : {};
+                  const splitConfig =
+                    householdId &&
+                    !spaceMeta?.isPortfolio &&
+                    row.type !== "income"
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          amount,
+                          row,
+                        )
+                      : {};
                   const { data, error } = await saveExpenseDirect(
                     supabase,
                     contact.id,
@@ -1348,7 +1527,8 @@ Deno.serve(async (req: Request) => {
                       currency: row.currency || userCurrency,
                       type: row.type || "expense",
                       householdId,
-                      isPortfolio: spaceMeta?.isPortfolio ??
+                      isPortfolio:
+                        spaceMeta?.isPortfolio ??
                         call.args.is_portfolio === true,
                       payerUserId: splitConfig.payerUserId,
                       customSplits: splitConfig.customSplits,
@@ -1370,11 +1550,9 @@ Deno.serve(async (req: Request) => {
                     ],
                   },
                 };
-                const chartUrl = `https://quickchart.io/chart?c=${
-                  encodeURIComponent(
-                    JSON.stringify(chartConfig),
-                  )
-                }`;
+                const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+                  JSON.stringify(chartConfig),
+                )}`;
                 toolResult = { url: chartUrl };
               } else if (call.name === "financial_insight") {
                 toolResult = { success: true };
@@ -1406,12 +1584,14 @@ Deno.serve(async (req: Request) => {
                   userCurrency,
                   spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                 );
-                toolResult = res.error ? { error: res.error } : {
-                  budget: res.budget,
-                  envelopes: res.envelopes,
-                  totals: res.totals,
-                  chart: res.chart,
-                };
+                toolResult = res.error
+                  ? { error: res.error }
+                  : {
+                      budget: res.budget,
+                      envelopes: res.envelopes,
+                      totals: res.totals,
+                      chart: res.chart,
+                    };
               } else if (call.name === "set_currency") {
                 const currency = (call.args.currency || "")
                   .toString()
@@ -1421,10 +1601,12 @@ Deno.serve(async (req: Request) => {
                   contact.id,
                   currency,
                 );
-                toolResult = error ? { error } : {
-                  success: true,
-                  currency: data?.preferred_currency || currency,
-                };
+                toolResult = error
+                  ? { error }
+                  : {
+                      success: true,
+                      currency: data?.preferred_currency || currency,
+                    };
               } else if (call.name === "update_transaction") {
                 const updates: Record<string, unknown> = {};
                 if (call.args.amount != null) {
@@ -1467,13 +1649,15 @@ Deno.serve(async (req: Request) => {
                       },
                     },
                   );
-                  toolResult = !error && data?.success
-                    ? { success: true, data: data?.data ?? data }
-                    : {
-                      error: error ??
-                        data?.error ??
-                        "Failed to update transaction",
-                    };
+                  toolResult =
+                    !error && data?.success
+                      ? { success: true, data: data?.data ?? data }
+                      : {
+                          error:
+                            error ??
+                            data?.error ??
+                            "Failed to update transaction",
+                        };
                 }
               } else if (call.name === "delete_transaction") {
                 if (!call.args.expense_id) {
@@ -1488,11 +1672,15 @@ Deno.serve(async (req: Request) => {
                       },
                     },
                   );
-                  toolResult = !error && data?.success ? { success: true } : {
-                    error: error ??
-                      data?.error ??
-                      "Failed to delete transaction",
-                  };
+                  toolResult =
+                    !error && data?.success
+                      ? { success: true }
+                      : {
+                          error:
+                            error ??
+                            data?.error ??
+                            "Failed to delete transaction",
+                        };
                 }
               } else if (
                 call.name === "draft_budget" ||
@@ -1765,18 +1953,22 @@ Deno.serve(async (req: Request) => {
                         },
                       },
                     );
-                    toolResult = !error && data?.success ? { success: true } : {
-                      error: error ??
-                        data?.error ??
-                        "Failed to delete recurring transaction",
-                    };
+                    toolResult =
+                      !error && data?.success
+                        ? { success: true }
+                        : {
+                            error:
+                              error ??
+                              data?.error ??
+                              "Failed to delete recurring transaction",
+                          };
                   }
                 } else if (action === "update") {
                   if (!call.args.expense_id) {
                     toolResult = { error: "expense_id is required" };
                   } else {
-                    const dateValue = call.args.date ||
-                      formatDateInTimeZone(userTimezone);
+                    const dateValue =
+                      call.args.date || formatDateInTimeZone(userTimezone);
                     const recurrenceRule = {
                       frequency: (call.args.frequency || "monthly")
                         .toString()
@@ -1816,17 +2008,19 @@ Deno.serve(async (req: Request) => {
                         },
                       },
                     );
-                    toolResult = !error && data?.success
-                      ? { success: true, data: data?.data ?? data }
-                      : {
-                        error: error ??
-                          data?.error ??
-                          "Failed to update recurring transaction",
-                      };
+                    toolResult =
+                      !error && data?.success
+                        ? { success: true, data: data?.data ?? data }
+                        : {
+                            error:
+                              error ??
+                              data?.error ??
+                              "Failed to update recurring transaction",
+                          };
                   }
                 } else {
-                  const dateValue = call.args.date ||
-                    formatDateInTimeZone(userTimezone);
+                  const dateValue =
+                    call.args.date || formatDateInTimeZone(userTimezone);
                   const recurrenceRule = {
                     frequency: (call.args.frequency || "monthly")
                       .toString()
@@ -1850,17 +2044,18 @@ Deno.serve(async (req: Request) => {
                     spaceMeta = spaceMap.get(householdName);
                     householdId = spaceMeta?.id ?? null;
                   }
-                  const splitConfig = householdId &&
-                      !spaceMeta?.isPortfolio &&
-                      call.args.type !== "income"
-                    ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId,
-                      userId,
-                      amount,
-                      call.args,
-                    )
-                    : {};
+                  const splitConfig =
+                    householdId &&
+                    !spaceMeta?.isPortfolio &&
+                    call.args.type !== "income"
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          amount,
+                          call.args,
+                        )
+                      : {};
                   const { data, error } = await saveExpenseDirect(
                     supabase,
                     contact.id,
@@ -1873,7 +2068,8 @@ Deno.serve(async (req: Request) => {
                       currency: call.args.currency || userCurrency,
                       type: call.args.type || "expense",
                       householdId,
-                      isPortfolio: spaceMeta?.isPortfolio ??
+                      isPortfolio:
+                        spaceMeta?.isPortfolio ??
                         call.args.is_portfolio === true,
                       isRecurring: true,
                       recurrence_rule: recurrenceRule,
@@ -1926,6 +2122,7 @@ Deno.serve(async (req: Request) => {
           TELEGRAM_BOT_TOKEN,
           chatId,
           finalResponseText,
+          buildChoiceKeyboard(finalResponseText),
         );
         await updateIdempotency(supabase, idempotencyKey, {
           status: "done",

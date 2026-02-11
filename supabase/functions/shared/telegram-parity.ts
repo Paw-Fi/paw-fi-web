@@ -26,15 +26,14 @@ export function buildTelegramVerificationUrl(
 
 export function buildTelegramVerificationMessage(
   code: string,
-  verificationUrl: string,
+  _verificationUrl: string,
 ): string {
   return [
     "Moneko Verification",
     "",
     `Your code: ${code}`,
     "",
-    "Or click here to verify:",
-    verificationUrl,
+    "Tap the button below to verify.",
     "",
     "Valid for 10 minutes.",
     "",
