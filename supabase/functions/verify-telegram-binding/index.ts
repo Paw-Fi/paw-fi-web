@@ -90,16 +90,50 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    await supabase
+    const { data: claimedVerification, error: claimError } = await supabase
       .from("whatsapp_verifications")
       .update({ verified: true, user_id: user.id })
-      .eq("id", verification.id);
+      .eq("id", verification.id)
+      .eq("verified", false)
+      .select("id, subject")
+      .maybeSingle();
 
-    const subject = String(verification.subject || "");
+    if (claimError || !claimedVerification) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired verification code" }),
+        {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const subject = String(
+      claimedVerification.subject || verification.subject || "",
+    );
     const chatId = Number(subject.replace("telegram:", ""));
 
-    let upsertError: any = null;
+    let upsertError: unknown = null;
     if (Number.isFinite(chatId)) {
+      const chatIdText = String(chatId);
+      const { data: chatBinding } = await supabase
+        .from("user_contacts")
+        .select("id, user_id")
+        .eq("telegram_chat_id", chatIdText)
+        .maybeSingle();
+
+      if (chatBinding?.user_id && chatBinding.user_id !== user.id) {
+        return new Response(
+          JSON.stringify({
+            error: "This Telegram chat is already linked to another account",
+          }),
+          {
+            status: 409,
+            headers: { ...cors, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       const { data: existingContact } = await supabase
         .from("user_contacts")
         .select("id")
@@ -110,22 +144,29 @@ Deno.serve(async (req: Request) => {
         const res = await supabase
           .from("user_contacts")
           .update({
-            telegram_chat_id: String(chatId),
+            telegram_chat_id: chatIdText,
             verified: true,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingContact.id);
         upsertError = res.error;
-      } else {
-        const res = await supabase.from("user_contacts").upsert(
-          {
+      } else if (chatBinding?.id) {
+        const res = await supabase
+          .from("user_contacts")
+          .update({
             user_id: user.id,
-            telegram_chat_id: String(chatId),
             verified: true,
             updated_at: new Date().toISOString(),
-          },
-          { onConflict: "telegram_chat_id" },
-        );
+          })
+          .eq("id", chatBinding.id);
+        upsertError = res.error;
+      } else {
+        const res = await supabase.from("user_contacts").insert({
+          user_id: user.id,
+          telegram_chat_id: chatIdText,
+          verified: true,
+          updated_at: new Date().toISOString(),
+        });
         upsertError = res.error;
       }
     } else {
