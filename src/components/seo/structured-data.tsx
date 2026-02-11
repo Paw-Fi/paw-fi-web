@@ -1,154 +1,172 @@
-import React from 'react'
+import React from "react";
 
 interface OrganizationData {
-  name: string
-  url: string
-  logo?: string
-  description?: string
-  sameAs?: string[]
+  name: string;
+  url: string;
+  logo?: string;
+  description?: string;
+  sameAs?: string[];
 }
 
 interface WebsiteData {
-  url: string
-  name: string
-  description?: string
-  publisher?: OrganizationData
+  url: string;
+  name: string;
+  description?: string;
+  publisher?: OrganizationData;
 }
 
 interface ArticleData {
-  title: string
-  description: string
-  url: string
-  datePublished: string
-  dateModified?: string
+  title: string;
+  description: string;
+  url: string;
+  datePublished: string;
+  dateModified?: string;
   author?: {
-    name: string
-    url?: string
-    jobTitle?: string
-    image?: string
-    sameAs?: string[]
-  }
-  image?: string
-  publisher?: OrganizationData
-  wordCount?: number
-  timeRequired?: string
-  educationalLevel?: string
-  isAccessibleForFree?: boolean
+    name: string;
+    url?: string;
+    jobTitle?: string;
+    image?: string;
+    sameAs?: string[];
+  };
+  image?: string;
+  publisher?: OrganizationData;
+  wordCount?: number;
+  timeRequired?: string;
+  educationalLevel?: string;
+  isAccessibleForFree?: boolean;
   speakable?: {
-    cssSelector: string[]
-  }
+    cssSelector: string[];
+  };
 }
 
 interface BreadcrumbItem {
-  name: string
-  url: string
+  name: string;
+  url: string;
 }
 
 interface FAQItem {
-  question: string
-  answer: string
+  question: string;
+  answer: string;
 }
 
 interface HowToStep {
-  name: string
-  text: string
-  url?: string
-  image?: string
+  name: string;
+  text: string;
+  url?: string;
+  image?: string;
 }
 
 interface HowToData {
-  name: string
-  description: string
-  totalTime?: string
+  name: string;
+  description: string;
+  totalTime?: string;
   estimatedCost?: {
-    currency: string
-    value: string
-  }
-  steps: HowToStep[]
-  image?: string
+    currency: string;
+    value: string;
+  };
+  steps: HowToStep[];
+  image?: string;
 }
 
 interface SoftwareApplicationData {
-  name: string
-  description: string
-  url: string
-  applicationCategory: string
-  operatingSystem: string
-  requirements?: string
-  screenshot?: string[]
-  softwareVersion?: string
-  dateModified?: string
-  publisher?: OrganizationData
+  name: string;
+  description: string;
+  url: string;
+  applicationCategory: string;
+  operatingSystem: string;
+  requirements?: string;
+  screenshot?: string[];
+  softwareVersion?: string;
+  dateModified?: string;
+  publisher?: OrganizationData;
   aggregateRating?: {
-    ratingValue: number
-    ratingCount: number
-  }
+    ratingValue: number;
+    ratingCount: number;
+  };
 }
 
 interface PersonData {
-  name: string
-  jobTitle?: string
-  description?: string
-  image?: string
-  url?: string
-  sameAs?: string[]
-  worksFor?: OrganizationData
-  knowsAbout?: string[]
-  alumniOf?: string[]
-  email?: string
+  name: string;
+  jobTitle?: string;
+  description?: string;
+  image?: string;
+  url?: string;
+  sameAs?: string[];
+  worksFor?: OrganizationData;
+  knowsAbout?: string[];
+  alumniOf?: string[];
+  email?: string;
 }
 
 interface StructuredDataProps {
-  type: 'organization' | 'website' | 'article' | 'breadcrumb' | 'faq' | 'howto' | 'software' | 'person'
-  data: OrganizationData | WebsiteData | ArticleData | BreadcrumbItem[] | FAQItem[] | HowToData | SoftwareApplicationData | PersonData
+  type:
+    | "organization"
+    | "website"
+    | "article"
+    | "breadcrumb"
+    | "faq"
+    | "howto"
+    | "software"
+    | "person";
+  data:
+    | OrganizationData
+    | WebsiteData
+    | ArticleData
+    | BreadcrumbItem[]
+    | FAQItem[]
+    | HowToData
+    | SoftwareApplicationData
+    | PersonData;
 }
 
 export function StructuredData({ type, data }: StructuredDataProps) {
   const getStructuredData = () => {
-    const baseContext = 'https://schema.org'
+    const baseContext = "https://schema.org";
 
     switch (type) {
-      case 'organization':
-        const orgData = data as OrganizationData
+      case "organization":
+        const orgData = data as OrganizationData;
         return {
-          '@context': baseContext,
-          '@type': 'Organization',
+          "@context": baseContext,
+          "@type": "Organization",
           name: orgData.name,
           url: orgData.url,
           logo: orgData.logo,
           description: orgData.description,
           sameAs: orgData.sameAs,
-        }
+        };
 
-      case 'website':
-        const websiteData = data as WebsiteData
+      case "website":
+        const websiteData = data as WebsiteData;
         return {
-          '@context': baseContext,
-          '@type': 'WebSite',
+          "@context": baseContext,
+          "@type": "WebSite",
           name: websiteData.name,
           url: websiteData.url,
           description: websiteData.description,
           publisher: websiteData.publisher,
-        }
+        };
 
-      case 'article':
-        const articleData = data as ArticleData
+      case "article":
+        const articleData = data as ArticleData;
         return {
-          '@context': baseContext,
-          '@type': 'Article',
+          "@context": baseContext,
+          "@type": "Article",
           headline: articleData.title,
           description: articleData.description,
           url: articleData.url,
           datePublished: articleData.datePublished,
           dateModified: articleData.dateModified || articleData.datePublished,
-          author: articleData.author ? {
-            '@type': 'Person',
-            name: articleData.author.name,
-            url: articleData.author.url,
-            jobTitle: articleData.author.jobTitle,
-            image: articleData.author.image,
-            sameAs: articleData.author.sameAs,
-          } : undefined,
+          author: articleData.author
+            ? {
+                "@type": "Person",
+                name: articleData.author.name,
+                url: articleData.author.url,
+                jobTitle: articleData.author.jobTitle,
+                image: articleData.author.image,
+                sameAs: articleData.author.sameAs,
+              }
+            : undefined,
           image: articleData.image,
           publisher: articleData.publisher,
           wordCount: articleData.wordCount,
@@ -156,61 +174,61 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           educationalLevel: articleData.educationalLevel,
           isAccessibleForFree: articleData.isAccessibleForFree,
           speakable: articleData.speakable,
-        }
+        };
 
-      case 'breadcrumb':
-        const breadcrumbData = data as BreadcrumbItem[]
+      case "breadcrumb":
+        const breadcrumbData = data as BreadcrumbItem[];
         return {
-          '@context': baseContext,
-          '@type': 'BreadcrumbList',
+          "@context": baseContext,
+          "@type": "BreadcrumbList",
           itemListElement: breadcrumbData.map((item, index) => ({
-            '@type': 'ListItem',
+            "@type": "ListItem",
             position: index + 1,
             name: item.name,
             item: item.url,
           })),
-        }
+        };
 
-      case 'faq':
-        const faqData = data as FAQItem[]
+      case "faq":
+        const faqData = data as FAQItem[];
         return {
-          '@context': baseContext,
-          '@type': 'FAQPage',
+          "@context": baseContext,
+          "@type": "FAQPage",
           mainEntity: faqData.map((item) => ({
-            '@type': 'Question',
+            "@type": "Question",
             name: item.question,
             acceptedAnswer: {
-              '@type': 'Answer',
+              "@type": "Answer",
               text: item.answer,
             },
           })),
-        }
+        };
 
-      case 'howto':
-        const howtoData = data as HowToData
+      case "howto":
+        const howtoData = data as HowToData;
         return {
-          '@context': baseContext,
-          '@type': 'HowTo',
+          "@context": baseContext,
+          "@type": "HowTo",
           name: howtoData.name,
           description: howtoData.description,
           totalTime: howtoData.totalTime,
           estimatedCost: howtoData.estimatedCost,
           image: howtoData.image,
           step: howtoData.steps.map((step, index) => ({
-            '@type': 'HowToStep',
+            "@type": "HowToStep",
             position: index + 1,
             name: step.name,
             text: step.text,
             url: step.url,
             image: step.image,
           })),
-        }
+        };
 
-      case 'software':
-        const softwareData = data as SoftwareApplicationData
+      case "software":
+        const softwareData = data as SoftwareApplicationData;
         return {
-          '@context': baseContext,
-          '@type': 'SoftwareApplication',
+          "@context": baseContext,
+          "@type": "SoftwareApplication",
           name: softwareData.name,
           description: softwareData.description,
           url: softwareData.url,
@@ -221,18 +239,20 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           softwareVersion: softwareData.softwareVersion,
           dateModified: softwareData.dateModified,
           publisher: softwareData.publisher,
-          aggregateRating: softwareData.aggregateRating ? {
-            '@type': 'AggregateRating',
-            ratingValue: softwareData.aggregateRating.ratingValue,
-            ratingCount: softwareData.aggregateRating.ratingCount,
-          } : undefined,
-        }
+          aggregateRating: softwareData.aggregateRating
+            ? {
+                "@type": "AggregateRating",
+                ratingValue: softwareData.aggregateRating.ratingValue,
+                ratingCount: softwareData.aggregateRating.ratingCount,
+              }
+            : undefined,
+        };
 
-      case 'person':
-        const personData = data as PersonData
+      case "person":
+        const personData = data as PersonData;
         return {
-          '@context': baseContext,
-          '@type': 'Person',
+          "@context": baseContext,
+          "@type": "Person",
           name: personData.name,
           jobTitle: personData.jobTitle,
           description: personData.description,
@@ -243,23 +263,25 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           knowsAbout: personData.knowsAbout,
           alumniOf: personData.alumniOf,
           email: personData.email,
-        }
+        };
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
-  const structuredData = getStructuredData()
+  const structuredData = getStructuredData();
 
-  if (!structuredData) return null
+  if (!structuredData) return null;
 
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+      }}
     />
-  )
+  );
 }
 
 // Pre-configured components for common use cases
@@ -268,17 +290,17 @@ export function MonekoOrganizationData() {
     <StructuredData
       type="organization"
       data={{
-        name: 'Moneko',
-        url: 'https://moneko.io',
-        logo: 'https://moneko.io/logo192.png',
-        description: 'Personal finance education and budgeting tools platform',
+        name: "Moneko",
+        url: "https://moneko.io",
+        logo: "https://moneko.io/logo192.png",
+        description: "Personal finance education and budgeting tools platform",
         sameAs: [
-          'https://twitter.com/moneko',
-          'https://linkedin.com/company/moneko-ai',
+          "https://twitter.com/moneko",
+          "https://linkedin.com/company/moneko-ai",
         ],
       }}
     />
-  )
+  );
 }
 
 export function MonekoWebsiteData() {
@@ -286,15 +308,16 @@ export function MonekoWebsiteData() {
     <StructuredData
       type="website"
       data={{
-        url: 'https://moneko.io',
-        name: 'Moneko',
-        description: 'Learn personal finance with comprehensive budgeting tools, calculators, and educational resources',
+        url: "https://moneko.io",
+        name: "Moneko",
+        description:
+          "Learn personal finance with comprehensive budgeting tools, calculators, and educational resources",
         publisher: {
-          name: 'Moneko',
-          url: 'https://moneko.io',
-          logo: 'https://moneko.io/logo192.png',
+          name: "Moneko",
+          url: "https://moneko.io",
+          logo: "https://moneko.io/logo192.png",
         },
       }}
     />
-  )
+  );
 }

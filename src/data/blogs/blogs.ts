@@ -4,11 +4,11 @@ import RoeImg from "@/assets/images/blogs/roe.jpg";// Replace with actual image 
 // --- Reusable Authors ---
 export const authorsData: BlogAuthor[] = [
   {
-    id: "roe-luo",
-    name: "Roe Luo",
+    id: "joe",
+    name: "Joe",
     avatar: RoeImg,
     title: "Financial Advisor, CFA",
-    bio: "Roe Luo is a Chartered Financial Analyst (CFA) and former equity research analyst with over a decade of experience in the finance industry. He specializes in financial modeling, investment analysis, and making complex financial topics accessible to a broad audience. His focus is on promoting inclusive and understandable investment strategies.",
+    bio: "Joe is a Chartered Financial Analyst (CFA) and former equity research analyst with over a decade of experience in the finance industry. He specializes in financial modeling, investment analysis, and making complex financial topics accessible to a broad audience. His focus is on promoting inclusive and understandable investment strategies.",
   },
   {
     id: "alex-rivera",
