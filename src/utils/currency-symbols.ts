@@ -54,6 +54,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'HUF': 'Ft',
   'MMK': 'Ks',
   'JOD': 'د.أ',
+  'SYP': '£S',
 };
 
 export function getCurrencySymbolBasedOnTimeZone(): string {
@@ -130,6 +131,7 @@ export function getCurrencySymbolBasedOnTimeZone(): string {
     'Asia/Thimphu': 'BTN',
     'Asia/Yangon': 'MMK',
     'Asia/Amman': 'JOD',
+    'Asia/Damascus': 'SYP',
     'Asia/Ho_Chi_Minh': 'VND',
     'Asia/Phnom_Penh': 'KHR',
     'Asia/Vientiane': 'LAK',

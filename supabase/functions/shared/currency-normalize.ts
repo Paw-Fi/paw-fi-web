@@ -57,6 +57,9 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Malawi Kwacha
     'MK': 'MWK',
 
+    // Syrian Pound
+    '£S': 'SYP',
+
     // Kenya Shilling
     'KSH': 'KES',
     'KSHS': 'KES',
