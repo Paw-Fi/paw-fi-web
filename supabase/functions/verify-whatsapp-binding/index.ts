@@ -6,6 +6,89 @@ import { getCorsHeaders } from "../shared/cors.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 
+interface UserContactRow {
+  id: string;
+  user_id: string | null;
+  phone_e164: string | null;
+  telegram_chat_id: string | null;
+  telegram_user_id: string | null;
+  whatsapp_user_id: string | null;
+  verified: boolean | null;
+}
+
+async function selectBestContactForUser(
+  supabase: any,
+  userId: string,
+): Promise<UserContactRow | null> {
+  // Prefer a contact row that already has a telegram_chat_id (Telegram-first flows).
+  const preferred = await supabase
+    .from("user_contacts")
+    .select(
+      "id, user_id, phone_e164, telegram_chat_id, telegram_user_id, whatsapp_user_id, verified",
+    )
+    .eq("user_id", userId)
+    .not("telegram_chat_id", "is", null)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (preferred.error) {
+    console.error(
+      "[verify-whatsapp-binding] contact select error",
+      preferred.error,
+    );
+    return null;
+  }
+  if (preferred.data) return preferred.data as UserContactRow;
+
+  const fallback = await supabase
+    .from("user_contacts")
+    .select(
+      "id, user_id, phone_e164, telegram_chat_id, telegram_user_id, whatsapp_user_id, verified",
+    )
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (fallback.error) {
+    console.error(
+      "[verify-whatsapp-binding] contact select error",
+      fallback.error,
+    );
+    return null;
+  }
+  return (fallback.data as UserContactRow) ?? null;
+}
+
+async function mergeContacts(
+  supabase: any,
+  primaryContactId: string,
+  secondaryContactId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("merge_user_contacts", {
+    p_primary_contact_id: primaryContactId,
+    p_secondary_contact_id: secondaryContactId,
+  });
+
+  if (error) {
+    console.error("[verify-whatsapp-binding] merge_user_contacts error", error);
+    return false;
+  }
+
+  if (data && (data as any).success === false) {
+    console.error(
+      "[verify-whatsapp-binding] merge_user_contacts failed",
+      (data as any).error,
+    );
+    return false;
+  }
+
+  return true;
+}
+
 Deno.serve(async (req: Request) => {
   const cors = getCorsHeaders(req.headers.get("Origin") ?? undefined);
   if (req.method === "OPTIONS") {
@@ -87,6 +170,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // If this verification was created for a specific user, ensure the caller matches.
+    if (verification.user_id && verification.user_id !== user.id) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
+
     // Mark verification as used and link to user
     await supabase
       .from("whatsapp_verifications")
@@ -97,25 +188,131 @@ Deno.serve(async (req: Request) => {
       .eq("id", verification.id);
 
     // Bind phone to user in user_contacts
-    const { error: upsertError } = await supabase.from("user_contacts").upsert(
-      {
-        phone_e164: verification.phone_e164,
-        user_id: user.id,
-        verified: true,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "phone_e164" },
-    );
+    const phone = verification.phone_e164 as string | null;
+    if (!phone) {
+      return new Response(JSON.stringify({ error: "Missing phone number" }), {
+        status: 500,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
+    }
 
-    if (upsertError) {
-      console.error("Failed to bind phone:", upsertError);
+    const nowIso = new Date().toISOString();
+
+    // Resolve existing rows
+    const { data: phoneContact, error: phoneContactError } = await supabase
+      .from("user_contacts")
+      .select(
+        "id, user_id, phone_e164, telegram_chat_id, telegram_user_id, whatsapp_user_id, verified",
+      )
+      .eq("phone_e164", phone)
+      .maybeSingle();
+
+    if (phoneContactError) {
+      console.error("Failed to look up phone contact:", phoneContactError);
       return new Response(
-        JSON.stringify({ error: "Failed to bind WhatsApp number" }),
+        JSON.stringify({ error: "Failed to bind WhatsApp" }),
         {
           status: 500,
           headers: { ...cors, "Content-Type": "application/json" },
         },
       );
+    }
+
+    const userContact = await selectBestContactForUser(supabase, user.id);
+
+    // Prefer the phone-bound row as primary (avoids unique phone conflict).
+    if (phoneContact?.id) {
+      const updatePhone = await supabase
+        .from("user_contacts")
+        .update({
+          user_id: user.id,
+          verified: true,
+          whatsapp_user_id: phone,
+          updated_at: nowIso,
+        })
+        .eq("id", phoneContact.id);
+
+      if (updatePhone.error) {
+        console.error("Failed to bind phone:", updatePhone.error);
+        return new Response(
+          JSON.stringify({ error: "Failed to bind WhatsApp number" }),
+          {
+            status: 500,
+            headers: { ...cors, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (userContact?.id && userContact.id !== phoneContact.id) {
+        // Copy Telegram identifiers to the phone row if needed.
+        if (!phoneContact.telegram_chat_id && userContact.telegram_chat_id) {
+          await supabase
+            .from("user_contacts")
+            .update({
+              telegram_chat_id: userContact.telegram_chat_id,
+              updated_at: nowIso,
+            })
+            .eq("id", phoneContact.id);
+        }
+
+        const merged = await mergeContacts(
+          supabase,
+          phoneContact.id,
+          userContact.id,
+        );
+        if (!merged) {
+          return new Response(
+            JSON.stringify({ error: "Failed to merge contact records" }),
+            {
+              status: 500,
+              headers: { ...cors, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+    } else if (userContact?.id) {
+      // Telegram-first: attach phone to the existing user contact row.
+      const res = await supabase
+        .from("user_contacts")
+        .update({
+          phone_e164: phone,
+          whatsapp_user_id: phone,
+          verified: true,
+          updated_at: nowIso,
+        })
+        .eq("id", userContact.id);
+
+      if (res.error) {
+        console.error("Failed to bind phone:", res.error);
+        return new Response(
+          JSON.stringify({ error: "Failed to bind WhatsApp number" }),
+          {
+            status: 500,
+            headers: { ...cors, "Content-Type": "application/json" },
+          },
+        );
+      }
+    } else {
+      // First channel being verified.
+      const { error: insertError } = await supabase
+        .from("user_contacts")
+        .insert({
+          phone_e164: phone,
+          whatsapp_user_id: phone,
+          user_id: user.id,
+          verified: true,
+          updated_at: nowIso,
+        });
+      if (insertError) {
+        console.error("Failed to bind phone:", insertError);
+        return new Response(
+          JSON.stringify({ error: "Failed to bind WhatsApp number" }),
+          {
+            status: 500,
+            headers: { ...cors, "Content-Type": "application/json" },
+          },
+        );
+      }
     }
 
     // Send onboarding message to WhatsApp after successful verification

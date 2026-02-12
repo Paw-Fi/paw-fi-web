@@ -96,36 +96,36 @@ WHATSAPP BUDGET FLOW (WhatsApp only):
 const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
 const PROCESSING_ACK_MESSAGES = [
-      "I’m looking into that for you now.",
-    "One moment while I process your request.",
-    "I am gathering the information you requested.",
-    "Just a moment while I review those details.",
-    "Processing your inquiry. Stand by, please.",
-    "I’m working on a response for you.",
-    "Checking my records for the most accurate information.",
-    "I’m analyzing your request now.",
-    "One second while I pull up that information.",
-    "I am currently formulating your answer.",
-    "Retrieving the requested data. One moment.",
-    "I'm reviewing the specifics of your message.",
-    "Stand by while I finalize your request.",
-    "I am cross-referencing that for you now.",
-    "Just a moment while I prepare the details.",
-    "I’m prioritizing your request. Please wait.",
-    "Searching for the most relevant information.",
-    "I will have an answer for you in just a moment.",
-    "Thank you for your patience; I'm looking into this.",
-    "I am currently processing your input.",
-    "Just a quick second while I verify those details.",
-    "Reviewing your request to ensure accuracy.",
-    "I’m pulling together the information you need.",
-    "One moment while I sync with the database.",
-    "Briefly reviewing your input now.",
-    "I am preparing a detailed response for you.",
-    "Just a moment while I look into that.",
-    "Processing... I'll be with you in a second.",
-    "Checking the available data to assist you.",
-    "I am currently working on your request."
+  "I’m looking into that for you now.",
+  "One moment while I process your request.",
+  "I am gathering the information you requested.",
+  "Just a moment while I review those details.",
+  "Processing your inquiry. Stand by, please.",
+  "I’m working on a response for you.",
+  "Checking my records for the most accurate information.",
+  "I’m analyzing your request now.",
+  "One second while I pull up that information.",
+  "I am currently formulating your answer.",
+  "Retrieving the requested data. One moment.",
+  "I'm reviewing the specifics of your message.",
+  "Stand by while I finalize your request.",
+  "I am cross-referencing that for you now.",
+  "Just a moment while I prepare the details.",
+  "I’m prioritizing your request. Please wait.",
+  "Searching for the most relevant information.",
+  "I will have an answer for you in just a moment.",
+  "Thank you for your patience; I'm looking into this.",
+  "I am currently processing your input.",
+  "Just a quick second while I verify those details.",
+  "Reviewing your request to ensure accuracy.",
+  "I’m pulling together the information you need.",
+  "One moment while I sync with the database.",
+  "Briefly reviewing your input now.",
+  "I am preparing a detailed response for you.",
+  "Just a moment while I look into that.",
+  "Processing... I'll be with you in a second.",
+  "Checking the available data to assist you.",
+  "I am currently working on your request.",
 ];
 const PROCESSING_ACK_DELAY_MS = 3000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
@@ -1797,7 +1797,7 @@ Deno.serve(async (req: Request) => {
   debugLog(WHATSAPP_DEBUG, "context lookup", { contextData, contextError });
 
   // Map the context data to maintain backward compatibility
-  const contact = contextData
+  let contact = contextData
     ? {
         id: contextData.contact_id,
         user_id: contextData.user_id,
@@ -1807,7 +1807,114 @@ Deno.serve(async (req: Request) => {
         preferred_timezone: contextData.preferred_timezone,
       }
     : null;
-  const contactError = contextError;
+  let contactError = contextError;
+
+  // Self-heal: if a user was previously verified (whatsapp_verifications) but their
+  // phone-bound user_contacts row is missing, recreate/merge it so WhatsApp doesn't
+  // incorrectly fall back to the verification prompt.
+  if (!contact && !contactError) {
+    try {
+      const { data: verifiedRow, error: verifiedRowError } = await supabase
+        .from("whatsapp_verifications")
+        .select("user_id")
+        .eq("channel", "whatsapp")
+        .eq("subject", from)
+        .eq("verified", true)
+        .not("user_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!verifiedRowError && verifiedRow?.user_id) {
+        const verifiedUserId = String(verifiedRow.user_id);
+        const nowIso = new Date().toISOString();
+
+        const { data: phoneContact } = await supabase
+          .from("user_contacts")
+          .select("id, user_id, telegram_chat_id")
+          .eq("phone_e164", from)
+          .maybeSingle();
+
+        const { data: userContact } = await supabase
+          .from("user_contacts")
+          .select("id, phone_e164, telegram_chat_id")
+          .eq("user_id", verifiedUserId)
+          .order("updated_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (phoneContact?.id) {
+          // Allow rebind: attach this phone to the verified user.
+          await supabase
+            .from("user_contacts")
+            .update({
+              user_id: verifiedUserId,
+              verified: true,
+              whatsapp_user_id: from,
+              updated_at: nowIso,
+            })
+            .eq("id", phoneContact.id);
+
+          if (userContact?.id && userContact.id !== phoneContact.id) {
+            if (
+              !phoneContact.telegram_chat_id &&
+              userContact.telegram_chat_id
+            ) {
+              await supabase
+                .from("user_contacts")
+                .update({
+                  telegram_chat_id: userContact.telegram_chat_id,
+                  updated_at: nowIso,
+                })
+                .eq("id", phoneContact.id);
+            }
+            await supabase.rpc("merge_user_contacts", {
+              p_primary_contact_id: phoneContact.id,
+              p_secondary_contact_id: userContact.id,
+            });
+          }
+        } else if (userContact?.id) {
+          await supabase
+            .from("user_contacts")
+            .update({
+              phone_e164: from,
+              whatsapp_user_id: from,
+              verified: true,
+              updated_at: nowIso,
+            })
+            .eq("id", userContact.id);
+        } else {
+          await supabase.from("user_contacts").insert({
+            phone_e164: from,
+            whatsapp_user_id: from,
+            user_id: verifiedUserId,
+            verified: true,
+            updated_at: nowIso,
+          });
+        }
+
+        // Re-fetch context after repair.
+        const { data: repairedRaw, error: repairedError } = await supabase
+          .rpc("get_whatsapp_context", { p_phone_e164: from })
+          .single();
+        const repaired: any = repairedRaw as any;
+        if (!repairedError && repaired) {
+          contact = {
+            id: repaired.contact_id,
+            user_id: repaired.user_id,
+            verified: repaired.verified,
+            preferred_currency: repaired.preferred_currency,
+            preferred_language: repaired.preferred_language,
+            preferred_timezone: repaired.preferred_timezone,
+          };
+          contactError = null;
+        }
+      }
+    } catch (e) {
+      console.error("[twilio-whatsapp-ai-bot] self-heal failed", e);
+    }
+  }
 
   // Handle "Start Verification" command (Unauthenticated flow)
   if (body.trim().toLowerCase() === "start verification") {

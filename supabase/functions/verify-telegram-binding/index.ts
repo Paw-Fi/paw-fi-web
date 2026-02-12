@@ -5,6 +5,89 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 
+interface UserContactRow {
+  id: string;
+  user_id: string | null;
+  phone_e164: string | null;
+  telegram_chat_id: string | null;
+  telegram_user_id: string | null;
+  whatsapp_user_id: string | null;
+  verified: boolean | null;
+}
+
+async function selectBestContactForUser(
+  supabase: any,
+  userId: string,
+): Promise<UserContactRow | null> {
+  // Prefer a contact row that already has a phone_e164 (it is the WhatsApp lookup key).
+  const preferred = await supabase
+    .from("user_contacts")
+    .select(
+      "id, user_id, phone_e164, telegram_chat_id, telegram_user_id, whatsapp_user_id, verified",
+    )
+    .eq("user_id", userId)
+    .not("phone_e164", "is", null)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (preferred.error) {
+    console.error(
+      "[verify-telegram-binding] contact select error",
+      preferred.error,
+    );
+    return null;
+  }
+  if (preferred.data) return preferred.data as UserContactRow;
+
+  const fallback = await supabase
+    .from("user_contacts")
+    .select(
+      "id, user_id, phone_e164, telegram_chat_id, telegram_user_id, whatsapp_user_id, verified",
+    )
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (fallback.error) {
+    console.error(
+      "[verify-telegram-binding] contact select error",
+      fallback.error,
+    );
+    return null;
+  }
+  return (fallback.data as UserContactRow) ?? null;
+}
+
+async function mergeContacts(
+  supabase: any,
+  primaryContactId: string,
+  secondaryContactId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("merge_user_contacts", {
+    p_primary_contact_id: primaryContactId,
+    p_secondary_contact_id: secondaryContactId,
+  });
+
+  if (error) {
+    console.error("[verify-telegram-binding] merge_user_contacts error", error);
+    return false;
+  }
+
+  if (data && (data as any).success === false) {
+    console.error(
+      "[verify-telegram-binding] merge_user_contacts failed",
+      (data as any).error,
+    );
+    return false;
+  }
+
+  return true;
+}
+
 async function sendTelegramMessage(
   token: string,
   chatId: number,
@@ -118,54 +201,76 @@ Deno.serve(async (req: Request) => {
       const chatIdText = String(chatId);
       const { data: chatBinding } = await supabase
         .from("user_contacts")
-        .select("id, user_id")
+        .select(
+          "id, user_id, phone_e164, telegram_chat_id, telegram_user_id, whatsapp_user_id, verified",
+        )
         .eq("telegram_chat_id", chatIdText)
         .maybeSingle();
 
-      if (chatBinding?.user_id && chatBinding.user_id !== user.id) {
-        return new Response(
-          JSON.stringify({
-            error: "This Telegram chat is already linked to another account",
-          }),
-          {
-            status: 409,
-            headers: { ...cors, "Content-Type": "application/json" },
-          },
-        );
-      }
+      const existingContact = await selectBestContactForUser(supabase, user.id);
 
-      const { data: existingContact } = await supabase
-        .from("user_contacts")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      // Choose a primary row that already owns phone_e164 (avoids unique conflicts)
+      // and merge the other row into it.
+      const chatRow = (chatBinding as UserContactRow) ?? null;
+      const userRow = existingContact;
+      const nowIso = new Date().toISOString();
 
-      if (existingContact?.id) {
+      if (userRow?.id && chatRow?.id && userRow.id !== chatRow.id) {
+        const primary = userRow.phone_e164 ? userRow : chatRow;
+        const secondary = primary.id === userRow.id ? chatRow : userRow;
+
+        // Ensure the primary contact is linked and carries the telegram chat id.
+        const updatePrimary = await supabase
+          .from("user_contacts")
+          .update({
+            user_id: user.id,
+            telegram_chat_id: chatIdText,
+            verified: true,
+            updated_at: nowIso,
+          })
+          .eq("id", primary.id);
+
+        if (updatePrimary.error) {
+          upsertError = updatePrimary.error;
+        } else {
+          const merged = await mergeContacts(
+            supabase,
+            primary.id,
+            secondary.id,
+          );
+          if (!merged) {
+            upsertError = { message: "Failed to merge user contacts" };
+          }
+        }
+      } else if (userRow?.id) {
+        // Update existing user contact row (Telegram first/only).
         const res = await supabase
           .from("user_contacts")
           .update({
             telegram_chat_id: chatIdText,
             verified: true,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           })
-          .eq("id", existingContact.id);
+          .eq("id", userRow.id);
         upsertError = res.error;
-      } else if (chatBinding?.id) {
+      } else if (chatRow?.id) {
+        // Allow rebind: attach this chat to the current user.
         const res = await supabase
           .from("user_contacts")
           .update({
             user_id: user.id,
             verified: true,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           })
-          .eq("id", chatBinding.id);
+          .eq("id", chatRow.id);
         upsertError = res.error;
       } else {
+        // No contact exists yet; create one for Telegram.
         const res = await supabase.from("user_contacts").insert({
           user_id: user.id,
           telegram_chat_id: chatIdText,
           verified: true,
-          updated_at: new Date().toISOString(),
+          updated_at: nowIso,
         });
         upsertError = res.error;
       }
