@@ -109,6 +109,10 @@ Deno.serve(async (req: Request) => {
   const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get(
     "TWILIO_MESSAGING_SERVICE_SID",
   );
+  // Optional override: if set, include an explicit WhatsApp sender in Twilio
+  // template sends (format: whatsapp:+14155238886). This can help avoid certain
+  // Messaging Service sender pool constraints.
+  const TWILIO_WHATSAPP_FROM = Deno.env.get("TWILIO_WHATSAPP_FROM");
 
   try {
     const { code } = await req.json();
@@ -149,18 +153,58 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Find valid verification (user_id is null when created from WhatsApp)
-    const { data: verification, error: verifyError } = await supabase
-      .from("whatsapp_verifications")
-      .select("*")
-      .eq("channel", "whatsapp")
-      .eq("verification_code", codeStr)
-      .eq("verified", false)
-      .gt("expires_at", new Date().toISOString())
-      .single();
+    const nowIso = new Date().toISOString();
 
-    if (verifyError || !verification) {
-      console.error("Verification lookup error:", verifyError);
+    // Find valid verification.
+    // Note: we intentionally avoid `.single()` here to handle rare real-world
+    // OTP collisions (multiple rows with same 6-digit code).
+    const loadCandidates = async (scope: "user" | "public") => {
+      let q = supabase
+        .from("whatsapp_verifications")
+        .select("*")
+        .eq("channel", "whatsapp")
+        .eq("verification_code", codeStr)
+        .eq("verified", false)
+        .gt("expires_at", nowIso)
+        .order("created_at", { ascending: false })
+        .limit(2);
+
+      q = scope === "user" ? q.eq("user_id", user.id) : q.is("user_id", null);
+
+      return await q;
+    };
+
+    // Prefer user-scoped rows (app-initiated flows), then fallback to public
+    // WhatsApp-initiated rows (user_id is null).
+    const userScoped = await loadCandidates("user");
+    if (userScoped.error) {
+      console.error(
+        "Verification lookup (user scope) error:",
+        userScoped.error,
+      );
+    }
+
+    let candidates = (userScoped.data as any[] | null) ?? null;
+
+    if (!candidates || candidates.length === 0) {
+      const publicScoped = await loadCandidates("public");
+      if (publicScoped.error) {
+        console.error(
+          "Verification lookup (public scope) error:",
+          publicScoped.error,
+        );
+        return new Response(
+          JSON.stringify({ error: "Failed to verify code" }),
+          {
+            status: 500,
+            headers: { ...cors, "Content-Type": "application/json" },
+          },
+        );
+      }
+      candidates = (publicScoped.data as any[] | null) ?? null;
+    }
+
+    if (!candidates || candidates.length === 0) {
       return new Response(
         JSON.stringify({ error: "Invalid or expired verification code" }),
         {
@@ -170,6 +214,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    if (candidates.length > 1) {
+      // Extremely rare but possible at scale with 6-digit OTPs.
+      // Safer to force re-issue than to bind the wrong number.
+      return new Response(
+        JSON.stringify({
+          error:
+            "Verification code collision. Please request a new code in WhatsApp (reply: Start Verification) and try again.",
+        }),
+        {
+          status: 409,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const verification = candidates[0];
+
     // If this verification was created for a specific user, ensure the caller matches.
     if (verification.user_id && verification.user_id !== user.id) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -178,25 +239,40 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Mark verification as used and link to user
-    await supabase
+    // Claim the verification atomically (idempotent / race-safe).
+    const { data: claimedVerification, error: claimError } = await supabase
       .from("whatsapp_verifications")
       .update({
         verified: true,
         user_id: user.id,
       })
-      .eq("id", verification.id);
+      .eq("id", verification.id)
+      .eq("verified", false)
+      .select("id, phone_e164, subject, user_id")
+      .maybeSingle();
+
+    if (claimError || !claimedVerification) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired verification code" }),
+        {
+          status: 400,
+          headers: { ...cors, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     // Bind phone to user in user_contacts
-    const phone = verification.phone_e164 as string | null;
+    const phone =
+      (claimedVerification.phone_e164 as string | null) ||
+      (claimedVerification.subject as string | null) ||
+      (verification.phone_e164 as string | null) ||
+      (verification.subject as string | null);
     if (!phone) {
       return new Response(JSON.stringify({ error: "Missing phone number" }), {
         status: 500,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
-
-    const nowIso = new Date().toISOString();
 
     // Resolve existing rows
     const { data: phoneContact, error: phoneContactError } = await supabase
@@ -315,96 +391,105 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Send onboarding message to WhatsApp after successful verification
-    try {
-      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-      const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+    // Send onboarding message to WhatsApp after successful verification (best-effort)
+    if (!TWILIO_MESSAGING_SERVICE_SID && !TWILIO_WHATSAPP_FROM) {
+      console.warn(
+        "[verify-whatsapp-binding] Missing TWILIO_MESSAGING_SERVICE_SID and TWILIO_WHATSAPP_FROM; skipping onboarding send",
+      );
+    } else {
+      try {
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+        const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
 
-      // Send onboarding message using Twilio Content Template
-      const twilioParams: Record<string, string> = {
-        To: `whatsapp:${verification.phone_e164}`,
-        ContentSid: TWILIO_TEMPLATES.ONBOARDING,
-      };
-
-      if (TWILIO_MESSAGING_SERVICE_SID) {
-        twilioParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
-      } else {
-        return new Response(
-          JSON.stringify({ error: "Missing Messaging Service SID" }),
-          {
-            status: 500,
-            headers: { ...cors, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      const twilioBody = new URLSearchParams(twilioParams);
-
-      await fetch(twilioUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${twilioAuth}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: twilioBody.toString(),
-      });
-
-      // Check if user is on free plan and send NON_SUBSCRIBER message
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("plan, status")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (isFreeUser(subscription)) {
-        console.log(
-          `[verify-whatsapp-binding] User ${user.id} is on free plan, sending NON_SUBSCRIBER template`,
-        );
-
-        // Send NON_SUBSCRIBER template using the same method as onboarding
-        const nonSubscriberParams: Record<string, string> = {
-          To: `whatsapp:${verification.phone_e164}`,
-          ContentSid: TWILIO_TEMPLATES.NON_SUBSCRIBER,
-          MessagingServiceSid: TWILIO_MESSAGING_SERVICE_SID,
+        // Send onboarding message using Twilio Content Template
+        const twilioParams: Record<string, string> = {
+          To: `whatsapp:${phone}`,
+          ContentSid: TWILIO_TEMPLATES.ONBOARDING,
         };
+        if (TWILIO_WHATSAPP_FROM) {
+          twilioParams.From = TWILIO_WHATSAPP_FROM;
+        }
+        if (TWILIO_MESSAGING_SERVICE_SID) {
+          twilioParams.MessagingServiceSid = TWILIO_MESSAGING_SERVICE_SID;
+        }
 
-        const nonSubscriberBody = new URLSearchParams(nonSubscriberParams);
-
-        const nonSubscriberResponse = await fetch(twilioUrl, {
+        const onboardingResponse = await fetch(twilioUrl, {
           method: "POST",
           headers: {
             Authorization: `Basic ${twilioAuth}`,
             "Content-Type": "application/x-www-form-urlencoded",
           },
-          body: nonSubscriberBody.toString(),
+          body: new URLSearchParams(twilioParams).toString(),
         });
 
-        if (nonSubscriberResponse.ok) {
-          const result = await nonSubscriberResponse.json();
-          console.log(
-            `[verify-whatsapp-binding] NON_SUBSCRIBER template sent successfully: ${result.sid}`,
-          );
-        } else {
-          const errorText = await nonSubscriberResponse.text();
+        if (!onboardingResponse.ok) {
+          const errorText = await onboardingResponse.text();
           console.error(
-            `[verify-whatsapp-binding] Failed to send NON_SUBSCRIBER template:`,
+            "[verify-whatsapp-binding] Failed to send onboarding template:",
             errorText,
           );
         }
-      } else {
-        console.log(
-          `[verify-whatsapp-binding] User ${user.id} is not on free plan, skipping NON_SUBSCRIBER template`,
-        );
+
+        // Check if user is on free plan and send NON_SUBSCRIBER message
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("plan, status")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (isFreeUser(subscription)) {
+          console.log(
+            `[verify-whatsapp-binding] User ${user.id} is on free plan, sending NON_SUBSCRIBER template`,
+          );
+
+          const nonSubscriberParams: Record<string, string> = {
+            To: `whatsapp:${phone}`,
+            ContentSid: TWILIO_TEMPLATES.NON_SUBSCRIBER,
+          };
+          if (TWILIO_WHATSAPP_FROM) {
+            nonSubscriberParams.From = TWILIO_WHATSAPP_FROM;
+          }
+          if (TWILIO_MESSAGING_SERVICE_SID) {
+            nonSubscriberParams.MessagingServiceSid =
+              TWILIO_MESSAGING_SERVICE_SID;
+          }
+
+          const nonSubscriberResponse = await fetch(twilioUrl, {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${twilioAuth}`,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams(nonSubscriberParams).toString(),
+          });
+
+          if (nonSubscriberResponse.ok) {
+            const result = await nonSubscriberResponse.json();
+            console.log(
+              `[verify-whatsapp-binding] NON_SUBSCRIBER template sent successfully: ${result.sid}`,
+            );
+          } else {
+            const errorText = await nonSubscriberResponse.text();
+            console.error(
+              `[verify-whatsapp-binding] Failed to send NON_SUBSCRIBER template:`,
+              errorText,
+            );
+          }
+        } else {
+          console.log(
+            `[verify-whatsapp-binding] User ${user.id} is not on free plan, skipping NON_SUBSCRIBER template`,
+          );
+        }
+      } catch (twilioError) {
+        // Don't fail the verification if message sending fails
+        console.error("Failed to send onboarding message:", twilioError);
       }
-    } catch (twilioError) {
-      // Don't fail the verification if message sending fails
-      console.error("Failed to send onboarding message:", twilioError);
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        phone: verification.phone_e164,
+        phone,
         message: "WhatsApp number verified and linked successfully",
       }),
       {

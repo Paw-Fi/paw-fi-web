@@ -1043,6 +1043,9 @@ Deno.serve(async (req: Request) => {
 
   const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
   const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const TWILIO_MESSAGING_SERVICE_SID = Deno.env.get(
+    "TWILIO_MESSAGING_SERVICE_SID",
+  );
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -1790,7 +1793,7 @@ Deno.serve(async (req: Request) => {
   // 2. Fetch all user context in a single optimized call
   const { data: contextDataRaw, error: contextError } = await supabase
     .rpc("get_whatsapp_context", { p_phone_e164: from })
-    .single();
+    .maybeSingle();
 
   const contextData: any = contextDataRaw as any;
 
@@ -1897,7 +1900,7 @@ Deno.serve(async (req: Request) => {
         // Re-fetch context after repair.
         const { data: repairedRaw, error: repairedError } = await supabase
           .rpc("get_whatsapp_context", { p_phone_e164: from })
-          .single();
+          .maybeSingle();
         const repaired: any = repairedRaw as any;
         if (!repairedError && repaired) {
           contact = {
@@ -1918,9 +1921,31 @@ Deno.serve(async (req: Request) => {
 
   // Handle "Start Verification" command (Unauthenticated flow)
   if (body.trim().toLowerCase() === "start verification") {
-    // Generate OTP logic (Copied from original webhook)
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate OTP.
+    // 6-digit codes can theoretically collide at scale; we do a small best-effort
+    // check against currently-active, unverified codes to reduce collision odds.
+    const nowIso = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    let code = "";
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const candidate = Math.floor(100000 + Math.random() * 900000).toString();
+      const { data: existing, error: existingError } = await supabase
+        .from("whatsapp_verifications")
+        .select("id")
+        .eq("channel", "whatsapp")
+        .eq("verification_code", candidate)
+        .eq("verified", false)
+        .gt("expires_at", nowIso)
+        .limit(1);
+
+      if (!existingError && (!existing || existing.length === 0)) {
+        code = candidate;
+        break;
+      }
+    }
+    if (!code) {
+      code = Math.floor(100000 + Math.random() * 900000).toString();
+    }
 
     await supabase
       .from("whatsapp_verifications")
@@ -1942,8 +1967,10 @@ Deno.serve(async (req: Request) => {
       to,
       from,
       TWILIO_TEMPLATES.VERIFICATION_CODE,
-      JSON.stringify({ CODE: code }),
+      JSON.stringify({ "1": code, CODE: code }),
+      TWILIO_MESSAGING_SERVICE_SID || undefined,
     );
+
     if (idempotencyKey) {
       await updateTwilioIdempotency(supabase, idempotencyKey, {
         status: "done",
@@ -1955,13 +1982,15 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!contact || !contact.verified || !contact.user_id) {
-    // Not verified: Send prompt template, fallback only if it fails
+    // Not verified: Send prompt template, fallback to TwiML if it fails
     const templateResult = await sendWhatsAppTemplate(
       twilioAccountSid,
       twilioAuthToken,
       to,
       from,
       TWILIO_TEMPLATES.VERIFICATION_PROMPT,
+      undefined,
+      TWILIO_MESSAGING_SERVICE_SID || undefined,
     );
     if (!templateResult.success) {
       console.error(
@@ -2005,6 +2034,8 @@ Deno.serve(async (req: Request) => {
       to,
       from,
       TWILIO_TEMPLATES.NON_SUBSCRIBER,
+      undefined,
+      undefined,
     );
     if (idempotencyKey) {
       await updateTwilioIdempotency(supabase, idempotencyKey, {

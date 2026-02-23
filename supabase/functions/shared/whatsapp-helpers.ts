@@ -15,35 +15,78 @@ export interface WhatsAppCommand {
 }
 
 export const WHATSAPP_COMMANDS: WhatsAppCommand[] = [
-  { name: '/help', usage: '/help', description: 'Show available commands and how to use free-form updates' },
-  { name: '/setBudget', alias: ['/setbudget'], usage: '/setBudget <amount>', description: "Set today's budget using your preferred currency" },
-  { name: '/setCurrency', alias: ['/setcurrency'], usage: '/setCurrency <ISO>', description: 'Set your preferred currency (e.g., USD, EUR, GBP)' },
-  { name: '/expenses', usage: '/expenses', description: "List today's expenses with totals" },
-  { name: '/addCategory', alias: ['/addcategory'], usage: '/addCategory <name>', description: 'Add a custom expense category' },
+  {
+    name: "/help",
+    usage: "/help",
+    description: "Show available commands and how to use free-form updates",
+  },
+  {
+    name: "/setBudget",
+    alias: ["/setbudget"],
+    usage: "/setBudget <amount>",
+    description: "Set today's budget using your preferred currency",
+  },
+  {
+    name: "/setCurrency",
+    alias: ["/setcurrency"],
+    usage: "/setCurrency <ISO>",
+    description: "Set your preferred currency (e.g., USD, EUR, GBP)",
+  },
+  {
+    name: "/expenses",
+    usage: "/expenses",
+    description: "List today's expenses with totals",
+  },
+  {
+    name: "/addCategory",
+    alias: ["/addcategory"],
+    usage: "/addCategory <name>",
+    description: "Add a custom expense category",
+  },
   // Envelopes (Zero-Based Budgeting)
-  { name: '/createEnvelope', alias: ['/createenvelope'], usage: '/createEnvelope <name> [monthlyTarget]', description: 'Create an envelope, optional default monthly target' },
-  { name: '/setEnvelopeAlloc', alias: ['/setenvelopealloc'], usage: '/setEnvelopeAlloc <name> <YYYY-MM> <amount>', description: 'Set allocation for a month' },
-  { name: '/linkCategoryEnvelope', alias: ['/linkcategoryenvelope'], usage: '/linkCategoryEnvelope <name> <category>', description: 'Map a category to an envelope' },
-  { name: '/envelopeStatus', alias: ['/envelopestatus'], usage: '/envelopeStatus [YYYY-MM]', description: 'Show envelope allocations vs spent for a month' },
+  {
+    name: "/createEnvelope",
+    alias: ["/createenvelope"],
+    usage: "/createEnvelope <name> [monthlyTarget]",
+    description: "Create an envelope, optional default monthly target",
+  },
+  {
+    name: "/setEnvelopeAlloc",
+    alias: ["/setenvelopealloc"],
+    usage: "/setEnvelopeAlloc <name> <YYYY-MM> <amount>",
+    description: "Set allocation for a month",
+  },
+  {
+    name: "/linkCategoryEnvelope",
+    alias: ["/linkcategoryenvelope"],
+    usage: "/linkCategoryEnvelope <name> <category>",
+    description: "Map a category to an envelope",
+  },
+  {
+    name: "/envelopeStatus",
+    alias: ["/envelopestatus"],
+    usage: "/envelopeStatus [YYYY-MM]",
+    description: "Show envelope allocations vs spent for a month",
+  },
 ];
 
 export function buildHelpMessage(helpImageUrl?: string): WhatsAppReply {
   const lines = [
-    '🎉 *Welcome to Moneko Budgeting!*',
-    '',
-    '💬 *Free-form text:*',
-    'Just type naturally, like:',
+    "🎉 *Welcome to Moneko Budgeting!*",
+    "",
+    "💬 *Free-form text:*",
+    "Just type naturally, like:",
     '"I spent 3 on sandwich and 2 on coffee today"',
-    '',
+    "",
     "📸 *Receipt upload:*",
-    'You can also log your expenses by simply snapping a photo of your receipt!',
-    '',
-    '📋 *Commands:*',
-    ...WHATSAPP_COMMANDS.map(c => `  ${c.usage} — ${c.description}`),
+    "You can also log your expenses by simply snapping a photo of your receipt!",
+    "",
+    "📋 *Commands:*",
+    ...WHATSAPP_COMMANDS.map((c) => `  ${c.usage} — ${c.description}`),
   ];
-  return { 
-    text: lines.join('\n'), 
-    mediaUrl: helpImageUrl || null 
+  return {
+    text: lines.join("\n"),
+    mediaUrl: helpImageUrl || null,
   };
 }
 
@@ -60,7 +103,7 @@ export async function sendWhatsAppMessage(
   from: string,
   to: string,
   body: string,
-  mediaUrl?: string
+  mediaUrl?: string,
 ): Promise<{ success: boolean; messageSid?: string; error?: string }> {
   try {
     const fromNumber = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
@@ -103,6 +146,8 @@ export async function sendWhatsAppMessage(
 
 /**
  * Send a WhatsApp message using Twilio Content Template (ContentSid)
+ * IMPORTANT: Our WhatsApp Content Templates must be created/approved as
+ * "English (US)" in Twilio. Locale mismatches can fail with 63027.
  * @param accountSid - Twilio Account SID
  * @param authToken - Twilio Auth Token
  * @param from - Sender WhatsApp number (e.g., 'whatsapp:+14155238886')
@@ -117,47 +162,147 @@ export async function sendWhatsAppTemplate(
   from: string,
   to: string,
   contentSid: string,
-  contentVariables?: string
-): Promise<{ success: boolean; messageSid?: string; error?: string }> {
+  contentVariables?: string,
+  messagingServiceSid?: string,
+): Promise<{
+  success: boolean;
+  messageSid?: string;
+  error?: string;
+  twilioErrorCode?: number | null;
+}> {
   try {
     // Ensure numbers have whatsapp: prefix
-    const fromNumber = from.startsWith('whatsapp:') ? from : `whatsapp:${from}`;
-    const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
-
-    // Build form data for Twilio API
-    const formData = new URLSearchParams();
-    formData.append('From', fromNumber);
-    formData.append('To', toNumber);
-    formData.append('ContentSid', contentSid);
-    
-    if (contentVariables) {
-      formData.append('ContentVariables', contentVariables);
-    }
+    const fromNumber = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+    const toNumber = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
 
     // Make request to Twilio Messages API
     const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-    const authHeader = 'Basic ' + btoa(`${accountSid}:${authToken}`);
+    const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': authHeader,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
-    });
+    const postTemplate = async (useMessagingService: boolean) => {
+      const formData = new URLSearchParams();
+      formData.append("To", toNumber);
+      formData.append("ContentSid", contentSid);
+      if (contentVariables) {
+        formData.append("ContentVariables", contentVariables);
+      }
+      // Twilio supports sending with BOTH MessagingServiceSid and From.
+      // This avoids requiring the WhatsApp sender to be present in the Messaging
+      // Service sender pool while still using a Messaging Service (see Twilio Content
+      // Template docs).
+      formData.append("From", fromNumber);
+      if (useMessagingService && messagingServiceSid) {
+        formData.append("MessagingServiceSid", messagingServiceSid);
+      }
+
+      console.log(
+        "[sendWhatsAppTemplate] sender mode:",
+        useMessagingService && messagingServiceSid
+          ? "messaging_service+from"
+          : "from_number",
+      );
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+
+      const responseText = await response.text();
+      let result: any = null;
+      try {
+        result = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        result = null;
+      }
+
+      return { response, responseText, result };
+    };
+
+    let { response, responseText, result } =
+      await postTemplate(!!messagingServiceSid);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[sendWhatsAppTemplate] Twilio API error:', errorText);
-      return { success: false, error: `Twilio API error: ${response.status}` };
+      const errorCode = Number(result?.code ?? result?.error_code ?? NaN);
+      const errorMessage =
+        result?.message ||
+        result?.error_message ||
+        responseText ||
+        `Twilio API error: ${response.status}`;
+      console.error("[sendWhatsAppTemplate] Twilio API error:", {
+        status: response.status,
+        errorCode: Number.isFinite(errorCode) ? errorCode : null,
+        errorMessage,
+        responseText,
+      });
+
+      if (
+        Number.isFinite(errorCode) &&
+        errorCode === 21703 &&
+        messagingServiceSid
+      ) {
+        console.warn(
+          "[sendWhatsAppTemplate] Messaging Service send failed (21703); retrying without MessagingServiceSid",
+        );
+        ({ response, responseText, result } = await postTemplate(false));
+        if (!response.ok) {
+          const retryCode = Number(result?.code ?? result?.error_code ?? NaN);
+          const retryMessage =
+            result?.message ||
+            result?.error_message ||
+            responseText ||
+            `Twilio API error: ${response.status}`;
+          return {
+            success: false,
+            error: retryMessage,
+            twilioErrorCode: Number.isFinite(retryCode) ? retryCode : null,
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: errorMessage,
+          twilioErrorCode: Number.isFinite(errorCode) ? errorCode : null,
+        };
+      }
     }
 
-    const result = await response.json();
-    console.log('[sendWhatsAppTemplate] Message sent successfully:', result.sid);
-    return { success: true, messageSid: result.sid };
+    const errorCode = Number(result?.error_code ?? result?.code ?? NaN);
+    const status =
+      typeof result?.status === "string" ? result.status.toLowerCase() : "";
+    const hasImmediateFailure =
+      Number.isFinite(errorCode) ||
+      status === "failed" ||
+      status === "undelivered";
+
+    if (hasImmediateFailure) {
+      const errorMessage =
+        result?.error_message ||
+        result?.message ||
+        `Twilio template send failed with status: ${status || "unknown"}`;
+      console.error("[sendWhatsAppTemplate] Twilio immediate failure:", {
+        sid: result?.sid,
+        status,
+        errorCode: Number.isFinite(errorCode) ? errorCode : null,
+        errorMessage,
+      });
+      return {
+        success: false,
+        error: errorMessage,
+        twilioErrorCode: Number.isFinite(errorCode) ? errorCode : null,
+      };
+    }
+
+    console.log(
+      "[sendWhatsAppTemplate] Message sent successfully:",
+      result?.sid,
+    );
+    return { success: true, messageSid: result?.sid };
   } catch (error) {
-    console.error('[sendWhatsAppTemplate] Error:', error);
+    console.error("[sendWhatsAppTemplate] Error:", error);
     return { success: false, error: String(error) };
   }
 }
@@ -172,7 +317,7 @@ export async function sendWhatsAppInteractiveButtons(
   from: string,
   to: string,
   body: string,
-  options: string[]
+  options: string[],
 ): Promise<{ success: boolean; messageSid?: string; error?: string }> {
   try {
     const fromNumber = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
@@ -202,12 +347,18 @@ export async function sendWhatsAppInteractiveButtons(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[sendWhatsAppInteractiveButtons] Twilio API error:", errorText);
+      console.error(
+        "[sendWhatsAppInteractiveButtons] Twilio API error:",
+        errorText,
+      );
       return { success: false, error: `Twilio API error: ${response.status}` };
     }
 
     const result = await response.json();
-    console.log("[sendWhatsAppInteractiveButtons] Message sent successfully:", result.sid);
+    console.log(
+      "[sendWhatsAppInteractiveButtons] Message sent successfully:",
+      result.sid,
+    );
     return { success: true, messageSid: result.sid };
   } catch (error) {
     console.error("[sendWhatsAppInteractiveButtons] Error:", error);
@@ -219,8 +370,8 @@ export async function sendWhatsAppInteractiveButtons(
  * Interface for user currency info
  */
 export interface UserCurrencyInfo {
-  code: string;      // ISO currency code (e.g., 'USD')
-  symbol: string;    // Currency symbol (e.g., '$')
+  code: string; // ISO currency code (e.g., 'USD')
+  symbol: string; // Currency symbol (e.g., '$')
 }
 
 /**
@@ -231,17 +382,17 @@ export interface UserCurrencyInfo {
  */
 export async function getUserCurrency(
   supabase: SupabaseClient,
-  phone: string
+  phone: string,
 ): Promise<UserCurrencyInfo> {
   const contactResult = await supabase
-    .from('user_contacts')
-    .select('preferred_currency')
-    .eq('phone_e164', phone)
-    .order('id', { ascending: false })
+    .from("user_contacts")
+    .select("preferred_currency")
+    .eq("phone_e164", phone)
+    .order("id", { ascending: false })
     .limit(1);
   const contactData = contactResult.data?.[0] ?? null;
 
-  const code = contactData?.preferred_currency || 'USD';
+  const code = contactData?.preferred_currency || "USD";
   const symbol = getCurrencySymbol(code);
 
   return { code, symbol };
