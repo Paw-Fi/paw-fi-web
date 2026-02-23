@@ -89,6 +89,100 @@ function redactUserId(userId: string): string {
   return userId.length >= 8 ? `${userId.slice(0, 8)}…` : userId;
 }
 
+const ACCESS_GRANTING_STATUSES = new Set<string>(["active", "trialing"]);
+const TERMINAL_DOWNGRADE_STATUSES = new Set<string>([
+  "canceled",
+  "incomplete_expired",
+  "unpaid",
+]);
+
+function isAccessGrantingStatus(status: string): boolean {
+  return ACCESS_GRANTING_STATUSES.has(status);
+}
+
+function isTerminalDowngradeStatus(status: string): boolean {
+  return TERMINAL_DOWNGRADE_STATUSES.has(status);
+}
+
+function mapStripeStatusToStoredStatus(status: string): string {
+  if (status === "incomplete_expired") return "canceled";
+  return status;
+}
+
+function formatUnixTimestampDate(timestamp: number | null | undefined): string | null {
+  if (typeof timestamp !== "number" || Number.isNaN(timestamp)) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(timestamp * 1000));
+}
+
+async function downgradeOwnerSubscriptionToFree(params: {
+  userId: string;
+  eventId: string;
+  status: "canceled" | "unpaid";
+  endedAt?: string;
+  stripeSubscriptionId?: string | null;
+}): Promise<void> {
+  const endedAt = params.endedAt ?? new Date().toISOString();
+
+  const { error: updateError } = await supabase
+    .from("subscriptions")
+    .update({
+      provider: "stripe",
+      plan: "free",
+      status: params.status,
+      billing_interval: null,
+      stripe_subscription_id: params.stripeSubscriptionId ?? null,
+      current_period_end: null,
+      cancel_at_period_end: false,
+      trial_start: null,
+      trial_end: null,
+      current_price_id: null,
+      pending_plan: null,
+      pending_interval: null,
+      pending_effective_date: null,
+      ended_at: endedAt,
+      last_event_id: params.eventId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", params.userId);
+
+  if (updateError) {
+    throw new Error(`failed to downgrade subscription: ${updateError.message}`);
+  }
+
+  try {
+    const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
+      "cascade_subscription_cancellation",
+      {
+        p_owner_user_id: params.userId,
+      },
+    );
+
+    if (cascadeError) {
+      console.error("Error cascading downgrade to household members:", {
+        userId: params.userId,
+        error: cascadeError,
+      });
+      return;
+    }
+
+    if (cascadeResult && cascadeResult > 0) {
+      console.log(`✅ Cascaded downgrade to ${cascadeResult} household members`);
+    }
+  } catch (error) {
+    console.error("Unexpected error during downgrade cascade:", {
+      userId: params.userId,
+      error,
+    });
+  }
+}
+
 // Validate environment on startup - FAIL FAST if misconfigured
 // Webhook function REQUIRES webhook secret
 const env = validateEnvironment({ requireWebhookSecret: true });
@@ -916,7 +1010,6 @@ async function handleSubscriptionUpdated(
   try {
     console.log("Processing subscription update:", subscription.id);
 
-    // Extract customer ID
     const customerId =
       typeof subscription.customer === "string"
         ? subscription.customer
@@ -927,55 +1020,177 @@ async function handleSubscriptionUpdated(
       return;
     }
 
-    // Find user with this Stripe customer ID
     const user = await getUserByCustomerId(customerId);
-
     if (!user) {
       console.error("No user found with customer ID:", customerId);
       return;
     }
 
     const userId = user.id;
-
-    // Extract subscription details - Read from metadata (snake_case per Stripe conventions)
     const status = subscription.status;
-    // Get current_period_end from subscription items (more reliable than subscription level)
-    const itemPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
+    const subscriptionPeriodEnd = subscription.current_period_end;
     const currentPeriodEnd =
-      itemPeriodEnd && !isNaN(itemPeriodEnd)
-        ? new Date(itemPeriodEnd * 1000).toISOString()
+      typeof subscriptionPeriodEnd === "number" &&
+      !Number.isNaN(subscriptionPeriodEnd)
+        ? new Date(subscriptionPeriodEnd * 1000).toISOString()
         : null;
     const cancelAtPeriodEnd = subscription.cancel_at_period_end;
 
-    // HANDLE PAUSED STATUS - Log and preserve subscription data
-    // NOTE: After fixing checkout to use 'create_invoice', paused status should be rare
-    // If it occurs, preserve subscription data and don't auto-downgrade
+    const { data: previousSub } = await supabase
+      .from("subscriptions")
+      .select(
+        "plan, billing_interval, status, stripe_subscription_id, cancel_at_period_end, ended_at",
+      )
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const previousStoredStatus = previousSub?.status || "";
+
+    if (
+      previousSub?.stripe_subscription_id &&
+      previousSub.stripe_subscription_id !== subscription.id
+    ) {
+      let shouldAcceptIncomingSubscriptionId = false;
+
+      if (isAccessGrantingStatus(status)) {
+        try {
+          const existingStripeSubscription = await stripe.subscriptions.retrieve(
+            previousSub.stripe_subscription_id,
+          );
+          const existingStripeStatus = existingStripeSubscription.status;
+
+          if (isTerminalDowngradeStatus(existingStripeStatus)) {
+            shouldAcceptIncomingSubscriptionId = true;
+          } else if (
+            isAccessGrantingStatus(existingStripeStatus) &&
+            typeof existingStripeSubscription.created === "number" &&
+            typeof subscription.created === "number" &&
+            subscription.created >= existingStripeSubscription.created
+          ) {
+            shouldAcceptIncomingSubscriptionId = true;
+          }
+        } catch (stripeError: any) {
+          console.error("Could not compare old vs incoming subscription IDs", {
+            userId: redactUserId(userId),
+            existingSubscriptionId: previousSub.stripe_subscription_id,
+            incomingSubscriptionId: subscription.id,
+            error: stripeError?.message || String(stripeError),
+          });
+        }
+      }
+
+      if (!shouldAcceptIncomingSubscriptionId) {
+        console.log(
+          "Skipping subscription update due to mismatched Stripe subscription id",
+          {
+            userId: redactUserId(userId),
+            incomingSubscriptionId: subscription.id,
+            existingSubscriptionId: previousSub.stripe_subscription_id,
+            status,
+            previousStoredStatus,
+          },
+        );
+        return;
+      }
+
+      console.log("Accepting newer Stripe subscription id for user", {
+        userId: redactUserId(userId),
+        previousSubscriptionId: previousSub.stripe_subscription_id,
+        incomingSubscriptionId: subscription.id,
+        incomingStatus: status,
+      });
+    }
+
+    if (
+      previousSub?.stripe_subscription_id === subscription.id &&
+      previousStoredStatus === "canceled" &&
+      !isTerminalDowngradeStatus(status)
+    ) {
+      console.log(
+        "Ignoring non-terminal update for subscription already marked canceled locally",
+        {
+          userId: redactUserId(userId),
+          subscriptionId: subscription.id,
+          previousStoredStatus,
+          incomingStatus: status,
+        },
+      );
+      return;
+    }
+
+    if (
+      !previousSub?.stripe_subscription_id &&
+      previousSub?.plan === "free" &&
+      previousSub?.status === "canceled" &&
+      cancelAtPeriodEnd &&
+      !isTerminalDowngradeStatus(status)
+    ) {
+      console.log(
+        "Ignoring stale subscription.updated for already canceled free subscription",
+        {
+          userId: redactUserId(userId),
+          incomingSubscriptionId: subscription.id,
+          status,
+        },
+      );
+      return;
+    }
+
+    if (isTerminalDowngradeStatus(status)) {
+      console.log(
+        `Subscription ${subscription.id} entered terminal status ${status}, downgrading to free`,
+      );
+
+      await downgradeOwnerSubscriptionToFree({
+        userId,
+        eventId,
+        status: mapStripeStatusToStoredStatus(status) === "unpaid"
+          ? "unpaid"
+          : "canceled",
+        stripeSubscriptionId: subscription.id,
+      });
+
+      if (previousSub?.status !== "canceled" && previousSub?.status !== "unpaid") {
+        const productId =
+          subscription.items?.data?.length > 0
+            ? getProductIdFromPrice(subscription.items.data[0]?.price)
+            : null;
+        const planName = await getPlanNameFromProductId(productId);
+
+        const emailTemplate = subscriptionCanceledTemplate({
+          name: user.full_name || "",
+          planName,
+          endDate: formatUnixTimestampDate(subscription.ended_at) || null,
+          immediateCancel: true,
+          dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
+        });
+
+        enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
+        console.log(`Terminal status email queued for ${user.email}`);
+      }
+
+      return;
+    }
+
     if (status === "paused") {
       console.log(
         `⚠️ Subscription ${subscription.id} is paused - preserving subscription data`,
       );
 
-      // Check if subscription has active discount for monitoring
       const hasDiscount =
         subscription.discount ||
         (subscription.discounts && subscription.discounts.length > 0);
 
       if (hasDiscount) {
-        console.log(
-          `🎫 Paused subscription has discount - checking if 100% off`,
-        );
+        console.log("🎫 Paused subscription has discount - checking if 100% off");
 
         let isFullDiscount = false;
         try {
-          // CRITICAL: Re-retrieve subscription with expanded discounts to get full objects
-          // The webhook event only contains discount IDs (di_*), not full objects
-          // Per Stripe API 2025 docs: Use expand parameter to get discount objects with coupon data
           const expandedSubscription = await stripe.subscriptions.retrieve(
             subscription.id,
             { expand: ["discounts.coupon"] },
           );
 
-          // Check subscription.discount (single discount object - deprecated but may exist)
           if (
             expandedSubscription.discount &&
             typeof expandedSubscription.discount === "object"
@@ -983,144 +1198,44 @@ async function handleSubscriptionUpdated(
             const coupon = expandedSubscription.discount.coupon;
             if (typeof coupon === "object" && coupon !== null) {
               isFullDiscount = coupon.percent_off === 100;
-              console.log(
-                `Single discount detected: ${coupon.percent_off}% off (${coupon.id})`,
-              );
             }
           }
 
-          // Check subscription.discounts array (current Stripe API standard)
           if (
             !isFullDiscount &&
             expandedSubscription.discounts &&
             Array.isArray(expandedSubscription.discounts)
           ) {
-            console.log(
-              `Checking ${expandedSubscription.discounts.length} discount(s) in array`,
-            );
-
             for (const discountItem of expandedSubscription.discounts) {
-              // After expansion, discountItem is a full Discount object with nested coupon
               if (typeof discountItem === "object" && discountItem !== null) {
                 const coupon = discountItem.coupon;
-                if (typeof coupon === "object" && coupon !== null) {
-                  const percentOff = coupon.percent_off || 0;
-                  console.log(
-                    `Discount ${discountItem.id}: ${percentOff}% off (coupon: ${coupon.id})`,
-                  );
-
-                  if (percentOff === 100) {
-                    isFullDiscount = true;
-                    console.log(`✅ Found 100% discount: ${coupon.id}`);
-                    break;
-                  }
-                } else {
-                  console.log(
-                    `⚠️ Discount ${discountItem.id} has no expanded coupon`,
-                  );
+                if (
+                  typeof coupon === "object" &&
+                  coupon !== null &&
+                  coupon.percent_off === 100
+                ) {
+                  isFullDiscount = true;
+                  break;
                 }
               }
             }
           }
         } catch (error: any) {
-          console.error(
-            "Error fetching expanded subscription discounts:",
-            error,
-          );
+          console.error("Error fetching expanded subscription discounts:", error);
         }
 
         if (isFullDiscount) {
-          console.log(
-            `✅ 100% discount confirmed - user should maintain plan access`,
-          );
-        } else {
-          console.log(`⚠️ Partial discount or no 100% discount detected`);
-        }
-      } else {
-        console.log(`⚠️ No discount found on paused subscription`);
-      }
-
-      // TEMPORARY FIX: Exit early to prevent paused status from being written to database
-      // TODO: Remove this early return after fixing checkout flow to use payment collection 'charge_automatically'
-      // console.log(`🚨 EARLY EXIT: Paused status will NOT be written to database`)
-      // console.log(`   Existing subscription data preserved in database`)
-      // console.log(`   User: ${userId}, Stripe Sub ID: ${subscription.id}`)
-      // return
-    }
-
-    // Handle incomplete_expired and unpaid statuses - downgrade to free
-    if (status === "incomplete_expired" || status === "unpaid") {
-      console.log(
-        `Subscription ${subscription.id} is ${status}, downgrading user to free plan`,
-      );
-
-      const { error: downgradeError } = await supabase
-        .from("subscriptions")
-        .update({
-          plan: "free",
-          status: status === "incomplete_expired" ? "canceled" : "unpaid",
-          stripe_subscription_id: null,
-          ended_at: new Date().toISOString(),
-          last_event_id: eventId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", userId);
-
-      if (downgradeError) {
-        console.error("Error downgrading subscription:", downgradeError);
-      } else {
-        // CRITICAL: Cascade cancellation to all bound household members
-        try {
-          const { data: cascadeResult, error: cascadeError } =
-            await supabase.rpc("cascade_subscription_cancellation", {
-              p_owner_user_id: userId,
-            });
-
-          if (cascadeError) {
-            console.error(
-              "Error cascading downgrade to household members:",
-              cascadeError,
-            );
-          } else {
-            console.log(
-              `✅ Cascaded downgrade to ${cascadeResult} household members`,
-            );
-          }
-        } catch (error: any) {
-          console.error("Unexpected error during downgrade cascade:", error);
+          console.log("✅ 100% discount confirmed on paused subscription");
         }
       }
-
-      // Send email notification
-      // Get plan name from subscription - use safe extraction
-      const productId =
-        subscription.items?.data?.length > 0
-          ? getProductIdFromPrice(subscription.items.data[0]?.price)
-          : null;
-      const planName = await getPlanNameFromProductId(productId);
-
-      const emailTemplate = subscriptionCanceledTemplate({
-        name: user.full_name || "",
-        planName,
-        endDate: null,
-        immediateCancel: true,
-        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-      });
-
-      enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
-      console.log(`Downgrade notification queued for ${user.email}`);
-
-      return;
     }
 
-    // Extract plan and interval from subscription metadata (set during checkout)
     const plan = (subscription.metadata?.plan ||
       subscription.metadata?.user_plan ||
       "plus") as PlanType;
     const billingInterval = (subscription.metadata?.billing_interval ||
       "monthly") as BillingInterval;
 
-    // Fallback: Try to determine from price ID if metadata is missing
     let finalPlan = plan;
     let finalInterval = billingInterval;
 
@@ -1135,38 +1250,32 @@ async function handleSubscriptionUpdated(
       }
     }
 
-    // Extract trial information - handle null/undefined safely
     const trialStart =
-      subscription.trial_start && !isNaN(subscription.trial_start)
+      typeof subscription.trial_start === "number" &&
+      !Number.isNaN(subscription.trial_start)
         ? new Date(subscription.trial_start * 1000).toISOString()
         : null;
     const trialEnd =
-      subscription.trial_end && !isNaN(subscription.trial_end)
+      typeof subscription.trial_end === "number" &&
+      !Number.isNaN(subscription.trial_end)
         ? new Date(subscription.trial_end * 1000).toISOString()
         : null;
-
-    // Get previous subscription data for change detection
-    const { data: previousSub } = await supabase
-      .from("subscriptions")
-      .select("plan, billing_interval, status")
-      .eq("user_id", userId)
-      .maybeSingle();
 
     const previousPlan = previousSub?.plan as PlanType | null;
     const previousInterval =
       previousSub?.billing_interval as BillingInterval | null;
+    const storedStatus = mapStripeStatusToStoredStatus(status);
 
     console.log("Updating subscription for user:", userId, {
       plan: finalPlan,
       billingInterval: finalInterval,
-      status,
+      status: storedStatus,
       currentPeriodEnd,
       cancelAtPeriodEnd,
       previousPlan,
       previousInterval,
     });
 
-    // Upsert subscription data with enhanced fields
     const { error: subscriptionError } = await supabase
       .from("subscriptions")
       .upsert(
@@ -1175,7 +1284,6 @@ async function handleSubscriptionUpdated(
           provider: "stripe",
           stripe_subscription_id: subscription.id,
           stripe_customer_id: customerId,
-          // Provider hygiene: ensure IAP identifiers are cleared.
           store_product_id: null,
           app_store_transaction_id: null,
           app_store_original_transaction_id: null,
@@ -1185,7 +1293,7 @@ async function handleSubscriptionUpdated(
           play_package_name: null,
           plan: finalPlan,
           billing_interval: finalInterval,
-          status,
+          status: storedStatus,
           bound_to_user_id: null,
           bound_to_household_id: null,
           current_period_end: currentPeriodEnd,
@@ -1195,6 +1303,7 @@ async function handleSubscriptionUpdated(
           current_price_id: subscription.items.data[0]?.price?.id,
           previous_plan: previousPlan,
           previous_interval: previousInterval,
+          ended_at: null,
           last_event_id: eventId,
           updated_at: new Date().toISOString(),
         },
@@ -1202,26 +1311,17 @@ async function handleSubscriptionUpdated(
       );
 
     if (subscriptionError) {
-      console.error(
-        "Error updating subscription in database:",
-        subscriptionError,
-      );
+      console.error("Error updating subscription in database:", subscriptionError);
       return;
     }
 
-    console.log("Subscription updated successfully for user:", userId);
-
-    // CRITICAL: Cascade ALL subscription changes to bound household members
-    // Bound members must stay in EXACT sync with owner's subscription lifecycle
-    // This includes: active, trialing, past_due, etc.
-    // Note: canceled/incomplete_expired/unpaid are handled separately above
     try {
       const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
         "cascade_subscription_upgrade",
         {
           p_owner_user_id: userId,
           p_new_plan: finalPlan,
-          p_new_status: status,
+          p_new_status: storedStatus,
         },
       );
 
@@ -1232,74 +1332,59 @@ async function handleSubscriptionUpdated(
         );
       } else if (cascadeResult && cascadeResult > 0) {
         console.log(
-          `✅ Cascaded subscription update to ${cascadeResult} household members (status: ${status})`,
+          `✅ Cascaded subscription update to ${cascadeResult} household members (status: ${storedStatus})`,
         );
       }
     } catch (error: any) {
-      console.error(
-        "Unexpected error during subscription update cascade:",
-        error,
-      );
+      console.error("Unexpected error during subscription update cascade:", error);
     }
 
-    // Prepare email notification - use safe extraction
     const productId =
       subscription.items?.data?.length > 0
         ? getProductIdFromPrice(subscription.items.data[0]?.price)
         : null;
     const planName = await getPlanNameFromProductId(productId);
-    // Reuse itemPeriodEnd from line 289 instead of redeclaring
-    const endDate =
-      itemPeriodEnd && !isNaN(itemPeriodEnd)
-        ? new Intl.DateTimeFormat("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(new Date(itemPeriodEnd * 1000))
-        : "N/A";
-
-    // Determine if this is a new subscription or an update
-    // A subscription is "new" if:
-    // 1. It's active OR trialing (new subscriptions can start with either status) AND
-    // 2. There was no previous subscription record (previousSub is null)
-    const isNew =
-      (subscription.status === "active" ||
-        subscription.status === "trialing") &&
-      !previousSub;
-
+    const endDate = formatUnixTimestampDate(subscriptionPeriodEnd) || "N/A";
     const name = user.full_name || "";
+    const hasAccessNow = isAccessGrantingStatus(storedStatus);
+    const hadAccessBefore = isAccessGrantingStatus(previousSub?.status || "");
+
+    const isNew = hasAccessNow && !hadAccessBefore;
 
     if (isNew) {
-      // Send welcome email for new subscriptions
       const isLifetime = finalPlan === "lifetime";
       const emailTemplate = subscriptionCreatedTemplate({
         name,
         planName,
-        endDate: isLifetime ? undefined : endDate, // Lifetime has no end date
+        endDate: isLifetime ? undefined : endDate,
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
         isLifetime,
       });
 
       enqueueUserEmail(user.email, name, emailTemplate);
       console.log(`Welcome email queued for ${user.email}`);
-    } else if (cancelAtPeriodEnd && previousSub?.status === "active") {
-      // User scheduled cancellation - send cancellation confirmation
-      // but tell them they have access until period end
+      return;
+    }
+
+    if (hasAccessNow && cancelAtPeriodEnd && !previousSub?.cancel_at_period_end) {
       const emailTemplate = subscriptionCanceledTemplate({
         name,
         planName,
-        endDate, // Show when access will end
+        endDate,
         dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-        immediateCancel: false, // They keep access until period end
+        immediateCancel: false,
       });
 
       enqueueUserEmail(user.email, name, emailTemplate);
       console.log(`Scheduled cancellation email queued for ${user.email}`);
-    } else if (
+      return;
+    }
+
+    if (
+      hasAccessNow &&
       previousPlan &&
       (previousPlan !== finalPlan || previousInterval !== finalInterval)
     ) {
-      // Send update email for plan changes or billing interval changes
       const changeType = getChangeType(
         previousPlan,
         finalPlan,
@@ -1335,7 +1420,7 @@ async function handleSubscriptionUpdated(
       error: error.message,
       stack: error.stack,
     });
-    throw error; // Re-throw to be caught by webhook handler
+    throw error;
   }
 }
 
@@ -1348,7 +1433,6 @@ async function handleSubscriptionDeleted(
   try {
     console.log("Processing subscription deletion:", subscription.id);
 
-    // Get customer ID
     const customerId =
       typeof subscription.customer === "string"
         ? subscription.customer
@@ -1359,13 +1443,9 @@ async function handleSubscriptionDeleted(
       return;
     }
 
-    // Find user by customer ID
-    const user = await getUserByCustomerId(customerId);
-
-    // Find the subscription in our database
     const { data: subData, error: subError } = await supabase
       .from("subscriptions")
-      .select("user_id")
+      .select("user_id, plan, status")
       .eq("stripe_subscription_id", subscription.id)
       .maybeSingle();
 
@@ -1374,99 +1454,79 @@ async function handleSubscriptionDeleted(
       return;
     }
 
-    if (!subData || !subData.user_id) {
-      console.error("No subscription found with ID:", subscription.id);
+    if (!subData?.user_id) {
+      console.log("Ignoring subscription.deleted for non-current subscription", {
+        subscriptionId: subscription.id,
+        customerId,
+      });
       return;
     }
 
     const userId = subData.user_id;
 
-    console.log("Downgrading user to free plan:", userId);
-
-    // CRITICAL FIX: Reset to free plan when subscription is deleted
-    // According to Stripe best practices: when subscription is deleted, revoke access
-    const { error: updateError } = await supabase
-      .from("subscriptions")
-      .update({
-        plan: "free", // Reset to free plan
-        status: "canceled",
-        billing_interval: null, // Clear billing interval
-        stripe_subscription_id: null, // Clear stripe subscription ID
-        ended_at: new Date().toISOString(), // Mark when it ended
-        last_event_id: eventId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId);
-
-    if (updateError) {
-      console.error("Error updating subscription status:", updateError);
-    } else {
-      console.log("User downgraded to free plan:", userId);
-
-      // CRITICAL: Cascade cancellation to all household members bound to this subscription
-      try {
-        const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
-          "cascade_subscription_cancellation",
-          { p_owner_user_id: userId },
-        );
-
-        if (cascadeError) {
-          console.error(
-            "Error cascading subscription cancellation to household members:",
-            cascadeError,
-          );
-        } else {
-          console.log(
-            `✅ Cascaded cancellation to ${cascadeResult} household members`,
-          );
-        }
-      } catch (error: any) {
-        console.error("Unexpected error during cascade cancellation:", error);
-      }
-
-      // Send cancellation email if we have user info
-      if (user) {
-        // Use safe extraction for product ID
-        const planId =
-          subscription.items?.data?.length > 0
-            ? getProductIdFromPrice(subscription.items.data[0]?.price)
-            : null;
-
-        const planName = await getPlanNameFromProductId(planId);
-        const name = user.full_name || "";
-
-        // subscription.deleted means the subscription has already ended
-        // Access is revoked immediately when this event fires
-        // Show when it ended using ended_at timestamp
-        const endedAt = subscription.ended_at;
-        const endDate =
-          endedAt && !isNaN(endedAt)
-            ? new Intl.DateTimeFormat("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              }).format(new Date(endedAt * 1000))
-            : null;
-
-        const emailTemplate = subscriptionCanceledTemplate({
-          name,
-          planName,
-          endDate,
-          dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
-          immediateCancel: true, // subscription.deleted always means immediate end
-        });
-
-        enqueueUserEmail(user.email, name, emailTemplate);
-        console.log(`Subscription cancellation email queued for ${user.email}`);
-      }
+    if (subData.plan === "lifetime" && subData.status === "active") {
+      console.log(
+        "Ignoring subscription.deleted because local entitlement is active lifetime",
+        {
+          userId: redactUserId(userId),
+          subscriptionId: subscription.id,
+        },
+      );
+      return;
     }
+
+    await downgradeOwnerSubscriptionToFree({
+      userId,
+      eventId,
+      status: "canceled",
+      stripeSubscriptionId: subscription.id,
+      endedAt:
+        typeof subscription.ended_at === "number" &&
+        !Number.isNaN(subscription.ended_at)
+          ? new Date(subscription.ended_at * 1000).toISOString()
+          : new Date().toISOString(),
+    });
+
+    console.log("User downgraded to free plan:", userId);
+
+    const { data: affectedUser } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!affectedUser?.email) {
+      return;
+    }
+
+    const planId =
+      subscription.items?.data?.length > 0
+        ? getProductIdFromPrice(subscription.items.data[0]?.price)
+        : null;
+
+    const planName = await getPlanNameFromProductId(planId);
+    const name = affectedUser.full_name || "";
+    const endDate = formatUnixTimestampDate(subscription.ended_at);
+
+    const emailTemplate = subscriptionCanceledTemplate({
+      name,
+      planName,
+      endDate,
+      dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
+      immediateCancel: true,
+    });
+
+    enqueueUserEmail(affectedUser.email, name, emailTemplate);
+    console.log(
+      `Subscription cancellation email queued for ${affectedUser.email}`,
+    );
   } catch (error: any) {
     console.error("Error in handleSubscriptionDeleted:", {
       subscriptionId: subscription.id,
       error: error.message,
       stack: error.stack,
     });
-    throw error; // Re-throw to be caught by webhook handler
+    throw error;
   }
 }
 
@@ -1858,40 +1918,65 @@ async function handleInvoicePaymentFailed(
   try {
     console.log("Processing failed payment for invoice:", invoice.id);
 
-    // Only process subscription invoices
-    if (invoice.subscription) {
-      const subscriptionId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription.id;
+    if (!invoice.subscription) {
+      return;
+    }
 
-      // Find user with this subscription
-      const { data: subData, error: subError } = await supabase
-        .from("subscriptions")
-        .select("user_id, plan")
-        .eq("stripe_subscription_id", subscriptionId)
-        .maybeSingle();
+    const subscriptionId =
+      typeof invoice.subscription === "string"
+        ? invoice.subscription
+        : invoice.subscription.id;
 
-      if (subError) {
-        console.error("Error finding subscription:", subError);
-        return;
-      }
+    const { data: subData, error: subError } = await supabase
+      .from("subscriptions")
+      .select("user_id, plan")
+      .eq("stripe_subscription_id", subscriptionId)
+      .maybeSingle();
 
-      if (!subData || !subData.user_id) {
-        console.error("No subscription found with ID:", subscriptionId);
-        return;
-      }
+    if (subError) {
+      console.error("Error finding subscription:", subError);
+      return;
+    }
 
-      const userId = subData.user_id;
-      const plan = (subData as any).plan as string | null;
+    if (!subData?.user_id) {
+      console.error("No subscription found with ID:", subscriptionId);
+      return;
+    }
 
-      console.log("Updating subscription status to past_due for user:", userId);
+    const userId = subData.user_id;
+    const plan = (subData as any).plan as string | null;
 
-      // Update subscription status to past_due
+    let latestStripeStatus = "past_due";
+    try {
+      const latestSubscription = await stripe.subscriptions.retrieve(
+        subscriptionId,
+      );
+      latestStripeStatus = latestSubscription.status;
+    } catch (retrieveError: any) {
+      console.error("Failed to retrieve latest subscription after payment failure", {
+        subscriptionId,
+        error: retrieveError?.message || String(retrieveError),
+      });
+    }
+
+    const mappedStatus = mapStripeStatusToStoredStatus(latestStripeStatus);
+
+    if (isTerminalDowngradeStatus(latestStripeStatus)) {
+      await downgradeOwnerSubscriptionToFree({
+        userId,
+        eventId: `invoice_payment_failed_${invoice.id}`,
+        status: mappedStatus === "unpaid" ? "unpaid" : "canceled",
+        stripeSubscriptionId: subscriptionId,
+      });
+      console.log(
+        `Subscription moved to terminal state ${latestStripeStatus}; user downgraded`,
+      );
+    } else {
       const { error: updateError } = await supabase
         .from("subscriptions")
         .update({
-          status: "past_due",
+          status: mappedStatus,
+          last_event_id: `invoice_payment_failed_${invoice.id}`,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", userId);
@@ -1901,71 +1986,67 @@ async function handleInvoicePaymentFailed(
         return;
       }
 
-      console.log("Subscription marked as past_due for user:", userId);
-
-      // Keep household members in sync with owner's lifecycle.
       if (plan) {
         try {
           await supabase.rpc("cascade_subscription_upgrade", {
             p_owner_user_id: userId,
             p_new_plan: plan,
-            p_new_status: "past_due",
+            p_new_status: mappedStatus,
           });
         } catch (cascadeError) {
           console.error(
-            "Error cascading past_due to household members (non-fatal):",
+            "Error cascading payment-failed status to household members (non-fatal):",
             cascadeError,
           );
         }
       }
-
-      // Get user details for email
-      const { data: userData } = await supabase
-        .from("users")
-        .select("email, full_name")
-        .eq("id", userId)
-        .single();
-
-      if (userData) {
-        // Get plan details - use safe extraction
-        let planName = "Premium";
-        const subscription =
-          await stripe.subscriptions.retrieve(subscriptionId);
-        if (subscription.items?.data?.length > 0) {
-          const productId = getProductIdFromPrice(
-            subscription.items.data[0]?.price,
-          );
-          planName = await getPlanNameFromProductId(productId);
-        }
-
-        const name = userData.full_name || "";
-
-        // Send payment failure email with downgrade notification
-        // User will be downgraded when subscription status changes to unpaid/incomplete_expired
-        const emailTemplate = paymentFailedTemplate({
-          name,
-          planName,
-          dashboardUrl: "https://moneko.io/dashboard/user-settings/membership",
-          updatePaymentUrl:
-            "https://moneko.io/dashboard/user-settings/membership",
-          isDowngraded: true, // Indicate user will be/has been downgraded
-          resubscribeUrl:
-            "https://moneko.io/dashboard/user-settings/membership", // CTA for resubscription
-        });
-
-        enqueueUserEmail(userData.email, name, emailTemplate);
-        console.log(
-          `💳 Payment failure with downgrade notification queued for ${userData.email}`,
-        );
-      }
     }
+
+    const { data: userData } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("id", userId)
+      .single();
+
+    if (!userData) {
+      return;
+    }
+
+    let planName = "Premium";
+    try {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      if (subscription.items?.data?.length > 0) {
+        const productId = getProductIdFromPrice(subscription.items.data[0]?.price);
+        planName = await getPlanNameFromProductId(productId);
+      }
+    } catch (subscriptionFetchError: any) {
+      console.error("Could not fetch subscription details for payment-failed email", {
+        subscriptionId,
+        error:
+          subscriptionFetchError?.message || String(subscriptionFetchError),
+      });
+    }
+
+    const name = userData.full_name || "";
+    const membershipUrl = `${DASHBOARD_URL}/dashboard/user-settings/membership`;
+    const emailTemplate = paymentFailedTemplate({
+      name,
+      planName,
+      dashboardUrl: membershipUrl,
+      updatePaymentUrl: membershipUrl,
+      isDowngraded: isTerminalDowngradeStatus(latestStripeStatus),
+      resubscribeUrl: membershipUrl,
+    });
+
+    enqueueUserEmail(userData.email, name, emailTemplate);
+    console.log(`Payment failure email queued for ${userData.email}`);
   } catch (error: any) {
     console.error("Error in handleInvoicePaymentFailed:", {
       invoiceId: invoice.id,
       error: error.message,
       stack: error.stack,
     });
-    throw error; // Re-throw to be caught by webhook handler
+    throw error;
   }
 }
 
@@ -2853,33 +2934,35 @@ async function handleInvoiceUpcoming(
     }
 
     const user = await getUserByCustomerId(customerId);
-
     if (!user) {
       console.error("No user found for customer:", customerId);
       return;
     }
 
-    // Calculate days until charge
+    if (
+      typeof invoice.next_payment_attempt !== "number" ||
+      Number.isNaN(invoice.next_payment_attempt)
+    ) {
+      console.log("Skipping invoice.upcoming without next_payment_attempt", {
+        invoiceId: invoice.id,
+      });
+      return;
+    }
+
     const chargeDate = new Date(invoice.next_payment_attempt * 1000);
     const now = new Date();
     const daysUntil = Math.ceil(
       (chargeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
     );
 
-    // === DISCOUNT EXPIRATION DETECTION (2025 Stripe API) ===
-    // Check if this invoice has active discounts but no payment method
-    // Using correct 2025 property names: invoice.discounts (array), invoice.total_discount_amounts
     const hasActiveDiscount =
       (invoice.discounts && invoice.discounts.length > 0) ||
       (invoice.total_discount_amounts &&
         invoice.total_discount_amounts.length > 0);
 
-    // Check if customer has payment method - need to check both invoice and customer
-    // Per 2025 Stripe docs: invoice.default_payment_method can be null even if customer has one
     let hasPaymentMethod = !!invoice.default_payment_method;
 
     if (!hasPaymentMethod) {
-      // Double-check customer's default payment method (more reliable)
       try {
         const customer = (await stripe.customers.retrieve(
           customerId,
@@ -2893,16 +2976,12 @@ async function handleInvoiceUpcoming(
       }
     }
 
-    // PROMOTIONAL DISCOUNT EXPIRING SCENARIO
-    // If discount is active but no payment method, user will be charged and fail
-    // Send proactive reminder emails at key intervals
     if (hasActiveDiscount && !hasPaymentMethod) {
       console.log(
         `🎫 Discount expiring scenario for ${user.email}: discount active but no payment method`,
       );
       console.log(`   Days until charge: ${daysUntil}`);
 
-      // Only send reminders at specific intervals: 30, 14, 7, 3 days before expiry
       const reminderDays = [30, 14, 7, 3];
       if (!reminderDays.includes(daysUntil)) {
         console.log(
@@ -2910,10 +2989,6 @@ async function handleInvoiceUpcoming(
         );
         return;
       }
-
-      console.log(
-        `📧 Sending ${daysUntil}-day discount expiration reminder to ${user.email}`,
-      );
 
       const totalDiscountAmount = Array.isArray(invoice.total_discount_amounts)
         ? invoice.total_discount_amounts.reduce(
@@ -2930,7 +3005,6 @@ async function handleInvoiceUpcoming(
           ? Math.round((totalDiscountAmount / invoice.subtotal) * 100)
           : 0;
 
-      // Send discount expiration reminder email
       const emailTemplate = discountExpiringTemplate({
         name: user.full_name || "there",
         discountPercent,
@@ -2940,18 +3014,16 @@ async function handleInvoiceUpcoming(
           month: "long",
           day: "numeric",
         }),
-        dashboardUrl: "https://moneko.io/dashboard/user-settings/membership",
+        dashboardUrl: `${DASHBOARD_URL}/dashboard/user-settings/membership`,
       });
 
       enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
       console.log(
         `✅ Discount expiration reminder queued for ${user.email} (${daysUntil} days before expiry)`,
       );
-
-      return; // Don't send regular renewal email
+      return;
     }
 
-    // === REGULAR RENEWAL REMINDER (no discount scenario) ===
     console.log(
       `Upcoming invoice for ${user.email}, charging in ${daysUntil} days`,
     );
@@ -2959,7 +3031,6 @@ async function handleInvoiceUpcoming(
       `Amount: ${(invoice.amount_due / 100).toFixed(2)} ${invoice.currency.toUpperCase()}`,
     );
 
-    // Get user data for personalized email
     const { data: userData } = await supabase
       .from("users")
       .select("email, full_name")
@@ -2973,7 +3044,6 @@ async function handleInvoiceUpcoming(
 
     const name = userData.full_name || "there";
 
-    // Get plan name from subscription - use safe extraction
     const productId =
       invoice.lines?.data?.length > 0
         ? getProductIdFromPrice(invoice.lines.data[0]?.price)
