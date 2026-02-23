@@ -55,6 +55,7 @@
     "https://esm.sh/@supabase/supabase-js@2.39.7": "5361671c958daa350e504d9975da64b2d6dc9e81390b985ccdafb2e3572e24e7",
     "https://esm.sh/@supabase/supabase-js@2.49.4": "d52c4d06946766d328fdd0ac2e007f52bb6d2ef7ce6103ad9f0f57d92b73e978",
     "https://esm.sh/@supabase/supabase-js@2.90.1": "fcf5e194d637ff365df76d1806e7c2f239905c4b08e83e5d95690a2b22e21a1d",
+    "https://esm.sh/pdf-lib@1.17.1?target=deno": "f05ab18d91820fe2a8ac345b9ffb1e40b218653ab54d26b25843dd8a01676d48",
     "https://esm.sh/xlsx@0.18.5/denonext/xlsx.mjs": "ecfb971768f8e7758bc4a4b817cd421771935a7e0d3c9819e7cdc4cbecc55dd8",
     "https://esm.sh/xlsx@0.18.5?no-dts": "feaad96c2697fd87d8d2cbf00030869f6f3cb87afc6f58c92602f1e33309dc03"
   },

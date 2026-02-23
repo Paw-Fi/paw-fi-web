@@ -442,13 +442,6 @@ Deno.serve(async (req: Request) => {
           "VALIDATION_ERROR",
         );
       }
-      if (updates.amount_cents > 100000000) {
-        // Max $1,000,000
-        return errorResponse(
-          "amount_cents must be less than 100,000,000",
-          "VALIDATION_ERROR",
-        );
-      }
     }
 
     if (updates.category !== undefined) {
@@ -1529,6 +1522,9 @@ Deno.serve(async (req: Request) => {
             old_created_at: oldCreatedAt,
             new_created_at: newCreatedAt,
             updated_fields: Object.keys(updates),
+            is_recurring:
+              ((updates as any).is_recurring as boolean | undefined) ??
+              (updatedExpense as any)?.is_recurring === true,
           },
         },
       );

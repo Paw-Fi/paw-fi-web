@@ -457,6 +457,7 @@ Deno.serve(async (req: Request) => {
             note: body.description || "",
             privacy_scope: privacyScope,
             owner_type: ownerType,
+            is_recurring: body.isRecurring === true,
           },
         },
       );

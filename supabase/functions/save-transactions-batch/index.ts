@@ -116,6 +116,19 @@ interface TransactionItem {
   source?: string;
   ownerType?: "me" | "partner" | "household";
   privacyScope?: "private" | "balances_only" | "full";
+  // Recurring support
+  isRecurring?: boolean;
+  recurrence_rule?: {
+    frequency: string;
+    anchor_date: string;
+    end_date?: string;
+    interval?: number;
+    reminder?: {
+      enabled: boolean;
+      value: number;
+      unit: "days" | "hours";
+    };
+  };
 }
 
 interface RequestBody {
@@ -332,6 +345,9 @@ Deno.serve(async (req: Request) => {
         receipt_image_url: tx.receiptImageUrl || null,
         created_at: tx.clientCreatedAt || new Date().toISOString(),
         household_id: isPortfolio ? requestedHouseholdId : null,
+        is_recurring: tx.isRecurring === true,
+        recurrence_rule:
+          tx.isRecurring === true ? tx.recurrence_rule || null : null,
       };
 
       if (tx.type === "income") {
@@ -425,6 +441,7 @@ Deno.serve(async (req: Request) => {
                   note: income.raw_text || "",
                   privacy_scope: income.privacy_scope,
                   owner_type: income.owner_type,
+                  is_recurring: income.is_recurring === true,
                 },
               },
             );
@@ -445,6 +462,9 @@ Deno.serve(async (req: Request) => {
                 actor_name: actorName,
                 actor_user_id: userId,
                 batch_count: insertedIncome.length,
+                recurring_count: insertedIncome.filter(
+                  (income) => income.is_recurring === true,
+                ).length,
                 household_id: resolvedHouseholdId,
               };
               const notifications = recipients.map((recipientId) => ({
@@ -750,6 +770,7 @@ Deno.serve(async (req: Request) => {
                   currency: expense.currency,
                   category: expense.category,
                   note: expense.raw_text || "",
+                  is_recurring: expense.is_recurring === true,
                 },
               },
             );
@@ -770,6 +791,9 @@ Deno.serve(async (req: Request) => {
                 actor_name: actorName,
                 actor_user_id: userId,
                 batch_count: insertedExpenses.length,
+                recurring_count: insertedExpenses.filter(
+                  (expense) => expense.is_recurring === true,
+                ).length,
                 household_id: resolvedHouseholdId,
               };
               const notifications = recipients.map((recipientId) => ({

@@ -388,6 +388,15 @@ serve(async (req) => {
         let body: string;
         let targetUserId: string | null = event.user_id;
         let messageData: Record<string, string> = {};
+        const payloadExpenseData =
+          event.payload?.expense_data &&
+          typeof event.payload.expense_data === "object" &&
+          !Array.isArray(event.payload.expense_data)
+            ? event.payload.expense_data
+            : {};
+        const isRecurringEvent =
+          event.payload?.is_recurring === true ||
+          payloadExpenseData.is_recurring === true;
 
         switch (event.event_type) {
           case "invite_sent":
@@ -423,32 +432,65 @@ serve(async (req) => {
           case "expense_added":
             {
               const batchCount = Number(event.payload?.batch_count ?? 0);
+              const recurringCount = Number(
+                event.payload?.recurring_count ?? 0,
+              );
+              const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "💸 Expenses Added";
-                body = `${batchCount} expenses were added in your household`;
+                const recurringSuffix =
+                  recurringCount > 0
+                    ? recurringCount === batchCount
+                      ? " (all recurring)"
+                      : ` (${recurringCount} recurring)`
+                    : "";
+                body = `${batchCount} expenses were added in your household${recurringSuffix}`;
               } else {
-                title = "💸 New Expense Added";
-                body = `A new expense was added in your household`;
+                title = isRecurring
+                  ? "🔁 New Recurring Expense Added"
+                  : "💸 New Expense Added";
+                body = isRecurring
+                  ? `A new recurring expense was added in your household`
+                  : `A new expense was added in your household`;
               }
             }
             targetUserId = null; // Broadcast to all members except actor
             break;
 
           case "expense_edited":
-            title = "✏️ Expense Updated";
-            body = `An expense was modified in your household`;
+            if (isRecurringEvent) {
+              title = "🔁 Recurring Expense Updated";
+              body = `A recurring expense was modified in your household`;
+            } else {
+              title = "✏️ Expense Updated";
+              body = `An expense was modified in your household`;
+            }
             targetUserId = null; // Broadcast to all members except actor
             break;
 
           case "expense_deleted":
             {
               const batchCount = Number(event.payload?.batch_count ?? 0);
+              const recurringCount = Number(
+                event.payload?.recurring_count ?? 0,
+              );
+              const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "🗑️ Expenses Deleted";
-                body = `${batchCount} expenses were deleted in your household`;
+                const recurringSuffix =
+                  recurringCount > 0
+                    ? recurringCount === batchCount
+                      ? " (all recurring)"
+                      : ` (${recurringCount} recurring)`
+                    : "";
+                body = `${batchCount} expenses were deleted in your household${recurringSuffix}`;
               } else {
-                title = "🗑️ Expense Deleted";
-                body = `An expense was deleted in your household`;
+                title = isRecurring
+                  ? "🔁 Recurring Expense Deleted"
+                  : "🗑️ Expense Deleted";
+                body = isRecurring
+                  ? `A recurring expense was deleted in your household`
+                  : `An expense was deleted in your household`;
               }
             }
             targetUserId = null; // Broadcast to all members except actor
@@ -456,16 +498,39 @@ serve(async (req) => {
 
           case "income_added": {
             const batchCount = Number(event.payload?.batch_count ?? 0);
+            const recurringCount = Number(event.payload?.recurring_count ?? 0);
+            const isRecurring = isRecurringEvent;
             if (batchCount > 1) {
               title = "💰 Income Added";
-              body = `${batchCount} income entries were added in your household`;
+              const recurringSuffix =
+                recurringCount > 0
+                  ? recurringCount === batchCount
+                    ? " (all recurring)"
+                    : ` (${recurringCount} recurring)`
+                  : "";
+              body = `${batchCount} income entries were added in your household${recurringSuffix}`;
             } else {
-              title = "💰 Income Added";
-              body = `A new income entry was added in your household`;
+              title = isRecurring
+                ? "🔁 Recurring Income Added"
+                : "💰 Income Added";
+              body = isRecurring
+                ? `A new recurring income entry was added in your household`
+                : `A new income entry was added in your household`;
             }
             targetUserId = null; // Broadcast to all members except actor
             break;
           }
+
+          case "income_edited":
+            if (isRecurringEvent) {
+              title = "🔁 Recurring Income Updated";
+              body = `A recurring income entry was modified in your household`;
+            } else {
+              title = "✏️ Income Updated";
+              body = `An income entry was modified in your household`;
+            }
+            targetUserId = null; // Broadcast to all members except actor
+            break;
 
           case "log_expense_reminder": {
             const reminderMessage = buildLogExpenseReminderMessage(
@@ -543,23 +608,30 @@ serve(async (req) => {
           )
           .in("user_id", userIds);
 
-        const isExpenseEvent =
+        const isImmediateTransactionEvent =
           event.event_type === "expense_added" ||
-          event.event_type === "expense_edited";
+          event.event_type === "expense_edited" ||
+          event.event_type === "expense_deleted" ||
+          event.event_type === "income_added" ||
+          event.event_type === "income_edited";
         const isLogExpenseReminder =
           event.event_type === "log_expense_reminder";
 
-        // Filter users by quiet hours (skip for expense events)
+        // Filter users by quiet hours (skip for immediate transaction events)
         const eligibleUserIds = userIds.filter((userId) => {
           const prefs = preferences?.find((p) => p.user_id === userId);
 
           // Check if notifications are enabled
-          if (prefs && prefs.enable_nudges === false) {
+          if (
+            !isImmediateTransactionEvent &&
+            prefs &&
+            prefs.enable_nudges === false
+          ) {
             return false;
           }
 
-          // Check quiet hours unless expense event (immediate delivery)
-          if (!isExpenseEvent) {
+          // Check quiet hours unless immediate transaction event
+          if (!isImmediateTransactionEvent) {
             if (isLogExpenseReminder) {
               const quietStart = Number.isFinite(
                 Number(event.payload?.quiet_start),
@@ -659,9 +731,16 @@ serve(async (req) => {
         let eventFailedCount = 0;
 
         const payloadData =
-          typeof event.payload === "object"
+          event.payload &&
+          typeof event.payload === "object" &&
+          !Array.isArray(event.payload)
             ? Object.fromEntries(
-                Object.entries(event.payload).map(([k, v]) => [k, String(v)]),
+                Object.entries(event.payload).map(([k, v]) => [
+                  k,
+                  v != null && typeof v === "object"
+                    ? JSON.stringify(v)
+                    : String(v),
+                ]),
               )
             : {};
         const mergedData = {

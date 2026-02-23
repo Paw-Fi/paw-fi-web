@@ -1416,6 +1416,14 @@ Deno.serve(async (req: Request) => {
                     enum: ["private", "balances_only", "full"],
                     description: "Income only",
                   },
+                  is_recurring: {
+                    type: "BOOLEAN",
+                    description: "True if this row is recurring",
+                  },
+                  frequency: {
+                    type: "STRING",
+                    description: "Recurring frequency for this row",
+                  },
                 },
                 required: ["type", "amount", "category"],
               },
@@ -1624,6 +1632,17 @@ Deno.serve(async (req: Request) => {
                   privacyScope: tx.privacy_scope || "full",
                   payerUserId,
                   customSplits,
+                  isRecurring: tx.is_recurring === true,
+                  recurrence_rule:
+                    tx.is_recurring === true
+                      ? tx.recurrence_rule || {
+                          frequency: (tx.frequency || "monthly")
+                            .toString()
+                            .toLowerCase(),
+                          interval: 1,
+                          anchor_date: dateStr,
+                        }
+                      : undefined,
                 });
               }
 
@@ -2808,6 +2827,14 @@ Deno.serve(async (req: Request) => {
                     enum: ["private", "balances_only", "full"],
                     description: "Income only",
                   },
+                  is_recurring: {
+                    type: "BOOLEAN",
+                    description: "True if this row is recurring",
+                  },
+                  frequency: {
+                    type: "STRING",
+                    description: "Recurring frequency for this row",
+                  },
                 },
                 required: ["type", "amount", "category"],
               },
@@ -3474,6 +3501,17 @@ Deno.serve(async (req: Request) => {
                 privacyScope: tx.privacy_scope || "full",
                 payerUserId,
                 customSplits,
+                isRecurring: tx.is_recurring === true,
+                recurrence_rule:
+                  tx.is_recurring === true
+                    ? tx.recurrence_rule || {
+                        frequency: (tx.frequency || "monthly")
+                          .toString()
+                          .toLowerCase(),
+                        interval: 1,
+                        anchor_date: dateStr,
+                      }
+                    : undefined,
               });
             }
 

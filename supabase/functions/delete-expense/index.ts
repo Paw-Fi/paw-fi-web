@@ -171,7 +171,7 @@ Deno.serve(async (req: Request) => {
     const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, household_id, amount_cents, currency, raw_text, category, date, type",
+        "id, user_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring",
       )
       .in("id", expenseIds);
 
@@ -368,6 +368,7 @@ Deno.serve(async (req: Request) => {
                   raw_text: expense.raw_text,
                   category: expense.category,
                   date: expense.date,
+                  is_recurring: expense.is_recurring === true,
                 },
               },
             );
@@ -394,6 +395,11 @@ Deno.serve(async (req: Request) => {
               actor_name: actorName,
               actor_user_id: userId,
               batch_count: count,
+              recurring_count: deletedExpenses.filter(
+                (expense) =>
+                  expense.household_id === householdId &&
+                  expense.is_recurring === true,
+              ).length,
               household_id: householdId,
             };
 

@@ -871,6 +871,7 @@ Deno.serve(async (req: Request) => {
             currency: currency,
             category: body.category,
             note: body.description || "",
+            is_recurring: body.isRecurring === true,
           },
         },
       );

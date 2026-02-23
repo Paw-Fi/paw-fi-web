@@ -418,6 +418,8 @@ function buildDeepLink(
     case "expense_added":
     case "expense_edited":
     case "expense_deleted":
+    case "income_added":
+    case "income_edited":
       // Navigate to expense detail sheet
       if (data.expense_id) {
         return `${appScheme}expense/${data.expense_id}`;
@@ -817,10 +819,12 @@ serve(async (req: Request) => {
       );
     }
 
-    const isExpenseEvent =
+    const isImmediateTransactionEvent =
       event_type === "expense_added" ||
       event_type === "expense_edited" ||
-      event_type === "expense_deleted";
+      event_type === "expense_deleted" ||
+      event_type === "income_added" ||
+      event_type === "income_edited";
     const isLogExpenseReminder = event_type === "log_expense_reminder";
 
     // Get user's notification preferences
@@ -832,7 +836,7 @@ serve(async (req: Request) => {
       .single();
 
     // Check if notifications are disabled for this user
-    if (!isExpenseEvent && prefs && !prefs.enable_nudges) {
+    if (!isImmediateTransactionEvent && prefs && !prefs.enable_nudges) {
       console.log("[send-push] User has disabled notifications");
       await supabase
         .from("notification_events")
@@ -851,8 +855,8 @@ serve(async (req: Request) => {
       );
     }
 
-    // Check quiet hours (skip for expense events to ensure immediate delivery)
-    if (!isExpenseEvent) {
+    // Check quiet hours (skip for immediate transaction events)
+    if (!isImmediateTransactionEvent) {
       if (isLogExpenseReminder) {
         const now = new Date();
         const quietStart = Number.isFinite(Number(payload.quiet_start))
@@ -1116,38 +1120,50 @@ function buildNotificationMessage(
   body: string;
   data: Record<string, string>;
 } {
-  const actor = (payload.expense_data?.actor_name ||
+  const expenseData = (payload.expense_data || {}) as Record<string, any>;
+  const actor = (expenseData.actor_name ||
     payload.actor_name ||
     "Someone") as string;
   const householdName = (payload.household_name || "your household") as string;
+  const isRecurring =
+    payload.is_recurring === true || expenseData.is_recurring === true;
+  const recurringLabel = isRecurring ? "recurring " : "";
 
   switch (eventType) {
     case "expense_added": {
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
+      const recurringCount = Number(payload.recurring_count ?? 0);
       if (batchCount > 1) {
+        const recurringSuffix =
+          recurringCount > 0
+            ? recurringCount === batchCount
+              ? " (all recurring)"
+              : ` (${recurringCount} recurring)`
+            : "";
         return {
           title: actor,
-          body: `added ${batchCount} expenses to ${householdName}`,
+          body: `added ${batchCount} expenses${recurringSuffix} to ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
         };
       }
-      const note = (payload.expense_data?.note || "").toString().trim();
-      const code = (recipientSplit?.currency ||
-        payload.expense_data?.currency) as string | undefined;
+      const note = (expenseData.note || "").toString().trim();
+      const code = (recipientSplit?.currency || expenseData.currency) as
+        | string
+        | undefined;
       const symbol = getCurrencySymbol(code);
       const cents = Number(
-        recipientSplit?.shareCents ?? payload.expense_data?.amount_cents ?? 0,
+        recipientSplit?.shareCents ?? expenseData.amount_cents ?? 0,
       );
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
       const isSplit = recipientSplit?.isSplitForRecipient === true;
 
       const body = isSplit
-        ? `split ${amount} expense with you${
+        ? `split ${amount} ${recurringLabel}expense with you${
             note ? `: ${note}` : ` in ${householdName}`
           }`
-        : `added ${amount} expense${
+        : `added ${amount} ${recurringLabel}expense${
             note ? `: ${note}` : ` to ${householdName}`
           }`;
 
@@ -1162,34 +1178,33 @@ function buildNotificationMessage(
     }
 
     case "expense_edited": {
-      const fields: string[] = (payload.expense_data?.updated_fields ||
-        []) as string[];
-      const code = (payload.expense_data?.currency ||
+      const fields: string[] = (expenseData.updated_fields || []) as string[];
+      const code = (expenseData.currency ||
         payload.currency ||
-        payload.expense_data?.new_currency) as string | undefined;
+        expenseData.new_currency) as string | undefined;
       const symbol = getCurrencySymbol(code);
 
-      let body = `modified an expense in ${householdName}`;
+      let body = `modified a ${recurringLabel}expense in ${householdName}`;
 
       // Show specific change for single field edits
       if (fields.length === 1) {
         if (fields.indexOf("amount_cents") !== -1) {
-          const oldC = Number(payload.expense_data?.old_amount_cents ?? 0);
-          const newC = Number(payload.expense_data?.new_amount_cents ?? 0);
+          const oldC = Number(expenseData.old_amount_cents ?? 0);
+          const newC = Number(expenseData.new_amount_cents ?? 0);
           body = `changed expense amount from ${symbol}${(oldC / 100).toFixed(
             2,
           )} to ${symbol}${(newC / 100).toFixed(2)}`;
         } else if (fields.indexOf("category") !== -1) {
-          const newCat = String(payload.expense_data?.new_category ?? "");
+          const newCat = String(expenseData.new_category ?? "");
           body = `changed expense category to ${newCat}`;
         } else if (fields.indexOf("currency") !== -1) {
-          const newCur = String(payload.expense_data?.new_currency ?? "");
+          const newCur = String(expenseData.new_currency ?? "");
           body = `changed expense currency to ${newCur}`;
         } else if (fields.indexOf("date") !== -1) {
-          const newDate = String(payload.expense_data?.new_date ?? "");
+          const newDate = String(expenseData.new_date ?? "");
           body = `changed expense date to ${newDate}`;
         } else if (fields.indexOf("raw_text") !== -1) {
-          const newN = String(payload.expense_data?.new_note ?? "").trim();
+          const newN = String(expenseData.new_note ?? "").trim();
           body = newN
             ? `updated expense note: ${newN}`
             : `removed expense note`;
@@ -1208,20 +1223,27 @@ function buildNotificationMessage(
 
     case "expense_deleted": {
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
+      const recurringCount = Number(payload.recurring_count ?? 0);
       if (batchCount > 1) {
+        const recurringSuffix =
+          recurringCount > 0
+            ? recurringCount === batchCount
+              ? " (all recurring)"
+              : ` (${recurringCount} recurring)`
+            : "";
         return {
           title: actor,
-          body: `deleted ${batchCount} expenses from ${householdName}`,
+          body: `deleted ${batchCount} expenses${recurringSuffix} from ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
         };
       }
-      const code = payload.expense_data?.currency as string | undefined;
+      const code = expenseData.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
-      const cents = Number(payload.expense_data?.amount_cents ?? 0);
+      const cents = Number(expenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const body = `deleted ${amount} expense from ${householdName}`;
+      const body = `deleted ${amount} ${recurringLabel}expense from ${householdName}`;
 
       return {
         title: actor,
@@ -1324,29 +1346,83 @@ function buildNotificationMessage(
 
     case "income_added": {
       const batchCount = Number(payload.batch_count ?? payload.count ?? 0);
+      const recurringCount = Number(payload.recurring_count ?? 0);
       if (batchCount > 1) {
+        const recurringSuffix =
+          recurringCount > 0
+            ? recurringCount === batchCount
+              ? " (all recurring)"
+              : ` (${recurringCount} recurring)`
+            : "";
         return {
           title: actor,
-          body: `added ${batchCount} income entries to ${householdName}`,
+          body: `added ${batchCount} income entries${recurringSuffix} to ${householdName}`,
           data: {
             household_id: payload.household_id || "",
           },
         };
       }
 
-      const code = payload.expense_data?.currency as string | undefined;
+      const code = expenseData.currency as string | undefined;
       const symbol = getCurrencySymbol(code);
-      const cents = Number(payload.expense_data?.amount_cents ?? 0);
+      const cents = Number(expenseData.amount_cents ?? 0);
       const amount = `${symbol}${(cents / 100).toFixed(2)}`;
-      const source = String(payload.expense_data?.source ?? "").trim();
+      const source = String(expenseData.source ?? "").trim();
       const body = source
-        ? `added ${amount} income from ${source} in ${householdName}`
-        : `added ${amount} income in ${householdName}`;
+        ? `added ${amount} ${recurringLabel}income from ${source} in ${householdName}`
+        : `added ${amount} ${recurringLabel}income in ${householdName}`;
 
       return {
         title: actor,
         body,
         data: {
+          expense_id: payload.expense_id || "",
+          household_id: payload.household_id || "",
+        },
+      };
+    }
+
+    case "income_edited": {
+      const fields: string[] = (expenseData.updated_fields || []) as string[];
+      const code = (expenseData.currency ||
+        payload.currency ||
+        expenseData.new_currency) as string | undefined;
+      const symbol = getCurrencySymbol(code);
+
+      let body = `modified a ${recurringLabel}income entry in ${householdName}`;
+
+      if (fields.length === 1) {
+        if (fields.indexOf("amount_cents") !== -1) {
+          const oldC = Number(expenseData.old_amount_cents ?? 0);
+          const newC = Number(expenseData.new_amount_cents ?? 0);
+          body = `changed income amount from ${symbol}${(oldC / 100).toFixed(
+            2,
+          )} to ${symbol}${(newC / 100).toFixed(2)}`;
+        } else if (fields.indexOf("category") !== -1) {
+          const newCat = String(expenseData.new_category ?? "");
+          body = `changed income category to ${newCat}`;
+        } else if (fields.indexOf("currency") !== -1) {
+          const newCur = String(expenseData.new_currency ?? "");
+          body = `changed income currency to ${newCur}`;
+        } else if (fields.indexOf("date") !== -1) {
+          const newDate = String(expenseData.new_date ?? "");
+          body = `changed income date to ${newDate}`;
+        } else if (fields.indexOf("raw_text") !== -1) {
+          const newN = String(expenseData.new_note ?? "").trim();
+          body = newN ? `updated income note: ${newN}` : `removed income note`;
+        } else if (fields.indexOf("source") !== -1) {
+          const newSource = String(expenseData.source ?? "").trim();
+          body = newSource
+            ? `changed income source to ${newSource}`
+            : `removed income source`;
+        }
+      }
+
+      return {
+        title: actor,
+        body,
+        data: {
+          expense_id: payload.expense_id || "",
           household_id: payload.household_id || "",
         },
       };

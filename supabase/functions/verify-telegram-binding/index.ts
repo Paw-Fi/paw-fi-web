@@ -102,6 +102,25 @@ async function sendTelegramMessage(
   return res.ok;
 }
 
+async function sendTelegramPhoto(
+  token: string,
+  chatId: number,
+  photoUrl: string,
+  caption?: string,
+) {
+  const url = `https://api.telegram.org/bot${token}/sendPhoto`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      photo: photoUrl,
+      ...(caption ? { caption } : {}),
+    }),
+  });
+  return res.ok;
+}
+
 Deno.serve(async (req: Request) => {
   const cors = getCorsHeaders(req.headers.get("Origin") ?? undefined);
   if (req.method === "OPTIONS") {
@@ -290,9 +309,20 @@ Deno.serve(async (req: Request) => {
 
     try {
       if (Number.isFinite(chatId)) {
-        const onboarding =
-          "✅ You're verified! You can now message me with expenses, budgets, and more.";
-        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, onboarding);
+        const onboardingText =
+          "👋 Hi! I’m Moneko, your personal budgeting assistant.\n\n" +
+          "Snap a photo of your receipt or\n" +
+          "type something like “spent 3 on coffee” — I’ll handle the rest!";
+
+        await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, onboardingText);
+
+        // Best-effort: include a receipt-upload example image (Telegram supports URL photos).
+        await sendTelegramPhoto(
+          TELEGRAM_BOT_TOKEN,
+          chatId,
+          "https://pbopcsmrcykdzbilpilf.supabase.co/storage/v1/object/public/web/Image_20251009092544_21_329.png",
+          "📸 Receipt upload\nLog your expenses by simply snapping a photo of your receipt!",
+        );
 
         const { data: subscription } = await supabase
           .from("subscriptions")
