@@ -5,7 +5,7 @@ console.error = (...args: any[]) => {
   const message = args[0];
   const joined = args
     .map((arg: any) =>
-      typeof arg === "string" ? arg : arg instanceof Error ? arg.message : ""
+      typeof arg === "string" ? arg : arg instanceof Error ? arg.message : "",
     )
     .filter(Boolean)
     .join(" ");
@@ -29,7 +29,7 @@ console.warn = (...args: any[]) => {
   const message = args[0];
   const joined = args
     .map((arg: any) =>
-      typeof arg === "string" ? arg : arg instanceof Error ? arg.message : ""
+      typeof arg === "string" ? arg : arg instanceof Error ? arg.message : "",
     )
     .filter(Boolean)
     .join(" ");
@@ -202,8 +202,7 @@ async function getGoogleCloudAccessToken(): Promise<string | null> {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body:
-        `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
     });
 
     if (!tokenResponse.ok) {
@@ -321,8 +320,8 @@ function parseDateFromText(line: string, callerDate: string): string | null {
     "i",
   );
 
-  const yearFromCaller = Number(callerDate.slice(0, 4)) ||
-    new Date().getFullYear();
+  const yearFromCaller =
+    Number(callerDate.slice(0, 4)) || new Date().getFullYear();
 
   const monthFirstMatch = line.match(monthFirstRegex);
   if (monthFirstMatch) {
@@ -429,10 +428,9 @@ function detectCurrencyFromText(line: string, callerCurrency: string): string {
 function inferTypeFromText(line: string): "expense" | "income" {
   const normalized = line.toLowerCase();
   if (
-    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from)/
-      .test(
-        normalized,
-      )
+    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from)/.test(
+      normalized,
+    )
   ) {
     return "income";
   }
@@ -571,10 +569,9 @@ function buildDeterministicCandidates(
     const lower = rawText.toLowerCase();
 
     if (
-      /(opening balance|closing balance|balance summary|statement generated|total money out|total money in)/
-        .test(
-          lower,
-        )
+      /(opening balance|closing balance|balance summary|statement generated|total money out|total money in)/.test(
+        lower,
+      )
     ) {
       continue;
     }
@@ -591,7 +588,7 @@ function buildDeterministicCandidates(
         columnMap = {
           date: header.findIndex((part) => part.includes("date")),
           description: header.findIndex((part) =>
-            /(description|merchant|details)/.test(part)
+            /(description|merchant|details)/.test(part),
           ),
           moneyOut: header.findIndex((part) => part.includes("money out")),
           moneyIn: header.findIndex((part) => part.includes("money in")),
@@ -608,9 +605,10 @@ function buildDeterministicCandidates(
     }
 
     if (columnMap && parts.length >= 3) {
-      const datePart = columnMap.date !== undefined && columnMap.date >= 0
-        ? parts[columnMap.date]
-        : "";
+      const datePart =
+        columnMap.date !== undefined && columnMap.date >= 0
+          ? parts[columnMap.date]
+          : "";
       const descriptionPart =
         columnMap.description !== undefined && columnMap.description >= 0
           ? parts[columnMap.description]
@@ -623,12 +621,13 @@ function buildDeterministicCandidates(
         columnMap.moneyIn !== undefined && columnMap.moneyIn >= 0
           ? parts[columnMap.moneyIn]
           : "";
-      const amountPart = columnMap.amount !== undefined && columnMap.amount >= 0
-        ? parts[columnMap.amount]
-        : "";
+      const amountPart =
+        columnMap.amount !== undefined && columnMap.amount >= 0
+          ? parts[columnMap.amount]
+          : "";
 
-      const dateValue = parseDateFromText(datePart, callerDate) || recordDate ||
-        lastSeenDate;
+      const dateValue =
+        parseDateFromText(datePart, callerDate) || recordDate || lastSeenDate;
       const moneyOutTokens = extractAmountTokens(moneyOutPart);
       const moneyInTokens = extractAmountTokens(moneyInPart);
       const amountTokens = extractAmountTokens(amountPart);
@@ -837,14 +836,12 @@ function extractStatementItemsFromLines(
       const sample = lines
         .slice(0, 20)
         .map((line) =>
-          line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*"))
+          line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*")),
         );
       console.log(
-        `[analyze-expense] PDF: Statement-mode sample lines (masked):\n${
-          sample.join(
-            "\n",
-          )
-        }`,
+        `[analyze-expense] PDF: Statement-mode sample lines (masked):\n${sample.join(
+          "\n",
+        )}`,
       );
     }
   }
@@ -859,9 +856,10 @@ function extractStatementItemsFromLines(
     const segments: string[] = [];
     for (let i = 0; i < matches.length; i++) {
       const start = matches[i].index ?? 0;
-      const end = i + 1 < matches.length
-        ? (matches[i + 1].index ?? sourceText.length)
-        : sourceText.length;
+      const end =
+        i + 1 < matches.length
+          ? (matches[i + 1].index ?? sourceText.length)
+          : sourceText.length;
       const segment = sourceText.slice(start, end).replace(/\s+/g, " ").trim();
       if (segment.length > 0) segments.push(segment);
     }
@@ -920,15 +918,14 @@ function extractDeterministicItemsFromTableRows(
     const joined = row.filter(Boolean).join(" | ");
     if (!joined) continue;
 
-    const dateText = headerMap && headerMap.date >= 0
-      ? row[headerMap.date]
-      : joined;
-    const descriptionText = headerMap && headerMap.description >= 0
-      ? row[headerMap.description]
-      : stripAmountsAndDates(joined) || joined;
-    const currencyText = headerMap && headerMap.currency >= 0
-      ? row[headerMap.currency]
-      : joined;
+    const dateText =
+      headerMap && headerMap.date >= 0 ? row[headerMap.date] : joined;
+    const descriptionText =
+      headerMap && headerMap.description >= 0
+        ? row[headerMap.description]
+        : stripAmountsAndDates(joined) || joined;
+    const currencyText =
+      headerMap && headerMap.currency >= 0 ? row[headerMap.currency] : joined;
 
     let amountValue: number | null = null;
     let type: "expense" | "income" = "expense";
@@ -969,8 +966,8 @@ function extractDeterministicItemsFromTableRows(
     if (isTotalLike(descriptionText)) continue;
 
     const dateValue = parseDateFromText(dateText, callerDate) || callerDate;
-    const currency = detectCurrencyFromText(currencyText, callerCurrency) ||
-      callerCurrency;
+    const currency =
+      detectCurrencyFromText(currencyText, callerCurrency) || callerCurrency;
 
     candidates.push({
       type,
@@ -1031,29 +1028,21 @@ function reconcileStatementTotals(text: string, items: ExpenseItem[]): void {
 
   if (totalOut && Math.abs(totalOut - sumOut) > tolerance) {
     console.warn(
-      `[analyze-expense] Reconciliation warning: money out total ${
-        totalOut.toFixed(
-          2,
-        )
-      } vs extracted ${sumOut.toFixed(2)} (diff ${
-        (totalOut - sumOut).toFixed(
-          2,
-        )
-      })`,
+      `[analyze-expense] Reconciliation warning: money out total ${totalOut.toFixed(
+        2,
+      )} vs extracted ${sumOut.toFixed(2)} (diff ${(totalOut - sumOut).toFixed(
+        2,
+      )})`,
     );
   }
 
   if (totalIn && Math.abs(totalIn - sumIn) > tolerance) {
     console.warn(
-      `[analyze-expense] Reconciliation warning: money in total ${
-        totalIn.toFixed(
-          2,
-        )
-      } vs extracted ${sumIn.toFixed(2)} (diff ${
-        (totalIn - sumIn).toFixed(
-          2,
-        )
-      })`,
+      `[analyze-expense] Reconciliation warning: money in total ${totalIn.toFixed(
+        2,
+      )} vs extracted ${sumIn.toFixed(2)} (diff ${(totalIn - sumIn).toFixed(
+        2,
+      )})`,
     );
   }
 }
@@ -1103,30 +1092,25 @@ async function resolveCandidateCategories(
         role: "user",
         parts: [
           {
-            text:
-              `You are a transaction categorization engine.\nReturn exactly ${candidates.length} categories in the same order as the input.\nUse only the allowed categories.\nExpense categories: ${
-                expenseCategories.join(
-                  ", ",
-                )
-              }\nIncome categories: ${
-                incomeCategories.join(
-                  ", ",
-                )
-              }\nLanguage: ${language}\n\nTransactions:\n${
-                candidates
-                  .map(
-                    (item, index) =>
-                      `${
-                        index + 1
-                      }. ${item.type.toUpperCase()} | ${item.date} | ${item.description} | ${item.amount} ${item.currency}`,
-                  )
-                  .join("\n")
-              }`,
+            text: `You are a transaction categorization engine.\nReturn exactly ${candidates.length} categories in the same order as the input.\nUse only the allowed categories.\nExpense categories: ${expenseCategories.join(
+              ", ",
+            )}\nIncome categories: ${incomeCategories.join(
+              ", ",
+            )}\nLanguage: ${language}\n\nTransactions:\n${candidates
+              .map(
+                (item, index) =>
+                  `${
+                    index + 1
+                  }. ${item.type.toUpperCase()} | ${item.date} | ${item.description} | ${item.amount} ${item.currency}`,
+              )
+              .join("\n")}`,
           },
         ],
       },
     ],
-    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    toolConfig: {
+      functionCallingConfig: CATEGORIZE_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
+    },
     generationConfig: { maxOutputTokens: 4096 },
   } as any);
 
@@ -1135,16 +1119,18 @@ async function resolveCandidateCategories(
   );
 
   if (toolCalls.length > 0) {
-    const categories = toolCalls.flatMap((call: any) =>
-      Array.isArray(call.args?.categories) ? call.args.categories : []
-    );
-    if (categories.length === candidates.length) {
-      return categories.map((cat: string) => normalizeCategory(cat));
+    for (const call of toolCalls) {
+      const categories = Array.isArray(call.args?.categories)
+        ? call.args.categories
+        : [];
+      if (categories.length === candidates.length) {
+        return categories.map((cat: string) => normalizeCategory(cat));
+      }
     }
   }
 
   return candidates.map((candidate) =>
-    normalizeCategory(candidate.description)
+    normalizeCategory(candidate.description),
   );
 }
 
@@ -1222,15 +1208,13 @@ function buildPageTextFromDocumentAiPage(page: any, fullText: string): string {
  * This reduces token usage by 80-90% compared to sending raw PDFs to Gemini.
  * Falls back to Gemini's native processing if Document AI is not configured.
  */
-async function extractPdfText(base64Pdf: string): Promise<
-  {
-    text: string;
-    pageCount: number;
-    pages?: string[];
-    tableRows?: string[];
-    lineTexts?: string[];
-  } | null
-> {
+async function extractPdfText(base64Pdf: string): Promise<{
+  text: string;
+  pageCount: number;
+  pages?: string[];
+  tableRows?: string[];
+  lineTexts?: string[];
+} | null> {
   // Check if Document AI service account is configured
   if (!GOOGLE_CLOUD_SERVICE_ACCOUNT) {
     console.log(
@@ -1318,9 +1302,10 @@ async function extractPdfText(base64Pdf: string): Promise<
 
     // Validate extracted text
     const fallbackText = normalizeDocumentText(fullText);
-    const cleanText = pageTexts.length > 0
-      ? normalizeDocumentText(pageTexts.join("\n\n"))
-      : fallbackText;
+    const cleanText =
+      pageTexts.length > 0
+        ? normalizeDocumentText(pageTexts.join("\n\n"))
+        : fallbackText;
     const hasSubstantialText = cleanText.length > 50;
     const hasTransactionLikeContent =
       /\d+\.\d{2}|\$|€|£|¥|₹/.test(cleanText) || // Has currency-like amounts
@@ -1343,20 +1328,20 @@ async function extractPdfText(base64Pdf: string): Promise<
         "[analyze-expense] 🚀 Using Document AI (not Gemini vision mode)",
       );
 
-      const finalTableRows = tableRows.length > 0
-        ? tableRows
-        : inferredRows.length > 0
-        ? inferredRows
-        : undefined;
+      const finalTableRows =
+        tableRows.length > 0
+          ? tableRows
+          : inferredRows.length > 0
+            ? inferredRows
+            : undefined;
 
       return {
         text: cleanText,
         pageCount: totalPages,
         pages: pagesForProcessing,
         tableRows: finalTableRows,
-        lineTexts: collectedLineTexts.length > 0
-          ? collectedLineTexts
-          : undefined,
+        lineTexts:
+          collectedLineTexts.length > 0 ? collectedLineTexts : undefined,
       };
     }
 
@@ -1420,18 +1405,39 @@ async function splitPdfBase64IntoChunks(
 
 function getFunctionCalls(response: any) {
   const direct = response?.response?.functionCalls?.();
-  if (Array.isArray(direct) && direct.length > 0) return direct;
-
+  const calls: any[] = Array.isArray(direct) ? [...direct] : [];
   const candidates = response?.response?.candidates;
-  if (!candidates || candidates.length === 0) return [];
-
-  const parts = candidates[0].content?.parts || [];
-  const calls: any[] = [];
-  for (const p of parts) {
-    if (p.functionCall) calls.push(p.functionCall);
+  if (Array.isArray(candidates)) {
+    for (const candidate of candidates) {
+      const parts = candidate?.content?.parts || [];
+      for (const part of parts) {
+        if (part?.functionCall) calls.push(part.functionCall);
+      }
+    }
   }
-  return calls;
+
+  if (calls.length <= 1) return calls;
+
+  const deduped: any[] = [];
+  const seen = new Set<string>();
+  for (const call of calls) {
+    const key = `${call?.name ?? ""}:${JSON.stringify(call?.args ?? {})}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(call);
+  }
+  return deduped;
 }
+
+const ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG = {
+  mode: "ANY",
+  allowedFunctionNames: ["add_transactions"],
+};
+
+const CATEGORIZE_TRANSACTIONS_FUNCTION_CALLING_CONFIG = {
+  mode: "ANY",
+  allowedFunctionNames: ["categorize_transactions"],
+};
 
 function getFirstFunctionCall(response: any) {
   return getFunctionCalls(response)?.[0] ?? null;
@@ -1530,16 +1536,15 @@ function buildTransactionSystemInstruction(
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
 ): string {
-  const normalizedHint = typeHint && typeHint !== "mixed"
-    ? typeHint
-    : undefined;
+  const normalizedHint =
+    typeHint && typeHint !== "mixed" ? typeHint : undefined;
   return [
     "You are a professional transaction extraction and classification system.",
     "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
     ...(normalizedHint
       ? [
-        `Caller Hint: The transactions are most likely ${normalizedHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`,
-      ]
+          `Caller Hint: The transactions are most likely ${normalizedHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`,
+        ]
       : []),
 
     "### 1. QUANTITY & AMOUNT STRATEGY",
@@ -1569,61 +1574,61 @@ function buildTransactionSystemInstruction(
 
     ...(householdContext
       ? [
-        "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
-        "- The caller is in a household/group context. Return split information for every EXPENSE item.",
-        "- The expense tracking logic: WHO paid the bill, and HOW MUCH does each person OWE.",
-        "",
-        "#### 5.1 PAYER IDENTIFICATION (payerUserId) - WHO PAID THE BILL",
-        "- Default payer = caller (the user logging the expense). OMIT payerUserId if caller paid.",
-        "- Set payerUserId ONLY when someone ELSE paid the bill.",
-        "- Patterns: 'Bob paid', 'paid by Bob', 'Bob covered it', 'Bob付了', 'Bob 결제함', 'Bob pagó'",
-        "- 'I paid', 'I covered it' → caller paid, OMIT payerUserId",
-        "- Use ONLY userId from the provided member list. Never output names/emails.",
-        "",
-        "#### 5.2 SPLIT EXTRACTION (customSplits) - HOW MUCH EACH PERSON OWES",
-        "- ALWAYS use splitType='amount' with memberSplits for ALL household members.",
-        "- Each member's amount represents what they OWE (their share of the expense).",
-        "- All amounts must sum to the total expense amount.",
-        "",
-        "**INTERPRETING SPLIT PHRASES (CRITICAL):**",
-        "",
-        "A) EXPLICIT AMOUNTS per person (clearest pattern):",
-        "   - 'Bob 30, me 20' → Bob owes 30, Caller owes 20",
-        "   - 'Bob's share is 15' → Bob owes 15, remainder for others",
-        "   - 'Bob owes 10' → Bob owes 10, remainder for others",
-        "   - '小明出30，我出20' → XiaoMing owes 30, Caller owes 20",
-        "",
-        "B) 'SPLIT X WITH [person]' - CONTEXT DEPENDENT:",
-        "   - When TOTAL is given separately: X is the amount the mentioned person owes",
-        "     Example: '50 dinner, split 20 with Bob' → Total=50, Bob owes 20, Caller owes 30",
-        "     Example: '40块晚饭，和小明分20' → Total=40, XiaoMing owes 20, Caller owes 20",
-        "   - When NO TOTAL given: X is the total to split EQUALLY",
-        "     Example: 'split 30 with Bob' → Total=30, Bob owes 15, Caller owes 15",
-        "",
-        "C) 'I OWE X' or 'MY SHARE IS X' (implies someone else paid):",
-        "   - 'Bob paid 50, I owe 20' → Payer=Bob, Caller owes 20, Bob owes 30",
-        "   - 'Bob paid dinner 40, my share is 10' → Payer=Bob, Caller owes 10, Bob owes 30",
-        "   - 'Bob paid, split 15 with me' → Payer=Bob, Caller owes 15, Bob owes remainder",
-        "   - Note: When someone else paid, they still 'owe' their own share to themselves.",
-        "",
-        "D) EQUAL SPLIT indicators:",
-        "   - 'split equally', '50-50', 'halves', 'AA制', '平分', '반반' → divide total equally",
-        "   - 'we split it' without amounts → equal split",
-        "",
-        "E) NO SPLIT MENTIONED:",
-        "   - Default to EQUAL split among ALL household members.",
-        "",
-        "**CALCULATION RULES:**",
-        "- After identifying specified amounts, distribute remainder equally among unspecified members.",
-        "- All memberSplits amounts MUST sum exactly to the total expense amount.",
-        "- ALWAYS include ALL household members in memberSplits array, even if their amount is 0.",
-        "- Small rounding differences are OK (backend will adjust the last member's amount).",
-        "",
-        "**MEMBER RESOLUTION:**",
-        "- Match names/aliases to userId from the provided member list (case-insensitive).",
-        "- 'me', 'myself', 'I', '我', '나' → Caller's userId",
-        "- Pronouns (him/her/them) → Context-dependent or last mentioned member",
-      ]
+          "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
+          "- The caller is in a household/group context. Return split information for every EXPENSE item.",
+          "- The expense tracking logic: WHO paid the bill, and HOW MUCH does each person OWE.",
+          "",
+          "#### 5.1 PAYER IDENTIFICATION (payerUserId) - WHO PAID THE BILL",
+          "- Default payer = caller (the user logging the expense). OMIT payerUserId if caller paid.",
+          "- Set payerUserId ONLY when someone ELSE paid the bill.",
+          "- Patterns: 'Bob paid', 'paid by Bob', 'Bob covered it', 'Bob付了', 'Bob 결제함', 'Bob pagó'",
+          "- 'I paid', 'I covered it' → caller paid, OMIT payerUserId",
+          "- Use ONLY userId from the provided member list. Never output names/emails.",
+          "",
+          "#### 5.2 SPLIT EXTRACTION (customSplits) - HOW MUCH EACH PERSON OWES",
+          "- ALWAYS use splitType='amount' with memberSplits for ALL household members.",
+          "- Each member's amount represents what they OWE (their share of the expense).",
+          "- All amounts must sum to the total expense amount.",
+          "",
+          "**INTERPRETING SPLIT PHRASES (CRITICAL):**",
+          "",
+          "A) EXPLICIT AMOUNTS per person (clearest pattern):",
+          "   - 'Bob 30, me 20' → Bob owes 30, Caller owes 20",
+          "   - 'Bob's share is 15' → Bob owes 15, remainder for others",
+          "   - 'Bob owes 10' → Bob owes 10, remainder for others",
+          "   - '小明出30，我出20' → XiaoMing owes 30, Caller owes 20",
+          "",
+          "B) 'SPLIT X WITH [person]' - CONTEXT DEPENDENT:",
+          "   - When TOTAL is given separately: X is the amount the mentioned person owes",
+          "     Example: '50 dinner, split 20 with Bob' → Total=50, Bob owes 20, Caller owes 30",
+          "     Example: '40块晚饭，和小明分20' → Total=40, XiaoMing owes 20, Caller owes 20",
+          "   - When NO TOTAL given: X is the total to split EQUALLY",
+          "     Example: 'split 30 with Bob' → Total=30, Bob owes 15, Caller owes 15",
+          "",
+          "C) 'I OWE X' or 'MY SHARE IS X' (implies someone else paid):",
+          "   - 'Bob paid 50, I owe 20' → Payer=Bob, Caller owes 20, Bob owes 30",
+          "   - 'Bob paid dinner 40, my share is 10' → Payer=Bob, Caller owes 10, Bob owes 30",
+          "   - 'Bob paid, split 15 with me' → Payer=Bob, Caller owes 15, Bob owes remainder",
+          "   - Note: When someone else paid, they still 'owe' their own share to themselves.",
+          "",
+          "D) EQUAL SPLIT indicators:",
+          "   - 'split equally', '50-50', 'halves', 'AA制', '平分', '반반' → divide total equally",
+          "   - 'we split it' without amounts → equal split",
+          "",
+          "E) NO SPLIT MENTIONED:",
+          "   - Default to EQUAL split among ALL household members.",
+          "",
+          "**CALCULATION RULES:**",
+          "- After identifying specified amounts, distribute remainder equally among unspecified members.",
+          "- All memberSplits amounts MUST sum exactly to the total expense amount.",
+          "- ALWAYS include ALL household members in memberSplits array, even if their amount is 0.",
+          "- Small rounding differences are OK (backend will adjust the last member's amount).",
+          "",
+          "**MEMBER RESOLUTION:**",
+          "- Match names/aliases to userId from the provided member list (case-insensitive).",
+          "- 'me', 'myself', 'I', '我', '나' → Caller's userId",
+          "- Pronouns (him/her/them) → Context-dependent or last mentioned member",
+        ]
       : []),
 
     "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
@@ -1751,12 +1756,11 @@ function buildHouseholdContextPrompt(
   ctx: NonNullable<ReturnType<typeof resolveHouseholdContext>>,
 ) {
   const lines = ctx.members.map((m) => {
-    const label = (m.userName || m.userEmail || "member").toString().trim() ||
-      "member";
+    const label =
+      (m.userName || m.userEmail || "member").toString().trim() || "member";
     const aliases = ctx.aliasesByUserId.get(m.userId) ?? [];
-    const aliasHint = aliases.length > 0
-      ? ` (aliases: ${aliases.join(", ")})`
-      : "";
+    const aliasHint =
+      aliases.length > 0 ? ` (aliases: ${aliases.join(", ")})` : "";
     return `- ${label}${aliasHint}: ${m.userId}`;
   });
   return [
@@ -1910,12 +1914,10 @@ export function normalizeCustomSplits(
     byUserId.set(resolvedId, {
       userId: resolvedId,
       amount: typeof rec.amount === "number" ? rec.amount : undefined,
-      percentage: typeof rec.percentage === "number"
-        ? rec.percentage
-        : undefined,
-      shares: typeof rec.shares === "number"
-        ? Math.trunc(rec.shares)
-        : undefined,
+      percentage:
+        typeof rec.percentage === "number" ? rec.percentage : undefined,
+      shares:
+        typeof rec.shares === "number" ? Math.trunc(rec.shares) : undefined,
     });
   }
 
@@ -2114,7 +2116,8 @@ async function preprocessExtractedTextWithGemini(
     model: "gemini-2.5-flash-lite",
   });
 
-  const schemaLine = '{"formatVersion":1,"source":"' +
+  const schemaLine =
+    '{"formatVersion":1,"source":"' +
     sourceLabel +
     '","normalizedText":"string","lines":["string"],"tables":[["string"]]}';
 
@@ -2256,13 +2259,11 @@ function mergeTransactionJsonSnippets(snippets: string[]): string | null {
 
   const seen = new Set<string>();
   const deduped = all.filter((item) => {
-    const key = `${item.date || ""}|${item.amount || ""}|${
-      (
-        item.description || ""
-      )
-        .toLowerCase()
-        .slice(0, 50)
-    }`;
+    const key = `${item.date || ""}|${item.amount || ""}|${(
+      item.description || ""
+    )
+      .toLowerCase()
+      .slice(0, 50)}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -2282,11 +2283,12 @@ function parseTransactionsJsonToItems(
 
   const results: ExpenseItem[] = [];
   for (const item of items) {
-    const rawDescription = typeof item?.description === "string"
-      ? item.description
-      : item?.description != null
-      ? String(item.description)
-      : "";
+    const rawDescription =
+      typeof item?.description === "string"
+        ? item.description
+        : item?.description != null
+          ? String(item.description)
+          : "";
     const description = rawDescription
       .trim()
       .replace(/^description\s*[:=]\s*/i, "")
@@ -2294,16 +2296,19 @@ function parseTransactionsJsonToItems(
     const amount = Math.abs(Number(item?.amount));
     if (!Number.isFinite(amount) || amount <= 0) continue;
 
-    const currency = typeof item?.currency === "string" && item.currency.trim()
-      ? item.currency.trim()
-      : callerCurrency;
-    const dateValue = typeof item?.date === "string"
-      ? parseDateFromText(item.date, callerDate) || item.date
-      : callerDate;
+    const currency =
+      typeof item?.currency === "string" && item.currency.trim()
+        ? item.currency.trim()
+        : callerCurrency;
+    const dateValue =
+      typeof item?.date === "string"
+        ? parseDateFromText(item.date, callerDate) || item.date
+        : callerDate;
     const typeRaw = String(item?.type || "").toLowerCase();
-    const type = typeRaw === "income" || typeRaw === "expense"
-      ? (typeRaw as "income" | "expense")
-      : inferTypeFromText(description);
+    const type =
+      typeRaw === "income" || typeRaw === "expense"
+        ? (typeRaw as "income" | "expense")
+        : inferTypeFromText(description);
 
     results.push({
       type,
@@ -2358,9 +2363,10 @@ async function analyzeFromText(
     callerCurrency,
     transactionLines.length >= 20 ? transactionLines : undefined,
   );
-  const analysisText = transactionLines.length >= 20
-    ? transactionLines.join("\n")
-    : normalizedText;
+  const analysisText =
+    transactionLines.length >= 20
+      ? transactionLines.join("\n")
+      : normalizedText;
 
   if (DEBUG_LOGS && transactionLines.length >= 20) {
     console.log(
@@ -2393,7 +2399,7 @@ async function analyzeFromText(
         currentChunk = "";
       } else if (
         currentChunk.length + processedPage.length + 2 >
-          CHUNK_THRESHOLD
+        CHUNK_THRESHOLD
       ) {
         // Adding this page would exceed limit, flush current
         if (currentChunk.trim()) textChunks.push(currentChunk.trim());
@@ -2405,9 +2411,10 @@ async function analyzeFromText(
     }
     if (currentChunk.trim()) textChunks.push(currentChunk.trim());
   } else {
-    textChunks = analysisText.length > CHUNK_THRESHOLD
-      ? splitTextIntoChunks(analysisText, CHUNK_THRESHOLD)
-      : [analysisText];
+    textChunks =
+      analysisText.length > CHUNK_THRESHOLD
+        ? splitTextIntoChunks(analysisText, CHUNK_THRESHOLD)
+        : [analysisText];
   }
 
   const isMultiChunk = textChunks.length > 1;
@@ -2540,7 +2547,7 @@ async function analyzeFromText(
         batchStart + idx,
         textChunks.length,
         "", // Empty for multi-chunk
-      )
+      ),
     );
 
     const batchResults = await Promise.allSettled(batchPromises);
@@ -2640,7 +2647,8 @@ Do NOT summarize - extract every single transaction.
         role: "user",
         parts: [
           {
-            text: `Caller Currency: ${callerCurrency}\n` +
+            text:
+              `Caller Currency: ${callerCurrency}\n` +
               `Caller Date: ${callerDate}` +
               householdPrompt +
               chunkPrompt +
@@ -2649,7 +2657,9 @@ Do NOT summarize - extract every single transaction.
         ],
       },
     ],
-    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    toolConfig: {
+      functionCallingConfig: ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
+    },
     generationConfig: { maxOutputTokens: 32768 },
   } as any;
 
@@ -2666,7 +2676,7 @@ Do NOT summarize - extract every single transaction.
 
   if (toolCalls.length > 0) {
     const rawItems: any[] = toolCalls.flatMap((call: any) =>
-      Array.isArray(call.args?.items) ? call.args.items : []
+      Array.isArray(call.args?.items) ? call.args.items : [],
     );
 
     const chunkItems = processRawItems(
@@ -2719,22 +2729,24 @@ function processRawItems(
       }
 
       const txType = String(it.type || "").toLowerCase();
-      const resolvedType = txType === "income" || txType === "expense"
-        ? txType
-        : undefined;
+      const resolvedType =
+        txType === "income" || txType === "expense" ? txType : undefined;
       const amount = Math.abs(Number(it.amount));
       const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
 
-      const payerUserId = resolvedType === "expense"
-        ? normalizePayerUserId(it.payerUserId, householdContext)
-        : undefined;
-      const normalizedCustomSplits = resolvedType === "expense"
-        ? normalizeCustomSplits(it.customSplits, householdContext, amount)
-        : undefined;
-      const customSplits = resolvedType === "expense" && householdContext
-        ? (normalizedCustomSplits ??
-          buildDefaultHouseholdCustomSplits(householdContext, amount))
-        : undefined;
+      const payerUserId =
+        resolvedType === "expense"
+          ? normalizePayerUserId(it.payerUserId, householdContext)
+          : undefined;
+      const normalizedCustomSplits =
+        resolvedType === "expense"
+          ? normalizeCustomSplits(it.customSplits, householdContext, amount)
+          : undefined;
+      const customSplits =
+        resolvedType === "expense" && householdContext
+          ? (normalizedCustomSplits ??
+            buildDefaultHouseholdCustomSplits(householdContext, amount))
+          : undefined;
 
       // Log household split details for debugging
       if (DEBUG_LOGS && householdContext && resolvedType === "expense") {
@@ -2743,14 +2755,12 @@ function processRawItems(
             payerUserId || "(caller)"
           }, ` +
             `rawCustomSplits=${JSON.stringify(it.customSplits)}, ` +
-            `normalizedSplits=${
-              JSON.stringify(
-                customSplits?.memberSplits?.map((m) => ({
-                  userId: m.userId.slice(-8),
-                  amount: m.amount,
-                })),
-              )
-            }`,
+            `normalizedSplits=${JSON.stringify(
+              customSplits?.memberSplits?.map((m) => ({
+                userId: m.userId.slice(-8),
+                amount: m.amount,
+              })),
+            )}`,
         );
       }
 
@@ -2767,7 +2777,8 @@ function processRawItems(
       } as ExpenseItem;
     })
     .filter((it) => {
-      const isValid = it.type &&
+      const isValid =
+        it.type &&
         (it.type === "income" || it.type === "expense") &&
         Number.isFinite(it.amount) &&
         it.amount > 0 &&
@@ -2778,11 +2789,9 @@ function processRawItems(
 
       if (DEBUG_LOGS && !isValid) {
         console.log(
-          `[analyze-expense] ${logPrefix} filtered invalid: ${
-            JSON.stringify(
-              it,
-            )
-          }`,
+          `[analyze-expense] ${logPrefix} filtered invalid: ${JSON.stringify(
+            it,
+          )}`,
         );
       }
       return isValid;
@@ -2803,7 +2812,7 @@ function deduplicateAndCleanItems(items: ExpenseItem[]): ExpenseItem[] {
   const sums = result.map((_, i) =>
     result
       .filter((__, j) => i !== j)
-      .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0)
+      .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
   );
   result = result.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
 
@@ -2815,12 +2824,10 @@ function deduplicateAndCleanItems(items: ExpenseItem[]): ExpenseItem[] {
     if (normalizedDescription.length < 3) {
       return true;
     }
-    const key = `${item.date}|${item.amount.toFixed(2)}|${
-      normalizedDescription.slice(
-        0,
-        50,
-      )
-    }`;
+    const key = `${item.date}|${item.amount.toFixed(2)}|${normalizedDescription.slice(
+      0,
+      50,
+    )}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -2860,16 +2867,17 @@ async function analyzeFromPdf(
   const textResult = await extractPdfText(base64Pdf);
 
   if (textResult && textResult.text.length > 0) {
-    const rawText = textResult.pages && textResult.pages.length > 0
-      ? textResult.pages.join("\n\n")
-      : textResult.text;
+    const rawText =
+      textResult.pages && textResult.pages.length > 0
+        ? textResult.pages.join("\n\n")
+        : textResult.text;
     const hasPageChunks = textResult.pages && textResult.pages.length > 1;
     console.log(
       `[analyze-expense] PDF: Using text mode (${textResult.pageCount} pages, ${textResult.text.length} chars)` +
         (hasPageChunks
           ? ` with ${
-            textResult.pages!.length
-          } page chunks for parallel processing`
+              textResult.pages!.length
+            } page chunks for parallel processing`
           : ""),
     );
     if (DEBUG_LOGS) {
@@ -2882,21 +2890,19 @@ async function analyzeFromPdf(
         const sample = textResult.lineTexts
           .slice(0, 15)
           .map((line) =>
-            line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*"))
+            line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*")),
           );
         console.log(
-          `[analyze-expense] PDF: Line text sample (masked):\n${
-            sample.join(
-              "\n",
-            )
-          }`,
+          `[analyze-expense] PDF: Line text sample (masked):\n${sample.join(
+            "\n",
+          )}`,
         );
       }
     }
     const hasLineDates = textResult.lineTexts
       ? textResult.lineTexts.some(
-        (line) => !!parseDateFromText(line, callerDate),
-      )
+          (line) => !!parseDateFromText(line, callerDate),
+        )
       : false;
 
     if (textResult.tableRows && textResult.tableRows.length > 0) {
@@ -3200,7 +3206,8 @@ async function analyzeFromPdfVision(
     : "\n";
 
   // Initial extraction prompt emphasizing completeness
-  const basePrompt = `Caller Currency: ${callerCurrency}\n` +
+  const basePrompt =
+    `Caller Currency: ${callerCurrency}\n` +
     `Caller Date: ${callerDate}` +
     householdPrompt +
     `CRITICAL INSTRUCTIONS FOR BULK EXTRACTION:
@@ -3232,14 +3239,17 @@ Return transactions only by calling add_transactions.`;
       passNumber++;
 
       // Build the request - first pass vs continuation pass
-      const promptText = passNumber === 1
-        ? basePrompt
-        : `${basePrompt}\n\nCONTINUATION: You already extracted ${continuationOffset} transactions. Now extract the REMAINING transactions starting from transaction #${
-          continuationOffset + 1
-        }. Only return transactions you haven't returned before.`;
+      const promptText =
+        passNumber === 1
+          ? basePrompt
+          : `${basePrompt}\n\nCONTINUATION: You already extracted ${continuationOffset} transactions. Now extract the REMAINING transactions starting from transaction #${
+              continuationOffset + 1
+            }. Only return transactions you haven't returned before.`;
 
       const request = {
-        toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+        toolConfig: {
+          functionCallingConfig: ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
+        },
         contents: [
           {
             role: "user",
@@ -3275,7 +3285,7 @@ Return transactions only by calling add_transactions.`;
 
         if (toolCalls.length > 0) {
           const rawItems: any[] = toolCalls.flatMap((call: any) =>
-            Array.isArray(call.args?.items) ? call.args.items : []
+            Array.isArray(call.args?.items) ? call.args.items : [],
           );
 
           const passItems = processRawItems(
@@ -3384,13 +3394,16 @@ async function analyzeFromAudio(
     : "\n";
 
   const response = await model.generateContent({
-    toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+    toolConfig: {
+      functionCallingConfig: ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
+    },
     contents: [
       {
         role: "user",
         parts: [
           {
-            text: `Caller Currency: ${callerCurrency}\n` +
+            text:
+              `Caller Currency: ${callerCurrency}\n` +
               `Caller Date: ${callerDate}` +
               householdPrompt +
               "The following is an audio description of one or more transactions. Analyze it and return ALL structured transactions by calling add_transactions. If multiple transactions are mentioned, extract each one separately.",
@@ -3413,7 +3426,7 @@ async function analyzeFromAudio(
 
   if (toolCalls.length > 0) {
     const rawItems: any[] = toolCalls.flatMap((call: any) =>
-      Array.isArray(call.args?.items) ? call.args.items : []
+      Array.isArray(call.args?.items) ? call.args.items : [],
     );
 
     const items = processRawItems(
@@ -3520,7 +3533,7 @@ async function generateGeminiWithRetry(params: {
               new Error(`Model ${modelName} timed out after ${timeoutMs}ms`),
             ),
           remaining,
-        )
+        ),
       );
       return await Promise.race([responsePromise, timeoutPromise]);
     } catch (error) {
@@ -3568,18 +3581,20 @@ async function attemptAnalysis(
     });
 
     const request = {
-      toolConfig: { functionCallingConfig: { mode: "AUTO" } },
+      toolConfig: {
+        functionCallingConfig: ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
+      },
       contents: [
         {
           role: "user",
           parts: [
             {
-              text:
-                `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract transaction details from this image (receipt, bank statement, or transaction notification):`,
+              text: `Caller Currency: ${callerCurrency}\nCaller Date: ${callerDate}\nExtract transaction details from this image (receipt, bank statement, or transaction notification):`,
             },
             {
               inlineData: {
-                mimeType: overrideContentType ||
+                mimeType:
+                  overrideContentType ||
                   body.image?.contentType ||
                   "image/jpeg",
                 data: base64Image,
@@ -3603,7 +3618,7 @@ async function attemptAnalysis(
     );
     if (toolCalls.length > 0) {
       const rawItems: any[] = toolCalls.flatMap((call: any) =>
-        Array.isArray(call.args?.items) ? call.args.items : []
+        Array.isArray(call.args?.items) ? call.args.items : [],
       );
 
       const tempItems = processRawItems(
@@ -3624,7 +3639,7 @@ async function attemptAnalysis(
         const sums = items.map((_, i) =>
           items
             .filter((__, j) => i !== j)
-            .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0)
+            .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
         );
         items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
       }
@@ -3657,11 +3672,9 @@ async function attemptAnalysis(
       }`,
     );
     console.log(
-      `[analyze-expense] Model output text preview: ${
-        JSON.stringify(
-          modelText.slice(0, 200),
-        )
-      }`,
+      `[analyze-expense] Model output text preview: ${JSON.stringify(
+        modelText.slice(0, 200),
+      )}`,
     );
 
     return {
@@ -3710,11 +3723,11 @@ export async function runAnalyzeExpense(
       };
     }
 
-    const hasText = typeof body.text === "string" &&
-      body.text.trim().length > 0;
+    const hasText =
+      typeof body.text === "string" && body.text.trim().length > 0;
     const hasImage = !!body.image;
-    const hasAttachments = Array.isArray(body.attachments) &&
-      body.attachments.length > 0;
+    const hasAttachments =
+      Array.isArray(body.attachments) && body.attachments.length > 0;
     const hasAudio = !!body.audio;
 
     const modes = [hasText, hasImage, hasAttachments, hasAudio].filter(
@@ -3743,11 +3756,12 @@ export async function runAnalyzeExpense(
     const language = normalizeLanguage(body.language);
     const householdContext = resolveHouseholdContext(body, userId);
     const rawTypeHint = body.typeHint?.toString().trim().toLowerCase();
-    const typeHint = rawTypeHint === "expense" ||
-        rawTypeHint === "income" ||
-        rawTypeHint === "mixed"
-      ? (rawTypeHint as AnalyzeRequestBody["typeHint"])
-      : undefined;
+    const typeHint =
+      rawTypeHint === "expense" ||
+      rawTypeHint === "income" ||
+      rawTypeHint === "mixed"
+        ? (rawTypeHint as AnalyzeRequestBody["typeHint"])
+        : undefined;
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
     const expenseCategories = getExpenseCategories();
@@ -3762,18 +3776,14 @@ export async function runAnalyzeExpense(
         `[analyze-expense] Income categories count: ${incomeCategories.length}`,
       );
       console.log(
-        `[analyze-expense] Expense categories include 'food': ${
-          expenseCategories.includes(
-            "food",
-          )
-        }`,
+        `[analyze-expense] Expense categories include 'food': ${expenseCategories.includes(
+          "food",
+        )}`,
       );
       console.log(
-        `[analyze-expense] Expense categories include 'food & drinks': ${
-          expenseCategories.includes(
-            "food & drinks",
-          )
-        }`,
+        `[analyze-expense] Expense categories include 'food & drinks': ${expenseCategories.includes(
+          "food & drinks",
+        )}`,
       );
     }
 
@@ -3897,14 +3907,13 @@ export async function runAnalyzeExpense(
         /^(text\/|application\/(json|csv|xml|javascript))/i.test(contentType) ||
         /\.(csv|txt|json|xml)$/i.test(lowerName);
       const isSpreadsheet =
-        /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i
-          .test(
-            contentType,
-          ) ||
+        /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(
+          contentType,
+        ) ||
         /application\/vnd\.ms-excel/i.test(contentType) ||
         /\.(xlsx|xls)$/i.test(lowerName);
-      const isPdf = /application\/pdf/i.test(contentType) ||
-        /\.pdf$/i.test(lowerName);
+      const isPdf =
+        /application\/pdf/i.test(contentType) || /\.pdf$/i.test(lowerName);
 
       let syntheticText = "";
 
@@ -4160,9 +4169,10 @@ export async function runAnalyzeExpense(
       );
       console.log(`[analyze-expense] Base64 End: ...${base64Image.slice(-20)}`);
 
-      const typeHintNote = typeHint && typeHint !== "mixed"
-        ? `Caller Hint: The transactions are most likely ${typeHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`
-        : null;
+      const typeHintNote =
+        typeHint && typeHint !== "mixed"
+          ? `Caller Hint: The transactions are most likely ${typeHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`
+          : null;
       const systemInstruction = [
         "You are an expert Financial OCR Analyst for Moneko.",
         "OBJECTIVE: Analyze the image to extract transaction data. Minimize noise, maximize accuracy.",
@@ -4209,20 +4219,20 @@ export async function runAnalyzeExpense(
 
         ...(householdContext
           ? [
-            "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
-            "- The caller is in a household/group context. Return split information for every EXPENSE item.",
-            "- The expense tracking logic: WHO paid the bill, and HOW MUCH does each person OWE.",
-            "",
-            "#### 5.1 PAYER IDENTIFICATION (payerUserId) - WHO PAID THE BILL",
-            "- Default payer = caller (the user logging the expense). OMIT payerUserId if caller paid.",
-            "- Set payerUserId ONLY when someone ELSE paid the bill.",
-            "- Use ONLY userId from the provided member list. Never output names/emails.",
-            "",
-            "#### 5.2 SPLIT EXTRACTION (customSplits) - HOW MUCH EACH PERSON OWES",
-            "- For image/receipt inputs, default to EQUAL split among ALL household members.",
-            "- OMIT customSplits entirely to let the system apply equal splits automatically.",
-            "- Only provide customSplits if the image clearly shows per-person amounts or annotations.",
-          ]
+              "### 5. HOUSEHOLD SPLITS (CRITICAL - when household context is provided)",
+              "- The caller is in a household/group context. Return split information for every EXPENSE item.",
+              "- The expense tracking logic: WHO paid the bill, and HOW MUCH does each person OWE.",
+              "",
+              "#### 5.1 PAYER IDENTIFICATION (payerUserId) - WHO PAID THE BILL",
+              "- Default payer = caller (the user logging the expense). OMIT payerUserId if caller paid.",
+              "- Set payerUserId ONLY when someone ELSE paid the bill.",
+              "- Use ONLY userId from the provided member list. Never output names/emails.",
+              "",
+              "#### 5.2 SPLIT EXTRACTION (customSplits) - HOW MUCH EACH PERSON OWES",
+              "- For image/receipt inputs, default to EQUAL split among ALL household members.",
+              "- OMIT customSplits entirely to let the system apply equal splits automatically.",
+              "- Only provide customSplits if the image clearly shows per-person amounts or annotations.",
+            ]
           : []),
 
         "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
@@ -4317,7 +4327,8 @@ export async function runAnalyzeExpense(
             );
             items = fallback.items;
           } else {
-            lastError = fallback.error ||
+            lastError =
+              fallback.error ||
               lastError ||
               "Handwriting fallback returned no items";
             console.log(
@@ -4337,7 +4348,8 @@ export async function runAnalyzeExpense(
       console.log("[analyze-expense] All models failed to extract items");
       return {
         success: false,
-        error: lastError ||
+        error:
+          lastError ||
           "Could not extract transaction information. Please try clearer text, a screenshot, or a photo.",
         status: 400,
         language,
@@ -4395,11 +4407,9 @@ export function buildXlsxPreview(buf: Uint8Array): string | null {
       totalRows += limited.length;
       const previewLines = limited.map((r: any) => JSON.stringify(r));
       sheetBlocks.push(
-        `Sheet "${sheetName}" data (${limited.length} of ${rows.length} rows):\n${
-          previewLines.join(
-            "\n",
-          )
-        }`,
+        `Sheet "${sheetName}" data (${limited.length} of ${rows.length} rows):\n${previewLines.join(
+          "\n",
+        )}`,
       );
 
       console.log(
@@ -4447,7 +4457,7 @@ function parseSignedAmountFromCell(
 function detectHeaderMap(row: string[]) {
   const header = row.map((cell: string) => cell.toLowerCase());
   const hasDate = header.some((cell) =>
-    /date|posted|transaction date/.test(cell)
+    /date|posted|transaction date/.test(cell),
   );
   const hasAmount = header.some((cell) => /amount|amt|value/.test(cell));
   if (!hasDate || !hasAmount) return null;
@@ -4541,17 +4551,18 @@ function extractXlsxTransactions(
         if (!joined) continue;
         if (headerNoisePattern.test(joined)) continue;
 
-        const dateText = headerMap && headerMap.date >= 0
-          ? cells[headerMap.date]
-          : joined;
+        const dateText =
+          headerMap && headerMap.date >= 0 ? cells[headerMap.date] : joined;
         const rowDate = parseDateFromText(dateText, callerDate);
         if (!headerMap && !rowDate) continue;
-        const descriptionText = headerMap && headerMap.description >= 0
-          ? cells[headerMap.description]
-          : stripAmountsAndDates(joined) || joined;
-        const currencyText = headerMap && headerMap.currency >= 0
-          ? cells[headerMap.currency]
-          : joined;
+        const descriptionText =
+          headerMap && headerMap.description >= 0
+            ? cells[headerMap.description]
+            : stripAmountsAndDates(joined) || joined;
+        const currencyText =
+          headerMap && headerMap.currency >= 0
+            ? cells[headerMap.currency]
+            : joined;
 
         let amountValue: number | null = null;
         let type: "expense" | "income" = "expense";
@@ -4614,7 +4625,8 @@ function extractXlsxTransactions(
         amountRows += 1;
 
         const dateValue = rowDate || callerDate;
-        const currency = detectCurrencyFromText(currencyText, callerCurrency) ||
+        const currency =
+          detectCurrencyFromText(currencyText, callerCurrency) ||
           callerCurrency;
 
         if (headerNoisePattern.test(descriptionText)) continue;
@@ -4669,8 +4681,7 @@ export async function summarizePdfWithGemini(
           role: "user",
           parts: [
             {
-              text:
-                `Extract ALL transaction data from this PDF. This is likely a bank statement with many transactions.
+              text: `Extract ALL transaction data from this PDF. This is likely a bank statement with many transactions.
 
 CRITICAL INSTRUCTIONS:
 - Extract EVERY transaction row from ALL pages

@@ -49,6 +49,30 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Telegram Sync, Siri Shortcuts & Quick Actions",
+    date: "2026-02-23",
+    version: "1.4.4",
+    tags: ["Feature", "Integration", "iOS", "Android", "Fix"],
+    description:
+      "This release brings powerful automation with Telegram sync, Siri Shortcuts, and faster access to your most-used actions.",
+    items: [
+      "Connect Telegram to sync your Moneko data and receive notifications",
+      "Use Siri Shortcuts to log expenses and check balances hands-free",
+      "Long-press the home FAB button for quick access to frequent actions",
+      "Quick-add menu now shows your most-used categories and amounts",
+      "Transaction search became faster and more accurate",
+      "Currency conversion rates were updated for better accuracy",
+      "Fixed issues with recurring transaction reminders",
+      "Resolved date display inconsistencies across time zones",
+      "Improved import handling for CSV files with special characters",
+      "Fixed crash when opening large transaction histories",
+      "Settlement calculations now handle edge cases better",
+      "Dark mode contrast was improved for better readability",
+      "Performance improvements for faster app startup",
+      "Released production mobile build 1.4.4+102",
+    ],
+  },
+  {
     title: "Account Control, Timezone Accuracy & Reliability Upgrade",
     date: "2026-02-11",
     version: "1.4.2",

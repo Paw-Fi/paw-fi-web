@@ -17,6 +17,27 @@ function sanitizeUuid(value?: string | null): string | null {
   return UUID_REGEX.test(trimmed) ? trimmed : null;
 }
 
+function resolveErrorCode(status: number): string {
+  if (status === 401 || status === 403) return "UNAUTHORIZED";
+  if (status === 404) return "NOT_FOUND";
+  if (status >= 500) return "SERVER_ERROR";
+  return "VALIDATION_ERROR";
+}
+
+function errorResponse(message: string, status = 400, code?: string): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+      code: code ?? resolveErrorCode(status),
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -146,13 +167,7 @@ Deno.serve(async (req: Request) => {
   try {
     // Validate request method
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed. Use POST." }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Method not allowed. Use POST.", 405);
     }
 
     // Parse request body
@@ -183,27 +198,15 @@ Deno.serve(async (req: Request) => {
     // NEVER trust userId from body unless the request is authenticated as internal.
 
     if (!body.amount || body.amount <= 0) {
-      return new Response(
-        JSON.stringify({ error: "Valid amount is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Valid amount is required", 400);
     }
 
     if (!body.category) {
-      return new Response(JSON.stringify({ error: "Category is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Category is required", 400);
     }
 
     if (!body.date) {
-      return new Response(JSON.stringify({ error: "Date is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Date is required", 400);
     }
 
     // Get environment variables
@@ -211,13 +214,7 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Server configuration error", 500);
     }
 
     // Validate and normalize currency
@@ -255,21 +252,15 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt) {
       const authResult = await authenticateUserOrInternalSecret(req, supabase);
       if (!authResult.success) {
-        return new Response(
-          JSON.stringify({ error: authResult.error || "Unauthorized" }),
-          {
-            status: authResult.statusCode ?? 401,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
+        return errorResponse(
+          authResult.error || "Unauthorized",
+          authResult.statusCode ?? 401,
         );
       }
 
       if (authResult.isInternalService) {
         if (!userId) {
-          return new Response(JSON.stringify({ error: "userId is required" }), {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return errorResponse("userId is required", 400);
         }
       } else {
         userId = authResult.userId ?? null;
@@ -290,13 +281,7 @@ Deno.serve(async (req: Request) => {
           "[save-expense] Failed to look up user contact:",
           contactError,
         );
-        return new Response(
-          JSON.stringify({ error: "Failed to resolve user contact" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        return errorResponse("Failed to resolve user contact", 500);
       }
 
       if (contact) {
@@ -346,24 +331,12 @@ Deno.serve(async (req: Request) => {
           "[save-expense] Failed to resolve GPT guest identity:",
           identityError,
         );
-        return new Response(
-          JSON.stringify({ error: "Failed to prepare GPT guest user" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        return errorResponse("Failed to prepare GPT guest user", 500);
       }
     }
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Unable to resolve user identity" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Unable to resolve user identity", 400);
     }
 
     // Convert amount to cents
@@ -399,16 +372,7 @@ Deno.serve(async (req: Request) => {
 
     if (expenseError) {
       console.error("[save-expense] Error saving expense:", expenseError);
-      return new Response(
-        JSON.stringify({
-          error: "Failed to save expense",
-          details: expenseError.message,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
     }
 
     console.log("[save-expense] Expense saved:", expense.id);
@@ -522,25 +486,22 @@ Deno.serve(async (req: Request) => {
       }
 
       // Determine split type and validate custom splits
-      const rawSplitType =
-        typeof body.customSplits?.splitType === "string"
-          ? body.customSplits.splitType.trim().toLowerCase()
-          : "equal";
+      const rawSplitType = typeof body.customSplits?.splitType === "string"
+        ? body.customSplits.splitType.trim().toLowerCase()
+        : "equal";
       const normalizedSplitType = [
-        "equal",
-        "amount",
-        "percentage",
-        "shares",
-      ].includes(rawSplitType)
+          "equal",
+          "amount",
+          "percentage",
+          "shares",
+        ].includes(rawSplitType)
         ? rawSplitType
         : "equal";
-      const hasMemberSplits =
-        Array.isArray(body.customSplits?.memberSplits) &&
+      const hasMemberSplits = Array.isArray(body.customSplits?.memberSplits) &&
         body.customSplits!.memberSplits.length > 0;
-      const customSplits =
-        hasMemberSplits && normalizedSplitType !== "equal"
-          ? body.customSplits
-          : null;
+      const customSplits = hasMemberSplits && normalizedSplitType !== "equal"
+        ? body.customSplits
+        : null;
       const splitType = customSplits ? normalizedSplitType : "equal";
 
       // Validate custom splits if provided
@@ -549,8 +510,8 @@ Deno.serve(async (req: Request) => {
 
         // Normalize member split values so downstream validations and inserts
         // don't violate DB constraints (e.g., shares cannot be 0).
-        const normalizedMemberSplits: MemberSplit[] =
-          customSplits.memberSplits.map((split) => ({
+        const normalizedMemberSplits: MemberSplit[] = customSplits.memberSplits
+          .map((split) => ({
             userId: split.userId,
             amount: normalizeAmount(split.amount),
             percentage: normalizePercentage(split.percentage),
@@ -567,14 +528,9 @@ Deno.serve(async (req: Request) => {
           console.error(
             "[save-expense] Custom splits do not match household members",
           );
-          return new Response(
-            JSON.stringify({
-              error: "Custom splits must include all household members",
-            }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
+          return errorResponse(
+            "Custom splits must include all household members",
+            400,
           );
         }
 
@@ -594,7 +550,10 @@ Deno.serve(async (req: Request) => {
             );
             return new Response(
               JSON.stringify({
-                error: `Amount splits must equal total expense amount (${body.amount})`,
+                success: false,
+                error:
+                  `Amount splits must equal total expense amount (${body.amount})`,
+                code: "VALIDATION_ERROR",
               }),
               {
                 status: 400,
@@ -613,14 +572,9 @@ Deno.serve(async (req: Request) => {
               "[save-expense] Percentage splits do not equal 100%:",
               totalPercent,
             );
-            return new Response(
-              JSON.stringify({
-                error: `Percentage splits (${totalPercent}%) must equal 100%`,
-              }),
-              {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
+            return errorResponse(
+              `Percentage splits (${totalPercent}%) must equal 100%`,
+              400,
             );
           }
         } else if (splitType === "shares") {
@@ -632,14 +586,9 @@ Deno.serve(async (req: Request) => {
             console.error(
               "[save-expense] Invalid shares: total shares must be > 0",
             );
-            return new Response(
-              JSON.stringify({
-                error: "At least one member must have a share greater than 0",
-              }),
-              {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
+            return errorResponse(
+              "At least one member must have a share greater than 0",
+              400,
             );
           }
         }
@@ -727,7 +676,7 @@ Deno.serve(async (req: Request) => {
       } else if (splitType === "amount" && customSplits) {
         // Custom amount split
         const cents = customSplits.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100)),
+          Math.max(0, Math.round((split.amount || 0) * 100))
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = amountCents - sumCents;
@@ -909,16 +858,6 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("[save-expense] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Failed to save expense",
-        details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
   }
 });

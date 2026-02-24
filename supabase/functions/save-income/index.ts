@@ -16,6 +16,27 @@ function sanitizeUuid(value?: string | null): string | null {
   return UUID_REGEX.test(trimmed) ? trimmed : null;
 }
 
+function resolveErrorCode(status: number): string {
+  if (status === 401 || status === 403) return "UNAUTHORIZED";
+  if (status === 404) return "NOT_FOUND";
+  if (status >= 500) return "SERVER_ERROR";
+  return "VALIDATION_ERROR";
+}
+
+function errorResponse(message: string, status = 400, code?: string): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+      code: code ?? resolveErrorCode(status),
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
 interface RequestBody {
   userId: string; // User ID (required)
   amount: number; // Amount in major units (required, must be > 0)
@@ -87,13 +108,7 @@ Deno.serve(async (req: Request) => {
   try {
     // Validate request method
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed. Use POST." }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Method not allowed. Use POST.", 405);
     }
 
     // Parse request body
@@ -101,8 +116,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule =
-      body.recurrence_rule ?? (body as any).recurrenceRule;
+    const legacyRecurrenceRule = body.recurrence_rule ??
+      (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -125,13 +140,7 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Server configuration error", 500);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -148,14 +157,9 @@ Deno.serve(async (req: Request) => {
     // - allow normal user JWT callers
     const authResult = await authenticateUserOrInternalSecret(req, supabase);
     if (!authResult.success) {
-      return new Response(
-        JSON.stringify({
-          error: authResult.error ?? "Authentication required",
-        }),
-        {
-          status: authResult.statusCode ?? 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        authResult.error ?? "Authentication required",
+        authResult.statusCode ?? 401,
       );
     }
 
@@ -164,65 +168,36 @@ Deno.serve(async (req: Request) => {
       : authResult.userId;
 
     if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Valid userId is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Valid userId is required", 400);
     }
 
     if (!body.amount || body.amount <= 0) {
-      return new Response(
-        JSON.stringify({ error: "Valid amount greater than 0 is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Valid amount greater than 0 is required", 400);
     }
 
     if (!body.category) {
-      return new Response(JSON.stringify({ error: "Category is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Category is required", 400);
     }
 
     if (!body.date) {
-      return new Response(JSON.stringify({ error: "Date is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Date is required", 400);
     }
 
     // Validate privacy scope
     const privacyScope = body.privacyScope || "full";
     if (!["private", "balances_only", "full"].includes(privacyScope)) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Invalid privacy scope. Must be: private, balances_only, or full",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        "Invalid privacy scope. Must be: private, balances_only, or full",
+        400,
       );
     }
 
     // Validate owner type
     const ownerType = body.ownerType || "me";
     if (!["me", "partner", "household"].includes(ownerType)) {
-      return new Response(
-        JSON.stringify({
-          error: "Invalid owner type. Must be: me, partner, or household",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        "Invalid owner type. Must be: me, partner, or household",
+        400,
       );
     }
 
@@ -247,13 +222,7 @@ Deno.serve(async (req: Request) => {
         "[save-income] Failed to look up user contact:",
         contactError,
       );
-      return new Response(
-        JSON.stringify({ error: "Failed to resolve user contact" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Failed to resolve user contact", 500);
     }
 
     if (contact) {
@@ -276,13 +245,7 @@ Deno.serve(async (req: Request) => {
 
     const requestedHouseholdId = sanitizeUuid(body.householdId ?? null);
     if (body.householdId && !requestedHouseholdId) {
-      return new Response(
-        JSON.stringify({ error: "Valid householdId is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Valid householdId is required", 400);
     }
 
     let resolvedHouseholdId: string | null = null;
@@ -303,13 +266,7 @@ Deno.serve(async (req: Request) => {
           "[save-income] Failed to verify household membership:",
           membershipError,
         );
-        return new Response(
-          JSON.stringify({ error: "Failed to verify household membership" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        return errorResponse("Failed to verify household membership", 500);
       }
 
       if (membership) {
@@ -407,16 +364,7 @@ Deno.serve(async (req: Request) => {
 
     if (incomeError) {
       console.error("[save-income] Error saving income:", incomeError);
-      return new Response(
-        JSON.stringify({
-          error: "Failed to save income",
-          details: incomeError.message,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Failed to save income", 500, "SERVER_ERROR");
     }
 
     console.log("[save-income] Income saved successfully:", income.id);
@@ -492,16 +440,6 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("[save-income] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Failed to save income",
-        details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return errorResponse("Failed to save income", 500, "SERVER_ERROR");
   }
 });

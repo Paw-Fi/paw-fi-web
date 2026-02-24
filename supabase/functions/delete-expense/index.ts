@@ -28,8 +28,8 @@ function sanitizeUuid(value?: string | null): string | null {
 }
 
 function parseExpenseIds(body: DeleteExpenseRequest): string[] {
-  const raw =
-    body.expenseIds ?? body.expense_ids ?? body.expenseId ?? body.expense_id;
+  const raw = body.expenseIds ?? body.expense_ids ?? body.expenseId ??
+    body.expense_id;
   if (!raw) return [];
   const rawString = Array.isArray(raw) ? raw.join(",") : String(raw);
   const parts = rawString
@@ -44,11 +44,25 @@ function parseExpenseIds(body: DeleteExpenseRequest): string[] {
   return Array.from(unique);
 }
 
-function errorResponse(message: string, status = 400) {
-  return new Response(JSON.stringify({ success: false, error: message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+function resolveErrorCode(status: number): string {
+  if (status === 401 || status === 403) return "UNAUTHORIZED";
+  if (status === 404) return "NOT_FOUND";
+  if (status >= 500) return "SERVER_ERROR";
+  return "VALIDATION_ERROR";
+}
+
+function errorResponse(message: string, status = 400, code?: string) {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+      code: code ?? resolveErrorCode(status),
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
 }
 
 Deno.serve(async (req: Request) => {
@@ -194,9 +208,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: householdRows } = householdIds.length
       ? await supabase
-          .from("households")
-          .select("id, is_portfolio")
-          .in("id", householdIds)
+        .from("households")
+        .select("id, is_portfolio")
+        .in("id", householdIds)
       : { data: [] as { id: string; is_portfolio: boolean | null }[] };
 
     const householdPortfolioMap = new Map(
@@ -207,14 +221,13 @@ Deno.serve(async (req: Request) => {
       (id) => householdPortfolioMap.get(id) !== true,
     );
 
-    const { data: membershipRows } =
-      nonPortfolioHouseholdIds.length > 0
-        ? await supabase
-            .from("household_members")
-            .select("household_id")
-            .eq("user_id", userId)
-            .in("household_id", nonPortfolioHouseholdIds)
-        : { data: [] as { household_id: string }[] };
+    const { data: membershipRows } = nonPortfolioHouseholdIds.length > 0
+      ? await supabase
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", userId)
+        .in("household_id", nonPortfolioHouseholdIds)
+      : { data: [] as { household_id: string }[] };
 
     const membershipSet = new Set(
       (membershipRows || []).map((row) => row.household_id),

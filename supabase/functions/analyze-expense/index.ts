@@ -202,6 +202,27 @@ function collapseReceiptItems(
   ];
 }
 
+function resolveErrorCode(status: number): string {
+  if (status === 401 || status === 403) return "UNAUTHORIZED";
+  if (status === 404) return "NOT_FOUND";
+  if (status >= 500) return "SERVER_ERROR";
+  return "VALIDATION_ERROR";
+}
+
+function errorResponse(message: string, status = 400, code?: string): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+      code: code ?? resolveErrorCode(status),
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
 /**
  * Creates a readable stream that sends SSE events during analysis
  */
@@ -289,13 +310,7 @@ Deno.serve(async (req: Request) => {
   try {
     // Validate request method
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed. Use POST." }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Method not allowed. Use POST.", 405);
     }
 
     // Check for SSE streaming mode via query parameter
@@ -307,10 +322,7 @@ Deno.serve(async (req: Request) => {
     try {
       body = await req.json();
     } catch (_error) {
-      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Invalid JSON body", 400);
     }
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
@@ -319,13 +331,7 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!GEMINI_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Server configuration error", 500);
     }
 
     // If we have an auth header, verify the caller and enrich household context safely under RLS.
@@ -345,23 +351,11 @@ Deno.serve(async (req: Request) => {
           .getUser();
         const callerId = userData?.user?.id;
         if (userErr || !callerId) {
-          return new Response(
-            JSON.stringify({ success: false, error: "Unauthorized" }),
-            {
-              status: 401,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
         }
 
         if (body.userId && body.userId !== callerId) {
-          return new Response(
-            JSON.stringify({ success: false, error: "userId mismatch" }),
-            {
-              status: 401,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          return errorResponse("userId mismatch", 401, "UNAUTHORIZED");
         }
         body.userId = callerId;
 
@@ -449,20 +443,11 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const status = message.includes("timed out") ? 504 : 500;
-      return new Response(JSON.stringify({ success: false, error: message }), {
-        status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse(message, status);
     }
     if (!result.success) {
       const status = result.status || 400;
-      return new Response(
-        JSON.stringify({ success: false, error: result.error }),
-        {
-          status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse(result.error ?? "Failed to analyze expense", status);
     }
 
     return new Response(
@@ -481,16 +466,6 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("[analyze-expense] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Failed to analyze expense",
-        details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return errorResponse("Failed to analyze expense", 500, "SERVER_ERROR");
   }
 });

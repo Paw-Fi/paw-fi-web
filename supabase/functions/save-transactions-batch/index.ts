@@ -147,6 +147,27 @@ interface SavedTransaction {
   data?: any;
 }
 
+function resolveErrorCode(status: number): string {
+  if (status === 401 || status === 403) return "UNAUTHORIZED";
+  if (status === 404) return "NOT_FOUND";
+  if (status >= 500) return "SERVER_ERROR";
+  return "VALIDATION_ERROR";
+}
+
+function errorResponse(message: string, status = 400, code?: string): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message,
+      code: code ?? resolveErrorCode(status),
+    }),
+    {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -154,13 +175,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (req.method !== "POST") {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed. Use POST." }),
-        {
-          status: 405,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Method not allowed. Use POST.", 405);
     }
 
     const body: RequestBody = await req.json();
@@ -172,28 +187,18 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
-      return new Response(
-        JSON.stringify({
-          error: "transactions array is required and must not be empty",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        "transactions array is required and must not be empty",
+        400,
       );
     }
 
     // Limit batch size to prevent abuse
     const MAX_BATCH_SIZE = 500;
     if (body.transactions.length > MAX_BATCH_SIZE) {
-      return new Response(
-        JSON.stringify({
-          error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE} transactions`,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        `Batch size exceeds maximum of ${MAX_BATCH_SIZE} transactions`,
+        400,
       );
     }
 
@@ -201,13 +206,7 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return errorResponse("Server configuration error", 500);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -224,12 +223,9 @@ Deno.serve(async (req: Request) => {
     // Authenticate
     const authResult = await authenticateUserOrInternalSecret(req, supabase);
     if (!authResult.success) {
-      return new Response(
-        JSON.stringify({ error: authResult.error || "Unauthorized" }),
-        {
-          status: authResult.statusCode ?? 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      return errorResponse(
+        authResult.error || "Unauthorized",
+        authResult.statusCode ?? 401,
       );
     }
 
@@ -238,10 +234,7 @@ Deno.serve(async (req: Request) => {
       : authResult.userId;
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: "userId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("userId is required", 400);
     }
 
     let actorName = "Someone";
@@ -346,8 +339,9 @@ Deno.serve(async (req: Request) => {
         created_at: tx.clientCreatedAt || new Date().toISOString(),
         household_id: isPortfolio ? requestedHouseholdId : null,
         is_recurring: tx.isRecurring === true,
-        recurrence_rule:
-          tx.isRecurring === true ? tx.recurrence_rule || null : null,
+        recurrence_rule: tx.isRecurring === true
+          ? tx.recurrence_rule || null
+          : null,
       };
 
       if (tx.type === "income") {
@@ -357,8 +351,8 @@ Deno.serve(async (req: Request) => {
           source: tx.source || null,
           owner_type: tx.ownerType || "me",
           privacy_scope: tx.privacyScope || "full",
-          household_id:
-            resolvedHouseholdId || (isPortfolio ? requestedHouseholdId : null),
+          household_id: resolvedHouseholdId ||
+            (isPortfolio ? requestedHouseholdId : null),
         };
         incomeRecords.push(incomeRecord);
         incomeIndices.push(i);
@@ -555,11 +549,11 @@ Deno.serve(async (req: Request) => {
                 ? meta.customSplits.splitType.trim().toLowerCase()
                 : "equal";
             const normalizedSplitType = [
-              "equal",
-              "amount",
-              "percentage",
-              "shares",
-            ].includes(rawSplitType)
+                "equal",
+                "amount",
+                "percentage",
+                "shares",
+              ].includes(rawSplitType)
               ? rawSplitType
               : "equal";
             const hasMemberSplits =
@@ -610,8 +604,8 @@ Deno.serve(async (req: Request) => {
               const amountPerMember = Math.floor(
                 amountCents / householdMembers.length,
               );
-              const remainder =
-                amountCents - amountPerMember * householdMembers.length;
+              const remainder = amountCents -
+                amountPerMember * householdMembers.length;
               lines = householdMembers.map((member, idx) => ({
                 user_id: member.user_id,
                 amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
@@ -619,7 +613,7 @@ Deno.serve(async (req: Request) => {
             } else if (splitType === "amount" && customSplits) {
               const memberSplits = customSplits.memberSplits as MemberSplit[];
               const cents = memberSplits.map((s) =>
-                Math.max(0, Math.round((normalizeAmount(s.amount) || 0) * 100)),
+                Math.max(0, Math.round((normalizeAmount(s.amount) || 0) * 100))
               );
               const sumCents = cents.reduce(
                 (sum: number, v: number) => sum + v,
@@ -669,8 +663,8 @@ Deno.serve(async (req: Request) => {
               const amountPerMember = Math.floor(
                 amountCents / householdMembers.length,
               );
-              const remainder =
-                amountCents - amountPerMember * householdMembers.length;
+              const remainder = amountCents -
+                amountPerMember * householdMembers.length;
               lines = householdMembers.map((member, idx) => ({
                 user_id: member.user_id,
                 amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
@@ -850,16 +844,10 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("[save-transactions-batch] Error:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Failed to save transactions batch",
-        details: error instanceof Error ? error.message : String(error),
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
+    return errorResponse(
+      "Failed to save transactions batch",
+      500,
+      "SERVER_ERROR",
     );
   }
 });

@@ -58,6 +58,7 @@ import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 import { Button } from "@/components/ui/button";
 import monekoLogo from '@/assets/images/logo/moneko.png';
 import finniLogo from '@/assets/images/logo/finni.png';
+import DownloadPage from "@/routes/download";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
 const scrollbarHideStyles = `
@@ -262,6 +263,9 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 export function Dashboard() {
+  // Temporary: route dashboard traffic to download page
+  return <DownloadPage />;
+
   // Auth query sync is now handled at root level - removed redundant call
   // Query client for cache invalidation
   const queryClient = useQueryClient();

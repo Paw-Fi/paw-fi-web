@@ -46,6 +46,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 import { GuidanceTestPanel } from "@/components/dashboard/GuidanceTestPanel";
+import DownloadPage from "@/routes/download";
 
 export const Route = createFileRoute("/dashboard/_layout/")({
   component: DashboardHome,
@@ -324,6 +325,9 @@ const itemVariants: Variants = {
 };
 
 function DashboardHome() {
+  // Temporary: route dashboard traffic to download page
+  return <DownloadPage />;
+
   const { user } = useAuth();
   // Rewards modal state
   const [showRewardsModal, setShowRewardsModal] = useState(false);
