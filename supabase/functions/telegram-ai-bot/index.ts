@@ -409,6 +409,21 @@ function resolveMemberIdByName(
   return unique[0];
 }
 
+async function ensureHouseholdMember(
+  supabase: SupabaseJsClient,
+  householdId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("household_members")
+    .select("id")
+    .eq("household_id", householdId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) return false;
+  return !!data;
+}
+
 async function resolveHouseholdSplitConfig(
   supabase: SupabaseJsClient,
   householdId: string,
@@ -1406,6 +1421,18 @@ Deno.serve(async (req: Request) => {
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
                 }
+                if (
+                  householdId &&
+                  !(await ensureHouseholdMember(supabase, householdId, userId))
+                ) {
+                  toolResult = {
+                    error: "You do not have access to that space",
+                  };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
                 const { data, error } = await fetchExpensesDirect(
                   supabase,
                   contact.id,
@@ -1449,6 +1476,18 @@ Deno.serve(async (req: Request) => {
                 ) {
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
+                }
+                if (
+                  householdId &&
+                  !(await ensureHouseholdMember(supabase, householdId, userId))
+                ) {
+                  toolResult = {
+                    error: "You do not have access to that space",
+                  };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
                 }
                 const isHouseholdExpense =
                   !!householdId && (call.args.type || "expense") === "expense";
@@ -1512,6 +1551,18 @@ Deno.serve(async (req: Request) => {
                 ) {
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
+                }
+                if (
+                  householdId &&
+                  !(await ensureHouseholdMember(supabase, householdId, userId))
+                ) {
+                  toolResult = {
+                    error: "You do not have access to that space",
+                  };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
                 }
                 const results: any[] = [];
                 for (const row of rows) {
@@ -1601,22 +1652,32 @@ Deno.serve(async (req: Request) => {
                   spaceMeta = spaceMap.get(householdName);
                   householdId = spaceMeta?.id ?? null;
                 }
-                const res = await getBudgetStatusDirect(
-                  supabase,
-                  userId,
-                  householdId,
-                  period_month,
-                  userCurrency,
-                  spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
-                );
-                toolResult = res.error
-                  ? { error: res.error }
-                  : {
-                      budget: res.budget,
-                      envelopes: res.envelopes,
-                      totals: res.totals,
-                      chart: res.chart,
-                    };
+                if (
+                  householdId &&
+                  !(await ensureHouseholdMember(supabase, householdId, userId))
+                ) {
+                  toolResult = {
+                    error: "You do not have access to that space",
+                  };
+                } else {
+                  const res = await getBudgetStatusDirect(
+                    supabase,
+                    userId,
+                    householdId,
+                    period_month,
+                    userCurrency,
+                    spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    contact.id,
+                  );
+                  toolResult = res.error
+                    ? { error: res.error }
+                    : {
+                        budget: res.budget,
+                        envelopes: res.envelopes,
+                        totals: res.totals,
+                        chart: res.chart,
+                      };
+                }
               } else if (call.name === "set_currency") {
                 const currency = (call.args.currency || "")
                   .toString()
@@ -1738,6 +1799,26 @@ Deno.serve(async (req: Request) => {
                       householdId = spaceMeta?.id ?? null;
                     }
 
+                    if (
+                      householdId &&
+                      !(await ensureHouseholdMember(
+                        supabase,
+                        householdId,
+                        userId,
+                      ))
+                    ) {
+                      toolResult = {
+                        error: "You do not have access to that space",
+                      };
+                      toolResponses.push({
+                        functionResponse: {
+                          name: call.name,
+                          response: toolResult,
+                        },
+                      });
+                      continue;
+                    }
+
                     const dateStr = (
                       call.args.date || formatDateInTimeZone(userTimezone)
                     ).slice(0, 10);
@@ -1849,6 +1930,25 @@ Deno.serve(async (req: Request) => {
                     spaceMeta = spaceMap.get(householdName);
                     householdId = spaceMeta?.id ?? null;
                   }
+                  if (
+                    householdId &&
+                    !(await ensureHouseholdMember(
+                      supabase,
+                      householdId,
+                      userId,
+                    ))
+                  ) {
+                    toolResult = {
+                      error: "You do not have access to that space",
+                    };
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
                   const budgetRes = await getBudgetStatusDirect(
                     supabase,
                     userId,
@@ -1856,6 +1956,7 @@ Deno.serve(async (req: Request) => {
                     periodMonth,
                     userCurrency,
                     spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    contact.id,
                   );
                   const budgetId = (budgetRes as any)?.budget?.id;
                   if (!budgetId) {
@@ -1930,6 +2031,25 @@ Deno.serve(async (req: Request) => {
                     spaceMeta = spaceMap.get(householdName);
                     householdId = spaceMeta?.id ?? null;
                   }
+                  if (
+                    householdId &&
+                    !(await ensureHouseholdMember(
+                      supabase,
+                      householdId,
+                      userId,
+                    ))
+                  ) {
+                    toolResult = {
+                      error: "You do not have access to that space",
+                    };
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
                   const budgetRes = await getBudgetStatusDirect(
                     supabase,
                     userId,
@@ -1937,6 +2057,7 @@ Deno.serve(async (req: Request) => {
                     periodMonth,
                     userCurrency,
                     spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    contact.id,
                   );
                   const budgetId = (budgetRes as any)?.budget?.id;
                   if (!budgetId) {

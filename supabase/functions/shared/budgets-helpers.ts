@@ -10,16 +10,23 @@ function parseMonthRangeUtc(periodMonth: string | undefined | null): {
   monthStartStr: string;
   nextMonthStr: string;
 } {
-  const raw = (periodMonth || new Date().toISOString().slice(0, 10)).slice(
-    0,
-    7,
-  );
+  const now = new Date();
+  const fallback = `${now.getUTCFullYear()}-${(now.getUTCMonth() + 1).toString().padStart(2, "0")}`;
+  const raw = (periodMonth || fallback).slice(0, 7);
   const parts = raw.split("-");
   const year = Number(parts[0] || "0");
   const month = Number(parts[1] || "1");
+  const safeYear =
+    Number.isInteger(year) && year >= 1970 && year <= 9999
+      ? year
+      : now.getUTCFullYear();
+  const safeMonth =
+    Number.isInteger(month) && month >= 1 && month <= 12
+      ? month
+      : now.getUTCMonth() + 1;
 
-  const start = new Date(Date.UTC(year, Math.max(0, month - 1), 1));
-  const next = new Date(Date.UTC(year, Math.max(0, month - 1) + 1, 1));
+  const start = new Date(Date.UTC(safeYear, safeMonth - 1, 1));
+  const next = new Date(Date.UTC(safeYear, safeMonth, 1));
 
   return {
     monthStartStr: start.toISOString().slice(0, 10),
@@ -34,23 +41,73 @@ export async function createOrUpdateBudget(
   period_month: string,
   currency: string,
   total_budget_cents: number,
-  isPortfolio: boolean = false,
+  _isPortfolio: boolean = false,
 ) {
+  const normalizedPeriodMonth = parseMonthRangeUtc(period_month).monthStartStr;
+  const updatedAt = new Date().toISOString();
   const payload: any = {
     user_id: userId,
     household_id: householdId,
-    period_month,
+    period_month: normalizedPeriodMonth,
     currency,
     total_budget_cents,
-    updated_at: new Date().toISOString(),
-    is_portfolio: householdId ? isPortfolio === true : null,
+    updated_at: updatedAt,
   };
-  const onConflict = householdId
-    ? "household_id,currency,period_month"
-    : "user_id,currency,period_month";
+
+  const buildExistingQuery = () => {
+    let query = supabase
+      .from("budgets")
+      .select("id")
+      .eq("currency", currency)
+      .eq("period_month", normalizedPeriodMonth)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+    if (householdId) {
+      query = query.eq("household_id", householdId);
+    } else {
+      query = query.eq("user_id", userId).is("household_id", null);
+    }
+
+    return query;
+  };
+
+  const { data: existing, error: existingErr } =
+    await buildExistingQuery().maybeSingle();
+  if (existingErr) {
+    return { data: null, error: existingErr } as const;
+  }
+
+  if (existing?.id) {
+    return supabase
+      .from("budgets")
+      .update({ total_budget_cents, updated_at: updatedAt })
+      .eq("id", existing.id)
+      .select()
+      .maybeSingle();
+  }
+
+  const insertRes = await supabase
+    .from("budgets")
+    .insert(payload)
+    .select()
+    .maybeSingle();
+
+  if (!insertRes.error || insertRes.error.code !== "23505") {
+    return insertRes;
+  }
+
+  // Concurrent insert won the race. Re-read and update target row.
+  const { data: winner, error: winnerErr } =
+    await buildExistingQuery().maybeSingle();
+  if (winnerErr || !winner?.id) {
+    return { data: null, error: winnerErr ?? insertRes.error } as const;
+  }
+
   return supabase
     .from("budgets")
-    .upsert(payload, { onConflict })
+    .update({ total_budget_cents, updated_at: updatedAt })
+    .eq("id", winner.id)
     .select()
     .maybeSingle();
 }
@@ -98,10 +155,11 @@ export async function upsertEnvelopeAllocation(
   period_month: string,
   amount_cents: number,
 ) {
+  const normalizedPeriodMonth = parseMonthRangeUtc(period_month).monthStartStr;
   return supabase.from("envelope_allocations").upsert(
     {
       envelope_id: envelopeId,
-      period_month,
+      period_month: normalizedPeriodMonth,
       amount_cents,
       updated_at: new Date().toISOString(),
     },
@@ -138,6 +196,7 @@ export async function getBudgetStatusDirect(
   period_month: string,
   currency: string,
   isPortfolio: boolean = false,
+  contactId?: string,
 ) {
   // Normalize to month range
   const { monthStartStr, nextMonthStr } = parseMonthRangeUtc(period_month);
@@ -145,7 +204,6 @@ export async function getBudgetStatusDirect(
   let budgetQuery = supabase
     .from("budgets")
     .select("id, total_budget_cents, currency, period_month")
-    .eq("user_id", userId)
     .eq("currency", currency)
     .gte("period_month", monthStartStr)
     .lt("period_month", nextMonthStr)
@@ -153,11 +211,9 @@ export async function getBudgetStatusDirect(
     .limit(1);
 
   if (householdId) {
-    budgetQuery = budgetQuery
-      .eq("household_id", householdId)
-      .eq("is_portfolio", isPortfolio === true);
+    budgetQuery = budgetQuery.eq("household_id", householdId);
   } else {
-    budgetQuery = budgetQuery.is("household_id", null).is("is_portfolio", null);
+    budgetQuery = budgetQuery.eq("user_id", userId).is("household_id", null);
   }
 
   const { data: budgetRows, error: budgetErr } = await budgetQuery;
@@ -206,7 +262,7 @@ export async function getBudgetStatusDirect(
   let expensesQuery = supabase
     .from("expenses")
     .select(
-      "amount_cents, category, currency, date, household_id, user_id, type",
+      "amount_cents, category, currency, date, household_id, user_id, contact_id, type",
     )
     .eq("type", "expense")
     .eq("currency", currency)
@@ -221,7 +277,7 @@ export async function getBudgetStatusDirect(
     }
   } else {
     expensesQuery = expensesQuery
-      .eq("user_id", userId)
+      .eq("contact_id", contactId ?? userId)
       .is("household_id", null);
   }
 

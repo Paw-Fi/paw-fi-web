@@ -468,23 +468,20 @@ async function resolveBudgetForScope(
   householdId: string | null,
   period_month: string,
   currency: string,
-  isPortfolio: boolean,
+  _isPortfolio: boolean,
 ) {
   let query = supabase
     .from("budgets")
     .select("id, total_budget_cents, currency, period_month")
-    .eq("user_id", userId)
     .eq("currency", currency)
     .eq("period_month", period_month)
     .order("updated_at", { ascending: false })
     .limit(1);
 
   if (householdId) {
-    query = query
-      .eq("household_id", householdId)
-      .eq("is_portfolio", isPortfolio === true);
+    query = query.eq("household_id", householdId);
   } else {
-    query = query.is("household_id", null).is("is_portfolio", null);
+    query = query.eq("user_id", userId).is("household_id", null);
   }
 
   return query.maybeSingle();
@@ -2579,6 +2576,13 @@ Deno.serve(async (req: Request) => {
     };
 
     const applyBudgetDraft = async (draft: PendingBudgetDraft) => {
+      if (
+        draft.household_id &&
+        !(await ensureHouseholdMember(supabase, draft.household_id, userId))
+      ) {
+        return { error: "You do not have access to that space" };
+      }
+
       const total_cents = Math.round(draft.amount * 100);
       const { data: budgetRow, error: budgetErr } = await createOrUpdateBudget(
         supabase,
@@ -3330,6 +3334,17 @@ Deno.serve(async (req: Request) => {
               householdId = spaceMeta?.id ?? null;
             }
 
+            if (
+              householdId &&
+              !(await ensureHouseholdMember(supabase, householdId, userId))
+            ) {
+              toolResult = { error: "You do not have access to that space" };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+
             const dateStr = normalizeDateInput(
               call.args.date,
               formatDateInTimeZone(userTimezone),
@@ -3458,6 +3473,16 @@ Deno.serve(async (req: Request) => {
             if (!spaceMeta && householdName && spaceMap.has(householdName)) {
               spaceMeta = spaceMap.get(householdName);
               householdId = spaceMeta?.id ?? null;
+            }
+            if (
+              householdId &&
+              !(await ensureHouseholdMember(supabase, householdId, userId))
+            ) {
+              toolResult = { error: "You do not have access to that space" };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
             }
             const isPortfolio =
               call.args.is_portfolio ?? spaceMeta?.isPortfolio ?? false;
@@ -3907,6 +3932,16 @@ Deno.serve(async (req: Request) => {
               spaceMeta = spaceMap.get(householdName);
               householdId = spaceMeta?.id ?? null;
             }
+            if (
+              householdId &&
+              !(await ensureHouseholdMember(supabase, householdId, userId))
+            ) {
+              toolResult = { error: "You do not have access to that space" };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
             const type = call.args.type || "expense";
             const listPayload = {
               limit: call.args.limit || 10,
@@ -3959,30 +3994,38 @@ Deno.serve(async (req: Request) => {
               spaceMeta = spaceMap.get(householdName);
               householdId = spaceMeta?.id ?? null;
             }
-            const res = await getBudgetStatusDirect(
-              supabase,
-              userId,
-              householdId,
-              period_month,
-              userCurrency,
-              spaceMeta?.isPortfolio ?? false,
-            );
-            if (res.error) {
-              const formatted = formatInvokeError(res.error);
-              if (WHATSAPP_DEBUG)
-                debugNotes.push(`get-budget direct error: ${formatted}`);
-              console.error(
-                "[twilio-whatsapp-ai-bot] get-budget direct error",
-                { error: res.error, formatted },
-              );
-              toolResult = { error: res.error };
+            if (
+              householdId &&
+              !(await ensureHouseholdMember(supabase, householdId, userId))
+            ) {
+              toolResult = { error: "You do not have access to that space" };
             } else {
-              toolResult = {
-                budget: res.budget,
-                envelopes: res.envelopes,
-                totals: res.totals,
-                chart: res.chart,
-              };
+              const res = await getBudgetStatusDirect(
+                supabase,
+                userId,
+                householdId,
+                period_month,
+                userCurrency,
+                spaceMeta?.isPortfolio ?? false,
+                contactId,
+              );
+              if (res.error) {
+                const formatted = formatInvokeError(res.error);
+                if (WHATSAPP_DEBUG)
+                  debugNotes.push(`get-budget direct error: ${formatted}`);
+                console.error(
+                  "[twilio-whatsapp-ai-bot] get-budget direct error",
+                  { error: res.error, formatted },
+                );
+                toolResult = { error: res.error };
+              } else {
+                toolResult = {
+                  budget: res.budget,
+                  envelopes: res.envelopes,
+                  totals: res.totals,
+                  chart: res.chart,
+                };
+              }
             }
           } else if (call.name === "set_currency") {
             const currency = (call.args.currency || "")
