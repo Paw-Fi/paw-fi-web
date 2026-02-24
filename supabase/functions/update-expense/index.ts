@@ -6,6 +6,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import {
   getAllCategories,
   normalizeCategory,
@@ -106,33 +107,6 @@ const MAX_UTC_OFFSET_MINUTES = 14 * 60;
 
 function pad2(value: number): string {
   return String(value).padStart(2, "0");
-}
-
-function isValidYyyyMmDd(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-
-  if (
-    !Number.isInteger(year) ||
-    !Number.isInteger(month) ||
-    !Number.isInteger(day)
-  ) {
-    return false;
-  }
-
-  if (month < 1 || month > 12) return false;
-  if (day < 1 || day > 31) return false;
-
-  const utc = new Date(Date.UTC(year, month - 1, day));
-  return (
-    utc.getUTCFullYear() === year &&
-    utc.getUTCMonth() === month - 1 &&
-    utc.getUTCDate() === day
-  );
 }
 
 function parseUtcOffsetMinutes(timezone: string): number | null {
@@ -414,8 +388,7 @@ Deno.serve(async (req: Request) => {
     const rawSplitUpdate = (body as any).splitUpdate as
       | CustomSplitsPayload
       | undefined;
-    const hasSplitPayload =
-      !!rawCustomSplits?.memberSplits?.length ||
+    const hasSplitPayload = !!rawCustomSplits?.memberSplits?.length ||
       !!rawSplitUpdate?.memberSplits?.length;
 
     if (Object.keys(updates).length === 0 && !hasSplitPayload) {
@@ -467,25 +440,18 @@ Deno.serve(async (req: Request) => {
 
     if (updates.date !== undefined) {
       if (typeof updates.date !== "string") {
+        return errorResponse("date must be a string", "VALIDATION_ERROR");
+      }
+
+      const normalizedDate = normalizeCalendarDateString(updates.date);
+      if (!normalizedDate) {
         return errorResponse(
-          "date must be a string in YYYY-MM-DD format",
+          "date must be a valid calendar date",
           "VALIDATION_ERROR",
         );
       }
 
-      // Validate date format (YYYY-MM-DD)
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(updates.date)) {
-        return errorResponse(
-          "date must be in YYYY-MM-DD format",
-          "VALIDATION_ERROR",
-        );
-      }
-
-      // Strictly validate date components (e.g., reject 2025-02-30 which JS auto-normalizes)
-      if (!isValidYyyyMmDd(updates.date)) {
-        return errorResponse("Invalid date", "VALIDATION_ERROR");
-      }
+      updates.date = normalizedDate;
     }
 
     if (updates.currency !== undefined) {
@@ -556,15 +522,17 @@ Deno.serve(async (req: Request) => {
           );
         }
 
-        // Validate anchor_date is in ISO format (can include time)
-        try {
-          new Date(updates.recurrence_rule.anchor_date);
-        } catch {
+        const normalizedAnchorDate = normalizeCalendarDateString(
+          updates.recurrence_rule.anchor_date,
+        );
+        if (!normalizedAnchorDate) {
           return errorResponse(
-            "recurrence_rule.anchor_date must be a valid ISO date",
+            "recurrence_rule.anchor_date must be a valid calendar date",
             "VALIDATION_ERROR",
           );
         }
+
+        updates.recurrence_rule.anchor_date = normalizedAnchorDate;
 
         // Validate end_date if provided
         if (
@@ -577,14 +545,16 @@ Deno.serve(async (req: Request) => {
               "VALIDATION_ERROR",
             );
           }
-          try {
-            new Date(updates.recurrence_rule.end_date);
-          } catch {
+          const normalizedEndDate = normalizeCalendarDateString(
+            updates.recurrence_rule.end_date,
+          );
+          if (!normalizedEndDate) {
             return errorResponse(
-              "recurrence_rule.end_date must be a valid ISO date",
+              "recurrence_rule.end_date must be a valid calendar date",
               "VALIDATION_ERROR",
             );
           }
+          updates.recurrence_rule.end_date = normalizedEndDate;
         }
 
         // Validate interval if provided
@@ -707,18 +677,11 @@ Deno.serve(async (req: Request) => {
         if (ianaTimezone != null) {
           return (
             getTodayYyyyMmDdInIanaTimezone(ianaTimezone) ??
-            getTodayYyyyMmDdInOffset(0)
+              getTodayYyyyMmDdInOffset(0)
           );
         }
         return getTodayYyyyMmDdInOffset(0);
       })();
-
-      if (updates.date > todayStr) {
-        return errorResponse(
-          "Date cannot be in the future",
-          "VALIDATION_ERROR",
-        );
-      }
     }
 
     // Fetch expense to verify ownership and obtain household info
@@ -850,8 +813,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Capture old values for notification payload
-    const oldAmountCents: number | null =
-      (expense as any)?.amount_cents ?? null;
+    const oldAmountCents: number | null = (expense as any)?.amount_cents ??
+      null;
     const oldCurrency: string | null = (expense as any)?.currency ?? null;
     const oldNote: string | null = (expense as any)?.raw_text ?? null;
     const oldCategory: string | null = (expense as any)?.category ?? null;
@@ -875,16 +838,14 @@ Deno.serve(async (req: Request) => {
       | CustomSplitsPayload
       | undefined;
 
-    const updatesHouseholdIdRaw =
-      (updates as any)?.household_id ?? (updates as any)?.householdId ?? null;
-    const updatesHouseholdId =
-      typeof updatesHouseholdIdRaw === "string"
-        ? sanitizeUuid(updatesHouseholdIdRaw)
-        : null;
+    const updatesHouseholdIdRaw = (updates as any)?.household_id ??
+      (updates as any)?.householdId ?? null;
+    const updatesHouseholdId = typeof updatesHouseholdIdRaw === "string"
+      ? sanitizeUuid(updatesHouseholdIdRaw)
+      : null;
     const effectiveHouseholdForSplit = expenseHouseholdId ?? updatesHouseholdId;
 
-    const shouldCreateSplitGroup =
-      !!effectiveHouseholdForSplit &&
+    const shouldCreateSplitGroup = !!effectiveHouseholdForSplit &&
       !isPortfolioHousehold &&
       !existingSplitGroupId &&
       !!bodyHouseholdId &&
@@ -904,10 +865,9 @@ Deno.serve(async (req: Request) => {
         .eq("household_id", expenseHouseholdId);
 
       if (members && members.length > 0) {
-        const effectiveAmountCents =
-          typeof updates.amount_cents === "number"
-            ? updates.amount_cents
-            : (((expense as any)?.amount_cents as number | null) ?? 0);
+        const effectiveAmountCents = typeof updates.amount_cents === "number"
+          ? updates.amount_cents
+          : (((expense as any)?.amount_cents as number | null) ?? 0);
 
         const customUserIds = customSplits!.memberSplits
           .map((s) => s.userId)
@@ -970,8 +930,7 @@ Deno.serve(async (req: Request) => {
             }
           }
 
-          const newCurrency =
-            updates.currency ||
+          const newCurrency = updates.currency ||
             ((expense as any)?.currency as string | null) ||
             null;
 
@@ -984,8 +943,8 @@ Deno.serve(async (req: Request) => {
               split_type: splitType,
               currency: newCurrency,
               total_amount_cents: effectiveAmountCents,
-              description:
-                updates.raw_text || (expense as any)?.raw_text || null,
+              description: updates.raw_text || (expense as any)?.raw_text ||
+                null,
               created_at: new Date().toISOString(),
             })
             .select()
@@ -997,14 +956,12 @@ Deno.serve(async (req: Request) => {
             let splitLines: any[] = [];
 
             if (splitType === "equal") {
-              const amountPerMember =
-                members.length > 0
-                  ? Math.floor(effectiveAmountCents / members.length)
-                  : 0;
-              const remainder =
-                members.length > 0
-                  ? effectiveAmountCents - amountPerMember * members.length
-                  : 0;
+              const amountPerMember = members.length > 0
+                ? Math.floor(effectiveAmountCents / members.length)
+                : 0;
+              const remainder = members.length > 0
+                ? effectiveAmountCents - amountPerMember * members.length
+                : 0;
               splitLines = members.map((member: any, index: number) => ({
                 split_group_id: createdSplitGroupId,
                 user_id: member.user_id,
@@ -1015,7 +972,7 @@ Deno.serve(async (req: Request) => {
               }));
             } else if (splitType === "amount") {
               const cents = customSplits!.memberSplits.map((split) =>
-                Math.max(0, Math.round((split.amount || 0) * 100)),
+                Math.max(0, Math.round((split.amount || 0) * 100))
               );
               const sumCents = cents.reduce((sum, v) => sum + v, 0);
               const diff = effectiveAmountCents - sumCents;
@@ -1052,10 +1009,9 @@ Deno.serve(async (req: Request) => {
               }));
             } else if (splitType === "shares") {
               const weights = customSplits!.memberSplits.map((split) => {
-                const shares =
-                  typeof split.shares === "number"
-                    ? Math.trunc(split.shares)
-                    : 0;
+                const shares = typeof split.shares === "number"
+                  ? Math.trunc(split.shares)
+                  : 0;
                 return shares > 0 ? shares : 0;
               });
               const allocatedCents = allocateCentsByWeights(
@@ -1064,10 +1020,9 @@ Deno.serve(async (req: Request) => {
               );
               if (weights.reduce((sum, v) => sum + v, 0) > 0) {
                 splitLines = customSplits!.memberSplits.map((split, index) => {
-                  const shares =
-                    typeof split.shares === "number"
-                      ? Math.trunc(split.shares)
-                      : 0;
+                  const shares = typeof split.shares === "number"
+                    ? Math.trunc(split.shares)
+                    : 0;
                   return {
                     split_group_id: createdSplitGroupId,
                     user_id: split.userId,
@@ -1100,8 +1055,7 @@ Deno.serve(async (req: Request) => {
     // This is separate from initial split group creation and is only allowed
     // when the expense already has a split_group_id and no lines have been
     // settled yet (to preserve settlement history correctness).
-    const wantsSplitUpdate =
-      !!expenseHouseholdId &&
+    const wantsSplitUpdate = !!expenseHouseholdId &&
       !isPortfolioHousehold &&
       !!existingSplitGroupId &&
       !!splitUpdate &&
@@ -1175,8 +1129,8 @@ Deno.serve(async (req: Request) => {
 
       const existingLines = ((existingGroup as any).expense_split_lines ||
         []) as {
-        is_settled?: boolean;
-      }[];
+          is_settled?: boolean;
+        }[];
       const hasSettledLines = existingLines.some(
         (line) => line && line.is_settled === true,
       );
@@ -1207,13 +1161,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const effectiveAmountCents =
-        typeof updates.amount_cents === "number"
-          ? updates.amount_cents
-          : (((expense as any)?.amount_cents as number | null) ?? 0);
+      const effectiveAmountCents = typeof updates.amount_cents === "number"
+        ? updates.amount_cents
+        : (((expense as any)?.amount_cents as number | null) ?? 0);
 
-      const splitType =
-        splitUpdate.splitType ||
+      const splitType = splitUpdate.splitType ||
         ((existingGroup as any).split_type as CustomSplitsPayload["splitType"]);
 
       // Validate user IDs match all household members (same rule as initial creation)
@@ -1287,14 +1239,12 @@ Deno.serve(async (req: Request) => {
       let updatedSplitLines: any[] = [];
 
       if (splitType === "equal") {
-        const amountPerMember =
-          members.length > 0
-            ? Math.floor(effectiveAmountCents / members.length)
-            : 0;
-        const remainder =
-          members.length > 0
-            ? effectiveAmountCents - amountPerMember * members.length
-            : 0;
+        const amountPerMember = members.length > 0
+          ? Math.floor(effectiveAmountCents / members.length)
+          : 0;
+        const remainder = members.length > 0
+          ? effectiveAmountCents - amountPerMember * members.length
+          : 0;
         updatedSplitLines = members.map((member: any, index: number) => ({
           split_group_id: existingSplitGroupId,
           user_id: member.user_id,
@@ -1305,7 +1255,7 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "amount") {
         const cents = splitUpdate.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100)),
+          Math.max(0, Math.round((split.amount || 0) * 100))
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = effectiveAmountCents - sumCents;
@@ -1339,8 +1289,9 @@ Deno.serve(async (req: Request) => {
         }));
       } else if (splitType === "shares") {
         const weights = splitUpdate.memberSplits.map((split) => {
-          const shares =
-            typeof split.shares === "number" ? Math.trunc(split.shares) : 0;
+          const shares = typeof split.shares === "number"
+            ? Math.trunc(split.shares)
+            : 0;
           return shares > 0 ? shares : 0;
         });
         const allocatedCents = allocateCentsByWeights(
@@ -1349,8 +1300,9 @@ Deno.serve(async (req: Request) => {
         );
         if (weights.reduce((sum, v) => sum + v, 0) > 0) {
           updatedSplitLines = splitUpdate.memberSplits.map((split, index) => {
-            const shares =
-              typeof split.shares === "number" ? Math.trunc(split.shares) : 0;
+            const shares = typeof split.shares === "number"
+              ? Math.trunc(split.shares)
+              : 0;
             return {
               split_group_id: existingSplitGroupId,
               user_id: split.userId,
@@ -1384,8 +1336,7 @@ Deno.serve(async (req: Request) => {
         splitGroupUpdates.total_amount_cents = updates.amount_cents;
       }
 
-      const newGroupCurrency =
-        updates.currency ||
+      const newGroupCurrency = updates.currency ||
         ((existingGroup as any).currency as string | null) ||
         null;
       if (newGroupCurrency) {
@@ -1474,30 +1425,28 @@ Deno.serve(async (req: Request) => {
       } catch (_) {}
 
       // Compute new values
-      const newAmountCents: number | null =
-        (updates as any).amount_cents ??
+      const newAmountCents: number | null = (updates as any).amount_cents ??
         (updatedExpense as any)?.amount_cents ??
         null;
-      const newCurrency: string | null =
-        (updates as any).currency ??
+      const newCurrency: string | null = (updates as any).currency ??
         (updatedExpense as any)?.currency ??
         oldCurrency;
-      const newNote: string | null =
-        (updates as any).raw_text ?? (updatedExpense as any)?.raw_text ?? null;
-      const newCategory: string | null =
-        (updates as any).category ?? (updatedExpense as any)?.category ?? null;
-      const newDate: string | null =
-        (updates as any).date ?? (updatedExpense as any)?.date ?? null;
-      const newCreatedAt: string | null =
-        (updates as any).created_at ??
+      const newNote: string | null = (updates as any).raw_text ??
+        (updatedExpense as any)?.raw_text ?? null;
+      const newCategory: string | null = (updates as any).category ??
+        (updatedExpense as any)?.category ?? null;
+      const newDate: string | null = (updates as any).date ??
+        (updatedExpense as any)?.date ?? null;
+      const newCreatedAt: string | null = (updates as any).created_at ??
         (updatedExpense as any)?.created_at ??
         null;
 
       const transactionType =
         ((expense as any)?.type as string | null | undefined)?.toLowerCase() ??
-        "expense";
-      const eventType =
-        transactionType == "income" ? "income_edited" : "expense_edited";
+          "expense";
+      const eventType = transactionType == "income"
+        ? "income_edited"
+        : "expense_edited";
 
       const { error: notifyError } = await supabase.rpc(
         "notify_household_members_expense",
@@ -1524,7 +1473,7 @@ Deno.serve(async (req: Request) => {
             updated_fields: Object.keys(updates),
             is_recurring:
               ((updates as any).is_recurring as boolean | undefined) ??
-              (updatedExpense as any)?.is_recurring === true,
+                (updatedExpense as any)?.is_recurring === true,
           },
         },
       );

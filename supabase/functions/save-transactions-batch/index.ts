@@ -7,6 +7,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
+import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -321,6 +322,47 @@ Deno.serve(async (req: Request) => {
       if (!tx.date) {
         validationErrors.push({ index: i, error: "Missing date" });
         continue;
+      }
+
+      const normalizedDate = normalizeCalendarDateString(tx.date);
+      if (!normalizedDate) {
+        validationErrors.push({
+          index: i,
+          error: "date must be a valid calendar date",
+        });
+        continue;
+      }
+      tx.date = normalizedDate;
+
+      if (tx.recurrence_rule) {
+        const normalizedAnchorDate = normalizeCalendarDateString(
+          tx.recurrence_rule.anchor_date,
+        );
+        if (!normalizedAnchorDate) {
+          validationErrors.push({
+            index: i,
+            error: "recurrence_rule.anchor_date must be a valid calendar date",
+          });
+          continue;
+        }
+
+        const normalizedEndDate = tx.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(tx.recurrence_rule.end_date);
+
+        if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
+          validationErrors.push({
+            index: i,
+            error: "recurrence_rule.end_date must be a valid calendar date",
+          });
+          continue;
+        }
+
+        tx.recurrence_rule = {
+          ...tx.recurrence_rule,
+          anchor_date: normalizedAnchorDate,
+          ...(normalizedEndDate ? { end_date: normalizedEndDate } : {}),
+        };
       }
 
       const currency = validateCurrency(tx.currency || "USD");
