@@ -7,7 +7,7 @@
 
 set -e  # Exit on any error
 
-PROJECT_REF="${1:-qbuynyxyemigtnvdujts}"  # Can override with arg
+PROJECT_REF="${1:-pbopcsmrcykdzbilpilf}"  # Can override with arg
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🏠 Deploying Households (Joint Accounts) Functions"
@@ -93,9 +93,16 @@ supabase functions deploy expense-daily-nudges --project-ref $PROJECT_REF --no-v
 echo "✅ expense-daily-nudges deployed"
 echo ""
 
-# Step 12: Deploy households-process-invite-reminders (SERVICE ROLE - called by cron)
-echo "📦 [12/12] Deploying households-process-invite-reminders function..."
+# Step 12: Deploy edge-error-digest (SERVICE ROLE - called by cron)
+echo "📦 [12/12] Deploying edge-error-digest function..."
+supabase functions deploy edge-error-digest --project-ref $PROJECT_REF --no-verify-jwt
+echo "✅ edge-error-digest deployed"
+echo ""
+
+# Step 13: Deploy households-process-invite-reminders (SERVICE ROLE - called by cron)
+echo "📦 [13/13] Deploying households-process-invite-reminders function..."
 supabase functions deploy households-process-invite-reminders --project-ref $PROJECT_REF
+echo "✅ households-process-invite-reminders deployed"
 echo ""
 
 echo "════════════════════════════════════════════════════════════"

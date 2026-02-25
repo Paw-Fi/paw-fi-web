@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
 
@@ -322,6 +323,14 @@ serve(async (req) => {
 
     if (eventsError) {
       console.error("Error fetching unsent events:", eventsError);
+      await reportEdgeFunctionError({
+        functionName: "households-process-notifications",
+        error: eventsError,
+        context: {
+          step: "fetch_unsent_events",
+          oneDayAgo,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to fetch notification events" }),
         {
@@ -693,7 +702,8 @@ serve(async (req) => {
           .from("devices")
           .select("user_id, push_token, platform")
           .in("user_id", eligibleUserIds)
-          .eq("is_active", true);
+          // Treat NULL as active for legacy rows to avoid dropping deliveries.
+          .or("is_active.is.true,is_active.is.null");
 
         if (!devices || devices.length === 0) {
           // Mark as sent (but no devices)
@@ -802,6 +812,17 @@ serve(async (req) => {
         }
       } catch (error: any) {
         console.error(`Error processing event ${event.id}:`, error);
+        await reportEdgeFunctionError({
+          functionName: "households-process-notifications",
+          error,
+          context: {
+            step: "process_single_event",
+            eventId: event.id,
+            eventType: event.event_type,
+            userId: event.user_id,
+            householdId: event.household_id,
+          },
+        });
         failedCount++;
         const errorMessage =
           error instanceof Error ? error.message : String(error);
@@ -831,6 +852,13 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error("Unexpected error:", error);
+    await reportEdgeFunctionError({
+      functionName: "households-process-notifications",
+      error,
+      context: {
+        step: "unhandled",
+      },
+    });
     const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
       JSON.stringify({

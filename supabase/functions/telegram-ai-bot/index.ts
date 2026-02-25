@@ -42,6 +42,7 @@ import {
   buildTelegramVerificationUrl,
   REQUIRED_TELEGRAM_TOOL_NAMES,
 } from "../shared/telegram-parity.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const MODEL_NAME = "gemini-2.5-flash";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
@@ -2276,6 +2277,13 @@ Deno.serve(async (req: Request) => {
         });
       } catch (error) {
         console.error("[telegram-ai-bot] Handler error:", error);
+        await reportEdgeFunctionError({
+          functionName: "telegram-ai-bot",
+          error,
+          context: {
+            step: "process_message",
+          },
+        });
         await updateIdempotency(supabase, idempotencyKey, {
           status: "failed",
           response_text: "processing_failed",

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { buildLogExpenseReminderMessage } from "../shared/log-expense-reminder.ts";
 import { getLocalTimeMinutes, isInQuietHours } from "../shared/timezone.ts";
@@ -800,6 +801,16 @@ serve(async (req: Request) => {
     const accessToken = await getAccessToken();
     if (!accessToken) {
       console.error("[send-push] Failed to obtain access token");
+      await reportEdgeFunctionError({
+        functionName: "households-send-push-notification",
+        error: new Error("Failed to obtain FCM access token"),
+        context: {
+          step: "get_access_token",
+          notification_event_id,
+          user_id,
+          event_type,
+        },
+      });
 
       await supabase
         .from("notification_events")
@@ -1077,6 +1088,13 @@ serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("[send-push] Unexpected error:", error);
+    await reportEdgeFunctionError({
+      functionName: "households-send-push-notification",
+      error,
+      context: {
+        step: "unhandled",
+      },
+    });
 
     // Try to mark notification with error
     try {

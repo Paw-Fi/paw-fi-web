@@ -8,6 +8,7 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -227,9 +228,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -522,22 +524,25 @@ Deno.serve(async (req: Request) => {
       }
 
       // Determine split type and validate custom splits
-      const rawSplitType = typeof body.customSplits?.splitType === "string"
-        ? body.customSplits.splitType.trim().toLowerCase()
-        : "equal";
+      const rawSplitType =
+        typeof body.customSplits?.splitType === "string"
+          ? body.customSplits.splitType.trim().toLowerCase()
+          : "equal";
       const normalizedSplitType = [
-          "equal",
-          "amount",
-          "percentage",
-          "shares",
-        ].includes(rawSplitType)
+        "equal",
+        "amount",
+        "percentage",
+        "shares",
+      ].includes(rawSplitType)
         ? rawSplitType
         : "equal";
-      const hasMemberSplits = Array.isArray(body.customSplits?.memberSplits) &&
+      const hasMemberSplits =
+        Array.isArray(body.customSplits?.memberSplits) &&
         body.customSplits!.memberSplits.length > 0;
-      const customSplits = hasMemberSplits && normalizedSplitType !== "equal"
-        ? body.customSplits
-        : null;
+      const customSplits =
+        hasMemberSplits && normalizedSplitType !== "equal"
+          ? body.customSplits
+          : null;
       const splitType = customSplits ? normalizedSplitType : "equal";
 
       // Validate custom splits if provided
@@ -546,8 +551,8 @@ Deno.serve(async (req: Request) => {
 
         // Normalize member split values so downstream validations and inserts
         // don't violate DB constraints (e.g., shares cannot be 0).
-        const normalizedMemberSplits: MemberSplit[] = customSplits.memberSplits
-          .map((split) => ({
+        const normalizedMemberSplits: MemberSplit[] =
+          customSplits.memberSplits.map((split) => ({
             userId: split.userId,
             amount: normalizeAmount(split.amount),
             percentage: normalizePercentage(split.percentage),
@@ -587,8 +592,7 @@ Deno.serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 success: false,
-                error:
-                  `Amount splits must equal total expense amount (${body.amount})`,
+                error: `Amount splits must equal total expense amount (${body.amount})`,
                 code: "VALIDATION_ERROR",
               }),
               {
@@ -712,7 +716,7 @@ Deno.serve(async (req: Request) => {
       } else if (splitType === "amount" && customSplits) {
         // Custom amount split
         const cents = customSplits.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100))
+          Math.max(0, Math.round((split.amount || 0) * 100)),
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = amountCents - sumCents;
@@ -894,6 +898,13 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error("[save-expense] Error:", error);
+    await reportEdgeFunctionError({
+      functionName: "save-expense",
+      error,
+      context: {
+        step: "unhandled",
+      },
+    });
     return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
   }
 });

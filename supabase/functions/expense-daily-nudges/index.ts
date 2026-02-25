@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface ContactRow {
   user_id: string;
@@ -233,6 +234,13 @@ Deno.serve(async (req: Request) => {
         "[expense-daily-nudges] user_contacts select error",
         contactErr,
       );
+      await reportEdgeFunctionError({
+        functionName: "expense-daily-nudges",
+        error: contactErr,
+        context: {
+          step: "load_user_contacts",
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to load contacts" }),
         {
@@ -262,7 +270,8 @@ Deno.serve(async (req: Request) => {
     const statsSinceIso = new Date(
       now.getTime() - statsLookbackDays * 24 * 60 * 60 * 1000,
     ).toISOString();
-    const chunkSize = 500;
+    // Keep PostgREST `in(...)` query strings small to avoid transport/proxy URL limits.
+    const chunkSize = 120;
     let recentReminderGuardFailed = false;
 
     for (let i = 0; i < userIds.length; i += chunkSize) {
@@ -282,6 +291,16 @@ Deno.serve(async (req: Request) => {
           "[expense-daily-nudges] recent reminder batch error",
           reminderErr,
         );
+        await reportEdgeFunctionError({
+          functionName: "expense-daily-nudges",
+          error: reminderErr,
+          context: {
+            step: "load_recent_reminders",
+            chunkSize,
+            chunkStart: i,
+            chunkLength: chunk.length,
+          },
+        });
         recentReminderGuardFailed = true;
         break;
       }
@@ -507,6 +526,14 @@ Deno.serve(async (req: Request) => {
         .select("id");
       if (insertErr) {
         console.error("[expense-daily-nudges] insert error", insertErr);
+        await reportEdgeFunctionError({
+          functionName: "expense-daily-nudges",
+          error: insertErr,
+          context: {
+            step: "insert_notifications",
+            toInsertCount: toInsert.length,
+          },
+        });
       } else {
         inserted = insertedRows?.length || 0;
       }
@@ -527,6 +554,21 @@ Deno.serve(async (req: Request) => {
       }),
       {
         status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    await reportEdgeFunctionError({
+      functionName: "expense-daily-nudges",
+      error,
+      context: {
+        step: "unhandled",
+      },
+    });
+    return new Response(
+      JSON.stringify({ error: "Failed to process daily nudges" }),
+      {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );

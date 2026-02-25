@@ -41,6 +41,7 @@ import {
   buildXlsxPreview,
   summarizePdfWithGemini,
 } from "../shared/analyze-core.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 // --- Constants & Types ---
 
@@ -4930,6 +4931,14 @@ Deno.serve(async (req: Request) => {
       return await deliverTwilioResponse(raceResult.data, "twiml");
     } catch (error) {
       console.error("[twilio-whatsapp-ai-bot] Delivery failed:", error);
+      await reportEdgeFunctionError({
+        functionName: "twilio-whatsapp-ai-bot",
+        error,
+        context: {
+          step: "deliver_twiml_response",
+          idempotencyKey,
+        },
+      });
       if (idempotencyKey) {
         await updateTwilioIdempotency(supabase, idempotencyKey, {
           status: "failed",
@@ -4951,6 +4960,14 @@ Deno.serve(async (req: Request) => {
       "[twilio-whatsapp-ai-bot] Processing failed:",
       raceResult.error,
     );
+    await reportEdgeFunctionError({
+      functionName: "twilio-whatsapp-ai-bot",
+      error: raceResult.error,
+      context: {
+        step: "process_request",
+        idempotencyKey,
+      },
+    });
     if (idempotencyKey) {
       await updateTwilioIdempotency(supabase, idempotencyKey, {
         status: "failed",
@@ -5000,6 +5017,14 @@ Deno.serve(async (req: Request) => {
         }
       } catch (error) {
         console.error("[twilio-whatsapp-ai-bot] Async delivery failed:", error);
+        await reportEdgeFunctionError({
+          functionName: "twilio-whatsapp-ai-bot",
+          error,
+          context: {
+            step: "deliver_async_response",
+            idempotencyKey,
+          },
+        });
         if (idempotencyKey) {
           await updateTwilioIdempotency(supabase, idempotencyKey, {
             status: "failed",
