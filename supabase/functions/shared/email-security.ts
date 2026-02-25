@@ -14,15 +14,17 @@ export const LINKS = {
 } as const;
 
 // Domain allowlist for URL sanitization
-const ALLOWED_HOSTS = [
+const EXACT_ALLOWED_HOSTS = [
   'moneko.io',
   'testflight.apple.com',
   'apps.apple.com',
   'play.google.com',
-  'stripe.com',
   'supabase.co',
   'upload.wikimedia.org',
 ];
+
+// Allowlist domains plus any of their subdomains
+const SUFFIX_ALLOWED_HOSTS = ['stripe.com'];
 
 // Enhanced URL sanitizer with allowlist and protocol validation
 export function sanitizeUrl(url: string): string {
@@ -56,7 +58,13 @@ export function sanitizeUrl(url: string): string {
     const parsed = new URL(url);
     
     // Check against allowlist
-    if (!ALLOWED_HOSTS.includes(parsed.hostname)) {
+    const isExactAllowed = EXACT_ALLOWED_HOSTS.includes(parsed.hostname);
+    const isSuffixAllowed = SUFFIX_ALLOWED_HOSTS.some(
+      (domain) =>
+        parsed.hostname === domain || parsed.hostname.endsWith(`.${domain}`),
+    );
+
+    if (!isExactAllowed && !isSuffixAllowed) {
       return '#';
     }
     
