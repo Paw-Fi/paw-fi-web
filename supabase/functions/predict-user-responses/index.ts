@@ -104,7 +104,7 @@ serve(async (req: Request): Promise<Response> => {
       },
     ];
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
     const generationConfig = {
       responseMimeType: "text/plain", // We expect plain text containing JSON
       maxOutputTokens: 500, // Reduced max tokens as suggestions are short

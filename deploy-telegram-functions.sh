@@ -80,6 +80,7 @@ if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
 fi
 
 # Public webhook entrypoint from Telegram (no JWT)
+deploy_internal_function "twilio-whatsapp-ai-bot"
 deploy_internal_function "telegram-ai-bot"
 
 # App verification function (JWT from mobile app)

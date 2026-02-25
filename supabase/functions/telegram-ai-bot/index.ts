@@ -28,11 +28,7 @@ import {
 } from "../shared/budgets-helpers.ts";
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
-import {
-  buildXlsxPreview,
-  runAnalyzeExpense,
-  summarizePdfWithGemini,
-} from "../shared/analyze-core.ts";
+import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 import {
   reserveIdempotency,
   updateIdempotency,
@@ -44,8 +40,9 @@ import {
 } from "../shared/telegram-parity.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
-const MODEL_NAME = "gemini-2.5-flash";
-const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
+const MODEL_NAME = "gemini-2.5-flash-lite";
+const SYSTEM_INSTRUCTION =
+  `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
@@ -115,6 +112,7 @@ const PROCESSING_ACK_MESSAGES = [
 const PROCESSING_ACK_DELAY_MS = 3000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
+const TYPING_ACTION_INTERVAL_MS = 4000;
 
 type TelegramUpdate = {
   update_id?: number;
@@ -254,9 +252,11 @@ async function getTelegramFile(
   token: string,
   fileId: string,
 ): Promise<{ file_path?: string; file_size?: number } | null> {
-  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(
-    fileId,
-  )}`;
+  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${
+    encodeURIComponent(
+      fileId,
+    )
+  }`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const payload = await res.json();
@@ -293,6 +293,42 @@ async function sendTelegramMessage(
   return res.ok;
 }
 
+async function sendTelegramChatAction(
+  token: string,
+  chatId: number,
+  action: "typing" = "typing",
+) {
+  const url = `https://api.telegram.org/bot${token}/sendChatAction`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      action,
+    }),
+  });
+  return res.ok;
+}
+
+function startTelegramTypingHeartbeat(token: string, chatId: number) {
+  let active = true;
+
+  const sendTyping = async () => {
+    if (!active) return;
+    await sendTelegramChatAction(token, chatId, "typing");
+  };
+
+  void sendTyping();
+  const intervalId = setInterval(() => {
+    void sendTyping();
+  }, TYPING_ACTION_INTERVAL_MS);
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+  };
+}
+
 async function answerTelegramCallbackQuery(
   token: string,
   callbackQueryId: string,
@@ -311,8 +347,7 @@ function normalizeText(input?: string | null) {
 }
 
 function resolvePublicBaseUrl() {
-  const explicitBaseUrl =
-    Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
+  const explicitBaseUrl = Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
     Deno.env.get("WEB_APP_URL") ||
     Deno.env.get("PUBLIC_APP_URL") ||
     Deno.env.get("NEXT_PUBLIC_APP_URL") ||
@@ -383,6 +418,212 @@ function resolveTextFromCallbackChoice(
 
 function normalizeNameForMatch(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+type BudgetEnvelopeRowLite = {
+  id: string;
+  name: string;
+  updated_at: string | null;
+};
+
+function normalizeEnvelopeName(value: string): string {
+  return (value || "").trim().toLowerCase();
+}
+
+function normalizePeriodMonth(value: string): string {
+  const trimmed = (value || "").trim();
+  if (trimmed.length >= 7) return `${trimmed.slice(0, 7)}-01`;
+  return trimmed;
+}
+
+function isNewerIso(
+  a: string | null | undefined,
+  b: string | null | undefined,
+) {
+  const ta = a ? Date.parse(a) : Number.NEGATIVE_INFINITY;
+  const tb = b ? Date.parse(b) : Number.NEGATIVE_INFINITY;
+  return ta > tb;
+}
+
+function formatPct(value: number): string {
+  if (!Number.isFinite(value)) return "0%";
+  const rounded = Math.round(value * 100) / 100;
+  const isInt = Math.abs(rounded - Math.round(rounded)) < 1e-9;
+  return `${isInt ? Math.round(rounded) : rounded}%`;
+}
+
+function buildBudgetDoneText(
+  pockets: Array<{ name: string; percentage: number }>,
+): string {
+  const cleaned = pockets
+    .map((p) => ({
+      name: (p.name || "").trim(),
+      percentage: Number(p.percentage) || 0,
+    }))
+    .filter((p) => p.name.length > 0);
+  if (!cleaned.length) return "Done — budget updated.";
+  const list = cleaned
+    .map((p) => `${p.name} ${formatPct(p.percentage)}`)
+    .join(", ");
+  return `Done — updated pockets: ${list}.`;
+}
+
+async function consolidateDuplicateEnvelopesForBudget(
+  supabase: SupabaseJsClient,
+  budgetId: string,
+  periodMonth: string,
+  debugNotes: string[],
+): Promise<Map<string, BudgetEnvelopeRowLite>> {
+  const normalizedPeriod = normalizePeriodMonth(periodMonth);
+  const { data: envRowsRaw, error: envErr } = await supabase
+    .from("budget_envelopes")
+    .select("id, name, updated_at")
+    .eq("budget_id", budgetId);
+
+  const envRows = (envRowsRaw || []) as BudgetEnvelopeRowLite[];
+  if (envErr) {
+    debugNotes.push(
+      `budget_envelopes load error: ${formatInvokeError(envErr)}`,
+    );
+    return new Map();
+  }
+
+  const byNorm = new Map<string, BudgetEnvelopeRowLite[]>();
+  for (const row of envRows) {
+    const norm = normalizeEnvelopeName(row?.name || "");
+    if (!norm) continue;
+    const list = byNorm.get(norm) || [];
+    list.push(row);
+    byNorm.set(norm, list);
+  }
+
+  const duplicateGroups = Array.from(byNorm.entries()).filter(
+    ([, rows]) => rows.length > 1,
+  );
+  if (!duplicateGroups.length) {
+    const map = new Map<string, BudgetEnvelopeRowLite>();
+    for (const [norm, rows] of byNorm.entries()) {
+      const chosen = rows.reduce((acc, cur) =>
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc
+      );
+      map.set(norm, chosen);
+    }
+    return map;
+  }
+
+  for (const [norm, group] of duplicateGroups) {
+    const ids = group.map((r) => r.id).filter(Boolean);
+    if (ids.length < 2) continue;
+
+    const { data: linksRaw, error: linksErr } = await supabase
+      .from("envelope_category_links")
+      .select("envelope_id, category")
+      .in("envelope_id", ids);
+    if (linksErr) {
+      debugNotes.push(
+        `envelope_category_links load error (${norm}): ${
+          formatInvokeError(linksErr)
+        }`,
+      );
+    }
+    const links = (linksRaw || []) as Array<{
+      envelope_id: string;
+      category: string;
+    }>;
+
+    const linkCounts = new Map<string, number>();
+    for (const l of links) {
+      const id = String((l as any)?.envelope_id || "");
+      if (!id) continue;
+      linkCounts.set(id, (linkCounts.get(id) || 0) + 1);
+    }
+
+    const canonical = group.reduce((acc, cur) => {
+      const accCount = linkCounts.get(acc.id) || 0;
+      const curCount = linkCounts.get(cur.id) || 0;
+      if (curCount !== accCount) return curCount > accCount ? cur : acc;
+      return isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc;
+    });
+    const canonicalId = canonical.id;
+    const dupIds = ids.filter((id) => id !== canonicalId);
+    if (!canonicalId || dupIds.length === 0) continue;
+
+    const categoriesToUpsert = new Set<string>();
+    for (const l of links) {
+      const envId = String((l as any)?.envelope_id || "");
+      if (!dupIds.includes(envId)) continue;
+      const cat = String((l as any)?.category || "");
+      if (!cat) continue;
+      categoriesToUpsert.add(cat);
+    }
+    for (const cat of categoriesToUpsert) {
+      await upsertEnvelopeCategoryLink(supabase, canonicalId, cat);
+    }
+
+    await supabase
+      .from("envelope_category_links")
+      .delete()
+      .in("envelope_id", dupIds);
+
+    const { data: canonicalAlloc } = await supabase
+      .from("envelope_allocations")
+      .select("envelope_id")
+      .eq("envelope_id", canonicalId)
+      .eq("period_month", normalizedPeriod)
+      .maybeSingle();
+
+    if (!canonicalAlloc) {
+      const { data: dupAllocs } = await supabase
+        .from("envelope_allocations")
+        .select("amount_cents")
+        .in("envelope_id", dupIds)
+        .eq("period_month", normalizedPeriod);
+      const sum = (dupAllocs || []).reduce((acc: number, row: any) => {
+        const v = Number(row?.amount_cents) || 0;
+        return acc + v;
+      }, 0);
+      if (sum > 0) {
+        await upsertEnvelopeAllocation(
+          supabase,
+          canonicalId,
+          normalizedPeriod,
+          sum,
+        );
+      }
+    }
+
+    await supabase
+      .from("envelope_allocations")
+      .delete()
+      .in("envelope_id", dupIds);
+    const { error: deleteEnvErr } = await supabase
+      .from("budget_envelopes")
+      .delete()
+      .in("id", dupIds);
+    if (deleteEnvErr) {
+      debugNotes.push(
+        `duplicate envelope delete error (${norm}): ${
+          formatInvokeError(deleteEnvErr)
+        }`,
+      );
+    }
+  }
+
+  const { data: finalRowsRaw } = await supabase
+    .from("budget_envelopes")
+    .select("id, name, updated_at")
+    .eq("budget_id", budgetId);
+  const finalRows = (finalRowsRaw || []) as BudgetEnvelopeRowLite[];
+  const map = new Map<string, BudgetEnvelopeRowLite>();
+  for (const row of finalRows) {
+    const norm = normalizeEnvelopeName(row?.name || "");
+    if (!norm) continue;
+    const existing = map.get(norm);
+    if (!existing || isNewerIso(row.updated_at, existing.updated_at)) {
+      map.set(norm, row);
+    }
+  }
+  return map;
 }
 
 function resolveMemberIdByName(
@@ -494,8 +735,9 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount =
-        typeof split?.amount === "number" ? Math.max(0, split.amount) : null;
+      const amount = typeof split?.amount === "number"
+        ? Math.max(0, split.amount)
+        : null;
       if (amount == null) missing.push(id);
       else specifiedSum += amount;
     }
@@ -504,10 +746,9 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount =
-        typeof split?.amount === "number"
-          ? Math.max(0, split.amount)
-          : perMissing;
+      const amount = typeof split?.amount === "number"
+        ? Math.max(0, split.amount)
+        : perMissing;
       fullSplits.push({ userId: id, amount });
     }
   } else if (inferredType === "percentage") {
@@ -515,10 +756,9 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage =
-        typeof split?.percentage === "number"
-          ? Math.max(0, Math.min(100, split.percentage))
-          : null;
+      const percentage = typeof split?.percentage === "number"
+        ? Math.max(0, Math.min(100, split.percentage))
+        : null;
       if (percentage == null) missing.push(id);
       else specifiedSum += percentage;
     }
@@ -527,19 +767,17 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage =
-        typeof split?.percentage === "number"
-          ? Math.max(0, Math.min(100, split.percentage))
-          : perMissing;
+      const percentage = typeof split?.percentage === "number"
+        ? Math.max(0, Math.min(100, split.percentage))
+        : perMissing;
       fullSplits.push({ userId: id, percentage });
     }
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const split = byId.get(id);
-      const shares =
-        typeof split?.shares === "number"
-          ? Math.max(1, Math.trunc(split.shares))
-          : 1;
+      const shares = typeof split?.shares === "number"
+        ? Math.max(1, Math.trunc(split.shares))
+        : 1;
       fullSplits.push({ userId: id, shares });
     }
   }
@@ -577,13 +815,16 @@ Deno.serve(async (req: Request) => {
 
   if (missingEnv.length) {
     console.error(
-      `[telegram-ai-bot] Missing required environment variables: ${missingEnv.join(", ")}`,
+      `[telegram-ai-bot] Missing required environment variables: ${
+        missingEnv.join(
+          ", ",
+        )
+      }`,
     );
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
-  const secretHeader =
-    req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
+  const secretHeader = req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
     req.headers.get("x-telegram-bot-api-secret-token");
   if (secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
     return jsonResponse({ ok: true });
@@ -637,6 +878,10 @@ Deno.serve(async (req: Request) => {
   runBackgroundTask(
     (async () => {
       const debugNotes: string[] = [];
+      const stopTypingHeartbeat = startTelegramTypingHeartbeat(
+        TELEGRAM_BOT_TOKEN,
+        chatId,
+      );
       try {
         const { data: contextDataRaw, error: contextError } = await supabase
           .rpc("get_telegram_context", { p_telegram_chat_id: String(chatId) })
@@ -645,13 +890,13 @@ Deno.serve(async (req: Request) => {
 
         const contact = contextData
           ? {
-              id: contextData.contact_id,
-              user_id: contextData.user_id,
-              verified: contextData.verified,
-              preferred_currency: contextData.preferred_currency,
-              preferred_language: contextData.preferred_language,
-              preferred_timezone: contextData.preferred_timezone,
-            }
+            id: contextData.contact_id,
+            user_id: contextData.user_id,
+            verified: contextData.verified,
+            preferred_currency: contextData.preferred_currency,
+            preferred_language: contextData.preferred_language,
+            preferred_timezone: contextData.preferred_timezone,
+          }
           : null;
 
         if (contextError) {
@@ -665,13 +910,12 @@ Deno.serve(async (req: Request) => {
           callbackData,
           normalizeText(message?.text),
         );
-        const incomingText =
-          callbackData === "start_verification"
-            ? "start verification"
-            : callbackChoiceText ||
-              (callbackData.startsWith("pick_option:")
-                ? callbackData.replace("pick_option:", "").trim()
-                : originalMessageText);
+        const incomingText = callbackData === "start_verification"
+          ? "start verification"
+          : callbackChoiceText ||
+            (callbackData.startsWith("pick_option:")
+              ? callbackData.replace("pick_option:", "").trim()
+              : originalMessageText);
         if (incomingText && isStartVerification(incomingText)) {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -733,9 +977,9 @@ Deno.serve(async (req: Request) => {
 
         const subscription = contextData
           ? {
-              plan: contextData.subscription_plan,
-              status: contextData.subscription_status,
-            }
+            plan: contextData.subscription_plan,
+            status: contextData.subscription_status,
+          }
           : null;
         if (isFreeUser(subscription)) {
           const nonSubscriberMessage =
@@ -820,205 +1064,31 @@ Deno.serve(async (req: Request) => {
 
         let userMessageContent = incomingText;
 
-        if (
-          !message?.photo &&
-          !message?.document &&
-          !message?.voice &&
-          !message?.audio &&
-          userMessageContent
-        ) {
-          let analysis: any = null;
-          try {
-            analysis = await runAnalyzeExpenseWithTimeout(
-              {
-                userId,
-                text: userMessageContent,
-                currency: userCurrency,
-              },
-              GEMINI_API_KEY,
-              30000,
-              "The text is taking longer than expected to process. Please try again or shorten the message.",
-            );
-          } catch {
-            analysis = { success: false };
-          }
-          if (analysis?.success && analysis?.items) {
-            userMessageContent = `[User message: "${userMessageContent}". Successfully extracted from text: ${JSON.stringify(
-              analysis.items,
-            )}. Please confirm with the user and ask if they want to save these transactions.]`;
-          }
-        }
-
         const photo = message?.photo?.[message.photo.length - 1];
         const doc = message?.document;
         const voice = message?.voice || message?.audio;
 
         if (photo?.file_id) {
-          const fileMeta = await getTelegramFile(
-            TELEGRAM_BOT_TOKEN,
-            photo.file_id,
-          );
-          if (fileMeta?.file_path) {
-            const buf = await downloadTelegramFile(
-              TELEGRAM_BOT_TOKEN,
-              fileMeta.file_path,
-            );
-            if (buf && buf.byteLength <= MAX_MEDIA_BYTES) {
-              const base64Data = uint8ToBase64(buf);
-              const analysis = await runAnalyzeExpenseWithTimeout(
-                {
-                  userId,
-                  image: {
-                    data: base64Data,
-                    contentType: "image/jpeg",
-                    bytes: buf,
-                  },
-                  currency: userCurrency,
-                },
-                GEMINI_API_KEY,
-                30000,
-                "The image is taking longer than expected to process. Please try again with a clearer photo.",
-              );
-              if (analysis?.success && analysis?.items) {
-                userMessageContent = `[User uploaded an image${
-                  message.caption ? ` with caption "${message.caption}"` : ""
-                }. Successfully extracted from receipt: ${JSON.stringify(
-                  analysis.items,
-                )}. Please confirm with the user and ask if they want to save these transactions.]`;
-              } else {
-                userMessageContent = `[User uploaded an image${
-                  message.caption ? ` with caption "${message.caption}"` : ""
-                }, but analysis failed: ${
-                  analysis?.error ||
-                  "Could not extract expense information. The image may be unclear or have poor lighting."
-                }. Please help the user by suggesting they try again with better lighting, or type the expense manually.]`;
-              }
-            } else {
-              userMessageContent = `[User uploaded an image${
-                message.caption ? ` with caption "${message.caption}"` : ""
-              }, but the file is too large to process. Please ask them to send a smaller photo.]`;
-            }
-          }
+          const captionNote = message?.caption
+            ? ` Caption: "${message.caption}".`
+            : "";
+          userMessageContent =
+            `[User sent an image receipt.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "image", file_id: "${photo.file_id}" } (or telegram_file_id: "${photo.file_id}").]`;
         } else if (voice?.file_id) {
-          const fileMeta = await getTelegramFile(
-            TELEGRAM_BOT_TOKEN,
-            voice.file_id,
-          );
-          if (fileMeta?.file_path) {
-            const buf = await downloadTelegramFile(
-              TELEGRAM_BOT_TOKEN,
-              fileMeta.file_path,
-            );
-            if (buf && buf.byteLength <= MAX_MEDIA_BYTES) {
-              const base64Data = uint8ToBase64(buf);
-              const analysis = await runAnalyzeExpenseWithTimeout(
-                {
-                  userId,
-                  audio: {
-                    data: base64Data,
-                    contentType: voice.mime_type || "audio/ogg",
-                    bytes: buf,
-                  },
-                  currency: userCurrency,
-                },
-                GEMINI_API_KEY,
-                30000,
-                "The audio is taking longer than expected to process. Please try again by speaking clearly.",
-              );
-              if (analysis?.success && analysis?.items) {
-                userMessageContent = `[User sent a voice message. Successfully extracted from audio: ${JSON.stringify(
-                  analysis.items,
-                )}. Please confirm with the user and ask if they want to save these transactions.]`;
-              } else {
-                userMessageContent = `[User sent a voice message, but analysis failed: ${
-                  analysis?.error ||
-                  "Could not extract expense information from the audio. Please try again."
-                }. Please help the user by suggesting they try again or type the expense manually.]`;
-              }
-            } else {
-              userMessageContent = `[User sent a voice message, but the file is too large to process. Please ask them to send a shorter clip.]`;
-            }
-          }
+          const captionNote = message?.caption
+            ? ` Caption: "${message.caption}".`
+            : "";
+          userMessageContent =
+            `[User sent an audio message.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "audio", file_id: "${voice.file_id}" } (or telegram_file_id: "${voice.file_id}").]`;
         } else if (doc?.file_id) {
-          const fileMeta = await getTelegramFile(
-            TELEGRAM_BOT_TOKEN,
-            doc.file_id,
-          );
-          if (fileMeta?.file_path) {
-            const buf = await downloadTelegramFile(
-              TELEGRAM_BOT_TOKEN,
-              fileMeta.file_path,
-            );
-            if (buf && buf.byteLength <= MAX_MEDIA_BYTES) {
-              const base64Data = uint8ToBase64(buf);
-              const cleanContentType = (doc.mime_type || "")
-                .split(";")[0]
-                .trim();
-              const isXlsx =
-                /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(
-                  cleanContentType,
-                ) || /\.xlsx$/i.test(doc.file_name || "");
-              const isPdf =
-                /application\/pdf/i.test(cleanContentType) ||
-                /\.pdf$/i.test(doc.file_name || "");
-              let preview = "";
-              let parsed = false;
-              if (isXlsx) {
-                const xlsxPreview = buildXlsxPreview(buf);
-                if (xlsxPreview) {
-                  preview = xlsxPreview;
-                  parsed = true;
-                }
-              } else if (isPdf) {
-                const pdfSummary = await summarizePdfWithGemini(
-                  base64Data,
-                  "application/pdf",
-                  GEMINI_API_KEY,
-                );
-                if (pdfSummary) {
-                  preview = `PDF summary:\n${pdfSummary}`;
-                  parsed = true;
-                }
-              } else if (
-                /^(text\/|application\/(json|csv|xml|javascript))/i.test(
-                  cleanContentType,
-                )
-              ) {
-                try {
-                  preview = new TextDecoder("utf-8", { fatal: false }).decode(
-                    buf.slice(0, 12000),
-                  );
-                  parsed = true;
-                } catch {
-                  parsed = false;
-                }
-              }
-              const captionNote = message.caption
-                ? ` with caption "${message.caption}"`
-                : "";
-              if (parsed) {
-                userMessageContent = `[User sent a file (${
-                  cleanContentType || "unknown"
-                }, ${buf.length} bytes)${captionNote}. Preview: ${preview}]`;
-              } else {
-                userMessageContent = `[User sent a file (${
-                  cleanContentType || "unknown"
-                }, ${buf.length} bytes)${captionNote}. Content not parsed (binary).]`;
-              }
-            } else {
-              userMessageContent = `[User sent a file, but it is too large to process. Please ask them to send a smaller file.]`;
-            }
-          }
+          const captionNote = message?.caption
+            ? ` Caption: "${message.caption}".`
+            : "";
+          const nameNote = doc.file_name ? ` Name: "${doc.file_name}".` : "";
+          const mimeNote = doc.mime_type ? ` Mime: "${doc.mime_type}".` : "";
+          userMessageContent =
+            `[User sent a file attachment.${nameNote}${mimeNote}${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "file", file_id: "${doc.file_id}" } (or telegram_file_id: "${doc.file_id}").]`;
         }
-
-        await insertChatMessage(
-          supabase,
-          sessionId,
-          "user",
-          userMessageContent,
-          debugNotes,
-          false,
-        );
 
         const { data: history } = await supabase
           .from("chat_messages")
@@ -1048,6 +1118,28 @@ Deno.serve(async (req: Request) => {
         });
 
         const tools = [
+          {
+            name: "analyze_expense",
+            description:
+              "Extract one or more transactions from text or a Telegram attachment (receipt image, audio, or file). Call this only if you need structured items.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                text: { type: "STRING" },
+                telegram_file_id: { type: "STRING" },
+                media: {
+                  type: "OBJECT",
+                  properties: {
+                    kind: {
+                      type: "STRING",
+                      enum: ["image", "audio", "file"],
+                    },
+                    file_id: { type: "STRING" },
+                  },
+                },
+              },
+            },
+          },
           {
             name: "add_transaction",
             description:
@@ -1397,16 +1489,223 @@ Deno.serve(async (req: Request) => {
           tools: [{ function_declarations: tools }] as any,
         });
         const result = await chat.sendMessage(userMessageContent);
-        const response = await result.response;
+        let response = await result.response;
         let functionCalls = (response.functionCalls() as any[]) || [];
         let finalResponseText = response.text();
 
-        if (functionCalls && functionCalls.length > 0) {
+        let toolSucceededAny = false;
+        let lastBudgetPockets:
+          | Array<{
+            name: string;
+            percentage: number;
+          }>
+          | null = null;
+        let toolIterations = 0;
+
+        while (
+          functionCalls &&
+          functionCalls.length > 0 &&
+          toolIterations < 3
+        ) {
           const toolResponses: any[] = [];
           for (const call of functionCalls) {
             let toolResult: any = {};
             try {
-              if (call.name === "list_expenses") {
+              if (call.name === "analyze_expense") {
+                const text = typeof call.args?.text === "string"
+                  ? call.args.text.trim()
+                  : "";
+                const fileId = (typeof call.args?.telegram_file_id === "string"
+                  ? call.args.telegram_file_id.trim()
+                  : "") ||
+                  (typeof call.args?.media?.file_id === "string"
+                    ? call.args.media.file_id.trim()
+                    : "");
+                const kindHintRaw = typeof call.args?.media?.kind === "string"
+                  ? call.args.media.kind
+                  : "";
+                const kindHint = ["image", "audio", "file"].includes(
+                    kindHintRaw,
+                  )
+                  ? kindHintRaw
+                  : "";
+
+                const inferKindFromPath = (filePath: string) => {
+                  const lower = (filePath || "").toLowerCase();
+                  if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp|\.bmp)$/i.test(lower)) {
+                    return "image";
+                  }
+                  if (/(\.oga|\.ogg|\.mp3|\.m4a|\.wav|\.aac)$/i.test(lower)) {
+                    return "audio";
+                  }
+                  return "file";
+                };
+
+                const XLSX_CONTENT_TYPE =
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+                const guessContentType = (filePath: string, kind: string) => {
+                  const lower = (filePath || "").toLowerCase();
+
+                  if (kind === "image") {
+                    if (lower.endsWith(".png")) {
+                      return "image/png";
+                    }
+                    if (lower.endsWith(".webp")) {
+                      return "image/webp";
+                    }
+                    if (lower.endsWith(".gif")) {
+                      return "image/gif";
+                    }
+                    return "image/jpeg";
+                  }
+
+                  if (kind === "audio") {
+                    if (lower.endsWith(".mp3")) {
+                      return "audio/mpeg";
+                    }
+                    if (lower.endsWith(".wav")) {
+                      return "audio/wav";
+                    }
+                    if (lower.endsWith(".m4a")) {
+                      return "audio/mp4";
+                    }
+                    return "audio/ogg";
+                  }
+
+                  if (lower.endsWith(".pdf")) {
+                    return "application/pdf";
+                  }
+                  if (lower.endsWith(".xlsx")) {
+                    return XLSX_CONTENT_TYPE;
+                  }
+                  if (lower.endsWith(".csv")) {
+                    return "text/csv";
+                  }
+                  if (lower.endsWith(".json")) {
+                    return "application/json";
+                  }
+                  if (lower.endsWith(".txt")) {
+                    return "text/plain";
+                  }
+                  return "application/octet-stream";
+                };
+
+                const guessFilename = (filePath: string) => {
+                  const last = (filePath || "").split("/").pop() || "";
+                  return last || "attachment";
+                };
+
+                if (!fileId && !text) {
+                  toolResult = {
+                    error:
+                      "Provide either text or telegram_file_id/media.file_id to analyze.",
+                  };
+                } else if (!fileId) {
+                  toolResult = await runAnalyzeExpenseWithTimeout(
+                    { userId, text, currency: userCurrency },
+                    GEMINI_API_KEY,
+                    30000,
+                    "Analysis is taking longer than expected. Please try again.",
+                  );
+                } else {
+                  const fileMeta = await getTelegramFile(
+                    TELEGRAM_BOT_TOKEN,
+                    fileId,
+                  );
+                  if (!fileMeta?.file_path) {
+                    toolResult = {
+                      error:
+                        "Could not fetch the Telegram file. Ask the user to resend it.",
+                    };
+                  } else if (
+                    typeof fileMeta.file_size === "number" &&
+                    fileMeta.file_size > MAX_MEDIA_BYTES
+                  ) {
+                    toolResult = {
+                      error:
+                        "The attachment is too large to process. Ask the user to send a smaller file.",
+                    };
+                  } else {
+                    const buf = await downloadTelegramFile(
+                      TELEGRAM_BOT_TOKEN,
+                      fileMeta.file_path,
+                    );
+                    if (!buf) {
+                      toolResult = {
+                        error:
+                          "Failed to download the Telegram file. Ask the user to resend it.",
+                      };
+                    } else if (buf.byteLength > MAX_MEDIA_BYTES) {
+                      toolResult = {
+                        error:
+                          "The attachment is too large to process. Ask the user to send a smaller file.",
+                      };
+                    } else {
+                      const kind = kindHint ||
+                        inferKindFromPath(fileMeta.file_path);
+                      const base64Data = uint8ToBase64(buf);
+                      const contentType = guessContentType(
+                        fileMeta.file_path,
+                        kind,
+                      );
+                      const filename = guessFilename(fileMeta.file_path);
+
+                      if (kind === "image") {
+                        toolResult = await runAnalyzeExpenseWithTimeout(
+                          {
+                            userId,
+                            ...(text ? { text } : {}),
+                            image: {
+                              data: base64Data,
+                              contentType,
+                              bytes: buf,
+                            },
+                            currency: userCurrency,
+                          },
+                          GEMINI_API_KEY,
+                          30000,
+                          "The image is taking longer than expected to process. Please try again with a clearer photo.",
+                        );
+                      } else if (kind === "audio") {
+                        toolResult = await runAnalyzeExpenseWithTimeout(
+                          {
+                            userId,
+                            ...(text ? { text } : {}),
+                            audio: {
+                              data: base64Data,
+                              contentType,
+                              bytes: buf,
+                            },
+                            currency: userCurrency,
+                          },
+                          GEMINI_API_KEY,
+                          30000,
+                          "The audio is taking longer than expected to process. Please try again by speaking clearly.",
+                        );
+                      } else {
+                        toolResult = await runAnalyzeExpenseWithTimeout(
+                          {
+                            userId,
+                            text,
+                            currency: userCurrency,
+                            attachments: [
+                              {
+                                filename,
+                                contentType,
+                                data: base64Data,
+                              },
+                            ],
+                          },
+                          GEMINI_API_KEY,
+                          30000,
+                          "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
+                        );
+                      }
+                    }
+                  }
+                }
+              } else if (call.name === "list_expenses") {
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
                   .toString()
@@ -1442,8 +1741,8 @@ Deno.serve(async (req: Request) => {
                     startDate: call.args.start_date,
                     endDate: call.args.end_date,
                     householdId,
-                    isPortfolio:
-                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    isPortfolio: spaceMeta?.isPortfolio ??
+                      call.args.is_portfolio === true,
                     portfolioHouseholdIds: householdId
                       ? undefined
                       : portfolioSpaceIds,
@@ -1490,35 +1789,33 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                const isHouseholdExpense =
-                  !!householdId && (call.args.type || "expense") === "expense";
+                const isHouseholdExpense = !!householdId &&
+                  (call.args.type || "expense") === "expense";
                 const splitConfig =
                   isHouseholdExpense && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
-                        supabase,
-                        householdId!,
-                        userId,
-                        amount,
-                        call.args,
-                      )
+                      supabase,
+                      householdId!,
+                      userId,
+                      amount,
+                      call.args,
+                    )
                     : {};
                 const { data, error } = await saveExpenseDirect(
                   supabase,
                   contact.id,
                   userId,
                   {
-                    recurrence_rule:
-                      call.args.is_recurring === true
-                        ? call.args.recurrence_rule || {
-                            frequency: (call.args.frequency || "monthly")
-                              .toString()
-                              .toLowerCase(),
-                            interval: 1,
-                            anchor_date:
-                              call.args.date ||
-                              formatDateInTimeZone(userTimezone),
-                          }
-                        : undefined,
+                    recurrence_rule: call.args.is_recurring === true
+                      ? call.args.recurrence_rule || {
+                        frequency: (call.args.frequency || "monthly")
+                          .toString()
+                          .toLowerCase(),
+                        interval: 1,
+                        anchor_date: call.args.date ||
+                          formatDateInTimeZone(userTimezone),
+                      }
+                      : undefined,
                     amount: amount,
                     category: call.args.category,
                     description: call.args.description || "",
@@ -1526,8 +1823,8 @@ Deno.serve(async (req: Request) => {
                     currency: call.args.currency || userCurrency,
                     type: call.args.type || "expense",
                     householdId,
-                    isPortfolio:
-                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    isPortfolio: spaceMeta?.isPortfolio ??
+                      call.args.is_portfolio === true,
                     isRecurring: call.args.is_recurring === true,
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
@@ -1568,34 +1865,32 @@ Deno.serve(async (req: Request) => {
                 const results: any[] = [];
                 for (const row of rows) {
                   const amount = Number(row.amount || 0);
-                  const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    row.type !== "income"
-                      ? await resolveHouseholdSplitConfig(
-                          supabase,
-                          householdId,
-                          userId,
-                          amount,
-                          row,
-                        )
-                      : {};
+                  const splitConfig = householdId &&
+                      !spaceMeta?.isPortfolio &&
+                      row.type !== "income"
+                    ? await resolveHouseholdSplitConfig(
+                      supabase,
+                      householdId,
+                      userId,
+                      amount,
+                      row,
+                    )
+                    : {};
                   const { data, error } = await saveExpenseDirect(
                     supabase,
                     contact.id,
                     userId,
                     {
-                      recurrence_rule:
-                        row.is_recurring === true
-                          ? row.recurrence_rule || {
-                              frequency: (row.frequency || "monthly")
-                                .toString()
-                                .toLowerCase(),
-                              interval: 1,
-                              anchor_date:
-                                row.date || formatDateInTimeZone(userTimezone),
-                            }
-                          : undefined,
+                      recurrence_rule: row.is_recurring === true
+                        ? row.recurrence_rule || {
+                          frequency: (row.frequency || "monthly")
+                            .toString()
+                            .toLowerCase(),
+                          interval: 1,
+                          anchor_date: row.date ||
+                            formatDateInTimeZone(userTimezone),
+                        }
+                        : undefined,
                       amount: amount,
                       category: row.category,
                       description: row.description || "",
@@ -1603,8 +1898,7 @@ Deno.serve(async (req: Request) => {
                       currency: row.currency || userCurrency,
                       type: row.type || "expense",
                       householdId,
-                      isPortfolio:
-                        spaceMeta?.isPortfolio ??
+                      isPortfolio: spaceMeta?.isPortfolio ??
                         call.args.is_portfolio === true,
                       isRecurring: row.is_recurring === true,
                       payerUserId: splitConfig.payerUserId,
@@ -1627,9 +1921,11 @@ Deno.serve(async (req: Request) => {
                     ],
                   },
                 };
-                const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
-                  JSON.stringify(chartConfig),
-                )}`;
+                const chartUrl = `https://quickchart.io/chart?c=${
+                  encodeURIComponent(
+                    JSON.stringify(chartConfig),
+                  )
+                }`;
                 toolResult = { url: chartUrl };
               } else if (call.name === "financial_insight") {
                 toolResult = { success: true };
@@ -1670,14 +1966,12 @@ Deno.serve(async (req: Request) => {
                     spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     contact.id,
                   );
-                  toolResult = res.error
-                    ? { error: res.error }
-                    : {
-                        budget: res.budget,
-                        envelopes: res.envelopes,
-                        totals: res.totals,
-                        chart: res.chart,
-                      };
+                  toolResult = res.error ? { error: res.error } : {
+                    budget: res.budget,
+                    envelopes: res.envelopes,
+                    totals: res.totals,
+                    chart: res.chart,
+                  };
                 }
               } else if (call.name === "set_currency") {
                 const currency = (call.args.currency || "")
@@ -1688,12 +1982,10 @@ Deno.serve(async (req: Request) => {
                   contact.id,
                   currency,
                 );
-                toolResult = error
-                  ? { error }
-                  : {
-                      success: true,
-                      currency: data?.preferred_currency || currency,
-                    };
+                toolResult = error ? { error } : {
+                  success: true,
+                  currency: data?.preferred_currency || currency,
+                };
               } else if (call.name === "update_transaction") {
                 const updates: Record<string, unknown> = {};
                 if (call.args.amount != null) {
@@ -1736,15 +2028,13 @@ Deno.serve(async (req: Request) => {
                       },
                     },
                   );
-                  toolResult =
-                    !error && data?.success
-                      ? { success: true, data: data?.data ?? data }
-                      : {
-                          error:
-                            error ??
-                            data?.error ??
-                            "Failed to update transaction",
-                        };
+                  toolResult = !error && data?.success
+                    ? { success: true, data: data?.data ?? data }
+                    : {
+                      error: error ??
+                        data?.error ??
+                        "Failed to update transaction",
+                    };
                 }
               } else if (call.name === "delete_transaction") {
                 if (!call.args.expense_id) {
@@ -1759,15 +2049,11 @@ Deno.serve(async (req: Request) => {
                       },
                     },
                   );
-                  toolResult =
-                    !error && data?.success
-                      ? { success: true }
-                      : {
-                          error:
-                            error ??
-                            data?.error ??
-                            "Failed to delete transaction",
-                        };
+                  toolResult = !error && data?.success ? { success: true } : {
+                    error: error ??
+                      data?.error ??
+                      "Failed to delete transaction",
+                  };
                 }
               } else if (
                 call.name === "draft_budget" ||
@@ -1854,23 +2140,43 @@ Deno.serve(async (req: Request) => {
                           error: budgetRes.error || "Failed to save budget",
                         };
                       } else {
+                        const envelopeNameMap =
+                          await consolidateDuplicateEnvelopesForBudget(
+                            supabase,
+                            budgetRes.data.id,
+                            periodMonth,
+                            debugNotes,
+                          );
                         const pockets = Array.isArray(call.args.pockets)
                           ? call.args.pockets
                           : [];
                         const envelopes: any[] = [];
+                        const updatedPockets: Array<{
+                          name: string;
+                          percentage: number;
+                        }> = [];
                         for (const pocket of pockets) {
                           const pocketName = (pocket?.name || "")
                             .toString()
                             .trim();
                           if (!pocketName) continue;
                           const pct = Number(pocket?.percentage || 0);
+                          const clampedPct = Math.max(0, Math.min(100, pct));
+                          const canonical = envelopeNameMap.get(
+                            normalizeEnvelopeName(pocketName),
+                          );
+                          const nameToUse = canonical?.name || pocketName;
+                          updatedPockets.push({
+                            name: nameToUse,
+                            percentage: clampedPct,
+                          });
                           const envRes = await upsertEnvelope(
                             supabase,
                             budgetRes.data.id,
                             userId,
                             householdId,
-                            pocketName,
-                            Math.max(0, Math.min(100, pct)),
+                            nameToUse,
+                            clampedPct,
                             userCurrency,
                             budgetRes.data.total_budget_cents,
                           );
@@ -1883,7 +2189,7 @@ Deno.serve(async (req: Request) => {
                             envRes.data.id,
                             periodMonth,
                             Math.round(
-                              (Math.max(0, Math.min(100, pct)) / 100) *
+                              (clampedPct / 100) *
                                 budgetRes.data.total_budget_cents,
                             ),
                           );
@@ -1902,6 +2208,7 @@ Deno.serve(async (req: Request) => {
                           success: true,
                           budget: budgetRes.data,
                           envelopes,
+                          updated_pockets: updatedPockets,
                         };
                       }
                     }
@@ -1965,6 +2272,17 @@ Deno.serve(async (req: Request) => {
                       error: "Please set a budget first for this month",
                     };
                   } else {
+                    const envelopeNameMap =
+                      await consolidateDuplicateEnvelopesForBudget(
+                        supabase,
+                        budgetId,
+                        periodMonth,
+                        debugNotes,
+                      );
+                    const canonical = envelopeNameMap.get(
+                      normalizeEnvelopeName(name),
+                    );
+                    const nameToUse = canonical?.name || name;
                     const percentage = Math.max(
                       0,
                       Math.min(100, Number(call.args.percentage || 0)),
@@ -1974,7 +2292,7 @@ Deno.serve(async (req: Request) => {
                       budgetId,
                       userId,
                       householdId,
-                      name,
+                      nameToUse,
                       percentage,
                       userCurrency,
                       (budgetRes as any).budget?.total_budget_cents,
@@ -2100,22 +2418,18 @@ Deno.serve(async (req: Request) => {
                         },
                       },
                     );
-                    toolResult =
-                      !error && data?.success
-                        ? { success: true }
-                        : {
-                            error:
-                              error ??
-                              data?.error ??
-                              "Failed to delete recurring transaction",
-                          };
+                    toolResult = !error && data?.success ? { success: true } : {
+                      error: error ??
+                        data?.error ??
+                        "Failed to delete recurring transaction",
+                    };
                   }
                 } else if (action === "update") {
                   if (!call.args.expense_id) {
                     toolResult = { error: "expense_id is required" };
                   } else {
-                    const dateValue =
-                      call.args.date || formatDateInTimeZone(userTimezone);
+                    const dateValue = call.args.date ||
+                      formatDateInTimeZone(userTimezone);
                     const recurrenceRule = {
                       frequency: (call.args.frequency || "monthly")
                         .toString()
@@ -2155,19 +2469,17 @@ Deno.serve(async (req: Request) => {
                         },
                       },
                     );
-                    toolResult =
-                      !error && data?.success
-                        ? { success: true, data: data?.data ?? data }
-                        : {
-                            error:
-                              error ??
-                              data?.error ??
-                              "Failed to update recurring transaction",
-                          };
+                    toolResult = !error && data?.success
+                      ? { success: true, data: data?.data ?? data }
+                      : {
+                        error: error ??
+                          data?.error ??
+                          "Failed to update recurring transaction",
+                      };
                   }
                 } else {
-                  const dateValue =
-                    call.args.date || formatDateInTimeZone(userTimezone);
+                  const dateValue = call.args.date ||
+                    formatDateInTimeZone(userTimezone);
                   const recurrenceRule = {
                     frequency: (call.args.frequency || "monthly")
                       .toString()
@@ -2191,18 +2503,17 @@ Deno.serve(async (req: Request) => {
                     spaceMeta = spaceMap.get(householdName);
                     householdId = spaceMeta?.id ?? null;
                   }
-                  const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    call.args.type !== "income"
-                      ? await resolveHouseholdSplitConfig(
-                          supabase,
-                          householdId,
-                          userId,
-                          amount,
-                          call.args,
-                        )
-                      : {};
+                  const splitConfig = householdId &&
+                      !spaceMeta?.isPortfolio &&
+                      call.args.type !== "income"
+                    ? await resolveHouseholdSplitConfig(
+                      supabase,
+                      householdId,
+                      userId,
+                      amount,
+                      call.args,
+                    )
+                    : {};
                   const { data, error } = await saveExpenseDirect(
                     supabase,
                     contact.id,
@@ -2215,8 +2526,7 @@ Deno.serve(async (req: Request) => {
                       currency: call.args.currency || userCurrency,
                       type: call.args.type || "expense",
                       householdId,
-                      isPortfolio:
-                        spaceMeta?.isPortfolio ??
+                      isPortfolio: spaceMeta?.isPortfolio ??
                         call.args.is_portfolio === true,
                       isRecurring: true,
                       recurrence_rule: recurrenceRule,
@@ -2230,6 +2540,26 @@ Deno.serve(async (req: Request) => {
             } catch (e) {
               toolResult = { error: String(e) };
             }
+
+            const succeeded = toolResult?.success === true ||
+              (!!toolResult?.data && !toolResult?.error);
+            if (succeeded) {
+              toolSucceededAny = true;
+              if (
+                call.name === "confirm_budget" ||
+                call.name === "set_budget"
+              ) {
+                const pocketsRaw = Array.isArray(toolResult?.updated_pockets)
+                  ? toolResult.updated_pockets
+                  : Array.isArray(call.args?.pockets)
+                  ? call.args.pockets
+                  : [];
+                lastBudgetPockets = (pocketsRaw || []).map((p: any) => ({
+                  name: String(p?.name || "").trim(),
+                  percentage: Number(p?.percentage) || 0,
+                }));
+              }
+            }
             toolResponses.push({
               functionResponse: {
                 name: call.name,
@@ -2239,8 +2569,13 @@ Deno.serve(async (req: Request) => {
           }
 
           try {
-            const finalResult = await chat.sendMessage(toolResponses);
-            finalResponseText = finalResult.response.text();
+            const nextResult = await chat.sendMessage(toolResponses);
+            response = await nextResult.response;
+            functionCalls = (response.functionCalls() as any[]) || [];
+            const candidate = response.text();
+            if (candidate && candidate.trim()) {
+              finalResponseText = candidate;
+            }
           } catch (e) {
             console.error(
               "[telegram-ai-bot] Failed to get final AI response:",
@@ -2248,13 +2583,33 @@ Deno.serve(async (req: Request) => {
             );
             finalResponseText =
               "I processed your request but encountered an issue generating a response. Please try again.";
+            functionCalls = [];
           }
+
+          toolIterations++;
         }
 
+        if (
+          (!finalResponseText || !finalResponseText.trim()) &&
+          toolSucceededAny &&
+          lastBudgetPockets
+        ) {
+          finalResponseText = buildBudgetDoneText(lastBudgetPockets);
+        }
         if (!finalResponseText || !finalResponseText.trim()) {
           finalResponseText =
             "I couldn't generate a response right now. Please try again in a few seconds.";
         }
+
+        // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
+        await insertChatMessage(
+          supabase,
+          sessionId,
+          "user",
+          userMessageContent,
+          debugNotes,
+          false,
+        );
 
         await insertChatMessage(
           supabase,
@@ -2289,11 +2644,12 @@ Deno.serve(async (req: Request) => {
           response_text: "processing_failed",
           error: error instanceof Error ? error.message : String(error),
         });
+      } finally {
+        stopTypingHeartbeat();
       }
     })(),
   );
 
-  const ackText = processingAckMessage || "Processing your request now. ⏳";
-  await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, ackText);
+  await sendTelegramChatAction(TELEGRAM_BOT_TOKEN, chatId, "typing");
   return jsonResponse({ ok: true });
 });

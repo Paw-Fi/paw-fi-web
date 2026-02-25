@@ -9,8 +9,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import {
   buildVerificationPrompt,
-  sendWhatsAppTemplate,
   sendWhatsAppMessage,
+  sendWhatsAppTemplate,
 } from "../shared/whatsapp-helpers.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
@@ -21,31 +21,27 @@ import {
 import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
+  getBudgetStatusDirect,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
-  getBudgetStatusDirect,
 } from "../shared/budgets-helpers.ts";
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
 import {
-  debugLog,
-  formatInvokeError,
-  normalizeExpensesForTool,
   buildCategoryChart,
   CATEGORY_GUIDE,
+  debugLog,
   formatAmount,
+  formatInvokeError,
+  normalizeExpensesForTool,
 } from "../shared/formatting-helpers.ts";
-import {
-  runAnalyzeExpense,
-  buildXlsxPreview,
-  summarizePdfWithGemini,
-} from "../shared/analyze-core.ts";
+import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 // --- Constants & Types ---
 
-const MODEL_NAME = "gemini-2.5-flash"; // Fast and capable
+const MODEL_NAME = "gemini-2.5-flash-lite"; // Fast and capable
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
@@ -96,45 +92,16 @@ WHATSAPP BUDGET FLOW (WhatsApp only):
 `;
 const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
-const PROCESSING_ACK_MESSAGES = [
-  "I’m looking into that for you now.",
-  "One moment while I process your request.",
-  "I am gathering the information you requested.",
-  "Just a moment while I review those details.",
-  "Processing your inquiry. Stand by, please.",
-  "I’m working on a response for you.",
-  "Checking my records for the most accurate information.",
-  "I’m analyzing your request now.",
-  "One second while I pull up that information.",
-  "I am currently formulating your answer.",
-  "Retrieving the requested data. One moment.",
-  "I'm reviewing the specifics of your message.",
-  "Stand by while I finalize your request.",
-  "I am cross-referencing that for you now.",
-  "Just a moment while I prepare the details.",
-  "I’m prioritizing your request. Please wait.",
-  "Searching for the most relevant information.",
-  "I will have an answer for you in just a moment.",
-  "Thank you for your patience; I'm looking into this.",
-  "I am currently processing your input.",
-  "Just a quick second while I verify those details.",
-  "Reviewing your request to ensure accuracy.",
-  "I’m pulling together the information you need.",
-  "One moment while I sync with the database.",
-  "Briefly reviewing your input now.",
-  "I am preparing a detailed response for you.",
-  "Just a moment while I look into that.",
-  "Processing... I'll be with you in a second.",
-  "Checking the available data to assist you.",
-  "I am currently working on your request.",
-];
-const PROCESSING_ACK_DELAY_MS = 3000;
+const PROCESSING_ACK_DELAY_MS = 1000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
+const TYPING_FOLLOW_UP_DELAY_MS = 24000;
+const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
+const DELIVERY_FAILURE_MESSAGE =
+  "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";
 
 type IdempotencyRecord = {
   status: "processing" | "done" | "failed";
-  ack_text?: string;
   response_text?: string;
   media_url?: string;
   delivery?: "twiml" | "api" | "template";
@@ -202,21 +169,135 @@ async function runAnalyzeExpenseWithTimeout(
   }
 }
 
-function pickProcessingMessage(seed?: string | null) {
-  if (!PROCESSING_ACK_MESSAGES.length) {
-    return "Processing your request now. ⏳";
+async function sendTwilioWhatsAppTypingIndicator(
+  accountSid: string,
+  authToken: string,
+  messageId?: string | null,
+) {
+  if (!accountSid || !authToken || !messageId) return false;
+
+  const formData = new URLSearchParams();
+  formData.append("messageId", messageId);
+  formData.append("channel", "whatsapp");
+
+  const response = await fetch(
+    "https://messaging.twilio.com/v2/Indicators/Typing.json",
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Basic " + btoa(`${accountSid}:${authToken}`),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formData.toString(),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error(
+      "[twilio-whatsapp-ai-bot] Failed to send typing indicator:",
+      body,
+    );
+    return false;
   }
-  if (!seed) {
-    const idx = Math.floor(Math.random() * PROCESSING_ACK_MESSAGES.length);
-    return PROCESSING_ACK_MESSAGES[idx];
+
+  return true;
+}
+
+function scheduleTwilioTypingFollowUp(
+  accountSid: string,
+  authToken: string,
+  messageId?: string | null,
+  delayMs: number = TYPING_FOLLOW_UP_DELAY_MS,
+) {
+  if (!accountSid || !authToken || !messageId) {
+    return () => {};
   }
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash << 5) - hash + seed.charCodeAt(i);
-    hash |= 0;
+
+  let active = true;
+  const timeoutId = setTimeout(async () => {
+    if (!active) return;
+    await sendTwilioWhatsAppTypingIndicator(accountSid, authToken, messageId);
+  }, delayMs);
+
+  return () => {
+    active = false;
+    clearTimeout(timeoutId);
+  };
+}
+
+function splitWhatsAppMessage(
+  text: string,
+  maxChars: number = WHATSAPP_CHUNK_TARGET_CHARS,
+): string[] {
+  const normalized = (text || "").replace(/\r\n/g, "\n").trim();
+  if (!normalized) return [];
+
+  const codePoints = Array.from(normalized);
+  if (codePoints.length <= maxChars) return [normalized];
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < codePoints.length) {
+    let end = Math.min(start + maxChars, codePoints.length);
+
+    if (end < codePoints.length) {
+      const minBreak = Math.max(start + Math.floor(maxChars * 0.5), start + 1);
+      for (let i = end - 1; i >= minBreak; i--) {
+        const marker = codePoints[i];
+        if (marker === "\n" || marker === " ") {
+          end = i + 1;
+          break;
+        }
+      }
+    }
+
+    const part = codePoints.slice(start, end).join("").trim();
+    if (part) chunks.push(part);
+    start = end;
   }
-  const idx = Math.abs(hash) % PROCESSING_ACK_MESSAGES.length;
-  return PROCESSING_ACK_MESSAGES[idx];
+
+  return chunks;
+}
+
+async function sendWhatsAppMessageInChunks(
+  accountSid: string,
+  authToken: string,
+  from: string,
+  to: string,
+  text: string,
+): Promise<
+  | { success: true; totalChunks: number }
+  | { success: false; error: string; sentChunks: number; totalChunks: number }
+> {
+  const chunks = splitWhatsAppMessage(text);
+  if (!chunks.length) {
+    return {
+      success: false,
+      error: "empty_message",
+      sentChunks: 0,
+      totalChunks: 0,
+    };
+  }
+  for (let i = 0; i < chunks.length; i++) {
+    const sendResult = await sendWhatsAppMessage(
+      accountSid,
+      authToken,
+      from,
+      to,
+      chunks[i],
+    );
+    if (!sendResult.success) {
+      return {
+        success: false,
+        error: sendResult.error || "unknown",
+        sentChunks: i,
+        totalChunks: chunks.length,
+      };
+    }
+  }
+  return { success: true, totalChunks: chunks.length };
 }
 
 function coerceNumber(value: unknown): number | null {
@@ -305,6 +386,221 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
   return pockets;
 }
 
+type BudgetEnvelopeRowLite = {
+  id: string;
+  name: string;
+  updated_at: string | null;
+};
+
+function normalizeEnvelopeName(value: string): string {
+  return (value || "").trim().toLowerCase();
+}
+
+function normalizePeriodMonth(value: string): string {
+  const trimmed = (value || "").trim();
+  if (trimmed.length >= 7) return `${trimmed.slice(0, 7)}-01`;
+  return trimmed;
+}
+
+function formatPct(value: number): string {
+  if (!Number.isFinite(value)) return "0%";
+  const rounded = Math.round(value * 100) / 100;
+  const isInt = Math.abs(rounded - Math.round(rounded)) < 1e-9;
+  return `${isInt ? Math.round(rounded) : rounded}%`;
+}
+
+function buildBudgetDoneText(
+  pockets: Array<{ name: string; percentage: number }>,
+): string {
+  const cleaned = pockets
+    .map((p) => ({
+      name: (p.name || "").trim(),
+      percentage: Number(p.percentage) || 0,
+    }))
+    .filter((p) => p.name.length > 0);
+  if (!cleaned.length) return "Done — budget updated.";
+  const list = cleaned
+    .map((p) => `${p.name} ${formatPct(p.percentage)}`)
+    .join(", ");
+  return `Done — updated pockets: ${list}.`;
+}
+
+function isNewerIso(
+  a: string | null | undefined,
+  b: string | null | undefined,
+) {
+  const ta = a ? Date.parse(a) : Number.NEGATIVE_INFINITY;
+  const tb = b ? Date.parse(b) : Number.NEGATIVE_INFINITY;
+  return ta > tb;
+}
+
+async function consolidateDuplicateEnvelopesForBudget(
+  supabase: SupabaseJsClient,
+  budgetId: string,
+  periodMonth: string,
+  debugNotes: string[],
+  debugEnabled: boolean,
+): Promise<Map<string, BudgetEnvelopeRowLite>> {
+  const normalizedPeriod = normalizePeriodMonth(periodMonth);
+  const { data: envRowsRaw, error: envErr } = await supabase
+    .from("budget_envelopes")
+    .select("id, name, updated_at")
+    .eq("budget_id", budgetId);
+
+  const envRows = (envRowsRaw || []) as BudgetEnvelopeRowLite[];
+  if (envErr) {
+    const formatted = formatInvokeError(envErr);
+    if (debugEnabled) {
+      debugNotes.push(`budget_envelopes load error: ${formatted}`);
+    }
+    return new Map();
+  }
+
+  const byNorm = new Map<string, BudgetEnvelopeRowLite[]>();
+  for (const row of envRows) {
+    const norm = normalizeEnvelopeName(row?.name || "");
+    if (!norm) continue;
+    const list = byNorm.get(norm) || [];
+    list.push(row);
+    byNorm.set(norm, list);
+  }
+
+  const duplicateGroups = Array.from(byNorm.entries()).filter(
+    ([, rows]) => rows.length > 1,
+  );
+  if (!duplicateGroups.length) {
+    const map = new Map<string, BudgetEnvelopeRowLite>();
+    for (const [norm, rows] of byNorm.entries()) {
+      const chosen = rows.reduce((acc, cur) =>
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
+      );
+      map.set(norm, chosen);
+    }
+    return map;
+  }
+
+  for (const [norm, group] of duplicateGroups) {
+    const ids = group.map((r) => r.id).filter(Boolean);
+    if (ids.length < 2) continue;
+
+    const { data: linksRaw, error: linksErr } = await supabase
+      .from("envelope_category_links")
+      .select("envelope_id, category")
+      .in("envelope_id", ids);
+    if (linksErr && debugEnabled) {
+      debugNotes.push(
+        `envelope_category_links load error (${norm}): ${formatInvokeError(
+          linksErr,
+        )}`,
+      );
+    }
+    const links = (linksRaw || []) as Array<{
+      envelope_id: string;
+      category: string;
+    }>;
+
+    const linkCounts = new Map<string, number>();
+    for (const l of links) {
+      const id = String((l as any)?.envelope_id || "");
+      if (!id) continue;
+      linkCounts.set(id, (linkCounts.get(id) || 0) + 1);
+    }
+
+    const canonical = group.reduce((acc, cur) => {
+      const accCount = linkCounts.get(acc.id) || 0;
+      const curCount = linkCounts.get(cur.id) || 0;
+      if (curCount !== accCount) return curCount > accCount ? cur : acc;
+      return isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc;
+    });
+    const canonicalId = canonical.id;
+    const dupIds = ids.filter((id) => id !== canonicalId);
+    if (!canonicalId || dupIds.length === 0) continue;
+
+    // Migrate category links -> canonical
+    const categoriesToUpsert = new Set<string>();
+    for (const l of links) {
+      const envId = String((l as any)?.envelope_id || "");
+      if (!dupIds.includes(envId)) continue;
+      const cat = String((l as any)?.category || "");
+      if (!cat) continue;
+      categoriesToUpsert.add(cat);
+    }
+    for (const cat of categoriesToUpsert) {
+      await upsertEnvelopeCategoryLink(supabase, canonicalId, cat);
+    }
+
+    // Delete dup links after migration
+    if (dupIds.length) {
+      await supabase
+        .from("envelope_category_links")
+        .delete()
+        .in("envelope_id", dupIds);
+    }
+
+    // Migrate allocations (current period only) without overwriting canonical
+    const { data: canonicalAlloc } = await supabase
+      .from("envelope_allocations")
+      .select("envelope_id")
+      .eq("envelope_id", canonicalId)
+      .eq("period_month", normalizedPeriod)
+      .maybeSingle();
+
+    if (!canonicalAlloc) {
+      const { data: dupAllocs } = await supabase
+        .from("envelope_allocations")
+        .select("amount_cents")
+        .in("envelope_id", dupIds)
+        .eq("period_month", normalizedPeriod);
+      const sum = (dupAllocs || []).reduce((acc: number, row: any) => {
+        const v = Number(row?.amount_cents) || 0;
+        return acc + v;
+      }, 0);
+      if (sum > 0) {
+        await upsertEnvelopeAllocation(
+          supabase,
+          canonicalId,
+          normalizedPeriod,
+          sum,
+        );
+      }
+    }
+
+    // Delete duplicate allocations (all periods) then envelopes
+    await supabase
+      .from("envelope_allocations")
+      .delete()
+      .in("envelope_id", dupIds);
+    const { error: deleteEnvErr } = await supabase
+      .from("budget_envelopes")
+      .delete()
+      .in("id", dupIds);
+    if (deleteEnvErr && debugEnabled) {
+      debugNotes.push(
+        `duplicate envelope delete error (${norm}): ${formatInvokeError(
+          deleteEnvErr,
+        )}`,
+      );
+    }
+  }
+
+  // Re-fetch canonical set
+  const { data: finalRowsRaw } = await supabase
+    .from("budget_envelopes")
+    .select("id, name, updated_at")
+    .eq("budget_id", budgetId);
+  const finalRows = (finalRowsRaw || []) as BudgetEnvelopeRowLite[];
+  const map = new Map<string, BudgetEnvelopeRowLite>();
+  for (const row of finalRows) {
+    const norm = normalizeEnvelopeName(row?.name || "");
+    if (!norm) continue;
+    const existing = map.get(norm);
+    if (!existing || isNewerIso(row.updated_at, existing.updated_at)) {
+      map.set(norm, row);
+    }
+  }
+  return map;
+}
+
 function normalizeDateInput(value: unknown, fallback: string): string {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
@@ -362,8 +658,9 @@ function getPendingBudget(
     return null;
   }
   if (!draft.currency || typeof draft.currency !== "string") return null;
-  if (!draft.period_month || typeof draft.period_month !== "string")
+  if (!draft.period_month || typeof draft.period_month !== "string") {
     return null;
+  }
   if (draft.created_at) {
     const ts = Date.parse(draft.created_at);
     if (!Number.isNaN(ts)) {
@@ -412,8 +709,9 @@ async function loadSessionState(
     .maybeSingle();
   if (error) {
     const formatted = formatInvokeError(error);
-    if (debugEnabled)
+    if (debugEnabled) {
       debugNotes.push(`chat_sessions load state error: ${formatted}`);
+    }
     console.error("[twilio-whatsapp-ai-bot] chat_sessions state load error", {
       error,
       formatted,
@@ -439,8 +737,9 @@ async function saveSessionState(
     .eq("id", sessionId);
   if (error) {
     const formatted = formatInvokeError(error);
-    if (debugEnabled)
+    if (debugEnabled) {
       debugNotes.push(`chat_sessions save state error: ${formatted}`);
+    }
     console.error("[twilio-whatsapp-ai-bot] chat_sessions state save error", {
       error,
       formatted,
@@ -592,12 +891,10 @@ function getTwilioMessageSid(formData: FormData): string | null {
 async function reserveTwilioIdempotency(
   supabase: SupabaseJsClient,
   key: string,
-  ackText?: string | null,
   ttlMinutes: number = IDEMPOTENCY_TTL_MINUTES,
 ): Promise<{ status: "new" | "duplicate"; result?: IdempotencyRecord | null }> {
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
   const result: IdempotencyRecord = { status: "processing" };
-  if (ackText) result.ack_text = ackText;
 
   const { error } = await supabase
     .from("idempotency_keys")
@@ -792,8 +1089,9 @@ async function resolveHouseholdSplitConfig(
   }
 
   const inferredType = (() => {
-    if (["equal", "amount", "percentage", "shares"].includes(splitTypeHint))
+    if (["equal", "amount", "percentage", "shares"].includes(splitTypeHint)) {
       return splitTypeHint;
+    }
     const hasPct = memberSplitsRaw.some(
       (s: any) => typeof s?.percentage === "number",
     );
@@ -971,7 +1269,9 @@ async function buildFinancialSnapshot(
     },
   };
   const chartUrl = catData.length
-    ? `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`
+    ? `https://quickchart.io/chart?c=${encodeURIComponent(
+        JSON.stringify(chartConfig),
+      )}`
     : undefined;
 
   return {
@@ -1022,8 +1322,9 @@ async function validateTwilioRequest(
   );
   const bytes = new Uint8Array(signature);
   let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++)
+  for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
+  }
   const expected = btoa(binary);
 
   return expected === signatureHeader;
@@ -1231,15 +1532,6 @@ Deno.serve(async (req: Request) => {
       .filter(Boolean)
       .join("\n");
 
-    await insertChatMessage(
-      supabase,
-      session.id,
-      "user",
-      userMessageContent,
-      debugNotes,
-      WHATSAPP_DEBUG,
-    );
-
     // History
     const { data: history } = await supabase
       .from("chat_messages")
@@ -1251,8 +1543,19 @@ Deno.serve(async (req: Request) => {
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }],
     }));
-    while (rawHistory.length > 0 && rawHistory[0].role === "model")
+    while (rawHistory.length > 0 && rawHistory[0].role === "model") {
       rawHistory.shift();
+    }
+
+    // Persist the incoming user message AFTER loading history so Gemini doesn't see it twice.
+    await insertChatMessage(
+      supabase,
+      session.id,
+      "user",
+      userMessageContent,
+      debugNotes,
+      WHATSAPP_DEBUG,
+    );
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
@@ -1268,6 +1571,30 @@ Deno.serve(async (req: Request) => {
     });
 
     const toolsApp = [
+      {
+        name: "analyze_expense",
+        description:
+          "Extract one or more transactions from text or an attached receipt/audio/file. Call this only if you need structured items.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            text: { type: "STRING" },
+            media: {
+              type: "OBJECT",
+              properties: {
+                kind: {
+                  type: "STRING",
+                  enum: ["image", "audio", "file"],
+                },
+                index: {
+                  type: "NUMBER",
+                  description: "0-based index of the WhatsApp media attachment",
+                },
+              },
+            },
+          },
+        },
+      },
       {
         name: "add_transaction",
         description:
@@ -1498,16 +1825,38 @@ Deno.serve(async (req: Request) => {
       tools: [{ function_declarations: toolsApp }] as any,
     });
     const result = await chat.sendMessage(userMessageContent);
-    const response = await result.response;
+    let response = await result.response;
     let functionCalls = (response.functionCalls() as any[]) || [];
     let finalResponseText = response.text();
     let mediaUrl: string | undefined;
-    if (functionCalls && functionCalls.length > 0) {
+    let toolIterations = 0;
+    while (functionCalls && functionCalls.length > 0 && toolIterations < 3) {
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
         try {
-          if (call.name === "list_expenses") {
+          if (call.name === "analyze_expense") {
+            const text =
+              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+            const hasMedia =
+              !!call.args?.media && typeof call.args.media === "object";
+
+            if (hasMedia) {
+              toolResult = {
+                error:
+                  "Media analysis is not available in app mode. Provide text to analyze.",
+              };
+            } else if (!text) {
+              toolResult = { error: "No text provided to analyze." };
+            } else {
+              toolResult = await runAnalyzeExpenseWithTimeout(
+                { userId, text, currency: userCurrency },
+                GEMINI_API_KEY,
+                30000,
+                "Analysis is taking longer than expected. Please try again.",
+              );
+            }
+          } else if (call.name === "list_expenses") {
             const { data, error } = await fetchExpensesDirect(
               supabase,
               contactId,
@@ -1669,7 +2018,11 @@ Deno.serve(async (req: Request) => {
                 const summary = data?.summary || {};
                 toolResult = {
                   success: true,
-                  message: `Saved ${summary.succeeded || batchTransactions.length} of ${summary.total || batchTransactions.length} transactions`,
+                  message: `Saved ${
+                    summary.succeeded || batchTransactions.length
+                  } of ${
+                    summary.total || batchTransactions.length
+                  } transactions`,
                   succeeded: summary.succeeded,
                   failed: summary.failed,
                 };
@@ -1692,7 +2045,13 @@ Deno.serve(async (req: Request) => {
         });
       }
       const finalResult = await chat.sendMessage(toolResponses);
-      finalResponseText = finalResult.response.text();
+      response = await finalResult.response;
+      functionCalls = (response.functionCalls() as any[]) || [];
+      const candidate = response.text();
+      if (candidate && candidate.trim()) {
+        finalResponseText = candidate;
+      }
+      toolIterations++;
     }
 
     await insertChatMessage(
@@ -1754,31 +2113,24 @@ Deno.serve(async (req: Request) => {
 
   const messageSid = getTwilioMessageSid(formData);
   const idempotencyKey = messageSid ? `twilio_whatsapp:${messageSid}` : null;
-  const processingAckMessage = pickProcessingMessage(
-    messageSid || `${from}-${Date.now()}`,
-  );
   const shouldAckEarly = numMedia > 0;
 
   if (idempotencyKey) {
-    const reserve = await reserveTwilioIdempotency(
-      supabase,
-      idempotencyKey,
-      processingAckMessage,
-    );
+    const reserve = await reserveTwilioIdempotency(supabase, idempotencyKey);
     if (reserve.status === "duplicate") {
       const existing = reserve.result;
       if (existing?.status === "failed") {
         await updateTwilioIdempotency(supabase, idempotencyKey, {
           status: "processing",
-          ack_text: processingAckMessage || undefined,
         });
       } else {
         if (existing?.status === "processing") {
-          const ackText =
-            existing.ack_text ||
-            processingAckMessage ||
-            "Still processing your request. ⏳";
-          return xmlResponse(buildTwimlMessage(ackText));
+          await sendTwilioWhatsAppTypingIndicator(
+            twilioAccountSid,
+            twilioAuthToken,
+            messageSid,
+          );
+          return xmlResponse(buildTwimlMessage(null));
         }
         return xmlResponse(buildTwimlMessage(null));
       }
@@ -2107,49 +2459,9 @@ Deno.serve(async (req: Request) => {
     let userMessageContent = body;
     const caption = (body || "").trim();
 
-    // If we only have text (no media), attempt direct transaction extraction via analyze-core
-    if (numMedia === 0 && caption) {
-      console.log(
-        "[twilio-whatsapp-ai-bot] Text-only message, attempting analyze-core extraction",
-        {
-          from,
-          preview: caption.slice(0, 120),
-        },
-      );
-      let analysis: any = null;
-      try {
-        analysis = await runAnalyzeExpenseWithTimeout(
-          {
-            userId,
-            text: caption,
-            currency: userCurrency,
-          },
-          GEMINI_API_KEY,
-          30000,
-          "The text is taking longer than expected to process. Please try again or shorten the message.",
-        );
-      } catch (error) {
-        analysis = {
-          success: false,
-          error:
-            "The text is taking longer than expected to process. Please try again or shorten the message.",
-          language: "en",
-        };
-      }
-
-      if (!analysis || !analysis.success || !analysis.items) {
-        if (WHATSAPP_DEBUG)
-          debugNotes.push(
-            `text analyze-expense error: ${analysis?.error || "unknown"}`,
-          );
-        // When analysis fails (e.g., for intent messages like "edit my expenses", "show budget"),
-        // just pass the raw message to the AI - it can handle intents directly with its tools
-        userMessageContent = caption;
-      } else {
-        userMessageContent = `[User message: "${caption}". Successfully extracted from text: ${JSON.stringify(
-          analysis.items!,
-        )}. Please confirm with the user and ask if they want to save these transactions.]`;
-      }
+    // Text-only messages: always pass raw caption to Gemini and let it decide.
+    if (numMedia === 0) {
+      userMessageContent = caption;
     }
 
     // If Image is present
@@ -2162,297 +2474,19 @@ Deno.serve(async (req: Request) => {
       const mediaType = formData.get("MediaContentType0")?.toString();
 
       if (mediaUrl && /^image\//i.test(mediaType || "")) {
-        // Download image with Twilio Basic auth (matches legacy webhook), then run local analyze-core
-        const accountSid =
-          formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
-        const authHeader =
-          "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
-        const imgRes = await fetch(mediaUrl, {
-          headers: { Authorization: authHeader },
-        });
-
-        if (!imgRes.ok) {
-          if (WHATSAPP_DEBUG)
-            debugNotes.push(`media fetch failed status=${imgRes.status}`);
-          userMessageContent = `[User uploaded an image, but download failed status=${imgRes.status}]`;
-        } else {
-          const contentType =
-            imgRes.headers.get("content-type") || mediaType || "";
-
-          if (!/^image\/(jpeg|jpg|png|gif|bmp|webp)$/i.test(contentType)) {
-            if (WHATSAPP_DEBUG)
-              debugNotes.push(`unsupported image type ${contentType}`);
-            userMessageContent = `[User sent unsupported image type: ${contentType}]`;
-          } else {
-            const imgBuf = new Uint8Array(await imgRes.arrayBuffer());
-            if (imgBuf.byteLength > MAX_MEDIA_BYTES) {
-              userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but the file is too large to process (${imgBuf.byteLength} bytes). Please ask them to send a smaller or clearer photo, or type the expense manually.]`;
-            } else {
-              const base64Data = uint8ToBase64(imgBuf);
-
-              // Don't send immediate acknowledgment - let the AI handle all responses
-              // to avoid duplicate messages
-
-              // Attempt analysis with timeout and retry
-              let analysis: any = null;
-              try {
-                analysis = await runAnalyzeExpenseWithTimeout(
-                  {
-                    userId,
-                    image: { data: base64Data, contentType, bytes: imgBuf },
-                    currency: userCurrency,
-                  },
-                  GEMINI_API_KEY,
-                  30000,
-                  "The image is taking longer than expected to process. Please try again with a clearer photo.",
-                );
-              } catch (error) {
-                analysis = {
-                  success: false,
-                  error:
-                    "The image is taking longer than expected to process. Please try again with a clearer photo.",
-                  language: "en",
-                };
-              }
-
-              if (!analysis || !analysis.success || !analysis.items) {
-                if (WHATSAPP_DEBUG)
-                  debugNotes.push(
-                    `analyze-expense error: ${analysis?.error || "unknown"}`,
-                  );
-
-                // Don't send error directly - let AI handle the response to maintain context
-                // Include the error details in the message content for the AI
-                userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}, but analysis failed: ${
-                  analysis?.error ||
-                  "Could not extract expense information. The image may be unclear or have poor lighting."
-                }. Please help the user by suggesting they try again with better lighting, holding camera steady, ensuring text is in focus, avoiding shadows/glare, or typing the expense manually like "Spent 45 on groceries"]`;
-              } else {
-                // Success - let AI handle the response with the extracted data
-                userMessageContent = `[User uploaded an image${caption ? ` with caption "${caption}"` : ""}. Successfully extracted from receipt: ${JSON.stringify(
-                  analysis.items!,
-                )}. Please confirm with the user and ask if they want to save these transactions.]`;
-              }
-            }
-          }
-        }
+        userMessageContent = `[User sent an image receipt.${
+          caption ? ` Caption: "${caption}".` : ""
+        } If you need to extract transactions, call analyze_expense with media { kind: "image", index: 0 }.]`;
       } else if (mediaUrl && /^audio\//i.test(mediaType || "")) {
-        // WhatsApp voice message / audio note: download and run analyze-core audio extraction
-        const accountSid =
-          formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
-        const authHeader =
-          "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
-        const audioRes = await fetch(mediaUrl, {
-          headers: { Authorization: authHeader },
-        });
-
-        if (!audioRes.ok) {
-          if (WHATSAPP_DEBUG)
-            debugNotes.push(`audio fetch failed status=${audioRes.status}`);
-          userMessageContent = `[User sent a voice message, but download failed status=${audioRes.status}${
-            caption ? ` | caption: "${caption}"` : ""
-          }]`;
-        } else {
-          const rawContentType =
-            audioRes.headers.get("content-type") || mediaType || "";
-          const contentType = rawContentType.split(";")[0].trim();
-          const audioBuf = new Uint8Array(await audioRes.arrayBuffer());
-          if (audioBuf.byteLength > MAX_MEDIA_BYTES) {
-            userMessageContent = `[User sent a voice message${caption ? ` with caption "${caption}"` : ""}, but the file is too large to process (${audioBuf.byteLength} bytes). Please ask them to send a shorter clip or type the expense manually.]`;
-          } else {
-            const base64Data = uint8ToBase64(audioBuf);
-
-            // Attempt audio analysis with a hard timeout, similar to text/image flows
-            let analysis: any = null;
-            try {
-              analysis = await runAnalyzeExpenseWithTimeout(
-                {
-                  userId,
-                  audio: { data: base64Data, contentType, bytes: audioBuf },
-                  currency: userCurrency,
-                },
-                GEMINI_API_KEY,
-                30000,
-                "The audio is taking longer than expected to process. Please try again by speaking clearly and mentioning the amount, currency, and date.",
-              );
-            } catch (error) {
-              analysis = {
-                success: false,
-                error:
-                  "The audio is taking longer than expected to process. Please try again by speaking clearly and mentioning the amount, currency, and date.",
-                language: "en",
-              };
-            }
-
-            if (!analysis || !analysis.success || !analysis.items) {
-              if (WHATSAPP_DEBUG)
-                debugNotes.push(
-                  `audio analyze-expense error: ${analysis?.error || "unknown"}`,
-                );
-
-              userMessageContent = `[User sent a voice message${
-                caption ? ` with caption "${caption}"` : ""
-              }, but analysis failed: ${
-                analysis?.error ||
-                "Could not extract expense information from the audio. Please try again by clearly describing what you spent, how much, in which currency, and when."
-              }. Please help the user by suggesting they try again or type the expense manually like "Spent 45 on groceries yesterday".]`;
-            } else {
-              userMessageContent = `[User sent a voice message${
-                caption ? ` with caption "${caption}"` : ""
-              }. Successfully extracted from audio: ${JSON.stringify(
-                analysis.items!,
-              )}. Please confirm with the user and ask if they want to save these transactions.]`;
-            }
-          }
-        }
+        userMessageContent = `[User sent an audio message.${
+          caption ? ` Caption: "${caption}".` : ""
+        } If you need to extract transactions, call analyze_expense with media { kind: "audio", index: 0 }.]`;
       } else if (mediaUrl) {
-        // Non-image file: fetch and include a small preview so AI keeps context
-        console.log(
-          "[twilio-whatsapp-ai-bot] Non-image media detected, building preview",
-          {
-            from,
-            mediaUrl,
-            mediaType,
-          },
-        );
-
-        const accountSid =
-          formData.get("AccountSid")?.toString() || TWILIO_ACCOUNT_SID || "";
-        const authHeader =
-          "Basic " + btoa(`${accountSid}:${TWILIO_AUTH_TOKEN}`);
-        const fileRes = await fetch(mediaUrl, {
-          headers: { Authorization: authHeader },
-        });
-
-        if (!fileRes.ok) {
-          if (WHATSAPP_DEBUG)
-            debugNotes.push(`file fetch failed status=${fileRes.status}`);
-          userMessageContent = `[User sent a file but download failed status=${fileRes.status}${caption ? ` | caption: "${caption}"` : ""}]`;
-        } else {
-          const contentType =
-            fileRes.headers.get("content-type") || mediaType || "";
-          const buf = new Uint8Array(await fileRes.arrayBuffer());
-          if (buf.byteLength > MAX_MEDIA_BYTES) {
-            userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${
-              caption ? ` with caption "${caption}"` : ""
-            }, but it is too large to process. Please ask them to send a smaller file or summarize the expense manually.]`;
-          } else {
-            const cleanContentType = contentType.split(";")[0].trim();
-            let preview = "";
-            let parsed = false;
-
-            const textLike =
-              /^(text\/|application\/(json|csv|xml|javascript))/i.test(
-                cleanContentType,
-              ) || /\.(csv|txt|json|xml)$/i.test(mediaUrl || "");
-            const isXlsx =
-              /spreadsheetml|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/i.test(
-                cleanContentType,
-              ) || /\.xlsx$/i.test(mediaUrl || "");
-            const isPdf =
-              /application\/pdf/i.test(cleanContentType) ||
-              /\.pdf$/i.test(mediaUrl || "");
-
-            let fileName = "attachment";
-            try {
-              const url = new URL(mediaUrl);
-              const last = url.pathname.split("/").pop() || "";
-              if (last && last.includes(".")) {
-                fileName = last;
-              }
-            } catch (_) {}
-
-            if (fileName === "attachment") {
-              if (isPdf) fileName = "attachment.pdf";
-              else if (isXlsx) fileName = "attachment.xlsx";
-              else if (textLike) fileName = "attachment.txt";
-              else fileName = "attachment.bin";
-            }
-
-            const base64Data = uint8ToBase64(buf);
-            let analysis: any = null;
-            try {
-              analysis = await runAnalyzeExpenseWithTimeout(
-                {
-                  userId,
-                  text: caption || "",
-                  currency: userCurrency,
-                  attachments: [
-                    {
-                      filename: fileName,
-                      contentType:
-                        cleanContentType || "application/octet-stream",
-                      data: base64Data,
-                    },
-                  ],
-                },
-                GEMINI_API_KEY,
-                30000,
-                "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
-              );
-            } catch (error) {
-              analysis = {
-                success: false,
-                error:
-                  "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
-                language: "en",
-              };
-            }
-
-            const analysisSucceeded =
-              analysis && analysis.success && Array.isArray(analysis.items);
-            if (analysisSucceeded) {
-              userMessageContent = `[User sent a file (${cleanContentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Successfully extracted from file: ${JSON.stringify(
-                analysis.items,
-              )}. Please confirm with the user and ask if they want to save these transactions.]`;
-            } else {
-              if (textLike) {
-                try {
-                  preview = new TextDecoder("utf-8", { fatal: false }).decode(
-                    buf.slice(0, 12000),
-                  );
-                  parsed = true;
-                } catch {
-                  parsed = false;
-                }
-              } else if (isXlsx) {
-                const xlsxPreview = buildXlsxPreview(buf);
-                if (xlsxPreview) {
-                  preview = xlsxPreview;
-                  parsed = true;
-                }
-              } else if (isPdf) {
-                const pdfSummary = await summarizePdfWithGemini(
-                  base64Data,
-                  "application/pdf",
-                  GEMINI_API_KEY,
-                );
-                if (pdfSummary) {
-                  preview = `PDF summary:\n${pdfSummary}`;
-                  parsed = true;
-                }
-              }
-
-              if (parsed) {
-                userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Preview: ${preview}]`;
-              } else {
-                userMessageContent = `[User sent a file (${contentType || "unknown"}, ${buf.length} bytes)${caption ? ` with caption "${caption}"` : ""}. Content not parsed (binary).]`;
-              }
-            }
-          }
-        }
+        userMessageContent = `[User sent a file attachment.${
+          caption ? ` Caption: "${caption}".` : ""
+        } If you need to extract transactions, call analyze_expense with media { kind: "file", index: 0 }.]`;
       }
     }
-
-    // Save User Message
-    await insertChatMessage(
-      supabase,
-      sessionId,
-      "user",
-      userMessageContent,
-      debugNotes,
-      WHATSAPP_DEBUG,
-    );
 
     // 5. Prepare Context & History - use households from context
     const spaces = contextData?.spaces || contextData?.households || [];
@@ -2597,20 +2631,32 @@ Deno.serve(async (req: Request) => {
       if (budgetErr || !budgetRow) {
         return { error: budgetErr ?? "Failed to save budget" };
       }
+
+      // Case-insensitive mapping + automatic consolidation of duplicate envelopes.
+      const envelopeNameMap = await consolidateDuplicateEnvelopesForBudget(
+        supabase,
+        budgetRow.id,
+        draft.period_month,
+        debugNotes,
+        WHATSAPP_DEBUG,
+      );
+
       const pockets = Array.isArray(draft.pockets) ? draft.pockets : [];
       const created: any[] = [];
       for (const p of pockets) {
+        const canonical = envelopeNameMap.get(normalizeEnvelopeName(p.name));
+        const pocketName = canonical?.name || p.name;
         const { data: env, error: envErr } = await upsertEnvelope(
           supabase,
           budgetRow.id,
           userId,
           draft.household_id,
-          p.name,
+          pocketName,
           p.percentage,
           draft.currency || userCurrency,
         );
         if (env && env.id) {
-          created.push({ name: p.name, percentage: p.percentage });
+          created.push({ name: pocketName, percentage: p.percentage });
           if (p.color || p.icon) {
             await supabase
               .from("budget_envelopes")
@@ -2633,8 +2679,9 @@ Deno.serve(async (req: Request) => {
           );
         } else if (envErr) {
           const formatted = formatInvokeError(envErr);
-          if (WHATSAPP_DEBUG)
+          if (WHATSAPP_DEBUG) {
             debugNotes.push(`envelope upsert error: ${formatted}`);
+          }
         }
       }
       return { budgetRow, envelopes: created };
@@ -2672,6 +2719,30 @@ Deno.serve(async (req: Request) => {
 
     // Define Tools
     const tools = [
+      {
+        name: "analyze_expense",
+        description:
+          "Extract one or more transactions from text or an attached receipt/audio/file. Call this only if you need structured items.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            text: { type: "STRING" },
+            media: {
+              type: "OBJECT",
+              properties: {
+                kind: {
+                  type: "STRING",
+                  enum: ["image", "audio", "file"],
+                },
+                index: {
+                  type: "NUMBER",
+                  description: "0-based index of the WhatsApp media attachment",
+                },
+              },
+            },
+          },
+        },
+      },
       {
         name: "add_transaction",
         description:
@@ -3305,9 +3376,12 @@ Deno.serve(async (req: Request) => {
     }
     let persistedContent: string | undefined;
 
-    // Loop for tool calls (handle sequential calls)
-    // For simplicity, we handle one batch of calls then get final text.
-    if (functionCalls && functionCalls.length > 0) {
+    // Tool-call loop (bounded) to support multi-round function calling.
+    let toolSucceededAny = false;
+    let lastBudgetPockets: Array<{ name: string; percentage: number }> | null =
+      null;
+    let toolIterations = 0;
+    while (functionCalls && functionCalls.length > 0 && toolIterations < 3) {
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
@@ -3316,7 +3390,157 @@ Deno.serve(async (req: Request) => {
           args: call.args,
         });
         try {
-          if (call.name === "add_transaction") {
+          if (call.name === "analyze_expense") {
+            const text =
+              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+            const media =
+              call.args?.media && typeof call.args.media === "object"
+                ? call.args.media
+                : null;
+            const kindRaw = typeof media?.kind === "string" ? media.kind : "";
+            const kind = ["image", "audio", "file"].includes(kindRaw)
+              ? kindRaw
+              : "";
+            const index = Number.isFinite(media?.index)
+              ? Math.max(0, Math.trunc(Number(media.index)))
+              : 0;
+
+            if (!kind && !text) {
+              toolResult = {
+                error:
+                  "Provide either text, or media.kind (+ optional media.index), to analyze.",
+              };
+            } else if (!kind) {
+              toolResult = await runAnalyzeExpenseWithTimeout(
+                { userId, text, currency: userCurrency },
+                GEMINI_API_KEY,
+                30000,
+                "Analysis is taking longer than expected. Please try again.",
+              );
+            } else {
+              const mediaUrl = formData.get(`MediaUrl${index}`)?.toString();
+              const mediaType = (
+                formData.get(`MediaContentType${index}`)?.toString() || ""
+              )
+                .split(";")[0]
+                .trim();
+
+              if (!mediaUrl) {
+                toolResult = {
+                  error: `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
+                };
+              } else {
+                const accountSid =
+                  formData.get("AccountSid")?.toString() ||
+                  TWILIO_ACCOUNT_SID ||
+                  "";
+                const token = TWILIO_AUTH_TOKEN || "";
+                if (!accountSid || !token) {
+                  toolResult = { error: "Twilio credentials not configured" };
+                } else {
+                  const authHeader = "Basic " + btoa(`${accountSid}:${token}`);
+                  const res = await fetch(mediaUrl, {
+                    headers: { Authorization: authHeader },
+                  });
+                  if (!res.ok) {
+                    toolResult = {
+                      error: `Failed to download media (status ${res.status}).`,
+                    };
+                  } else {
+                    const headerContentType =
+                      res.headers.get("content-type") || mediaType || "";
+                    const contentType = headerContentType.split(";")[0].trim();
+                    const buf = new Uint8Array(await res.arrayBuffer());
+                    if (buf.byteLength > MAX_MEDIA_BYTES) {
+                      toolResult = {
+                        error: `Media is too large to process (${buf.byteLength} bytes).`,
+                      };
+                    } else {
+                      const base64Data = uint8ToBase64(buf);
+                      const cleanContentType =
+                        contentType ||
+                        (kind === "image"
+                          ? "image/jpeg"
+                          : kind === "audio"
+                            ? "audio/ogg"
+                            : "application/octet-stream");
+
+                      const guessExtension = (ct: string) => {
+                        const lower = ct.toLowerCase();
+                        if (lower.includes("pdf")) return "pdf";
+                        if (lower.includes("spreadsheetml")) return "xlsx";
+                        if (lower.includes("csv")) return "csv";
+                        if (lower.includes("json")) return "json";
+                        if (lower.startsWith("image/")) {
+                          const ext = lower.split("/")[1] || "jpg";
+                          return ext === "jpeg" ? "jpg" : ext;
+                        }
+                        if (lower.startsWith("audio/")) {
+                          return lower.split("/")[1] || "ogg";
+                        }
+                        if (lower.startsWith("text/")) return "txt";
+                        return "bin";
+                      };
+
+                      if (kind === "image") {
+                        toolResult = await runAnalyzeExpenseWithTimeout(
+                          {
+                            userId,
+                            ...(text ? { text } : {}),
+                            image: {
+                              data: base64Data,
+                              contentType: cleanContentType,
+                              bytes: buf,
+                            },
+                            currency: userCurrency,
+                          },
+                          GEMINI_API_KEY,
+                          30000,
+                          "The image is taking longer than expected to process. Please try again with a clearer photo.",
+                        );
+                      } else if (kind === "audio") {
+                        toolResult = await runAnalyzeExpenseWithTimeout(
+                          {
+                            userId,
+                            ...(text ? { text } : {}),
+                            audio: {
+                              data: base64Data,
+                              contentType: cleanContentType,
+                              bytes: buf,
+                            },
+                            currency: userCurrency,
+                          },
+                          GEMINI_API_KEY,
+                          30000,
+                          "The audio is taking longer than expected to process. Please try again by speaking clearly.",
+                        );
+                      } else {
+                        const ext = guessExtension(cleanContentType);
+                        const filename = `attachment.${ext}`;
+                        toolResult = await runAnalyzeExpenseWithTimeout(
+                          {
+                            userId,
+                            text,
+                            currency: userCurrency,
+                            attachments: [
+                              {
+                                filename,
+                                contentType: cleanContentType,
+                                data: base64Data,
+                              },
+                            ],
+                          },
+                          GEMINI_API_KEY,
+                          30000,
+                          "The file is taking longer than expected to process. Please try again with a smaller file or send a clear photo instead.",
+                        );
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          } else if (call.name === "add_transaction") {
             let householdId = call.args.household_id as string | null;
             const householdName = (
               call.args.household_name ||
@@ -3391,8 +3615,9 @@ Deno.serve(async (req: Request) => {
                 : { error: error ?? data?.error };
               if (!success) {
                 const formatted = formatInvokeError(error ?? data?.error);
-                if (WHATSAPP_DEBUG)
+                if (WHATSAPP_DEBUG) {
                   debugNotes.push(`add-income error: ${formatted}`);
+                }
                 console.error("[twilio-whatsapp-ai-bot] add-income error", {
                   error,
                   formatted,
@@ -3439,8 +3664,9 @@ Deno.serve(async (req: Request) => {
                 : { error: error ?? data?.error };
               if (!success) {
                 const formatted = formatInvokeError(error ?? data?.error);
-                if (WHATSAPP_DEBUG)
+                if (WHATSAPP_DEBUG) {
                   debugNotes.push(`add-expense error: ${formatted}`);
+                }
                 console.error("[twilio-whatsapp-ai-bot] add-expense error", {
                   error,
                   formatted,
@@ -3567,14 +3793,17 @@ Deno.serve(async (req: Request) => {
               const summary = data?.summary || {};
               toolResult = {
                 success: true,
-                message: `Saved ${summary.succeeded || batchTransactions.length} of ${summary.total || batchTransactions.length} transactions`,
+                message: `Saved ${
+                  summary.succeeded || batchTransactions.length
+                } of ${summary.total || batchTransactions.length} transactions`,
                 succeeded: summary.succeeded,
                 failed: summary.failed,
               };
             } else {
               const formatted = formatInvokeError(error ?? data?.error);
-              if (WHATSAPP_DEBUG)
+              if (WHATSAPP_DEBUG) {
                 debugNotes.push(`add_transactions_batch error: ${formatted}`);
+              }
               console.error(
                 "[twilio-whatsapp-ai-bot] add_transactions_batch error",
                 { error, formatted },
@@ -3717,12 +3946,15 @@ Deno.serve(async (req: Request) => {
                 updates.amount_cents = Math.round(amount * 100);
               }
             }
-            if (call.args.category != null)
+            if (call.args.category != null) {
               updates.category = call.args.category;
-            if (call.args.description != null)
+            }
+            if (call.args.description != null) {
               updates.raw_text = call.args.description;
-            if (call.args.currency != null)
+            }
+            if (call.args.currency != null) {
               updates.currency = call.args.currency;
+            }
             if (call.args.date != null) updates.date = dateStr;
             if (call.args.is_recurring != null) {
               updates.is_recurring = !!call.args.is_recurring;
@@ -3803,8 +4035,9 @@ Deno.serve(async (req: Request) => {
                 : { error: error ?? data?.error };
               if (!success) {
                 const formatted = formatInvokeError(error ?? data?.error);
-                if (WHATSAPP_DEBUG)
+                if (WHATSAPP_DEBUG) {
                   debugNotes.push(`update-expense error: ${formatted}`);
+                }
                 console.error("[twilio-whatsapp-ai-bot] update-expense error", {
                   error,
                   formatted,
@@ -3916,8 +4149,9 @@ Deno.serve(async (req: Request) => {
               : { error: error ?? data?.error };
             if (!success) {
               const formatted = formatInvokeError(error ?? data?.error);
-              if (WHATSAPP_DEBUG)
+              if (WHATSAPP_DEBUG) {
                 debugNotes.push(`delete-expense error: ${formatted}`);
+              }
               console.error("[twilio-whatsapp-ai-bot] delete-expense error", {
                 error,
                 formatted,
@@ -3966,8 +4200,9 @@ Deno.serve(async (req: Request) => {
             );
             if (error) {
               const formatted = formatInvokeError(error);
-              if (WHATSAPP_DEBUG)
+              if (WHATSAPP_DEBUG) {
                 debugNotes.push(`list-expenses direct error: ${formatted}`);
+              }
               console.error(
                 "[twilio-whatsapp-ai-bot] list-expenses direct query error",
                 { error, formatted },
@@ -4012,8 +4247,9 @@ Deno.serve(async (req: Request) => {
               );
               if (res.error) {
                 const formatted = formatInvokeError(res.error);
-                if (WHATSAPP_DEBUG)
+                if (WHATSAPP_DEBUG) {
                   debugNotes.push(`get-budget direct error: ${formatted}`);
+                }
                 console.error(
                   "[twilio-whatsapp-ai-bot] get-budget direct error",
                   { error: res.error, formatted },
@@ -4045,8 +4281,9 @@ Deno.serve(async (req: Request) => {
                 };
             if (error) {
               const formatted = formatInvokeError(error);
-              if (WHATSAPP_DEBUG)
+              if (WHATSAPP_DEBUG) {
                 debugNotes.push(`set-currency error: ${formatted}`);
+              }
               console.error("[twilio-whatsapp-ai-bot] set-currency error", {
                 error,
                 formatted,
@@ -4096,8 +4333,9 @@ Deno.serve(async (req: Request) => {
                 if (res.error) {
                   const formatted = formatInvokeError(res.error);
                   toolResult = { error: res.error ?? "Failed to save budget" };
-                  if (WHATSAPP_DEBUG)
+                  if (WHATSAPP_DEBUG) {
                     debugNotes.push(`confirm-budget error: ${formatted}`);
+                  }
                   console.error(
                     "[twilio-whatsapp-ai-bot] confirm-budget error",
                     { error: res.error, formatted },
@@ -4133,8 +4371,9 @@ Deno.serve(async (req: Request) => {
               if (res.error) {
                 const formatted = formatInvokeError(res.error);
                 toolResult = { error: res.error ?? "Failed to save budget" };
-                if (WHATSAPP_DEBUG)
+                if (WHATSAPP_DEBUG) {
                   debugNotes.push(`set-budget error: ${formatted}`);
+                }
                 console.error("[twilio-whatsapp-ai-bot] set-budget error", {
                   error: res.error,
                   formatted,
@@ -4430,7 +4669,9 @@ Deno.serve(async (req: Request) => {
               },
               options: { title: { display: true, text: call.args.title } },
             };
-            const url = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
+            const url = `https://quickchart.io/chart?c=${encodeURIComponent(
+              JSON.stringify(chartConfig),
+            )}`;
             toolResult = { url };
           } else if (call.name === "manage_recurring") {
             // Use update-expense or save-expense
@@ -4500,10 +4741,11 @@ Deno.serve(async (req: Request) => {
                   : { error: error ?? data?.error };
                 if (!success) {
                   const formatted = formatInvokeError(error ?? data?.error);
-                  if (WHATSAPP_DEBUG)
+                  if (WHATSAPP_DEBUG) {
                     debugNotes.push(
                       `save-income (recurring add) error: ${formatted}`,
                     );
+                  }
                   console.error(
                     "[twilio-whatsapp-ai-bot] save-income recurring add error",
                     { error, formatted },
@@ -4549,10 +4791,11 @@ Deno.serve(async (req: Request) => {
                   : { error: error ?? data?.error };
                 if (!success) {
                   const formatted = formatInvokeError(error ?? data?.error);
-                  if (WHATSAPP_DEBUG)
+                  if (WHATSAPP_DEBUG) {
                     debugNotes.push(
                       `save-expense (recurring add) error: ${formatted}`,
                     );
+                  }
                   console.error(
                     "[twilio-whatsapp-ai-bot] save-expense recurring add error",
                     { error, formatted },
@@ -4619,12 +4862,15 @@ Deno.serve(async (req: Request) => {
                     updates.amount_cents = Math.round(amount * 100);
                   }
                 }
-                if (call.args.category != null)
+                if (call.args.category != null) {
                   updates.category = call.args.category;
-                if (call.args.description != null)
+                }
+                if (call.args.description != null) {
                   updates.raw_text = call.args.description;
-                if (call.args.currency != null)
+                }
+                if (call.args.currency != null) {
                   updates.currency = call.args.currency;
+                }
                 if (call.args.date != null) updates.date = dateStr;
                 updates.is_recurring = true;
                 if (call.args.source != null) updates.source = call.args.source;
@@ -4702,8 +4948,9 @@ Deno.serve(async (req: Request) => {
                     : { error: error ?? data?.error };
                   if (!success) {
                     const formatted = formatInvokeError(error ?? data?.error);
-                    if (WHATSAPP_DEBUG)
+                    if (WHATSAPP_DEBUG) {
                       debugNotes.push(`update-expense error: ${formatted}`);
+                    }
                     console.error(
                       "[twilio-whatsapp-ai-bot] update-expense error",
                       { error, formatted },
@@ -4725,8 +4972,9 @@ Deno.serve(async (req: Request) => {
                 : { error: error ?? data?.error };
               if (!success) {
                 const formatted = formatInvokeError(error ?? data?.error);
-                if (WHATSAPP_DEBUG)
+                if (WHATSAPP_DEBUG) {
                   debugNotes.push(`delete-expense error: ${formatted}`);
+                }
                 console.error("[twilio-whatsapp-ai-bot] delete-expense error", {
                   error,
                   formatted,
@@ -4750,13 +4998,22 @@ Deno.serve(async (req: Request) => {
               const net = snap.net / 100;
               summary += `Income: ${formatAmount(income, userCurrency)}\n`;
               summary += `Spending: ${formatAmount(expense, userCurrency)}\n`;
-              summary += `Net: ${formatAmount(net, userCurrency)}\n\nTop categories:\n`;
+              summary += `Net: ${formatAmount(
+                net,
+                userCurrency,
+              )}\n\nTop categories:\n`;
               snap.categories.forEach((c, idx) => {
-                summary += `${idx + 1}. ${c.category}: ${formatAmount(c.amount_cents / 100, userCurrency)}\n`;
+                summary += `${idx + 1}. ${c.category}: ${formatAmount(
+                  c.amount_cents / 100,
+                  userCurrency,
+                )}\n`;
               });
               if (snap.budget_cents) {
                 const remain = (snap.budget_cents - snap.totalExpense) / 100;
-                summary += `\nBudget: ${formatAmount(snap.budget_cents / 100, userCurrency)} | Remaining: ${formatAmount(remain, userCurrency)}`;
+                summary += `\nBudget: ${formatAmount(
+                  snap.budget_cents / 100,
+                  userCurrency,
+                )} | Remaining: ${formatAmount(remain, userCurrency)}`;
               }
               toolResult = {
                 snapshot: snap,
@@ -4767,8 +5024,23 @@ Deno.serve(async (req: Request) => {
           }
         } catch (e) {
           toolResult = { error: String(e) };
-          if (WHATSAPP_DEBUG)
+          if (WHATSAPP_DEBUG) {
             debugNotes.push(`tool exception (${call.name}): ${String(e)}`);
+          }
+        }
+
+        const succeeded = (toolResult as any)?.success === true;
+        if (succeeded) {
+          toolSucceededAny = true;
+          if (call.name === "confirm_budget" || call.name === "set_budget") {
+            const pocketsRaw = Array.isArray((toolResult as any)?.envelopes)
+              ? ((toolResult as any).envelopes as any[])
+              : [];
+            lastBudgetPockets = pocketsRaw.map((p) => ({
+              name: String(p?.name || "").trim(),
+              percentage: Number(p?.percentage) || 0,
+            }));
+          }
         }
         toolResponses.push({
           functionResponse: {
@@ -4780,8 +5052,13 @@ Deno.serve(async (req: Request) => {
 
       // Send tool outputs back to Gemini with error handling
       try {
-        const finalResult = await chat.sendMessage(toolResponses);
-        finalResponseText = finalResult.response.text();
+        const nextResult = await chat.sendMessage(toolResponses);
+        response = await nextResult.response;
+        functionCalls = (response.functionCalls() as any[]) || [];
+        const candidate = response.text();
+        if (candidate && candidate.trim()) {
+          finalResponseText = candidate;
+        }
       } catch (e) {
         console.error(
           "[twilio-whatsapp-ai-bot] Failed to get final AI response:",
@@ -4790,16 +5067,36 @@ Deno.serve(async (req: Request) => {
         finalResponseText =
           "I processed your request but encountered an issue generating a response. Please try again.";
         if (WHATSAPP_DEBUG) debugNotes.push(`AI response error: ${String(e)}`);
+        functionCalls = null;
       }
+
+      toolIterations++;
     }
 
     // 7. Finalize Response
+    if (
+      (!finalResponseText || !finalResponseText.trim()) &&
+      toolSucceededAny &&
+      lastBudgetPockets
+    ) {
+      finalResponseText = buildBudgetDoneText(lastBudgetPockets);
+    }
     if (!finalResponseText || !finalResponseText.trim()) {
       finalResponseText =
         "I couldn't generate a response right now. Please try again in a few seconds.";
     }
     persistedContent = finalResponseText;
     const bodyToSend = finalResponseText;
+
+    // Persist the incoming user message AFTER model/tool flow so Gemini doesn't see it twice.
+    await insertChatMessage(
+      supabase,
+      sessionId,
+      "user",
+      userMessageContent,
+      debugNotes,
+      WHATSAPP_DEBUG,
+    );
 
     // Save assistant message with final content (for context)
     await insertChatMessage(
@@ -4837,7 +5134,7 @@ Deno.serve(async (req: Request) => {
     const { bodyToSend, persistedContent, immediateText } = computed;
 
     if (deliveryMode === "api") {
-      const sendResult = await sendWhatsAppMessage(
+      const sendResult = await sendWhatsAppMessageInChunks(
         twilioAccountSid,
         twilioAuthToken,
         to,
@@ -4847,8 +5144,25 @@ Deno.serve(async (req: Request) => {
       if (!sendResult.success) {
         console.error(
           "[twilio-whatsapp-ai-bot] Failed to send WhatsApp message:",
-          sendResult.error,
+          {
+            error: sendResult.error,
+            sentChunks: sendResult.sentChunks,
+            totalChunks: sendResult.totalChunks,
+          },
         );
+        const fallbackResult = await sendWhatsAppMessage(
+          twilioAccountSid,
+          twilioAuthToken,
+          to,
+          from,
+          DELIVERY_FAILURE_MESSAGE,
+        );
+        if (!fallbackResult.success) {
+          console.error(
+            "[twilio-whatsapp-ai-bot] Failed to send fallback WhatsApp message:",
+            fallbackResult.error,
+          );
+        }
         if (idempotencyKey) {
           await updateTwilioIdempotency(supabase, idempotencyKey, {
             status: "failed",
@@ -4859,6 +5173,57 @@ Deno.serve(async (req: Request) => {
         }
         return xmlResponse(buildTwimlMessage(null));
       }
+      if (idempotencyKey) {
+        await updateTwilioIdempotency(supabase, idempotencyKey, {
+          status: "done",
+          delivery: "api",
+          response_text: persistedContent,
+        });
+      }
+      return xmlResponse(buildTwimlMessage(null));
+    }
+
+    if (Array.from(immediateText).length > WHATSAPP_CHUNK_TARGET_CHARS) {
+      const sendResult = await sendWhatsAppMessageInChunks(
+        twilioAccountSid,
+        twilioAuthToken,
+        to,
+        from,
+        immediateText,
+      );
+      if (!sendResult.success) {
+        console.error(
+          "[twilio-whatsapp-ai-bot] Failed to send long TwiML response via API:",
+          {
+            error: sendResult.error,
+            sentChunks: sendResult.sentChunks,
+            totalChunks: sendResult.totalChunks,
+          },
+        );
+        const fallbackResult = await sendWhatsAppMessage(
+          twilioAccountSid,
+          twilioAuthToken,
+          to,
+          from,
+          DELIVERY_FAILURE_MESSAGE,
+        );
+        if (!fallbackResult.success) {
+          console.error(
+            "[twilio-whatsapp-ai-bot] Failed to send fallback WhatsApp message:",
+            fallbackResult.error,
+          );
+        }
+        if (idempotencyKey) {
+          await updateTwilioIdempotency(supabase, idempotencyKey, {
+            status: "failed",
+            delivery: "api",
+            response_text: persistedContent,
+            error: sendResult.error || "unknown",
+          });
+        }
+        return xmlResponse(buildTwimlMessage(null));
+      }
+
       if (idempotencyKey) {
         await updateTwilioIdempotency(supabase, idempotencyKey, {
           status: "done",
@@ -4882,7 +5247,16 @@ Deno.serve(async (req: Request) => {
   };
 
   if (shouldAckEarly) {
-    const ackText = processingAckMessage || "Processing your request now. ⏳";
+    await sendTwilioWhatsAppTypingIndicator(
+      twilioAccountSid,
+      twilioAuthToken,
+      messageSid,
+    );
+    const cancelTypingFollowUp = scheduleTwilioTypingFollowUp(
+      twilioAccountSid,
+      twilioAuthToken,
+      messageSid,
+    );
     runBackgroundTask(
       (async () => {
         try {
@@ -4910,10 +5284,12 @@ Deno.serve(async (req: Request) => {
               error: error instanceof Error ? error.message : String(error),
             });
           }
+        } finally {
+          cancelTypingFollowUp();
         }
       })(),
     );
-    return xmlResponse(buildTwimlMessage(ackText));
+    return xmlResponse(buildTwimlMessage(null));
   }
 
   const computePromise = computeTwilioResponse()
@@ -4986,7 +5362,16 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const ackText = processingAckMessage || "Processing your request now. ⏳";
+  await sendTwilioWhatsAppTypingIndicator(
+    twilioAccountSid,
+    twilioAuthToken,
+    messageSid,
+  );
+  const cancelTypingFollowUp = scheduleTwilioTypingFollowUp(
+    twilioAccountSid,
+    twilioAuthToken,
+    messageSid,
+  );
   runBackgroundTask(
     (async () => {
       try {
@@ -5033,9 +5418,11 @@ Deno.serve(async (req: Request) => {
             error: error instanceof Error ? error.message : String(error),
           });
         }
+      } finally {
+        cancelTypingFollowUp();
       }
     })(),
   );
 
-  return xmlResponse(buildTwimlMessage(ackText));
+  return xmlResponse(buildTwimlMessage(null));
 });
