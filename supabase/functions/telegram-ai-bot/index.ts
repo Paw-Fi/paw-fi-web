@@ -48,7 +48,11 @@ You can handle personal finances and shared spaces.
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
     - Use currency symbols (€, $, £, ₦, etc.) when replying instead of ISO codes.
-2.  **Spaces**: If the user asks about “spaces” (e.g., family, roommates, portfolio), clarify which space if they have multiple, or use the household_id + is_portfolio provided in context.
+2.  **Spaces**: If the user asks about “spaces” (e.g., family, roommates, private space), clarify which space if they have multiple, or use the household_id + is_portfolio provided in context.
+    - Personal account ⇒ expenses with household_id = null (the user's own account).
+    - Private space ⇒ household_id != null AND is_portfolio = true (internal flag — never say “portfolio” to the user).
+    - Shared space ⇒ household_id != null AND is_portfolio = false.
+    When calling tools (especially list_expenses), include a household_id when known or set space_scope to personal account / private space / shared space so the correct account is queried.
 3.  **Confirmation**: For ambiguous requests (e.g., "5 coffee"), ask for clarification (Personal or which space? Which category?).
     - Infer a category from the text and propose it (e.g., "latte" -> "food & drink"). Ask for quick confirmation before saving.
 4.  **Charts**: If the user asks for a chart or graph, use the 'generate_chart_url' tool and provide the URL in your response. Explain that you are sending an image.
@@ -781,7 +785,73 @@ function inferListExpensesArgsFromText(text: string): Record<string, unknown> {
   if (typeof limit === "number") args.limit = limit;
   const type = detectListTypeFromText(text);
   if (type) args.type = type;
+  const scope = detectSpaceScopeFromText(text);
+  if (scope) args.space_scope = scope;
   return args;
+}
+
+function normalizeSpaceScope(
+  value: unknown,
+): "personal" | "private" | "shared" | null {
+  const normalized = normalizeMatchString(value).replace(/\s+/g, "_");
+  if (!normalized) return null;
+  if (
+    normalized === "personal" ||
+    normalized === "personal_account" ||
+    normalized === "own_account" ||
+    normalized === "me"
+  ) {
+    return "personal";
+  }
+  if (
+    normalized === "portfolio" ||
+    normalized === "private" ||
+    normalized === "private_space" ||
+    normalized === "private_account" ||
+    normalized === "portfolio_space"
+  ) {
+    return "private";
+  }
+  if (
+    normalized === "shared" ||
+    normalized === "shared_space" ||
+    normalized === "household" ||
+    normalized === "family_space" ||
+    normalized === "joint" ||
+    normalized === "roommate"
+  ) {
+    return "shared";
+  }
+  return null;
+}
+
+function detectSpaceScopeFromText(
+  text: string,
+): "personal" | "private" | "shared" | undefined {
+  const normalized = normalizeMatchString(text);
+  if (!normalized) return undefined;
+  if (
+    /\b(personal account|personal-only|my personal|my own account)\b/.test(
+      normalized,
+    )
+  ) {
+    return "personal";
+  }
+  if (
+    /\b(portfolio|private space|private account|investment account|investing space)\b/.test(
+      normalized,
+    )
+  ) {
+    return "private";
+  }
+  if (
+    /\b(shared|household|family space|roommate|joint account)\b/.test(
+      normalized,
+    )
+  ) {
+    return "shared";
+  }
+  return undefined;
 }
 
 function shouldForceListExpensesCall(text: string): boolean {
@@ -1446,6 +1516,8 @@ Deno.serve(async (req: Request) => {
           { id: string; name: string; isPortfolio: boolean }
         >();
         const portfolioSpaceIds: string[] = [];
+        const sharedSpaceIds: string[] = [];
+        const sharedSpaceIdSet = new Set<string>();
         for (const h of chatHouseholds as any[]) {
           if (!h) continue;
           const id = String((h as any).household_id || "");
@@ -1456,6 +1528,9 @@ Deno.serve(async (req: Request) => {
             spaceMap.set(id, value);
             if (isPortfolio) {
               portfolioSpaceIds.push(id);
+            } else if (!sharedSpaceIdSet.has(id)) {
+              sharedSpaceIdSet.add(id);
+              sharedSpaceIds.push(id);
             }
           }
           if (name) spaceMap.set(name.toLowerCase(), { id, name, isPortfolio });
@@ -1721,6 +1796,34 @@ Deno.serve(async (req: Request) => {
                     description: { type: "STRING" },
                     date: { type: "STRING", description: "YYYY-MM-DD" },
                     currency: { type: "STRING" },
+                    household_id: {
+                      type: "STRING",
+                      description:
+                        "ID of the target space. Use this when moving the transaction to a specific household/private space.",
+                    },
+                    household_name: {
+                      type: "STRING",
+                      description:
+                        "Human-readable name of the space to move the transaction into (case-insensitive).",
+                    },
+                    space_scope: {
+                      type: "STRING",
+                      enum: [
+                        "personal",
+                        "personal_account",
+                        "portfolio",
+                        "private_space",
+                        "shared",
+                        "shared_space",
+                      ],
+                      description:
+                        "High-level destination: personal account, private/portfolio space, or shared household.",
+                    },
+                    space_target: {
+                      type: "STRING",
+                      description:
+                        "Optional free-form hint for the target space (e.g., 'move to living expenses space').",
+                    },
                   },
                 },
               },
@@ -1763,6 +1866,20 @@ Deno.serve(async (req: Request) => {
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
                 is_portfolio: { type: "BOOLEAN" },
+                space_scope: {
+                  type: "STRING",
+                  enum: [
+                    "personal",
+                    "personal_account",
+                    "portfolio",
+                    "private_space",
+                    "shared",
+                    "shared_space",
+                    "household",
+                  ],
+                  description:
+                    "Optional high-level scope hint: personal (household_id null), portfolio/private space, or shared household.",
+                },
               },
             },
           },
@@ -2241,6 +2358,18 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
+                const normalizedScope =
+                  normalizeSpaceScope(call.args.space_scope) ||
+                  normalizeSpaceScope(call.args.scope);
+                const wantsPersonalOnly =
+                  !householdId && normalizedScope === "personal";
+                const wantsSharedOnly =
+                  !householdId && normalizedScope === "shared";
+                const isPortfolioQuery =
+                  spaceMeta?.isPortfolio ??
+                  (normalizedScope === "portfolio"
+                    ? true
+                    : call.args.is_portfolio === true);
                 const { data, error } = await fetchExpensesDirect(
                   supabase,
                   contact.id,
@@ -2249,11 +2378,15 @@ Deno.serve(async (req: Request) => {
                     startDate: call.args.start_date,
                     endDate: call.args.end_date,
                     householdId,
-                    isPortfolio:
-                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    isPortfolio: isPortfolioQuery,
                     portfolioHouseholdIds: householdId
                       ? undefined
                       : portfolioSpaceIds,
+                    sharedHouseholdIds: householdId
+                      ? undefined
+                      : sharedSpaceIds,
+                    personalOnly: wantsPersonalOnly,
+                    sharedOnly: wantsSharedOnly,
                     currency: call.args.currency,
                     type: call.args.type,
                   },
