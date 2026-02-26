@@ -67,6 +67,7 @@ function Unsubscribe() {
         .update({ unsubscribed_from_newsletter: true })
         .eq("email", normalizedEmail)
         .select("id")
+        .order("created_at", { ascending: false })
         .limit(1);
 
       if (error) {
