@@ -5,7 +5,7 @@ import {
   createClient,
   type SupabaseClient as SupabaseJsClient,
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.17.0";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 import {
@@ -41,8 +41,7 @@ import {
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const MODEL_NAME = "gemini-2.5-flash-lite";
-const SYSTEM_INSTRUCTION =
-  `You are Moneko, a helpful and friendly financial assistant on Telegram.
+const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
@@ -64,11 +63,12 @@ CRITICAL RULES:
 13. **Tooling discipline**: For add/update/delete/recurring/budget/envelope requests, call the appropriate tool. For recurring requests without a frequency, default to monthly. For incomes, set type="income".
 14. **Bulk imports**: When the user uploads a receipt, bank statement, or file with multiple transactions, use 'add_transactions_batch' to save them all at once.
 15. **Privacy**: Never show raw IDs (household_id, expense_id, etc.) to the user. Refer to spaces by name only; if multiple, offer names, not IDs.
-16. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
-17. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
-18. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-19. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
-20. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
+16. **No transaction IDs**: Never ask the user for transaction IDs. If you need to disambiguate, ask them to reply with the number from the last list (1..N) or provide amount/date/description.
+17. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
+18. **Telegram UX (choices)**: When asking the user to choose among transactions/options, ALWAYS format options as numbered lines like "1. <short label>" (one per line; label <= ~60 chars) so Telegram inline buttons can be generated. Ask them to tap a button.
+19. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
+20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
+21. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
 
 CURRENT CONTEXT:
 - Date: {{DATE}}
@@ -113,6 +113,18 @@ const PROCESSING_ACK_DELAY_MS = 3000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_ACTION_INTERVAL_MS = 4000;
+
+const INTERNAL_FUNCTION_KEY = (
+  Deno.env.get("SECRET_API_KEY") ||
+  Deno.env.get("EDGE_FUNCTION_KEY") ||
+  ""
+).trim();
+
+if (!INTERNAL_FUNCTION_KEY) {
+  console.warn(
+    "[telegram-ai-bot] INTERNAL_FUNCTION_KEY not configured; internal tool calls will fail",
+  );
+}
 
 type TelegramUpdate = {
   update_id?: number;
@@ -252,11 +264,9 @@ async function getTelegramFile(
   token: string,
   fileId: string,
 ): Promise<{ file_path?: string; file_size?: number } | null> {
-  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${
-    encodeURIComponent(
-      fileId,
-    )
-  }`;
+  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(
+    fileId,
+  )}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const payload = await res.json();
@@ -346,8 +356,48 @@ function normalizeText(input?: string | null) {
   return (input || "").trim();
 }
 
+function sanitizeArgs(args: unknown): unknown {
+  const seen = new WeakMap<object, unknown>();
+
+  const shouldRedact = (path: string[]) => {
+    const last = path[path.length - 1];
+    const prev = path[path.length - 2];
+    return (
+      last === "telegram_file_id" || (prev === "media" && last === "file_id")
+    );
+  };
+
+  const walk = (value: unknown, path: string[]): unknown => {
+    if (shouldRedact(path)) return "[redacted]";
+    if (value == null) return value;
+    if (typeof value !== "object") return value;
+
+    if (value instanceof Uint8Array) {
+      return `[uint8array:${value.byteLength}]`;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item, idx) => walk(item, [...path, String(idx)]));
+    }
+
+    const obj = value as Record<string, unknown>;
+    const cached = seen.get(obj);
+    if (cached) return cached;
+
+    const out: Record<string, unknown> = {};
+    seen.set(obj, out);
+    for (const [key, child] of Object.entries(obj)) {
+      out[key] = walk(child, [...path, key]);
+    }
+    return out;
+  };
+
+  return walk(args, []);
+}
+
 function resolvePublicBaseUrl() {
-  const explicitBaseUrl = Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
+  const explicitBaseUrl =
+    Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
     Deno.env.get("WEB_APP_URL") ||
     Deno.env.get("PUBLIC_APP_URL") ||
     Deno.env.get("NEXT_PUBLIC_APP_URL") ||
@@ -418,6 +468,377 @@ function resolveTextFromCallbackChoice(
 
 function normalizeNameForMatch(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+type LastListedTransaction = {
+  id: string;
+  amountMajor: number;
+  currency: string;
+  date: string;
+  category: string;
+  description: string;
+  type?: "expense" | "income";
+  household_id?: string | null;
+};
+
+type LastListedTransactionsMemory = {
+  items: LastListedTransaction[];
+  saved_at: string;
+};
+
+type SessionState = {
+  moneko_state?: {
+    last_listed_transactions?: LastListedTransactionsMemory;
+  };
+};
+
+const LAST_LISTED_TTL_MS = 2 * 60 * 60 * 1000;
+
+function normalizeSessionState(raw: unknown): SessionState {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as SessionState;
+  }
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as SessionState;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return {};
+}
+
+function normalizeLastListedTransactionFromRow(
+  row: any,
+): LastListedTransaction | null {
+  if (!row || typeof row !== "object") return null;
+  const idRaw = (row as any).id;
+  const id = typeof idRaw === "string" ? idRaw : String(idRaw || "");
+  if (!id) return null;
+
+  const cents = (row as any).amount_cents;
+  const amountMajor =
+    typeof cents === "number" && Number.isFinite(cents)
+      ? cents / 100
+      : Number((row as any).amount) || 0;
+
+  const currency = String((row as any).currency || "").toUpperCase();
+  const date = String((row as any).date || "").slice(0, 10);
+  const category = String((row as any).category || "").trim();
+  const description = String(
+    (row as any).raw_text ?? (row as any).description ?? "",
+  ).trim();
+  const typeRaw = String((row as any).type || "expense").toLowerCase();
+  const type = typeRaw === "income" ? "income" : "expense";
+  const householdIdRaw = (row as any).household_id;
+  const household_id =
+    householdIdRaw == null ? null : String(householdIdRaw || "") || null;
+
+  return {
+    id,
+    amountMajor,
+    currency,
+    date,
+    category,
+    description,
+    type,
+    household_id,
+  };
+}
+
+function readLastListedTransactions(state: SessionState | null): {
+  items: LastListedTransaction[] | null;
+  expired: boolean;
+} {
+  const memory = state?.moneko_state?.last_listed_transactions;
+  if (!memory || typeof memory !== "object") {
+    return { items: null, expired: false };
+  }
+  const savedAt = (memory as any).saved_at;
+  const savedAtMs = typeof savedAt === "string" ? Date.parse(savedAt) : NaN;
+  if (!Number.isFinite(savedAtMs)) {
+    return { items: null, expired: true };
+  }
+  if (Date.now() - savedAtMs > LAST_LISTED_TTL_MS) {
+    return { items: null, expired: true };
+  }
+  const rawItems = Array.isArray((memory as any).items)
+    ? ((memory as any).items as any[])
+    : [];
+  const items = rawItems
+    .map((item) => (item && typeof item === "object" ? item : null))
+    .filter(Boolean) as LastListedTransaction[];
+  return { items: items.slice(0, 25), expired: false };
+}
+
+function setLastListedTransactions(
+  state: SessionState | null,
+  items: LastListedTransaction[],
+): SessionState {
+  const base = normalizeSessionState(state);
+  return {
+    ...base,
+    moneko_state: {
+      ...(base.moneko_state || {}),
+      last_listed_transactions: {
+        items: (items || []).slice(0, 25),
+        saved_at: new Date().toISOString(),
+      },
+    },
+  };
+}
+
+function clearLastListedTransactions(state: SessionState | null): SessionState {
+  const base = normalizeSessionState(state);
+  if (!base.moneko_state?.last_listed_transactions) return base;
+  const { last_listed_transactions: _last, ...rest } = base.moneko_state;
+  if (Object.keys(rest).length === 0) {
+    const { moneko_state: _state, ...withoutState } = base;
+    return withoutState;
+  }
+  return { ...base, moneko_state: rest };
+}
+
+type TransactionMatch = {
+  amount?: number;
+  date?: string;
+  description_contains?: string;
+  category?: string;
+  currency?: string;
+  type?: "expense" | "income";
+};
+
+function normalizeMatchString(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function matchesTransaction(
+  item: LastListedTransaction,
+  match: TransactionMatch,
+) {
+  if (match.amount != null) {
+    const amt = Number(match.amount);
+    if (!Number.isFinite(amt)) return false;
+    if (Math.abs((item.amountMajor || 0) - amt) > 0.009) return false;
+  }
+  if (match.date) {
+    const d = String(match.date || "").slice(0, 10);
+    if (d && item.date !== d) return false;
+  }
+  if (match.currency) {
+    const cur = String(match.currency || "")
+      .trim()
+      .toUpperCase();
+    if (cur && item.currency.toUpperCase() !== cur) return false;
+  }
+  if (match.type) {
+    const t =
+      String(match.type).toLowerCase() === "income" ? "income" : "expense";
+    if ((item.type || "expense") !== t) return false;
+  }
+  if (match.category) {
+    const cat = normalizeMatchString(match.category);
+    if (cat && normalizeMatchString(item.category) !== cat) return false;
+  }
+  if (match.description_contains) {
+    const needle = normalizeMatchString(match.description_contains);
+    if (needle && !normalizeMatchString(item.description).includes(needle)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function buildChoiceSummary(
+  item: LastListedTransaction,
+  spaceName?: string | null,
+): string {
+  const amountText = `${item.amountMajor || 0} ${item.currency || "USD"}`;
+  const pieces = [
+    item.date,
+    amountText,
+    item.category || "",
+    item.description || "",
+    spaceName ? `(${spaceName})` : "",
+  ].filter((p) => String(p || "").trim().length > 0);
+  return pieces.join(" - ");
+}
+
+function resolveLastListedSelection(
+  items: LastListedTransaction[],
+  args: { selection_index?: unknown; match?: unknown },
+  spaceNameByHouseholdId?: (
+    householdId: string | null | undefined,
+  ) => string | null,
+):
+  | { candidate: LastListedTransaction }
+  | {
+      needs_disambiguation: true;
+      choices: Array<{ index: number; summary: string }>;
+    }
+  | { error: string } {
+  const list = Array.isArray(items) ? items : [];
+  if (list.length === 0) {
+    return {
+      error:
+        "No matching transaction found. Ask user to list recent transactions first or provide more details.",
+    };
+  }
+
+  const rawIndex = Number((args as any).selection_index);
+  if (Number.isFinite(rawIndex)) {
+    const idx = Math.trunc(rawIndex);
+    if (idx >= 1 && idx <= list.length) {
+      return { candidate: list[idx - 1] };
+    }
+    return {
+      error: `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
+    };
+  }
+
+  const matchRaw = (args as any).match;
+  const match: TransactionMatch =
+    matchRaw && typeof matchRaw === "object" && !Array.isArray(matchRaw)
+      ? (matchRaw as TransactionMatch)
+      : {};
+
+  const filtered = Object.keys(match).length
+    ? list.filter((item) => matchesTransaction(item, match))
+    : [];
+
+  if (filtered.length === 1) {
+    return { candidate: filtered[0] };
+  }
+
+  const choicesSource = filtered.length ? filtered : list;
+  const choices = choicesSource
+    .slice(0, 10)
+    .map((item) => {
+      const index = list.findIndex((x) => x.id === item.id) + 1;
+      const spaceName = spaceNameByHouseholdId
+        ? spaceNameByHouseholdId(item.household_id)
+        : null;
+      return {
+        index: index > 0 ? index : 0,
+        summary: buildChoiceSummary(item, spaceName),
+      };
+    })
+    .filter((c) => c.index > 0);
+
+  if (choices.length === 1) {
+    const only = list[choices[0].index - 1];
+    if (only) return { candidate: only };
+  }
+
+  if (choices.length > 1) {
+    return { needs_disambiguation: true, choices };
+  }
+
+  return {
+    error:
+      "No matching transaction found. Ask user to list recent transactions first or provide more details.",
+  };
+}
+
+function detectListTypeFromText(
+  text: string,
+): "expense" | "income" | undefined {
+  const normalized = normalizeMatchString(text);
+  const hasIncome =
+    /\b(income|incomes|earning|earnings|salary|salaries)\b/.test(normalized);
+  const hasExpense =
+    /\b(expense|expenses|spending|spend|spent|purchase|purchases)\b/.test(
+      normalized,
+    );
+  if (hasIncome && !hasExpense) return "income";
+  if (hasExpense && !hasIncome) return "expense";
+  return undefined;
+}
+
+function parseListLimitFromText(text: string): number | undefined {
+  const normalized = normalizeMatchString(text);
+  const candidates = [
+    normalized.match(
+      /\b(?:latest|recent|last)\s+(\d{1,3})\s+(?:transactions?|expenses?|incomes?)\b/,
+    ),
+    normalized.match(/\b(\d{1,3})\s+(?:transactions?|expenses?|incomes?)\b/),
+  ];
+  for (const match of candidates) {
+    const raw = Number(match?.[1] || NaN);
+    if (!Number.isFinite(raw)) continue;
+    const value = Math.trunc(raw);
+    if (value >= 1) return Math.min(50, value);
+  }
+  return undefined;
+}
+
+function inferListExpensesArgsFromText(text: string): Record<string, unknown> {
+  const args: Record<string, unknown> = {};
+  const limit = parseListLimitFromText(text);
+  if (typeof limit === "number") args.limit = limit;
+  const type = detectListTypeFromText(text);
+  if (type) args.type = type;
+  return args;
+}
+
+function shouldForceListExpensesCall(text: string): boolean {
+  const normalized = normalizeMatchString(text);
+  if (!normalized) return false;
+
+  const hasTransactionNoun =
+    /\b(transaction|transactions|expense|expenses|income|incomes|spending|spend|spent|earning|earnings)\b/.test(
+      normalized,
+    );
+  if (!hasTransactionNoun) return false;
+
+  const hasListIntent =
+    /\b(show|list|display|get|fetch|view|see)\b/.test(normalized) ||
+    /\b(latest|recent|last)\b/.test(normalized);
+  if (!hasListIntent) return false;
+
+  const hasMutationIntent = /\b(update|edit|change|delete|remove|set)\b/.test(
+    normalized,
+  );
+  return !hasMutationIntent;
+}
+
+async function loadSessionState(
+  supabase: SupabaseJsClient,
+  sessionId: string,
+  debugNotes: string[],
+): Promise<SessionState> {
+  const { data, error } = await supabase
+    .from("chat_sessions")
+    .select("system_prompt")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error) {
+    debugNotes.push(
+      `chat_sessions load state error: ${formatInvokeError(error)}`,
+    );
+    return {};
+  }
+  return normalizeSessionState((data as any)?.system_prompt);
+}
+
+async function saveSessionState(
+  supabase: SupabaseJsClient,
+  sessionId: string,
+  state: SessionState,
+  debugNotes: string[],
+): Promise<void> {
+  const { error } = await supabase
+    .from("chat_sessions")
+    .update({ system_prompt: state, updated_at: new Date().toISOString() })
+    .eq("id", sessionId);
+  if (error) {
+    debugNotes.push(
+      `chat_sessions save state error: ${formatInvokeError(error)}`,
+    );
+  }
 }
 
 type BudgetEnvelopeRowLite = {
@@ -504,7 +925,7 @@ async function consolidateDuplicateEnvelopesForBudget(
     const map = new Map<string, BudgetEnvelopeRowLite>();
     for (const [norm, rows] of byNorm.entries()) {
       const chosen = rows.reduce((acc, cur) =>
-        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
       );
       map.set(norm, chosen);
     }
@@ -521,9 +942,9 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("envelope_id", ids);
     if (linksErr) {
       debugNotes.push(
-        `envelope_category_links load error (${norm}): ${
-          formatInvokeError(linksErr)
-        }`,
+        `envelope_category_links load error (${norm}): ${formatInvokeError(
+          linksErr,
+        )}`,
       );
     }
     const links = (linksRaw || []) as Array<{
@@ -602,9 +1023,9 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("id", dupIds);
     if (deleteEnvErr) {
       debugNotes.push(
-        `duplicate envelope delete error (${norm}): ${
-          formatInvokeError(deleteEnvErr)
-        }`,
+        `duplicate envelope delete error (${norm}): ${formatInvokeError(
+          deleteEnvErr,
+        )}`,
       );
     }
   }
@@ -735,9 +1156,8 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount = typeof split?.amount === "number"
-        ? Math.max(0, split.amount)
-        : null;
+      const amount =
+        typeof split?.amount === "number" ? Math.max(0, split.amount) : null;
       if (amount == null) missing.push(id);
       else specifiedSum += amount;
     }
@@ -746,9 +1166,10 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount = typeof split?.amount === "number"
-        ? Math.max(0, split.amount)
-        : perMissing;
+      const amount =
+        typeof split?.amount === "number"
+          ? Math.max(0, split.amount)
+          : perMissing;
       fullSplits.push({ userId: id, amount });
     }
   } else if (inferredType === "percentage") {
@@ -756,9 +1177,10 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage = typeof split?.percentage === "number"
-        ? Math.max(0, Math.min(100, split.percentage))
-        : null;
+      const percentage =
+        typeof split?.percentage === "number"
+          ? Math.max(0, Math.min(100, split.percentage))
+          : null;
       if (percentage == null) missing.push(id);
       else specifiedSum += percentage;
     }
@@ -767,17 +1189,19 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage = typeof split?.percentage === "number"
-        ? Math.max(0, Math.min(100, split.percentage))
-        : perMissing;
+      const percentage =
+        typeof split?.percentage === "number"
+          ? Math.max(0, Math.min(100, split.percentage))
+          : perMissing;
       fullSplits.push({ userId: id, percentage });
     }
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const split = byId.get(id);
-      const shares = typeof split?.shares === "number"
-        ? Math.max(1, Math.trunc(split.shares))
-        : 1;
+      const shares =
+        typeof split?.shares === "number"
+          ? Math.max(1, Math.trunc(split.shares))
+          : 1;
       fullSplits.push({ userId: id, shares });
     }
   }
@@ -804,7 +1228,6 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
-  const EDGE_FUNCTION_KEY = Deno.env.get("EDGE_FUNCTION_KEY") || "";
 
   const missingEnv: string[] = [];
   if (!TELEGRAM_BOT_TOKEN) missingEnv.push("TELEGRAM_BOT_TOKEN");
@@ -815,16 +1238,15 @@ Deno.serve(async (req: Request) => {
 
   if (missingEnv.length) {
     console.error(
-      `[telegram-ai-bot] Missing required environment variables: ${
-        missingEnv.join(
-          ", ",
-        )
-      }`,
+      `[telegram-ai-bot] Missing required environment variables: ${missingEnv.join(
+        ", ",
+      )}`,
     );
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
-  const secretHeader = req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
+  const secretHeader =
+    req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
     req.headers.get("x-telegram-bot-api-secret-token");
   if (secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
     return jsonResponse({ ok: true });
@@ -846,6 +1268,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: true });
   }
 
+  const traceId = `${chatId}:${messageId}:${Date.now()}`;
+
   if (callbackQuery?.id) {
     await answerTelegramCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
   }
@@ -865,6 +1289,11 @@ Deno.serve(async (req: Request) => {
   if (reserve.status === "duplicate") {
     const cached = reserve.result;
     if (cached?.response_text) {
+      console.log("[telegram-ai-bot] idempotency duplicate", {
+        chatId,
+        messageId,
+        idempotencyKey,
+      });
       await sendTelegramMessage(
         TELEGRAM_BOT_TOKEN,
         chatId,
@@ -890,13 +1319,13 @@ Deno.serve(async (req: Request) => {
 
         const contact = contextData
           ? {
-            id: contextData.contact_id,
-            user_id: contextData.user_id,
-            verified: contextData.verified,
-            preferred_currency: contextData.preferred_currency,
-            preferred_language: contextData.preferred_language,
-            preferred_timezone: contextData.preferred_timezone,
-          }
+              id: contextData.contact_id,
+              user_id: contextData.user_id,
+              verified: contextData.verified,
+              preferred_currency: contextData.preferred_currency,
+              preferred_language: contextData.preferred_language,
+              preferred_timezone: contextData.preferred_timezone,
+            }
           : null;
 
         if (contextError) {
@@ -910,12 +1339,23 @@ Deno.serve(async (req: Request) => {
           callbackData,
           normalizeText(message?.text),
         );
-        const incomingText = callbackData === "start_verification"
-          ? "start verification"
-          : callbackChoiceText ||
-            (callbackData.startsWith("pick_option:")
-              ? callbackData.replace("pick_option:", "").trim()
-              : originalMessageText);
+        const incomingText =
+          callbackData === "start_verification"
+            ? "start verification"
+            : callbackChoiceText ||
+              (callbackData.startsWith("pick_option:")
+                ? callbackData.replace("pick_option:", "").trim()
+                : originalMessageText);
+
+        console.log("[telegram-ai-bot] incoming", {
+          traceId,
+          chatId,
+          messageId,
+          idempotencyKey,
+          isCallback: !!callbackQuery?.id,
+          textPreview: incomingText.slice(0, 120),
+        });
+
         if (incomingText && isStartVerification(incomingText)) {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -977,9 +1417,9 @@ Deno.serve(async (req: Request) => {
 
         const subscription = contextData
           ? {
-            plan: contextData.subscription_plan,
-            status: contextData.subscription_status,
-          }
+              plan: contextData.subscription_plan,
+              status: contextData.subscription_status,
+            }
           : null;
         if (isFreeUser(subscription)) {
           const nonSubscriberMessage =
@@ -1062,6 +1502,17 @@ Deno.serve(async (req: Request) => {
           return;
         }
 
+        let sessionState = await loadSessionState(
+          supabase,
+          sessionId,
+          debugNotes,
+        );
+        const lastListedRead = readLastListedTransactions(sessionState);
+        if (!lastListedRead.items && lastListedRead.expired) {
+          sessionState = clearLastListedTransactions(sessionState);
+          await saveSessionState(supabase, sessionId, sessionState, debugNotes);
+        }
+
         let userMessageContent = incomingText;
 
         const photo = message?.photo?.[message.photo.length - 1];
@@ -1072,22 +1523,19 @@ Deno.serve(async (req: Request) => {
           const captionNote = message?.caption
             ? ` Caption: "${message.caption}".`
             : "";
-          userMessageContent =
-            `[User sent an image receipt.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "image", file_id: "${photo.file_id}" } (or telegram_file_id: "${photo.file_id}").]`;
+          userMessageContent = `[User sent an image receipt.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "image", file_id: "${photo.file_id}" } (or telegram_file_id: "${photo.file_id}").]`;
         } else if (voice?.file_id) {
           const captionNote = message?.caption
             ? ` Caption: "${message.caption}".`
             : "";
-          userMessageContent =
-            `[User sent an audio message.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "audio", file_id: "${voice.file_id}" } (or telegram_file_id: "${voice.file_id}").]`;
+          userMessageContent = `[User sent an audio message.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "audio", file_id: "${voice.file_id}" } (or telegram_file_id: "${voice.file_id}").]`;
         } else if (doc?.file_id) {
           const captionNote = message?.caption
             ? ` Caption: "${message.caption}".`
             : "";
           const nameNote = doc.file_name ? ` Name: "${doc.file_name}".` : "";
           const mimeNote = doc.mime_type ? ` Mime: "${doc.mime_type}".` : "";
-          userMessageContent =
-            `[User sent a file attachment.${nameNote}${mimeNote}${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "file", file_id: "${doc.file_id}" } (or telegram_file_id: "${doc.file_id}").]`;
+          userMessageContent = `[User sent a file attachment.${nameNote}${mimeNote}${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "file", file_id: "${doc.file_id}" } (or telegram_file_id: "${doc.file_id}").]`;
         }
 
         const { data: history } = await supabase
@@ -1248,50 +1696,57 @@ Deno.serve(async (req: Request) => {
           },
           {
             name: "update_transaction",
-            description: "Update an existing expense transaction.",
+            description:
+              "Update a previously listed transaction (no transaction IDs).",
             parameters: {
               type: "OBJECT",
               properties: {
-                expense_id: { type: "STRING" },
-                amount: { type: "NUMBER" },
-                category: { type: "STRING" },
-                description: { type: "STRING" },
-                date: { type: "STRING" },
-                currency: { type: "STRING" },
-                source: { type: "STRING" },
-                payer_name: { type: "STRING" },
-                split_type: {
-                  type: "STRING",
-                  enum: ["equal", "amount", "percentage", "shares"],
-                },
-                member_splits: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      member_name: { type: "STRING" },
-                      amount: { type: "NUMBER" },
-                      percentage: { type: "NUMBER" },
-                      shares: { type: "NUMBER" },
-                    },
-                    required: ["member_name"],
+                selection_index: { type: "NUMBER" },
+                match: {
+                  type: "OBJECT",
+                  properties: {
+                    amount: { type: "NUMBER" },
+                    date: { type: "STRING", description: "YYYY-MM-DD" },
+                    description_contains: { type: "STRING" },
+                    category: { type: "STRING" },
+                    currency: { type: "STRING" },
+                    type: { type: "STRING", enum: ["expense", "income"] },
                   },
                 },
-                is_recurring: { type: "BOOLEAN" },
-                recurrence_rule: { type: "OBJECT" },
+                updates: {
+                  type: "OBJECT",
+                  properties: {
+                    amount: { type: "NUMBER" },
+                    category: { type: "STRING" },
+                    description: { type: "STRING" },
+                    date: { type: "STRING", description: "YYYY-MM-DD" },
+                    currency: { type: "STRING" },
+                  },
+                },
               },
-              required: ["expense_id"],
+              required: ["updates"],
             },
           },
           {
             name: "delete_transaction",
-            description: "Delete an existing expense transaction.",
+            description:
+              "Delete a previously listed transaction (no transaction IDs).",
             parameters: {
               type: "OBJECT",
               properties: {
-                expense_id: { type: "STRING" },
+                selection_index: { type: "NUMBER" },
+                match: {
+                  type: "OBJECT",
+                  properties: {
+                    amount: { type: "NUMBER" },
+                    date: { type: "STRING", description: "YYYY-MM-DD" },
+                    description_contains: { type: "STRING" },
+                    category: { type: "STRING" },
+                    currency: { type: "STRING" },
+                    type: { type: "STRING", enum: ["expense", "income"] },
+                  },
+                },
               },
-              required: ["expense_id"],
             },
           },
           {
@@ -1446,6 +1901,18 @@ Deno.serve(async (req: Request) => {
               properties: {
                 action: { type: "STRING", enum: ["add", "update", "delete"] },
                 expense_id: { type: "STRING" },
+                selection_index: { type: "NUMBER" },
+                match: {
+                  type: "OBJECT",
+                  properties: {
+                    amount: { type: "NUMBER" },
+                    date: { type: "STRING", description: "YYYY-MM-DD" },
+                    description_contains: { type: "STRING" },
+                    category: { type: "STRING" },
+                    currency: { type: "STRING" },
+                    type: { type: "STRING", enum: ["expense", "income"] },
+                  },
+                },
                 amount: { type: "NUMBER" },
                 category: { type: "STRING" },
                 description: { type: "STRING" },
@@ -1493,13 +1960,43 @@ Deno.serve(async (req: Request) => {
         let functionCalls = (response.functionCalls() as any[]) || [];
         let finalResponseText = response.text();
 
+        console.log("[telegram-ai-bot] model response", {
+          traceId,
+          functionCalls: functionCalls.map((c: any) => ({
+            name: c?.name,
+            argsKeys: Object.keys(
+              c?.args && typeof c.args === "object" && !Array.isArray(c.args)
+                ? c.args
+                : {},
+            ),
+          })),
+          hasText: !!(response.text() || "").trim(),
+        });
+
+        if (
+          shouldForceListExpensesCall(incomingText) &&
+          (!functionCalls || functionCalls.length === 0)
+        ) {
+          const forcedArgs = inferListExpensesArgsFromText(incomingText);
+          functionCalls = [{ name: "list_expenses", args: forcedArgs } as any];
+          debugNotes.push(
+            `forced list_expenses call for list intent (args: ${JSON.stringify(forcedArgs)})`,
+          );
+          console.log("[telegram-ai-bot] forced tool call", {
+            traceId,
+            name: "list_expenses",
+            args: forcedArgs,
+            reason: "list_intent_without_function_call",
+          });
+        }
+
         let toolSucceededAny = false;
-        let lastBudgetPockets:
-          | Array<{
-            name: string;
-            percentage: number;
-          }>
-          | null = null;
+        let lastToolResult: any = null;
+        let lastToolCallName: string | null = null;
+        let lastBudgetPockets: Array<{
+          name: string;
+          percentage: number;
+        }> | null = null;
         let toolIterations = 0;
 
         while (
@@ -1510,23 +2007,33 @@ Deno.serve(async (req: Request) => {
           const toolResponses: any[] = [];
           for (const call of functionCalls) {
             let toolResult: any = {};
+
+            console.log("[telegram-ai-bot] tool call", {
+              traceId,
+              name: call.name,
+              args: sanitizeArgs(call.args),
+            });
+
             try {
               if (call.name === "analyze_expense") {
-                const text = typeof call.args?.text === "string"
-                  ? call.args.text.trim()
-                  : "";
-                const fileId = (typeof call.args?.telegram_file_id === "string"
-                  ? call.args.telegram_file_id.trim()
-                  : "") ||
+                const text =
+                  typeof call.args?.text === "string"
+                    ? call.args.text.trim()
+                    : "";
+                const fileId =
+                  (typeof call.args?.telegram_file_id === "string"
+                    ? call.args.telegram_file_id.trim()
+                    : "") ||
                   (typeof call.args?.media?.file_id === "string"
                     ? call.args.media.file_id.trim()
                     : "");
-                const kindHintRaw = typeof call.args?.media?.kind === "string"
-                  ? call.args.media.kind
-                  : "";
+                const kindHintRaw =
+                  typeof call.args?.media?.kind === "string"
+                    ? call.args.media.kind
+                    : "";
                 const kindHint = ["image", "audio", "file"].includes(
-                    kindHintRaw,
-                  )
+                  kindHintRaw,
+                )
                   ? kindHintRaw
                   : "";
 
@@ -1642,8 +2149,8 @@ Deno.serve(async (req: Request) => {
                           "The attachment is too large to process. Ask the user to send a smaller file.",
                       };
                     } else {
-                      const kind = kindHint ||
-                        inferKindFromPath(fileMeta.file_path);
+                      const kind =
+                        kindHint || inferKindFromPath(fileMeta.file_path);
                       const base64Data = uint8ToBase64(buf);
                       const contentType = guessContentType(
                         fileMeta.file_path,
@@ -1728,6 +2235,7 @@ Deno.serve(async (req: Request) => {
                   toolResult = {
                     error: "You do not have access to that space",
                   };
+                  lastToolResult = toolResult;
                   toolResponses.push({
                     functionResponse: { name: call.name, response: toolResult },
                   });
@@ -1741,8 +2249,8 @@ Deno.serve(async (req: Request) => {
                     startDate: call.args.start_date,
                     endDate: call.args.end_date,
                     householdId,
-                    isPortfolio: spaceMeta?.isPortfolio ??
-                      call.args.is_portfolio === true,
+                    isPortfolio:
+                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     portfolioHouseholdIds: householdId
                       ? undefined
                       : portfolioSpaceIds,
@@ -1753,12 +2261,50 @@ Deno.serve(async (req: Request) => {
                 if (error) {
                   toolResult = { error };
                 } else {
+                  const memoryItems = (data || [])
+                    .map((row: any) =>
+                      normalizeLastListedTransactionFromRow(row),
+                    )
+                    .filter(Boolean) as LastListedTransaction[];
+
+                  sessionState = setLastListedTransactions(
+                    sessionState,
+                    memoryItems,
+                  );
+                  await saveSessionState(
+                    supabase,
+                    sessionId,
+                    sessionState,
+                    debugNotes,
+                  );
+
                   const normalized = normalizeExpensesForTool(
                     data || [],
                     userCurrency,
                   );
                   const chartUrl = buildCategoryChart(normalized);
-                  toolResult = { expenses: normalized, chart_url: chartUrl };
+                  const safeExpenses = memoryItems
+                    .slice(0, 25)
+                    .map((item, i) => {
+                      const spaceName = item.household_id
+                        ? spaceMap.get(item.household_id)?.name || null
+                        : null;
+                      return {
+                        index: i + 1,
+                        amountMajor: item.amountMajor,
+                        currency: item.currency,
+                        date: item.date,
+                        category: item.category,
+                        description: item.description,
+                        type: item.type || "expense",
+                        ...(spaceName ? { space: spaceName } : {}),
+                      };
+                    });
+                  toolResult = {
+                    expenses: safeExpenses,
+                    chart_url: chartUrl,
+                    has_selection_memory: true,
+                  };
                 }
               } else if (call.name === "add_transaction") {
                 const amount = Number(call.args.amount || 0);
@@ -1784,38 +2330,41 @@ Deno.serve(async (req: Request) => {
                   toolResult = {
                     error: "You do not have access to that space",
                   };
+                  lastToolResult = toolResult;
                   toolResponses.push({
                     functionResponse: { name: call.name, response: toolResult },
                   });
                   continue;
                 }
-                const isHouseholdExpense = !!householdId &&
-                  (call.args.type || "expense") === "expense";
+                const isHouseholdExpense =
+                  !!householdId && (call.args.type || "expense") === "expense";
                 const splitConfig =
                   isHouseholdExpense && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId!,
-                      userId,
-                      amount,
-                      call.args,
-                    )
+                        supabase,
+                        householdId!,
+                        userId,
+                        amount,
+                        call.args,
+                      )
                     : {};
                 const { data, error } = await saveExpenseDirect(
                   supabase,
                   contact.id,
                   userId,
                   {
-                    recurrence_rule: call.args.is_recurring === true
-                      ? call.args.recurrence_rule || {
-                        frequency: (call.args.frequency || "monthly")
-                          .toString()
-                          .toLowerCase(),
-                        interval: 1,
-                        anchor_date: call.args.date ||
-                          formatDateInTimeZone(userTimezone),
-                      }
-                      : undefined,
+                    recurrence_rule:
+                      call.args.is_recurring === true
+                        ? call.args.recurrence_rule || {
+                            frequency: (call.args.frequency || "monthly")
+                              .toString()
+                              .toLowerCase(),
+                            interval: 1,
+                            anchor_date:
+                              call.args.date ||
+                              formatDateInTimeZone(userTimezone),
+                          }
+                        : undefined,
                     amount: amount,
                     category: call.args.category,
                     description: call.args.description || "",
@@ -1823,8 +2372,8 @@ Deno.serve(async (req: Request) => {
                     currency: call.args.currency || userCurrency,
                     type: call.args.type || "expense",
                     householdId,
-                    isPortfolio: spaceMeta?.isPortfolio ??
-                      call.args.is_portfolio === true,
+                    isPortfolio:
+                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     isRecurring: call.args.is_recurring === true,
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
@@ -1857,6 +2406,7 @@ Deno.serve(async (req: Request) => {
                   toolResult = {
                     error: "You do not have access to that space",
                   };
+                  lastToolResult = toolResult;
                   toolResponses.push({
                     functionResponse: { name: call.name, response: toolResult },
                   });
@@ -1865,32 +2415,34 @@ Deno.serve(async (req: Request) => {
                 const results: any[] = [];
                 for (const row of rows) {
                   const amount = Number(row.amount || 0);
-                  const splitConfig = householdId &&
-                      !spaceMeta?.isPortfolio &&
-                      row.type !== "income"
-                    ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId,
-                      userId,
-                      amount,
-                      row,
-                    )
-                    : {};
+                  const splitConfig =
+                    householdId &&
+                    !spaceMeta?.isPortfolio &&
+                    row.type !== "income"
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          amount,
+                          row,
+                        )
+                      : {};
                   const { data, error } = await saveExpenseDirect(
                     supabase,
                     contact.id,
                     userId,
                     {
-                      recurrence_rule: row.is_recurring === true
-                        ? row.recurrence_rule || {
-                          frequency: (row.frequency || "monthly")
-                            .toString()
-                            .toLowerCase(),
-                          interval: 1,
-                          anchor_date: row.date ||
-                            formatDateInTimeZone(userTimezone),
-                        }
-                        : undefined,
+                      recurrence_rule:
+                        row.is_recurring === true
+                          ? row.recurrence_rule || {
+                              frequency: (row.frequency || "monthly")
+                                .toString()
+                                .toLowerCase(),
+                              interval: 1,
+                              anchor_date:
+                                row.date || formatDateInTimeZone(userTimezone),
+                            }
+                          : undefined,
                       amount: amount,
                       category: row.category,
                       description: row.description || "",
@@ -1898,7 +2450,8 @@ Deno.serve(async (req: Request) => {
                       currency: row.currency || userCurrency,
                       type: row.type || "expense",
                       householdId,
-                      isPortfolio: spaceMeta?.isPortfolio ??
+                      isPortfolio:
+                        spaceMeta?.isPortfolio ??
                         call.args.is_portfolio === true,
                       isRecurring: row.is_recurring === true,
                       payerUserId: splitConfig.payerUserId,
@@ -1921,11 +2474,9 @@ Deno.serve(async (req: Request) => {
                     ],
                   },
                 };
-                const chartUrl = `https://quickchart.io/chart?c=${
-                  encodeURIComponent(
-                    JSON.stringify(chartConfig),
-                  )
-                }`;
+                const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+                  JSON.stringify(chartConfig),
+                )}`;
                 toolResult = { url: chartUrl };
               } else if (call.name === "financial_insight") {
                 toolResult = { success: true };
@@ -1966,12 +2517,14 @@ Deno.serve(async (req: Request) => {
                     spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     contact.id,
                   );
-                  toolResult = res.error ? { error: res.error } : {
-                    budget: res.budget,
-                    envelopes: res.envelopes,
-                    totals: res.totals,
-                    chart: res.chart,
-                  };
+                  toolResult = res.error
+                    ? { error: res.error }
+                    : {
+                        budget: res.budget,
+                        envelopes: res.envelopes,
+                        totals: res.totals,
+                        chart: res.chart,
+                      };
                 }
               } else if (call.name === "set_currency") {
                 const currency = (call.args.currency || "")
@@ -1982,78 +2535,433 @@ Deno.serve(async (req: Request) => {
                   contact.id,
                   currency,
                 );
-                toolResult = error ? { error } : {
-                  success: true,
-                  currency: data?.preferred_currency || currency,
-                };
+                toolResult = error
+                  ? { error }
+                  : {
+                      success: true,
+                      currency: data?.preferred_currency || currency,
+                    };
               } else if (call.name === "update_transaction") {
-                const updates: Record<string, unknown> = {};
-                if (call.args.amount != null) {
-                  const amount = Number(call.args.amount);
-                  if (Number.isFinite(amount)) {
-                    updates.amount_cents = Math.round(amount * 100);
+                const updatesArgs =
+                  call.args?.updates &&
+                  typeof call.args.updates === "object" &&
+                  !Array.isArray(call.args.updates)
+                    ? call.args.updates
+                    : null;
+                if (!updatesArgs) {
+                  toolResult = { error: "updates is required" };
+                } else {
+                  let lastRead = readLastListedTransactions(sessionState);
+                  let bootstrappedListForUpdate = false;
+                  if (!lastRead.items && lastRead.expired) {
+                    sessionState = clearLastListedTransactions(sessionState);
+                    await saveSessionState(
+                      supabase,
+                      sessionId,
+                      sessionState,
+                      debugNotes,
+                    );
+                    lastRead = { items: null, expired: false };
+                  }
+
+                  if (!lastRead.items || lastRead.items.length === 0) {
+                    const requestedIndex = Math.trunc(
+                      Number(call.args?.selection_index),
+                    );
+                    const fallbackLimit =
+                      Number.isFinite(requestedIndex) && requestedIndex > 0
+                        ? Math.min(25, Math.max(10, requestedIndex))
+                        : 10;
+
+                    const matchTypeRaw =
+                      typeof call.args?.match?.type === "string"
+                        ? call.args.match.type.toLowerCase()
+                        : "";
+                    const fallbackType =
+                      matchTypeRaw === "income"
+                        ? "income"
+                        : matchTypeRaw === "expense"
+                          ? "expense"
+                          : undefined;
+
+                    const { data: fallbackData, error: fallbackError } =
+                      await fetchExpensesDirect(supabase, contact.id, {
+                        limit: fallbackLimit,
+                        portfolioHouseholdIds: portfolioSpaceIds,
+                        ...(fallbackType ? { type: fallbackType } : {}),
+                      });
+
+                    if (!fallbackError && Array.isArray(fallbackData)) {
+                      const fallbackItems = fallbackData
+                        .map((row: any) =>
+                          normalizeLastListedTransactionFromRow(row),
+                        )
+                        .filter(Boolean) as LastListedTransaction[];
+
+                      if (fallbackItems.length > 0) {
+                        sessionState = setLastListedTransactions(
+                          sessionState,
+                          fallbackItems,
+                        );
+                        await saveSessionState(
+                          supabase,
+                          sessionId,
+                          sessionState,
+                          debugNotes,
+                        );
+                        lastRead = { items: fallbackItems, expired: false };
+                        bootstrappedListForUpdate = true;
+                        debugNotes.push(
+                          `update_transaction bootstrapped selection memory with ${fallbackItems.length} recent transactions`,
+                        );
+                      }
+                    } else if (fallbackError) {
+                      debugNotes.push(
+                        `update_transaction fallback list failed: ${fallbackError}`,
+                      );
+                    }
+                  }
+
+                  const spaceNameByHouseholdId = (
+                    householdId: string | null | undefined,
+                  ) =>
+                    householdId
+                      ? spaceMap.get(householdId)?.name || null
+                      : null;
+
+                  const requestedSelectionIndex = Number(
+                    call.args?.selection_index,
+                  );
+                  if (
+                    bootstrappedListForUpdate &&
+                    Number.isFinite(requestedSelectionIndex)
+                  ) {
+                    const choiceCount = Math.min(
+                      25,
+                      Math.max(8, Math.trunc(requestedSelectionIndex) || 0),
+                    );
+                    const choices = (lastRead.items || [])
+                      .slice(0, choiceCount)
+                      .map((item, i) => ({
+                        index: i + 1,
+                        summary: buildChoiceSummary(
+                          item,
+                          spaceNameByHouseholdId(item.household_id),
+                        ).slice(0, 60),
+                      }));
+
+                    toolResult = {
+                      needs_disambiguation: true,
+                      choices,
+                      choices_text: [
+                        "I couldn't confirm your previous list context. Please pick from the latest transactions:",
+                        ...choices.map((c) => `${c.index}. ${c.summary}`),
+                        `Reply with a number from 1..${Math.max(choices.length, 1)}.`,
+                      ].join("\n"),
+                    };
+                    lastToolResult = toolResult;
+                    lastToolCallName = call.name;
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
+
+                  const resolved = resolveLastListedSelection(
+                    lastRead.items || [],
+                    call.args,
+                    spaceNameByHouseholdId,
+                  );
+                  if ("needs_disambiguation" in resolved) {
+                    const truncateLabel = (value: string, maxLen = 60) => {
+                      const cleaned = String(value || "")
+                        .replace(/\s+/g, " ")
+                        .trim();
+                      if (cleaned.length <= maxLen) return cleaned;
+                      if (maxLen <= 3) return cleaned.slice(0, maxLen);
+                      return cleaned.slice(0, maxLen - 3).trimEnd() + "...";
+                    };
+
+                    const choicesRaw = Array.isArray((resolved as any).choices)
+                      ? ((resolved as any).choices as any[])
+                      : [];
+                    const choices = choicesRaw
+                      .map((c) => ({
+                        index: Math.trunc(Number(c?.index)),
+                        summary: String(c?.summary || ""),
+                      }))
+                      .filter((c) => Number.isFinite(c.index) && c.index > 0)
+                      .slice(0, 8)
+                      .map((c) => ({
+                        index: c.index,
+                        summary: truncateLabel(c.summary, 60),
+                      }));
+
+                    const choices_text = [
+                      "Which one do you mean? Tap a button:",
+                      ...choices.map((c) => `${c.index}. ${c.summary}`),
+                    ].join("\n");
+
+                    toolResult = {
+                      needs_disambiguation: true,
+                      choices,
+                      choices_text,
+                    };
+                  } else if ("error" in resolved) {
+                    toolResult = { error: resolved.error };
+                  } else {
+                    const updates: Record<string, unknown> = {};
+                    if ((updatesArgs as any).amount != null) {
+                      const amount = Number((updatesArgs as any).amount);
+                      if (!Number.isFinite(amount) || amount <= 0) {
+                        toolResult = {
+                          error: "Invalid amount. Use a value greater than 0.",
+                        };
+                      } else {
+                        updates.amount_cents = Math.round(amount * 100);
+                      }
+                    }
+                    if ((updatesArgs as any).category != null) {
+                      updates.category = (updatesArgs as any).category;
+                    }
+                    if ((updatesArgs as any).description != null) {
+                      updates.raw_text = (updatesArgs as any).description;
+                    }
+                    if ((updatesArgs as any).currency != null) {
+                      const currency = String(
+                        (updatesArgs as any).currency || "",
+                      )
+                        .trim()
+                        .toUpperCase();
+                      if (!/^[A-Z]{3}$/.test(currency)) {
+                        toolResult = {
+                          error:
+                            "Invalid currency. Use a 3-letter code like USD or EUR.",
+                        };
+                      } else {
+                        updates.currency = currency;
+                      }
+                    }
+                    if ((updatesArgs as any).date != null) {
+                      const dateValue = String((updatesArgs as any).date || "")
+                        .trim()
+                        .slice(0, 10);
+                      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+                        toolResult = {
+                          error: "Invalid date. Use YYYY-MM-DD.",
+                        };
+                      } else {
+                        updates.date = dateValue;
+                      }
+                    }
+
+                    if (toolResult?.error) {
+                      // validation error already set in toolResult
+                    } else if (Object.keys(updates).length === 0) {
+                      toolResult = { error: "No updates provided" };
+                    } else {
+                      const candidateSummary = [
+                        resolved.candidate.date,
+                        `${resolved.candidate.amountMajor || 0} ${
+                          resolved.candidate.currency || ""
+                        }`.trim(),
+                        resolved.candidate.category,
+                        resolved.candidate.description,
+                        resolved.candidate.household_id
+                          ? `(${
+                              spaceMap.get(resolved.candidate.household_id)
+                                ?.name || ""
+                            })`
+                          : "",
+                      ]
+                        .filter((v) => String(v || "").trim().length > 0)
+                        .join(" | ")
+                        .slice(0, 180);
+
+                      const expenseId = resolved.candidate.id;
+
+                      if (!INTERNAL_FUNCTION_KEY) {
+                        console.error(
+                          "[telegram-ai-bot] update-expense invoke skipped: missing internal key",
+                          {
+                            traceId,
+                            updatesKeys: Object.keys(updates),
+                            candidateSummary,
+                            expenseId,
+                            internalKeyConfigured: false,
+                          },
+                        );
+                        try {
+                          await reportEdgeFunctionError({
+                            functionName: "telegram-ai-bot",
+                            error: new Error(
+                              "update-expense skipped: missing internal key",
+                            ),
+                            context: {
+                              step: "tool:update_transaction",
+                              traceId,
+                              tool: "update-expense",
+                              internalKeyConfigured: false,
+                              updatesKeys: Object.keys(updates),
+                              candidateSummary,
+                              expenseId,
+                            },
+                          });
+                        } catch (error) {
+                          console.error(
+                            "[telegram-ai-bot] reportEdgeFunctionError failed",
+                            {
+                              traceId,
+                              step: "tool:update_transaction",
+                              tool: "update-expense",
+                              error: String(error),
+                            },
+                          );
+                        }
+                        toolResult = { error: "Internal key not configured" };
+                      } else {
+                        const { data, error } = await supabase.functions.invoke(
+                          "update-expense",
+                          {
+                            body: {
+                              userId,
+                              expenseId,
+                              updates,
+                            },
+                            headers: {
+                              "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                            },
+                          },
+                        );
+
+                        const success = !error && data?.success === true;
+                        if (success) {
+                          toolResult = { success: true };
+                        } else {
+                          const status = (error as any)?.status;
+                          const httpStatus =
+                            typeof (error as any)?.context?.status === "number"
+                              ? (error as any).context.status
+                              : typeof status === "number"
+                                ? status
+                                : undefined;
+                          const formattedBase = error
+                            ? formatInvokeError(error)
+                            : typeof (data as any)?.error === "string"
+                              ? (data as any).error
+                              : "Failed to update transaction";
+                          const code = (data as any)?.code;
+                          const formatted = code
+                            ? `${formattedBase} (code: ${code})`
+                            : formattedBase;
+
+                          console.error(
+                            "[telegram-ai-bot] update-expense invoke failed",
+                            {
+                              traceId,
+                              status,
+                              httpStatus,
+                              formatted,
+                              hasData: !!data,
+                              code: (data as any)?.code,
+                              message: (data as any)?.error,
+                              updatesKeys: Object.keys(updates),
+                              candidateSummary,
+                              expenseId,
+                              internalKeyConfigured: true,
+                            },
+                          );
+                          debugNotes.push(
+                            `update_transaction update-expense failed: ${formattedBase} (status: ${
+                              httpStatus ?? status ?? "unknown"
+                            }, code: ${code ?? "none"})`,
+                          );
+                          try {
+                            await reportEdgeFunctionError({
+                              functionName: "telegram-ai-bot",
+                              error: new Error(
+                                `update-expense failed: ${formatted}`,
+                              ),
+                              context: {
+                                step: "tool:update_transaction",
+                                traceId,
+                                tool: "update-expense",
+                                internalKeyConfigured: Boolean(
+                                  INTERNAL_FUNCTION_KEY,
+                                ),
+                                httpStatus,
+                                status,
+                                code,
+                                updatesKeys: Object.keys(updates),
+                                candidateSummary,
+                                expenseId,
+                              },
+                            });
+                          } catch (error) {
+                            console.error(
+                              "[telegram-ai-bot] reportEdgeFunctionError failed",
+                              {
+                                traceId,
+                                step: "tool:update_transaction",
+                                tool: "update-expense",
+                                error: String(error),
+                              },
+                            );
+                          }
+                          toolResult = { error: formatted };
+                        }
+                      }
+                    }
                   }
                 }
-                if (call.args.category != null) {
-                  updates.category = call.args.category;
-                }
-                if (call.args.description != null) {
-                  updates.raw_text = call.args.description;
-                }
-                if (call.args.currency != null) {
-                  updates.currency = call.args.currency;
-                }
-                if (call.args.date != null) updates.date = call.args.date;
-                if (call.args.source != null) updates.source = call.args.source;
-                if (call.args.is_recurring != null) {
-                  updates.is_recurring = !!call.args.is_recurring;
-                }
-                if (call.args.recurrence_rule != null) {
-                  updates.recurrence_rule = call.args.recurrence_rule;
+              } else if (call.name === "delete_transaction") {
+                const lastRead = readLastListedTransactions(sessionState);
+                if (!lastRead.items && lastRead.expired) {
+                  sessionState = clearLastListedTransactions(sessionState);
+                  await saveSessionState(
+                    supabase,
+                    sessionId,
+                    sessionState,
+                    debugNotes,
+                  );
                 }
 
-                if (!call.args.expense_id) {
-                  toolResult = { error: "expense_id is required" };
-                } else {
-                  const { data, error } = await supabase.functions.invoke(
-                    "update-expense",
-                    {
-                      body: {
-                        userId,
-                        expenseId: call.args.expense_id,
-                        updates,
-                      },
-                      headers: {
-                        "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
-                      },
-                    },
-                  );
-                  toolResult = !error && data?.success
-                    ? { success: true, data: data?.data ?? data }
-                    : {
-                      error: error ??
-                        data?.error ??
-                        "Failed to update transaction",
-                    };
-                }
-              } else if (call.name === "delete_transaction") {
-                if (!call.args.expense_id) {
-                  toolResult = { error: "expense_id is required" };
+                const spaceNameByHouseholdId = (
+                  householdId: string | null | undefined,
+                ) =>
+                  householdId ? spaceMap.get(householdId)?.name || null : null;
+
+                const resolved = resolveLastListedSelection(
+                  lastRead.items || [],
+                  call.args,
+                  spaceNameByHouseholdId,
+                );
+                if ("needs_disambiguation" in resolved) {
+                  toolResult = resolved;
+                } else if ("error" in resolved) {
+                  toolResult = { error: resolved.error };
                 } else {
                   const { data, error } = await supabase.functions.invoke(
                     "delete-expense",
                     {
-                      body: { userId, expenseIds: call.args.expense_id },
+                      body: { userId, expenseIds: resolved.candidate.id },
                       headers: {
-                        "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
+                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
                       },
                     },
                   );
-                  toolResult = !error && data?.success ? { success: true } : {
-                    error: error ??
-                      data?.error ??
-                      "Failed to delete transaction",
-                  };
+                  toolResult =
+                    !error && data?.success
+                      ? { success: true }
+                      : {
+                          error:
+                            error ??
+                            data?.error ??
+                            "Failed to delete transaction",
+                        };
                 }
               } else if (
                 call.name === "draft_budget" ||
@@ -2406,80 +3314,151 @@ Deno.serve(async (req: Request) => {
                   .toString()
                   .toLowerCase();
                 if (action === "delete") {
-                  if (!call.args.expense_id) {
-                    toolResult = { error: "expense_id is required" };
+                  const expenseIdDirect =
+                    typeof call.args.expense_id === "string"
+                      ? call.args.expense_id.trim()
+                      : "";
+                  const spaceNameByHouseholdId = (
+                    householdId: string | null | undefined,
+                  ) =>
+                    householdId
+                      ? spaceMap.get(householdId)?.name || null
+                      : null;
+
+                  const resolved = !expenseIdDirect
+                    ? resolveLastListedSelection(
+                        readLastListedTransactions(sessionState).items || [],
+                        call.args,
+                        spaceNameByHouseholdId,
+                      )
+                    : null;
+
+                  if (resolved && "needs_disambiguation" in resolved) {
+                    toolResult = resolved;
+                  } else if (resolved && "error" in resolved) {
+                    toolResult = { error: resolved.error };
                   } else {
-                    const { data, error } = await supabase.functions.invoke(
-                      "delete-expense",
-                      {
-                        body: { userId, expenseIds: call.args.expense_id },
-                        headers: {
-                          "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
+                    const expenseId =
+                      expenseIdDirect ||
+                      (resolved && "candidate" in resolved
+                        ? resolved.candidate.id
+                        : "");
+                    if (!expenseId) {
+                      toolResult = {
+                        error:
+                          "No matching transaction found. Ask user to list recent transactions first or provide more details.",
+                      };
+                    } else {
+                      const { data, error } = await supabase.functions.invoke(
+                        "delete-expense",
+                        {
+                          body: { userId, expenseIds: expenseId },
+                          headers: {
+                            "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                          },
                         },
-                      },
-                    );
-                    toolResult = !error && data?.success ? { success: true } : {
-                      error: error ??
-                        data?.error ??
-                        "Failed to delete recurring transaction",
-                    };
+                      );
+                      toolResult =
+                        !error && data?.success
+                          ? { success: true }
+                          : {
+                              error:
+                                error ??
+                                data?.error ??
+                                "Failed to delete recurring transaction",
+                            };
+                    }
                   }
                 } else if (action === "update") {
-                  if (!call.args.expense_id) {
-                    toolResult = { error: "expense_id is required" };
+                  const expenseIdDirect =
+                    typeof call.args.expense_id === "string"
+                      ? call.args.expense_id.trim()
+                      : "";
+                  const spaceNameByHouseholdId = (
+                    householdId: string | null | undefined,
+                  ) =>
+                    householdId
+                      ? spaceMap.get(householdId)?.name || null
+                      : null;
+                  const resolved = !expenseIdDirect
+                    ? resolveLastListedSelection(
+                        readLastListedTransactions(sessionState).items || [],
+                        call.args,
+                        spaceNameByHouseholdId,
+                      )
+                    : null;
+
+                  if (resolved && "needs_disambiguation" in resolved) {
+                    toolResult = resolved;
+                  } else if (resolved && "error" in resolved) {
+                    toolResult = { error: resolved.error };
                   } else {
-                    const dateValue = call.args.date ||
-                      formatDateInTimeZone(userTimezone);
-                    const recurrenceRule = {
-                      frequency: (call.args.frequency || "monthly")
-                        .toString()
-                        .toLowerCase(),
-                      interval: 1,
-                      anchor_date: dateValue,
-                    };
-                    const updates: Record<string, unknown> = {
-                      is_recurring: true,
-                      recurrence_rule: recurrenceRule,
-                    };
-                    if (call.args.amount != null) {
-                      updates.amount_cents = Math.round(
-                        Number(call.args.amount) * 100,
-                      );
-                    }
-                    if (call.args.category != null) {
-                      updates.category = call.args.category;
-                    }
-                    if (call.args.description != null) {
-                      updates.raw_text = call.args.description;
-                    }
-                    if (call.args.currency != null) {
-                      updates.currency = call.args.currency;
-                    }
-                    if (call.args.date != null) updates.date = call.args.date;
-                    const { data, error } = await supabase.functions.invoke(
-                      "update-expense",
-                      {
-                        body: {
-                          userId,
-                          expenseId: call.args.expense_id,
-                          updates,
-                        },
-                        headers: {
-                          "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
-                        },
-                      },
-                    );
-                    toolResult = !error && data?.success
-                      ? { success: true, data: data?.data ?? data }
-                      : {
-                        error: error ??
-                          data?.error ??
-                          "Failed to update recurring transaction",
+                    const expenseId =
+                      expenseIdDirect ||
+                      (resolved && "candidate" in resolved
+                        ? resolved.candidate.id
+                        : "");
+                    if (!expenseId) {
+                      toolResult = {
+                        error:
+                          "No matching transaction found. Ask user to list recent transactions first or provide more details.",
                       };
+                    } else {
+                      const dateValue =
+                        call.args.date || formatDateInTimeZone(userTimezone);
+                      const recurrenceRule = {
+                        frequency: (call.args.frequency || "monthly")
+                          .toString()
+                          .toLowerCase(),
+                        interval: 1,
+                        anchor_date: dateValue,
+                      };
+                      const updates: Record<string, unknown> = {
+                        is_recurring: true,
+                        recurrence_rule: recurrenceRule,
+                      };
+                      if (call.args.amount != null) {
+                        updates.amount_cents = Math.round(
+                          Number(call.args.amount) * 100,
+                        );
+                      }
+                      if (call.args.category != null) {
+                        updates.category = call.args.category;
+                      }
+                      if (call.args.description != null) {
+                        updates.raw_text = call.args.description;
+                      }
+                      if (call.args.currency != null) {
+                        updates.currency = call.args.currency;
+                      }
+                      if (call.args.date != null) updates.date = call.args.date;
+                      const { data, error } = await supabase.functions.invoke(
+                        "update-expense",
+                        {
+                          body: {
+                            userId,
+                            expenseId,
+                            updates,
+                          },
+                          headers: {
+                            "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                          },
+                        },
+                      );
+                      toolResult =
+                        !error && data?.success
+                          ? { success: true }
+                          : {
+                              error:
+                                error ??
+                                data?.error ??
+                                "Failed to update recurring transaction",
+                            };
+                    }
                   }
                 } else {
-                  const dateValue = call.args.date ||
-                    formatDateInTimeZone(userTimezone);
+                  const dateValue =
+                    call.args.date || formatDateInTimeZone(userTimezone);
                   const recurrenceRule = {
                     frequency: (call.args.frequency || "monthly")
                       .toString()
@@ -2503,17 +3482,18 @@ Deno.serve(async (req: Request) => {
                     spaceMeta = spaceMap.get(householdName);
                     householdId = spaceMeta?.id ?? null;
                   }
-                  const splitConfig = householdId &&
-                      !spaceMeta?.isPortfolio &&
-                      call.args.type !== "income"
-                    ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId,
-                      userId,
-                      amount,
-                      call.args,
-                    )
-                    : {};
+                  const splitConfig =
+                    householdId &&
+                    !spaceMeta?.isPortfolio &&
+                    call.args.type !== "income"
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          amount,
+                          call.args,
+                        )
+                      : {};
                   const { data, error } = await saveExpenseDirect(
                     supabase,
                     contact.id,
@@ -2526,7 +3506,8 @@ Deno.serve(async (req: Request) => {
                       currency: call.args.currency || userCurrency,
                       type: call.args.type || "expense",
                       householdId,
-                      isPortfolio: spaceMeta?.isPortfolio ??
+                      isPortfolio:
+                        spaceMeta?.isPortfolio ??
                         call.args.is_portfolio === true,
                       isRecurring: true,
                       recurrence_rule: recurrenceRule,
@@ -2541,7 +3522,23 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: String(e) };
             }
 
-            const succeeded = toolResult?.success === true ||
+            console.log("[telegram-ai-bot] tool result", {
+              traceId,
+              name: call.name,
+              ok: toolResult?.success === true,
+              hasError: typeof toolResult?.error === "string",
+              error:
+                typeof toolResult?.error === "string"
+                  ? toolResult.error.slice(0, 200)
+                  : undefined,
+            });
+
+            lastToolResult = toolResult;
+            lastToolCallName =
+              typeof call?.name === "string" ? call.name : null;
+
+            const succeeded =
+              toolResult?.success === true ||
               (!!toolResult?.data && !toolResult?.error);
             if (succeeded) {
               toolSucceededAny = true;
@@ -2552,8 +3549,8 @@ Deno.serve(async (req: Request) => {
                 const pocketsRaw = Array.isArray(toolResult?.updated_pockets)
                   ? toolResult.updated_pockets
                   : Array.isArray(call.args?.pockets)
-                  ? call.args.pockets
-                  : [];
+                    ? call.args.pockets
+                    : [];
                 lastBudgetPockets = (pocketsRaw || []).map((p: any) => ({
                   name: String(p?.name || "").trim(),
                   percentage: Number(p?.percentage) || 0,
@@ -2591,10 +3588,28 @@ Deno.serve(async (req: Request) => {
 
         if (
           (!finalResponseText || !finalResponseText.trim()) &&
+          lastToolResult?.needs_disambiguation === true &&
+          typeof lastToolResult?.choices_text === "string" &&
+          lastToolResult.choices_text.trim()
+        ) {
+          finalResponseText = lastToolResult.choices_text;
+        }
+
+        if (
+          (!finalResponseText || !finalResponseText.trim()) &&
           toolSucceededAny &&
           lastBudgetPockets
         ) {
           finalResponseText = buildBudgetDoneText(lastBudgetPockets);
+        }
+        if (
+          (!finalResponseText || !finalResponseText.trim()) &&
+          lastToolCallName === "update_transaction" &&
+          typeof lastToolResult?.error === "string" &&
+          lastToolResult.error.trim()
+        ) {
+          const errorSnippet = lastToolResult.error.trim().slice(0, 180);
+          finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
         }
         if (!finalResponseText || !finalResponseText.trim()) {
           finalResponseText =
@@ -2620,11 +3635,18 @@ Deno.serve(async (req: Request) => {
           false,
         );
 
+        const choiceKeyboard = buildChoiceKeyboard(finalResponseText);
+        console.log("[telegram-ai-bot] final", {
+          traceId,
+          textLen: finalResponseText?.length || 0,
+          usedChoiceKeyboard: !!choiceKeyboard,
+        });
+
         await sendTelegramMessage(
           TELEGRAM_BOT_TOKEN,
           chatId,
           finalResponseText,
-          buildChoiceKeyboard(finalResponseText),
+          choiceKeyboard,
         );
         await updateIdempotency(supabase, idempotencyKey, {
           status: "done",
