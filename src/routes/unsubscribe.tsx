@@ -67,8 +67,8 @@ function Unsubscribe() {
         .update({ unsubscribed_from_newsletter: true })
         .eq("email", normalizedEmail)
         .select("id")
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .order("id", { ascending: true })
+        .maybeSingle();
 
       if (error) {
         setErrorMessage(error.message ?? "Unknown error");
@@ -76,7 +76,7 @@ function Unsubscribe() {
         return;
       }
 
-      if (!data || data.length === 0) {
+      if (!data) {
         setStatus("notFound");
         return;
       }
