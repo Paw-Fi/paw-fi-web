@@ -39,18 +39,16 @@ export interface FeatureDetail {
   highlight?: boolean;
 }
 
-// Feature comparison structure
+// Feature comparison structure derived from main_shell.md
 export interface FeatureComparison {
-  basicLessons: FeatureDetail;
-  advancedCourses: FeatureDetail;
-  aiPersonalizedLessons: FeatureDetail;
-  aiConversations: FeatureDetail;
-  goalCreation: FeatureDetail;
-  goalModification: FeatureDetail;
-  portfolioTracking: FeatureDetail;
-  support: FeatureDetail;
-  oneOnOneGuidance: FeatureDetail;
-  communityAccess: FeatureDetail;
+  fastCapture: FeatureDetail;
+  pockets: FeatureDetail;
+  whatsapp: FeatureDetail;
+  scenarioPlanning: FeatureDetail;
+  personalHousehold: FeatureDetail;
+  recurring: FeatureDetail;
+  multiCurrency: FeatureDetail;
+  homeWidgets: FeatureDetail;
 }
 
 // Pricing tier interface used in PricingPage
@@ -128,32 +126,30 @@ export const planData: Record<string, PlanData> = {
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",
     features: [
-      "Core web budgeting dashboard",
-      "Fast capture (text + review)",
-      "Pockets (envelopes) for monthly budgeting",
+      "Fast capture with a review-first workflow",
+      "Pockets & envelope budgeting",
       "Personal and Household modes",
-      "Recurring items (bills + income)",
-      "Community access"
+      "Recurring bills and income tracking",
+      "Multi-currency overview",
+      "Home screen widgets + quick add"
     ],
     featureItems: [
-      { text: "Core web budgeting dashboard", icon: faChartLine },
-      { text: "Fast capture (text + review)", icon: faComments },
-      { text: "Pockets (envelopes) for monthly budgeting", icon: faBullseye },
+      { text: "Fast capture with a review-first workflow", icon: faComments },
+      { text: "Pockets & envelope budgeting", icon: faBullseye },
       { text: "Personal and Household modes", icon: faUsers },
-      { text: "Recurring items (bills + income)", icon: faEdit },
-      { text: "Community access", icon: faGift }
+      { text: "Recurring bills and income tracking", icon: faEdit },
+      { text: "Multi-currency overview", icon: faChartLine },
+      { text: "Home screen widgets + quick add", icon: faGift }
     ],
     featureComparison: {
-      basicLessons: { description: "Fast capture", isIncluded: true, limit: "Text capture" },
-      advancedCourses: { description: "Pockets (envelopes)", isIncluded: true },
-      aiPersonalizedLessons: { description: "Scenario planning", isIncluded: true },
-      aiConversations: { description: "WhatsApp assistant", isIncluded: false },
-      goalCreation: { description: "Personal vs Household mode", isIncluded: true },
-      goalModification: { description: "Recurring items", isIncluded: true },
-      portfolioTracking: { description: "Multi-currency view", isIncluded: true },
-      support: { description: "Support", isIncluded: true, limit: "Standard" },
-      oneOnOneGuidance: { description: "1:1 guidance", isIncluded: false },
-      communityAccess: { description: "Community access", isIncluded: true, limit: "Standard" }
+      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text capture + review" },
+      pockets: { description: "Pockets & envelopes", isIncluded: true },
+      whatsapp: { description: "WhatsApp assistant", isIncluded: false },
+      scenarioPlanning: { description: "Scenario planning", isIncluded: true },
+      personalHousehold: { description: "Personal vs Household mode", isIncluded: true },
+      recurring: { description: "Recurring bills & income", isIncluded: true },
+      multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency" },
+      homeWidgets: { description: "Home screen widgets", isIncluded: true }
     }
   },
   
@@ -184,29 +180,27 @@ export const planData: Record<string, PlanData> = {
     borderColor: "border-purple-200 dark:border-purple-800",
     features: [
       "Everything in Starter",
-      "WhatsApp assistant access (where available)",
-      "Receipt photo capture (where available)",
-      "Voice note capture (where available)",
-      "Scenario planning and saved insights"
+      "WhatsApp assistant for capture + summaries",
+      "Receipt/photo/voice capture (where available)",
+      "Scenario planning with saved insights",
+      "Home screen widgets + quick add"
     ],
     featureItems: [
       { text: "Everything in Starter", icon: faGift },
-      { text: "WhatsApp assistant access (where available)", icon: faRobot },
-      { text: "Receipt photo capture (where available)", icon: faBook },
-      { text: "Voice note capture (where available)", icon: faComments },
-      { text: "Scenario planning and saved insights", icon: faChartLine }
+      { text: "WhatsApp assistant for capture + summaries", icon: faRobot },
+      { text: "Receipt/photo/voice capture (where available)", icon: faBook },
+      { text: "Scenario planning with saved insights", icon: faChartLine },
+      { text: "Home screen widgets + quick add", icon: faComments }
     ],
     featureComparison: {
-      basicLessons: { description: "Fast capture", isIncluded: true, limit: "Text + review", highlight: true },
-      advancedCourses: { description: "Pockets (envelopes)", isIncluded: true, highlight: true },
-      aiPersonalizedLessons: { description: "Scenario planning", isIncluded: true, highlight: true },
-      aiConversations: { description: "WhatsApp assistant", isIncluded: true, limit: "Where available", highlight: true },
-      goalCreation: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
-      goalModification: { description: "Recurring items", isIncluded: true, highlight: true },
-      portfolioTracking: { description: "Multi-currency view", isIncluded: true },
-      support: { description: "Support", isIncluded: true, limit: "Standard" },
-      oneOnOneGuidance: { description: "1:1 guidance", isIncluded: false },
-      communityAccess: { description: "Community access", isIncluded: true, limit: "Standard" }
+      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text, photo & voice", highlight: true },
+      pockets: { description: "Pockets & envelopes", isIncluded: true, highlight: true },
+      whatsapp: { description: "WhatsApp assistant", isIncluded: true, limit: "Chat capture + summaries", highlight: true },
+      scenarioPlanning: { description: "Scenario planning", isIncluded: true, highlight: true },
+      personalHousehold: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
+      recurring: { description: "Recurring bills & income", isIncluded: true, highlight: true },
+      multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency", highlight: true },
+      homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true }
     }
   },
   
@@ -229,28 +223,26 @@ export const planData: Record<string, PlanData> = {
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",
     features: [
-      "All Plus features included",
-      "Lifetime access for the account",
-      "Discord community perks (when offered)",
-      "Support"
+      "All Plus features unlocked",
+      "Fast capture + pockets workflows",
+      "WhatsApp budgeting assistant",
+      "Scenario planning & insights"
     ],
     featureItems: [
-      { text: "All Plus features included", icon: faGift },
-      { text: "Lifetime access for the account", icon: faUserTie },
-      { text: "Discord community perks (when offered)", icon: faUsers },
-      { text: "Support", icon: faHeadset }
+      { text: "All Plus features unlocked", icon: faGift },
+      { text: "Fast capture + pockets workflows", icon: faBullseye },
+      { text: "WhatsApp budgeting assistant", icon: faRobot },
+      { text: "Scenario planning & insights", icon: faChartLine }
     ],
     featureComparison: {
-      basicLessons: { description: "Fast capture", isIncluded: true, limit: "Text + review" },
-      advancedCourses: { description: "Pockets (envelopes)", isIncluded: true, highlight: true },
-      aiPersonalizedLessons: { description: "Scenario planning", isIncluded: true, highlight: true },
-      aiConversations: { description: "WhatsApp assistant", isIncluded: true, limit: "Where available", highlight: true },
-      goalCreation: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
-      goalModification: { description: "Recurring items", isIncluded: true, highlight: true },
-      portfolioTracking: { description: "Multi-currency view", isIncluded: true, highlight: true },
-      support: { description: "Support", isIncluded: true, limit: "Standard" },
-      oneOnOneGuidance: { description: "1:1 guidance", isIncluded: false },
-      communityAccess: { description: "Community access", isIncluded: true, limit: "Standard" }
+      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text, photo & voice", highlight: true },
+      pockets: { description: "Pockets & envelopes", isIncluded: true, highlight: true },
+      whatsapp: { description: "WhatsApp assistant", isIncluded: true, limit: "Chat capture + summaries", highlight: true },
+      scenarioPlanning: { description: "Scenario planning", isIncluded: true, highlight: true },
+      personalHousehold: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
+      recurring: { description: "Recurring bills & income", isIncluded: true, highlight: true },
+      multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency", highlight: true },
+      homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true }
     }
   },
 };

@@ -13,53 +13,43 @@ export function FeatureComparisonGrid({ prefersReducedMotion }: FeatureCompariso
   const features = [
     {
       category: "Fast Expense Capture",
-      key: "basicLessons" as const,
-      description: "Log expenses quickly with a review-first workflow"
+      key: "fastCapture" as const,
+      description: "Log expenses quickly via text, photo, or voice"
     },
     {
-      category: "Pockets (Digital Envelope Budgeting)", 
-      key: "advancedCourses" as const,
-      description: "Allocate money into pockets (envelopes) for zero-based monthly budgeting"
+      category: "Pockets (Envelope Budgeting)", 
+      key: "pockets" as const,
+      description: "Allocate each month’s budget into pockets"
     },
     {
-      category: "WhatsApp Expense Tracking",
-      key: "aiConversations" as const,
-      description: "Capture expenses and request summaries from chat (where available)"
+      category: "WhatsApp Assistant",
+      key: "whatsapp" as const,
+      description: "Capture expenses and request summaries from chat"
     },
     {
       category: "Scenario Planning",
-      key: "aiPersonalizedLessons" as const, 
-      description: "Run “what if” budgeting scenarios and save insights"
+      key: "scenarioPlanning" as const, 
+      description: "Ask “what if?” questions and save insights"
     },
     {
-      category: "Personal vs Household Budgets",
-      key: "goalCreation" as const,
-      description: "Track personal budgets and shared household budgets in separate spaces"
+      category: "Personal vs Household Modes",
+      key: "personalHousehold" as const,
+      description: "Switch between personal and household dashboards"
     },
     {
       category: "Recurring Items",
-      key: "goalModification" as const,
-      description: "Bills and income that repeat"
+      key: "recurring" as const,
+      description: "Track repeating bills and income"
     },
     {
       category: "Multi-currency View",
-      key: "portfolioTracking" as const, 
-      description: "Switch currency views for budgeting and charts"
+      key: "multiCurrency" as const, 
+      description: "Change the currency for charts and budgets"
     },
     {
-      category: "Customer Support",
-      key: "support" as const,
-      description: "Get help when you need it"
-    },
-    {
-      category: "1-on-1 Guidance",
-      key: "oneOnOneGuidance" as const,
-      description: "Available in select plans (if offered)"
-    },
-    {
-      category: "Community Access",
-      key: "communityAccess" as const,
-      description: "Connect with other users"
+      category: "Home Screen Widgets",
+      key: "homeWidgets" as const,
+      description: "See pockets and quick actions on your device home screen"
     }
   ];
 

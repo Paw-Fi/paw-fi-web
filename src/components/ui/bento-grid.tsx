@@ -53,7 +53,7 @@ const BentoCard = ({
     <Link
       to={href}
       className={cn(
-        "group relative overflow-hidden bg-card transition-all duration-300 border-r border-b border-border last:border-r-0 [&:nth-child(2)]:border-r-0 [&:nth-child(3)]:border-b-0 [&:nth-child(4)]:border-b-0 block cursor-pointer",
+        "group relative overflow-hidden flex flex-col min-h-[300px] bg-card transition-all duration-300 border-r border-b border-border last:border-r-0 [&:nth-child(2)]:border-r-0 [&:nth-child(3)]:border-b-0 [&:nth-child(4)]:border-b-0 cursor-pointer",
         className,
       )}
       onMouseMove={handleMouseMove}

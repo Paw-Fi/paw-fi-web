@@ -96,24 +96,10 @@ function loadQuery(queryFile) {
   if (!queryFile) {
     // Default query: users with no subscription or cancelled free plan
     return `
-      SELECT DISTINCT
-        u.id,
-        u.email,
-        u.raw_user_meta_data->>'full_name' as full_name,
-        u.created_at
-      FROM auth.users u
-      LEFT JOIN public.subscriptions s ON u.id = s.user_id
-      WHERE 
-        u.email IS NOT NULL
-        AND u.email_confirmed_at IS NOT NULL
-        AND (
-          s.id IS NULL -- No subscription record
-          OR (
-            s.plan = 'free' 
-            AND s.status = 'canceled'
-          )
-        )
-      ORDER BY u.created_at DESC;
+SELECT u.email
+FROM public.users AS u
+WHERE u.email = 'yflim7020@gmail.com'
+ORDER BY u.created_at;
     `;
   }
 
@@ -357,7 +343,9 @@ async function main() {
     const testVariables = {
       first_name: 'Test User',
       email: config.testEmail,
-      unsubscribe_url: 'https://moneko.io/unsubscribe',
+      unsubscribe_url: `https://moneko.io/unsubscribe?email=${encodeURIComponent(
+        config.testEmail,
+      )}`,
     };
 
     const testHtml = replaceVariables(template, testVariables);
@@ -498,7 +486,9 @@ async function main() {
     first_name: 'Yifan',
     full_name: 'Yifan Lim',
     email: ADMIN_EMAIL,
-    unsubscribe_url: 'https://moneko.io/unsubscribe',
+    unsubscribe_url: `https://moneko.io/unsubscribe?email=${encodeURIComponent(
+      ADMIN_EMAIL,
+    )}`,
   };
   const adminCampaignEmail = replaceVariables(template, adminVariables);
 
