@@ -325,8 +325,6 @@ const itemVariants: Variants = {
 };
 
 function DashboardHome() {
-  // Temporary: route dashboard traffic to download page
-  return <DownloadPage />;
 
   const { user } = useAuth();
   // Rewards modal state

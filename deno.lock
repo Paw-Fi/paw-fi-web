@@ -43,6 +43,7 @@
     "npm:@tanstack/react-router-devtools@^1.140.0": "1.163.2_@tanstack+react-router@1.163.2__react@19.2.4__react-dom@19.2.4___react@19.2.4_react@19.2.4_react-dom@19.2.4__react@19.2.4",
     "npm:@tanstack/react-router@^1.140.0": "1.163.2_react@19.2.4_react-dom@19.2.4__react@19.2.4",
     "npm:@tanstack/react-start@^1.140.0": "1.163.2_react@19.2.4_react-dom@19.2.4__react@19.2.4_vite@7.3.1__@types+node@24.10.8__sass@1.97.3__picomatch@4.0.3_@types+node@24.10.8_sass@1.97.3_@tanstack+react-router@1.163.2__react@19.2.4__react-dom@19.2.4___react@19.2.4",
+    "npm:@tanstack/react-table@^8.21.3": "8.21.3_react@19.2.4_react-dom@19.2.4__react@19.2.4",
     "npm:@tanstack/router-plugin@^1.140.0": "1.163.2_@tanstack+react-router@1.163.2__react@19.2.4__react-dom@19.2.4___react@19.2.4_vite@7.3.1__@types+node@24.10.8__sass@1.97.3__picomatch@4.0.3_@babel+core@7.29.0_react@19.2.4_react-dom@19.2.4__react@19.2.4_@types+node@24.10.8_sass@1.97.3",
     "npm:@types/express@^4.17.23": "4.17.25",
     "npm:@types/lodash@^4.17.20": "4.17.24",
@@ -3349,6 +3350,14 @@
         "use-sync-external-store"
       ]
     },
+    "@tanstack/react-table@8.21.3_react@19.2.4_react-dom@19.2.4__react@19.2.4": {
+      "integrity": "sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==",
+      "dependencies": [
+        "@tanstack/table-core",
+        "react",
+        "react-dom"
+      ]
+    },
     "@tanstack/router-core@1.163.2_seroval@1.5.0": {
       "integrity": "sha512-mD0Pav6kcpS317XSJN+wCZaxLLngDhlwgzPNca56dWCp8YKPEvhhj/Zdl+LdRlJQ2VJ5BOy7FbOV1hErc9Nj5Q==",
       "dependencies": [
@@ -3482,6 +3491,9 @@
     },
     "@tanstack/store@0.9.1": {
       "integrity": "sha512-+qcNkOy0N1qSGsP7omVCW0SDrXtaDcycPqBDE726yryiA5eTDFpjBReaYjghVJwNf1pcPMyzIwTGlYjCSQR0Fg=="
+    },
+    "@tanstack/table-core@8.21.3": {
+      "integrity": "sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg=="
     },
     "@tanstack/virtual-file-routes@1.161.4": {
       "integrity": "sha512-42WoRePf8v690qG8yGRe/YOh+oHni9vUaUUfoqlS91U2scd3a5rkLtVsc6b7z60w3RogH0I00vdrC5AaeiZ18w=="
@@ -8613,6 +8625,7 @@
         "npm:@tanstack/react-router-devtools@^1.140.0",
         "npm:@tanstack/react-router@^1.140.0",
         "npm:@tanstack/react-start@^1.140.0",
+        "npm:@tanstack/react-table@^8.21.3",
         "npm:@tanstack/router-plugin@^1.140.0",
         "npm:@types/express@^4.17.23",
         "npm:@types/lodash@^4.17.20",

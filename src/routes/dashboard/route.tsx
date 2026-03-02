@@ -263,8 +263,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 export function Dashboard() {
-  // Temporary: route dashboard traffic to download page
-  return <DownloadPage />;
+
 
   // Auth query sync is now handled at root level - removed redundant call
   // Query client for cache invalidation

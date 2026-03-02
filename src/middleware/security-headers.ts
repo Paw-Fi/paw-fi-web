@@ -25,7 +25,7 @@ export function securityHeadersMiddleware(request: Request): Response | null {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://api.supabase.co https://www.google-analytics.com https://www.reddit.com https://reddit.com https://api.reddit.com",
+      "connect-src 'self' https://api.supabase.co https://*.supabase.co https://www.google-analytics.com https://www.reddit.com https://reddit.com https://api.reddit.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
