@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -151,6 +152,73 @@ serve(async (req) => {
         }
       );
     }
+
+const { data: inviteeContact, error: inviteeContactError } = await supabase
+  .from('user_contacts')
+  .select('id, preferred_currency')
+  .eq('user_id', user.id)
+  .maybeSingle();
+  
+
+if (inviteeContactError) {
+  console.error('[accept-invite] Error fetching invitee contact:', inviteeContactError);
+  await reportEdgeFunctionError({
+    functionName: "households-accept-invite",
+    error: inviteeContactError,
+    context: {
+      inviteId: invite?.id,
+      step: "fetch-invitee-contact",
+      userId: user.id,
+    },
+  });
+  throw inviteeContactError;
+}
+
+if (inviteeContact?.preferred_currency == null && invite.inviter_user_id) {
+  const { data: inviterContact, error: inviterContactError } = await supabase
+    .from('user_contacts')
+    .select('preferred_currency')
+    .eq('user_id', invite.inviter_user_id)
+    .maybeSingle();
+
+  if (inviterContactError) {
+    console.error('[accept-invite] Error fetching inviter contact:', inviterContactError);
+    await reportEdgeFunctionError({
+      functionName: "households-accept-invite",
+      error: inviterContactError,
+      context: {
+        inviterUserId: invite.inviter_user_id,
+        inviteId: invite?.id,
+        step: "fetch-inviter-contact",
+        userId: user.id,
+      },
+    });
+    throw inviterContactError;
+  }
+
+  if (inviterContact?.preferred_currency) {
+    const { error: updateContactError } = await supabase
+      .from('user_contacts')
+      .update({ preferred_currency: inviterContact.preferred_currency })
+      .eq('id', inviteeContact.id)
+      .is('preferred_currency', null);
+
+    if (updateContactError) {
+      console.error('[accept-invite] Error updating invitee preferred currency:', updateContactError);
+      await reportEdgeFunctionError({
+        functionName: "households-accept-invite",
+        error: updateContactError,
+        context: {
+          inviteId: invite?.id,
+          inviterUserId: invite.inviter_user_id,
+          step: "update-invitee-preferred-currency",
+          userId: user.id,
+        },
+      });
+      throw updateContactError;
+    }
+  }
+}
 
     // Check if user is already a member
     const { data: existingMember } = await supabase

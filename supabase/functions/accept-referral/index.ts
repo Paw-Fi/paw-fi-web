@@ -5,6 +5,7 @@ import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { getPriceId } from "../shared/stripe-subscription-prices.ts";
 import { createCheckoutSessionWithRetry } from "../shared/stripe-retry.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -101,6 +102,70 @@ serve(async (req) => {
         },
       );
     }
+
+const { data: refereeContact, error: refereeContactError } = await supabase
+  .from('user_contacts')
+  .select('id, preferred_currency')
+  .eq('user_id', refereeUserId)
+  .maybeSingle();
+
+if (refereeContactError) {
+  console.error('Error fetching referee contact:', refereeContactError);
+  await reportEdgeFunctionError({
+    functionName: "accept-referral",
+    error: refereeContactError,
+    context: {
+      referrerUserId,
+      refereeUserId,
+      step: "fetch-referee-contact",
+    },
+  });
+  throw refereeContactError;
+}
+
+if (refereeContact?.preferred_currency == null && referrerUserId) {
+  const { data: referrerContact, error: referrerContactError } = await supabase
+    .from('user_contacts')
+    .select('preferred_currency')
+    .eq('user_id', referrerUserId)
+    .maybeSingle();
+
+  if (referrerContactError) {
+    console.error('Error fetching referrer contact:', referrerContactError);
+    await reportEdgeFunctionError({
+      functionName: "accept-referral",
+      error: referrerContactError,
+      context: {
+        referrerUserId,
+        refereeUserId,
+        step: "fetch-referrer-contact",
+      },
+    });
+    throw referrerContactError;
+  }
+
+  if (referrerContact?.preferred_currency) {
+    const { error: updateContactError } = await supabase
+      .from('user_contacts')
+      .update({ preferred_currency: referrerContact.preferred_currency })
+      .eq('id', refereeContact.id)
+      .is('preferred_currency', null); // race condition guard
+
+    if (updateContactError) {
+      console.error('Error updating referee preferred currency:', updateContactError);
+      await reportEdgeFunctionError({
+        functionName: "accept-referral",
+        error: updateContactError,
+        context: {
+          referrerUserId,
+          refereeUserId,
+          step: "update-referee-preferred-currency",
+        },
+      });
+      throw updateContactError;
+    }
+  }
+}
 
     // Eligibility: Block users who already have premium/lifetime
     const { data: existingSub } = await supabase
