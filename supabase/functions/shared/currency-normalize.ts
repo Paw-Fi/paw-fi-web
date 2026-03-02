@@ -60,6 +60,9 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Syrian Pound
     '£S': 'SYP',
 
+    // Zambian Kwacha
+    'ZK': 'ZMW',
+
     // Kenya Shilling
     'KSH': 'KES',
     'KSHS': 'KES',

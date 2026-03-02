@@ -55,6 +55,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'MMK': 'Ks',
   'JOD': 'د.أ',
   'SYP': '£S',
+  'ZMW': 'ZK',
 };
 
 export function getCurrencySymbolBasedOnTimeZone(): string {

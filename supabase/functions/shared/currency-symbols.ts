@@ -52,6 +52,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'VND': '₫',
   'ZAR': 'R',
   'HUF': 'Ft',
+  'ZMW': 'ZK',
 };
 
 /**
