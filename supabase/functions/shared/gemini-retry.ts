@@ -61,8 +61,10 @@ function normalizeErrorText(error: unknown): string {
 
 export function isRetryableGeminiError(error: unknown): boolean {
   const statusCode = extractStatusCode(error);
-  if (statusCode != null && [429, 500, 503, 504].includes(statusCode)) {
-    return true;
+  if (statusCode != null) {
+    if (statusCode === 429) return true;
+    if ([500, 503, 504].includes(statusCode)) return true;
+    return false;
   }
 
   const text = normalizeErrorText(error);
@@ -99,12 +101,12 @@ export async function sendGeminiMessageWithRetry(
     await sleep(config.preRequestDelayMs);
   }
 
-  for (let attempt = 0; ; attempt++) {
+  for (let attempt = 0;; attempt++) {
     try {
       return await chat.sendMessage(content);
     } catch (error) {
-      const shouldRetry =
-        attempt < config.maxRetries && isRetryableGeminiError(error);
+      const shouldRetry = attempt < config.maxRetries &&
+        isRetryableGeminiError(error);
       if (!shouldRetry) {
         throw error;
       }
@@ -122,10 +124,9 @@ export async function sendGeminiMessageWithRetry(
         attempt: attempt + 1,
         nextDelayMs: delayMs,
         statusCode: extractStatusCode(error),
-        error:
-          error instanceof Error
-            ? `${error.name}: ${error.message}`
-            : String(error),
+        error: error instanceof Error
+          ? `${error.name}: ${error.message}`
+          : String(error),
       });
 
       await sleep(delayMs);

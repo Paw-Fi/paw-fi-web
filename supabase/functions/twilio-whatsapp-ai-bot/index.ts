@@ -39,17 +39,19 @@ import {
 } from "../shared/formatting-helpers.ts";
 import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { sendGeminiMessageWithRetry } from "../shared/gemini-retry.ts";
 import {
+  fetchUserCategoryPreferences,
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
-  fetchUserCategoryPreferences,
   mergeAllowedCategories,
 } from "../shared/user-categories.ts";
 
 // --- Constants & Types ---
 
 const MODEL_NAME = "gemini-2.5-flash-lite"; // Fast and capable
-const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
+const SYSTEM_INSTRUCTION =
+  `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
@@ -102,12 +104,15 @@ WHATSAPP BUDGET FLOW (WhatsApp only):
 - When the user confirms (e.g., yes/ok/sounds good), call "confirm_budget" to finalize without re-asking for amounts unless missing.
 - Only call "set_budget" directly if the user explicitly asks to set it now and the full amount is present in the same message.
 `;
-const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
+const WHATSAPP_SYSTEM_INSTRUCTION =
+  `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
 const PROCESSING_ACK_DELAY_MS = 1000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_FOLLOW_UP_DELAY_MS = 24000;
+const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
+const GEMINI_MAX_RETRIES = 3;
 const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
 const DELIVERY_FAILURE_MESSAGE =
   "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";
@@ -187,33 +192,40 @@ async function sendTwilioWhatsAppTypingIndicator(
   messageId?: string | null,
 ) {
   if (!accountSid || !authToken || !messageId) return false;
+  try {
+    const formData = new URLSearchParams();
+    formData.append("messageId", messageId);
+    formData.append("channel", "whatsapp");
 
-  const formData = new URLSearchParams();
-  formData.append("messageId", messageId);
-  formData.append("channel", "whatsapp");
-
-  const response = await fetch(
-    "https://messaging.twilio.com/v2/Indicators/Typing.json",
-    {
-      method: "POST",
-      headers: {
-        Authorization: "Basic " + btoa(`${accountSid}:${authToken}`),
-        "Content-Type": "application/x-www-form-urlencoded",
+    const response = await fetch(
+      "https://messaging.twilio.com/v2/Indicators/Typing.json",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Basic " + btoa(`${accountSid}:${authToken}`),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
       },
-      body: formData.toString(),
-    },
-  );
+    );
 
-  if (!response.ok) {
-    const body = await response.text();
+    if (!response.ok) {
+      const body = await response.text();
+      console.error(
+        "[twilio-whatsapp-ai-bot] Failed to send typing indicator:",
+        body,
+      );
+      return false;
+    }
+
+    return true;
+  } catch (error) {
     console.error(
-      "[twilio-whatsapp-ai-bot] Failed to send typing indicator:",
-      body,
+      "[twilio-whatsapp-ai-bot] Error while sending typing indicator:",
+      error,
     );
     return false;
   }
-
-  return true;
 }
 
 function scheduleTwilioTypingFollowUp(
@@ -227,9 +239,15 @@ function scheduleTwilioTypingFollowUp(
   }
 
   let active = true;
-  const timeoutId = setTimeout(async () => {
+  const timeoutId = setTimeout(() => {
     if (!active) return;
-    await sendTwilioWhatsAppTypingIndicator(accountSid, authToken, messageId);
+    void sendTwilioWhatsAppTypingIndicator(
+      accountSid,
+      authToken,
+      messageId,
+    ).catch((error) => {
+      console.error("[twilio-whatsapp-ai-bot] Typing follow-up failed:", error);
+    });
   }, delayMs);
 
   return () => {
@@ -357,13 +375,13 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
   const rawList: any[] = Array.isArray(input)
     ? input
     : input && typeof input === "object"
-      ? Object.entries(input as Record<string, unknown>).map(
-          ([name, percentage]) => ({
-            name,
-            percentage,
-          }),
-        )
-      : [];
+    ? Object.entries(input as Record<string, unknown>).map(
+      ([name, percentage]) => ({
+        name,
+        percentage,
+      }),
+    )
+    : [];
 
   const pockets: NormalizedPocket[] = [];
   for (const entry of rawList) {
@@ -372,8 +390,7 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
     const name = typeof rawName === "string" ? rawName.trim() : "";
     if (!name) continue;
 
-    const rawPercent =
-      (entry as any).percentage ??
+    const rawPercent = (entry as any).percentage ??
       (entry as any).percent ??
       (entry as any).pct ??
       (entry as any).ratio;
@@ -382,17 +399,15 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
 
     const clamped = Math.max(0, Math.min(100, percent));
     const categories = normalizeCategories((entry as any).categories);
-    const colorRaw =
-      (entry as any).color ?? (entry as any).hex ?? (entry as any).hex_color;
+    const colorRaw = (entry as any).color ?? (entry as any).hex ??
+      (entry as any).hex_color;
     const iconRaw = (entry as any).icon ?? (entry as any).symbol;
-    const color =
-      typeof colorRaw === "string" && colorRaw.trim().length > 0
-        ? colorRaw.trim()
-        : undefined;
-    const icon =
-      typeof iconRaw === "string" && iconRaw.trim().length > 0
-        ? iconRaw.trim()
-        : undefined;
+    const color = typeof colorRaw === "string" && colorRaw.trim().length > 0
+      ? colorRaw.trim()
+      : undefined;
+    const icon = typeof iconRaw === "string" && iconRaw.trim().length > 0
+      ? iconRaw.trim()
+      : undefined;
     pockets.push({ name, percentage: clamped, categories, color, icon });
   }
   return pockets;
@@ -484,7 +499,7 @@ async function consolidateDuplicateEnvelopesForBudget(
     const map = new Map<string, BudgetEnvelopeRowLite>();
     for (const [norm, rows] of byNorm.entries()) {
       const chosen = rows.reduce((acc, cur) =>
-        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc
       );
       map.set(norm, chosen);
     }
@@ -501,9 +516,11 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("envelope_id", ids);
     if (linksErr && debugEnabled) {
       debugNotes.push(
-        `envelope_category_links load error (${norm}): ${formatInvokeError(
-          linksErr,
-        )}`,
+        `envelope_category_links load error (${norm}): ${
+          formatInvokeError(
+            linksErr,
+          )
+        }`,
       );
     }
     const links = (linksRaw || []) as Array<{
@@ -588,9 +605,11 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("id", dupIds);
     if (deleteEnvErr && debugEnabled) {
       debugNotes.push(
-        `duplicate envelope delete error (${norm}): ${formatInvokeError(
-          deleteEnvErr,
-        )}`,
+        `duplicate envelope delete error (${norm}): ${
+          formatInvokeError(
+            deleteEnvErr,
+          )
+        }`,
       );
     }
   }
@@ -668,10 +687,9 @@ function normalizeLastListedTransactionFromRow(
   if (!id) return null;
 
   const cents = (row as any).amount_cents;
-  const amountMajor =
-    typeof cents === "number" && Number.isFinite(cents)
-      ? cents / 100
-      : Number((row as any).amount) || 0;
+  const amountMajor = typeof cents === "number" && Number.isFinite(cents)
+    ? cents / 100
+    : Number((row as any).amount) || 0;
 
   const currency = String((row as any).currency || "").toUpperCase();
   const date = String((row as any).date || "").slice(0, 10);
@@ -682,8 +700,9 @@ function normalizeLastListedTransactionFromRow(
   const typeRaw = String((row as any).type || "expense").toLowerCase();
   const type = typeRaw === "income" ? "income" : "expense";
   const householdIdRaw = (row as any).household_id;
-  const household_id =
-    householdIdRaw == null ? null : String(householdIdRaw || "") || null;
+  const household_id = householdIdRaw == null
+    ? null
+    : String(householdIdRaw || "") || null;
 
   return {
     id,
@@ -783,8 +802,9 @@ function matchesTransaction(
     if (cur && item.currency.toUpperCase() !== cur) return false;
   }
   if (match.type) {
-    const t =
-      String(match.type).toLowerCase() === "income" ? "income" : "expense";
+    const t = String(match.type).toLowerCase() === "income"
+      ? "income"
+      : "expense";
     if ((item.type || "expense") !== t) return false;
   }
   if (match.category) {
@@ -830,9 +850,9 @@ function resolveLastListedSelection(
 ):
   | { candidate: LastListedTransaction }
   | {
-      needs_disambiguation: true;
-      choices: Array<{ index: number; summary: string }>;
-    }
+    needs_disambiguation: true;
+    choices: Array<{ index: number; summary: string }>;
+  }
   | { error: string } {
   const list = Array.isArray(items) ? items : [];
   if (list.length === 0) {
@@ -849,7 +869,8 @@ function resolveLastListedSelection(
       return { candidate: list[idx - 1] };
     }
     return {
-      error: `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
+      error:
+        `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
     };
   }
 
@@ -1094,8 +1115,9 @@ function rebalancePocketPercentages(
     let remaining = available;
     for (let i = 0; i < others.length; i++) {
       const raw = Math.max(0, (others[i].percentage || 0) * factor);
-      const pct =
-        i === others.length - 1 ? remaining : Number(raw.toFixed(precision));
+      const pct = i === others.length - 1
+        ? remaining
+        : Number(raw.toFixed(precision));
       remaining -= pct;
       updated[others[i].id] = Number(pct.toFixed(precision));
     }
@@ -1114,23 +1136,22 @@ function buildRecurrenceRule(args: any, fallbackAnchor: string) {
     return provided as Record<string, unknown>;
   }
 
-  const frequency =
-    typeof args?.frequency === "string" && args.frequency.trim()
-      ? args.frequency.trim().toLowerCase()
-      : null;
+  const frequency = typeof args?.frequency === "string" && args.frequency.trim()
+    ? args.frequency.trim().toLowerCase()
+    : null;
   const interval = Number.isFinite(args?.interval)
     ? Math.trunc(args.interval)
     : null;
   const anchor_date = normalizeDateInput(args?.anchor_date, fallbackAnchor);
-  const end_date =
-    typeof args?.end_date === "string" && args.end_date.trim()
-      ? normalizeDateInput(args.end_date, "")
-      : "";
+  const end_date = typeof args?.end_date === "string" && args.end_date.trim()
+    ? normalizeDateInput(args.end_date, "")
+    : "";
   const reminderValue = Number.isFinite(args?.reminder_value)
     ? Math.trunc(args.reminder_value)
     : null;
-  const reminderUnit =
-    typeof args?.reminder_unit === "string" ? args.reminder_unit : null;
+  const reminderUnit = typeof args?.reminder_unit === "string"
+    ? args.reminder_unit
+    : null;
 
   if (!frequency) return null;
 
@@ -1397,8 +1418,9 @@ async function resolveHouseholdSplitConfig(
     const perMissing = missing.length ? remaining / missing.length : 0;
     for (const id of memberIds) {
       const s = byId.get(id);
-      const amt =
-        typeof s?.amount === "number" ? Math.max(0, s.amount) : perMissing;
+      const amt = typeof s?.amount === "number"
+        ? Math.max(0, s.amount)
+        : perMissing;
       fullSplits.push({ userId: id, amount: amt });
     }
     const sum = fullSplits.reduce((acc, s) => acc + (s.amount || 0), 0);
@@ -1414,10 +1436,9 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const s = byId.get(id);
-      const pct =
-        typeof s?.percentage === "number"
-          ? Math.max(0, Math.min(100, s.percentage))
-          : null;
+      const pct = typeof s?.percentage === "number"
+        ? Math.max(0, Math.min(100, s.percentage))
+        : null;
       if (pct == null) missing.push(id);
       else specifiedSum += pct;
     }
@@ -1425,10 +1446,9 @@ async function resolveHouseholdSplitConfig(
     const perMissing = missing.length ? remaining / missing.length : 0;
     for (const id of memberIds) {
       const s = byId.get(id);
-      const pct =
-        typeof s?.percentage === "number"
-          ? Math.max(0, Math.min(100, s.percentage))
-          : perMissing;
+      const pct = typeof s?.percentage === "number"
+        ? Math.max(0, Math.min(100, s.percentage))
+        : perMissing;
       fullSplits.push({ userId: id, percentage: pct });
     }
     const sum = fullSplits.reduce((acc, s) => acc + (s.percentage || 0), 0);
@@ -1442,8 +1462,9 @@ async function resolveHouseholdSplitConfig(
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const s = byId.get(id);
-      const shares =
-        typeof s?.shares === "number" ? Math.max(1, Math.trunc(s.shares)) : 1;
+      const shares = typeof s?.shares === "number"
+        ? Math.max(1, Math.trunc(s.shares))
+        : 1;
       fullSplits.push({ userId: id, shares });
     }
   }
@@ -1538,9 +1559,11 @@ async function buildFinancialSnapshot(
     },
   };
   const chartUrl = catData.length
-    ? `https://quickchart.io/chart?c=${encodeURIComponent(
+    ? `https://quickchart.io/chart?c=${
+      encodeURIComponent(
         JSON.stringify(chartConfig),
-      )}`
+      )
+    }`
     : undefined;
 
   return {
@@ -1563,8 +1586,7 @@ async function validateTwilioRequest(
   req: Request,
   authToken: string,
 ): Promise<boolean> {
-  const signatureHeader =
-    req.headers.get("X-Twilio-Signature") ||
+  const signatureHeader = req.headers.get("X-Twilio-Signature") ||
     req.headers.get("x-twilio-signature");
   if (!signatureHeader) return false;
 
@@ -1647,8 +1669,8 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const supabaseAuthed = SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } },
-      })
+      global: { headers: { Authorization: authHeader } },
+    })
     : null;
 
   if (isJsonApp) {
@@ -1663,8 +1685,8 @@ Deno.serve(async (req: Request) => {
     if (!supabaseAuthed) {
       return jsonResponse({ error: "Auth client not configured" }, 500);
     }
-    const { data: userData, error: userErr } =
-      await supabaseAuthed.auth.getUser();
+    const { data: userData, error: userErr } = await supabaseAuthed.auth
+      .getUser();
     if (userErr || !userData?.user) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
@@ -2171,7 +2193,15 @@ Deno.serve(async (req: Request) => {
       history: rawHistory,
       tools: [{ function_declarations: toolsApp }] as any,
     });
-    const result = await chat.sendMessage(userMessageContent);
+    const result = await sendGeminiMessageWithRetry(
+      chat as any,
+      userMessageContent,
+      {
+        preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+        maxRetries: GEMINI_MAX_RETRIES,
+        logPrefix: "twilio-whatsapp-ai-bot",
+      },
+    );
     let response = await result.response;
     let functionCalls = (response.functionCalls() as any[]) || [];
     let finalResponseText = response.text();
@@ -2185,10 +2215,11 @@ Deno.serve(async (req: Request) => {
         let toolResult = {};
         try {
           if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
-            const hasMedia =
-              !!call.args?.media && typeof call.args.media === "object";
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
+            const hasMedia = !!call.args?.media &&
+              typeof call.args.media === "object";
 
             if (hasMedia) {
               toolResult = {
@@ -2272,12 +2303,11 @@ Deno.serve(async (req: Request) => {
               };
             }
           } else if (call.name === "update_transaction") {
-            const updatesArgs =
-              call.args?.updates &&
-              typeof call.args.updates === "object" &&
-              !Array.isArray(call.args.updates)
-                ? call.args.updates
-                : null;
+            const updatesArgs = call.args?.updates &&
+                typeof call.args.updates === "object" &&
+                !Array.isArray(call.args.updates)
+              ? call.args.updates
+              : null;
             if (!updatesArgs) {
               toolResult = { error: "updates is required" };
             } else {
@@ -2376,8 +2406,8 @@ Deno.serve(async (req: Request) => {
                       const formattedBase = error
                         ? formatInvokeError(error)
                         : typeof (data as any)?.error === "string"
-                          ? (data as any).error
-                          : "Failed to update transaction";
+                        ? (data as any).error
+                        : "Failed to update transaction";
                       const code = (data as any)?.code;
                       const formatted = code
                         ? `${formattedBase} (code: ${code})`
@@ -2442,26 +2472,24 @@ Deno.serve(async (req: Request) => {
                 },
               );
               const success = !error && data?.success === true;
-              toolResult = success
-                ? { success: true }
-                : {
-                    error: error ?? data?.error ?? "Failed to delete",
-                  };
+              toolResult = success ? { success: true } : {
+                error: error ?? data?.error ?? "Failed to delete",
+              };
             }
           } else if (call.name === "add_transaction") {
             const householdId = (call.args.household_id || null) as
               | string
               | null;
-            const isHouseholdExpense =
-              !!householdId && (call.args.type || "expense") === "expense";
+            const isHouseholdExpense = !!householdId &&
+              (call.args.type || "expense") === "expense";
             const splitConfig = isHouseholdExpense
               ? await resolveHouseholdSplitConfig(
-                  supabase,
-                  householdId!,
-                  userId,
-                  Number(call.args.amount || 0),
-                  call.args,
-                )
+                supabase,
+                householdId!,
+                userId,
+                Number(call.args.amount || 0),
+                call.args,
+              )
               : {};
             const { data, error } = await saveExpenseDirect(
               supabase,
@@ -2480,13 +2508,13 @@ Deno.serve(async (req: Request) => {
                 isRecurring: call.args.is_recurring,
                 recurrence_rule: call.args.is_recurring
                   ? {
-                      frequency: (
-                        call.args.frequency || "MONTHLY"
-                      ).toUpperCase(),
-                      interval: 1,
-                      anchor_date:
-                        call.args.date || formatDateInTimeZone(userTimezone),
-                    }
+                    frequency: (
+                      call.args.frequency || "MONTHLY"
+                    ).toUpperCase(),
+                    interval: 1,
+                    anchor_date: call.args.date ||
+                      formatDateInTimeZone(userTimezone),
+                  }
                   : undefined,
               },
             );
@@ -2510,10 +2538,9 @@ Deno.serve(async (req: Request) => {
               const defaultDate = formatDateInTimeZone(userTimezone);
 
               for (const tx of rawTransactions) {
-                const txType =
-                  typeof tx.type === "string" && tx.type
-                    ? tx.type.toLowerCase()
-                    : "expense";
+                const txType = typeof tx.type === "string" && tx.type
+                  ? tx.type.toLowerCase()
+                  : "expense";
                 const dateStr = normalizeDateInput(tx.date, defaultDate);
 
                 // Resolve splits for household expenses
@@ -2545,16 +2572,15 @@ Deno.serve(async (req: Request) => {
                   payerUserId,
                   customSplits,
                   isRecurring: tx.is_recurring === true,
-                  recurrence_rule:
-                    tx.is_recurring === true
-                      ? tx.recurrence_rule || {
-                          frequency: (tx.frequency || "monthly")
-                            .toString()
-                            .toLowerCase(),
-                          interval: 1,
-                          anchor_date: dateStr,
-                        }
-                      : undefined,
+                  recurrence_rule: tx.is_recurring === true
+                    ? tx.recurrence_rule || {
+                      frequency: (tx.frequency || "monthly")
+                        .toString()
+                        .toLowerCase(),
+                      interval: 1,
+                      anchor_date: dateStr,
+                    }
+                    : undefined,
                 });
               }
 
@@ -2593,8 +2619,7 @@ Deno.serve(async (req: Request) => {
                 };
               } else {
                 toolResult = {
-                  error:
-                    formatInvokeError(error ?? data?.error) ||
+                  error: formatInvokeError(error ?? data?.error) ||
                     "Failed to save transactions",
                 };
               }
@@ -2612,7 +2637,15 @@ Deno.serve(async (req: Request) => {
           functionResponse: { name: call.name, response: toolResult },
         });
       }
-      const finalResult = await chat.sendMessage(toolResponses);
+      const finalResult = await sendGeminiMessageWithRetry(
+        chat as any,
+        toolResponses,
+        {
+          preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+          maxRetries: GEMINI_MAX_RETRIES,
+          logPrefix: "twilio-whatsapp-ai-bot",
+        },
+      );
       response = await finalResult.response;
       functionCalls = (response.functionCalls() as any[]) || [];
       const candidate = response.text();
@@ -2727,6 +2760,12 @@ Deno.serve(async (req: Request) => {
     return xmlResponse(buildTwimlMessage(null));
   }
 
+  await sendTwilioWhatsAppTypingIndicator(
+    twilioAccountSid,
+    twilioAuthToken,
+    messageSid,
+  );
+
   const whatsappSessionId = `whatsapp:${from}`;
   const debugNotes: string[] = [];
   debugLog(WHATSAPP_DEBUG, "incoming form data", {
@@ -2749,13 +2788,13 @@ Deno.serve(async (req: Request) => {
   // Map the context data to maintain backward compatibility
   let contact = contextData
     ? {
-        id: contextData.contact_id,
-        user_id: contextData.user_id,
-        verified: contextData.verified,
-        preferred_currency: contextData.preferred_currency,
-        preferred_language: contextData.preferred_language,
-        preferred_timezone: contextData.preferred_timezone,
-      }
+      id: contextData.contact_id,
+      user_id: contextData.user_id,
+      verified: contextData.verified,
+      preferred_currency: contextData.preferred_currency,
+      preferred_language: contextData.preferred_language,
+      preferred_timezone: contextData.preferred_timezone,
+    }
     : null;
   let contactError = contextError;
 
@@ -2966,9 +3005,9 @@ Deno.serve(async (req: Request) => {
   // Use subscription data from context
   const subscription = contextData
     ? {
-        plan: contextData.subscription_plan,
-        status: contextData.subscription_status,
-      }
+      plan: contextData.subscription_plan,
+      status: contextData.subscription_status,
+    }
     : null;
   debugLog(WHATSAPP_DEBUG, "subscription", { subscription });
 
@@ -3092,13 +3131,12 @@ Deno.serve(async (req: Request) => {
       .map((h: any) => h?.household_id)
       .filter((value: any) => typeof value === "string" && value.length > 0);
 
-    const householdContext =
-      spaces
-        ?.map(
-          (h: any) =>
-            `${h.name || "Space"}${h.is_portfolio ? " (Portfolio)" : ""}`,
-        )
-        .join("; ") || "None";
+    const householdContext = spaces
+      ?.map(
+        (h: any) =>
+          `${h.name || "Space"}${h.is_portfolio ? " (Portfolio)" : ""}`,
+      )
+      .join("; ") || "None";
 
     const spaceMap = new Map<
       string,
@@ -3179,17 +3217,15 @@ Deno.serve(async (req: Request) => {
       fallback?: PendingBudgetDraft | null,
     ) => {
       const amountCandidate = coerceNumber(args.amount);
-      const amountMajor =
-        amountCandidate != null && amountCandidate > 0
-          ? amountCandidate
-          : (fallback?.amount ?? null);
+      const amountMajor = amountCandidate != null && amountCandidate > 0
+        ? amountCandidate
+        : (fallback?.amount ?? null);
       if (!amountMajor || amountMajor <= 0) {
         return { error: "Invalid budget amount" };
       }
-      const rawDate =
-        typeof args.date === "string" && args.date.trim()
-          ? args.date.trim()
-          : fallback?.date || formatDateInTimeZone(userTimezone);
+      const rawDate = typeof args.date === "string" && args.date.trim()
+        ? args.date.trim()
+        : fallback?.date || formatDateInTimeZone(userTimezone);
       const dateStr = rawDate.slice(0, 10);
       const period_month = dateStr.slice(0, 7) + "-01";
       const { householdId, resolvedName, isPortfolio } = resolveBudgetScope(
@@ -3956,12 +3992,20 @@ Deno.serve(async (req: Request) => {
     let response: any | null = null;
     let finalResponseText = "";
     try {
-      const messagePromise = chat.sendMessage(userMessageContent);
+      const messagePromise = sendGeminiMessageWithRetry(
+        chat as any,
+        userMessageContent,
+        {
+          preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+          maxRetries: GEMINI_MAX_RETRIES,
+          logPrefix: "twilio-whatsapp-ai-bot",
+        },
+      );
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error("AI response timed out after 60 seconds")),
           60000,
-        ),
+        )
       );
 
       const result = await Promise.race([messagePromise, timeoutPromise]);
@@ -4002,8 +4046,9 @@ Deno.serve(async (req: Request) => {
         });
         try {
           if (call.name === "analyze_expense") {
-            const text =
-              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+            const text = typeof call.args?.text === "string"
+              ? call.args.text.trim()
+              : "";
             const media =
               call.args?.media && typeof call.args.media === "object"
                 ? call.args.media
@@ -4045,11 +4090,11 @@ Deno.serve(async (req: Request) => {
 
               if (!mediaUrl) {
                 toolResult = {
-                  error: `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
+                  error:
+                    `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
                 };
               } else {
-                const accountSid =
-                  formData.get("AccountSid")?.toString() ||
+                const accountSid = formData.get("AccountSid")?.toString() ||
                   TWILIO_ACCOUNT_SID ||
                   "";
                 const token = TWILIO_AUTH_TOKEN || "";
@@ -4065,23 +4110,23 @@ Deno.serve(async (req: Request) => {
                       error: `Failed to download media (status ${res.status}).`,
                     };
                   } else {
-                    const headerContentType =
-                      res.headers.get("content-type") || mediaType || "";
+                    const headerContentType = res.headers.get("content-type") ||
+                      mediaType || "";
                     const contentType = headerContentType.split(";")[0].trim();
                     const buf = new Uint8Array(await res.arrayBuffer());
                     if (buf.byteLength > MAX_MEDIA_BYTES) {
                       toolResult = {
-                        error: `Media is too large to process (${buf.byteLength} bytes).`,
+                        error:
+                          `Media is too large to process (${buf.byteLength} bytes).`,
                       };
                     } else {
                       const base64Data = uint8ToBase64(buf);
-                      const cleanContentType =
-                        contentType ||
+                      const cleanContentType = contentType ||
                         (kind === "image"
                           ? "image/jpeg"
                           : kind === "audio"
-                            ? "audio/ogg"
-                            : "application/octet-stream");
+                          ? "audio/ogg"
+                          : "application/octet-stream");
 
                       const guessExtension = (ct: string) => {
                         const lower = ct.toLowerCase();
@@ -4203,15 +4248,14 @@ Deno.serve(async (req: Request) => {
             );
             const recurrenceRule = call.args.is_recurring
               ? buildRecurrenceRule(call.args, dateStr) || {
-                  frequency: "monthly",
-                  interval: 1,
-                  anchor_date: dateStr,
-                }
+                frequency: "monthly",
+                interval: 1,
+                anchor_date: dateStr,
+              }
               : null;
-            const type =
-              typeof call.args.type === "string" && call.args.type
-                ? call.args.type.toLowerCase()
-                : "expense";
+            const type = typeof call.args.type === "string" && call.args.type
+              ? call.args.type.toLowerCase()
+              : "expense";
 
             if (type === "income") {
               const payload = {
@@ -4254,12 +4298,12 @@ Deno.serve(async (req: Request) => {
               const isHouseholdExpense = !!householdId && type === "expense";
               const splitConfig = isHouseholdExpense
                 ? await resolveHouseholdSplitConfig(
-                    supabase,
-                    householdId!,
-                    userId,
-                    Number(call.args.amount || 0),
-                    call.args,
-                  )
+                  supabase,
+                  householdId!,
+                  userId,
+                  Number(call.args.amount || 0),
+                  call.args,
+                )
                 : {};
 
               const payload = {
@@ -4338,18 +4382,17 @@ Deno.serve(async (req: Request) => {
               });
               continue;
             }
-            const isPortfolio =
-              call.args.is_portfolio ?? spaceMeta?.isPortfolio ?? false;
+            const isPortfolio = call.args.is_portfolio ??
+              spaceMeta?.isPortfolio ?? false;
 
             // Build transactions array for the batch endpoint
             const batchTransactions: any[] = [];
             const defaultDate = formatDateInTimeZone(userTimezone);
 
             for (const tx of rawTransactions) {
-              const txType =
-                typeof tx.type === "string" && tx.type
-                  ? tx.type.toLowerCase()
-                  : "expense";
+              const txType = typeof tx.type === "string" && tx.type
+                ? tx.type.toLowerCase()
+                : "expense";
               const dateStr = normalizeDateInput(tx.date, defaultDate);
 
               // Resolve splits for household expenses
@@ -4381,16 +4424,15 @@ Deno.serve(async (req: Request) => {
                 payerUserId,
                 customSplits,
                 isRecurring: tx.is_recurring === true,
-                recurrence_rule:
-                  tx.is_recurring === true
-                    ? tx.recurrence_rule || {
-                        frequency: (tx.frequency || "monthly")
-                          .toString()
-                          .toLowerCase(),
-                        interval: 1,
-                        anchor_date: dateStr,
-                      }
-                    : undefined,
+                recurrence_rule: tx.is_recurring === true
+                  ? tx.recurrence_rule || {
+                    frequency: (tx.frequency || "monthly")
+                      .toString()
+                      .toLowerCase(),
+                    interval: 1,
+                    anchor_date: dateStr,
+                  }
+                  : undefined,
               });
             }
 
@@ -4440,12 +4482,11 @@ Deno.serve(async (req: Request) => {
               };
             }
           } else if (call.name === "update_transaction") {
-            const updatesArgs =
-              call.args?.updates &&
-              typeof call.args.updates === "object" &&
-              !Array.isArray(call.args.updates)
-                ? call.args.updates
-                : null;
+            const updatesArgs = call.args?.updates &&
+                typeof call.args.updates === "object" &&
+                !Array.isArray(call.args.updates)
+              ? call.args.updates
+              : null;
             if (!updatesArgs) {
               toolResult = { error: "updates is required" };
             } else {
@@ -4463,8 +4504,7 @@ Deno.serve(async (req: Request) => {
 
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
 
               const resolved = resolveLastListedSelection(
                 lastRead.items || [],
@@ -4550,9 +4590,9 @@ Deno.serve(async (req: Request) => {
                         resolved.candidate.description,
                         resolved.candidate.household_id
                           ? `(${
-                              spaceMap.get(resolved.candidate.household_id)
-                                ?.name || ""
-                            })`
+                            spaceMap.get(resolved.candidate.household_id)
+                              ?.name || ""
+                          })`
                           : "",
                       ]
                         .filter((v) => String(v || "").trim().length > 0)
@@ -4587,8 +4627,8 @@ Deno.serve(async (req: Request) => {
                           const formattedBase = error
                             ? formatInvokeError(error)
                             : typeof (data as any)?.error === "string"
-                              ? (data as any).error
-                              : "Failed to update transaction";
+                            ? (data as any).error
+                            : "Failed to update transaction";
                           const code = (data as any)?.code;
                           const formatted = code
                             ? `${formattedBase} (code: ${code})`
@@ -4853,12 +4893,10 @@ Deno.serve(async (req: Request) => {
               contactId,
               currency,
             );
-            toolResult = error
-              ? { error }
-              : {
-                  success: true,
-                  currency: data?.preferred_currency || currency,
-                };
+            toolResult = error ? { error } : {
+              success: true,
+              currency: data?.preferred_currency || currency,
+            };
             if (error) {
               const formatted = formatInvokeError(error);
               if (WHATSAPP_DEBUG) {
@@ -5016,14 +5054,12 @@ Deno.serve(async (req: Request) => {
                     call.args.categories,
                   );
                   const categories = rawCategories.map((c) => c.toLowerCase());
-                  const color =
-                    typeof call.args.color === "string"
-                      ? call.args.color.trim()
-                      : undefined;
-                  const icon =
-                    typeof call.args.icon === "string"
-                      ? call.args.icon.trim()
-                      : undefined;
+                  const color = typeof call.args.color === "string"
+                    ? call.args.color.trim()
+                    : undefined;
+                  const icon = typeof call.args.icon === "string"
+                    ? call.args.icon.trim()
+                    : undefined;
 
                   if (!envelope && pctInput == null) {
                     toolResult = { error: "Pocket percentage is required" };
@@ -5039,12 +5075,11 @@ Deno.serve(async (req: Request) => {
                       )
                       .eq("budget_id", budgetRow.id);
                     const existingPct = envelope?.budget_percentage;
-                    const desiredPctRaw =
-                      pctInput != null
-                        ? Math.max(0, Math.min(100, pctInput))
-                        : typeof existingPct === "number"
-                          ? existingPct
-                          : 0;
+                    const desiredPctRaw = pctInput != null
+                      ? Math.max(0, Math.min(100, pctInput))
+                      : typeof existingPct === "number"
+                      ? existingPct
+                      : 0;
                     const desiredPct = Number(desiredPctRaw.toFixed(4));
                     const others = (envelopes || [])
                       .filter((p: any) => p.id !== envelope?.id)
@@ -5052,10 +5087,9 @@ Deno.serve(async (req: Request) => {
                         id: p.id as string,
                         percentage: Number(p.budget_percentage) || 0,
                       }));
-                    const adjustedOthers =
-                      pctInput != null
-                        ? rebalancePocketPercentages(desiredPct, others)
-                        : {};
+                    const adjustedOthers = pctInput != null
+                      ? rebalancePocketPercentages(desiredPct, others)
+                      : {};
 
                     // Compute budget_amount_cents from percentage and total budget
                     const totalBudgetCents = budgetRow.total_budget_cents || 0;
@@ -5249,9 +5283,11 @@ Deno.serve(async (req: Request) => {
               },
               options: { title: { display: true, text: call.args.title } },
             };
-            const url = `https://quickchart.io/chart?c=${encodeURIComponent(
-              JSON.stringify(chartConfig),
-            )}`;
+            const url = `https://quickchart.io/chart?c=${
+              encodeURIComponent(
+                JSON.stringify(chartConfig),
+              )
+            }`;
             toolResult = { url };
           } else if (call.name === "manage_recurring") {
             // Use update-expense or save-expense
@@ -5287,10 +5323,9 @@ Deno.serve(async (req: Request) => {
                 interval: 1,
                 anchor_date: dateStr,
               };
-              const type =
-                typeof call.args.type === "string" && call.args.type
-                  ? call.args.type.toLowerCase()
-                  : "expense";
+              const type = typeof call.args.type === "string" && call.args.type
+                ? call.args.type.toLowerCase()
+                : "expense";
 
               if (type === "income") {
                 const payload = {
@@ -5335,12 +5370,12 @@ Deno.serve(async (req: Request) => {
                 const isHouseholdExpense = !!householdId;
                 const splitConfig = isHouseholdExpense
                   ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId!,
-                      userId,
-                      Number(call.args.amount || 0),
-                      call.args,
-                    )
+                    supabase,
+                    householdId!,
+                    userId,
+                    Number(call.args.amount || 0),
+                    call.args,
+                  )
                   : {};
                 const payload = {
                   userId,
@@ -5383,22 +5418,20 @@ Deno.serve(async (req: Request) => {
                 }
               }
             } else if (action === "update") {
-              const expenseIdDirect =
-                typeof call.args.expense_id === "string"
-                  ? call.args.expense_id.trim()
-                  : "";
+              const expenseIdDirect = typeof call.args.expense_id === "string"
+                ? call.args.expense_id.trim()
+                : "";
 
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
 
               const resolvedSelection = !expenseIdDirect
                 ? resolveLastListedSelection(
-                    readLastListedTransactions(sessionState).items || [],
-                    call.args,
-                    spaceNameByHouseholdId,
-                  )
+                  readLastListedTransactions(sessionState).items || [],
+                  call.args,
+                  spaceNameByHouseholdId,
+                )
                 : null;
 
               if (
@@ -5409,8 +5442,7 @@ Deno.serve(async (req: Request) => {
               } else if (resolvedSelection && "error" in resolvedSelection) {
                 toolResult = { error: resolvedSelection.error };
               } else {
-                const resolvedExpenseId =
-                  expenseIdDirect ||
+                const resolvedExpenseId = expenseIdDirect ||
                   (resolvedSelection && "candidate" in resolvedSelection
                     ? resolvedSelection.candidate.id
                     : "");
@@ -5507,26 +5539,24 @@ Deno.serve(async (req: Request) => {
                     return typeof cents === "number" ? cents / 100 : 0;
                   })();
 
-                  const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    (hasSplitHints || hasPayerHint)
-                      ? await resolveHouseholdSplitConfig(
-                          supabase,
-                          householdId,
-                          userId,
-                          totalForSplits,
-                          call.args,
-                        )
-                      : {};
+                  const splitConfig = householdId &&
+                      !spaceMeta?.isPortfolio &&
+                      (hasSplitHints || hasPayerHint)
+                    ? await resolveHouseholdSplitConfig(
+                      supabase,
+                      householdId,
+                      userId,
+                      totalForSplits,
+                      call.args,
+                    )
+                    : {};
 
                   if (splitConfig.payerUserId) {
                     updates.payer_user_id = splitConfig.payerUserId;
                   }
 
                   const extraBody: Record<string, unknown> = {};
-                  const hasCustomSplits =
-                    !!splitConfig.customSplits &&
+                  const hasCustomSplits = !!splitConfig.customSplits &&
                     Array.isArray(splitConfig.customSplits.memberSplits) &&
                     splitConfig.customSplits.memberSplits.length > 0;
                   if (householdId && hasCustomSplits) {
@@ -5580,28 +5610,25 @@ Deno.serve(async (req: Request) => {
                 }
               }
             } else {
-              const expenseIdDirect =
-                typeof call.args.expense_id === "string"
-                  ? call.args.expense_id.trim()
-                  : "";
+              const expenseIdDirect = typeof call.args.expense_id === "string"
+                ? call.args.expense_id.trim()
+                : "";
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) =>
-                householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
               const resolved = !expenseIdDirect
                 ? resolveLastListedSelection(
-                    readLastListedTransactions(sessionState).items || [],
-                    call.args,
-                    spaceNameByHouseholdId,
-                  )
+                  readLastListedTransactions(sessionState).items || [],
+                  call.args,
+                  spaceNameByHouseholdId,
+                )
                 : null;
               if (resolved && "needs_disambiguation" in resolved) {
                 toolResult = resolved;
               } else if (resolved && "error" in resolved) {
                 toolResult = { error: resolved.error };
               } else {
-                const expenseId =
-                  expenseIdDirect ||
+                const expenseId = expenseIdDirect ||
                   (resolved && "candidate" in resolved
                     ? resolved.candidate.id
                     : "");
@@ -5657,22 +5684,28 @@ Deno.serve(async (req: Request) => {
               const net = snap.net / 100;
               summary += `Income: ${formatAmount(income, userCurrency)}\n`;
               summary += `Spending: ${formatAmount(expense, userCurrency)}\n`;
-              summary += `Net: ${formatAmount(
-                net,
-                userCurrency,
-              )}\n\nTop categories:\n`;
-              snap.categories.forEach((c, idx) => {
-                summary += `${idx + 1}. ${c.category}: ${formatAmount(
-                  c.amount_cents / 100,
+              summary += `Net: ${
+                formatAmount(
+                  net,
                   userCurrency,
-                )}\n`;
+                )
+              }\n\nTop categories:\n`;
+              snap.categories.forEach((c, idx) => {
+                summary += `${idx + 1}. ${c.category}: ${
+                  formatAmount(
+                    c.amount_cents / 100,
+                    userCurrency,
+                  )
+                }\n`;
               });
               if (snap.budget_cents) {
                 const remain = (snap.budget_cents - snap.totalExpense) / 100;
-                summary += `\nBudget: ${formatAmount(
-                  snap.budget_cents / 100,
-                  userCurrency,
-                )} | Remaining: ${formatAmount(remain, userCurrency)}`;
+                summary += `\nBudget: ${
+                  formatAmount(
+                    snap.budget_cents / 100,
+                    userCurrency,
+                  )
+                } | Remaining: ${formatAmount(remain, userCurrency)}`;
               }
               toolResult = {
                 snapshot: snap,
@@ -5714,7 +5747,15 @@ Deno.serve(async (req: Request) => {
 
       // Send tool outputs back to Gemini with error handling
       try {
-        const nextResult = await chat.sendMessage(toolResponses);
+        const nextResult = await sendGeminiMessageWithRetry(
+          chat as any,
+          toolResponses,
+          {
+            preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+            maxRetries: GEMINI_MAX_RETRIES,
+            logPrefix: "twilio-whatsapp-ai-bot",
+          },
+        );
         response = await nextResult.response;
         functionCalls = (response.functionCalls() as any[]) || [];
         const candidate = response.text();
@@ -5968,7 +6009,7 @@ Deno.serve(async (req: Request) => {
     .catch((error) => ({ type: "error" as const, error }));
 
   const timeoutPromise = new Promise<{ type: "timeout" }>((resolve) =>
-    setTimeout(() => resolve({ type: "timeout" }), PROCESSING_ACK_DELAY_MS),
+    setTimeout(() => resolve({ type: "timeout" }), PROCESSING_ACK_DELAY_MS)
   );
 
   const raceResult = await Promise.race([computePromise, timeoutPromise]);
@@ -6020,10 +6061,9 @@ Deno.serve(async (req: Request) => {
         status: "failed",
         delivery: "twiml",
         response_text: "processing_failed",
-        error:
-          raceResult.error instanceof Error
-            ? raceResult.error.message
-            : String(raceResult.error),
+        error: raceResult.error instanceof Error
+          ? raceResult.error.message
+          : String(raceResult.error),
       });
     }
     return xmlResponse(
@@ -6064,10 +6104,9 @@ Deno.serve(async (req: Request) => {
               status: "failed",
               delivery: "api",
               response_text: "processing_failed",
-              error:
-                result.error instanceof Error
-                  ? result.error.message
-                  : String(result.error),
+              error: result.error instanceof Error
+                ? result.error.message
+                : String(result.error),
             });
           }
         }
