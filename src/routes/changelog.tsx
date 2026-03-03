@@ -49,6 +49,20 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Custom Categories, Regional Support & Faster Currency Flow",
+    date: "2026-03-03",
+    version: "1.4.6",
+    tags: ["Feature", "Customization", "Currency", "Fix"],
+    description:
+      "Version 1.4.6 gives you more control over categorization, expands regional currency support, and makes support and feedback easier from inside the app.",
+    items: [
+      "Create your own transaction categories with custom icons and styles",
+      "Added Bangladesh Taka (BDT) and Zambian Kwacha (ZMW) with updated currency support",
+      "You can now send feature requests and bug reports directly from Settings",
+      "Currency selector and transaction totals now refresh more reliably",
+    ],
+  },
+  {
     title: "Telegram Sync, Siri Shortcuts & Quick Actions",
     date: "2026-02-23",
     version: "1.4.4",
