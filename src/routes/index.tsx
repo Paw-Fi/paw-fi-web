@@ -17,7 +17,6 @@ import { ComparisonTable } from "@/components/homepage/v2/comparison-table";
 import { CTASection } from "@/components/homepage/v2/cta-section";
 import { HowItWorksSection } from "@/components/homepage/v2/how-it-works-section";
 import { CaptureSection } from "@/components/homepage/v2/capture-section";
-import { WidgetsSection } from "@/components/homepage/v2/widgets-section";
 import { UserCommunityShowcase } from "@/components/homepage/user-community-showcase";
 
 // Existing Components
