@@ -1,4 +1,8 @@
-import { CATEGORY_COLOR_MAP } from "./category-colors.ts";
+import {
+  CATEGORY_COLOR_MAP,
+  normalizeCategoryForStorage,
+  resolveCategoryColor,
+} from "./category-colors.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
 
 export function debugLog(enabled: boolean, note: string, data?: unknown) {
@@ -62,11 +66,18 @@ export type NormalizedExpense = {
   formatted_amount: string;
 };
 
-export function normalizeExpensesForTool(raw: any[] | undefined, defaultCurrency: string): NormalizedExpense[] {
+export function normalizeExpensesForTool(
+  raw: any[] | undefined,
+  defaultCurrency: string,
+): NormalizedExpense[] {
   if (!raw) return [];
   return raw.map((e) => {
     const currency = e.currency || defaultCurrency;
-    const amountMajor = e.amountMajor ?? (typeof e.amount_cents === "number" ? e.amount_cents / 100 : Number(e.amount) || 0);
+    const amountMajor =
+      e.amountMajor ??
+      (typeof e.amount_cents === "number"
+        ? e.amount_cents / 100
+        : Number(e.amount) || 0);
     const currencySymbol = asCurrencySymbol(currency);
     return {
       id: e.id,
@@ -98,7 +109,14 @@ export function buildCategoryChart(expenses: NormalizedExpense[]) {
       datasets: [
         {
           data,
-          backgroundColor: ["#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40"],
+          backgroundColor: [
+            "#FF6384",
+            "#36A2EB",
+            "#FFCE56",
+            "#4BC0C0",
+            "#9966FF",
+            "#FF9F40",
+          ],
         },
       ],
     },
@@ -115,14 +133,15 @@ export function buildCategoryChart(expenses: NormalizedExpense[]) {
 export function formatExpensesSummary(
   expenses: NormalizedExpense[],
   includeChartNote: boolean,
-  opts?: { limit?: number; startDate?: string; endDate?: string }
+  opts?: { limit?: number; startDate?: string; endDate?: string },
 ): string {
   if (!expenses.length) return "I couldn't find any expenses for that range.";
   const lines: string[] = [];
   const limit = opts?.limit || expenses.length;
-  const header = opts?.startDate || opts?.endDate
-    ? `Here are transactions${opts?.startDate ? ` from ${opts.startDate}` : ""}${opts?.endDate ? ` to ${opts.endDate}` : ""}:`
-    : `Here are your ${Math.min(expenses.length, limit)} most recent transactions:`;
+  const header =
+    opts?.startDate || opts?.endDate
+      ? `Here are transactions${opts?.startDate ? ` from ${opts.startDate}` : ""}${opts?.endDate ? ` to ${opts.endDate}` : ""}:`
+      : `Here are your ${Math.min(expenses.length, limit)} most recent transactions:`;
   lines.push(header);
 
   let total = 0;
@@ -138,14 +157,36 @@ export function formatExpensesSummary(
   });
 
   const currency = expenses[0]?.currency || "";
-  lines.push("", `Total shown (${Math.min(expenses.length, limit)} items): ${formatAmount(total, currency)}`);
+  lines.push(
+    "",
+    `Total shown (${Math.min(expenses.length, limit)} items): ${formatAmount(total, currency)}`,
+  );
   if (includeChartNote) {
     lines.push("Chart attached. 🔍");
   }
-  lines.push("Need a monthly total, budget, or recurring setup? I can help! 🎯");
+  lines.push(
+    "Need a monthly total, budget, or recurring setup? I can help! 🎯",
+  );
   return lines.join("\n");
 }
 
-export const CATEGORY_GUIDE = Object.entries(CATEGORY_COLOR_MAP)
-  .map(([name, color]) => `${name} (${color})`)
-  .join("; ");
+export function buildCategoryGuide(categories?: string[] | null): string {
+  const source = Array.isArray(categories)
+    ? categories
+    : Object.keys(CATEGORY_COLOR_MAP);
+
+  const set = new Set<string>();
+  for (const entry of source) {
+    const raw = typeof entry === "string" ? entry : null;
+    const normalized = normalizeCategoryForStorage(raw);
+    if (!normalized) continue;
+    set.add(normalized);
+  }
+
+  return Array.from(set)
+    .sort()
+    .map((name) => `${name} (${resolveCategoryColor(name)})`)
+    .join("; ");
+}
+
+export const CATEGORY_GUIDE = buildCategoryGuide();

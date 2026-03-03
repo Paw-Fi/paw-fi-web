@@ -4,7 +4,10 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
-import { normalizeCategory } from "../shared/category-colors.ts";
+import {
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "../shared/category-colors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 
 const UUID_REGEX =
@@ -372,7 +375,9 @@ Deno.serve(async (req: Request) => {
         id: expense.id,
         type: expense.type || "expense",
         date: expense.date,
-        category: normalizeCategory(expense.category),
+        category:
+          sanitizeCategoryName(expense.category ?? "") ??
+          normalizeCategoryForStorage(expense.category),
         raw_text: expense.raw_text,
         amount_cents: expense.amount_cents, // Keep as cents, mobile divides by 100
         currency: validateCurrency(expense.currency || "USD"),

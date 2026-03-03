@@ -11,7 +11,8 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import {
   ALLOWED_CATEGORIES,
   resolveCategoryColor,
-  normalizeCategory,
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
 } from "../shared/category-colors.ts";
 import { getDaysInMonth } from "../shared/date-utils.ts";
 
@@ -207,7 +208,7 @@ type BreakdownEntry = {
 interface RespondWithChartOptions {
   breakdown: BreakdownEntry[];
   detection: ReturnType<typeof detectGptRequest>;
-  supabase: ReturnType<typeof createClient>;
+  supabase: any;
   chartBucket: string;
   resolvedUserId: string;
   conversationId: string | null;
@@ -244,9 +245,17 @@ async function respondWithChart({
     breakdown.find((entry) => entry.totals.some((t) => t.amountMajor > 0)) ??
     breakdown[0];
 
+  const quickchartDisabled =
+    (Deno.env.get("DISABLE_QUICKCHART") || "").toUpperCase() === "TRUE";
+  const enableQuickchart = !quickchartDisabled;
+
   let chartImageUrl: string | null = null;
 
-  if (meaningfulEntry && meaningfulEntry.totals.length > 0) {
+  if (
+    enableQuickchart &&
+    meaningfulEntry &&
+    meaningfulEntry.totals.length > 0
+  ) {
     const chartConfig = buildDoughnutConfigFromBreakdown({
       currency: meaningfulEntry.currency,
       totals: meaningfulEntry.totals.map((t) => ({
@@ -273,7 +282,9 @@ async function respondWithChart({
   if (detection.isGpt) {
     const markdown = chartImageUrl
       ? `![Spending breakdown](${chartImageUrl})`
-      : "No expenses found for the requested period.";
+      : enableQuickchart
+        ? "No expenses found for the requested period."
+        : "Chart rendering is disabled.";
     return new Response(markdown, {
       status: 200,
       headers: {
@@ -308,6 +319,7 @@ async function respondWithChart({
         windowDays,
         mocked,
         chartImageUrl,
+        enableQuickchart,
       },
     }),
     {
@@ -544,7 +556,9 @@ Deno.serve(async (req) => {
 
     for (const exp of expenses) {
       const currency = validateCurrency(exp.currency || "USD");
-      const category = normalizeCategory(exp.category);
+      const category =
+        sanitizeCategoryName(exp.category ?? "") ??
+        normalizeCategoryForStorage(exp.category);
 
       // Debug logging to ensure "other" categories are being processed
       if (category === "other") {

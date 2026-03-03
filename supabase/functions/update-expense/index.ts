@@ -10,8 +10,15 @@ import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   getAllCategories,
-  normalizeCategory,
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
 } from "../shared/category-colors.ts";
+import {
+  applyCategoryRemap,
+  ensureUserCategory,
+  fetchUserCategoryRemaps,
+  learnUserCategoryPreference,
+} from "../shared/user-categories.ts";
 
 interface MemberSplitPayload {
   userId: string;
@@ -59,6 +66,12 @@ interface UpdateExpenseRequest {
   clientTimezoneOffsetMinutes?: number;
   // Optional IANA timezone (e.g., "Asia/Singapore"). Used if offset is not provided.
   clientTimezone?: string;
+
+  // Optional user-confirmed category remap preference (mapping-only mode supported)
+  categoryRemap?: {
+    fromCategory: string;
+    toCategory: string;
+  };
 }
 
 interface ErrorResponse {
@@ -248,7 +261,11 @@ Deno.serve(async (req: Request) => {
       user_id?: string;
     } = await req.json();
     const expenseId = body.expenseId ?? body.expense_id;
-    const updates = body.updates;
+    const updates = (body as any).updates ?? {};
+
+    const categoryRemapRaw =
+      (body as any).categoryRemap ?? (body as any).category_remap;
+    const hasCategoryRemap = categoryRemapRaw != null;
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
@@ -376,7 +393,10 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
     }
 
-    if (!updates || typeof updates !== "object" || Array.isArray(updates)) {
+    if (
+      (!updates || typeof updates !== "object" || Array.isArray(updates)) &&
+      !hasCategoryRemap
+    ) {
       return errorResponse(
         "updates object is required and must be an object",
         "VALIDATION_ERROR",
@@ -393,7 +413,11 @@ Deno.serve(async (req: Request) => {
       !!rawCustomSplits?.memberSplits?.length ||
       !!rawSplitUpdate?.memberSplits?.length;
 
-    if (Object.keys(updates).length === 0 && !hasSplitPayload) {
+    if (
+      Object.keys(updates).length === 0 &&
+      !hasSplitPayload &&
+      !hasCategoryRemap
+    ) {
       return errorResponse(
         "updates object is required and must contain at least one field",
         "VALIDATION_ERROR",
@@ -420,8 +444,25 @@ Deno.serve(async (req: Request) => {
     }
 
     if (updates.category !== undefined) {
-      const normalizedCategory = normalizeCategory(updates.category || "other");
-      updates.category = normalizedCategory;
+      const rawCategory = String(updates.category ?? "other");
+      // For manual edits, preserve user-entered category names (including
+      // custom categories) after sanitization, instead of remapping aliases.
+      const sanitizedCategory = sanitizeCategoryName(rawCategory);
+      updates.category = sanitizedCategory ?? "other";
+      if (!sanitizedCategory && rawCategory.trim().length > 0) {
+        await reportEdgeFunctionError({
+          functionName: "update-expense",
+          error: new Error("CATEGORY_SANITIZE_FALLBACK"),
+          context: {
+            expenseId,
+            rawCategory,
+            finalCategory: updates.category,
+          },
+        });
+      }
+      console.log(
+        `[update-expense] category normalized for manual edit: raw="${rawCategory}" final="${updates.category}"`,
+      );
     }
 
     if (updates.raw_text !== undefined) {
@@ -717,6 +758,36 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Expense not found", "NOT_FOUND", 404);
     }
 
+    if (updates.category !== undefined) {
+      const txTypeRaw = String(
+        (expense as any)?.type ?? "expense",
+      ).toLowerCase();
+      const txType = txTypeRaw === "income" ? "income" : "expense";
+      const categoryBeforeRemap = String(updates.category);
+
+      try {
+        const remaps = await fetchUserCategoryRemaps({
+          supabase,
+          userId,
+          limit: 120,
+        });
+        updates.category = applyCategoryRemap({
+          categoryName: categoryBeforeRemap,
+          transactionType: txType,
+          remaps,
+        });
+      } catch (error) {
+        console.error(
+          "[update-expense] Failed to apply category remaps:",
+          error,
+        );
+      }
+
+      console.log(
+        `[update-expense] category after remap gate: before="${categoryBeforeRemap}" final="${updates.category}"`,
+      );
+    }
+
     const expenseHouseholdIdRaw: string | null =
       (expense as any)?.household_id ?? null;
     let isPortfolioHousehold = false;
@@ -812,6 +883,186 @@ Deno.serve(async (req: Request) => {
           403,
         );
       }
+    }
+
+    // Mapping-only mode: record an explicit category-to-category preference.
+    // This is called by the mobile client AFTER a category-only edit.
+    if (
+      hasCategoryRemap &&
+      Object.keys(updates).length === 0 &&
+      !hasSplitPayload
+    ) {
+      const remap = categoryRemapRaw as any;
+      const fromRaw =
+        remap?.fromCategory ?? remap?.from_category ?? remap?.from;
+      const toRaw = remap?.toCategory ?? remap?.to_category ?? remap?.to;
+
+      if (typeof fromRaw !== "string" || typeof toRaw !== "string") {
+        return errorResponse(
+          "categoryRemap.fromCategory and categoryRemap.toCategory are required",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      const fromCategory = normalizeCategoryForStorage(fromRaw);
+      const toCategory = normalizeCategoryForStorage(toRaw);
+
+      if (!fromCategory || !toCategory) {
+        return errorResponse(
+          "Invalid category remap values",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      if (toCategory === "other") {
+        return errorResponse("Cannot remap to 'other'", "VALIDATION_ERROR");
+      }
+
+      if (fromCategory === toCategory) {
+        return errorResponse(
+          "categoryRemap values must be different",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      const txTypeRaw = String(
+        (expense as any)?.type ?? "expense",
+      ).toLowerCase();
+      const txType = txTypeRaw === "income" ? "income" : "expense";
+
+      // Ensure the target category exists for the user (custom categories allowed).
+      try {
+        await ensureUserCategory({
+          supabase,
+          userId,
+          categoryName: toCategory,
+          transactionType: txType,
+        });
+      } catch (e) {
+        console.error(
+          "[update-expense] Failed to ensure category for remap:",
+          e,
+        );
+      }
+
+      // Prevent mapping to a hidden category (would create a preference the AI can never apply).
+      const { data: hiddenRow, error: hiddenError } = await supabase
+        .from("user_hidden_transaction_categories")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("category_name", toCategory)
+        .eq("transaction_type", txType)
+        .limit(1)
+        .maybeSingle();
+
+      if (hiddenError) {
+        console.error(
+          "[update-expense] Failed to check hidden categories:",
+          hiddenError,
+        );
+        return errorResponse(
+          "Failed to update category preference",
+          "SERVER_ERROR",
+          500,
+        );
+      }
+
+      if (hiddenRow) {
+        return errorResponse(
+          "Cannot remap to a hidden category",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      const nowIso = new Date().toISOString();
+
+      const { data: existingRemap, error: existingError } = await supabase
+        .from("user_category_remaps")
+        .select("id, use_count")
+        .eq("user_id", userId)
+        .eq("transaction_type", txType)
+        .eq("from_category_name", fromCategory)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error(
+          "[update-expense] Failed to load existing remap:",
+          existingError,
+        );
+        return errorResponse(
+          "Failed to update category preference",
+          "SERVER_ERROR",
+          500,
+        );
+      }
+
+      if (existingRemap?.id) {
+        const nextCount =
+          typeof (existingRemap as any).use_count === "number" &&
+          Number.isFinite((existingRemap as any).use_count)
+            ? Math.max(1, Math.trunc((existingRemap as any).use_count) + 1)
+            : 1;
+
+        const { error: updateRemapError } = await supabase
+          .from("user_category_remaps")
+          .update({
+            to_category_name: toCategory,
+            use_count: nextCount,
+            last_used_at: nowIso,
+            updated_at: nowIso,
+          })
+          .eq("id", (existingRemap as any).id);
+
+        if (updateRemapError) {
+          console.error(
+            "[update-expense] Failed to update category remap:",
+            updateRemapError,
+          );
+          return errorResponse(
+            "Failed to update category preference",
+            "SERVER_ERROR",
+            500,
+          );
+        }
+      } else {
+        const { error: insertRemapError } = await supabase
+          .from("user_category_remaps")
+          .insert({
+            user_id: userId,
+            transaction_type: txType,
+            from_category_name: fromCategory,
+            to_category_name: toCategory,
+            use_count: 1,
+            last_used_at: nowIso,
+            created_at: nowIso,
+            updated_at: nowIso,
+          });
+
+        if (insertRemapError) {
+          console.error(
+            "[update-expense] Failed to insert category remap:",
+            insertRemapError,
+          );
+          return errorResponse(
+            "Failed to update category preference",
+            "SERVER_ERROR",
+            500,
+          );
+        }
+      }
+
+      return jsonResponse(
+        {
+          success: true,
+          data: {
+            transactionType: txType,
+            fromCategory,
+            toCategory,
+          },
+          resolvedUserId: userId,
+        },
+        200,
+      );
     }
 
     // Capture old values for notification payload
@@ -1419,6 +1670,40 @@ Deno.serve(async (req: Request) => {
     console.log(
       `[update-expense] Successfully updated expense ${normalizedExpenseId} for user ${userId}`,
     );
+
+    // Learn/ensure custom category + preference mapping for future AI categorization
+    try {
+      const txTypeRaw = String(
+        (updatedExpense as any)?.type ?? "expense",
+      ).toLowerCase();
+      const txType = txTypeRaw === "income" ? "income" : "expense";
+      const updatedCategory = (updatedExpense as any)?.category ?? null;
+      const updatedNote = (updatedExpense as any)?.raw_text ?? null;
+
+      if (
+        typeof updatedCategory === "string" &&
+        updatedCategory.trim().length > 0
+      ) {
+        await ensureUserCategory({
+          supabase,
+          userId,
+          categoryName: updatedCategory,
+          transactionType: txType,
+        });
+        await learnUserCategoryPreference({
+          supabase,
+          userId,
+          transactionType: txType,
+          categoryName: updatedCategory,
+          descriptionText: updatedNote,
+        });
+      }
+    } catch (e) {
+      console.error(
+        "[update-expense] Failed to learn category preference (non-blocking):",
+        e,
+      );
+    }
 
     // For non-GPT requests, notify household members if this was a shared expense
     if (!detection.isGpt && expense.household_id && !isPortfolioHousehold) {

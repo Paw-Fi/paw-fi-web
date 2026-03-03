@@ -1,0 +1,147 @@
+import {
+  assert,
+  assertEquals,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+
+import {
+  coerceCategoryToAllowed,
+  getExpenseCategories,
+  getIncomeCategories,
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "../shared/category-colors.ts";
+import {
+  applyPreferencesToItems,
+  mergeAllowedCategories,
+} from "../shared/user-categories.ts";
+
+function withSilencedConsoleWarn<T>(fn: () => T): T {
+  const original = console.warn;
+  console.warn = () => {};
+  try {
+    return fn();
+  } finally {
+    console.warn = original;
+  }
+}
+
+Deno.test("category: sanitizeCategoryName accepts safe custom category", () => {
+  assertEquals(sanitizeCategoryName("Coffee & Tea"), "coffee & tea");
+});
+
+Deno.test("category: sanitizeCategoryName rejects backticks", () => {
+  assertEquals(sanitizeCategoryName("rent `oops`"), null);
+});
+
+Deno.test("category: sanitizeCategoryName rejects overly long names", () => {
+  const longName = "a".repeat(49);
+  assertEquals(sanitizeCategoryName(longName), null);
+});
+
+Deno.test("category: normalizeCategoryForStorage preserves unknown custom", () => {
+  assertEquals(withSilencedConsoleWarn(() => normalizeCategoryForStorage("My Custom")), "my custom");
+});
+
+Deno.test("category: normalizeCategoryForStorage keeps income gift canonical", () => {
+  assertEquals(normalizeCategoryForStorage("gift"), "gift");
+});
+
+Deno.test("category: coerceCategoryToAllowed returns other when not allowed", () => {
+  const allowed = new Set(["groceries", "rent"]);
+  assertEquals(withSilencedConsoleWarn(() => coerceCategoryToAllowed("my custom", allowed)), "other");
+});
+
+Deno.test("user-categories: mergeAllowedCategories includes custom in correct sets", () => {
+  const merged = mergeAllowedCategories({
+    customCategories: [
+      { name: "Side Hustle", transaction_type: "income" },
+      { name: "Chores", transaction_type: "expense" },
+      { name: "Allowance", transaction_type: "income" },
+    ],
+  });
+
+  assert(merged.incomeCategories.includes("side hustle"));
+  assert(!merged.expenseCategories.includes("side hustle"));
+
+  assert(merged.expenseCategories.includes("chores"));
+  assert(!merged.incomeCategories.includes("chores"));
+
+    assert(merged.incomeCategories.includes("allowance"));
+});
+
+Deno.test("user-categories: applyPreferencesToItems uses preferred category when allowed", () => {
+  const merged = mergeAllowedCategories({ customCategories: [] });
+
+  const items = [
+    { type: "expense" as const, description: "Starbucks latte", category: "other" },
+  ];
+
+  const preferences = [
+    {
+      transaction_type: "expense" as const,
+      match_key: "starbucks latte",
+      category_name: "coffee & tea",
+      use_count: 3,
+      last_used_at: null,
+    },
+  ];
+
+  const out = applyPreferencesToItems({
+    items,
+    preferences,
+    allowedExpenseCategories: merged.allowedExpenseSet,
+    allowedIncomeCategories: merged.allowedIncomeSet,
+  });
+
+  assertEquals(out[0].category, "coffee & tea");
+});
+
+Deno.test("user-categories: applyPreferencesToItems does not apply if preferred not allowed", () => {
+  const allowedExpenseSet = new Set(["rent", "groceries"]);
+  const allowedIncomeSet = new Set(getIncomeCategories());
+
+  const items = [
+    { type: "expense" as const, description: "Starbucks latte", category: "other" },
+  ];
+
+  const preferences = [
+    {
+      transaction_type: "expense" as const,
+      match_key: "starbucks latte",
+      category_name: "coffee & tea",
+      use_count: 1,
+      last_used_at: null,
+    },
+  ];
+
+  const out = applyPreferencesToItems({
+    items,
+    preferences,
+    allowedExpenseCategories: allowedExpenseSet,
+    allowedIncomeCategories: allowedIncomeSet,
+  });
+
+  assertEquals(out[0].category, "other");
+});
+
+Deno.test("category lists: built-in lists remain non-empty", () => {
+  assert(getExpenseCategories().length > 0);
+  assert(getIncomeCategories().length > 0);
+});
+
+
+Deno.test("user-categories: mergeAllowedCategories excludes hidden categories", () => {
+  const merged = mergeAllowedCategories({
+    customCategories: [{ name: "side hustle", transaction_type: "income" }],
+    hiddenCategories: [
+      { category_name: "groceries", transaction_type: "expense" },
+      { category_name: "side hustle", transaction_type: "income" },
+    ],
+  });
+
+  assert(!merged.expenseCategories.includes("groceries"));
+  assert(!merged.incomeCategories.includes("side hustle"));
+
+  // fallbacks still present
+  assert(merged.expenseCategories.includes("other"));
+});

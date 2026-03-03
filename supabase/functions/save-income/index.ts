@@ -8,6 +8,16 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "../shared/category-colors.ts";
+import {
+  applyCategoryRemap,
+  ensureUserCategory,
+  fetchUserCategoryRemaps,
+  learnUserCategoryPreference,
+} from "../shared/user-categories.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -127,10 +137,26 @@ Deno.serve(async (req: Request) => {
 
     console.log("[save-income] has recurrence_rule:", !!body.recurrence_rule);
 
+    const rawCategory = String(body.category ?? "");
+    const sanitizedCategory = sanitizeCategoryName(rawCategory);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    let effectiveCategory = resolvedCategory;
+    if (!sanitizedCategory && rawCategory.trim().length > 0) {
+      await reportEdgeFunctionError({
+        functionName: "save-income",
+        error: new Error("CATEGORY_SANITIZE_FALLBACK"),
+        context: {
+          rawCategory,
+          finalCategory: resolvedCategory,
+        },
+      });
+    }
+
     console.log("[save-income] Incoming request:", {
       userId: "[redacted]",
       amount: body.amount,
-      category: body.category,
+      category: resolvedCategory,
       householdId: body.householdId,
       privacyScope: body.privacyScope,
       isRecurring: body.isRecurring,
@@ -172,6 +198,26 @@ Deno.serve(async (req: Request) => {
     if (!userId) {
       return errorResponse("Valid userId is required", 400);
     }
+
+    try {
+      const remaps = await fetchUserCategoryRemaps({
+        supabase,
+        userId,
+        limit: 120,
+      });
+      effectiveCategory = applyCategoryRemap({
+        categoryName: resolvedCategory,
+        transactionType: "income",
+        remaps,
+      });
+    } catch (error) {
+      console.error("[save-income] Failed to apply category remaps:", error);
+    }
+
+    console.log("[save-income] Effective category after remaps:", {
+      initial: resolvedCategory,
+      final: effectiveCategory,
+    });
 
     if (!body.amount || body.amount <= 0) {
       return errorResponse("Valid amount greater than 0 is required", 400);
@@ -323,7 +369,7 @@ Deno.serve(async (req: Request) => {
       user_id: userId,
       type: "income", // CRITICAL: Set transaction type to income
       amount_cents: amountCents,
-      category: body.category,
+      category: effectiveCategory,
       date: body.date,
       raw_text: body.description || "",
       currency: currency,
@@ -335,11 +381,6 @@ Deno.serve(async (req: Request) => {
       is_recurring: body.isRecurring || false,
       recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
     };
-
-    console.log(
-      "[save-income] incomeRecord being inserted:",
-      JSON.stringify(incomeRecord, null, 2),
-    );
 
     // Add household reference if resolved (portfolio uses household_id as a private space scope)
     if (resolvedHouseholdId) {
@@ -407,6 +448,29 @@ Deno.serve(async (req: Request) => {
 
     console.log("[save-income] Income saved successfully:", income.id);
 
+    // Learn/ensure custom category + preference mapping for future AI categorization
+    try {
+      await ensureUserCategory({
+        supabase,
+        userId,
+        categoryName: income.category ?? body.category,
+        transactionType: "income",
+      });
+      await learnUserCategoryPreference({
+        supabase,
+        userId,
+        transactionType: "income",
+        categoryName: income.category ?? body.category,
+        sourceText: body.source || null,
+        descriptionText: body.description || income.raw_text || null,
+      });
+    } catch (e) {
+      console.error(
+        "[save-income] Failed to learn category preference (non-blocking):",
+        e,
+      );
+    }
+
     // If household income, create notification for household members (portfolio skips sharing/notifications)
     if (resolvedHouseholdId && !isPortfolio) {
       console.log(
@@ -438,7 +502,7 @@ Deno.serve(async (req: Request) => {
             actor_name: actorName,
             amount_cents: amountCents,
             currency: currency,
-            category: body.category,
+            category: income.category ?? effectiveCategory,
             source: body.source || "",
             note: body.description || "",
             privacy_scope: privacyScope,

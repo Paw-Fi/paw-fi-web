@@ -9,6 +9,16 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "../shared/category-colors.ts";
+import {
+  applyCategoryRemap,
+  ensureUserCategory,
+  fetchUserCategoryRemaps,
+  learnUserCategoryPreference,
+} from "../shared/user-categories.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -301,6 +311,21 @@ Deno.serve(async (req: Request) => {
     const incomeIndices: number[] = [];
     const validationErrors: { index: number; error: string }[] = [];
 
+    let categoryRemaps: Awaited<ReturnType<typeof fetchUserCategoryRemaps>> =
+      [];
+    try {
+      categoryRemaps = await fetchUserCategoryRemaps({
+        supabase,
+        userId,
+        limit: 120,
+      });
+    } catch (error) {
+      console.error(
+        "[save-transactions-batch] Failed to load category remaps:",
+        error,
+      );
+    }
+
     for (let i = 0; i < body.transactions.length; i++) {
       const tx = body.transactions[i];
 
@@ -369,12 +394,38 @@ Deno.serve(async (req: Request) => {
 
       const currency = validateCurrency(tx.currency || "USD");
       const amountCents = Math.round(tx.amount * 100);
+      const rawCategory = String(tx.category ?? "");
+      const sanitizedCategory = sanitizeCategoryName(rawCategory);
+      const resolvedCategory =
+        sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
+      const effectiveCategory = applyCategoryRemap({
+        categoryName: resolvedCategory,
+        transactionType: tx.type === "income" ? "income" : "expense",
+        remaps: categoryRemaps,
+      });
+      if (!sanitizedCategory && rawCategory.trim().length > 0) {
+        void reportEdgeFunctionError({
+          functionName: "save-transactions-batch",
+          error: new Error("CATEGORY_SANITIZE_FALLBACK"),
+          context: {
+            index: i,
+            transactionType: tx.type || "expense",
+            rawCategory,
+            finalCategory: effectiveCategory,
+          },
+        }).catch((error) => {
+          console.error(
+            "[save-transactions-batch] Failed to report category sanitize fallback:",
+            error,
+          );
+        });
+      }
 
       const baseRecord = {
         contact_id: contactId,
         user_id: userId,
         amount_cents: amountCents,
-        category: tx.category,
+        category: effectiveCategory,
         date: tx.date,
         raw_text: tx.description || "",
         currency: currency,
@@ -855,6 +906,67 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
+    }
+
+    // Ensure any user-defined categories exist so future AI calls can use them
+    // and learn basic per-user preferences for future categorization.
+    try {
+      const uniqueExpense = new Set<string>(
+        expenseRecords.map((r: any) => r.category).filter(Boolean),
+      );
+      const uniqueIncome = new Set<string>(
+        incomeRecords.map((r: any) => r.category).filter(Boolean),
+      );
+
+      for (const cat of uniqueExpense) {
+        await ensureUserCategory({
+          supabase,
+          userId,
+          categoryName: cat,
+          transactionType: "expense",
+        });
+      }
+      for (const cat of uniqueIncome) {
+        await ensureUserCategory({
+          supabase,
+          userId,
+          categoryName: cat,
+          transactionType: "income",
+        });
+      }
+
+      const MAX_PREF_LEARN = 120;
+      let learned = 0;
+
+      for (const r of incomeRecords) {
+        if (learned >= MAX_PREF_LEARN) break;
+        await learnUserCategoryPreference({
+          supabase,
+          userId,
+          transactionType: "income",
+          categoryName: r.category,
+          sourceText: r.source ?? null,
+          descriptionText: r.raw_text ?? null,
+        });
+        learned += 1;
+      }
+
+      for (const r of expenseRecords) {
+        if (learned >= MAX_PREF_LEARN) break;
+        await learnUserCategoryPreference({
+          supabase,
+          userId,
+          transactionType: "expense",
+          categoryName: r.category,
+          descriptionText: r.raw_text ?? null,
+        });
+        learned += 1;
+      }
+    } catch (e) {
+      console.error(
+        "[save-transactions-batch] Failed to ensure/learn categories (non-blocking):",
+        e,
+      );
     }
 
     // Sort results by original index

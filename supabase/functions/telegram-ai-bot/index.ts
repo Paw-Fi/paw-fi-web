@@ -10,6 +10,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 import {
   buildCategoryChart,
+  buildCategoryGuide,
   CATEGORY_GUIDE,
   formatInvokeError,
   normalizeExpensesForTool,
@@ -39,6 +40,12 @@ import {
   REQUIRED_TELEGRAM_TOOL_NAMES,
 } from "../shared/telegram-parity.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  fetchUserCustomCategories,
+  fetchUserHiddenCategories,
+  fetchUserCategoryPreferences,
+  mergeAllowedCategories,
+} from "../shared/user-categories.ts";
 
 const MODEL_NAME = "gemini-2.5-flash-lite";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
@@ -1510,6 +1517,23 @@ Deno.serve(async (req: Request) => {
         const userCurrency = contact.preferred_currency || "USD";
         const userLang = contact.preferred_language || "en";
         const userTimezone = contact.preferred_timezone || "UTC";
+
+        const [customCategories, hiddenCategories, categoryPreferences] =
+          await Promise.all([
+            fetchUserCustomCategories({ supabase, userId }),
+            fetchUserHiddenCategories({ supabase, userId }),
+            fetchUserCategoryPreferences({ supabase, userId }),
+          ]);
+        const { expenseCategories, incomeCategories } = mergeAllowedCategories({
+          customCategories,
+          hiddenCategories,
+        });
+        const allowedExpenseCategories = expenseCategories;
+        const allowedIncomeCategories = incomeCategories;
+        const categoryGuideForUser = buildCategoryGuide([
+          ...expenseCategories,
+          ...incomeCategories,
+        ]);
         const chatHouseholds = contextData?.households || [];
         const spaceMap = new Map<
           string,
@@ -1636,7 +1660,7 @@ Deno.serve(async (req: Request) => {
           )
             .replace("{{CURRENCY}}", userCurrency)
             .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
-            .replace("{{CATEGORIES}}", CATEGORY_GUIDE)
+            .replace("{{CATEGORIES}}", categoryGuideForUser)
             .replace("{{LANGUAGE}}", userLang),
         });
 
@@ -2227,7 +2251,14 @@ Deno.serve(async (req: Request) => {
                   };
                 } else if (!fileId) {
                   toolResult = await runAnalyzeExpenseWithTimeout(
-                    { userId, text, currency: userCurrency },
+                    {
+                      userId,
+                      text,
+                      currency: userCurrency,
+                      allowedExpenseCategories,
+                      allowedIncomeCategories,
+                      categoryPreferences,
+                    },
                     GEMINI_API_KEY,
                     30000,
                     "Analysis is taking longer than expected. Please try again.",
@@ -2286,6 +2317,9 @@ Deno.serve(async (req: Request) => {
                               bytes: buf,
                             },
                             currency: userCurrency,
+                            allowedExpenseCategories,
+                            allowedIncomeCategories,
+                            categoryPreferences,
                           },
                           GEMINI_API_KEY,
                           30000,
@@ -2302,6 +2336,9 @@ Deno.serve(async (req: Request) => {
                               bytes: buf,
                             },
                             currency: userCurrency,
+                            allowedExpenseCategories,
+                            allowedIncomeCategories,
+                            categoryPreferences,
                           },
                           GEMINI_API_KEY,
                           30000,
@@ -2313,6 +2350,9 @@ Deno.serve(async (req: Request) => {
                             userId,
                             text,
                             currency: userCurrency,
+                            allowedExpenseCategories,
+                            allowedIncomeCategories,
+                            categoryPreferences,
                             attachments: [
                               {
                                 filename,
@@ -2366,10 +2406,8 @@ Deno.serve(async (req: Request) => {
                 const wantsSharedOnly =
                   !householdId && normalizedScope === "shared";
                 const isPortfolioQuery =
-                  spaceMeta?.isPortfolio ??
-                  (normalizedScope === "portfolio"
-                    ? true
-                    : call.args.is_portfolio === true);
+                  (spaceMeta?.isPortfolio === true) ||
+                  call.args.is_portfolio === true;
                 const { data, error } = await fetchExpensesDirect(
                   supabase,
                   contact.id,

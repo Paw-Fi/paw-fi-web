@@ -2,7 +2,14 @@ import {
   createClient,
   type SupabaseClient as SupabaseJsClient,
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { normalizeCategory } from "./category-colors.ts";
+import {
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "./category-colors.ts";
+import {
+  ensureUserCategory,
+  learnUserCategoryPreference,
+} from "./user-categories.ts";
 
 export type SupabaseClient = SupabaseJsClient;
 
@@ -117,6 +124,10 @@ export interface FetchExpensesOptions {
   householdId?: string | null;
   isPortfolio?: boolean;
   portfolioHouseholdIds?: string[];
+  // Optional hints used by some bot flows (currently ignored by query logic)
+  personalOnly?: boolean;
+  sharedOnly?: boolean;
+  sharedHouseholdIds?: string[];
   type?: "expense" | "income";
   currency?: string;
 }
@@ -209,7 +220,9 @@ export async function saveExpenseDirect(
 ) {
   const amount_cents = Math.round((params.amount || 0) * 100);
   const date = params.date || new Date().toISOString().split("T")[0];
-  const category = normalizeCategory(params.category || "other");
+  const category =
+    sanitizeCategoryName(params.category || "") ??
+    normalizeCategoryForStorage(params.category || "other");
   const isPortfolioExpense = params.isPortfolio === true;
   const isHouseholdExpense =
     !!params.householdId &&
@@ -243,6 +256,26 @@ export async function saveExpenseDirect(
     .select()
     .single();
   if (insertRes.error || !insertRes.data) return insertRes;
+
+  try {
+    const txTypeRaw = String(params.type || "expense").toLowerCase();
+    const txType = txTypeRaw === "income" ? "income" : "expense";
+    await ensureUserCategory({
+      supabase,
+      userId,
+      categoryName: category,
+      transactionType: txType,
+    });
+    await learnUserCategoryPreference({
+      supabase,
+      userId,
+      transactionType: txType,
+      categoryName: category,
+      descriptionText: params.description || null,
+    });
+  } catch (_) {
+    // non-blocking
+  }
 
   // Household expense: create split group + split lines (equal by default).
   if (!isHouseholdExpense) return insertRes;

@@ -58,10 +58,20 @@ import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 import { validateCurrency } from "./currency-validator.ts";
 import {
+  coerceCategoryToAllowed,
   getExpenseCategories,
   getIncomeCategories,
   normalizeCategory,
+  normalizeCategoryForStorage,
 } from "./category-colors.ts";
+import {
+  applyCategoryRemap,
+  applyPreferencesToItems,
+} from "./user-categories.ts";
+import type {
+  UserCategoryPreferenceRow,
+  UserCategoryRemapRow,
+} from "./user-categories.ts";
 import { getCurrencySymbol } from "./currency-symbols.ts";
 
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
@@ -1124,7 +1134,9 @@ async function resolveCandidateCategories(
         ? call.args.categories
         : [];
       if (categories.length === candidates.length) {
-        return categories.map((cat: string) => normalizeCategory(cat));
+        return categories.map((cat: string) =>
+          normalizeCategoryForStorage(cat),
+        );
       }
     }
   }
@@ -1471,6 +1483,16 @@ export interface AnalyzeRequestBody {
   isPortfolio?: boolean;
   householdMembers?: HouseholdMemberContext[];
   attachments?: AnalyzeAttachment[];
+
+  // Optional: caller-provided allowed categories (defaults + user custom merged upstream)
+  allowedExpenseCategories?: string[];
+  allowedIncomeCategories?: string[];
+
+  // Optional: learned user preferences for category assignment
+  categoryPreferences?: UserCategoryPreferenceRow[];
+
+  // Optional: explicit user category remaps (hard gate)
+  categoryRemaps?: UserCategoryRemapRow[];
 }
 
 export interface AnalyzeResult {
@@ -2720,7 +2742,7 @@ function processRawItems(
     .map((it) => {
       const itemCurrency = it.currency || callerCurrency;
       const rawCategory = it.category || "other";
-      const normalizedCategory = normalizeCategory(rawCategory);
+      const normalizedCategory = normalizeCategoryForStorage(rawCategory);
 
       if (DEBUG_LOGS) {
         console.log(
@@ -3764,8 +3786,46 @@ export async function runAnalyzeExpense(
         : undefined;
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const expenseCategories = getExpenseCategories();
-    const incomeCategories = getIncomeCategories();
+
+    const normalizeAllowedList = (values: unknown): string[] => {
+      if (!Array.isArray(values)) return [];
+      const seen = new Set<string>();
+      const out: string[] = [];
+      for (const v of values) {
+        const key = normalizeCategoryForStorage(
+          typeof v === "string" ? v : String(v ?? ""),
+        );
+        if (!key || !seen.add(key)) continue;
+        out.push(key);
+      }
+      out.sort();
+      // Ensure stable fallback
+      if (!seen.has("other")) out.push("other");
+      return out;
+    };
+
+    const callerExpenseAllowed = normalizeAllowedList(
+      body.allowedExpenseCategories,
+    );
+    const callerIncomeAllowed = normalizeAllowedList(
+      body.allowedIncomeCategories,
+    );
+
+    const expenseCategories =
+      callerExpenseAllowed.length > 0
+        ? callerExpenseAllowed
+        : getExpenseCategories();
+    const incomeCategories =
+      callerIncomeAllowed.length > 0
+        ? callerIncomeAllowed
+        : getIncomeCategories();
+
+    const allowedExpenseSet = new Set<string>(
+      expenseCategories.map((c) => normalizeCategoryForStorage(c)),
+    );
+    const allowedIncomeSet = new Set<string>(
+      incomeCategories.map((c) => normalizeCategoryForStorage(c)),
+    );
 
     // Debug: Log categories being passed to AI
     if (DEBUG_LOGS) {
@@ -4033,13 +4093,7 @@ export async function runAnalyzeExpense(
           }
         }
 
-        if (items.length > 0) {
-          return {
-            success: true,
-            items,
-            language,
-          };
-        }
+        // Items extracted from attachment pre-processing; continue to final normalization.
 
         items = await analyzeFromText(
           genAI,
@@ -4354,6 +4408,53 @@ export async function runAnalyzeExpense(
         status: 400,
         language,
       };
+    }
+
+    const preferences: UserCategoryPreferenceRow[] = Array.isArray(
+      body.categoryPreferences,
+    )
+      ? body.categoryPreferences
+      : [];
+    const remaps: UserCategoryRemapRow[] = Array.isArray(body.categoryRemaps)
+      ? body.categoryRemaps
+      : [];
+
+    if (items.length > 0) {
+      // First, apply learned user preferences based on description match key
+      items = applyPreferencesToItems({
+        items: items.map((it) => ({
+          type: it.type,
+          description: it.description,
+          category: it.category,
+        })),
+        preferences,
+        allowedExpenseCategories: allowedExpenseSet,
+        allowedIncomeCategories: allowedIncomeSet,
+      }).map((it, idx) => ({
+        ...items[idx],
+        category: it.category,
+      }));
+
+      // Then, hard-apply explicit user remaps (from -> to) before final coercion.
+      items = items.map((it) => ({
+        ...it,
+        category: applyCategoryRemap({
+          categoryName: it.category,
+          transactionType: it.type,
+          remaps,
+          allowedExpenseCategories: allowedExpenseSet,
+          allowedIncomeCategories: allowedIncomeSet,
+        }),
+      }));
+
+      // Finally, coerce to the allowed set for the user
+      items = items.map((it) => ({
+        ...it,
+        category: coerceCategoryToAllowed(
+          it.category,
+          it.type === "income" ? allowedIncomeSet : allowedExpenseSet,
+        ),
+      }));
     }
 
     return {

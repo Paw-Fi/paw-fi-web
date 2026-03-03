@@ -128,6 +128,7 @@ const MONEY_IN_OUT = [
   "freelance income",
   "rental income",
   "interest income",
+  "gift",
   "cashback",
   "pension",
   "refunds",
@@ -257,7 +258,7 @@ export function resolveCategoryColor(category: string): string {
 export function normalizeCategory(raw: string | null): string {
   if (!raw) return "other";
 
-  const normalized = raw.trim().toLowerCase();
+  const normalized = sanitizeCategoryName(raw) ?? raw.trim().toLowerCase();
 
   if (normalized == "default" || normalized == "unknown") {
     return "other";
@@ -532,7 +533,7 @@ export function normalizeCategory(raw: string | null): string {
     drink: "bars & drinks",
     date: "dating",
     party: "parties & hosting",
-    gift: "gifts",
+    gift: "gift",
     donation: "charity",
     charity: "charity",
     collectible: "collectibles",
@@ -613,6 +614,7 @@ export const INCOME_CATEGORIES = [
   "freelance income",
   "rental income",
   "interest income",
+  "gift",
   "cashback",
   "pension",
   "refunds",
@@ -637,4 +639,95 @@ export function getExpenseCategories(): string[] {
  */
 export function isCategoryAllowed(category: string): boolean {
   return ALLOWED_CATEGORIES.has(category.trim().toLowerCase());
+}
+
+// === Custom categories (user-defined) ===
+export function sanitizeCategoryName(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw) return null;
+
+  const normalized = raw
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!normalized) return null;
+  if (normalized.length > 48) return null;
+
+  // Disallow characters that can break prompts / markdown formatting.
+  if (normalized.includes("`")) return null;
+
+  // Allow only simple safe characters.
+  if (!/^[a-z0-9 &/._-]+$/.test(normalized)) return null;
+
+  return normalized;
+}
+
+/**
+ * Normalization for storage/UI: maps known aliases to canonical categories,
+ * but preserves unknown values as user-defined categories.
+ */
+export function normalizeCategoryForStorage(raw: string | null): string {
+  if (!raw) return "other";
+
+  const normalized = sanitizeCategoryName(raw);
+  if (!normalized) {
+    const mapped = normalizeCategory(raw);
+    return mapped !== "other" ? mapped : "other";
+  }
+
+  if (normalized === "default" || normalized === "unknown") {
+    return "other";
+  }
+
+  // Canonical match
+  if (ALLOWED_CATEGORIES.has(normalized)) {
+    return normalized;
+  }
+
+  // Map aliases/provider codes to canonical list if possible.
+  const mapped = normalizeCategory(raw);
+  if (mapped !== "other") {
+    return mapped;
+  }
+
+  // Preserve user-defined categories.
+  return sanitizeCategoryName(normalized) ?? "other";
+}
+
+/**
+ * Coerce an arbitrary category to an allowed set.
+ * Use this for AI outputs so we never persist an unknown category unless the
+ * user's allowed list includes it.
+ */
+export function coerceCategoryToAllowed(
+  raw: string | null,
+  allowed: Set<string>,
+): string {
+  const candidate = normalizeCategoryForStorage(raw);
+  if (allowed.has(candidate)) return candidate;
+
+  const mapped = normalizeCategory(raw);
+  if (allowed.has(mapped)) return mapped;
+
+  return "other";
+}
+
+export function normalizePreferenceMatchKey(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw) return null;
+  const cleaned = raw
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!cleaned) return null;
+  return cleaned.length > 80 ? cleaned.slice(0, 80) : cleaned;
 }

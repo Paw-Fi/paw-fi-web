@@ -9,6 +9,16 @@ import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "../shared/category-colors.ts";
+import {
+  applyCategoryRemap,
+  ensureUserCategory,
+  fetchUserCategoryRemaps,
+  learnUserCategoryPreference,
+} from "../shared/user-categories.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -175,13 +185,6 @@ Deno.serve(async (req: Request) => {
     // Parse request body
     const body: RequestBody = await req.json();
 
-    const headerSnapshot: Record<string, string> = {};
-    req.headers.forEach((value, key) => {
-      headerSnapshot[key] = value;
-    });
-    console.log("[save-expense] Incoming headers:", headerSnapshot);
-    console.log("[save-expense] Incoming body:", body);
-
     const detection = detectGptRequest(req);
 
     let userId = sanitizeUuid(body.userId ?? null);
@@ -266,11 +269,26 @@ Deno.serve(async (req: Request) => {
     }
 
     const isPortfolio = body.isPortfolio === true;
+    const rawCategory = String(body.category ?? "");
+    const sanitizedCategory = sanitizeCategoryName(rawCategory);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    let effectiveCategory = resolvedCategory;
+    if (!sanitizedCategory && rawCategory.trim().length > 0) {
+      await reportEdgeFunctionError({
+        functionName: "save-expense",
+        error: new Error("CATEGORY_SANITIZE_FALLBACK"),
+        context: {
+          rawCategory,
+          finalCategory: resolvedCategory,
+        },
+      });
+    }
 
     console.log("[save-expense] Saving expense:", {
       userId,
       amount: body.amount,
-      category: body.category,
+      category: resolvedCategory,
       currency,
       householdId: body.householdId,
       isPortfolio,
@@ -377,15 +395,28 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Unable to resolve user identity", 400);
     }
 
+    try {
+      const remaps = await fetchUserCategoryRemaps({
+        supabase,
+        userId,
+        limit: 120,
+      });
+      effectiveCategory = applyCategoryRemap({
+        categoryName: resolvedCategory,
+        transactionType: "expense",
+        remaps,
+      });
+    } catch (error) {
+      console.error("[save-expense] Failed to apply category remaps:", error);
+    }
+
+    console.log("[save-expense] Effective category after remaps:", {
+      initial: resolvedCategory,
+      final: effectiveCategory,
+    });
+
     // Convert amount to cents
     const amountCents = Math.round(body.amount * 100);
-
-    console.log(
-      "[save-expense] Full request body:",
-      JSON.stringify(body, null, 2),
-    );
-    console.log("[save-expense] isRecurring:", body.isRecurring);
-    console.log("[save-expense] recurrence_rule:", body.recurrence_rule);
 
     // Insert expense into expenses table
     const { data: expense, error: expenseError } = await supabase
@@ -394,7 +425,7 @@ Deno.serve(async (req: Request) => {
         contact_id: contactId,
         user_id: userId,
         amount_cents: amountCents,
-        category: body.category,
+        category: effectiveCategory,
         date: body.date,
         raw_text: body.description || "",
         currency: currency,
@@ -414,6 +445,28 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[save-expense] Expense saved:", expense.id);
+
+    // Learn/ensure custom category + preference mapping for future AI categorization
+    try {
+      await ensureUserCategory({
+        supabase,
+        userId,
+        categoryName: expense.category ?? body.category,
+        transactionType: "expense",
+      });
+      await learnUserCategoryPreference({
+        supabase,
+        userId,
+        transactionType: "expense",
+        categoryName: expense.category ?? body.category,
+        descriptionText: body.description || expense.raw_text || null,
+      });
+    } catch (e) {
+      console.error(
+        "[save-expense] Failed to learn category preference (non-blocking):",
+        e,
+      );
+    }
 
     // GPT requests do not support household functionality
     if (detection.isGpt) {
@@ -858,7 +911,7 @@ Deno.serve(async (req: Request) => {
             actor_name: actorName,
             amount_cents: amountCents,
             currency: currency,
-            category: body.category,
+            category: responseExpense.category ?? effectiveCategory,
             note: body.description || "",
             is_recurring: body.isRecurring === true,
           },

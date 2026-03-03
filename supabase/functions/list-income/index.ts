@@ -5,8 +5,13 @@
 import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import {
+  normalizeCategoryForStorage,
+  sanitizeCategoryName,
+} from "../shared/category-colors.ts";
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
@@ -22,15 +27,15 @@ interface RequestBody {
   endDate?: string; // Filter by end date (inclusive)
   currency?: string; // Filter by currency
   householdId?: string; // Filter by household (optional)
-  ownerType?: 'me' | 'partner' | 'household'; // Filter by owner (optional)
-  
+  ownerType?: "me" | "partner" | "household"; // Filter by owner (optional)
+
   // Recurring filters (NEW - for proper data separation)
-  includeRecurring?: boolean;   // If true, ONLY fetch recurring transactions
-  excludeRecurring?: boolean;   // If true, EXCLUDE recurring transactions
-  
+  includeRecurring?: boolean; // If true, ONLY fetch recurring transactions
+  excludeRecurring?: boolean; // If true, EXCLUDE recurring transactions
+
   // Household filters (NEW - for proper data separation)
-  personalOnly?: boolean;       // If true, only fetch personal (split_group_id IS NULL)
-  householdOnly?: boolean;      // If true, only fetch household (split_group_id IS NOT NULL)
+  personalOnly?: boolean; // If true, only fetch personal (split_group_id IS NULL)
+  householdOnly?: boolean; // If true, only fetch household (split_group_id IS NOT NULL)
 }
 
 const DEFAULT_LIMIT = 50;
@@ -54,16 +59,8 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json()) as RequestBody;
 
-    console.log("[list-income] Incoming request:", {
-      userId: body.userId,
-      householdId: body.householdId,
-      startDate: body.startDate,
-      endDate: body.endDate,
-    });
-
-    // Validate userId
-    const userId = sanitizeUuid(body.userId);
-    if (!userId) {
+    const requestedUserId = sanitizeUuid(body.userId);
+    if (!requestedUserId) {
       return new Response(
         JSON.stringify({ error: "Valid userId is required" }),
         {
@@ -74,11 +71,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const limit = Math.max(1, Math.min(body.limit ?? DEFAULT_LIMIT, MAX_LIMIT));
+    const offset = Number.isFinite(body.offset) ? Math.max(0, body.offset!) : 0;
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         {
@@ -88,7 +87,41 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabase = createClient(
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseAuthed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: userData, error: userErr } =
+      await supabaseAuthed.auth.getUser();
+    const callerId = userData?.user?.id;
+    if (userErr || !callerId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (callerId !== requestedUserId) {
+      return new Response(JSON.stringify({ error: "userId mismatch" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseAdmin = createClient(
       SUPABASE_URL,
       SUPABASE_SERVICE_ROLE_KEY,
       {
@@ -101,13 +134,111 @@ Deno.serve(async (req: Request) => {
       },
     );
 
-    const offset = body.offset || 0;
+    const householdId = sanitizeUuid(body.householdId ?? null);
+    if (body.householdId && !householdId) {
+      return new Response(JSON.stringify({ error: "Invalid householdId" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Build query for income transactions
-    let query = supabase
+    // Compute household access lists for the caller.
+    const [memberRows, ownedRows] = await Promise.all([
+      supabaseAdmin
+        .from("household_members")
+        .select("household_id")
+        .eq("user_id", callerId),
+      supabaseAdmin.from("households").select("id").eq("owner_id", callerId),
+    ]);
+
+    const memberHouseholdIds = Array.isArray(memberRows.data)
+      ? (memberRows.data as any[])
+          .map((r) => String(r?.household_id || ""))
+          .filter((id) => sanitizeUuid(id))
+      : [];
+
+    const ownedHouseholdIds = Array.isArray(ownedRows.data)
+      ? (ownedRows.data as any[])
+          .map((r) => String(r?.id || ""))
+          .filter((id) => sanitizeUuid(id))
+      : [];
+
+    const accessibleHouseholdIds = Array.from(
+      new Set([...memberHouseholdIds, ...ownedHouseholdIds]),
+    );
+
+    const { data: householdRows } = accessibleHouseholdIds.length
+      ? await supabaseAdmin
+          .from("households")
+          .select("id, is_portfolio")
+          .in("id", accessibleHouseholdIds)
+      : { data: [] as any[] };
+
+    const portfolioHouseholdIds = (householdRows || [])
+      .filter((h: any) => h?.is_portfolio === true)
+      .map((h: any) => String(h?.id || ""))
+      .filter((id: string) => sanitizeUuid(id));
+
+    const sharedHouseholdIds = (householdRows || [])
+      .filter((h: any) => h?.is_portfolio !== true)
+      .map((h: any) => String(h?.id || ""))
+      .filter((id: string) => sanitizeUuid(id));
+
+    if (householdId && !accessibleHouseholdIds.includes(householdId)) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Early return: householdOnly with no accessible shared spaces.
+    if (
+      body.householdOnly === true &&
+      !householdId &&
+      sharedHouseholdIds.length === 0
+    ) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: [],
+          summary: {
+            count: 0,
+            totalIncome: 0,
+            currencyBreakdown: {},
+            categoryBreakdown: {},
+          },
+          meta: {
+            count: 0,
+            total: 0,
+            limit,
+            offset,
+            hasMore: false,
+            filters: {
+              startDate: body.startDate || null,
+              endDate: body.endDate || null,
+              currency: body.currency || null,
+              householdId: body.householdId || null,
+              ownerType: body.ownerType || null,
+              includeRecurring: body.includeRecurring || false,
+              excludeRecurring: body.excludeRecurring || false,
+              personalOnly: body.personalOnly || false,
+              householdOnly: body.householdOnly || false,
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let query = supabaseAdmin
       .from("expenses")
-      .select(`
+      .select(
+        `
         id,
+        user_id,
         type,
         date,
         category,
@@ -129,57 +260,43 @@ Deno.serve(async (req: Request) => {
         attachments,
         created_at,
         updated_at
-      `, { count: 'exact' })
-      .eq("type", "income") // CRITICAL: Filter for income only
+      `,
+        { count: "exact" },
+      )
+      .eq("type", "income")
       .order("date", { ascending: false })
       .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1); // Pagination support
+      .range(offset, offset + limit - 1);
 
-    // Apply recurring filters (NEW)
     if (body.includeRecurring === true) {
-      // ONLY recurring transactions
       query = query.eq("is_recurring", true);
     } else if (body.excludeRecurring === true) {
-      // EXCLUDE recurring transactions (for home page)
       query = query.or("is_recurring.is.false,is_recurring.is.null");
     }
-    
-    // Apply household filters (NEW)
-    // CRITICAL: In household mode, fetch ALL income for the household (any member)
-    // In personal mode, filter by user_id AND ensure household_id is null OR is a portfolio household
+
     if (body.personalOnly === true) {
-      // ONLY personal income (split_group_id IS NULL)
-      query = query.eq("user_id", userId).is("split_group_id", null);
+      query = query.eq("user_id", callerId).is("split_group_id", null);
     } else if (body.householdOnly === true) {
-      // ONLY household income (split_group_id IS NOT NULL)
       query = query.not("split_group_id", "is", null);
-    } else if (body.householdId) {
-      // Specific household - fetch ALL income for this household (any member)
-      query = query.eq("household_id", body.householdId);
-    } else {
-      // Default personal mode: filter by user_id and exclude non-portfolio household income
-      // Portfolio households (is_portfolio=true) should be included in personal view
-      // We need to fetch portfolio household IDs for this user first
-      const { data: userHouseholds } = await supabase
-        .from("households")
-        .select("id, is_portfolio")
-        .or(`owner_id.eq.${userId},id.in.(select household_id from household_members where user_id='${userId}')`);
-      
-      const portfolioHouseholdIds = (userHouseholds || [])
-        .filter(h => h.is_portfolio === true)
-        .map(h => h.id);
-      
-      if (portfolioHouseholdIds.length > 0) {
-        // Include income where household_id is null OR in portfolio households
-        query = query.eq("user_id", userId)
-          .or(`household_id.is.null,household_id.in.(${portfolioHouseholdIds.join(',')})`);
+      if (householdId) {
+        query = query.eq("household_id", householdId);
       } else {
-        // No portfolio households, simple null check
-        query = query.eq("user_id", userId).is("household_id", null);
+        query = query.in("household_id", sharedHouseholdIds);
+      }
+    } else if (householdId) {
+      query = query.eq("household_id", householdId);
+    } else {
+      if (portfolioHouseholdIds.length > 0) {
+        query = query
+          .eq("user_id", callerId)
+          .or(
+            `household_id.is.null,household_id.in.(${portfolioHouseholdIds.join(",")})`,
+          );
+      } else {
+        query = query.eq("user_id", callerId).is("household_id", null);
       }
     }
 
-    // Apply filters
     if (body.startDate) {
       query = query.gte("date", body.startDate);
     }
@@ -193,109 +310,113 @@ Deno.serve(async (req: Request) => {
       query = query.eq("owner_type", body.ownerType);
     }
 
-    const { data: incomeRecords, error, count } = await query;
+    const { data: incomeRecordsRaw, error, count } = await query;
 
     if (error) {
       console.error("[list-income] Database error:", error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch income' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: "Failed to fetch income" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`[list-income] Fetched ${incomeRecords.length} income records, total: ${count}`);
+    const incomeRecords = Array.isArray(incomeRecordsRaw)
+      ? incomeRecordsRaw
+      : [];
 
-    // Transform and normalize data with privacy-aware rendering
-    const data = incomeRecords.map(record => {
-      // Check if current user has acknowledged this income
+    const data = incomeRecords.map((record: any) => {
       const acknowledgedBy = record.acknowledged_by || [];
-      const isAcknowledged = acknowledgedBy.includes(userId);
+      const isAcknowledged = Array.isArray(acknowledgedBy)
+        ? acknowledgedBy.includes(callerId)
+        : false;
 
-      // Privacy-aware field redaction for non-owners
-      const isOwner = record.user_id === userId;
-      let privacyRedacted = false;
+      const isOwner = record.user_id === callerId;
+      const privacyRedacted =
+        !isOwner && record.privacy_scope === "balances_only";
 
-      // For balances_only: redact details for non-owners
-      if (!isOwner && record.privacy_scope === 'balances_only') {
-        privacyRedacted = true;
-      }
-      
-      // Parse recurrence_rule if it's a string (JSONB sometimes comes as string)
       let recurrenceRule = record.recurrence_rule;
-      if (typeof recurrenceRule === 'string') {
+      if (typeof recurrenceRule === "string") {
         try {
           recurrenceRule = JSON.parse(recurrenceRule);
-        } catch (e) {
-          console.warn('[list-income] Failed to parse recurrence_rule:', e);
+        } catch {
           recurrenceRule = null;
         }
       }
-      
-      // Parse attachments if it's a string
+
       let attachments = record.attachments || [];
-      if (typeof attachments === 'string') {
+      if (typeof attachments === "string") {
         try {
           attachments = JSON.parse(attachments);
-        } catch (e) {
-          console.warn('[list-income] Failed to parse attachments:', e);
+        } catch {
           attachments = [];
         }
       }
 
       return {
         id: record.id,
-        type: record.type || 'income', // IMPORTANT: Include type field
+        type: record.type || "income",
         date: record.date,
-        category: record.category,
+        category: privacyRedacted
+          ? "other"
+          : (sanitizeCategoryName(record.category ?? "") ??
+            normalizeCategoryForStorage(record.category)),
         description: privacyRedacted ? null : record.raw_text,
         source: privacyRedacted ? null : record.source,
-        amountMajor: record.amount_cents / 100,
+        amountMajor: (Number(record.amount_cents) || 0) / 100,
         currency: record.currency,
         ownerType: privacyRedacted ? null : record.owner_type,
         privacyScope: record.privacy_scope,
         householdId: record.household_id,
-        splitGroupId: record.split_group_id, // NEW: Include split_group_id
-        isAcknowledged: isAcknowledged,
-        acknowledgedCount: acknowledgedBy.length,
-        normalizedAmountMajor: record.normalized_amount_cents ? record.normalized_amount_cents / 100 : null,
+        splitGroupId: record.split_group_id,
+        isAcknowledged,
+        acknowledgedCount: Array.isArray(acknowledgedBy)
+          ? acknowledgedBy.length
+          : 0,
+        normalizedAmountMajor: record.normalized_amount_cents
+          ? (Number(record.normalized_amount_cents) || 0) / 100
+          : null,
         baseCurrency: record.base_currency,
         fxRate: record.fx_rate,
         isRecurring: record.is_recurring || false,
-        recurrenceRule: recurrenceRule,
+        recurrenceRule,
         parentRecurringId: record.parent_recurring_id,
-        attachments: attachments,
+        attachments,
         createdAt: record.created_at,
         updatedAt: record.updated_at,
-        privacyRedacted: privacyRedacted,
+        privacyRedacted,
       };
     });
 
-    // Calculate summary statistics
     const totalIncome = data.reduce((sum, record) => {
-      // Use normalized amount if available, otherwise use original amount
       const amount = record.normalizedAmountMajor || record.amountMajor;
       return sum + amount;
     }, 0);
 
-    const currencyBreakdown = data.reduce((acc, record) => {
-      const curr = record.currency;
-      if (!acc[curr]) {
-        acc[curr] = { count: 0, total: 0 };
-      }
-      acc[curr].count += 1;
-      acc[curr].total += record.amountMajor;
-      return acc;
-    }, {} as Record<string, { count: number; total: number }>);
+    const currencyBreakdown = data.reduce(
+      (acc, record) => {
+        const curr = record.currency;
+        if (!acc[curr]) {
+          acc[curr] = { count: 0, total: 0 };
+        }
+        acc[curr].count += 1;
+        acc[curr].total += record.amountMajor;
+        return acc;
+      },
+      {} as Record<string, { count: number; total: number }>,
+    );
 
-    const categoryBreakdown = data.reduce((acc, record) => {
-      const cat = record.category;
-      if (!acc[cat]) {
-        acc[cat] = { count: 0, total: 0 };
-      }
-      acc[cat].count += 1;
-      acc[cat].total += record.normalizedAmountMajor || record.amountMajor;
-      return acc;
-    }, {} as Record<string, { count: number; total: number }>);
+    const categoryBreakdown = data.reduce(
+      (acc, record) => {
+        const cat = record.category;
+        if (!acc[cat]) {
+          acc[cat] = { count: 0, total: 0 };
+        }
+        acc[cat].count += 1;
+        acc[cat].total += record.normalizedAmountMajor || record.amountMajor;
+        return acc;
+      },
+      {} as Record<string, { count: number; total: number }>,
+    );
 
     return new Response(
       JSON.stringify({
@@ -303,16 +424,16 @@ Deno.serve(async (req: Request) => {
         data,
         summary: {
           count: data.length,
-          totalIncome: totalIncome,
-          currencyBreakdown: currencyBreakdown,
-          categoryBreakdown: categoryBreakdown,
+          totalIncome,
+          currencyBreakdown,
+          categoryBreakdown,
         },
         meta: {
-          count: data.length,          // Items in this response
-          total: count || 0,            // Total matching items (NEW)
+          count: data.length,
+          total: count || 0,
           limit,
-          offset: offset,               // Current offset (NEW)
-          hasMore: (offset + data.length) < (count || 0), // Has more pages (NEW)
+          offset,
+          hasMore: offset + data.length < (count || 0),
           filters: {
             startDate: body.startDate || null,
             endDate: body.endDate || null,
@@ -326,7 +447,10 @@ Deno.serve(async (req: Request) => {
           },
         },
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("[list-income] Error:", error);

@@ -11,6 +11,13 @@ import {
   runAnalyzeExpense,
 } from "../shared/analyze-core.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import {
+  fetchUserCustomCategories,
+  fetchUserCategoryRemaps,
+  fetchUserHiddenCategories,
+  fetchUserCategoryPreferences,
+  mergeAllowedCategories,
+} from "../shared/user-categories.ts";
 
 /**
  * Formats an SSE event message
@@ -68,8 +75,8 @@ function mapProgressEvent(
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
   const hasImage = Boolean(body.image);
-  const hasAttachments = Array.isArray(body.attachments) &&
-    body.attachments.length > 0;
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
   return hasImage && !hasAttachments;
 }
 
@@ -77,10 +84,11 @@ function formatBreakdownAmount(item: any): string {
   const amount = Number(item?.amount);
   if (!Number.isFinite(amount)) return "";
   const formatted = amount.toFixed(2);
-  const symbol = typeof item?.currencySymbol === "string" &&
-      item.currencySymbol.trim().length > 0
-    ? item.currencySymbol.trim()
-    : "";
+  const symbol =
+    typeof item?.currencySymbol === "string" &&
+    item.currencySymbol.trim().length > 0
+      ? item.currencySymbol.trim()
+      : "";
   const currency =
     typeof item?.currency === "string" && item.currency.trim().length > 0
       ? item.currency.trim()
@@ -93,9 +101,8 @@ function formatBreakdownAmount(item: any): string {
 function buildReceiptBreakdown(items: any[]): string[] {
   return items
     .map((item) => {
-      const desc = typeof item?.description === "string"
-        ? item.description.trim()
-        : "";
+      const desc =
+        typeof item?.description === "string" ? item.description.trim() : "";
       const amountText = formatBreakdownAmount(item);
       if (!amountText && !desc) return "";
       if (!amountText) return desc;
@@ -108,7 +115,7 @@ function buildReceiptBreakdown(items: any[]): string[] {
 function pickReceiptDescription(items: any[]): string {
   const candidates = items
     .map((item) =>
-      typeof item?.description === "string" ? item.description.trim() : ""
+      typeof item?.description === "string" ? item.description.trim() : "",
     )
     .filter((value) => value.length > 0);
   if (candidates.length === 0) return "Receipt";
@@ -161,9 +168,10 @@ function collapseReceiptItems(
   if (!Array.isArray(items) || items.length <= 1) return items;
   if (!shouldCollapseReceipt(body)) return items;
 
-  const filteredItems = items.length > 1
-    ? items.filter((item) => !isTotalLike(item?.description))
-    : items;
+  const filteredItems =
+    items.length > 1
+      ? items.filter((item) => !isTotalLike(item?.description))
+      : items;
   const workingItems = filteredItems.length > 0 ? filteredItems : items;
 
   const totalAmount = workingItems.reduce((sum, item) => {
@@ -175,8 +183,8 @@ function collapseReceiptItems(
 
   const primary = workingItems[0] ?? {};
   const breakdown = buildReceiptBreakdown(workingItems);
-  const category = resolveReceiptCategory(workingItems) || primary.category ||
-    "other";
+  const category =
+    resolveReceiptCategory(workingItems) || primary.category || "other";
   const description = pickReceiptDescription(workingItems);
   const type = workingItems.some((item) => item?.type === "expense")
     ? "expense"
@@ -254,7 +262,7 @@ function createSSEStream(
           setTimeout(
             () => reject(new Error("Analysis timed out after 180 seconds")),
             180000,
-          )
+          ),
         );
 
         const result = await Promise.race([analysisPromise, timeoutPromise]);
@@ -308,16 +316,13 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Validate request method
     if (req.method !== "POST") {
       return errorResponse("Method not allowed. Use POST.", 405);
     }
 
-    // Check for SSE streaming mode via query parameter
     const url = new URL(req.url);
     const isStreamMode = url.searchParams.get("stream") === "true";
 
-    // Parse request body
     let body: AnalyzeRequestBody;
     try {
       body = await req.json();
@@ -330,92 +335,120 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!GEMINI_API_KEY) {
+    if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
       return errorResponse("Server configuration error", 500);
     }
 
-    // If we have an auth header, verify the caller and enrich household context safely under RLS.
     const authHeader = req.headers.get("Authorization") || "";
-    if (SUPABASE_URL && SUPABASE_ANON_KEY && authHeader) {
-      try {
-        const supabaseAuthed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false,
-          },
-          global: { headers: { Authorization: authHeader } },
-        });
+    if (!authHeader) {
+      return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    }
 
-        const { data: userData, error: userErr } = await supabaseAuthed.auth
-          .getUser();
-        const callerId = userData?.user?.id;
-        if (userErr || !callerId) {
-          return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    // Verify the caller and enrich context safely under RLS.
+    const supabaseAuthed = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: userData, error: userErr } =
+      await supabaseAuthed.auth.getUser();
+    const callerId = userData?.user?.id;
+    if (userErr || !callerId) {
+      return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
+    }
+
+    if (body.userId && body.userId !== callerId) {
+      return errorResponse("userId mismatch", 401, "UNAUTHORIZED");
+    }
+    body.userId = callerId;
+
+    // Load per-user custom categories + learned preferences for category assignment
+    try {
+      const [customCategories, hiddenCategories] = await Promise.all([
+        fetchUserCustomCategories({
+          supabase: supabaseAuthed,
+          userId: callerId,
+        }),
+        fetchUserHiddenCategories({
+          supabase: supabaseAuthed,
+          userId: callerId,
+        }),
+      ]);
+      const merged = mergeAllowedCategories({
+        customCategories,
+        hiddenCategories,
+      });
+      body.allowedExpenseCategories = merged.expenseCategories;
+      body.allowedIncomeCategories = merged.incomeCategories;
+      body.categoryPreferences = await fetchUserCategoryPreferences({
+        supabase: supabaseAuthed,
+        userId: callerId,
+        limit: 60,
+      });
+      body.categoryRemaps = await fetchUserCategoryRemaps({
+        supabase: supabaseAuthed,
+        userId: callerId,
+        limit: 120,
+      });
+    } catch (e) {
+      console.error(
+        "[analyze-expense] Failed to load user categories/preferences:",
+        e,
+      );
+    }
+
+    // In household mode, provide the household member list to the model so it can
+    // reliably resolve payer/splits by userId (without exposing IDs to end users).
+    if (
+      body.householdId &&
+      !body.isPortfolio &&
+      !Array.isArray(body.householdMembers)
+    ) {
+      const { data: membership, error: membershipError } = await supabaseAuthed
+        .from("household_members")
+        .select("id")
+        .eq("household_id", body.householdId)
+        .eq("user_id", callerId)
+        .maybeSingle();
+
+      if (!membershipError && membership?.id) {
+        const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
+        const reader = canAdminRead
+          ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
+              auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+                detectSessionInUrl: false,
+              },
+              global: {
+                headers: { "X-Client-Info": "moneko-analyze-expense" },
+              },
+            })
+          : supabaseAuthed;
+
+        const { data: members, error: membersError } = await reader
+          .from("household_members")
+          .select("user_id, users(full_name, email)")
+          .eq("household_id", body.householdId);
+
+        if (!membersError && Array.isArray(members) && members.length > 0) {
+          body.householdMembers = members.map((m: any) => ({
+            userId: m.user_id,
+            userName: m.users?.full_name ?? null,
+            userEmail: m.users?.email ?? null,
+          }));
         }
-
-        if (body.userId && body.userId !== callerId) {
-          return errorResponse("userId mismatch", 401, "UNAUTHORIZED");
-        }
-        body.userId = callerId;
-
-        // In household mode, provide the household member list to the model so it can
-        // reliably resolve payer/splits by userId (without exposing IDs to end users).
-        if (
-          body.householdId &&
-          !body.isPortfolio &&
-          !Array.isArray(body.householdMembers)
-        ) {
-          const { data: membership, error: membershipError } =
-            await supabaseAuthed
-              .from("household_members")
-              .select("id")
-              .eq("household_id", body.householdId)
-              .eq("user_id", callerId)
-              .maybeSingle();
-
-          if (!membershipError && membership?.id) {
-            // Prefer admin read for full member profile fields (RLS-safe because we
-            // already verified the caller is a member via the authed client).
-            const canAdminRead = !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
-            const reader = canAdminRead
-              ? createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!, {
-                auth: {
-                  autoRefreshToken: false,
-                  persistSession: false,
-                  detectSessionInUrl: false,
-                },
-                global: {
-                  headers: { "X-Client-Info": "moneko-analyze-expense" },
-                },
-              })
-              : supabaseAuthed;
-
-            const { data: members, error: membersError } = await reader
-              .from("household_members")
-              .select("user_id, users(full_name, email)")
-              .eq("household_id", body.householdId);
-
-            if (!membersError && Array.isArray(members) && members.length > 0) {
-              body.householdMembers = members.map((m: any) => ({
-                userId: m.user_id,
-                userName: m.users?.full_name ?? null,
-                userEmail: m.users?.email ?? null,
-              }));
-            }
-          }
-        }
-      } catch (e) {
-        console.error("[analyze-expense] auth/context enrichment failed:", e);
       }
     }
 
-    // SSE Streaming Mode - returns text/event-stream with progress events
     if (isStreamMode) {
       console.log("[analyze-expense] Starting SSE streaming mode");
 
       const stream = createSSEStream(body, GEMINI_API_KEY);
-
       return new Response(stream, {
         status: 200,
         headers: {
@@ -427,17 +460,14 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Standard JSON Mode (default, backward compatible)
     let result: any;
     try {
       const analysisPromise = runAnalyzeExpense(body, GEMINI_API_KEY);
-      // Keep below Supabase Edge request idle timeout to return a structured
-      // JSON error instead of an upstream 504 gateway timeout.
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
           () => reject(new Error("Analysis timed out after 140 seconds")),
           140000,
-        )
+        ),
       );
       result = await Promise.race([analysisPromise, timeoutPromise]);
     } catch (error) {
@@ -445,6 +475,7 @@ Deno.serve(async (req: Request) => {
       const status = message.includes("timed out") ? 504 : 500;
       return errorResponse(message, status);
     }
+
     if (!result.success) {
       const status = result.status || 400;
       return errorResponse(result.error ?? "Failed to analyze expense", status);
