@@ -40,13 +40,13 @@ BEGIN
     RAISE EXCEPTION 'Invalid new transaction type';
   END IF;
 
-  IF char_length(v_old_name) < 1 OR char_length(v_old_name) > 48 OR
-     v_old_name !~ '^[a-z0-9 &/._-]+$' OR v_old_name ~ '`' THEN
+  IF char_length(v_old_name) < 1 OR char_length(v_old_name) > 96 OR
+     position('`' in v_old_name) > 0 THEN
     RAISE EXCEPTION 'Invalid old category name';
   END IF;
 
-  IF char_length(v_new_name) < 1 OR char_length(v_new_name) > 48 OR
-     v_new_name !~ '^[a-z0-9 &/._-]+$' OR v_new_name ~ '`' THEN
+  IF char_length(v_new_name) < 1 OR char_length(v_new_name) > 96 OR
+     position('`' in v_new_name) > 0 THEN
     RAISE EXCEPTION 'Invalid new category name';
   END IF;
 

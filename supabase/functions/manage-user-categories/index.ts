@@ -16,13 +16,65 @@ function normalizeCategoryName(value: unknown): string {
 }
 
 function isValidCategoryName(name: string): boolean {
-  if (!name || name.length > 48) return false;
+  if (!name || name.length > 96) return false;
   if (name.includes("`")) return false;
-  return /^[a-z0-9 &/._-]+$/.test(name);
+  if (/[\x00-\x1F\x7F]/.test(name)) return false;
+  return true;
 }
 
 function isValidTransactionType(type: string): boolean {
   return type === "expense" || type === "income";
+}
+
+async function fetchUserEnvelopeIds(
+  supabase: any,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("budget_envelopes")
+    .select("id")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+}
+
+async function remapEnvelopeCategoryLinks(
+  supabase: any,
+  userId: string,
+  oldCategory: string,
+  newCategory: string,
+): Promise<void> {
+  const envelopeIds = await fetchUserEnvelopeIds(supabase, userId);
+  if (envelopeIds.length === 0) return;
+
+  const { data: existingLinks, error: existingLinksError } = await supabase
+    .from("envelope_category_links")
+    .select("envelope_id")
+    .in("envelope_id", envelopeIds)
+    .eq("category", oldCategory);
+  if (existingLinksError) throw existingLinksError;
+
+  const sourceLinks = (existingLinks ?? []) as Array<{ envelope_id: string }>;
+  if (sourceLinks.length === 0) return;
+
+  const upserts = sourceLinks.map((row) => ({
+    envelope_id: row.envelope_id,
+    category: newCategory,
+  }));
+  const { error: upsertError } = await supabase
+    .from("envelope_category_links")
+    .upsert(upserts, { onConflict: "envelope_id,category" });
+  if (upsertError) throw upsertError;
+
+  const { error: deleteOldError } = await supabase
+    .from("envelope_category_links")
+    .delete()
+    .in(
+      "envelope_id",
+      sourceLinks.map((row) => row.envelope_id),
+    )
+    .eq("category", oldCategory);
+  if (deleteOldError) throw deleteOldError;
 }
 
 Deno.serve(async (req: Request) => {
@@ -168,6 +220,10 @@ Deno.serve(async (req: Request) => {
         .eq("category_name", oldName)
         .eq("transaction_type", oldType);
 
+      if (oldType === "expense") {
+        await remapEnvelopeCategoryLinks(supabase, userId, oldName, newName);
+      }
+
       if (oldName !== newName || oldType !== newType) {
         await supabase
           .from("user_transaction_categories")
@@ -307,6 +363,10 @@ Deno.serve(async (req: Request) => {
         .eq("user_id", userId)
         .eq("name", name)
         .eq("transaction_type", type);
+
+      if (type === "expense") {
+        await remapEnvelopeCategoryLinks(supabase, userId, name, fallback);
+      }
 
       return json({ success: true });
     }

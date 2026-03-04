@@ -119,6 +119,7 @@ async function uploadPngToBucket(
   const { error } = await supabase.storage.from(bucket).upload(key, bytes, {
     contentType: "image/png",
     upsert: true,
+    cacheControl: "3600",
   });
   if (error) {
     console.error("[expenses-summary] upload error:", error);
@@ -273,7 +274,8 @@ async function respondWithChart({
       devicePixelRatio: 2,
     });
 
-    const key = `${mocked ? "mock" : "summary"}/${resolvedUserId || conversationId || crypto.randomUUID()}-${Date.now()}.png`;
+    const curSuffix = breakdown.length > 0 ? breakdown[0].currency : (currencyFilter ?? "all");
+    const key = `${mocked ? "mock" : "summary"}/${resolvedUserId}_${startDateIso}_${endDateIso}_${curSuffix}.png`;
     chartImageUrl =
       (await uploadPngToBucket(supabase, chartBucket, key, pngBytes)) ??
       `data:image/png;base64,${encodeBase64(pngBytes)}`;

@@ -24,7 +24,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_transaction_categories
     ADD CONSTRAINT user_transaction_categories_name_length_check
-      CHECK (char_length(name) BETWEEN 1 AND 48);
+      CHECK (char_length(name) BETWEEN 1 AND 96);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -33,7 +33,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_transaction_categories
     ADD CONSTRAINT user_transaction_categories_name_chars_check
-      CHECK (name ~ '^[a-z0-9 &/._-]+$' AND name !~ '`');
+      CHECK (position('`' in name) = 0);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -139,7 +139,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_category_preferences
     ADD CONSTRAINT user_category_preferences_category_name_length_check
-      CHECK (char_length(category_name) BETWEEN 1 AND 48);
+      CHECK (char_length(category_name) BETWEEN 1 AND 96);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -148,7 +148,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_category_preferences
     ADD CONSTRAINT user_category_preferences_category_name_chars_check
-      CHECK (category_name ~ '^[a-z0-9 &/._-]+$' AND category_name !~ '`');
+      CHECK (position('`' in category_name) = 0);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;

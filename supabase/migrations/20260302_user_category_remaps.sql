@@ -24,7 +24,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_category_remaps
     ADD CONSTRAINT user_category_remaps_from_length_check
-      CHECK (char_length(from_category_name) BETWEEN 1 AND 48);
+      CHECK (char_length(from_category_name) BETWEEN 1 AND 96);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -33,7 +33,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_category_remaps
     ADD CONSTRAINT user_category_remaps_from_chars_check
-      CHECK (from_category_name ~ '^[a-z0-9 &/._-]+$' AND from_category_name !~ '`');
+      CHECK (position('`' in from_category_name) = 0);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -42,7 +42,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_category_remaps
     ADD CONSTRAINT user_category_remaps_to_length_check
-      CHECK (char_length(to_category_name) BETWEEN 1 AND 48);
+      CHECK (char_length(to_category_name) BETWEEN 1 AND 96);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
@@ -51,7 +51,7 @@ DO $$
 BEGIN
   ALTER TABLE public.user_category_remaps
     ADD CONSTRAINT user_category_remaps_to_chars_check
-      CHECK (to_category_name ~ '^[a-z0-9 &/._-]+$' AND to_category_name !~ '`');
+      CHECK (position('`' in to_category_name) = 0);
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;

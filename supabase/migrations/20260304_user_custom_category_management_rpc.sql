@@ -26,8 +26,8 @@ BEGIN
     RAISE EXCEPTION 'Invalid transaction type';
   END IF;
 
-  IF char_length(v_name) < 1 OR char_length(v_name) > 48 OR
-     v_name !~ '^[a-z0-9 &/._-]+$' OR v_name ~ '`' OR v_name = 'other' THEN
+  IF char_length(v_name) < 1 OR char_length(v_name) > 96 OR
+     position('`' in v_name) > 0 OR v_name = 'other' THEN
     RAISE EXCEPTION 'Invalid category name';
   END IF;
 
@@ -85,8 +85,8 @@ BEGIN
     RAISE EXCEPTION 'Invalid transaction type';
   END IF;
 
-  IF char_length(v_name) < 1 OR char_length(v_name) > 48 OR
-     v_name !~ '^[a-z0-9 &/._-]+$' OR v_name ~ '`' OR v_name = 'other' THEN
+  IF char_length(v_name) < 1 OR char_length(v_name) > 96 OR
+     position('`' in v_name) > 0 OR v_name = 'other' THEN
     RAISE EXCEPTION 'Invalid category name';
   END IF;
 
@@ -134,8 +134,8 @@ BEGIN
     RAISE EXCEPTION 'Invalid transaction type';
   END IF;
 
-  IF char_length(v_name) < 1 OR char_length(v_name) > 48 OR
-     v_name !~ '^[a-z0-9 &/._-]+$' OR v_name ~ '`' OR v_name IN ('other', 'uncategorized') THEN
+  IF char_length(v_name) < 1 OR char_length(v_name) > 96 OR
+     position('`' in v_name) > 0 OR v_name IN ('other', 'uncategorized') THEN
     RAISE EXCEPTION 'Invalid category name';
   END IF;
 
@@ -189,13 +189,13 @@ BEGIN
     RAISE EXCEPTION 'Invalid transaction type';
   END IF;
 
-  IF char_length(v_name) < 1 OR char_length(v_name) > 48 OR
-     v_name !~ '^[a-z0-9 &/._-]+$' OR v_name ~ '`' OR v_name = 'other' THEN
+  IF char_length(v_name) < 1 OR char_length(v_name) > 96 OR
+     position('`' in v_name) > 0 OR v_name = 'other' THEN
     RAISE EXCEPTION 'Invalid category name';
   END IF;
 
-  IF char_length(v_fallback) < 1 OR char_length(v_fallback) > 48 OR
-     v_fallback !~ '^[a-z0-9 &/._-]+$' OR v_fallback ~ '`' THEN
+  IF char_length(v_fallback) < 1 OR char_length(v_fallback) > 96 OR
+     position('`' in v_fallback) > 0 THEN
     RAISE EXCEPTION 'Invalid fallback category';
   END IF;
 

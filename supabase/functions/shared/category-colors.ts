@@ -656,13 +656,13 @@ export function sanitizeCategoryName(
     .trim();
 
   if (!normalized) return null;
-  if (normalized.length > 48) return null;
+  if (normalized.length > 96) return null;
 
   // Disallow characters that can break prompts / markdown formatting.
   if (normalized.includes("`")) return null;
 
-  // Allow only simple safe characters.
-  if (!/^[a-z0-9 &/._-]+$/.test(normalized)) return null;
+  // Disallow control characters.
+  if (/[\x00-\x1F\x7F]/.test(normalized)) return null;
 
   return normalized;
 }

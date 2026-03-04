@@ -45,6 +45,14 @@ deploy_function() {
   echo ""
 }
 
+deploy_internal_function() {
+  local NAME=$1
+  echo "📦 Deploying ${NAME} (--no-verify-jwt)..."
+  supabase functions deploy "${NAME}" --project-ref "$PROJECT_REF" --no-verify-jwt
+  echo "✅ ${NAME} deployed (internal/JWT-optional)"
+  echo ""
+}
+
 if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
   echo ""
   echo "⚠️  WARNING: You are about to deploy to PRODUCTION"
@@ -60,11 +68,11 @@ fi
 # Category lifecycle and ingestion/save functions that apply category logic
 deploy_function "manage-user-categories"
 deploy_function "analyze-expense"
-deploy_function "save-expense"
-deploy_function "save-income"
-deploy_function "save-transactions-batch"
-deploy_function "update-expense"
-deploy_function "delete-expense"
+deploy_internal_function "save-expense"
+deploy_internal_function "save-income"
+deploy_internal_function "save-transactions-batch"
+deploy_internal_function "update-expense"
+deploy_internal_function "delete-expense"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ Category functions deployed successfully"
