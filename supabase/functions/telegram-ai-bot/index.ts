@@ -47,12 +47,15 @@ import {
   fetchUserHiddenCategories,
   mergeAllowedCategories,
 } from "../shared/user-categories.ts";
+import { buildLanguageOverride } from "../shared/detect-language.ts";
 
-const MODEL_NAME = "gemini-2.5-flash-lite";
+const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 const SYSTEM_INSTRUCTION =
   `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
+
+**LANGUAGE RULE (HIGHEST PRIORITY):** You MUST detect the language of the user's latest message and reply ENTIRELY in that same language. This overrides conversation history. Even if all previous messages were in English, if the user now writes in Chinese, you MUST reply fully in Chinese. If in Spanish, reply in Spanish. This applies to every part of your response: confirmations, questions, summaries, labels, and follow-ups. Fall back to {{LANGUAGE}} only when the message is ambiguous (pure numbers, emojis, or single universal words).
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
@@ -81,7 +84,7 @@ CRITICAL RULES:
 18. **Telegram UX (choices)**: When asking the user to choose among transactions/options, ALWAYS format options as numbered lines like "1. <short label>" (one per line; label <= ~60 chars) so Telegram inline buttons can be generated. Ask them to tap a button.
 19. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
 20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
-21. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
+21. **Language**: See the LANGUAGE RULE above. Always mirror the language of the user's latest message.
 
 CURRENT CONTEXT:
 - Date: {{DATE}}
@@ -1685,7 +1688,8 @@ Deno.serve(async (req: Request) => {
             .replace("{{CURRENCY}}", userCurrency)
             .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
             .replace("{{CATEGORIES}}", categoryGuideForUser)
-            .replace("{{LANGUAGE}}", userLang),
+            .replace("{{LANGUAGE}}", userLang) +
+            buildLanguageOverride(incomingText),
         });
 
         const tools = [

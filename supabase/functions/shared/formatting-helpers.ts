@@ -178,7 +178,7 @@ export function buildCategoryGuide(categories?: string[] | null): string {
   const set = new Set<string>();
   for (const entry of source) {
     const raw = typeof entry === "string" ? entry : null;
-    const normalized = normalizeCategoryForStorage(raw);
+    const normalized = normalizeCategoryForGuide(raw);
     if (!normalized) continue;
     set.add(normalized);
   }
@@ -187,6 +187,24 @@ export function buildCategoryGuide(categories?: string[] | null): string {
     .sort()
     .map((name) => `${name} (${resolveCategoryColor(name)})`)
     .join("; ");
+}
+
+function normalizeCategoryForGuide(raw: string | null): string {
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    const firstArg = args[0];
+    const firstText = typeof firstArg === "string" ? firstArg : "";
+    if (firstText.includes("[normalizeCategory] Unknown category")) {
+      return;
+    }
+    originalWarn(...args);
+  };
+
+  try {
+    return normalizeCategoryForStorage(raw);
+  } finally {
+    console.warn = originalWarn;
+  }
 }
 
 export const CATEGORY_GUIDE = buildCategoryGuide();

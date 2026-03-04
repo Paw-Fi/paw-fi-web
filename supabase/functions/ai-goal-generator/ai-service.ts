@@ -138,7 +138,7 @@ export class AIService {
   ): Promise<AIGoalResponse> {
     // Simplified approach - no function calling, direct JSON response
     const model = this.genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-lite",
+      model: "gemini-3.1-flash-lite-preview",
     });
 
     const prompt = this.buildPrompt(goalType, questionnaireAnswers);

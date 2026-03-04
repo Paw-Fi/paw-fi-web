@@ -1105,7 +1105,7 @@ async function resolveCandidateCategories(
   ];
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3.1-flash-lite-preview",
     tools: tools as any,
   });
 
@@ -2160,7 +2160,7 @@ async function preprocessExtractedTextWithGemini(
   }
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3.1-flash-lite-preview",
   });
 
   const schemaLine = '{"formatVersion":1,"source":"' +
@@ -2199,7 +2199,7 @@ async function preprocessExtractedTextWithGemini(
 
     const response = await generateGeminiWithRetry({
       model,
-      modelName: "gemini-2.5-flash-lite",
+      modelName: "gemini-3.1-flash-lite-preview",
       request,
       timeoutMs: 30000,
     });
@@ -2227,7 +2227,7 @@ async function extractTransactionsJsonWithGemini(
   const trimmed = rawText.trim();
   if (!trimmed) return null;
 
-  const modelName = "gemini-2.5-flash-lite";
+  const modelName = "gemini-3.1-flash-lite-preview";
   const model = genAI.getGenerativeModel({ model: modelName });
   const request = {
     contents: [
@@ -2676,7 +2676,7 @@ Do NOT summarize - extract every single transaction.
 `
     : "";
 
-  const modelName = "gemini-2.5-flash-lite";
+  const modelName = "gemini-3.1-flash-lite-preview";
   const model = genAI.getGenerativeModel({
     model: modelName,
     tools,
@@ -3242,7 +3242,7 @@ async function analyzeFromPdfVision(
   // Model progression for PDF analysis with higher token limits and extended timeouts
   // Increased timeouts to 3 minutes for large PDFs with many transactions
   const modelConfigs = [
-    { name: "gemini-2.5-flash-lite", timeout: 180000, maxTokens: 65536 },
+    { name: "gemini-3.1-flash-lite-preview", timeout: 180000, maxTokens: 65536 },
     { name: "gemini-3-flash-preview", timeout: 180000, maxTokens: 65536 },
   ];
 
@@ -3428,7 +3428,7 @@ async function analyzeFromAudio(
     typeHint,
   );
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3.1-flash-lite-preview",
     tools,
     systemInstruction,
   });
@@ -4321,7 +4321,7 @@ export async function runAnalyzeExpense(
       // Model progression: prefer stable fast model first.
       // Preview models can be more prone to overload.
       const modelAttempts = [
-        { name: "gemini-2.5-flash-lite", timeout: 30000 },
+        { name: "gemini-3.1-flash-lite-preview", timeout: 30000 },
         { name: "gemini-3-flash-preview", timeout: 30000 },
         { name: "gemini-3-pro-preview", timeout: 55000 },
       ];
@@ -4390,7 +4390,7 @@ export async function runAnalyzeExpense(
         try {
           const fallback = await attemptAnalysis(
             genAI,
-            "gemini-2.5-flash-lite",
+            "gemini-3.1-flash-lite-preview",
             handwritingInstruction,
             body,
             base64Image,
@@ -4836,7 +4836,7 @@ export async function summarizePdfWithGemini(
 
     const startedAt = Date.now();
     const totalTimeoutMs = 120000; // Increased from 60s to 120s for large PDFs
-    const modelNames = ["gemini-2.5-flash-lite", "gemini-3-flash-preview"];
+    const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-3-flash-preview"];
 
     const request = {
       contents: [

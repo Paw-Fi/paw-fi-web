@@ -13,7 +13,7 @@ import {
 } from "./goal-tracker.ts";
 
 // Configuration constants
-const AI_MODEL = "gemini-2.5-flash-lite";
+const AI_MODEL = "gemini-3.1-flash-lite-preview";
 const AI_MODEL_COMPREHENSIVE = "gemini-2.5-pro";
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_OUTPUT_TOKENS = 8000;

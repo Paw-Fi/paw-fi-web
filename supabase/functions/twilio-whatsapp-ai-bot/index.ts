@@ -46,14 +46,17 @@ import {
   fetchUserHiddenCategories,
   mergeAllowedCategories,
 } from "../shared/user-categories.ts";
+import { buildLanguageOverride } from "../shared/detect-language.ts";
 
 // --- Constants & Types ---
 
-const MODEL_NAME = "gemini-2.5-flash-lite"; // Fast and capable
+const MODEL_NAME = "gemini-3.1-flash-lite-preview"; // Fast and capable
 const SYSTEM_INSTRUCTION =
   `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
+
+**LANGUAGE RULE (HIGHEST PRIORITY):** You MUST detect the language of the user's latest message and reply ENTIRELY in that same language. This overrides conversation history. Even if all previous messages were in English, if the user now writes in Chinese, you MUST reply fully in Chinese. If in Spanish, reply in Spanish. This applies to every part of your response: confirmations, questions, summaries, labels, and follow-ups. Fall back to {{LANGUAGE}} only when the message is ambiguous (pure numbers, emojis, or single universal words).
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
@@ -82,7 +85,7 @@ CRITICAL RULES:
 17. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
 18. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
 19. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
-20. **Language**: Respond in the user's preferred language: {{LANGUAGE}}.
+20. **Language**: See the LANGUAGE RULE above. Always mirror the language of the user's latest message.
 
 COMMON USER INTENTS (answer directly, propose next steps):
 - Spending clarity: where money goes, why cash runs out, breakdowns by category, spot leaks, compare to norms.
@@ -1875,7 +1878,8 @@ Deno.serve(async (req: Request) => {
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", "None")
         .replace("{{CATEGORIES}}", categoryGuideForUser)
-        .replace("{{LANGUAGE}}", userLang),
+        .replace("{{LANGUAGE}}", userLang) +
+        buildLanguageOverride(messageText),
     });
 
     const toolsApp = [
@@ -3357,7 +3361,8 @@ Deno.serve(async (req: Request) => {
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", householdContext)
         .replace("{{CATEGORIES}}", categoryGuideForUser)
-        .replace("{{LANGUAGE}}", userLang),
+        .replace("{{LANGUAGE}}", userLang) +
+        buildLanguageOverride(caption),
     });
 
     // Define Tools
