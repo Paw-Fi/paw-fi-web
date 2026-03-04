@@ -35,6 +35,20 @@ export interface UserHiddenCategoryRow {
   transaction_type: CategoryTransactionType;
 }
 
+export function normalizeStoredUserCategory(
+  raw: string | null | undefined,
+): string {
+  const sanitized = sanitizeCategoryName(raw);
+  if (sanitized) {
+    if (sanitized === "default" || sanitized === "unknown") {
+      return "other";
+    }
+    return sanitized;
+  }
+
+  return normalizeCategoryForStorage(raw ?? null);
+}
+
 export function mergeAllowedCategories(params: {
   customCategories: Array<UserCategoryRow>;
   hiddenCategories?: Array<UserHiddenCategoryRow>;
@@ -51,8 +65,7 @@ export function mergeAllowedCategories(params: {
   const incomeSet = new Set<string>(baseIncome);
 
   for (const row of params.customCategories) {
-    const name =
-      sanitizeCategoryName(row?.name ?? null) ??
+    const name = sanitizeCategoryName(row?.name ?? null) ??
       normalizeCategoryForStorage(row?.name ?? null);
     if (!name || name === "other") {
       continue;
@@ -70,8 +83,7 @@ export function mergeAllowedCategories(params: {
   }
 
   for (const row of params.hiddenCategories ?? []) {
-    const name =
-      sanitizeCategoryName(row?.category_name ?? null) ??
+    const name = sanitizeCategoryName(row?.category_name ?? null) ??
       normalizeCategoryForStorage(row?.category_name ?? null);
     if (!name || name === "other" || name === "uncategorized") {
       continue;
@@ -120,15 +132,13 @@ export async function fetchUserCustomCategories(params: {
 
   return data
     .map((row: any) => ({
-      name:
-        typeof row?.name === "string"
-          ? (sanitizeCategoryName(row.name) ?? row.name)
-          : "",
-      transaction_type:
-        row?.transaction_type === "income" ||
-        row?.transaction_type === "expense"
-          ? (row.transaction_type as CategoryTransactionType)
-          : "expense",
+      name: typeof row?.name === "string"
+        ? (sanitizeCategoryName(row.name) ?? row.name)
+        : "",
+      transaction_type: row?.transaction_type === "income" ||
+          row?.transaction_type === "expense"
+        ? (row.transaction_type as CategoryTransactionType)
+        : "expense",
     }))
     .filter((row: UserCategoryRow) => row.name.trim().length > 0);
 }
@@ -149,15 +159,13 @@ export async function fetchUserHiddenCategories(params: {
 
   return data
     .map((row: any) => ({
-      category_name:
-        typeof row?.category_name === "string"
-          ? (sanitizeCategoryName(row.category_name) ?? row.category_name)
-          : "",
-      transaction_type:
-        row?.transaction_type === "income" ||
-        row?.transaction_type === "expense"
-          ? (row.transaction_type as CategoryTransactionType)
-          : "expense",
+      category_name: typeof row?.category_name === "string"
+        ? (sanitizeCategoryName(row.category_name) ?? row.category_name)
+        : "",
+      transaction_type: row?.transaction_type === "income" ||
+          row?.transaction_type === "expense"
+        ? (row.transaction_type as CategoryTransactionType)
+        : "expense",
     }))
     .filter(
       (row: UserHiddenCategoryRow) => row.category_name.trim().length > 0,
@@ -188,14 +196,17 @@ export async function fetchUserCategoryPreferences(params: {
   return data
     .map(
       (row: any): UserCategoryPreferenceRow => ({
-        transaction_type:
-          row?.transaction_type === "income" ? "income" : "expense",
+        transaction_type: row?.transaction_type === "income"
+          ? "income"
+          : "expense",
         match_key: typeof row?.match_key === "string" ? row.match_key : "",
-        category_name:
-          typeof row?.category_name === "string" ? row.category_name : "other",
+        category_name: typeof row?.category_name === "string"
+          ? row.category_name
+          : "other",
         use_count: typeof row?.use_count === "number" ? row.use_count : 0,
-        last_used_at:
-          typeof row?.last_used_at === "string" ? row.last_used_at : null,
+        last_used_at: typeof row?.last_used_at === "string"
+          ? row.last_used_at
+          : null,
       }),
     )
     .filter(
@@ -228,17 +239,19 @@ export async function fetchUserCategoryRemaps(params: {
   return data
     .map(
       (row: any): UserCategoryRemapRow => ({
-        transaction_type:
-          row?.transaction_type === "income" ? "income" : "expense",
-        from_category_name:
-          typeof row?.from_category_name === "string"
-            ? row.from_category_name
-            : "",
-        to_category_name:
-          typeof row?.to_category_name === "string" ? row.to_category_name : "",
+        transaction_type: row?.transaction_type === "income"
+          ? "income"
+          : "expense",
+        from_category_name: typeof row?.from_category_name === "string"
+          ? row.from_category_name
+          : "",
+        to_category_name: typeof row?.to_category_name === "string"
+          ? row.to_category_name
+          : "",
         use_count: typeof row?.use_count === "number" ? row.use_count : 0,
-        last_used_at:
-          typeof row?.last_used_at === "string" ? row.last_used_at : null,
+        last_used_at: typeof row?.last_used_at === "string"
+          ? row.last_used_at
+          : null,
       }),
     )
     .filter(
@@ -254,15 +267,13 @@ export async function ensureUserCategory(params: {
   categoryName: string;
   transactionType: "expense" | "income";
 }): Promise<void> {
-  const category =
-    sanitizeCategoryName(params.categoryName) ??
+  const category = sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
   if (!category || category === "other") return;
 
   // Don't store canonical defaults as custom rows.
   // We consider a category to be canonical if it exists in either built-in list.
-  const isCanonical =
-    getExpenseCategories().includes(category) ||
+  const isCanonical = getExpenseCategories().includes(category) ||
     getIncomeCategories().includes(category);
   if (isCanonical) return;
 
@@ -290,8 +301,7 @@ export async function learnUserCategoryPreference(params: {
   sourceText?: string | null;
   descriptionText?: string | null;
 }): Promise<void> {
-  const category =
-    sanitizeCategoryName(params.categoryName) ??
+  const category = sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
   if (!category || category === "other") return;
 
@@ -308,10 +318,9 @@ export async function learnUserCategoryPreference(params: {
     .eq("match_key", matchKey)
     .maybeSingle();
 
-  const nextCount =
-    existing.error || !existing.data
-      ? 1
-      : Math.max(1, Number(existing.data.use_count || 0) + 1);
+  const nextCount = existing.error || !existing.data
+    ? 1
+    : Math.max(1, Number(existing.data.use_count || 0) + 1);
 
   const now = new Date().toISOString();
 
@@ -354,7 +363,7 @@ export function applyPreferencesToItems(params: {
   for (const pref of params.preferences) {
     const key = pref.match_key.trim();
     if (!key) continue;
-    const cat = normalizeCategoryForStorage(pref.category_name);
+    const cat = normalizeStoredUserCategory(pref.category_name);
     if (pref.transaction_type === "income") {
       prefMapIncome.set(key, cat);
     } else {
@@ -390,14 +399,14 @@ export function applyCategoryRemap(params: {
   allowedIncomeCategories?: Set<string>;
 }): string {
   if (!params.remaps.length) {
-    return normalizeCategoryForStorage(params.categoryName);
+    return normalizeStoredUserCategory(params.categoryName);
   }
 
-  const source = normalizeCategoryForStorage(params.categoryName);
+  const source = normalizeStoredUserCategory(params.categoryName);
 
   const targetRow = params.remaps.find((row) => {
     if (row.transaction_type !== params.transactionType) return false;
-    const from = normalizeCategoryForStorage(row.from_category_name);
+    const from = normalizeStoredUserCategory(row.from_category_name);
     return from === source;
   });
 
@@ -405,7 +414,7 @@ export function applyCategoryRemap(params: {
     return source;
   }
 
-  const remapped = normalizeCategoryForStorage(targetRow.to_category_name);
+  const remapped = normalizeStoredUserCategory(targetRow.to_category_name);
 
   if (params.transactionType === "income") {
     if (!params.allowedIncomeCategories) return remapped;

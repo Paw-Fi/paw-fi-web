@@ -128,8 +128,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule =
-      body.recurrence_rule ?? (body as any).recurrenceRule;
+    const legacyRecurrenceRule = body.recurrence_rule ??
+      (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -139,8 +139,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    const resolvedCategory = sanitizedCategory ??
+      normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -199,6 +199,10 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Valid userId is required", 400);
     }
 
+    if (!authResult.isInternalService && !sanitizedCategory) {
+      return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
+    }
+
     try {
       const remaps = await fetchUserCategoryRemaps({
         supabase,
@@ -248,10 +252,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate =
-        body.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate = body.recurrence_rule.end_date == null
+        ? undefined
+        : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(

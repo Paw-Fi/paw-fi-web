@@ -231,10 +231,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate =
-        body.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate = body.recurrence_rule.end_date == null
+        ? undefined
+        : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -271,8 +270,11 @@ Deno.serve(async (req: Request) => {
     const isPortfolio = body.isPortfolio === true;
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    if (!detection.isGpt && !sanitizedCategory) {
+      return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
+    }
+    const resolvedCategory = sanitizedCategory ??
+      normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -577,25 +579,22 @@ Deno.serve(async (req: Request) => {
       }
 
       // Determine split type and validate custom splits
-      const rawSplitType =
-        typeof body.customSplits?.splitType === "string"
-          ? body.customSplits.splitType.trim().toLowerCase()
-          : "equal";
+      const rawSplitType = typeof body.customSplits?.splitType === "string"
+        ? body.customSplits.splitType.trim().toLowerCase()
+        : "equal";
       const normalizedSplitType = [
-        "equal",
-        "amount",
-        "percentage",
-        "shares",
-      ].includes(rawSplitType)
+          "equal",
+          "amount",
+          "percentage",
+          "shares",
+        ].includes(rawSplitType)
         ? rawSplitType
         : "equal";
-      const hasMemberSplits =
-        Array.isArray(body.customSplits?.memberSplits) &&
+      const hasMemberSplits = Array.isArray(body.customSplits?.memberSplits) &&
         body.customSplits!.memberSplits.length > 0;
-      const customSplits =
-        hasMemberSplits && normalizedSplitType !== "equal"
-          ? body.customSplits
-          : null;
+      const customSplits = hasMemberSplits && normalizedSplitType !== "equal"
+        ? body.customSplits
+        : null;
       const splitType = customSplits ? normalizedSplitType : "equal";
 
       // Validate custom splits if provided
@@ -604,8 +603,8 @@ Deno.serve(async (req: Request) => {
 
         // Normalize member split values so downstream validations and inserts
         // don't violate DB constraints (e.g., shares cannot be 0).
-        const normalizedMemberSplits: MemberSplit[] =
-          customSplits.memberSplits.map((split) => ({
+        const normalizedMemberSplits: MemberSplit[] = customSplits.memberSplits
+          .map((split) => ({
             userId: split.userId,
             amount: normalizeAmount(split.amount),
             percentage: normalizePercentage(split.percentage),
@@ -645,7 +644,8 @@ Deno.serve(async (req: Request) => {
             return new Response(
               JSON.stringify({
                 success: false,
-                error: `Amount splits must equal total expense amount (${body.amount})`,
+                error:
+                  `Amount splits must equal total expense amount (${body.amount})`,
                 code: "VALIDATION_ERROR",
               }),
               {
@@ -769,7 +769,7 @@ Deno.serve(async (req: Request) => {
       } else if (splitType === "amount" && customSplits) {
         // Custom amount split
         const cents = customSplits.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100)),
+          Math.max(0, Math.round((split.amount || 0) * 100))
         );
         const sumCents = cents.reduce((sum, v) => sum + v, 0);
         const diff = amountCents - sumCents;

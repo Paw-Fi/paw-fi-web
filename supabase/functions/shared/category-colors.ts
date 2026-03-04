@@ -708,6 +708,9 @@ export function coerceCategoryToAllowed(
   raw: string | null,
   allowed: Set<string>,
 ): string {
+  const sanitized = sanitizeCategoryName(raw);
+  if (sanitized && allowed.has(sanitized)) return sanitized;
+
   const candidate = normalizeCategoryForStorage(raw);
   if (allowed.has(candidate)) return candidate;
 
