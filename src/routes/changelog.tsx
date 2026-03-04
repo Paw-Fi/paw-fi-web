@@ -56,11 +56,12 @@ const changelogs: ChangelogEntry[] = [
     description:
       "Version 1.4.6 gives you more control over categorization, expands regional currency support, and makes support and feedback easier from inside the app.",
     items: [
-      "Create your own transaction categories with custom icons and styles",
-      "Added Bangladesh Taka (BDT) and Zambian Kwacha (ZMW) with updated currency support",
-      "You can now send feature requests and bug reports directly from Settings",
-      "Currency selector and transaction totals now refresh more reliably",
-    ],
+  "Create custom transaction categories with your own icons and styles",
+  "Added Bangladesh Taka (BDT), Belize Dollar (BZD), and Zambian Kwacha (ZMW)",
+  "Moneko AI is now smarter and more helpful",
+  "Send feature requests and bug reports directly from Settings",
+  "Currency selector and totals now refresh more reliably",
+],
   },
   {
     title: "Telegram Sync, Siri Shortcuts & Quick Actions",
