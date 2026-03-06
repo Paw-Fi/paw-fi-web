@@ -3,7 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { formatDate } from "@/lib/utils";
 import { Helmet } from "@dr.pogodin/react-helmet";
 // @ts-ignore
-import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -56,12 +61,12 @@ const changelogs: ChangelogEntry[] = [
     description:
       "Version 1.4.6 gives you more control over categorization, expands regional currency support, and makes support and feedback easier from inside the app.",
     items: [
-  "Create custom transaction categories with your own icons and styles",
-  "Added Bangladesh Taka (BDT), Belize Dollar (BZD), and Zambian Kwacha (ZMW)",
-  "Moneko AI is now smarter and more helpful",
-  "Send feature requests and bug reports directly from Settings",
-  "Currency selector and totals now refresh more reliably",
-],
+      "Create custom transaction categories with your own icons and styles",
+      "Added Bangladesh Taka (BDT), Belize Dollar (BZD), and Zambian Kwacha (ZMW)",
+      "Moneko AI is now smarter and more helpful",
+      "Send feature requests and bug reports directly from Settings",
+      "Currency selector and totals now refresh more reliably",
+    ],
   },
   {
     title: "Telegram Sync, Siri Shortcuts & Quick Actions",
@@ -505,13 +510,35 @@ export default function ChangelogPage() {
     [sortedChangelogs],
   );
 
-  const { scrollYProgress } = useScroll();
+  const scrollYProgress = useMotionValue(0);
   const prefersReducedMotion = useReducedMotion();
   const scaleY = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001,
   });
+
+  React.useEffect(() => {
+    const updateScrollProgress = () => {
+      const { documentElement } = document;
+      const scrollTop = window.scrollY;
+      const scrollableHeight =
+        documentElement.scrollHeight - documentElement.clientHeight;
+      const progress = scrollableHeight > 0 ? scrollTop / scrollableHeight : 0;
+
+      scrollYProgress.set(progress);
+    };
+
+    updateScrollProgress();
+
+    window.addEventListener("scroll", updateScrollProgress, { passive: true });
+    window.addEventListener("resize", updateScrollProgress);
+
+    return () => {
+      window.removeEventListener("scroll", updateScrollProgress);
+      window.removeEventListener("resize", updateScrollProgress);
+    };
+  }, [scrollYProgress]);
 
   React.useEffect(() => {
     const scrollToHash = () => {
