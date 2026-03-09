@@ -35,7 +35,7 @@ Deno.test("category: sanitizeCategoryName rejects backticks", () => {
 });
 
 Deno.test("category: sanitizeCategoryName rejects overly long names", () => {
-  const longName = "a".repeat(49);
+  const longName = "a".repeat(97);
   assertEquals(sanitizeCategoryName(longName), null);
 });
 
@@ -62,7 +62,7 @@ Deno.test(
     const allowed = new Set(["groceries", "rent"]);
     assertEquals(
       withSilencedConsoleWarn(() =>
-        coerceCategoryToAllowed("my custom", allowed)
+        coerceCategoryToAllowed("my custom", allowed),
       ),
       "other",
     );
@@ -272,5 +272,21 @@ Deno.test(
 
     // fallbacks still present
     assert(merged.expenseCategories.includes("other"));
+  },
+);
+
+Deno.test(
+  "user-categories: mergeAllowedCategories excludes reserved custom names",
+  () => {
+    const merged = mergeAllowedCategories({
+      customCategories: [
+        { name: "default", transaction_type: "expense" },
+        { name: "unknown", transaction_type: "income" },
+      ],
+    });
+
+    assert(!merged.expenseCategories.includes("default"));
+    assert(!merged.incomeCategories.includes("unknown"));
+    assert(merged.expenseCategories.includes("uncategorized"));
   },
 );

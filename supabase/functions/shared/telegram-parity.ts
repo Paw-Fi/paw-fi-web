@@ -1,4 +1,5 @@
 export const REQUIRED_TELEGRAM_TOOL_NAMES = [
+  "create_custom_category",
   "add_transaction",
   "add_transactions_batch",
   "update_transaction",

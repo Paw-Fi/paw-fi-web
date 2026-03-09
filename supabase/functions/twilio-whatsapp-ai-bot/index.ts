@@ -45,18 +45,18 @@ import {
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
   mergeAllowedCategories,
+  upsertUserCustomCategory,
 } from "../shared/user-categories.ts";
 import { buildLanguageOverride } from "../shared/detect-language.ts";
 
 // --- Constants & Types ---
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview"; // Fast and capable
-const SYSTEM_INSTRUCTION =
-  `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
+const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
-**LANGUAGE RULE (HIGHEST PRIORITY):** You MUST detect the language of the user's latest message and reply ENTIRELY in that same language. This overrides conversation history. Even if all previous messages were in English, if the user now writes in Chinese, you MUST reply fully in Chinese. If in Spanish, reply in Spanish. This applies to every part of your response: confirmations, questions, summaries, labels, and follow-ups. Fall back to {{LANGUAGE}} only when the message is ambiguous (pure numbers, emojis, or single universal words).
+**LANGUAGE RULE (HIGHEST PRIORITY):** You MUST detect the language of the user's latest message and reply ENTIRELY in that same language. This overrides conversation history. This applies to every part of your response: confirmations, questions, summaries, labels, and follow-ups. Fall back to {{LANGUAGE}} only when the message is ambiguous (pure numbers, emojis, or single universal words).
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
@@ -68,7 +68,10 @@ CRITICAL RULES:
     Always refer to these exact names (personal account, private space, shared space) when responding.
 3.  **Confirmation**: For ambiguous requests (e.g., "5 coffee"), ask for clarification (Personal or which space? Which category?).
     - Infer a category from the text and propose it (e.g., "latte" -> "food & drink"). Ask for quick confirmation before saving.
-4.  **Charts**: If the user asks for a chart or graph, use the 'generate_chart_url' tool and provide the URL in your response. Explain that you are sending an image.
+4.  **Charts**: If the user asks for a chart or graph, use the 'generate_chart_url' tool.
+    - DO NOT paste the chart URL in your message.
+    - The backend will attach the chart image automatically.
+    - Write a short caption + 1-2 insights about what the chart shows.
 5.  **Recurring**: If the user says "monthly", "weekly", "every month", etc., set 'is_recurring' to true.
 6.  **Tone**: Enthusiastic, encouraging, concise, and proactive (suitable for WhatsApp). Use light emojis, and close with a quick follow-up offer to help further (e.g., suggest related actions like totals, budgets, or recurring setup).
 7.  **Totals**: When listing or summarizing expenses, always include a total spent for the requested range and mention how many items are shown.
@@ -120,8 +123,7 @@ WHATSAPP BUDGET FLOW (WhatsApp only):
 - When the user confirms (e.g., yes/ok/sounds good), call "confirm_budget" to finalize without re-asking for amounts unless missing.
 - Only call "set_budget" directly if the user explicitly asks to set it now and the full amount is present in the same message.
 `;
-const WHATSAPP_SYSTEM_INSTRUCTION =
-  `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
+const WHATSAPP_SYSTEM_INSTRUCTION = `${SYSTEM_INSTRUCTION}\n${WHATSAPP_BUDGET_FLOW}`;
 
 const PROCESSING_ACK_DELAY_MS = 1000;
 const IDEMPOTENCY_TTL_MINUTES = 60;
@@ -156,15 +158,109 @@ function xmlResponse(xml: string, status = 200) {
   });
 }
 
-function buildTwimlMessage(message?: string | null) {
-  if (!message) {
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`;
-  }
-  const textEsc = message
+function escapeXml(value: string): string {
+  return (value || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${textEsc}</Message></Response>`;
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildTwimlMessage(message?: string | null, mediaUrl?: string | null) {
+  const body = (message || "").trim();
+  const media = (mediaUrl || "").trim();
+  if (!body && !media) {
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`;
+  }
+
+  if (!media) {
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${escapeXml(body)}</Message></Response>`;
+  }
+
+  const bodyXml = body ? `<Body>${escapeXml(body)}</Body>` : "";
+  const mediaXml = `<Media>${escapeXml(media)}</Media>`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${bodyXml}${mediaXml}</Message></Response>`;
+}
+
+function truncateTextByCodePoints(input: string, max: number): string {
+  const arr = Array.from((input || "").trim());
+  if (arr.length <= max) return arr.join("");
+  return arr.slice(0, Math.max(0, max - 1)).join("") + "…";
+}
+
+function extractQuickChartUrl(text: string): {
+  url: string | null;
+  cleanedText: string;
+} {
+  const input = (text || "").trim();
+  if (!input) return { url: null, cleanedText: "" };
+
+  const regex = /(https?:\/\/quickchart\.io\/chart[^\s<>"]+)/gi;
+  const matches = input.match(regex) || [];
+  const raw = matches[0] || "";
+  const url = raw ? raw.replace(/[)\].,!?;:]+$/g, "") : null;
+  if (!url) return { url: null, cleanedText: input };
+
+  const withoutUrl = input.replace(raw, "");
+  const cleanedText = withoutUrl
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return { url, cleanedText };
+}
+
+function parseQuickChartConfigFromUrl(url: string): unknown | null {
+  try {
+    const u = new URL(url);
+    if (!/quickchart\.io$/i.test(u.hostname)) return null;
+    if (!u.pathname.startsWith("/chart")) return null;
+    if (u.pathname.startsWith("/chart/render/")) return null;
+    const c = u.searchParams.get("c");
+    if (!c) return null;
+    const decoded = decodeURIComponent(c);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+async function createQuickChartShortUrl(
+  chartConfig: unknown,
+): Promise<string | null> {
+  try {
+    const res = await fetch("https://quickchart.io/chart/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chart: chartConfig,
+        format: "png",
+        width: 720,
+        height: 480,
+        devicePixelRatio: 2,
+        backgroundColor: "white",
+      }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json().catch(() => null)) as any;
+    if (!json?.success || typeof json?.url !== "string") return null;
+    return json.url;
+  } catch {
+    return null;
+  }
+}
+
+async function normalizeQuickChartMediaUrl(url: string): Promise<string> {
+  const input = (url || "").trim();
+  if (!input) return input;
+  if (/^https?:\/\/quickchart\.io\/chart\/render\//i.test(input)) {
+    return input;
+  }
+  const cfg = parseQuickChartConfigFromUrl(input);
+  if (!cfg) return input;
+  return (await createQuickChartShortUrl(cfg)) || input;
 }
 
 function runBackgroundTask(task: Promise<unknown>) {
@@ -391,13 +487,13 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
   const rawList: any[] = Array.isArray(input)
     ? input
     : input && typeof input === "object"
-    ? Object.entries(input as Record<string, unknown>).map(
-      ([name, percentage]) => ({
-        name,
-        percentage,
-      }),
-    )
-    : [];
+      ? Object.entries(input as Record<string, unknown>).map(
+          ([name, percentage]) => ({
+            name,
+            percentage,
+          }),
+        )
+      : [];
 
   const pockets: NormalizedPocket[] = [];
   for (const entry of rawList) {
@@ -406,7 +502,8 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
     const name = typeof rawName === "string" ? rawName.trim() : "";
     if (!name) continue;
 
-    const rawPercent = (entry as any).percentage ??
+    const rawPercent =
+      (entry as any).percentage ??
       (entry as any).percent ??
       (entry as any).pct ??
       (entry as any).ratio;
@@ -415,15 +512,17 @@ function normalizePockets(input: unknown): NormalizedPocket[] {
 
     const clamped = Math.max(0, Math.min(100, percent));
     const categories = normalizeCategories((entry as any).categories);
-    const colorRaw = (entry as any).color ?? (entry as any).hex ??
-      (entry as any).hex_color;
+    const colorRaw =
+      (entry as any).color ?? (entry as any).hex ?? (entry as any).hex_color;
     const iconRaw = (entry as any).icon ?? (entry as any).symbol;
-    const color = typeof colorRaw === "string" && colorRaw.trim().length > 0
-      ? colorRaw.trim()
-      : undefined;
-    const icon = typeof iconRaw === "string" && iconRaw.trim().length > 0
-      ? iconRaw.trim()
-      : undefined;
+    const color =
+      typeof colorRaw === "string" && colorRaw.trim().length > 0
+        ? colorRaw.trim()
+        : undefined;
+    const icon =
+      typeof iconRaw === "string" && iconRaw.trim().length > 0
+        ? iconRaw.trim()
+        : undefined;
     pockets.push({ name, percentage: clamped, categories, color, icon });
   }
   return pockets;
@@ -515,7 +614,7 @@ async function consolidateDuplicateEnvelopesForBudget(
     const map = new Map<string, BudgetEnvelopeRowLite>();
     for (const [norm, rows] of byNorm.entries()) {
       const chosen = rows.reduce((acc, cur) =>
-        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
       );
       map.set(norm, chosen);
     }
@@ -532,11 +631,9 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("envelope_id", ids);
     if (linksErr && debugEnabled) {
       debugNotes.push(
-        `envelope_category_links load error (${norm}): ${
-          formatInvokeError(
-            linksErr,
-          )
-        }`,
+        `envelope_category_links load error (${norm}): ${formatInvokeError(
+          linksErr,
+        )}`,
       );
     }
     const links = (linksRaw || []) as Array<{
@@ -621,11 +718,9 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("id", dupIds);
     if (deleteEnvErr && debugEnabled) {
       debugNotes.push(
-        `duplicate envelope delete error (${norm}): ${
-          formatInvokeError(
-            deleteEnvErr,
-          )
-        }`,
+        `duplicate envelope delete error (${norm}): ${formatInvokeError(
+          deleteEnvErr,
+        )}`,
       );
     }
   }
@@ -703,9 +798,10 @@ function normalizeLastListedTransactionFromRow(
   if (!id) return null;
 
   const cents = (row as any).amount_cents;
-  const amountMajor = typeof cents === "number" && Number.isFinite(cents)
-    ? cents / 100
-    : Number((row as any).amount) || 0;
+  const amountMajor =
+    typeof cents === "number" && Number.isFinite(cents)
+      ? cents / 100
+      : Number((row as any).amount) || 0;
 
   const currency = String((row as any).currency || "").toUpperCase();
   const date = String((row as any).date || "").slice(0, 10);
@@ -716,9 +812,8 @@ function normalizeLastListedTransactionFromRow(
   const typeRaw = String((row as any).type || "expense").toLowerCase();
   const type = typeRaw === "income" ? "income" : "expense";
   const householdIdRaw = (row as any).household_id;
-  const household_id = householdIdRaw == null
-    ? null
-    : String(householdIdRaw || "") || null;
+  const household_id =
+    householdIdRaw == null ? null : String(householdIdRaw || "") || null;
 
   return {
     id,
@@ -818,9 +913,8 @@ function matchesTransaction(
     if (cur && item.currency.toUpperCase() !== cur) return false;
   }
   if (match.type) {
-    const t = String(match.type).toLowerCase() === "income"
-      ? "income"
-      : "expense";
+    const t =
+      String(match.type).toLowerCase() === "income" ? "income" : "expense";
     if ((item.type || "expense") !== t) return false;
   }
   if (match.category) {
@@ -866,9 +960,9 @@ function resolveLastListedSelection(
 ):
   | { candidate: LastListedTransaction }
   | {
-    needs_disambiguation: true;
-    choices: Array<{ index: number; summary: string }>;
-  }
+      needs_disambiguation: true;
+      choices: Array<{ index: number; summary: string }>;
+    }
   | { error: string } {
   const list = Array.isArray(items) ? items : [];
   if (list.length === 0) {
@@ -885,8 +979,7 @@ function resolveLastListedSelection(
       return { candidate: list[idx - 1] };
     }
     return {
-      error:
-        `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
+      error: `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
     };
   }
 
@@ -1131,9 +1224,8 @@ function rebalancePocketPercentages(
     let remaining = available;
     for (let i = 0; i < others.length; i++) {
       const raw = Math.max(0, (others[i].percentage || 0) * factor);
-      const pct = i === others.length - 1
-        ? remaining
-        : Number(raw.toFixed(precision));
+      const pct =
+        i === others.length - 1 ? remaining : Number(raw.toFixed(precision));
       remaining -= pct;
       updated[others[i].id] = Number(pct.toFixed(precision));
     }
@@ -1152,22 +1244,23 @@ function buildRecurrenceRule(args: any, fallbackAnchor: string) {
     return provided as Record<string, unknown>;
   }
 
-  const frequency = typeof args?.frequency === "string" && args.frequency.trim()
-    ? args.frequency.trim().toLowerCase()
-    : null;
+  const frequency =
+    typeof args?.frequency === "string" && args.frequency.trim()
+      ? args.frequency.trim().toLowerCase()
+      : null;
   const interval = Number.isFinite(args?.interval)
     ? Math.trunc(args.interval)
     : null;
   const anchor_date = normalizeDateInput(args?.anchor_date, fallbackAnchor);
-  const end_date = typeof args?.end_date === "string" && args.end_date.trim()
-    ? normalizeDateInput(args.end_date, "")
-    : "";
+  const end_date =
+    typeof args?.end_date === "string" && args.end_date.trim()
+      ? normalizeDateInput(args.end_date, "")
+      : "";
   const reminderValue = Number.isFinite(args?.reminder_value)
     ? Math.trunc(args.reminder_value)
     : null;
-  const reminderUnit = typeof args?.reminder_unit === "string"
-    ? args.reminder_unit
-    : null;
+  const reminderUnit =
+    typeof args?.reminder_unit === "string" ? args.reminder_unit : null;
 
   if (!frequency) return null;
 
@@ -1434,9 +1527,8 @@ async function resolveHouseholdSplitConfig(
     const perMissing = missing.length ? remaining / missing.length : 0;
     for (const id of memberIds) {
       const s = byId.get(id);
-      const amt = typeof s?.amount === "number"
-        ? Math.max(0, s.amount)
-        : perMissing;
+      const amt =
+        typeof s?.amount === "number" ? Math.max(0, s.amount) : perMissing;
       fullSplits.push({ userId: id, amount: amt });
     }
     const sum = fullSplits.reduce((acc, s) => acc + (s.amount || 0), 0);
@@ -1452,9 +1544,10 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const s = byId.get(id);
-      const pct = typeof s?.percentage === "number"
-        ? Math.max(0, Math.min(100, s.percentage))
-        : null;
+      const pct =
+        typeof s?.percentage === "number"
+          ? Math.max(0, Math.min(100, s.percentage))
+          : null;
       if (pct == null) missing.push(id);
       else specifiedSum += pct;
     }
@@ -1462,9 +1555,10 @@ async function resolveHouseholdSplitConfig(
     const perMissing = missing.length ? remaining / missing.length : 0;
     for (const id of memberIds) {
       const s = byId.get(id);
-      const pct = typeof s?.percentage === "number"
-        ? Math.max(0, Math.min(100, s.percentage))
-        : perMissing;
+      const pct =
+        typeof s?.percentage === "number"
+          ? Math.max(0, Math.min(100, s.percentage))
+          : perMissing;
       fullSplits.push({ userId: id, percentage: pct });
     }
     const sum = fullSplits.reduce((acc, s) => acc + (s.percentage || 0), 0);
@@ -1478,9 +1572,8 @@ async function resolveHouseholdSplitConfig(
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const s = byId.get(id);
-      const shares = typeof s?.shares === "number"
-        ? Math.max(1, Math.trunc(s.shares))
-        : 1;
+      const shares =
+        typeof s?.shares === "number" ? Math.max(1, Math.trunc(s.shares)) : 1;
       fullSplits.push({ userId: id, shares });
     }
   }
@@ -1575,11 +1668,9 @@ async function buildFinancialSnapshot(
     },
   };
   const chartUrl = catData.length
-    ? `https://quickchart.io/chart?c=${
-      encodeURIComponent(
+    ? `https://quickchart.io/chart?c=${encodeURIComponent(
         JSON.stringify(chartConfig),
-      )
-    }`
+      )}`
     : undefined;
 
   return {
@@ -1602,7 +1693,8 @@ async function validateTwilioRequest(
   req: Request,
   authToken: string,
 ): Promise<boolean> {
-  const signatureHeader = req.headers.get("X-Twilio-Signature") ||
+  const signatureHeader =
+    req.headers.get("X-Twilio-Signature") ||
     req.headers.get("x-twilio-signature");
   if (!signatureHeader) return false;
 
@@ -1685,8 +1777,8 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
   const supabaseAuthed = SUPABASE_ANON_KEY
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    })
+        global: { headers: { Authorization: authHeader } },
+      })
     : null;
 
   if (isJsonApp) {
@@ -1701,8 +1793,8 @@ Deno.serve(async (req: Request) => {
     if (!supabaseAuthed) {
       return jsonResponse({ error: "Auth client not configured" }, 500);
     }
-    const { data: userData, error: userErr } = await supabaseAuthed.auth
-      .getUser();
+    const { data: userData, error: userErr } =
+      await supabaseAuthed.auth.getUser();
     if (userErr || !userData?.user) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
@@ -1884,14 +1976,15 @@ Deno.serve(async (req: Request) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
       model: MODEL_NAME,
-      systemInstruction: SYSTEM_INSTRUCTION.replace(
-        "{{DATE}}",
-        formatDateInTimeZone(userTimezone),
-      )
-        .replace("{{CURRENCY}}", userCurrency)
-        .replace("{{HOUSEHOLDS}}", "None")
-        .replace("{{CATEGORIES}}", categoryGuideForUser)
-        .replace("{{LANGUAGE}}", userLang) +
+      systemInstruction:
+        SYSTEM_INSTRUCTION.replace(
+          "{{DATE}}",
+          formatDateInTimeZone(userTimezone),
+        )
+          .replace("{{CURRENCY}}", userCurrency)
+          .replace("{{HOUSEHOLDS}}", "None")
+          .replace("{{CATEGORIES}}", categoryGuideForUser)
+          .replace("{{LANGUAGE}}", userLang) +
         buildLanguageOverride(messageText),
     });
 
@@ -1918,6 +2011,24 @@ Deno.serve(async (req: Request) => {
               },
             },
           },
+        },
+      },
+      {
+        name: "create_custom_category",
+        description:
+          "Create or update a custom transaction category for this user so it can be reused later.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING" },
+            transaction_type: {
+              type: "STRING",
+              enum: ["expense", "income"],
+            },
+            color_argb: { type: "NUMBER" },
+            icon_key: { type: "STRING" },
+          },
+          required: ["name", "transaction_type"],
         },
       },
       {
@@ -2232,11 +2343,10 @@ Deno.serve(async (req: Request) => {
         let toolResult = {};
         try {
           if (call.name === "analyze_expense") {
-            const text = typeof call.args?.text === "string"
-              ? call.args.text.trim()
-              : "";
-            const hasMedia = !!call.args?.media &&
-              typeof call.args.media === "object";
+            const text =
+              typeof call.args?.text === "string" ? call.args.text.trim() : "";
+            const hasMedia =
+              !!call.args?.media && typeof call.args.media === "object";
 
             if (hasMedia) {
               toolResult = {
@@ -2320,11 +2430,12 @@ Deno.serve(async (req: Request) => {
               };
             }
           } else if (call.name === "update_transaction") {
-            const updatesArgs = call.args?.updates &&
-                typeof call.args.updates === "object" &&
-                !Array.isArray(call.args.updates)
-              ? call.args.updates
-              : null;
+            const updatesArgs =
+              call.args?.updates &&
+              typeof call.args.updates === "object" &&
+              !Array.isArray(call.args.updates)
+                ? call.args.updates
+                : null;
             if (!updatesArgs) {
               toolResult = { error: "updates is required" };
             } else {
@@ -2423,8 +2534,8 @@ Deno.serve(async (req: Request) => {
                       const formattedBase = error
                         ? formatInvokeError(error)
                         : typeof (data as any)?.error === "string"
-                        ? (data as any).error
-                        : "Failed to update transaction";
+                          ? (data as any).error
+                          : "Failed to update transaction";
                       const code = (data as any)?.code;
                       const formatted = code
                         ? `${formattedBase} (code: ${code})`
@@ -2489,24 +2600,62 @@ Deno.serve(async (req: Request) => {
                 },
               );
               const success = !error && data?.success === true;
-              toolResult = success ? { success: true } : {
-                error: error ?? data?.error ?? "Failed to delete",
+              toolResult = success
+                ? { success: true }
+                : {
+                    error: error ?? data?.error ?? "Failed to delete",
+                  };
+            }
+          } else if (call.name === "create_custom_category") {
+            const transactionType =
+              String(call.args?.transaction_type || "expense").toLowerCase() ===
+              "income"
+                ? "income"
+                : "expense";
+            try {
+              const created = await upsertUserCustomCategory({
+                supabase,
+                userId,
+                categoryName: String(call.args?.name || ""),
+                transactionType,
+                colorArgb: Number.isFinite(Number(call.args?.color_argb))
+                  ? Number(call.args?.color_argb)
+                  : null,
+                iconKey:
+                  typeof call.args?.icon_key === "string"
+                    ? call.args.icon_key
+                    : null,
+              });
+              const targetList =
+                transactionType === "income"
+                  ? allowedIncomeCategories
+                  : allowedExpenseCategories;
+              if (!targetList.includes(created.name)) {
+                targetList.push(created.name);
+                targetList.sort();
+              }
+              toolResult = {
+                success: true,
+                category: created.name,
+                transaction_type: created.transactionType,
               };
+            } catch (error) {
+              toolResult = { error: formatInvokeError(error) };
             }
           } else if (call.name === "add_transaction") {
             const householdId = (call.args.household_id || null) as
               | string
               | null;
-            const isHouseholdExpense = !!householdId &&
-              (call.args.type || "expense") === "expense";
+            const isHouseholdExpense =
+              !!householdId && (call.args.type || "expense") === "expense";
             const splitConfig = isHouseholdExpense
               ? await resolveHouseholdSplitConfig(
-                supabase,
-                householdId!,
-                userId,
-                Number(call.args.amount || 0),
-                call.args,
-              )
+                  supabase,
+                  householdId!,
+                  userId,
+                  Number(call.args.amount || 0),
+                  call.args,
+                )
               : {};
             const { data, error } = await saveExpenseDirect(
               supabase,
@@ -2525,13 +2674,13 @@ Deno.serve(async (req: Request) => {
                 isRecurring: call.args.is_recurring,
                 recurrence_rule: call.args.is_recurring
                   ? {
-                    frequency: (
-                      call.args.frequency || "MONTHLY"
-                    ).toUpperCase(),
-                    interval: 1,
-                    anchor_date: call.args.date ||
-                      formatDateInTimeZone(userTimezone),
-                  }
+                      frequency: (
+                        call.args.frequency || "MONTHLY"
+                      ).toUpperCase(),
+                      interval: 1,
+                      anchor_date:
+                        call.args.date || formatDateInTimeZone(userTimezone),
+                    }
                   : undefined,
               },
             );
@@ -2555,9 +2704,10 @@ Deno.serve(async (req: Request) => {
               const defaultDate = formatDateInTimeZone(userTimezone);
 
               for (const tx of rawTransactions) {
-                const txType = typeof tx.type === "string" && tx.type
-                  ? tx.type.toLowerCase()
-                  : "expense";
+                const txType =
+                  typeof tx.type === "string" && tx.type
+                    ? tx.type.toLowerCase()
+                    : "expense";
                 const dateStr = normalizeDateInput(tx.date, defaultDate);
 
                 // Resolve splits for household expenses
@@ -2589,15 +2739,16 @@ Deno.serve(async (req: Request) => {
                   payerUserId,
                   customSplits,
                   isRecurring: tx.is_recurring === true,
-                  recurrence_rule: tx.is_recurring === true
-                    ? tx.recurrence_rule || {
-                      frequency: (tx.frequency || "monthly")
-                        .toString()
-                        .toLowerCase(),
-                      interval: 1,
-                      anchor_date: dateStr,
-                    }
-                    : undefined,
+                  recurrence_rule:
+                    tx.is_recurring === true
+                      ? tx.recurrence_rule || {
+                          frequency: (tx.frequency || "monthly")
+                            .toString()
+                            .toLowerCase(),
+                          interval: 1,
+                          anchor_date: dateStr,
+                        }
+                      : undefined,
                 });
               }
 
@@ -2636,7 +2787,8 @@ Deno.serve(async (req: Request) => {
                 };
               } else {
                 toolResult = {
-                  error: formatInvokeError(error ?? data?.error) ||
+                  error:
+                    formatInvokeError(error ?? data?.error) ||
                     "Failed to save transactions",
                 };
               }
@@ -2805,13 +2957,13 @@ Deno.serve(async (req: Request) => {
   // Map the context data to maintain backward compatibility
   let contact = contextData
     ? {
-      id: contextData.contact_id,
-      user_id: contextData.user_id,
-      verified: contextData.verified,
-      preferred_currency: contextData.preferred_currency,
-      preferred_language: contextData.preferred_language,
-      preferred_timezone: contextData.preferred_timezone,
-    }
+        id: contextData.contact_id,
+        user_id: contextData.user_id,
+        verified: contextData.verified,
+        preferred_currency: contextData.preferred_currency,
+        preferred_language: contextData.preferred_language,
+        preferred_timezone: contextData.preferred_timezone,
+      }
     : null;
   let contactError = contextError;
 
@@ -3022,9 +3174,9 @@ Deno.serve(async (req: Request) => {
   // Use subscription data from context
   const subscription = contextData
     ? {
-      plan: contextData.subscription_plan,
-      status: contextData.subscription_status,
-    }
+        plan: contextData.subscription_plan,
+        status: contextData.subscription_status,
+      }
     : null;
   debugLog(WHATSAPP_DEBUG, "subscription", { subscription });
 
@@ -3148,12 +3300,13 @@ Deno.serve(async (req: Request) => {
       .map((h: any) => h?.household_id)
       .filter((value: any) => typeof value === "string" && value.length > 0);
 
-    const householdContext = spaces
-      ?.map(
-        (h: any) =>
-          `${h.name || "Space"}${h.is_portfolio ? " (Portfolio)" : ""}`,
-      )
-      .join("; ") || "None";
+    const householdContext =
+      spaces
+        ?.map(
+          (h: any) =>
+            `${h.name || "Space"}${h.is_portfolio ? " (Portfolio)" : ""}`,
+        )
+        .join("; ") || "None";
 
     const spaceMap = new Map<
       string,
@@ -3234,15 +3387,17 @@ Deno.serve(async (req: Request) => {
       fallback?: PendingBudgetDraft | null,
     ) => {
       const amountCandidate = coerceNumber(args.amount);
-      const amountMajor = amountCandidate != null && amountCandidate > 0
-        ? amountCandidate
-        : (fallback?.amount ?? null);
+      const amountMajor =
+        amountCandidate != null && amountCandidate > 0
+          ? amountCandidate
+          : (fallback?.amount ?? null);
       if (!amountMajor || amountMajor <= 0) {
         return { error: "Invalid budget amount" };
       }
-      const rawDate = typeof args.date === "string" && args.date.trim()
-        ? args.date.trim()
-        : fallback?.date || formatDateInTimeZone(userTimezone);
+      const rawDate =
+        typeof args.date === "string" && args.date.trim()
+          ? args.date.trim()
+          : fallback?.date || formatDateInTimeZone(userTimezone);
       const dateStr = rawDate.slice(0, 10);
       const period_month = dateStr.slice(0, 7) + "-01";
       const { householdId, resolvedName, isPortfolio } = resolveBudgetScope(
@@ -3367,15 +3522,15 @@ Deno.serve(async (req: Request) => {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
       model: MODEL_NAME,
-      systemInstruction: WHATSAPP_SYSTEM_INSTRUCTION.replace(
-        "{{DATE}}",
-        formatDateInTimeZone(userTimezone),
-      )
-        .replace("{{CURRENCY}}", userCurrency)
-        .replace("{{HOUSEHOLDS}}", householdContext)
-        .replace("{{CATEGORIES}}", categoryGuideForUser)
-        .replace("{{LANGUAGE}}", userLang) +
-        buildLanguageOverride(caption),
+      systemInstruction:
+        WHATSAPP_SYSTEM_INSTRUCTION.replace(
+          "{{DATE}}",
+          formatDateInTimeZone(userTimezone),
+        )
+          .replace("{{CURRENCY}}", userCurrency)
+          .replace("{{HOUSEHOLDS}}", householdContext)
+          .replace("{{CATEGORIES}}", categoryGuideForUser)
+          .replace("{{LANGUAGE}}", userLang) + buildLanguageOverride(caption),
     });
 
     // Define Tools
@@ -3402,6 +3557,24 @@ Deno.serve(async (req: Request) => {
               },
             },
           },
+        },
+      },
+      {
+        name: "create_custom_category",
+        description:
+          "Create or update a custom transaction category for this user so it can be reused later.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING" },
+            transaction_type: {
+              type: "STRING",
+              enum: ["expense", "income"],
+            },
+            color_argb: { type: "NUMBER" },
+            icon_key: { type: "STRING" },
+          },
+          required: ["name", "transaction_type"],
         },
       },
       {
@@ -4023,7 +4196,7 @@ Deno.serve(async (req: Request) => {
         setTimeout(
           () => reject(new Error("AI response timed out after 60 seconds")),
           60000,
-        )
+        ),
       );
 
       const result = await Promise.race([messagePromise, timeoutPromise]);
@@ -4051,6 +4224,7 @@ Deno.serve(async (req: Request) => {
     let toolSucceededAny = false;
     let lastToolResult: any = null;
     let lastToolCallName: string | null = null;
+    let lastGeneratedChartUrl: string | null = null;
     let lastBudgetPockets: Array<{ name: string; percentage: number }> | null =
       null;
     let toolIterations = 0;
@@ -4064,9 +4238,8 @@ Deno.serve(async (req: Request) => {
         });
         try {
           if (call.name === "analyze_expense") {
-            const text = typeof call.args?.text === "string"
-              ? call.args.text.trim()
-              : "";
+            const text =
+              typeof call.args?.text === "string" ? call.args.text.trim() : "";
             const media =
               call.args?.media && typeof call.args.media === "object"
                 ? call.args.media
@@ -4108,11 +4281,11 @@ Deno.serve(async (req: Request) => {
 
               if (!mediaUrl) {
                 toolResult = {
-                  error:
-                    `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
+                  error: `Missing MediaUrl${index}. Ask the user to resend the attachment.`,
                 };
               } else {
-                const accountSid = formData.get("AccountSid")?.toString() ||
+                const accountSid =
+                  formData.get("AccountSid")?.toString() ||
                   TWILIO_ACCOUNT_SID ||
                   "";
                 const token = TWILIO_AUTH_TOKEN || "";
@@ -4128,23 +4301,23 @@ Deno.serve(async (req: Request) => {
                       error: `Failed to download media (status ${res.status}).`,
                     };
                   } else {
-                    const headerContentType = res.headers.get("content-type") ||
-                      mediaType || "";
+                    const headerContentType =
+                      res.headers.get("content-type") || mediaType || "";
                     const contentType = headerContentType.split(";")[0].trim();
                     const buf = new Uint8Array(await res.arrayBuffer());
                     if (buf.byteLength > MAX_MEDIA_BYTES) {
                       toolResult = {
-                        error:
-                          `Media is too large to process (${buf.byteLength} bytes).`,
+                        error: `Media is too large to process (${buf.byteLength} bytes).`,
                       };
                     } else {
                       const base64Data = uint8ToBase64(buf);
-                      const cleanContentType = contentType ||
+                      const cleanContentType =
+                        contentType ||
                         (kind === "image"
                           ? "image/jpeg"
                           : kind === "audio"
-                          ? "audio/ogg"
-                          : "application/octet-stream");
+                            ? "audio/ogg"
+                            : "application/octet-stream");
 
                       const guessExtension = (ct: string) => {
                         const lower = ct.toLowerCase();
@@ -4230,6 +4403,42 @@ Deno.serve(async (req: Request) => {
                 }
               }
             }
+          } else if (call.name === "create_custom_category") {
+            const transactionType =
+              String(call.args?.transaction_type || "expense").toLowerCase() ===
+              "income"
+                ? "income"
+                : "expense";
+            try {
+              const created = await upsertUserCustomCategory({
+                supabase,
+                userId,
+                categoryName: String(call.args?.name || ""),
+                transactionType,
+                colorArgb: Number.isFinite(Number(call.args?.color_argb))
+                  ? Number(call.args?.color_argb)
+                  : null,
+                iconKey:
+                  typeof call.args?.icon_key === "string"
+                    ? call.args.icon_key
+                    : null,
+              });
+              const targetList =
+                transactionType === "income"
+                  ? allowedIncomeCategories
+                  : allowedExpenseCategories;
+              if (!targetList.includes(created.name)) {
+                targetList.push(created.name);
+                targetList.sort();
+              }
+              toolResult = {
+                success: true,
+                category: created.name,
+                transaction_type: created.transactionType,
+              };
+            } catch (error) {
+              toolResult = { error: formatInvokeError(error) };
+            }
           } else if (call.name === "add_transaction") {
             let householdId = call.args.household_id as string | null;
             const householdName = (
@@ -4266,14 +4475,15 @@ Deno.serve(async (req: Request) => {
             );
             const recurrenceRule = call.args.is_recurring
               ? buildRecurrenceRule(call.args, dateStr) || {
-                frequency: "monthly",
-                interval: 1,
-                anchor_date: dateStr,
-              }
+                  frequency: "monthly",
+                  interval: 1,
+                  anchor_date: dateStr,
+                }
               : null;
-            const type = typeof call.args.type === "string" && call.args.type
-              ? call.args.type.toLowerCase()
-              : "expense";
+            const type =
+              typeof call.args.type === "string" && call.args.type
+                ? call.args.type.toLowerCase()
+                : "expense";
 
             if (type === "income") {
               const payload = {
@@ -4316,12 +4526,12 @@ Deno.serve(async (req: Request) => {
               const isHouseholdExpense = !!householdId && type === "expense";
               const splitConfig = isHouseholdExpense
                 ? await resolveHouseholdSplitConfig(
-                  supabase,
-                  householdId!,
-                  userId,
-                  Number(call.args.amount || 0),
-                  call.args,
-                )
+                    supabase,
+                    householdId!,
+                    userId,
+                    Number(call.args.amount || 0),
+                    call.args,
+                  )
                 : {};
 
               const payload = {
@@ -4400,17 +4610,18 @@ Deno.serve(async (req: Request) => {
               });
               continue;
             }
-            const isPortfolio = call.args.is_portfolio ??
-              spaceMeta?.isPortfolio ?? false;
+            const isPortfolio =
+              call.args.is_portfolio ?? spaceMeta?.isPortfolio ?? false;
 
             // Build transactions array for the batch endpoint
             const batchTransactions: any[] = [];
             const defaultDate = formatDateInTimeZone(userTimezone);
 
             for (const tx of rawTransactions) {
-              const txType = typeof tx.type === "string" && tx.type
-                ? tx.type.toLowerCase()
-                : "expense";
+              const txType =
+                typeof tx.type === "string" && tx.type
+                  ? tx.type.toLowerCase()
+                  : "expense";
               const dateStr = normalizeDateInput(tx.date, defaultDate);
 
               // Resolve splits for household expenses
@@ -4442,15 +4653,16 @@ Deno.serve(async (req: Request) => {
                 payerUserId,
                 customSplits,
                 isRecurring: tx.is_recurring === true,
-                recurrence_rule: tx.is_recurring === true
-                  ? tx.recurrence_rule || {
-                    frequency: (tx.frequency || "monthly")
-                      .toString()
-                      .toLowerCase(),
-                    interval: 1,
-                    anchor_date: dateStr,
-                  }
-                  : undefined,
+                recurrence_rule:
+                  tx.is_recurring === true
+                    ? tx.recurrence_rule || {
+                        frequency: (tx.frequency || "monthly")
+                          .toString()
+                          .toLowerCase(),
+                        interval: 1,
+                        anchor_date: dateStr,
+                      }
+                    : undefined,
               });
             }
 
@@ -4500,11 +4712,12 @@ Deno.serve(async (req: Request) => {
               };
             }
           } else if (call.name === "update_transaction") {
-            const updatesArgs = call.args?.updates &&
-                typeof call.args.updates === "object" &&
-                !Array.isArray(call.args.updates)
-              ? call.args.updates
-              : null;
+            const updatesArgs =
+              call.args?.updates &&
+              typeof call.args.updates === "object" &&
+              !Array.isArray(call.args.updates)
+                ? call.args.updates
+                : null;
             if (!updatesArgs) {
               toolResult = { error: "updates is required" };
             } else {
@@ -4522,7 +4735,8 @@ Deno.serve(async (req: Request) => {
 
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) =>
+                householdId ? spaceMap.get(householdId)?.name || null : null;
 
               const resolved = resolveLastListedSelection(
                 lastRead.items || [],
@@ -4608,9 +4822,9 @@ Deno.serve(async (req: Request) => {
                         resolved.candidate.description,
                         resolved.candidate.household_id
                           ? `(${
-                            spaceMap.get(resolved.candidate.household_id)
-                              ?.name || ""
-                          })`
+                              spaceMap.get(resolved.candidate.household_id)
+                                ?.name || ""
+                            })`
                           : "",
                       ]
                         .filter((v) => String(v || "").trim().length > 0)
@@ -4645,8 +4859,8 @@ Deno.serve(async (req: Request) => {
                           const formattedBase = error
                             ? formatInvokeError(error)
                             : typeof (data as any)?.error === "string"
-                            ? (data as any).error
-                            : "Failed to update transaction";
+                              ? (data as any).error
+                              : "Failed to update transaction";
                           const code = (data as any)?.code;
                           const formatted = code
                             ? `${formattedBase} (code: ${code})`
@@ -4911,10 +5125,12 @@ Deno.serve(async (req: Request) => {
               contactId,
               currency,
             );
-            toolResult = error ? { error } : {
-              success: true,
-              currency: data?.preferred_currency || currency,
-            };
+            toolResult = error
+              ? { error }
+              : {
+                  success: true,
+                  currency: data?.preferred_currency || currency,
+                };
             if (error) {
               const formatted = formatInvokeError(error);
               if (WHATSAPP_DEBUG) {
@@ -5072,12 +5288,14 @@ Deno.serve(async (req: Request) => {
                     call.args.categories,
                   );
                   const categories = rawCategories.map((c) => c.toLowerCase());
-                  const color = typeof call.args.color === "string"
-                    ? call.args.color.trim()
-                    : undefined;
-                  const icon = typeof call.args.icon === "string"
-                    ? call.args.icon.trim()
-                    : undefined;
+                  const color =
+                    typeof call.args.color === "string"
+                      ? call.args.color.trim()
+                      : undefined;
+                  const icon =
+                    typeof call.args.icon === "string"
+                      ? call.args.icon.trim()
+                      : undefined;
 
                   if (!envelope && pctInput == null) {
                     toolResult = { error: "Pocket percentage is required" };
@@ -5093,11 +5311,12 @@ Deno.serve(async (req: Request) => {
                       )
                       .eq("budget_id", budgetRow.id);
                     const existingPct = envelope?.budget_percentage;
-                    const desiredPctRaw = pctInput != null
-                      ? Math.max(0, Math.min(100, pctInput))
-                      : typeof existingPct === "number"
-                      ? existingPct
-                      : 0;
+                    const desiredPctRaw =
+                      pctInput != null
+                        ? Math.max(0, Math.min(100, pctInput))
+                        : typeof existingPct === "number"
+                          ? existingPct
+                          : 0;
                     const desiredPct = Number(desiredPctRaw.toFixed(4));
                     const others = (envelopes || [])
                       .filter((p: any) => p.id !== envelope?.id)
@@ -5105,9 +5324,10 @@ Deno.serve(async (req: Request) => {
                         id: p.id as string,
                         percentage: Number(p.budget_percentage) || 0,
                       }));
-                    const adjustedOthers = pctInput != null
-                      ? rebalancePocketPercentages(desiredPct, others)
-                      : {};
+                    const adjustedOthers =
+                      pctInput != null
+                        ? rebalancePocketPercentages(desiredPct, others)
+                        : {};
 
                     // Compute budget_amount_cents from percentage and total budget
                     const totalBudgetCents = budgetRow.total_budget_cents || 0;
@@ -5301,12 +5521,13 @@ Deno.serve(async (req: Request) => {
               },
               options: { title: { display: true, text: call.args.title } },
             };
-            const url = `https://quickchart.io/chart?c=${
-              encodeURIComponent(
-                JSON.stringify(chartConfig),
-              )
-            }`;
+            const longUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+              JSON.stringify(chartConfig),
+            )}`;
+            const url =
+              (await createQuickChartShortUrl(chartConfig)) || longUrl;
             toolResult = { url };
+            lastGeneratedChartUrl = url;
           } else if (call.name === "manage_recurring") {
             // Use update-expense or save-expense
             const action = (call.args.action || "").toString().toLowerCase();
@@ -5341,9 +5562,10 @@ Deno.serve(async (req: Request) => {
                 interval: 1,
                 anchor_date: dateStr,
               };
-              const type = typeof call.args.type === "string" && call.args.type
-                ? call.args.type.toLowerCase()
-                : "expense";
+              const type =
+                typeof call.args.type === "string" && call.args.type
+                  ? call.args.type.toLowerCase()
+                  : "expense";
 
               if (type === "income") {
                 const payload = {
@@ -5388,12 +5610,12 @@ Deno.serve(async (req: Request) => {
                 const isHouseholdExpense = !!householdId;
                 const splitConfig = isHouseholdExpense
                   ? await resolveHouseholdSplitConfig(
-                    supabase,
-                    householdId!,
-                    userId,
-                    Number(call.args.amount || 0),
-                    call.args,
-                  )
+                      supabase,
+                      householdId!,
+                      userId,
+                      Number(call.args.amount || 0),
+                      call.args,
+                    )
                   : {};
                 const payload = {
                   userId,
@@ -5436,20 +5658,22 @@ Deno.serve(async (req: Request) => {
                 }
               }
             } else if (action === "update") {
-              const expenseIdDirect = typeof call.args.expense_id === "string"
-                ? call.args.expense_id.trim()
-                : "";
+              const expenseIdDirect =
+                typeof call.args.expense_id === "string"
+                  ? call.args.expense_id.trim()
+                  : "";
 
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) =>
+                householdId ? spaceMap.get(householdId)?.name || null : null;
 
               const resolvedSelection = !expenseIdDirect
                 ? resolveLastListedSelection(
-                  readLastListedTransactions(sessionState).items || [],
-                  call.args,
-                  spaceNameByHouseholdId,
-                )
+                    readLastListedTransactions(sessionState).items || [],
+                    call.args,
+                    spaceNameByHouseholdId,
+                  )
                 : null;
 
               if (
@@ -5460,7 +5684,8 @@ Deno.serve(async (req: Request) => {
               } else if (resolvedSelection && "error" in resolvedSelection) {
                 toolResult = { error: resolvedSelection.error };
               } else {
-                const resolvedExpenseId = expenseIdDirect ||
+                const resolvedExpenseId =
+                  expenseIdDirect ||
                   (resolvedSelection && "candidate" in resolvedSelection
                     ? resolvedSelection.candidate.id
                     : "");
@@ -5557,24 +5782,26 @@ Deno.serve(async (req: Request) => {
                     return typeof cents === "number" ? cents / 100 : 0;
                   })();
 
-                  const splitConfig = householdId &&
-                      !spaceMeta?.isPortfolio &&
-                      (hasSplitHints || hasPayerHint)
-                    ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId,
-                      userId,
-                      totalForSplits,
-                      call.args,
-                    )
-                    : {};
+                  const splitConfig =
+                    householdId &&
+                    !spaceMeta?.isPortfolio &&
+                    (hasSplitHints || hasPayerHint)
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          totalForSplits,
+                          call.args,
+                        )
+                      : {};
 
                   if (splitConfig.payerUserId) {
                     updates.payer_user_id = splitConfig.payerUserId;
                   }
 
                   const extraBody: Record<string, unknown> = {};
-                  const hasCustomSplits = !!splitConfig.customSplits &&
+                  const hasCustomSplits =
+                    !!splitConfig.customSplits &&
                     Array.isArray(splitConfig.customSplits.memberSplits) &&
                     splitConfig.customSplits.memberSplits.length > 0;
                   if (householdId && hasCustomSplits) {
@@ -5628,25 +5855,28 @@ Deno.serve(async (req: Request) => {
                 }
               }
             } else {
-              const expenseIdDirect = typeof call.args.expense_id === "string"
-                ? call.args.expense_id.trim()
-                : "";
+              const expenseIdDirect =
+                typeof call.args.expense_id === "string"
+                  ? call.args.expense_id.trim()
+                  : "";
               const spaceNameByHouseholdId = (
                 householdId: string | null | undefined,
-              ) => householdId ? spaceMap.get(householdId)?.name || null : null;
+              ) =>
+                householdId ? spaceMap.get(householdId)?.name || null : null;
               const resolved = !expenseIdDirect
                 ? resolveLastListedSelection(
-                  readLastListedTransactions(sessionState).items || [],
-                  call.args,
-                  spaceNameByHouseholdId,
-                )
+                    readLastListedTransactions(sessionState).items || [],
+                    call.args,
+                    spaceNameByHouseholdId,
+                  )
                 : null;
               if (resolved && "needs_disambiguation" in resolved) {
                 toolResult = resolved;
               } else if (resolved && "error" in resolved) {
                 toolResult = { error: resolved.error };
               } else {
-                const expenseId = expenseIdDirect ||
+                const expenseId =
+                  expenseIdDirect ||
                   (resolved && "candidate" in resolved
                     ? resolved.candidate.id
                     : "");
@@ -5702,28 +5932,22 @@ Deno.serve(async (req: Request) => {
               const net = snap.net / 100;
               summary += `Income: ${formatAmount(income, userCurrency)}\n`;
               summary += `Spending: ${formatAmount(expense, userCurrency)}\n`;
-              summary += `Net: ${
-                formatAmount(
-                  net,
-                  userCurrency,
-                )
-              }\n\nTop categories:\n`;
+              summary += `Net: ${formatAmount(
+                net,
+                userCurrency,
+              )}\n\nTop categories:\n`;
               snap.categories.forEach((c, idx) => {
-                summary += `${idx + 1}. ${c.category}: ${
-                  formatAmount(
-                    c.amount_cents / 100,
-                    userCurrency,
-                  )
-                }\n`;
+                summary += `${idx + 1}. ${c.category}: ${formatAmount(
+                  c.amount_cents / 100,
+                  userCurrency,
+                )}\n`;
               });
               if (snap.budget_cents) {
                 const remain = (snap.budget_cents - snap.totalExpense) / 100;
-                summary += `\nBudget: ${
-                  formatAmount(
-                    snap.budget_cents / 100,
-                    userCurrency,
-                  )
-                } | Remaining: ${formatAmount(remain, userCurrency)}`;
+                summary += `\nBudget: ${formatAmount(
+                  snap.budget_cents / 100,
+                  userCurrency,
+                )} | Remaining: ${formatAmount(remain, userCurrency)}`;
               }
               toolResult = {
                 snapshot: snap,
@@ -5815,8 +6039,23 @@ Deno.serve(async (req: Request) => {
       finalResponseText =
         "I couldn't generate a response right now. Please try again in a few seconds.";
     }
-    persistedContent = finalResponseText;
-    const bodyToSend = finalResponseText;
+    const chartFromText = extractQuickChartUrl(finalResponseText);
+    let mediaUrl: string | null = chartFromText.url || lastGeneratedChartUrl;
+    let cleanedText = chartFromText.cleanedText || finalResponseText;
+
+    if (mediaUrl) {
+      mediaUrl = await normalizeQuickChartMediaUrl(mediaUrl);
+    }
+
+    if (mediaUrl && !cleanedText) {
+      cleanedText = "Chart attached. 📊";
+    }
+
+    persistedContent = cleanedText;
+    const bodyToSend = truncateTextByCodePoints(
+      cleanedText,
+      Math.min(WHATSAPP_CHUNK_TARGET_CHARS, 1500),
+    );
 
     // Persist the incoming user message AFTER model/tool flow so Gemini doesn't see it twice.
     await insertChatMessage(
@@ -5839,7 +6078,7 @@ Deno.serve(async (req: Request) => {
     );
 
     // If we're sending a chart, respond quickly then send media via Twilio API asynchronously
-    const immediateText = finalResponseText;
+    const immediateText = bodyToSend;
     debugLog(WHATSAPP_DEBUG, "final response", {
       immediateText,
       persistedContent,
@@ -5849,7 +6088,8 @@ Deno.serve(async (req: Request) => {
       bodyToSend,
       persistedContent,
       immediateText,
-      finalResponseText,
+      finalResponseText: cleanedText,
+      mediaUrl,
     };
   };
 
@@ -5858,26 +6098,36 @@ Deno.serve(async (req: Request) => {
       bodyToSend: string;
       persistedContent: string;
       immediateText: string;
+      mediaUrl?: string | null;
     },
     deliveryMode: "twiml" | "api",
   ): Promise<Response> => {
-    const { bodyToSend, persistedContent, immediateText } = computed;
+    const { bodyToSend, persistedContent, immediateText, mediaUrl } = computed;
 
     if (deliveryMode === "api") {
-      const sendResult = await sendWhatsAppMessageInChunks(
-        twilioAccountSid,
-        twilioAuthToken,
-        to,
-        from,
-        bodyToSend,
-      );
+      const sendResult = mediaUrl
+        ? await sendWhatsAppMessage(
+            twilioAccountSid,
+            twilioAuthToken,
+            to,
+            from,
+            bodyToSend,
+            mediaUrl,
+          )
+        : await sendWhatsAppMessageInChunks(
+            twilioAccountSid,
+            twilioAuthToken,
+            to,
+            from,
+            bodyToSend,
+          );
       if (!sendResult.success) {
         console.error(
           "[twilio-whatsapp-ai-bot] Failed to send WhatsApp message:",
           {
             error: sendResult.error,
-            sentChunks: sendResult.sentChunks,
-            totalChunks: sendResult.totalChunks,
+            sentChunks: (sendResult as any).sentChunks,
+            totalChunks: (sendResult as any).totalChunks,
           },
         );
         const fallbackResult = await sendWhatsAppMessage(
@@ -5898,6 +6148,7 @@ Deno.serve(async (req: Request) => {
             status: "failed",
             delivery: "api",
             response_text: persistedContent,
+            media_url: mediaUrl || undefined,
             error: sendResult.error || "unknown",
           });
         }
@@ -5908,12 +6159,54 @@ Deno.serve(async (req: Request) => {
           status: "done",
           delivery: "api",
           response_text: persistedContent,
+          media_url: mediaUrl || undefined,
         });
       }
       return xmlResponse(buildTwimlMessage(null));
     }
 
     if (Array.from(immediateText).length > WHATSAPP_CHUNK_TARGET_CHARS) {
+      // If a chart is attached, enforce single-message delivery.
+      if (mediaUrl) {
+        const clipped = truncateTextByCodePoints(
+          immediateText,
+          WHATSAPP_CHUNK_TARGET_CHARS,
+        );
+        const sendResult = await sendWhatsAppMessage(
+          twilioAccountSid,
+          twilioAuthToken,
+          to,
+          from,
+          clipped,
+          mediaUrl,
+        );
+        if (!sendResult.success) {
+          console.error(
+            "[twilio-whatsapp-ai-bot] Failed to send media TwiML response via API:",
+            { error: sendResult.error },
+          );
+          if (idempotencyKey) {
+            await updateTwilioIdempotency(supabase, idempotencyKey, {
+              status: "failed",
+              delivery: "api",
+              response_text: persistedContent,
+              media_url: mediaUrl || undefined,
+              error: sendResult.error || "unknown",
+            });
+          }
+          return xmlResponse(buildTwimlMessage(null));
+        }
+        if (idempotencyKey) {
+          await updateTwilioIdempotency(supabase, idempotencyKey, {
+            status: "done",
+            delivery: "api",
+            response_text: persistedContent,
+            media_url: mediaUrl || undefined,
+          });
+        }
+        return xmlResponse(buildTwimlMessage(null));
+      }
+
       const sendResult = await sendWhatsAppMessageInChunks(
         twilioAccountSid,
         twilioAuthToken,
@@ -5948,6 +6241,7 @@ Deno.serve(async (req: Request) => {
             status: "failed",
             delivery: "api",
             response_text: persistedContent,
+            media_url: mediaUrl || undefined,
             error: sendResult.error || "unknown",
           });
         }
@@ -5959,6 +6253,7 @@ Deno.serve(async (req: Request) => {
           status: "done",
           delivery: "api",
           response_text: persistedContent,
+          media_url: mediaUrl || undefined,
         });
       }
       return xmlResponse(buildTwimlMessage(null));
@@ -5969,11 +6264,12 @@ Deno.serve(async (req: Request) => {
         status: "done",
         delivery: "twiml",
         response_text: persistedContent,
+        media_url: mediaUrl || undefined,
       });
     }
 
     // Return TwiML with immediate response (no media)
-    return xmlResponse(buildTwimlMessage(immediateText));
+    return xmlResponse(buildTwimlMessage(immediateText, mediaUrl || null));
   };
 
   if (shouldAckEarly) {
@@ -6027,7 +6323,7 @@ Deno.serve(async (req: Request) => {
     .catch((error) => ({ type: "error" as const, error }));
 
   const timeoutPromise = new Promise<{ type: "timeout" }>((resolve) =>
-    setTimeout(() => resolve({ type: "timeout" }), PROCESSING_ACK_DELAY_MS)
+    setTimeout(() => resolve({ type: "timeout" }), PROCESSING_ACK_DELAY_MS),
   );
 
   const raceResult = await Promise.race([computePromise, timeoutPromise]);
@@ -6079,9 +6375,10 @@ Deno.serve(async (req: Request) => {
         status: "failed",
         delivery: "twiml",
         response_text: "processing_failed",
-        error: raceResult.error instanceof Error
-          ? raceResult.error.message
-          : String(raceResult.error),
+        error:
+          raceResult.error instanceof Error
+            ? raceResult.error.message
+            : String(raceResult.error),
       });
     }
     return xmlResponse(
@@ -6122,9 +6419,10 @@ Deno.serve(async (req: Request) => {
               status: "failed",
               delivery: "api",
               response_text: "processing_failed",
-              error: result.error instanceof Error
-                ? result.error.message
-                : String(result.error),
+              error:
+                result.error instanceof Error
+                  ? result.error.message
+                  : String(result.error),
             });
           }
         }

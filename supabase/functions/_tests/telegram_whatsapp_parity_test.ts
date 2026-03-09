@@ -15,6 +15,7 @@ Deno.test("telegram verification URL uses verify-telegram route", () => {
 
 Deno.test("telegram tool surface includes whatsapp parity tools", () => {
   const required = [
+    "create_custom_category",
     "add_transaction",
     "add_transactions_batch",
     "update_transaction",

@@ -65,9 +65,10 @@ export function mergeAllowedCategories(params: {
   const incomeSet = new Set<string>(baseIncome);
 
   for (const row of params.customCategories) {
-    const name = sanitizeCategoryName(row?.name ?? null) ??
+    const name =
+      sanitizeCategoryName(row?.name ?? null) ??
       normalizeCategoryForStorage(row?.name ?? null);
-    if (!name || name === "other") {
+    if (!name || RESERVED_CUSTOM_CATEGORY_NAMES.has(name)) {
       continue;
     }
 
@@ -83,7 +84,8 @@ export function mergeAllowedCategories(params: {
   }
 
   for (const row of params.hiddenCategories ?? []) {
-    const name = sanitizeCategoryName(row?.category_name ?? null) ??
+    const name =
+      sanitizeCategoryName(row?.category_name ?? null) ??
       normalizeCategoryForStorage(row?.category_name ?? null);
     if (!name || name === "other" || name === "uncategorized") {
       continue;
@@ -132,13 +134,15 @@ export async function fetchUserCustomCategories(params: {
 
   return data
     .map((row: any) => ({
-      name: typeof row?.name === "string"
-        ? (sanitizeCategoryName(row.name) ?? row.name)
-        : "",
-      transaction_type: row?.transaction_type === "income" ||
-          row?.transaction_type === "expense"
-        ? (row.transaction_type as CategoryTransactionType)
-        : "expense",
+      name:
+        typeof row?.name === "string"
+          ? (sanitizeCategoryName(row.name) ?? row.name)
+          : "",
+      transaction_type:
+        row?.transaction_type === "income" ||
+        row?.transaction_type === "expense"
+          ? (row.transaction_type as CategoryTransactionType)
+          : "expense",
     }))
     .filter((row: UserCategoryRow) => row.name.trim().length > 0);
 }
@@ -159,13 +163,15 @@ export async function fetchUserHiddenCategories(params: {
 
   return data
     .map((row: any) => ({
-      category_name: typeof row?.category_name === "string"
-        ? (sanitizeCategoryName(row.category_name) ?? row.category_name)
-        : "",
-      transaction_type: row?.transaction_type === "income" ||
-          row?.transaction_type === "expense"
-        ? (row.transaction_type as CategoryTransactionType)
-        : "expense",
+      category_name:
+        typeof row?.category_name === "string"
+          ? (sanitizeCategoryName(row.category_name) ?? row.category_name)
+          : "",
+      transaction_type:
+        row?.transaction_type === "income" ||
+        row?.transaction_type === "expense"
+          ? (row.transaction_type as CategoryTransactionType)
+          : "expense",
     }))
     .filter(
       (row: UserHiddenCategoryRow) => row.category_name.trim().length > 0,
@@ -196,17 +202,14 @@ export async function fetchUserCategoryPreferences(params: {
   return data
     .map(
       (row: any): UserCategoryPreferenceRow => ({
-        transaction_type: row?.transaction_type === "income"
-          ? "income"
-          : "expense",
+        transaction_type:
+          row?.transaction_type === "income" ? "income" : "expense",
         match_key: typeof row?.match_key === "string" ? row.match_key : "",
-        category_name: typeof row?.category_name === "string"
-          ? row.category_name
-          : "other",
+        category_name:
+          typeof row?.category_name === "string" ? row.category_name : "other",
         use_count: typeof row?.use_count === "number" ? row.use_count : 0,
-        last_used_at: typeof row?.last_used_at === "string"
-          ? row.last_used_at
-          : null,
+        last_used_at:
+          typeof row?.last_used_at === "string" ? row.last_used_at : null,
       }),
     )
     .filter(
@@ -239,19 +242,17 @@ export async function fetchUserCategoryRemaps(params: {
   return data
     .map(
       (row: any): UserCategoryRemapRow => ({
-        transaction_type: row?.transaction_type === "income"
-          ? "income"
-          : "expense",
-        from_category_name: typeof row?.from_category_name === "string"
-          ? row.from_category_name
-          : "",
-        to_category_name: typeof row?.to_category_name === "string"
-          ? row.to_category_name
-          : "",
+        transaction_type:
+          row?.transaction_type === "income" ? "income" : "expense",
+        from_category_name:
+          typeof row?.from_category_name === "string"
+            ? row.from_category_name
+            : "",
+        to_category_name:
+          typeof row?.to_category_name === "string" ? row.to_category_name : "",
         use_count: typeof row?.use_count === "number" ? row.use_count : 0,
-        last_used_at: typeof row?.last_used_at === "string"
-          ? row.last_used_at
-          : null,
+        last_used_at:
+          typeof row?.last_used_at === "string" ? row.last_used_at : null,
       }),
     )
     .filter(
@@ -267,13 +268,15 @@ export async function ensureUserCategory(params: {
   categoryName: string;
   transactionType: "expense" | "income";
 }): Promise<void> {
-  const category = sanitizeCategoryName(params.categoryName) ??
+  const category =
+    sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
   if (!category || category === "other") return;
 
   // Don't store canonical defaults as custom rows.
   // We consider a category to be canonical if it exists in either built-in list.
-  const isCanonical = getExpenseCategories().includes(category) ||
+  const isCanonical =
+    getExpenseCategories().includes(category) ||
     getIncomeCategories().includes(category);
   if (isCanonical) return;
 
@@ -293,6 +296,57 @@ export async function ensureUserCategory(params: {
     .maybeSingle();
 }
 
+const RESERVED_CUSTOM_CATEGORY_NAMES = new Set([
+  "other",
+  "uncategorized",
+  "default",
+  "unknown",
+]);
+
+export async function upsertUserCustomCategory(params: {
+  supabase: SupabaseClient;
+  userId: string;
+  categoryName: string;
+  transactionType: "expense" | "income";
+  colorArgb?: number | null;
+  iconKey?: string | null;
+}): Promise<{ name: string; transactionType: "expense" | "income" }> {
+  const name = sanitizeCategoryName(params.categoryName);
+  const transactionType =
+    params.transactionType === "income" ? "income" : "expense";
+
+  if (!name || RESERVED_CUSTOM_CATEGORY_NAMES.has(name)) {
+    throw new Error("Invalid category name");
+  }
+
+  const colorArgb = Number.isFinite(params.colorArgb)
+    ? Math.trunc(Number(params.colorArgb))
+    : null;
+  const iconKey =
+    typeof params.iconKey === "string" && params.iconKey.trim().length > 0
+      ? params.iconKey.trim()
+      : "tag";
+
+  const { error } = await params.supabase
+    .from("user_transaction_categories")
+    .upsert(
+      {
+        user_id: params.userId,
+        name,
+        transaction_type: transactionType,
+        color_argb: colorArgb,
+        icon_key: iconKey,
+      },
+      { onConflict: "user_id,name,transaction_type" },
+    );
+
+  if (error) {
+    throw error;
+  }
+
+  return { name, transactionType };
+}
+
 export async function learnUserCategoryPreference(params: {
   supabase: SupabaseClient;
   userId: string;
@@ -301,7 +355,8 @@ export async function learnUserCategoryPreference(params: {
   sourceText?: string | null;
   descriptionText?: string | null;
 }): Promise<void> {
-  const category = sanitizeCategoryName(params.categoryName) ??
+  const category =
+    sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
   if (!category || category === "other") return;
 
@@ -318,9 +373,10 @@ export async function learnUserCategoryPreference(params: {
     .eq("match_key", matchKey)
     .maybeSingle();
 
-  const nextCount = existing.error || !existing.data
-    ? 1
-    : Math.max(1, Number(existing.data.use_count || 0) + 1);
+  const nextCount =
+    existing.error || !existing.data
+      ? 1
+      : Math.max(1, Number(existing.data.use_count || 0) + 1);
 
   const now = new Date().toISOString();
 
