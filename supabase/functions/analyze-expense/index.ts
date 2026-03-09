@@ -206,6 +206,9 @@ function collapseReceiptItems(
       ...(splitSource?.payerUserId
         ? { payerUserId: splitSource.payerUserId }
         : {}),
+      ...(splitSource?.customSplits
+        ? { customSplits: splitSource.customSplits }
+        : {}),
     },
   ];
 }
@@ -223,12 +226,33 @@ function errorResponse(message: string, status = 400, code?: string): Response {
       success: false,
       error: message,
       code: code ?? resolveErrorCode(status),
+      status,
     }),
     {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     },
   );
+}
+
+function statusForErrorCode(code?: string): number {
+  switch (code) {
+    case "UNAUTHORIZED":
+      return 401;
+    case "NOT_FOUND":
+      return 404;
+    case "SERVER_ERROR":
+      return 500;
+    default:
+      return 400;
+  }
+}
+
+function resolveAnalyzeResultCode(result: AnalyzeRequestBody | any): string {
+  if (typeof result?.code === "string" && result.code.trim().length > 0) {
+    return result.code.trim().toUpperCase();
+  }
+  return resolveErrorCode(result?.status ?? 400);
 }
 
 /**
@@ -276,17 +300,21 @@ function createSSEStream(
               items: collapsedItems ?? result.items,
               isAnalyzed: true,
               language: result.language,
+              diagnostics: result.diagnostics,
             },
           };
           controller.enqueue(
             encoder.encode(formatSSEEvent("complete", completeData)),
           );
         } else {
+          const code = resolveAnalyzeResultCode(result);
           controller.enqueue(
             encoder.encode(
               formatSSEEvent("error", {
                 success: false,
                 error: result.error,
+                code,
+                status: result.status ?? statusForErrorCode(code),
               }),
             ),
           );
@@ -295,11 +323,14 @@ function createSSEStream(
         controller.close();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        const code = resolveErrorCode(500);
         controller.enqueue(
           encoder.encode(
             formatSSEEvent("error", {
               success: false,
               error: message,
+              code,
+              status: statusForErrorCode(code),
             }),
           ),
         );
@@ -406,7 +437,8 @@ Deno.serve(async (req: Request) => {
     if (
       body.householdId &&
       !body.isPortfolio &&
-      !Array.isArray(body.householdMembers)
+      (!Array.isArray(body.householdMembers) ||
+        body.householdMembers.length === 0)
     ) {
       const { data: membership, error: membershipError } = await supabaseAuthed
         .from("household_members")
@@ -432,14 +464,13 @@ Deno.serve(async (req: Request) => {
 
         const { data: members, error: membersError } = await reader
           .from("household_members")
-          .select("user_id, users(full_name, email)")
+          .select("user_id, users(full_name)")
           .eq("household_id", body.householdId);
 
         if (!membersError && Array.isArray(members) && members.length > 0) {
           body.householdMembers = members.map((m: any) => ({
             userId: m.user_id,
             userName: m.users?.full_name ?? null,
-            userEmail: m.users?.email ?? null,
           }));
         }
       }
@@ -478,7 +509,11 @@ Deno.serve(async (req: Request) => {
 
     if (!result.success) {
       const status = result.status || 400;
-      return errorResponse(result.error ?? "Failed to analyze expense", status);
+      return errorResponse(
+        result.error ?? "Failed to analyze expense",
+        status,
+        resolveAnalyzeResultCode(result),
+      );
     }
 
     return new Response(
@@ -488,6 +523,7 @@ Deno.serve(async (req: Request) => {
           items: collapseReceiptItems(result.items, body) ?? result.items,
           isAnalyzed: true,
           language: result.language,
+          diagnostics: result.diagnostics,
         },
       }),
       {
