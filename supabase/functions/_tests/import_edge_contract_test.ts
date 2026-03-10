@@ -16,6 +16,13 @@ Deno.test(
     assertStringIncludes(source, "description");
     assertStringIncludes(source, "householdId");
     assertStringIncludes(source, "isPortfolio");
+    assertStringIncludes(source, "recurrence_rule");
+    assertStringIncludes(source, "anchor_date");
+    assertStringIncludes(source, "interval");
+    assertStringIncludes(
+      source,
+      "recurrence_rule: body.recurrence_rule || null",
+    );
   },
 );
 
@@ -35,6 +42,9 @@ Deno.test(
     assertStringIncludes(source, "description");
     assertStringIncludes(source, "householdId");
     assertStringIncludes(source, "isPortfolio");
+    assertStringIncludes(source, "recurrence_rule");
+    assertStringIncludes(source, "anchor_date");
+    assertStringIncludes(source, "interval");
   },
 );
 

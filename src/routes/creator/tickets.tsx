@@ -102,7 +102,38 @@ function TicketsDashboard() {
 
   const updateStatusMutation = useMutation({
     mutationFn: updateTicketStatus,
-    onSuccess: () =>
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ["support-tickets"] });
+
+      const previousTickets = queryClient.getQueryData<SupportTicketWithUser[]>(
+        ["support-tickets"],
+      );
+
+      queryClient.setQueryData<SupportTicketWithUser[]>(
+        ["support-tickets"],
+        (currentTickets) =>
+          currentTickets?.map((ticket) =>
+            ticket.id === id
+              ? {
+                  ...ticket,
+                  status,
+                  is_resolved: isResolvedStatus(status),
+                  resolved_at: isResolvedStatus(status)
+                    ? new Date().toISOString()
+                    : null,
+                }
+              : ticket,
+          ) ?? [],
+      );
+
+      return { previousTickets };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousTickets) {
+        queryClient.setQueryData(["support-tickets"], context.previousTickets);
+      }
+    },
+    onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["support-tickets"] }),
   });
 
@@ -146,7 +177,13 @@ function TicketsDashboard() {
         replace: true,
       });
     }
-  }, [creatorAccessQuery.data, creatorAccessQuery.error, creatorAccessQuery.isLoading, navigate, user]);
+  }, [
+    creatorAccessQuery.data,
+    creatorAccessQuery.error,
+    creatorAccessQuery.isLoading,
+    navigate,
+    user,
+  ]);
 
   if (isAuthLoading || (!user && !creatorAccessQuery.data)) {
     return <TicketsPageState message="Checking your session..." />;
@@ -208,6 +245,11 @@ function TicketsDashboard() {
         <TicketDataTable
           data={tickets}
           isLoading={ticketsQuery.isLoading}
+          updatingTicketId={
+            updateStatusMutation.isPending
+              ? (updateStatusMutation.variables?.id ?? null)
+              : null
+          }
           onStatusChange={(id, status) =>
             updateStatusMutation.mutate({ id, status })
           }
@@ -228,10 +270,12 @@ function TicketsPageState({ message }: { message: string }) {
 function TicketDataTable({
   data,
   isLoading,
+  updatingTicketId,
   onStatusChange,
 }: {
   data: SupportTicketWithUser[];
   isLoading: boolean;
+  updatingTicketId: string | null;
   onStatusChange: (id: string, status: SupportTicket["status"]) => void;
 }) {
   const [sorting, setSorting] = useState<SortingState>([
@@ -242,6 +286,23 @@ function TicketDataTable({
 
   const [selectedTicket, setSelectedTicket] =
     useState<SupportTicketWithUser | null>(null);
+
+  useEffect(() => {
+    if (!selectedTicket) {
+      return;
+    }
+
+    const nextSelectedTicket = data.find(
+      (ticket) => ticket.id === selectedTicket.id,
+    );
+
+    if (!nextSelectedTicket) {
+      setSelectedTicket(null);
+      return;
+    }
+
+    setSelectedTicket(nextSelectedTicket);
+  }, [data, selectedTicket]);
 
   const columns: ColumnDef<SupportTicketWithUser>[] = [
     {
@@ -287,16 +348,18 @@ function TicketDataTable({
       cell: ({ row }) => {
         const status = row.getValue("status") as SupportTicket["status"];
         const ticket = row.original;
+        const isUpdatingTicket = updatingTicketId === ticket.id;
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <Select
               value={status}
+              disabled={isUpdatingTicket}
               onValueChange={(val: SupportTicket["status"]) =>
                 onStatusChange(ticket.id, val)
               }
             >
               <SelectTrigger
-                className={`h-8 w-[140px] border-0 text-xs font-medium ${statusBadgeClassName[status]}`}
+                className={`h-8 w-[140px] border-0 text-xs font-medium ${statusBadgeClassName[status]} ${isUpdatingTicket ? "cursor-not-allowed opacity-70" : ""}`}
               >
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -351,6 +414,7 @@ function TicketDataTable({
       enableHiding: false,
       cell: ({ row }) => {
         const ticket = row.original;
+        const isUpdatingTicket = updatingTicketId === ticket.id;
         return (
           <div onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
@@ -380,6 +444,7 @@ function TicketDataTable({
                 {statusOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
+                    disabled={isUpdatingTicket}
                     onClick={() =>
                       onStatusChange(
                         ticket.id,
@@ -669,6 +734,7 @@ function TicketDataTable({
                   <h3 className="text-sm font-medium text-white/80">Status</h3>
                   <Select
                     value={selectedTicket.status}
+                    disabled={updatingTicketId === selectedTicket.id}
                     onValueChange={(val: SupportTicket["status"]) => {
                       onStatusChange(selectedTicket.id, val);
                       setSelectedTicket({ ...selectedTicket, status: val });
@@ -735,94 +801,164 @@ function TicketAttachments({
 }: {
   attachments: SupportTicketAttachment[];
 }) {
-  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      {attachments.map((attachment) => (
+        <TicketAttachmentCard key={attachment.id} attachment={attachment} />
+      ))}
+    </div>
+  );
+}
+
+function TicketAttachmentCard({
+  attachment,
+}: {
+  attachment: SupportTicketAttachment;
+}) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(true);
+  const [hasPreviewError, setHasPreviewError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const isImage = attachment.content_type?.startsWith("image/") ?? false;
+  const fallbackLabel = attachment.file_path.split("/").pop() ?? "Attachment";
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadSignedUrls() {
-      const next: Record<string, string> = {};
-
-      await Promise.all(
-        attachments.map(async (attachment) => {
-          if (!attachment.file_path) return;
-
-          const { data, error } = await supabase.storage
-            .from("support-attachments")
-            .createSignedUrl(attachment.file_path, 60 * 60);
-
-          if (!error && data?.signedUrl) {
-            next[attachment.id] = data.signedUrl;
-          }
-        }),
-      );
-
-      if (!cancelled) {
-        setSignedUrls(next);
+    async function loadSignedUrl() {
+      if (!attachment.file_path) {
+        setSignedUrl(null);
+        setIsLoadingPreview(false);
+        return;
       }
+
+      setIsLoadingPreview(true);
+      setHasPreviewError(false);
+
+      const { data, error } = await supabase.storage
+        .from("support-attachments")
+        .createSignedUrl(attachment.file_path, 60 * 60);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (error || !data?.signedUrl) {
+        setSignedUrl(null);
+        setHasPreviewError(true);
+        setIsLoadingPreview(false);
+        return;
+      }
+
+      setSignedUrl(data.signedUrl);
+      setIsLoadingPreview(false);
     }
 
-    void loadSignedUrls();
+    void loadSignedUrl();
 
     return () => {
       cancelled = true;
     };
-  }, [attachments]);
+  }, [attachment.file_path, retryCount]);
+
+  const handleRetry = () => {
+    setRetryCount((currentCount) => currentCount + 1);
+  };
+
+  const previewContent = (() => {
+    if (signedUrl && isImage && !hasPreviewError) {
+      return (
+        <div className="relative aspect-video bg-black/50">
+          <img
+            key={signedUrl}
+            src={signedUrl}
+            alt={fallbackLabel}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200"
+            onError={() => {
+              setHasPreviewError(true);
+              setIsLoadingPreview(false);
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex aspect-video flex-col items-center justify-center gap-2 bg-black/50 px-4 text-center">
+        <Paperclip className="h-8 w-8 text-white/20" />
+        {isLoadingPreview ? (
+          <span className="text-xs text-white/40">Loading preview...</span>
+        ) : hasPreviewError && isImage ? (
+          <>
+            <span className="text-xs text-white/40">
+              Unable to preview image
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRetry}
+              className="h-7 px-2 text-xs text-white/70 hover:bg-white/10 hover:text-white"
+            >
+              Retry preview
+            </Button>
+          </>
+        ) : null}
+      </div>
+    );
+  })();
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {attachments.map((attachment) => {
-        const url = signedUrls[attachment.id];
-        const isImage = attachment.content_type?.startsWith("image/");
-        const fallbackLabel =
-          attachment.file_path.split("/").pop() ?? "Attachment";
-
-        return (
-          <div
-            key={attachment.id}
-            className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-white/5"
-          >
-            {url && isImage ? (
-              <div className="relative aspect-video bg-black/50">
-                <img
-                  src={url}
-                  alt="Attachment"
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex aspect-video items-center justify-center bg-black/50">
-                <Paperclip className="h-8 w-8 text-white/20" />
-              </div>
-            )}
-            <div className="flex flex-col gap-2 bg-white/5 p-3 text-xs">
-              <span
-                className="truncate font-medium text-white/80"
-                title={fallbackLabel}
-              >
-                {fallbackLabel}
-              </span>
-              <div className="flex items-center justify-between">
-                <span className="text-white/50">
-                  {formatBytes(attachment.file_size_bytes || 0)}
-                </span>
-                {url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary hover:text-primary/80 transition-colors"
-                  >
-                    View
-                  </a>
-                ) : (
-                  <span className="text-white/30">Unavailable</span>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-white/5">
+      {signedUrl && isImage && !hasPreviewError ? (
+        <a
+          href={signedUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="block transition-opacity hover:opacity-95"
+        >
+          {previewContent}
+        </a>
+      ) : (
+        previewContent
+      )}
+      <div className="flex flex-col gap-2 bg-white/5 p-3 text-xs">
+        <span
+          className="truncate font-medium text-white/80"
+          title={fallbackLabel}
+        >
+          {fallbackLabel}
+        </span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-white/50">
+            {formatBytes(attachment.file_size_bytes || 0)}
+          </span>
+          {signedUrl ? (
+            <a
+              href={signedUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              View
+            </a>
+          ) : hasPreviewError ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRetry}
+              className="h-7 px-2 text-xs text-white/70 hover:bg-white/10 hover:text-white"
+            >
+              Retry
+            </Button>
+          ) : (
+            <span className="text-white/30">Unavailable</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -843,7 +979,9 @@ async function fetchSupportTickets(): Promise<SupportTicketWithUser[]> {
   return (data as SupportTicketWithUser[]) ?? [];
 }
 
-async function fetchCreatorAccess(userId: string): Promise<CreatorAccessProfile> {
+async function fetchCreatorAccess(
+  userId: string,
+): Promise<CreatorAccessProfile> {
   const { data, error } = await supabase
     .from("users")
     .select("id, is_creator")
@@ -868,7 +1006,7 @@ async function updateTicketStatus({
   id: string;
   status: SupportTicket["status"];
 }) {
-  const isResolved = status === "resolved" || status === "closed";
+  const isResolved = isResolvedStatus(status);
   const { error } = await supabase
     .from("support_tickets")
     .update({
@@ -896,6 +1034,10 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isResolvedStatus(status: SupportTicket["status"]) {
+  return status === "resolved" || status === "closed";
 }
 
 const statusOptions = [
