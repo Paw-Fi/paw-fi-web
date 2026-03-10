@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
@@ -62,6 +62,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   ColumnDef,
@@ -801,58 +807,148 @@ function TicketAttachments({
 }: {
   attachments: SupportTicketAttachment[];
 }) {
+  const [selectedImage, setSelectedImage] = useState<{
+    alt: string;
+    url: string;
+  } | null>(null);
+
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {attachments.map((attachment) => (
-        <TicketAttachmentCard key={attachment.id} attachment={attachment} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {attachments.map((attachment) => (
+          <TicketAttachmentCard
+            key={attachment.id}
+            attachment={attachment}
+            onOpenImage={(image) => setSelectedImage(image)}
+          />
+        ))}
+      </div>
+
+      <Dialog
+        open={selectedImage !== null}
+        onOpenChange={(open) => !open && setSelectedImage(null)}
+      >
+        <DialogContent className="h-[100vh] max-w-none translate-x-[-50%] translate-y-[-50%] border-0 bg-black/95 p-6 shadow-none sm:h-[100vh] sm:max-w-none sm:rounded-none">
+          {selectedImage ? (
+            <>
+              <DialogTitle className="sr-only">Attachment preview</DialogTitle>
+              <DialogDescription className="sr-only">
+                Fullscreen preview for {selectedImage.alt}
+              </DialogDescription>
+              <div className="flex h-full w-full items-center justify-center">
+                <img
+                  src={selectedImage.url}
+                  alt={selectedImage.alt}
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 function TicketAttachmentCard({
   attachment,
+  onOpenImage,
 }: {
   attachment: SupportTicketAttachment;
+  onOpenImage: (image: { alt: string; url: string }) => void;
 }) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [urlResolvedAt, setUrlResolvedAt] = useState<number | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(true);
   const [hasPreviewError, setHasPreviewError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+  const isRefreshingRef = useRef(false);
 
   const isImage = attachment.content_type?.startsWith("image/") ?? false;
   const fallbackLabel = attachment.file_path.split("/").pop() ?? "Attachment";
+  const previewUrl = signedUrl ?? attachment.file_url;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const refreshSignedUrl = useCallback(async () => {
+    if (isRefreshingRef.current) {
+      return;
+    }
+
+    if (!attachment.file_path) {
+      setSignedUrl(null);
+      setUrlResolvedAt(null);
+      setIsLoadingPreview(false);
+      return;
+    }
+
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    isRefreshingRef.current = true;
+
+    setIsLoadingPreview(true);
+    setHasPreviewError(false);
+
+    const signedUrlPromise = supabase.storage
+      .from("support-attachments")
+      .createSignedUrl(attachment.file_path, 60 * 60);
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error("signed_url_timeout")), 10_000);
+    });
+
+    try {
+      const { data, error } = await Promise.race([
+        signedUrlPromise,
+        timeoutPromise,
+      ]);
+
+      if (!isMountedRef.current || requestIdRef.current !== requestId) {
+        return;
+      }
+
+      if (error || !data?.signedUrl) {
+        throw error ?? new Error("signed_url_unavailable");
+      }
+
+      setSignedUrl(data.signedUrl);
+      setUrlResolvedAt(Date.now());
+    } catch {
+      if (!isMountedRef.current || requestIdRef.current !== requestId) {
+        return;
+      }
+
+      setSignedUrl(null);
+      setUrlResolvedAt(null);
+      setHasPreviewError(!attachment.file_url);
+    } finally {
+      if (isMountedRef.current && requestIdRef.current === requestId) {
+        setIsLoadingPreview(false);
+      }
+
+      if (requestIdRef.current === requestId) {
+        isRefreshingRef.current = false;
+      }
+    }
+  }, [attachment.file_path, attachment.file_url]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadSignedUrl() {
-      if (!attachment.file_path) {
-        setSignedUrl(null);
-        setIsLoadingPreview(false);
-        return;
-      }
-
-      setIsLoadingPreview(true);
-      setHasPreviewError(false);
-
-      const { data, error } = await supabase.storage
-        .from("support-attachments")
-        .createSignedUrl(attachment.file_path, 60 * 60);
+      await refreshSignedUrl();
 
       if (cancelled) {
         return;
       }
-
-      if (error || !data?.signedUrl) {
-        setSignedUrl(null);
-        setHasPreviewError(true);
-        setIsLoadingPreview(false);
-        return;
-      }
-
-      setSignedUrl(data.signedUrl);
-      setIsLoadingPreview(false);
     }
 
     void loadSignedUrl();
@@ -860,24 +956,65 @@ function TicketAttachmentCard({
     return () => {
       cancelled = true;
     };
-  }, [attachment.file_path, retryCount]);
+  }, [refreshSignedUrl, retryCount]);
+
+  useEffect(() => {
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      const hasStaleUrl =
+        urlResolvedAt !== null && Date.now() - urlResolvedAt > 45 * 60 * 1000;
+      const shouldRefreshFallbackUrl =
+        !signedUrl && Boolean(attachment.file_path);
+
+      if (
+        !previewUrl ||
+        hasPreviewError ||
+        hasStaleUrl ||
+        shouldRefreshFallbackUrl
+      ) {
+        void refreshSignedUrl();
+      }
+    };
+
+    window.addEventListener("focus", handleVisibilityRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
+
+    return () => {
+      window.removeEventListener("focus", handleVisibilityRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
+    };
+  }, [
+    attachment.file_path,
+    hasPreviewError,
+    previewUrl,
+    refreshSignedUrl,
+    signedUrl,
+    urlResolvedAt,
+  ]);
 
   const handleRetry = () => {
     setRetryCount((currentCount) => currentCount + 1);
   };
 
   const previewContent = (() => {
-    if (signedUrl && isImage && !hasPreviewError) {
+    if (previewUrl && isImage && !hasPreviewError) {
       return (
         <div className="relative aspect-video bg-black/50">
           <img
-            key={signedUrl}
-            src={signedUrl}
+            key={previewUrl}
+            src={previewUrl}
             alt={fallbackLabel}
             loading="lazy"
             className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200"
             onError={() => {
               setHasPreviewError(true);
+              setIsLoadingPreview(false);
+            }}
+            onLoad={() => {
+              setHasPreviewError(false);
               setIsLoadingPreview(false);
             }}
           />
@@ -912,15 +1049,14 @@ function TicketAttachmentCard({
 
   return (
     <div className="flex flex-col overflow-hidden rounded-lg border border-white/10 bg-white/5">
-      {signedUrl && isImage && !hasPreviewError ? (
-        <a
-          href={signedUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="block transition-opacity hover:opacity-95"
+      {previewUrl && isImage && !hasPreviewError ? (
+        <button
+          type="button"
+          onClick={() => onOpenImage({ alt: fallbackLabel, url: previewUrl })}
+          className="block w-full transition-opacity hover:opacity-95"
         >
           {previewContent}
-        </a>
+        </button>
       ) : (
         previewContent
       )}
@@ -935,9 +1071,19 @@ function TicketAttachmentCard({
           <span className="text-white/50">
             {formatBytes(attachment.file_size_bytes || 0)}
           </span>
-          {signedUrl ? (
+          {previewUrl && isImage ? (
+            <button
+              type="button"
+              onClick={() =>
+                onOpenImage({ alt: fallbackLabel, url: previewUrl })
+              }
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              View
+            </button>
+          ) : previewUrl ? (
             <a
-              href={signedUrl}
+              href={previewUrl}
               target="_blank"
               rel="noreferrer"
               className="text-primary hover:text-primary/80 transition-colors"
