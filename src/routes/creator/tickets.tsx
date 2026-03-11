@@ -34,6 +34,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Select,
   SelectContent,
@@ -83,6 +84,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "react-toastify";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -149,9 +151,22 @@ function TicketsDashboard() {
 
       return { previousTickets };
     },
-    onError: (_error, _variables, context) => {
+    onError: (error, variables, context) => {
       if (context?.previousTickets) {
         queryClient.setQueryData(["support-tickets"], context.previousTickets);
+      }
+
+      if (variables.status === "closed") {
+        toast.error(
+          error instanceof Error && error.message.includes("email update")
+            ? "Failed to send the email update."
+            : "Failed to mark this item as closed.",
+        );
+      }
+    },
+    onSuccess: (_data, variables) => {
+      if (variables.status === "closed") {
+        toast.success("The email update has been sent successfully.");
       }
     },
     onSettled: () =>
@@ -221,7 +236,7 @@ function TicketsDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 py-10 text-white">
       <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
-                <CreatorHeader />
+        <CreatorHeader />
 
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -274,7 +289,7 @@ function TicketsDashboard() {
               : null
           }
           onStatusChange={(ticket, status) =>
-            updateStatusMutation.mutate({ ticket, status })
+            updateStatusMutation.mutateAsync({ ticket, status })
           }
         />
       </div>
@@ -302,7 +317,7 @@ function TicketDataTable({
   onStatusChange: (
     ticket: SupportTicketWithUser,
     status: SupportTicket["status"],
-  ) => void;
+  ) => Promise<void>;
 }) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "created_at", desc: true },
@@ -314,6 +329,7 @@ function TicketDataTable({
     useState<SupportTicketWithUser | null>(null);
   const [pendingCloseTicket, setPendingCloseTicket] =
     useState<SupportTicketWithUser | null>(null);
+  const [isConfirmingClose, setIsConfirmingClose] = useState(false);
 
   useEffect(() => {
     if (!selectedTicket) {
@@ -334,7 +350,7 @@ function TicketDataTable({
 
   const applyStatusChange = useCallback(
     (ticket: SupportTicketWithUser, status: SupportTicket["status"]) => {
-      onStatusChange(ticket, status);
+      void onStatusChange(ticket, status).catch(() => undefined);
 
       setSelectedTicket((currentTicket) =>
         currentTicket?.id === ticket.id
@@ -365,13 +381,31 @@ function TicketDataTable({
   );
 
   const confirmCloseTicket = useCallback(() => {
-    if (!pendingCloseTicket) {
-      return;
+    async function runCloseConfirmation() {
+      if (!pendingCloseTicket) {
+        return;
+      }
+
+      setIsConfirmingClose(true);
+
+      try {
+        await onStatusChange(pendingCloseTicket, "closed");
+        setSelectedTicket((currentTicket) =>
+          currentTicket?.id === pendingCloseTicket.id
+            ? {
+                ...currentTicket,
+                status: "closed",
+              }
+            : currentTicket,
+        );
+      } finally {
+        setPendingCloseTicket(null);
+        setIsConfirmingClose(false);
+      }
     }
 
-    applyStatusChange(pendingCloseTicket, "closed");
-    setPendingCloseTicket(null);
-  }, [applyStatusChange, pendingCloseTicket]);
+    void runCloseConfirmation();
+  }, [onStatusChange, pendingCloseTicket]);
 
   const columns: ColumnDef<SupportTicketWithUser>[] = [
     {
@@ -863,7 +897,9 @@ function TicketDataTable({
 
       <AlertDialog
         open={pendingCloseTicket !== null}
-        onOpenChange={(open) => !open && setPendingCloseTicket(null)}
+        onOpenChange={(open) =>
+          !open && !isConfirmingClose && setPendingCloseTicket(null)
+        }
       >
         <AlertDialogContent className="border-white/10 bg-slate-950 text-white">
           <AlertDialogHeader>
@@ -875,14 +911,28 @@ function TicketDataTable({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white">
+            <AlertDialogCancel
+              disabled={isConfirmingClose}
+              className="border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmCloseTicket}
+              disabled={isConfirmingClose}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Mark as closed
+              {isConfirmingClose ? (
+                <span className="inline-flex items-center gap-2">
+                  <LoadingSpinner
+                    size="sm"
+                    className="h-4 w-4 border-white/30 border-t-white"
+                  />
+                  Sending update...
+                </span>
+              ) : (
+                "Mark as closed"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1331,7 +1381,7 @@ async function updateTicketStatus({
 
   if (updateError) {
     console.error("Unable to update ticket status", updateError);
-    throw updateError;
+    throw new Error("Failed to update ticket status");
   }
 
   if (status !== "closed") {
@@ -1357,11 +1407,11 @@ async function updateTicketStatus({
 
   if (error) {
     console.error("Unable to send closed ticket email", error);
-    throw error;
+    throw new Error("Failed to send email update");
   }
 
   if (!data?.success) {
-    throw new Error(data?.error ?? "Unable to send closed ticket email");
+    throw new Error(data?.error ?? "Failed to send email update");
   }
 }
 

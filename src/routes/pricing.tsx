@@ -186,7 +186,7 @@ function PricingPage() {
   
   const mTier = safelyGetTier(monthlyTier, { title: "Monthly", priceMonthly: "$2.99", compareAtPriceMonthly: "$7.99" });
   const yTier = safelyGetTier(yearlyTier, { title: "Yearly", priceMonthly: "$9.99", compareAtPriceMonthly: "$59.99" });
-  const lTier = safelyGetTier(lifetimeTier, { title: "Lifetime", priceMonthly: "$19.99" });
+  const lTier = safelyGetTier(lifetimeTier, { title: "Lifetime", priceMonthly: "$29.99" });
 
   const faqData = [
     {
