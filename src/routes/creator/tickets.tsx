@@ -16,6 +16,9 @@ import {
   User,
   MonitorSmartphone,
   Code2,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -68,6 +71,17 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   ColumnDef,
@@ -81,6 +95,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { CreatorHeader } from "@/components/creator/creator-header";
 
 export const Route = createFileRoute("/creator/tickets")({
   component: TicketsDashboard,
@@ -108,7 +123,7 @@ function TicketsDashboard() {
 
   const updateStatusMutation = useMutation({
     mutationFn: updateTicketStatus,
-    onMutate: async ({ id, status }) => {
+    onMutate: async ({ ticket, status }) => {
       await queryClient.cancelQueries({ queryKey: ["support-tickets"] });
 
       const previousTickets = queryClient.getQueryData<SupportTicketWithUser[]>(
@@ -118,17 +133,17 @@ function TicketsDashboard() {
       queryClient.setQueryData<SupportTicketWithUser[]>(
         ["support-tickets"],
         (currentTickets) =>
-          currentTickets?.map((ticket) =>
-            ticket.id === id
+          currentTickets?.map((currentTicket) =>
+            currentTicket.id === ticket.id
               ? {
-                  ...ticket,
+                  ...currentTicket,
                   status,
                   is_resolved: isResolvedStatus(status),
                   resolved_at: isResolvedStatus(status)
                     ? new Date().toISOString()
                     : null,
                 }
-              : ticket,
+              : currentTicket,
           ) ?? [],
       );
 
@@ -206,6 +221,8 @@ function TicketsDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 py-10 text-white">
       <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
+                <CreatorHeader />
+
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-primary/70 text-sm tracking-[0.3em] uppercase">
@@ -253,11 +270,11 @@ function TicketsDashboard() {
           isLoading={ticketsQuery.isLoading}
           updatingTicketId={
             updateStatusMutation.isPending
-              ? (updateStatusMutation.variables?.id ?? null)
+              ? (updateStatusMutation.variables?.ticket.id ?? null)
               : null
           }
-          onStatusChange={(id, status) =>
-            updateStatusMutation.mutate({ id, status })
+          onStatusChange={(ticket, status) =>
+            updateStatusMutation.mutate({ ticket, status })
           }
         />
       </div>
@@ -282,7 +299,10 @@ function TicketDataTable({
   data: SupportTicketWithUser[];
   isLoading: boolean;
   updatingTicketId: string | null;
-  onStatusChange: (id: string, status: SupportTicket["status"]) => void;
+  onStatusChange: (
+    ticket: SupportTicketWithUser,
+    status: SupportTicket["status"],
+  ) => void;
 }) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "created_at", desc: true },
@@ -291,6 +311,8 @@ function TicketDataTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const [selectedTicket, setSelectedTicket] =
+    useState<SupportTicketWithUser | null>(null);
+  const [pendingCloseTicket, setPendingCloseTicket] =
     useState<SupportTicketWithUser | null>(null);
 
   useEffect(() => {
@@ -309,6 +331,47 @@ function TicketDataTable({
 
     setSelectedTicket(nextSelectedTicket);
   }, [data, selectedTicket]);
+
+  const applyStatusChange = useCallback(
+    (ticket: SupportTicketWithUser, status: SupportTicket["status"]) => {
+      onStatusChange(ticket, status);
+
+      setSelectedTicket((currentTicket) =>
+        currentTicket?.id === ticket.id
+          ? {
+              ...currentTicket,
+              status,
+            }
+          : currentTicket,
+      );
+    },
+    [onStatusChange],
+  );
+
+  const requestStatusChange = useCallback(
+    (ticket: SupportTicketWithUser, status: SupportTicket["status"]) => {
+      if (status === ticket.status) {
+        return;
+      }
+
+      if (status === "closed" && ticket.status !== "closed") {
+        setPendingCloseTicket(ticket);
+        return;
+      }
+
+      applyStatusChange(ticket, status);
+    },
+    [applyStatusChange],
+  );
+
+  const confirmCloseTicket = useCallback(() => {
+    if (!pendingCloseTicket) {
+      return;
+    }
+
+    applyStatusChange(pendingCloseTicket, "closed");
+    setPendingCloseTicket(null);
+  }, [applyStatusChange, pendingCloseTicket]);
 
   const columns: ColumnDef<SupportTicketWithUser>[] = [
     {
@@ -361,7 +424,7 @@ function TicketDataTable({
               value={status}
               disabled={isUpdatingTicket}
               onValueChange={(val: SupportTicket["status"]) =>
-                onStatusChange(ticket.id, val)
+                requestStatusChange(ticket, val)
               }
             >
               <SelectTrigger
@@ -452,8 +515,8 @@ function TicketDataTable({
                     key={option.value}
                     disabled={isUpdatingTicket}
                     onClick={() =>
-                      onStatusChange(
-                        ticket.id,
+                      requestStatusChange(
+                        ticket,
                         option.value as SupportTicket["status"],
                       )
                     }
@@ -742,8 +805,7 @@ function TicketDataTable({
                     value={selectedTicket.status}
                     disabled={updatingTicketId === selectedTicket.id}
                     onValueChange={(val: SupportTicket["status"]) => {
-                      onStatusChange(selectedTicket.id, val);
-                      setSelectedTicket({ ...selectedTicket, status: val });
+                      requestStatusChange(selectedTicket, val);
                     }}
                   >
                     <SelectTrigger
@@ -798,6 +860,33 @@ function TicketDataTable({
           )}
         </SheetContent>
       </Sheet>
+
+      <AlertDialog
+        open={pendingCloseTicket !== null}
+        onOpenChange={(open) => !open && setPendingCloseTicket(null)}
+      >
+        <AlertDialogContent className="border-white/10 bg-slate-950 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm ticket closure</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/70">
+              The user will automatically receive an email update about this
+              ticket. Please confirm it is fully resolved before marking it as
+              closed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-white/10 bg-transparent text-white hover:bg-white/10 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCloseTicket}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Mark as closed
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -811,6 +900,16 @@ function TicketAttachments({
     alt: string;
     url: string;
   } | null>(null);
+  const [scale, setScale] = useState(1);
+
+  // Reset scale when image changes
+  useEffect(() => {
+    setScale(1);
+  }, [selectedImage]);
+
+  const handleZoomIn = () => setScale((s) => Math.min(s + 0.5, 5));
+  const handleZoomOut = () => setScale((s) => Math.max(s - 0.5, 0.5));
+  const handleResetZoom = () => setScale(1);
 
   return (
     <>
@@ -824,28 +923,96 @@ function TicketAttachments({
         ))}
       </div>
 
-      <Dialog
+      <DialogPrimitive.Root
         open={selectedImage !== null}
         onOpenChange={(open) => !open && setSelectedImage(null)}
       >
-        <DialogContent className="h-[100vh] max-w-none translate-x-[-50%] translate-y-[-50%] border-0 bg-black/95 p-6 shadow-none sm:h-[100vh] sm:max-w-none sm:rounded-none">
-          {selectedImage ? (
-            <>
-              <DialogTitle className="sr-only">Attachment preview</DialogTitle>
-              <DialogDescription className="sr-only">
-                Fullscreen preview for {selectedImage.alt}
-              </DialogDescription>
-              <div className="flex h-full w-full items-center justify-center">
-                <img
-                  src={selectedImage.url}
-                  alt={selectedImage.alt}
-                  className="max-h-full max-w-full object-contain"
-                />
-              </div>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] bg-black/95" />
+          <DialogPrimitive.Content className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[100] flex flex-col items-center justify-center p-0 outline-none">
+            {selectedImage ? (
+              <>
+                <DialogPrimitive.Title className="sr-only">
+                  Attachment preview
+                </DialogPrimitive.Title>
+                <DialogPrimitive.Description className="sr-only">
+                  Fullscreen preview for {selectedImage.alt}
+                </DialogPrimitive.Description>
+
+                <div className="relative flex h-full w-full flex-1 touch-none items-center justify-center overflow-auto">
+                  <div
+                    className="flex origin-center items-center justify-center transition-transform duration-200 ease-out"
+                    style={{
+                      transform: `scale(${scale})`,
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  >
+                    <img
+                      src={selectedImage.url}
+                      alt={selectedImage.alt}
+                      className="max-h-full max-w-full object-contain select-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Close Button */}
+                <DialogPrimitive.Close className="absolute top-4 right-4 z-[110] rounded-full bg-black/50 p-2 text-white/70 backdrop-blur-md transition-colors hover:bg-black/70 hover:text-white focus:outline-none">
+                  <span className="sr-only">Close</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </DialogPrimitive.Close>
+
+                {/* Zoom Controls */}
+                <div className="absolute bottom-6 left-1/2 z-[110] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-black/60 px-4 py-2 backdrop-blur-md">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                    onClick={handleZoomOut}
+                    disabled={scale <= 0.5}
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <div className="w-12 text-center text-xs font-medium text-white">
+                    {Math.round(scale * 100)}%
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                    onClick={handleResetZoom}
+                    disabled={scale === 1}
+                  >
+                    <Maximize className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/20 hover:text-white"
+                    onClick={handleZoomIn}
+                    disabled={scale >= 5}
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </>
   );
 }
@@ -1146,26 +1313,162 @@ async function fetchCreatorAccess(
 }
 
 async function updateTicketStatus({
-  id,
+  ticket,
   status,
 }: {
-  id: string;
+  ticket: SupportTicketWithUser;
   status: SupportTicket["status"];
 }) {
   const isResolved = isResolvedStatus(status);
-  const { error } = await supabase
+  const { error: updateError } = await supabase
     .from("support_tickets")
     .update({
       status,
       is_resolved: isResolved,
       resolved_at: isResolved ? new Date().toISOString() : null,
     })
-    .eq("id", id);
+    .eq("id", ticket.id);
+
+  if (updateError) {
+    console.error("Unable to update ticket status", updateError);
+    throw updateError;
+  }
+
+  if (status !== "closed") {
+    return;
+  }
+
+  const email = ticket.users?.email?.trim();
+  if (!email) {
+    return;
+  }
+
+  const template = buildTicketClosedEmail(ticket);
+  const { data, error } = await supabase.functions.invoke("send-email-raw", {
+    body: {
+      to: email,
+      from: "Moneko Team <hello@moneko.io>",
+      replyTo: "hello@moneko.io",
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    },
+  });
 
   if (error) {
-    console.error("Unable to update ticket status", error);
+    console.error("Unable to send closed ticket email", error);
     throw error;
   }
+
+  if (!data?.success) {
+    throw new Error(data?.error ?? "Unable to send closed ticket email");
+  }
+}
+
+function buildTicketClosedEmail(
+  ticket: SupportTicketWithUser,
+): TicketClosedEmailTemplate {
+  const firstName = ticket.users?.full_name?.trim().split(/\s+/)[0] || "there";
+  const escapedMessage = escapeHtml(ticket.message);
+  const subject = "Update on your request – Moneko";
+
+  return {
+    subject,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Update on your request – Moneko</title>
+</head>
+<body style="margin:0; padding:40px 20px; background:#f7f7fb; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing:antialiased; color:#111827; line-height:1.6;">
+
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:680px; margin:0 auto;">
+
+    <tr>
+      <td style="text-align:center; padding:24px 0;">
+        <img src="https://moneko.io/logo192.png" alt="Moneko Logo" width="72" height="72" style="display:block; margin:0 auto 18px;"/>
+        <h1 style="margin:0; font-weight:300; font-size:26px; line-height:1.15; color:#111827;">We have got this sorted</h1>
+      </td>
+    </tr>
+
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#ffffff; border-radius:28px; box-shadow:0 8px 24px rgba(17,24,39,0.06); padding:32px;">
+          <tr>
+            <td>
+
+              <p style="margin:0 0 18px; font-size:16px;">Hi ${escapeHtml(firstName)},</p>
+
+              <p style="margin:0 0 20px; font-size:15px; color:#374151; line-height:1.6;">
+                We’ve looked into it and made the necessary updates on our side.
+              </p>
+
+              <p style="margin:0 0 20px; font-size:15px; color:#374151; line-height:1.6;">
+                Everything should now be sorted. Please update the app to check it out.
+              </p>
+
+              <div style="margin:24px 0; padding:16px; border:1px solid #e5e7eb; border-radius:20px; background:#f9fafb;">
+                <p style="margin:0 0 8px; font-size:12px; letter-spacing:1px; font-weight:700; text-transform:uppercase; color:#6b7280;">Your original message</p>
+                <p style="margin:0; font-size:15px; color:#374151; white-space:pre-wrap;">${escapedMessage}</p>
+              </div>
+
+              <p style="margin:0 0 10px; font-size:15px; color:#374151;">
+                If you still notice anything unusual or have any other thoughts to share, feel free to reply to this email — we’re always happy to hear from you.
+              </p>
+
+              <p style="margin:20px 0 0; font-size:15px;">
+                <strong>Moneko Team</strong><br/>
+                <span style="color:#6b7280; font-size:14px;">hello@moneko.io</span>
+              </p>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr>
+      <td style="text-align:center; padding:18px 8px;">
+        <hr style="border:none; border-top:1px solid rgba(17,24,39,0.06); margin:0 0 16px;" />
+        <p style="margin:0 0 20px; font-size:13px;">
+          <a href="https://www.instagram.com/moneko_ai" style="color:#7458FF; text-decoration:none;">Instagram</a> &nbsp;•&nbsp;
+          <a href="https://x.com/moneko_ai" style="color:#7458FF; text-decoration:none;">X</a> &nbsp;•&nbsp;
+          <a href="https://www.facebook.com/monekoai/" style="color:#7458FF; text-decoration:none;">Facebook</a>
+        </p>
+        <p style="margin:0; font-size:12px; color:#6b7280;">
+          © 2026 Moneko AI. All rights reserved.
+        </p>
+      </td>
+    </tr>
+
+  </table>
+</body>
+</html>`,
+    text: [
+      `Hi ${firstName},`,
+      "",
+      "We’ve looked into it and made the necessary updates on our side.",
+      "",
+      "Everything should now be sorted. Please update the app to check it out.",
+      "",
+      "Your original message:",
+      ticket.message,
+      "",
+      "If you still notice anything unusual or have any other thoughts to share, feel free to reply to this email — we’re always happy to hear from you.",
+      "",
+      "Moneko Team",
+    ].join("\n"),
+  };
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function buildStatusStats(tickets: SupportTicketWithUser[]) {
@@ -1252,6 +1555,12 @@ type SupportTicketWithUser = SupportTicket & {
 
 type SupportTicketAttachment =
   Database["public"]["Tables"]["support_ticket_attachments"]["Row"];
+
+interface TicketClosedEmailTemplate {
+  subject: string;
+  html: string;
+  text: string;
+}
 
 interface CreatorAccessProfile {
   id: string;

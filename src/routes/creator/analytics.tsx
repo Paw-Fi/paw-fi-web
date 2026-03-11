@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CreatorHeader } from "@/components/creator/creator-header";
 
 export const Route = createFileRoute("/creator/analytics" as never)({
   beforeLoad: async ({ location }) => requireCreatorUser(location.href),
@@ -82,21 +83,19 @@ function CreatorAnalyticsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 py-10 text-white">
-      <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-primary/70 text-sm tracking-[0.3em] uppercase">
-              Creator Console
-            </p>
-            <h1 className="text-3xl font-semibold tracking-tight text-white">
-              Onboarding Analytics
-            </h1>
-            <p className="text-sm text-slate-300">
-              Measure funnel strength, post-auth usage, paywall conversion, and
-              where people leave.
-            </p>
-          </div>
+    <>
+      <div className="min-h-screen bg-slate-950 py-10 text-white">
+        <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
+      <CreatorHeader />
+          <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-white">
+                Platform Analytics
+              </h1>
+              <p className="text-sm text-slate-300">
+                Monitor platform growth, user engagement, and conversion metrics.
+              </p>
+            </div>
           <Button
             variant="outline"
             className="border-primary/30 text-primary hover:bg-primary/10 gap-2 bg-transparent"
@@ -520,6 +519,7 @@ function CreatorAnalyticsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
 
