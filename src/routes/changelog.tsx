@@ -53,6 +53,22 @@ interface ChangelogEntry {
 }
 
 const changelogs: ChangelogEntry[] = [
+{
+  title: "Thai Language Support & Recurring Improvements",
+  date: "2026-03-11",
+  version: "1.4.7",
+  tags: ["Feature", "Currency", "Recurring", "Localization"],
+  description:
+    "This release introduces Thai language support, expands currency coverage, improves CSV imports, and adds a new 6-month option for recurring transactions while making transaction updates more reliable.",
+  items: [
+    "Thai language is now supported",
+    "Add Nepalese Rupee (NPR) to supported currencies",
+    "Enhanced CSV import with better column mapping and deduplication",
+    "6-month frequency option added to recurring transactions",
+    "Improved reliability for transaction updates and category changes",
+    "Fixed pie chart legend display issues",
+  ],
+},
   {
     title: "Custom Categories, Regional Support & Faster Currency Flow",
     date: "2026-03-03",
