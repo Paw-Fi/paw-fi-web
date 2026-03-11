@@ -3,6 +3,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
+import { normalizePreferredLanguage } from "../shared/currency-helpers.ts";
 
 interface RequestBody {
   phone?: string;
@@ -11,7 +13,10 @@ interface RequestBody {
 }
 
 function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 function error(message: string, status = 400, details?: unknown) {
@@ -21,22 +26,18 @@ function error(message: string, status = 400, details?: unknown) {
 // Very permissive validator: allow a-z 2-8 chars (e.g., en, zh, pt, es, fr, de)
 function normalizeLanguage(input?: string | null): string | null {
   if (input == null) return null; // explicit clear
-  const v = String(input).trim().toLowerCase();
-  if (!v) return null;
-  // map legacy values
-  if (v === "cn") return "zh";
-  // accept simple tags like en, zh, fr; if longer, keep first segment
-  const code = v.includes("-") ? v.split("-")[0] : v;
-  return /^[a-z]{2,8}$/.test(code) ? code : null;
+  return normalizePreferredLanguage(String(input));
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return error("Server not configured", 500);
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
+    return error("Server not configured", 500);
 
   let payload: RequestBody;
   try {
@@ -45,26 +46,53 @@ Deno.serve(async (req: Request) => {
     return error("Invalid JSON body", 400);
   }
 
-  const { phone, userId } = payload || {};
-  const preferredLanguage = normalizeLanguage(payload?.language ?? undefined);
+  const { phone, userId: requestedUserId } = payload || {};
+  const rawLanguage = payload?.language;
+  const preferredLanguage = normalizeLanguage(rawLanguage ?? undefined);
 
-  if (!phone && !userId) return error("Either 'phone' or 'userId' must be provided", 400);
-  if (phone && typeof phone !== "string") return error("'phone' must be a string", 400);
-  if (userId && typeof userId !== "string") return error("'userId' must be a string", 400);
+  if (phone && typeof phone !== "string")
+    return error("'phone' must be a string", 400);
+  if (requestedUserId && typeof requestedUserId !== "string")
+    return error("'userId' must be a string", 400);
+  if (rawLanguage != null && preferredLanguage == null) {
+    return error("Invalid language", 400);
+  }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    global: { headers: { "X-Client-Info": "moneko-update-preferred-language" } },
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: { "X-Client-Info": "moneko-update-preferred-language" },
+    },
   });
+
+  const authResult = await authenticateUserOrInternalSecret(req, supabase);
+  if (!authResult.success) {
+    return error(
+      authResult.error ?? "Unauthorized",
+      authResult.statusCode ?? 401,
+    );
+  }
+
+  const userId = authResult.isInternalService
+    ? requestedUserId
+    : authResult.userId;
+  const effectivePhone = authResult.isInternalService ? phone : undefined;
+
+  if (!effectivePhone && !userId)
+    return error("Either 'phone' or 'userId' must be provided", 400);
 
   // find existing contact
   let contact: any = null;
   let contactErr: any = null;
-  if (phone) {
+  if (effectivePhone) {
     const r = await supabase
       .from("user_contacts")
       .select("id, user_id, preferred_language")
-      .eq("phone_e164", phone)
+      .eq("phone_e164", effectivePhone)
       .order("id", { ascending: false })
       .limit(1);
     contact = r.data?.[0] ?? null;
@@ -88,12 +116,17 @@ Deno.serve(async (req: Request) => {
   // create if missing
   let contactId: string | null = contact?.id ?? null;
   if (!contactId) {
-    if (phone) {
+    if (effectivePhone) {
       const { data: upserted, error: upsertErr } = await supabase
         .from("user_contacts")
         .upsert(
-          { phone_e164: phone, user_id: userId || null, preferred_language: preferredLanguage, updated_at: new Date().toISOString() },
-          { onConflict: "phone_e164" }
+          {
+            phone_e164: effectivePhone,
+            user_id: userId || null,
+            preferred_language: preferredLanguage,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "phone_e164" },
         )
         .select("id")
         .single();
@@ -111,10 +144,13 @@ Deno.serve(async (req: Request) => {
   }
 
   // update preference (allow null to clear)
-  const { error: updateErr } = await supabase
+  const updateQuery = supabase
     .from("user_contacts")
-    .update({ preferred_language: preferredLanguage })
-    .eq("id", contactId!);
+    .update({ preferred_language: preferredLanguage });
+  const { error: updateErr } =
+    userId && !effectivePhone
+      ? await updateQuery.eq("user_id", userId)
+      : await updateQuery.eq("id", contactId!);
   if (updateErr) return error("Failed to update contact", 500, updateErr);
 
   return json({ ok: true, results: { contactId, preferredLanguage } });

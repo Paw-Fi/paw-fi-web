@@ -15,10 +15,7 @@ import {
   formatInvokeError,
   normalizeExpensesForTool,
 } from "../shared/formatting-helpers.ts";
-import {
-  fetchExpensesDirect,
-  saveExpenseDirect,
-} from "../shared/expenses-helpers.ts";
+import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
@@ -45,17 +42,22 @@ import {
   fetchUserCategoryPreferences,
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
+  fetchUserCategoryRemaps,
   mergeAllowedCategories,
   upsertUserCustomCategory,
 } from "../shared/user-categories.ts";
-import { buildLanguageOverride } from "../shared/detect-language.ts";
+import {
+  buildLanguageOverride,
+  getReplyLanguagePromptLabel,
+  resolvePreferredReplyLanguage,
+} from "../shared/detect-language.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
-**LANGUAGE RULE (HIGHEST PRIORITY):** You MUST detect the language of the user's latest message and reply ENTIRELY in that same language. This overrides conversation history. This applies to every part of your response: confirmations, questions, summaries, labels, and follow-ups. Fall back to {{LANGUAGE}} only when the message is ambiguous (pure numbers, emojis, or single universal words).
+**LANGUAGE RULE (HIGHEST PRIORITY):** Always reply in {{LANGUAGE}}. This value is resolved by the backend before your prompt is built. Do not choose the reply language yourself and do not infer it from the user's latest message.
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
@@ -87,7 +89,7 @@ CRITICAL RULES:
 18. **Telegram UX (choices)**: When asking the user to choose among transactions/options, ALWAYS format options as numbered lines like "1. <short label>" (one per line; label <= ~60 chars) so Telegram inline buttons can be generated. Ask them to tap a button.
 19. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
 20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
-21. **Language**: See the LANGUAGE RULE above. Always mirror the language of the user's latest message.
+21. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
 
 MESSAGE FORMATTING (Telegram-specific):
 - Your response is sent as **plain text** — do NOT use Markdown symbols like *bold* or _italic_ because they will appear as literal characters, not formatted text.
@@ -1283,6 +1285,115 @@ function resolveMemberIdByName(
   return unique[0];
 }
 
+function buildRecurrenceRule(args: any, fallbackAnchor: string) {
+  const provided = args?.recurrence_rule;
+  if (provided && typeof provided === "object" && !Array.isArray(provided)) {
+    return provided as Record<string, unknown>;
+  }
+
+  const frequency =
+    typeof args?.frequency === "string" && args.frequency.trim()
+      ? args.frequency.trim().toLowerCase()
+      : null;
+  const interval = Number.isFinite(args?.interval)
+    ? Math.trunc(args.interval)
+    : null;
+  const anchor_date =
+    typeof args?.anchor_date === "string" && args.anchor_date.trim()
+      ? args.anchor_date.trim().slice(0, 10)
+      : fallbackAnchor;
+  const end_date =
+    typeof args?.end_date === "string" && args.end_date.trim()
+      ? args.end_date.trim().slice(0, 10)
+      : "";
+
+  if (!frequency) return null;
+
+  const rule: Record<string, unknown> = { frequency, anchor_date };
+  if (interval && interval > 0) rule.interval = interval;
+  if (end_date) rule.end_date = end_date;
+  if (args?.reminder && typeof args.reminder === "object") {
+    rule.reminder = args.reminder;
+  }
+  return rule;
+}
+
+async function invokeTransactionSave(
+  supabase: SupabaseJsClient,
+  internalKey: string,
+  userId: string,
+  params: {
+    type?: string;
+    amount: number;
+    category: string;
+    currency: string;
+    date: string;
+    description?: string;
+    householdId?: string | null;
+    isPortfolio?: boolean;
+    payerUserId?: string;
+    customSplits?: CustomSplits;
+    isRecurring?: boolean;
+    recurrence_rule?: Record<string, unknown> | null;
+    source?: string;
+    ownerType?: string;
+    privacyScope?: string;
+  },
+) {
+  const type =
+    (params.type || "expense").toLowerCase() === "income"
+      ? "income"
+      : "expense";
+
+  const body =
+    type === "income"
+      ? {
+          userId,
+          amount: params.amount,
+          category: params.category,
+          currency: params.currency,
+          date: params.date,
+          description: params.description,
+          source: params.source,
+          ownerType: params.ownerType || "me",
+          privacyScope: params.privacyScope || "full",
+          householdId: params.householdId,
+          isPortfolio: params.isPortfolio === true,
+          isRecurring: params.isRecurring === true,
+          recurrence_rule:
+            params.isRecurring === true
+              ? params.recurrence_rule || null
+              : undefined,
+          clientCreatedAt: new Date().toISOString(),
+        }
+      : {
+          userId,
+          amount: params.amount,
+          category: params.category,
+          currency: params.currency,
+          date: params.date,
+          description: params.description,
+          householdId: params.householdId,
+          isPortfolio: params.isPortfolio === true,
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
+          isRecurring: params.isRecurring === true,
+          recurrence_rule:
+            params.isRecurring === true
+              ? params.recurrence_rule || null
+              : undefined,
+          clientCreatedAt: new Date().toISOString(),
+        };
+
+  return await supabase.functions.invoke(
+    type === "income" ? "save-income" : "save-expense",
+    {
+      body,
+      headers: { "X-Moneko-Internal-Key": internalKey },
+    },
+  );
+}
+
 async function ensureHouseholdMember(
   supabase: SupabaseJsClient,
   householdId: string,
@@ -1662,15 +1773,24 @@ Deno.serve(async (req: Request) => {
 
         const userId = contact.user_id as string;
         const userCurrency = contact.preferred_currency || "USD";
-        const userLang = contact.preferred_language || "en";
+        const userLang = resolvePreferredReplyLanguage(
+          contact.preferred_language,
+          contact.preferred_currency,
+        );
+        const userLangLabel = getReplyLanguagePromptLabel(userLang);
         const userTimezone = contact.preferred_timezone || "UTC";
 
-        const [customCategories, hiddenCategories, categoryPreferences] =
-          await Promise.all([
-            fetchUserCustomCategories({ supabase, userId }),
-            fetchUserHiddenCategories({ supabase, userId }),
-            fetchUserCategoryPreferences({ supabase, userId }),
-          ]);
+        const [
+          customCategories,
+          hiddenCategories,
+          categoryPreferences,
+          categoryRemaps,
+        ] = await Promise.all([
+          fetchUserCustomCategories({ supabase, userId }),
+          fetchUserHiddenCategories({ supabase, userId }),
+          fetchUserCategoryPreferences({ supabase, userId }),
+          fetchUserCategoryRemaps({ supabase, userId }),
+        ]);
         const { expenseCategories, incomeCategories } = mergeAllowedCategories({
           customCategories,
           hiddenCategories,
@@ -1809,15 +1929,15 @@ Deno.serve(async (req: Request) => {
               .replace("{{CURRENCY}}", userCurrency)
               .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
               .replace("{{CATEGORIES}}", categoryGuideForUser)
-              .replace("{{LANGUAGE}}", userLang) +
-            buildLanguageOverride(incomingText),
+              .replace("{{LANGUAGE}}", userLangLabel) +
+            buildLanguageOverride(userLang),
         });
 
         const tools = [
           {
             name: "analyze_expense",
             description:
-              "Extract one or more transactions from text or a Telegram attachment (receipt image, audio, or file). Call this only if you need structured items.",
+              "Extract one or more transactions from text or a Telegram attachment (receipt image, audio, or file). Provide either text or a Telegram file reference, not both.",
             parameters: {
               type: "OBJECT",
               properties: {
@@ -1899,6 +2019,10 @@ Deno.serve(async (req: Request) => {
                 source: { type: "STRING" },
                 is_recurring: { type: "BOOLEAN" },
                 frequency: { type: "STRING" },
+                recurrence_rule: {
+                  type: "OBJECT",
+                  description: "Optional explicit recurrence rule payload",
+                },
               },
               required: ["type", "amount", "category"],
             },
@@ -1952,6 +2076,11 @@ Deno.serve(async (req: Request) => {
                       },
                       is_recurring: { type: "BOOLEAN" },
                       frequency: { type: "STRING" },
+                      recurrence_rule: {
+                        type: "OBJECT",
+                        description:
+                          "Optional explicit recurrence rule payload",
+                      },
                     },
                     required: ["type", "amount", "category"],
                   },
@@ -1987,33 +2116,12 @@ Deno.serve(async (req: Request) => {
                     description: { type: "STRING" },
                     date: { type: "STRING", description: "YYYY-MM-DD" },
                     currency: { type: "STRING" },
-                    household_id: {
-                      type: "STRING",
-                      description:
-                        "ID of the target space. Use this when moving the transaction to a specific household/private space.",
-                    },
-                    household_name: {
-                      type: "STRING",
-                      description:
-                        "Human-readable name of the space to move the transaction into (case-insensitive).",
-                    },
-                    space_scope: {
-                      type: "STRING",
-                      enum: [
-                        "personal",
-                        "personal_account",
-                        "portfolio",
-                        "private_space",
-                        "shared",
-                        "shared_space",
-                      ],
-                      description:
-                        "High-level destination: personal account, private/portfolio space, or shared household.",
-                    },
-                    space_target: {
-                      type: "STRING",
-                      description:
-                        "Optional free-form hint for the target space (e.g., 'move to living expenses space').",
+                    source: { type: "STRING" },
+                    is_recurring: { type: "BOOLEAN" },
+                    frequency: { type: "STRING" },
+                    recurrence_rule: {
+                      type: "OBJECT",
+                      description: "Optional explicit recurrence rule payload",
                     },
                   },
                 },
@@ -2202,6 +2310,15 @@ Deno.serve(async (req: Request) => {
             },
           },
           {
+            name: "set_language",
+            description: "Update preferred language.",
+            parameters: {
+              type: "OBJECT",
+              properties: { language: { type: "STRING" } },
+              required: ["language"],
+            },
+          },
+          {
             name: "manage_recurring",
             description: "Add, update, or delete recurring transactions.",
             parameters: {
@@ -2248,6 +2365,19 @@ Deno.serve(async (req: Request) => {
                   },
                 },
                 frequency: { type: "STRING" },
+                recurrence_rule: {
+                  type: "OBJECT",
+                  description: "Optional explicit recurrence rule payload",
+                },
+                source: { type: "STRING" },
+                owner_type: {
+                  type: "STRING",
+                  enum: ["me", "partner", "household"],
+                },
+                privacy_scope: {
+                  type: "STRING",
+                  enum: ["private", "balances_only", "full"],
+                },
                 type: { type: "STRING", enum: ["expense", "income"] },
               },
               required: ["action"],
@@ -2422,7 +2552,12 @@ Deno.serve(async (req: Request) => {
                   return last || "attachment";
                 };
 
-                if (!fileId && !text) {
+                if (fileId && text) {
+                  toolResult = {
+                    error:
+                      "Provide either text or telegram_file_id/media.file_id, not both.",
+                  };
+                } else if (!fileId && !text) {
                   toolResult = {
                     error:
                       "Provide either text or telegram_file_id/media.file_id to analyze.",
@@ -2436,6 +2571,7 @@ Deno.serve(async (req: Request) => {
                       allowedExpenseCategories,
                       allowedIncomeCategories,
                       categoryPreferences,
+                      categoryRemaps,
                     },
                     GEMINI_API_KEY,
                     30000,
@@ -2488,7 +2624,6 @@ Deno.serve(async (req: Request) => {
                         toolResult = await runAnalyzeExpenseWithTimeout(
                           {
                             userId,
-                            ...(text ? { text } : {}),
                             image: {
                               data: base64Data,
                               contentType,
@@ -2498,6 +2633,7 @@ Deno.serve(async (req: Request) => {
                             allowedExpenseCategories,
                             allowedIncomeCategories,
                             categoryPreferences,
+                            categoryRemaps,
                           },
                           GEMINI_API_KEY,
                           30000,
@@ -2507,7 +2643,6 @@ Deno.serve(async (req: Request) => {
                         toolResult = await runAnalyzeExpenseWithTimeout(
                           {
                             userId,
-                            ...(text ? { text } : {}),
                             audio: {
                               data: base64Data,
                               contentType,
@@ -2517,6 +2652,7 @@ Deno.serve(async (req: Request) => {
                             allowedExpenseCategories,
                             allowedIncomeCategories,
                             categoryPreferences,
+                            categoryRemaps,
                           },
                           GEMINI_API_KEY,
                           30000,
@@ -2526,11 +2662,11 @@ Deno.serve(async (req: Request) => {
                         toolResult = await runAnalyzeExpenseWithTimeout(
                           {
                             userId,
-                            text,
                             currency: userCurrency,
                             allowedExpenseCategories,
                             allowedIncomeCategories,
                             categoryPreferences,
+                            categoryRemaps,
                             attachments: [
                               {
                                 filename,
@@ -2734,22 +2870,18 @@ Deno.serve(async (req: Request) => {
                         call.args,
                       )
                     : {};
-                const { data, error } = await saveExpenseDirect(
+                const { data, error } = await invokeTransactionSave(
                   supabase,
-                  contact.id,
+                  INTERNAL_FUNCTION_KEY,
                   userId,
                   {
                     recurrence_rule:
                       call.args.is_recurring === true
-                        ? call.args.recurrence_rule || {
-                            frequency: (call.args.frequency || "monthly")
-                              .toString()
-                              .toLowerCase(),
-                            interval: 1,
-                            anchor_date:
-                              call.args.date ||
+                        ? buildRecurrenceRule(
+                            call.args,
+                            call.args.date ||
                               formatDateInTimeZone(userTimezone),
-                          }
+                          )
                         : undefined,
                     amount: amount,
                     category: call.args.category,
@@ -2763,6 +2895,9 @@ Deno.serve(async (req: Request) => {
                     isRecurring: call.args.is_recurring === true,
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
+                    source: call.args.source,
+                    ownerType: call.args.owner_type,
+                    privacyScope: call.args.privacy_scope,
                   },
                 );
                 toolResult = { data, error };
@@ -2798,13 +2933,14 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                const results: any[] = [];
+                const isPortfolio =
+                  spaceMeta?.isPortfolio ?? call.args.is_portfolio === true;
+                const batchTransactions: any[] = [];
+
                 for (const row of rows) {
                   const amount = Number(row.amount || 0);
                   const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    row.type !== "income"
+                    householdId && !isPortfolio && row.type !== "income"
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
@@ -2813,40 +2949,57 @@ Deno.serve(async (req: Request) => {
                           row,
                         )
                       : {};
-                  const { data, error } = await saveExpenseDirect(
-                    supabase,
-                    contact.id,
-                    userId,
-                    {
-                      recurrence_rule:
-                        row.is_recurring === true
-                          ? row.recurrence_rule || {
-                              frequency: (row.frequency || "monthly")
-                                .toString()
-                                .toLowerCase(),
-                              interval: 1,
-                              anchor_date:
-                                row.date || formatDateInTimeZone(userTimezone),
-                            }
-                          : undefined,
-                      amount: amount,
-                      category: row.category,
-                      description: row.description || "",
-                      date: row.date || formatDateInTimeZone(userTimezone),
-                      currency: row.currency || userCurrency,
-                      type: row.type || "expense",
-                      householdId,
-                      isPortfolio:
-                        spaceMeta?.isPortfolio ??
-                        call.args.is_portfolio === true,
-                      isRecurring: row.is_recurring === true,
-                      payerUserId: splitConfig.payerUserId,
-                      customSplits: splitConfig.customSplits,
-                    },
-                  );
-                  results.push({ data, error });
+
+                  batchTransactions.push({
+                    type: row.type || "expense",
+                    amount,
+                    category: row.category,
+                    description: row.description || "",
+                    date: row.date || formatDateInTimeZone(userTimezone),
+                    currency: row.currency || userCurrency,
+                    source: row.source,
+                    ownerType: row.owner_type || "me",
+                    privacyScope: row.privacy_scope || "full",
+                    payerUserId: splitConfig.payerUserId,
+                    customSplits: splitConfig.customSplits,
+                    isRecurring: row.is_recurring === true,
+                    recurrence_rule:
+                      row.is_recurring === true
+                        ? buildRecurrenceRule(
+                            row,
+                            row.date || formatDateInTimeZone(userTimezone),
+                          )
+                        : undefined,
+                  });
                 }
-                toolResult = { results };
+
+                const { data, error } = await supabase.functions.invoke(
+                  "save-transactions-batch",
+                  {
+                    body: {
+                      userId,
+                      householdId,
+                      isPortfolio,
+                      transactions: batchTransactions,
+                    },
+                    headers: {
+                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                    },
+                  },
+                );
+
+                toolResult =
+                  !error && data?.success === true
+                    ? {
+                        success: true,
+                        summary: data?.summary,
+                        results: data?.results,
+                      }
+                    : {
+                        error:
+                          formatInvokeError(error ?? data?.error) ||
+                          "Failed to save transactions",
+                      };
               } else if (call.name === "generate_chart_url") {
                 const chartConfig = {
                   type: call.args.chart_type || "bar",
@@ -2929,6 +3082,30 @@ Deno.serve(async (req: Request) => {
                   : {
                       success: true,
                       currency: data?.preferred_currency || currency,
+                    };
+              } else if (call.name === "set_language") {
+                const language = (call.args.language || "").toString().trim();
+                const { data, error } = await supabase.functions.invoke(
+                  "update-preferred-language",
+                  {
+                    body: {
+                      userId,
+                      language,
+                    },
+                    headers: {
+                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                    },
+                  },
+                );
+                const resolvedLanguage =
+                  data?.results?.preferredLanguage || language;
+                toolResult = error
+                  ? { error }
+                  : {
+                      success: true,
+                      language: resolvedLanguage,
+                      reply_language: resolvedLanguage,
+                      message: `Preferred language updated to ${resolvedLanguage}. Reply in this language for this confirmation and use it as the default language for future replies.`,
                     };
               } else if (call.name === "update_transaction") {
                 const updatesArgs =
@@ -3148,6 +3325,35 @@ Deno.serve(async (req: Request) => {
                       } else {
                         updates.date = dateValue;
                       }
+                    }
+                    if ((updatesArgs as any).source != null) {
+                      updates.source = (updatesArgs as any).source;
+                    }
+                    if ((updatesArgs as any).is_recurring === true) {
+                      updates.is_recurring = true;
+                      updates.recurrence_rule = buildRecurrenceRule(
+                        updatesArgs,
+                        typeof updates.date === "string"
+                          ? updates.date
+                          : resolved.candidate.date ||
+                              formatDateInTimeZone(userTimezone),
+                      ) || {
+                        frequency: "monthly",
+                        interval: 1,
+                        anchor_date:
+                          typeof updates.date === "string"
+                            ? updates.date
+                            : resolved.candidate.date ||
+                              formatDateInTimeZone(userTimezone),
+                      };
+                    } else if ((updatesArgs as any).is_recurring === false) {
+                      updates.is_recurring = false;
+                      updates.recurrence_rule = null;
+                    } else if ((updatesArgs as any).recurrence_rule) {
+                      updates.is_recurring = true;
+                      updates.recurrence_rule = (
+                        updatesArgs as any
+                      ).recurrence_rule;
                     }
 
                     if (toolResult?.error) {
@@ -3824,6 +4030,12 @@ Deno.serve(async (req: Request) => {
                         updates.currency = call.args.currency;
                       }
                       if (call.args.date != null) updates.date = call.args.date;
+                      if (call.args.source != null) {
+                        updates.source = call.args.source;
+                      }
+                      if (call.args.recurrence_rule) {
+                        updates.recurrence_rule = call.args.recurrence_rule;
+                      }
                       const { data, error } = await supabase.functions.invoke(
                         "update-expense",
                         {
@@ -3886,9 +4098,9 @@ Deno.serve(async (req: Request) => {
                           call.args,
                         )
                       : {};
-                  const { data, error } = await saveExpenseDirect(
+                  const { data, error } = await invokeTransactionSave(
                     supabase,
-                    contact.id,
+                    INTERNAL_FUNCTION_KEY,
                     userId,
                     {
                       amount,
@@ -3905,6 +4117,9 @@ Deno.serve(async (req: Request) => {
                       recurrence_rule: recurrenceRule,
                       payerUserId: splitConfig.payerUserId,
                       customSplits: splitConfig.customSplits,
+                      source: call.args.source,
+                      ownerType: call.args.owner_type,
+                      privacyScope: call.args.privacy_scope,
                     },
                   );
                   toolResult = { data, error };
