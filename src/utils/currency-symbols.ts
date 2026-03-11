@@ -34,6 +34,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'MWK': 'MK',
   'NGN': '₦',
   'NOK': 'kr',
+  'NPR': 'रू',
   'NZD': 'NZ$',
   'PHP': '₱',
   'PEN': 'S/',
