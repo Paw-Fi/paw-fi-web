@@ -109,7 +109,9 @@ function mapStripeStatusToStoredStatus(status: string): string {
   return status;
 }
 
-function formatUnixTimestampDate(timestamp: number | null | undefined): string | null {
+function formatUnixTimestampDate(
+  timestamp: number | null | undefined,
+): string | null {
   if (typeof timestamp !== "number" || Number.isNaN(timestamp)) {
     return null;
   }
@@ -173,7 +175,9 @@ async function downgradeOwnerSubscriptionToFree(params: {
     }
 
     if (cascadeResult && cascadeResult > 0) {
-      console.log(`✅ Cascaded downgrade to ${cascadeResult} household members`);
+      console.log(
+        `✅ Cascaded downgrade to ${cascadeResult} household members`,
+      );
     }
   } catch (error) {
     console.error("Unexpected error during downgrade cascade:", {
@@ -901,53 +905,8 @@ async function completeReferralAcceptance(params: {
   if (referralCodeRow.user_id !== referrerUserId) return false;
   if (!referralCodeRow.is_active) return false;
 
-  // Upgrade referrer to lifetime.
-  const { data: referrerOldSub } = await supabase
-    .from("subscriptions")
-    .select("stripe_subscription_id")
-    .eq("user_id", referrerUserId)
-    .maybeSingle();
-
-  const { data: referrerMapping } = await supabase
-    .from("user_stripe_mapping")
-    .select("stripe_customer_id")
-    .eq("user_id", referrerUserId)
-    .maybeSingle();
-
-  const oldId = referrerOldSub?.stripe_subscription_id;
-  if (oldId && oldId !== "null" && oldId.startsWith("sub_")) {
-    try {
-      await stripe.subscriptions.cancel(oldId, { prorate: false });
-    } catch (cancelError) {
-      const msg =
-        cancelError instanceof Error
-          ? cancelError.message
-          : String(cancelError);
-      console.error(
-        "Warning: Could not cancel referrer old subscription:",
-        msg,
-      );
-    }
-  }
-
-  const referrerLifetimeData = createLifetimeSubscriptionPayload(
-    referrerUserId,
-    referrerMapping?.stripe_customer_id,
-    eventId,
-  );
-
-  const { error: referrerUpsertError } = await supabase
-    .from("subscriptions")
-    .upsert(referrerLifetimeData, {
-      onConflict: "user_id",
-      ignoreDuplicates: false,
-    });
-
-  if (referrerUpsertError) {
-    throw new Error(
-      `referrer lifetime upsert failed: ${referrerUpsertError.message}`,
-    );
-  }
+  // The referral flow now provides a discounted checkout only.
+  // Do not upgrade the referrer automatically.
 
   const nowIso = new Date().toISOString();
   const { error: acceptanceUpdateError } = await supabase
@@ -1054,9 +1013,10 @@ async function handleSubscriptionUpdated(
 
       if (isAccessGrantingStatus(status)) {
         try {
-          const existingStripeSubscription = await stripe.subscriptions.retrieve(
-            previousSub.stripe_subscription_id,
-          );
+          const existingStripeSubscription =
+            await stripe.subscriptions.retrieve(
+              previousSub.stripe_subscription_id,
+            );
           const existingStripeStatus = existingStripeSubscription.status;
 
           if (isTerminalDowngradeStatus(existingStripeStatus)) {
@@ -1144,13 +1104,17 @@ async function handleSubscriptionUpdated(
       await downgradeOwnerSubscriptionToFree({
         userId,
         eventId,
-        status: mapStripeStatusToStoredStatus(status) === "unpaid"
-          ? "unpaid"
-          : "canceled",
+        status:
+          mapStripeStatusToStoredStatus(status) === "unpaid"
+            ? "unpaid"
+            : "canceled",
         stripeSubscriptionId: subscription.id,
       });
 
-      if (previousSub?.status !== "canceled" && previousSub?.status !== "unpaid") {
+      if (
+        previousSub?.status !== "canceled" &&
+        previousSub?.status !== "unpaid"
+      ) {
         const productId =
           subscription.items?.data?.length > 0
             ? getProductIdFromPrice(subscription.items.data[0]?.price)
@@ -1182,7 +1146,9 @@ async function handleSubscriptionUpdated(
         (subscription.discounts && subscription.discounts.length > 0);
 
       if (hasDiscount) {
-        console.log("🎫 Paused subscription has discount - checking if 100% off");
+        console.log(
+          "🎫 Paused subscription has discount - checking if 100% off",
+        );
 
         let isFullDiscount = false;
         try {
@@ -1221,7 +1187,10 @@ async function handleSubscriptionUpdated(
             }
           }
         } catch (error: any) {
-          console.error("Error fetching expanded subscription discounts:", error);
+          console.error(
+            "Error fetching expanded subscription discounts:",
+            error,
+          );
         }
 
         if (isFullDiscount) {
@@ -1311,7 +1280,10 @@ async function handleSubscriptionUpdated(
       );
 
     if (subscriptionError) {
-      console.error("Error updating subscription in database:", subscriptionError);
+      console.error(
+        "Error updating subscription in database:",
+        subscriptionError,
+      );
       return;
     }
 
@@ -1336,7 +1308,10 @@ async function handleSubscriptionUpdated(
         );
       }
     } catch (error: any) {
-      console.error("Unexpected error during subscription update cascade:", error);
+      console.error(
+        "Unexpected error during subscription update cascade:",
+        error,
+      );
     }
 
     const productId =
@@ -1366,7 +1341,11 @@ async function handleSubscriptionUpdated(
       return;
     }
 
-    if (hasAccessNow && cancelAtPeriodEnd && !previousSub?.cancel_at_period_end) {
+    if (
+      hasAccessNow &&
+      cancelAtPeriodEnd &&
+      !previousSub?.cancel_at_period_end
+    ) {
       const emailTemplate = subscriptionCanceledTemplate({
         name,
         planName,
@@ -1455,10 +1434,13 @@ async function handleSubscriptionDeleted(
     }
 
     if (!subData?.user_id) {
-      console.log("Ignoring subscription.deleted for non-current subscription", {
-        subscriptionId: subscription.id,
-        customerId,
-      });
+      console.log(
+        "Ignoring subscription.deleted for non-current subscription",
+        {
+          subscriptionId: subscription.id,
+          customerId,
+        },
+      );
       return;
     }
 
@@ -1948,15 +1930,17 @@ async function handleInvoicePaymentFailed(
 
     let latestStripeStatus = "past_due";
     try {
-      const latestSubscription = await stripe.subscriptions.retrieve(
-        subscriptionId,
-      );
+      const latestSubscription =
+        await stripe.subscriptions.retrieve(subscriptionId);
       latestStripeStatus = latestSubscription.status;
     } catch (retrieveError: any) {
-      console.error("Failed to retrieve latest subscription after payment failure", {
-        subscriptionId,
-        error: retrieveError?.message || String(retrieveError),
-      });
+      console.error(
+        "Failed to retrieve latest subscription after payment failure",
+        {
+          subscriptionId,
+          error: retrieveError?.message || String(retrieveError),
+        },
+      );
     }
 
     const mappedStatus = mapStripeStatusToStoredStatus(latestStripeStatus);
@@ -2016,15 +2000,20 @@ async function handleInvoicePaymentFailed(
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       if (subscription.items?.data?.length > 0) {
-        const productId = getProductIdFromPrice(subscription.items.data[0]?.price);
+        const productId = getProductIdFromPrice(
+          subscription.items.data[0]?.price,
+        );
         planName = await getPlanNameFromProductId(productId);
       }
     } catch (subscriptionFetchError: any) {
-      console.error("Could not fetch subscription details for payment-failed email", {
-        subscriptionId,
-        error:
-          subscriptionFetchError?.message || String(subscriptionFetchError),
-      });
+      console.error(
+        "Could not fetch subscription details for payment-failed email",
+        {
+          subscriptionId,
+          error:
+            subscriptionFetchError?.message || String(subscriptionFetchError),
+        },
+      );
     }
 
     const name = userData.full_name || "";
@@ -2571,7 +2560,7 @@ async function handleCheckoutSessionCompleted(
               referralCodeRow.user_id !== referrerUserId
             ) {
               console.error(
-                "Referral code ownership mismatch; skipping referrer upgrade",
+                "Referral code ownership mismatch; skipping referral completion",
                 {
                   sessionId,
                   referee: redactUserId(refereeUserId),
@@ -2579,112 +2568,14 @@ async function handleCheckoutSessionCompleted(
                 },
               );
             } else {
-              // Upgrade referrer to lifetime.
-              const { data: referrerOldSub } = await supabase
-                .from("subscriptions")
-                .select("stripe_subscription_id")
-                .eq("user_id", referrerUserId)
-                .maybeSingle();
-
-              const referrerOldStripeSubId =
-                referrerOldSub?.stripe_subscription_id;
-
-              const { data: referrerMapping } = await supabase
-                .from("user_stripe_mapping")
-                .select("stripe_customer_id")
-                .eq("user_id", referrerUserId)
-                .maybeSingle();
-
-              if (
-                referrerOldStripeSubId &&
-                referrerOldStripeSubId !== "null" &&
-                referrerOldStripeSubId.startsWith("sub_")
-              ) {
-                try {
-                  await stripe.subscriptions.cancel(referrerOldStripeSubId, {
-                    prorate: false,
-                  });
-                } catch (cancelError) {
-                  const msg =
-                    cancelError instanceof Error
-                      ? cancelError.message
-                      : String(cancelError);
-                  console.error(
-                    "Warning: Could not cancel referrer's old subscription:",
-                    msg,
-                  );
-                }
-              }
-
-              const referrerLifetimeData = createLifetimeSubscriptionPayload(
+              await completeReferralAcceptance({
+                referralCodeId,
                 referrerUserId,
-                referrerMapping?.stripe_customer_id,
+                refereeUserId,
+                stripeCheckoutSessionId: sessionId,
                 eventId,
-              );
-
-              const { error: referrerUpgradeError } = await supabase
-                .from("subscriptions")
-                .upsert(referrerLifetimeData, {
-                  onConflict: "user_id",
-                  ignoreDuplicates: false,
-                });
-
-              if (referrerUpgradeError) {
-                throw new Error(
-                  `referrer subscription upsert failed: ${referrerUpgradeError.message}`,
-                );
-              }
-
-              const nowIso = new Date().toISOString();
-              const { error: acceptanceUpdateError } = await supabase
-                .from("referral_acceptances")
-                .update({
-                  status: "completed",
-                  completed_at: nowIso,
-                  stripe_checkout_session_id: sessionId,
-                  referral_code_text: referralCodeRow.code,
-                })
-                .eq("referee_user_id", refereeUserId)
-                .eq("referral_code_id", referralCodeId);
-
-              if (acceptanceUpdateError) {
-                throw new Error(
-                  `referral_acceptances update failed: ${acceptanceUpdateError.message}`,
-                );
-              }
-
-              // Best-effort: email notification.
-              try {
-                const { data: referrerData } = await supabase
-                  .from("users")
-                  .select("email, full_name")
-                  .eq("id", referrerUserId)
-                  .single();
-
-                const { data: refereeData } = await supabase
-                  .from("users")
-                  .select("full_name")
-                  .eq("id", refereeUserId)
-                  .single();
-
-                if (referrerData?.email) {
-                  const template = referralAcceptedTemplate({
-                    referrerName: referrerData.full_name || "there",
-                    refereeName: refereeData?.full_name || "A friend",
-                  });
-                  enqueueUserEmail(
-                    referrerData.email,
-                    referrerData.full_name || "",
-                    template,
-                  );
-                }
-              } catch (emailError) {
-                const msg =
-                  emailError instanceof Error
-                    ? emailError.message
-                    : String(emailError);
-                console.error("Referral email send failed (non-fatal):", msg);
-              }
+                enqueueUserEmail,
+              });
             }
           }
         }

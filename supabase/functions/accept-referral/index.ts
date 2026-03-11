@@ -23,6 +23,7 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
 });
 
 const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
+const REFERRAL_PROMO_CODE = "LIFETIME50";
 
 serve(async (req) => {
   const origin = req.headers.get("origin") || "";
@@ -103,69 +104,78 @@ serve(async (req) => {
       );
     }
 
-const { data: refereeContact, error: refereeContactError } = await supabase
-  .from('user_contacts')
-  .select('id, preferred_currency')
-  .eq('user_id', refereeUserId)
-  .maybeSingle();
+    const { data: refereeContact, error: refereeContactError } = await supabase
+      .from("user_contacts")
+      .select("id, preferred_currency")
+      .eq("user_id", refereeUserId)
+      .maybeSingle();
 
-if (refereeContactError) {
-  console.error('Error fetching referee contact:', refereeContactError);
-  await reportEdgeFunctionError({
-    functionName: "accept-referral",
-    error: refereeContactError,
-    context: {
-      referrerUserId,
-      refereeUserId,
-      step: "fetch-referee-contact",
-    },
-  });
-  throw refereeContactError;
-}
-
-if (refereeContact?.preferred_currency == null && referrerUserId) {
-  const { data: referrerContact, error: referrerContactError } = await supabase
-    .from('user_contacts')
-    .select('preferred_currency')
-    .eq('user_id', referrerUserId)
-    .maybeSingle();
-
-  if (referrerContactError) {
-    console.error('Error fetching referrer contact:', referrerContactError);
-    await reportEdgeFunctionError({
-      functionName: "accept-referral",
-      error: referrerContactError,
-      context: {
-        referrerUserId,
-        refereeUserId,
-        step: "fetch-referrer-contact",
-      },
-    });
-    throw referrerContactError;
-  }
-
-  if (referrerContact?.preferred_currency) {
-    const { error: updateContactError } = await supabase
-      .from('user_contacts')
-      .update({ preferred_currency: referrerContact.preferred_currency })
-      .eq('id', refereeContact.id)
-      .is('preferred_currency', null); // race condition guard
-
-    if (updateContactError) {
-      console.error('Error updating referee preferred currency:', updateContactError);
+    if (refereeContactError) {
+      console.error("Error fetching referee contact:", refereeContactError);
       await reportEdgeFunctionError({
         functionName: "accept-referral",
-        error: updateContactError,
+        error: refereeContactError,
         context: {
           referrerUserId,
           refereeUserId,
-          step: "update-referee-preferred-currency",
+          step: "fetch-referee-contact",
         },
       });
-      throw updateContactError;
+      throw refereeContactError;
     }
-  }
-}
+
+    if (
+      refereeContact &&
+      refereeContact.preferred_currency == null &&
+      referrerUserId
+    ) {
+      const refereeContactId = refereeContact.id;
+      const { data: referrerContact, error: referrerContactError } =
+        await supabase
+          .from("user_contacts")
+          .select("preferred_currency")
+          .eq("user_id", referrerUserId)
+          .maybeSingle();
+
+      if (referrerContactError) {
+        console.error("Error fetching referrer contact:", referrerContactError);
+        await reportEdgeFunctionError({
+          functionName: "accept-referral",
+          error: referrerContactError,
+          context: {
+            referrerUserId,
+            refereeUserId,
+            step: "fetch-referrer-contact",
+          },
+        });
+        throw referrerContactError;
+      }
+
+      if (referrerContact?.preferred_currency) {
+        const { error: updateContactError } = await supabase
+          .from("user_contacts")
+          .update({ preferred_currency: referrerContact.preferred_currency })
+          .eq("id", refereeContactId)
+          .is("preferred_currency", null); // race condition guard
+
+        if (updateContactError) {
+          console.error(
+            "Error updating referee preferred currency:",
+            updateContactError,
+          );
+          await reportEdgeFunctionError({
+            functionName: "accept-referral",
+            error: updateContactError,
+            context: {
+              referrerUserId,
+              refereeUserId,
+              step: "update-referee-preferred-currency",
+            },
+          });
+          throw updateContactError;
+        }
+      }
+    }
 
     // Eligibility: Block users who already have premium/lifetime
     const { data: existingSub } = await supabase
@@ -300,9 +310,45 @@ if (refereeContact?.preferred_currency == null && referrerUserId) {
       refereeUserId,
       referrerUserId,
       priceId,
+      promoCode: REFERRAL_PROMO_CODE,
     });
 
-    // Create Stripe checkout session with 100% promo code
+    let promotionCodeId: string | null = null;
+    try {
+      const promotionCodes = await stripe.promotionCodes.list({
+        code: REFERRAL_PROMO_CODE,
+        active: true,
+        limit: 1,
+      });
+
+      if (promotionCodes.data.length === 0) {
+        return new Response(
+          JSON.stringify({
+            error: "Referral discount unavailable",
+            details: `The promotion code '${REFERRAL_PROMO_CODE}' is not valid or has expired.`,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      promotionCodeId = promotionCodes.data[0].id;
+    } catch (promoError) {
+      console.error("Error looking up referral promotion code:", promoError);
+      return new Response(
+        JSON.stringify({
+          error: "Referral discount unavailable",
+          details: `Could not validate the promotion code '${REFERRAL_PROMO_CODE}'.`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const successUrl = `${APP_URL}/referral/${code}?status=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${APP_URL}/referral/${code}?status=canceled`;
 
@@ -310,6 +356,7 @@ if (refereeContact?.preferred_currency == null && referrerUserId) {
       customer: customerId,
       client_reference_id: refereeUserId,
       payment_method_types: ["card"],
+      payment_method_collection: "always",
       line_items: [
         {
           price: priceId,
@@ -345,10 +392,10 @@ if (refereeContact?.preferred_currency == null && referrerUserId) {
         referee_user_id: refereeUserId,
         referral_code: code,
       },
-      // Automatically apply the MONEKO-GRP-LIFETIME promo code
+      // Automatically apply the referral discount code at checkout.
       discounts: [
         {
-          promotion_code: Deno.env.get("STRIPE_REFERRAL_PROMO_CODE_ID") || "", // Will need to be set in env
+          promotion_code: promotionCodeId,
         },
       ],
     };

@@ -192,9 +192,9 @@ export const trialEndingTemplate = (data: {
     <p class="subtitle">Your ${escapeHtml(data.planName)} trial will end on ${formatDate(data.trialEndDate)}.</p>
     <p>To continue enjoying all the benefits without interruption, please ensure your payment method is up to date.</p>
     ${renderButton("Manage Membership", sanitizeUrl(data.dashboardUrl))}
-    <p><strong>Want to keep premium for free?</strong> We’re giving away <strong>free lifetime access</strong> through our referral program.</p>
-    <p>Invite a friend to Moneko and when they join, you both unlock lifetime premium automatically.</p>
-    ${renderButton("Get Lifetime Access (Referral Program)", sanitizeUrl("https://moneko.io/referral"), "secondary")}
+    <p><strong>Want to help a friend lock in lifetime access for less?</strong> Our referral program now gives new users <strong>50% off the lifetime plan</strong>.</p>
+    <p>Share your referral link and friends will get the 50% discount applied automatically at checkout.</p>
+    ${renderButton("Share Your Referral Link", sanitizeUrl("https://moneko.io/referral"), "secondary")}
     <p>If you have any questions, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
@@ -218,11 +218,11 @@ export const referralAcceptedTemplate = (data: {
   refereeName: string;
 }) => {
   const content = `
-    <h1 class="title">Your Friend Joined Moneko 🎉</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, your friend ${data.refereeName ? escapeHtml(data.refereeName) + " " : ""}has accepted your invitation and joined Moneko!</p>
-    <p>Thank you for helping grow our community. Your support means a lot to us.</p>
+    <h1 class="title">Your Friend Claimed Your Referral Offer 🎉</h1>
+    <p class="subtitle">Hi ${escapeHtml(data.referrerName)}, ${data.refereeName ? escapeHtml(data.refereeName) + " " : "your friend "}completed checkout through your referral link.</p>
+    <p>Thanks for sharing Moneko. Your referral helped someone unlock 50% off the lifetime plan.</p>
     ${mobileDownloadCtasHtml()}
-    <p>Keep sharing the love - you'll earn rewards for each friend who subscribes to a premium plan.</p>
+    <p>Keep sharing your link to help more people discover Moneko and claim the discounted lifetime offer.</p>
     <p>The Moneko Team</p>
   `;
 
@@ -235,7 +235,7 @@ export const referralAcceptedTemplate = (data: {
       }),
     ),
     text: htmlToText(content),
-    subject: sanitizeSubject("Your Friend Accepted Your Moneko Invitation!"),
+    subject: sanitizeSubject("Your Friend Completed a Referral Checkout"),
   };
 };
 
@@ -247,11 +247,11 @@ export const referralSuccessfulTemplate = (data: {
 }) => {
   const content = `
     <h1 class="title">Welcome to Moneko! 🎉</h1>
-    <p class="subtitle">Hi ${escapeHtml(data.name)}, thanks for joining Moneko through ${escapeHtml(data.referrerName)}'s invitation!</p>
-    <p>You're all set up and ready to start your financial journey with us. We're excited to have you on board!</p>
+    <p class="subtitle">Hi ${escapeHtml(data.name)}, thanks for joining Moneko through ${escapeHtml(data.referrerName)}'s invitation.</p>
+    <p>Your referral offer gives you 50% off the lifetime plan, applied automatically in the referral checkout flow.</p>
     ${renderButton("Go to Dashboard", sanitizeUrl(data.dashboardUrl))}
     ${mobileDownloadCtasHtml()}
-    <p>If you have any questions getting started, just reply to this email and our support team will help you out.</p>
+    <p>If you have any questions getting started or completing checkout, just reply to this email and our support team will help you out.</p>
     <p>The Moneko Team</p>
   `;
 
