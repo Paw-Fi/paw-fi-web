@@ -10,7 +10,7 @@ set -euo pipefail  # Exit on error, unset vars, and pipe fails
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-DEFAULT_PROJECT_REF="pbopcsmrcykdzbilpilf"
+DEFAULT_PROJECT_REF="qbuynyxyemigtnvdujts"
 PROJECT_REF="${1:-${PROJECT_REF:-$DEFAULT_PROJECT_REF}}"
 
 echo "════════════════════════════════════════════════════════════"
@@ -100,19 +100,24 @@ supabase functions deploy categories --project-ref "$PROJECT_REF"
 echo "✅ categories deployed"
 echo ""
 
-echo "📦 [16/18] Deploying ai-scenario-planner function..."
+echo "📦 [16/19] Deploying ai-scenario-planner function..."
 supabase functions deploy ai-scenario-planner --project-ref "$PROJECT_REF"
 echo "✅ ai-scenario-planner deployed"
 echo ""
 
-echo "📦 [17/18] Deploying update-preferred-language function..."
+echo "📦 [17/19] Deploying update-preferred-language function..."
 supabase functions deploy update-preferred-language --project-ref "$PROJECT_REF"
 echo "✅ update-preferred-language deployed"
 echo ""
 
-echo "📦 [18/18] Deploying update-preferred-timezone function..."
+echo "📦 [18/19] Deploying update-preferred-timezone function..."
 supabase functions deploy update-preferred-timezone --project-ref "$PROJECT_REF"
 echo "✅ update-preferred-timezone deployed"
+echo ""
+
+echo "📦 [19/19] Deploying update-preferred-platform function..."
+supabase functions deploy update-preferred-platform --project-ref "$PROJECT_REF"
+echo "✅ update-preferred-platform deployed"
 echo ""
 
 echo "════════════════════════════════════════════════════════════"
