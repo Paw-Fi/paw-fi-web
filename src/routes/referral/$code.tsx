@@ -22,11 +22,11 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { useValidateReferral } from "@/hooks/use-validate-referral";
 import { useAcceptReferral } from "@/hooks/use-accept-referral";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { toast } from "react-toastify";
 import { AcceptInvitationCard } from "@/components/referral/accept-invitation-card";
 import { MonekoIcon } from "@/components/shared/moneko-icon";
 import { ReferralAuthPrompt } from "@/components/auth/referral-auth-prompt";
-import AppleLogo from "@assets/images/shared/apple-logo.png";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 
@@ -113,7 +113,15 @@ function InviteePage() {
   // Handle accept invitation
   const handleAcceptInvitation = async () => {
     if (!code || !user) return;
-    await accept(code);
+    try {
+      await accept(code);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to continue to checkout. Please try again.";
+      toast.error(message);
+    }
   };
 
   // Preserve canceled status in URL; do not auto-strip it

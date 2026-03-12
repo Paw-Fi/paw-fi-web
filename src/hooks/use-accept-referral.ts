@@ -53,7 +53,33 @@ export function useAcceptReferral(): UseAcceptReferralState {
             "[useAcceptReferral] Edge function error:",
             invokeError,
           );
-          throw new Error(invokeError.message || "Failed to accept referral");
+
+          let errorMessage = invokeError.message || "Failed to accept referral";
+
+          const errorContext = (invokeError as { context?: Response }).context;
+          if (errorContext instanceof Response) {
+            if (errorContext.status >= 500) {
+              errorMessage =
+                "Failed to continue to checkout. Please try again.";
+            } else {
+              try {
+                const errorPayload = (await errorContext.clone().json()) as {
+                  error?: string;
+                  details?: string;
+                };
+
+                if (errorPayload.details) {
+                  errorMessage = errorPayload.details;
+                } else if (errorPayload.error) {
+                  errorMessage = errorPayload.error;
+                }
+              } catch {
+                // Ignore JSON parsing errors and keep fallback message.
+              }
+            }
+          }
+
+          throw new Error(errorMessage);
         }
 
         if (!data) {

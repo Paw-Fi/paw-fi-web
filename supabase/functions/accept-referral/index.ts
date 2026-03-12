@@ -93,6 +93,19 @@ serve(async (req) => {
 
     const referrerUserId = referralCode.user_id;
 
+    if (!referrerUserId) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid referral code configuration",
+          details: "Referral code is missing an associated referrer",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Prevent user from using their own referral code
     if (referrerUserId === refereeUserId) {
       return new Response(
@@ -334,7 +347,22 @@ serve(async (req) => {
         );
       }
 
-      promotionCodeId = promotionCodes.data[0].id;
+      const promotionCode = promotionCodes.data[0];
+
+      if (!promotionCode?.id) {
+        return new Response(
+          JSON.stringify({
+            error: "Referral discount unavailable",
+            details: "Promotion code record is invalid.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      promotionCodeId = promotionCode.id;
     } catch (promoError) {
       console.error("Error looking up referral promotion code:", promoError);
       return new Response(
@@ -356,7 +384,6 @@ serve(async (req) => {
       customer: customerId,
       client_reference_id: refereeUserId,
       payment_method_types: ["card"],
-      payment_method_collection: "always",
       line_items: [
         {
           price: priceId,
@@ -437,6 +464,12 @@ serve(async (req) => {
       } else {
         throw sessionError;
       }
+    }
+
+    if (!session?.id || !session.url) {
+      throw new Error(
+        "Stripe checkout session was not created correctly (missing id or url)",
+      );
     }
 
     console.log("Checkout session created:", session.id);
