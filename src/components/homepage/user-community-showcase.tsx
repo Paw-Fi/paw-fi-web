@@ -1,16 +1,16 @@
 import React from "react";
+import { format } from "date-fns";
 import { motion, Variants } from "framer-motion";
 import { useNavigate } from "@tanstack/react-router";
 import { Star } from "lucide-react";
 import { Marquee } from "@/components/ui/marquee";
-import { NumberTicker } from "@/components/ui/number-ticker";
-import { useCommunityStats } from "@/hooks/use-community-stats";
 import {
   appStoreReviews,
   APP_STORE_RATING,
   TOTAL_REVIEW_COUNT,
   type Review,
 } from "@/data/app-store-reviews";
+import { useReducedVisualEffects } from "@/hooks/use-reduced-visual-effects";
 
 /**
  * Star Rating Component - Displays partial stars for decimal ratings
@@ -136,7 +136,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onClick }) => {
       <p className="text-muted-foreground line-clamp-3 text-xs">{body}</p>
       <div className="text-muted-foreground mt-1 flex items-center justify-between text-xs">
         <span>{territory}</span>
-        <span>{new Date(createdDate).toLocaleDateString()}</span>
+        <span>{format(new Date(createdDate), "M/d/yyyy")}</span>
       </div>
     </motion.div>
   );
@@ -144,16 +144,12 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onClick }) => {
 
 export function UserCommunityShowcase() {
   const navigate = useNavigate();
+  const reducedVisualEffects = useReducedVisualEffects();
 
-  // Use hardcoded reviews - no API needed!
   const reviews = appStoreReviews;
   const displayRating = APP_STORE_RATING;
   const totalReviews = TOTAL_REVIEW_COUNT;
-
-  // Fetch real-time user count from Supabase
-  const { data: communityStats, isLoading: isLoadingUsers } =
-    useCommunityStats();
-  const totalUsers = communityStats?.totalUsers;
+  const featuredReviews = reviews.slice(0, reducedVisualEffects ? 6 : 10);
 
   /**
    * Handle review card click - navigate to appropriate store
@@ -201,23 +197,10 @@ export function UserCommunityShowcase() {
               App Store rating
             </h2>
 
-            {/* Real-time user count from Supabase */}
-            {typeof totalUsers === "number" && (
-              <div className="text-muted-foreground flex items-center justify-center gap-2 text-xl">
-                <span className="text-foreground font-medium">
-                  <NumberTicker
-                    value={totalUsers}
-                    className="inline-block font-medium"
-                  />
-                </span>
-                <span>people have already joined</span>
-              </div>
-            )}
-            {isLoadingUsers && (
-              <div className="text-muted-foreground text-sm">
-                Loading community stats...
-              </div>
-            )}
+            <div className="text-muted-foreground flex items-center justify-center gap-2 text-xl">
+              <span className="text-foreground font-medium">6,000+</span>
+              <span>people have already joined</span>
+            </div>
 
             <p className="text-muted-foreground mx-auto max-w-2xl text-lg sm:text-xl">
               See what our users are saying about Moneko
@@ -227,47 +210,58 @@ export function UserCommunityShowcase() {
           {/* Reviews Marquee Section */}
           {reviews.length > 0 && (
             <div className="space-y-6">
-              {/* First row - reviews 0-9 (normal direction) */}
-              <Marquee pauseOnHover className="[--duration:70s]">
-                {reviews
-                  .slice(0, Math.min(10, reviews.length))
-                  .map((review) => (
+              {reducedVisualEffects ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {featuredReviews.map((review) => (
                     <ReviewCard
-                      key={`row1-${review.id}`}
+                      key={`featured-${review.id}`}
                       review={review}
                       onClick={handleReviewClick}
                     />
                   ))}
-              </Marquee>
+                </div>
+              ) : (
+                <>
+                  <Marquee pauseOnHover className="[--duration:70s]">
+                    {reviews
+                      .slice(0, Math.min(10, reviews.length))
+                      .map((review) => (
+                        <ReviewCard
+                          key={`row1-${review.id}`}
+                          review={review}
+                          onClick={handleReviewClick}
+                        />
+                      ))}
+                  </Marquee>
 
-              {/* Second row - reviews 10-19 (reverse direction) */}
-              {reviews.length >= 10 && (
-                <Marquee reverse pauseOnHover className="[--duration:65s]">
-                  {reviews
-                    .slice(10, Math.min(20, reviews.length))
-                    .map((review) => (
-                      <ReviewCard
-                        key={`row2-${review.id}`}
-                        review={review}
-                        onClick={handleReviewClick}
-                      />
-                    ))}
-                </Marquee>
-              )}
+                  {reviews.length >= 10 && (
+                    <Marquee reverse pauseOnHover className="[--duration:65s]">
+                      {reviews
+                        .slice(10, Math.min(20, reviews.length))
+                        .map((review) => (
+                          <ReviewCard
+                            key={`row2-${review.id}`}
+                            review={review}
+                            onClick={handleReviewClick}
+                          />
+                        ))}
+                    </Marquee>
+                  )}
 
-              {/* Third row - reviews 20-29 (normal direction) */}
-              {reviews.length >= 20 && (
-                <Marquee pauseOnHover className="[--duration:70s]">
-                  {reviews
-                    .slice(20, Math.min(30, reviews.length))
-                    .map((review) => (
-                      <ReviewCard
-                        key={`row3-${review.id}`}
-                        review={review}
-                        onClick={handleReviewClick}
-                      />
-                    ))}
-                </Marquee>
+                  {reviews.length >= 20 && (
+                    <Marquee pauseOnHover className="[--duration:70s]">
+                      {reviews
+                        .slice(20, Math.min(30, reviews.length))
+                        .map((review) => (
+                          <ReviewCard
+                            key={`row3-${review.id}`}
+                            review={review}
+                            onClick={handleReviewClick}
+                          />
+                        ))}
+                    </Marquee>
+                  )}
+                </>
               )}
             </div>
           )}

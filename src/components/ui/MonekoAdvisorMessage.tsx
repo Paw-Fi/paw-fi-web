@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import TypewriterText from './TypewriterText';
- import monekoIconGif from '@/assets/images/logo/moneko-avatar.gif';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import TypewriterText from "./TypewriterText";
+import monekoIconGif from "@/assets/images/logo/moneko.png";
 
-export type AdvisorTone = 'congratulatory' | 'encouraging' | 'motivational' | 'reassuring' | 'informative';
+export type AdvisorTone =
+  | "congratulatory"
+  | "encouraging"
+  | "motivational"
+  | "reassuring"
+  | "informative";
 
 export interface AdvisorMessage {
   message: string;
@@ -22,27 +27,36 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
   message,
   showMessage,
   typewriterSpeed = 25,
-  className = '',
-  transparentBackground = false
+  className = "",
+  transparentBackground = false,
 }) => {
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
-  
-  if (!showMessage||!message.message) return null;
+
+  if (!showMessage || !message.message) return null;
 
   const getToneBadge = (tone: AdvisorTone) => {
     switch (tone) {
-      case 'congratulatory':
-        return { text: '🎉 Excellent!', classes: 'bg-success/10 text-success' };
-      case 'encouraging':
-        return { text: '💪 Great Progress!', classes: 'bg-primary/10 text-primary' };
-      case 'motivational':
-        return { text: '🚀 Keep Going!', classes: 'bg-primary/10 text-primary' };
-      case 'reassuring':
-        return { text: '🤝 I\'m Here!', classes: 'bg-warning/10 text-warning' };
-      case 'informative':
-        return { text: '💡 Good to Know!', classes: 'bg-primary/10 text-primary' };
+      case "congratulatory":
+        return { text: "🎉 Excellent!", classes: "bg-success/10 text-success" };
+      case "encouraging":
+        return {
+          text: "💪 Great Progress!",
+          classes: "bg-primary/10 text-primary",
+        };
+      case "motivational":
+        return {
+          text: "🚀 Keep Going!",
+          classes: "bg-primary/10 text-primary",
+        };
+      case "reassuring":
+        return { text: "🤝 I'm Here!", classes: "bg-warning/10 text-warning" };
+      case "informative":
+        return {
+          text: "💡 Good to Know!",
+          classes: "bg-primary/10 text-primary",
+        };
       default:
-        return { text: '✨ Moneko', classes: 'bg-primary/10 text-primary' };
+        return { text: "✨ Moneko", classes: "bg-primary/10 text-primary" };
     }
   };
 
@@ -70,44 +84,46 @@ export const MonekoAdvisorMessage: React.FC<MonekoAdvisorMessageProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className={`${transparentBackground ? '' : 'bg-subtle-background rounded-xl p-6 shadow-sm border'} ${className}`}
+      className={`${transparentBackground ? "" : "bg-subtle-background rounded-xl border p-6 shadow-sm"} ${className}`}
     >
       <div className="flex items-start gap-4">
         {/* Moneko Avatar */}
         <div className="flex-shrink-0">
-          <div className="w-12 h-12 rounded-full bg-primary p-1 shadow-sm">
-            <img 
-              src={avatarSrc} 
-              alt="Moneko AI" 
-              className="w-full h-full rounded-full object-cover bg-card"
+          <div className="bg-primary h-12 w-12 rounded-full p-1 shadow-sm">
+            <img
+              src={avatarSrc}
+              alt="Moneko AI"
+              className="bg-card h-full w-full rounded-full object-cover"
             />
           </div>
         </div>
-        
-        {/* Message Content */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-card rounded-xl p-4 shadow-sm border relative">
-            {/* Speech bubble tail (token-friendly) */}
-            <div className="absolute -left-1.5 top-5 w-3 h-3 bg-card border rotate-45"></div>
 
-            <div className="flex items-center gap-3 mb-3">
-              <h4 className="font-semibold text-foreground">
-                Moneko
-              </h4>
-              <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium ${badge.classes}`}>
+        {/* Message Content */}
+        <div className="min-w-0 flex-1">
+          <div className="bg-card relative rounded-xl border p-4 shadow-sm">
+            {/* Speech bubble tail (token-friendly) */}
+            <div className="bg-card absolute top-5 -left-1.5 h-3 w-3 rotate-45 border"></div>
+
+            <div className="mb-3 flex items-center gap-3">
+              <h4 className="text-foreground font-semibold">Moneko</h4>
+              <span
+                className={`inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium ${badge.classes}`}
+              >
                 {badge.text}
               </span>
             </div>
-            
-         {message.message&&   <TypewriterText
-              text={`${message.message}`}
-              speed={typewriterSpeed}
-              delay={300}
-              className="text-sm leading-relaxed text-muted-foreground-color"
-              showCursor={true}
-              cursorClassName="animate-pulse text-primary"
-              onComplete={handleTypewriterComplete}
-            />}
+
+            {message.message && (
+              <TypewriterText
+                text={`${message.message}`}
+                speed={typewriterSpeed}
+                delay={300}
+                className="text-muted-foreground-color text-sm leading-relaxed"
+                showCursor={true}
+                cursorClassName="animate-pulse text-primary"
+                onComplete={handleTypewriterComplete}
+              />
+            )}
           </div>
         </div>
       </div>

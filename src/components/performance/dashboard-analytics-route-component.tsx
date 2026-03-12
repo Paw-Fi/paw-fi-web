@@ -1,4 +1,4 @@
-import { createFileRoute, lazyRouteComponent } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -37,10 +37,6 @@ import {
 } from 'recharts'
 import { HelpCircle, Plus, Settings, Search, Filter, Edit2, Trash2, Tag, ArrowRight, Calendar, Info, ChevronLeft, ChevronRight, Wallet, Target, PiggyBank } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/dashboard/analytics/')({
-  component: lazyRouteComponent(() => import("@/components/performance/dashboard-analytics-route-component"), "DashboardAnalyticsRouteComponent"),
-})
 
 interface ContactRow { id: string; user_id: string | null; phone_e164: string; verified: boolean; preferred_currency: string | null }
 interface ExpenseRow { id: string; contact_id: string; date: string; amount_cents: number; currency: string | null; category: string | null; created_at: string; raw_text?: string | null }
@@ -133,7 +129,7 @@ function getCategoryColor(category: string, index: number): string {
 }
 function daysBetween(from: string, to: string) { return eachDayOfInterval({ start: parseISO(from), end: parseISO(to) }).map(dstr) }
 
-function RouteComponent() {
+export function DashboardAnalyticsRouteComponent() {
   const { user, isAuthenticated } = useAuth()
   const queryClient = useQueryClient()
   const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30)

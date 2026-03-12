@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { createContext, useContext, useEffect, useState } from "react";
+import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 // Extend the Supabase User type to include uid property
 export interface User extends SupabaseUser {
@@ -14,10 +14,21 @@ export type AuthContextType = {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signUp: (email: string, password: string, userData: { full_name: string }, redirectUrl?: string) => Promise<{ success: boolean; data: any }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; data: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    userData: { full_name: string },
+    redirectUrl?: string,
+  ) => Promise<{ success: boolean; data: any }>;
+  signIn: (
+    email: string,
+    password: string,
+  ) => Promise<{ success: boolean; data: any }>;
   signOut: () => Promise<{ success: boolean }>;
-  resetPassword: (email: string, redirectUrl?: string) => Promise<{ success: boolean; data?: any }>;
+  resetPassword: (
+    email: string,
+    redirectUrl?: string,
+  ) => Promise<{ success: boolean; data?: any }>;
   deleteAccount: () => Promise<{ success: boolean }>;
 };
 
@@ -31,74 +42,130 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Helper function to transform SupabaseUser to our extended User type
   const transformUser = (supabaseUser: SupabaseUser | null): User | null => {
     if (!supabaseUser) return null;
-    
+
     return {
       ...supabaseUser,
-      uid: supabaseUser.id // Map id to uid for compatibility
+      uid: supabaseUser.id, // Map id to uid for compatibility
     };
   };
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(transformUser(session?.user ?? null));
-      setIsLoading(false);
-    });
+    let subscription:
+      | ReturnType<
+          typeof supabase.auth.onAuthStateChange
+        >["data"]["subscription"]
+      | null = null;
+    let cancelled = false;
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // Handle password recovery events - Supabase triggers this after processing recovery hash
-        if (event === 'PASSWORD_RECOVERY') {
-          // Only redirect if we're not already on the reset-password page
-          if (!window.location.pathname.includes('/reset-password')) {
-            window.location.href = '/reset-password';
+    const runAuthInit = () => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSession(session);
+        setUser(transformUser(session?.user ?? null));
+        setIsLoading(false);
+      });
+
+      subscription = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (event === "PASSWORD_RECOVERY") {
+          if (!window.location.pathname.includes("/reset-password")) {
+            window.location.href = "/reset-password";
           }
           return;
         }
 
         setSession(session);
         setUser(transformUser(session?.user ?? null));
-        
-        // Update last login for sign-in events
-        if (event === 'SIGNED_IN' && session?.user) {
+
+        if (event === "SIGNED_IN" && session?.user) {
           try {
             await supabase
-              .from('users')
+              .from("users")
               .update({ last_login: new Date().toISOString() })
-              .eq('id', session.user.id);
+              .eq("id", session.user.id);
           } catch (error) {
-            console.error('Error updating last login:', error);
+            console.error("Error updating last login:", error);
           }
         }
-        
-        setIsLoading(false);
-      }
-    );
 
-    return () => subscription.unsubscribe();
+        setIsLoading(false);
+      }).data.subscription;
+    };
+
+    const currentPath = window.location.pathname;
+    const shouldDeferSessionBootstrap = ![
+      /^\/dashboard/,
+      /^\/creator/,
+      /^\/checkout/,
+      /^\/login/,
+      /^\/register/,
+      /^\/reset-password/,
+      /^\/forgot-password/,
+      /^\/auth/,
+    ].some((pattern) => pattern.test(currentPath));
+
+    if (shouldDeferSessionBootstrap) {
+      const deferredInit = () => runAuthInit();
+
+      if (typeof window.requestIdleCallback === "function") {
+        const idleId = window.requestIdleCallback(deferredInit, {
+          timeout: 1500,
+        });
+
+        return () => {
+          cancelled = true;
+          window.cancelIdleCallback?.(idleId);
+          subscription?.unsubscribe();
+        };
+      }
+
+      const timeoutId = window.setTimeout(deferredInit, 800);
+
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timeoutId);
+        subscription?.unsubscribe();
+      };
+    }
+
+    runAuthInit();
+
+    return () => {
+      cancelled = true;
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const signUp = async (email: string, password: string, userData: { full_name: string }, redirectUrl?: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    userData: { full_name: string },
+    redirectUrl?: string,
+  ) => {
     setIsLoading(true);
-    
+
     try {
       // The user metadata will be used by our database trigger to populate the users table
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectUrl || '/dashboard')}`,
-          data: userData
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectUrl || "/dashboard")}`,
+          data: userData,
         },
       });
 
       if (error) throw error;
-      
+
       return { success: true, data };
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error("Error signing up:", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -107,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    
+
     try {
       const { error, data } = await supabase.auth.signInWithPassword({
         email,
@@ -115,26 +182,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) throw error;
-      
+
       return { success: true, data };
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error("Error signing in:", error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-
   const signOut = async () => {
     setIsLoading(true);
-    
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       return { success: true };
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -148,34 +214,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) throw error;
-      
+
       return { success: true, data };
     } catch (error) {
-      console.error('Error resetting password:', error);
+      console.error("Error resetting password:", error);
       throw error;
     }
   };
 
   const deleteAccount = async () => {
     if (!user) {
-      throw new Error('No user is currently logged in');
+      throw new Error("No user is currently logged in");
     }
-    
+
     try {
       // Call the database function to delete the user account
       // This is a SECURITY DEFINER function that can delete from auth.users
-      const { data, error } = await supabase.rpc('delete_user_account');
-      
+      const { data, error } = await supabase.rpc("delete_user_account");
+
       if (error) throw error;
-      
+
       // Check if the function returned success
       if (data && !data.success) {
-        throw new Error(data.message || 'Failed to delete account');
+        throw new Error(data.message || "Failed to delete account");
       }
-      
+
       return { success: true };
     } catch (error) {
-      console.error('Error deleting account:', error);
+      console.error("Error deleting account:", error);
       throw error;
     }
   };
@@ -183,7 +249,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, isAuthenticated, signUp, signIn, signOut, resetPassword, deleteAccount }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isLoading,
+        isAuthenticated,
+        signUp,
+        signIn,
+        signOut,
+        resetPassword,
+        deleteAccount,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -191,10 +269,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  
+
   // During SSR/hydration, context might be temporarily undefined
   // Add a safety check to prevent hydration errors
-  if (typeof window !== 'undefined' && context === undefined) {
+  if (typeof window !== "undefined" && context === undefined) {
     // On client-side, if context is undefined, it means we're in a hydration race condition
     // Return a safe default state that matches the initial AuthProvider state
     return {
@@ -209,10 +287,10 @@ export const useAuth = () => {
       deleteAccount: async () => ({ success: false }),
     } as AuthContextType;
   }
-  
+
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  
+
   return context;
 };

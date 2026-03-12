@@ -16,18 +16,12 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import { 
-  TrendingUp, 
-  Target, 
-  Brain,
-  Zap
-} from "lucide-react";
+import { TrendingUp, Target, Brain, Zap } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "../ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import monekoIcon from "@/assets/images/logo/moneko.png"
-import monekoAnimate from "@/assets/images/logo/moneko-avatar.gif"
+import monekoIcon from "@/assets/images/logo/moneko.png";
 
 // AI Chat interface with animations
 const AIChat = () => {
@@ -56,47 +50,59 @@ const AIChat = () => {
   }, [inView]);
 
   return (
-    <div ref={ref} className="h-full w-full flex flex-col p-6 bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/30 dark:to-purple-950/30">
+    <div
+      ref={ref}
+      className="flex h-full w-full flex-col bg-gradient-to-br from-blue-50/50 to-purple-50/50 p-6 dark:from-blue-950/30 dark:to-purple-950/30"
+    >
       {/* Chat Messages */}
-      <div className="flex-1 space-y-4 min-h-0 overflow-hidden">
+      <div className="min-h-0 flex-1 space-y-4 overflow-hidden">
         {/* User Message - Top Right */}
-        <div className="flex items-start gap-3 justify-end">
-          <div className="bg-card rounded-2xl p-4 max-w-[85%] shadow-sm">
-            <p className="text-sm text-foreground">
+        <div className="flex items-start justify-end gap-3">
+          <div className="bg-card max-w-[85%] rounded-2xl p-4 shadow-sm">
+            <p className="text-foreground text-sm">
               Help me create a budget for saving $10,000 this year
             </p>
           </div>
           <Avatar className="size-9 flex-shrink-0">
-            <AvatarImage src="https://randomuser.me/api/portraits/women/3.jpg" alt="User" />
+            <AvatarImage
+              src="https://randomuser.me/api/portraits/women/3.jpg"
+              alt="User"
+            />
             <AvatarFallback>U</AvatarFallback>
           </Avatar>
         </div>
-        
+
         {/* AI Response - Bottom Left */}
         <div className="flex items-start gap-3">
-          <img 
+          <img
             src={monekoIcon}
             alt="Moneko AI"
-            className="flex-shrink-0 size-10 rounded-full"
+            className="size-10 flex-shrink-0 rounded-full"
           />
-          <div className="bg-primary rounded-2xl p-4 max-w-[90%] text-primary-foreground shadow-sm">
+          <div className="bg-primary text-primary-foreground max-w-[90%] rounded-2xl p-4 shadow-sm">
             {showLoading && !showTyping && (
               <div className="flex items-center gap-2">
                 <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-primary-foreground/70 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-1.5 h-1.5 bg-primary-foreground/70 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-1.5 h-1.5 bg-primary-foreground/70 rounded-full animate-bounce"></div>
+                  <div className="bg-primary-foreground/70 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.3s]"></div>
+                  <div className="bg-primary-foreground/70 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.15s]"></div>
+                  <div className="bg-primary-foreground/70 h-1.5 w-1.5 animate-bounce rounded-full"></div>
                 </div>
-                <span className="text-xs text-primary-foreground/70">Analyzing...</span>
+                <span className="text-primary-foreground/70 text-xs">
+                  Analyzing...
+                </span>
               </div>
             )}
             {showTyping && (
-              <TypingAnimation 
-                className="text-sm font-normal" 
+              <TypingAnimation
+                className="text-sm font-normal"
                 duration={20}
                 startOnView={false}
               >
-Based on your financial patterns and preferences, I recommend creating a budget that allocates 20% for savings, 50% for essential expenses, and 30% for discretionary spending, such as entertainment, hobbies, and personal goals              </TypingAnimation>
+                Based on your financial patterns and preferences, I recommend
+                creating a budget that allocates 20% for savings, 50% for
+                essential expenses, and 30% for discretionary spending, such as
+                entertainment, hobbies, and personal goals{" "}
+              </TypingAnimation>
             )}
           </div>
         </div>
@@ -110,12 +116,12 @@ const FeatureTag = ({ label }: { label: string }) => (
   <div className="relative flex h-full !w-64 items-center justify-center">
     <span
       aria-hidden="true"
-      className="block h-2 w-2 rounded-full bg-primary shadow-sm shadow-primary/30"
+      className="bg-primary shadow-primary/30 block h-2 w-2 rounded-full shadow-sm"
     />
     <Badge
       aria-label={label}
       variant="outline"
-      className="absolute left-full ml-2 rounded-full bg-card/80 backdrop-blur px-3 py-1 text-xs font-medium border border-border shadow-sm text-foreground"
+      className="bg-card/80 border-border text-foreground absolute left-full ml-2 rounded-full border px-3 py-1 text-xs font-medium shadow-sm backdrop-blur"
     >
       {label}
     </Badge>
@@ -127,40 +133,64 @@ const TechStack = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
   // Use a more reasonable speed reduction or disable animation entirely
   const motionSpeed = prefersReducedMotion ? 0 : 1; // 0 = no animation, 1 = normal speed
-  
+
   return (
-    <div className="relative h-full w-full bg-subtle-background overflow-hidden">
+    <div className="bg-subtle-background relative h-full w-full overflow-hidden">
       {/* Full container for orbiting tags */}
-      <div className="absolute inset-0 flex items-center justify-center top-24 lg:top-12 scale-100 lg:scale-115">
+      <div className="absolute inset-0 top-24 flex scale-100 items-center justify-center lg:top-12 lg:scale-115">
         {/* Center Logo */}
-        <div className="relative z-20 flex h-20 w-20 items-center justify-center rounded-full bg-primary shadow-lg ring-8 ring-primary/10">
-          <img src={monekoAnimate} alt="Moneko" className="h-14 w-14 rounded-full" />
+        <div className="bg-primary ring-primary/10 relative z-20 flex h-20 w-20 items-center justify-center rounded-full shadow-lg ring-8">
+          <img
+            src={monekoIcon}
+            alt="Moneko"
+            className="h-14 w-14 rounded-full object-cover"
+          />
         </div>
 
         {/* Only render orbiting circles if animation is enabled */}
         {motionSpeed > 0 && (
           <>
             {/* Inner Ring */}
-            <OrbitingCircles iconSize={16} radius={90} duration={27} path speed={motionSpeed}>
+            <OrbitingCircles
+              iconSize={16}
+              radius={90}
+              duration={27}
+              path
+              speed={motionSpeed}
+            >
               <FeatureTag label="Emergency fund?" />
               <FeatureTag label="Smart Saving?" />
             </OrbitingCircles>
 
             {/* Outer Ring */}
-            <OrbitingCircles iconSize={16} radius={120} duration={32} reverse path speed={motionSpeed}>
+            <OrbitingCircles
+              iconSize={16}
+              radius={120}
+              duration={32}
+              reverse
+              path
+              speed={motionSpeed}
+            >
               <FeatureTag label="Goal Plan?" />
               <FeatureTag label="Budget tips?" />
             </OrbitingCircles>
 
-             {/* Outer Ring */}
-             <OrbitingCircles iconSize={16} radius={160} duration={21} reverse path speed={motionSpeed}>
+            {/* Outer Ring */}
+            <OrbitingCircles
+              iconSize={16}
+              radius={160}
+              duration={21}
+              reverse
+              path
+              speed={motionSpeed}
+            >
               <FeatureTag label="Bad Debt?" />
               <FeatureTag label="Investment?" />
             </OrbitingCircles>
           </>
         )}
       </div>
-      <div className="pointer-events-none absolute bottom-20 left-0 h-20 w-full bg-gradient-to-t from-background to-transparent z-20 dark:from-neutral-900"></div>
+      <div className="from-background pointer-events-none absolute bottom-20 left-0 z-20 h-20 w-full bg-gradient-to-t to-transparent dark:from-neutral-900"></div>
     </div>
   );
 };
@@ -190,17 +220,17 @@ const FinancialGrowth = () => {
   } satisfies ChartConfig;
 
   return (
-    <div className="h-full w-full p-4 bg-green-50/40 dark:bg-green-950/20">
-      <div className="h-full flex flex-col">
+    <div className="h-full w-full bg-green-50/40 p-4 dark:bg-green-950/20">
+      <div className="flex h-full flex-col">
         {/* Header */}
         <div className="mb-3">
-          <h3 className="font-medium text-foreground mb-2">Portfolio Growth</h3>
+          <h3 className="text-foreground mb-2 font-medium">Portfolio Growth</h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-light text-primary">$42,000</span>
-            <span className="text-xs text-muted-foreground">+171%</span>
+            <span className="text-primary text-lg font-light">$42,000</span>
+            <span className="text-muted-foreground text-xs">+171%</span>
           </div>
         </div>
-        
+
         {/* Chart */}
         <div className="h-full -translate-y-20">
           <ChartContainer config={chartConfig} className="h-full w-full">
@@ -209,7 +239,11 @@ const FinancialGrowth = () => {
               data={portfolioData}
               margin={{ left: 12, right: 12, top: 12, bottom: 16 }}
             >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" className="opacity-20" />
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                className="opacity-20"
+              />
               <XAxis
                 dataKey="month"
                 tickLine={false}
@@ -218,7 +252,10 @@ const FinancialGrowth = () => {
                 className="text-xs"
                 tickFormatter={(v) => String(v).slice(0, 3)}
               />
-              <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="line" />}
+              />
               {/* Baseline (Traditional) */}
               <Area
                 dataKey="withoutMoneko"
@@ -252,7 +289,6 @@ const FinancialGrowth = () => {
   );
 };
 
-
 // Financial Health Radar Chart
 const FinancialHealth = () => {
   const healthData = [
@@ -276,17 +312,17 @@ const FinancialHealth = () => {
   } satisfies ChartConfig;
 
   return (
-    <div className="h-full w-full p-4 bg-purple-50/50 dark:bg-purple-950/30">
-      <div className="h-full flex flex-col">
+    <div className="h-full w-full bg-purple-50/50 p-4 dark:bg-purple-950/30">
+      <div className="flex h-full flex-col">
         {/* Header */}
-        <div className="text-center mb-4">
-          <h3 className="font-medium text-foreground mb-1">Financial Health</h3>
+        <div className="mb-4 text-center">
+          <h3 className="text-foreground mb-1 font-medium">Financial Health</h3>
           <div className="flex items-baseline justify-center gap-2">
-            <span className="text-xl font-light text-primary">84.7</span>
-            <span className="text-xs text-muted-foreground">/ 100</span>
+            <span className="text-primary text-xl font-light">84.7</span>
+            <span className="text-muted-foreground text-xs">/ 100</span>
           </div>
         </div>
-        
+
         {/* Radar Chart */}
         <div className="flex-1">
           <ChartContainer
@@ -337,10 +373,10 @@ const FinancialHealth = () => {
             </RadarChart>
           </ChartContainer>
         </div>
-        
+
         {/* Footer */}
         <div className="mt-2">
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
             <TrendingUp className="h-3 w-3" />
             <span>Excellent financial health</span>
           </div>
@@ -354,7 +390,8 @@ const features = [
   {
     Icon: Brain,
     name: "AI Financial Coaching",
-    description: "Chat with our intelligent AI advisor for personalized financial guidance",
+    description:
+      "Chat with our intelligent AI advisor for personalized financial guidance",
     href: "/dashboard",
     cta: "Chat with AI",
     component: <AIChat />,
@@ -362,7 +399,7 @@ const features = [
   },
   {
     Icon: Zap,
-    name: "Ask Moneko AI Anything", 
+    name: "Ask Moneko AI Anything",
     description: "Get instant, helpful answers to beginner finance questions",
     href: "/dashboard",
     cta: "Explore Platform",
@@ -372,8 +409,9 @@ const features = [
   {
     Icon: TrendingUp,
     name: "Portfolio Growth",
-    description: "Track your investment portfolio with professional analytics and insights",
-    href: "/dashboard/portfolio", 
+    description:
+      "Track your investment portfolio with professional analytics and insights",
+    href: "/dashboard/portfolio",
     cta: "View Analytics",
     component: <FinancialGrowth />,
     className: "lg:col-span-1 lg:row-span-1 h-[420px]",
@@ -381,7 +419,8 @@ const features = [
   {
     Icon: Target,
     name: "Financial Health",
-    description: "Monitor your overall financial wellness across multiple categories",
+    description:
+      "Monitor your overall financial wellness across multiple categories",
     href: "/dashboard/portfolio",
     cta: "View Health",
     component: <FinancialHealth />,
@@ -395,17 +434,18 @@ export function FeaturesBentoGrid() {
       <div className="mx-auto max-w-7xl">
         {/* Section Header */}
         <div className="mb-16 text-center">
-          <h2 className="text-foreground mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl font-lato">
+          <h2 className="text-foreground font-lato mb-6 text-4xl leading-tight font-bold sm:text-5xl md:text-6xl">
             Everything You Need for Financial Success
           </h2>
-          <p className="text-muted-foreground mx-auto max-w-3xl text-xl leading-relaxed font-lato">
-            Experience comprehensive financial management with AI-powered insights, goal tracking, 
-            portfolio analytics, and personalized education in one integrated platform.
+          <p className="text-muted-foreground font-lato mx-auto max-w-3xl text-xl leading-relaxed">
+            Experience comprehensive financial management with AI-powered
+            insights, goal tracking, portfolio analytics, and personalized
+            education in one integrated platform.
           </p>
         </div>
 
         {/* Bento Grid */}
-        <BentoGrid className="lg:grid-cols-2 lg:grid-rows-2 border border-border rounded-3xl overflow-hidden">
+        <BentoGrid className="border-border overflow-hidden rounded-3xl border lg:grid-cols-2 lg:grid-rows-2">
           {features.map((feature) => (
             <BentoCard
               key={feature.name}
@@ -418,11 +458,9 @@ export function FeaturesBentoGrid() {
         {/* Call to Action */}
         <div className="mt-16 text-center">
           <Button asChild size="lg" className="px-8 py-3 text-lg font-semibold">
-            <Link to="/dashboard">
-              Start Your Financial Journey
-            </Link>
+            <Link to="/dashboard">Start Your Financial Journey</Link>
           </Button>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-4 text-sm">
             Free forever • No credit card required • Start in 30 seconds
           </p>
         </div>

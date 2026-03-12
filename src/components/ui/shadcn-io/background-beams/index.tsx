@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from "react"
-import { motion } from "framer-motion"
+import React from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export interface BackgroundBeamsProps {
@@ -61,17 +61,26 @@ export const BackgroundBeams = React.memo(
       "M-51 -565C-51 -565 17 -160 481 -33C945 94 1013 499 1013 499",
       "M-44 -573C-44 -573 24 -168 488 -41C952 86 1020 491 1020 491",
       "M-37 -581C-37 -581 31 -176 495 -49C959 78 1027 483 1027 483",
-    ]
-    
+    ];
+
+    const getGradientConfig = (index: number) => ({
+      x1: "0%",
+      x2: `${94 + (index % 4)}%`,
+      y1: "0%",
+      y2: `${92 + (index % 6)}%`,
+      duration: 12 + (index % 6),
+      delay: (index % 5) * 1.5,
+    });
+
     return (
       <div
         className={cn(
-          "absolute h-full z-10 w-full inset-0 [mask-size:40px] [mask-repeat:no-repeat] flex items-center justify-center",
+          "absolute inset-0 z-10 flex h-full w-full items-center justify-center [mask-size:40px] [mask-repeat:no-repeat]",
           className,
         )}
       >
         <svg
-          className="z-0 h-full w-full pointer-events-none absolute"
+          className="pointer-events-none absolute z-0 h-full w-full"
           width="100%"
           height="100%"
           viewBox="0 0 696 316"
@@ -94,37 +103,43 @@ export const BackgroundBeams = React.memo(
               strokeWidth="0.5"
             />
           ))}
-          
+
           <defs>
-            {paths.map((path, index) => (
-              <motion.linearGradient
-                id={`linearGradient-${index}`}
-                key={`gradient-${index}`}
-                initial={{
-                  x1: "0%",
-                  x2: "0%",
-                  y1: "0%",
-                  y2: "0%",
-                }}
-                animate={{
-                  x1: ["0%", "100%"],
-                  x2: ["0%", "95%"],
-                  y1: ["0%", "100%"],
-                  y2: ["0%", `${93 + Math.random() * 8}%`],
-                }}
-                transition={{
-                  duration: Math.random() * 10 + 10,
-                  ease: "easeInOut",
-                  repeat: Infinity,
-                  delay: Math.random() * 10,
-                }}
-              >
-                <stop stopColor="#18CCFC" stopOpacity="0" />
-                <stop stopColor="#18CCFC" />
-                <stop offset="32.5%" stopColor="#6344F5" />
-                <stop offset="100%" stopColor="#AE48FF" stopOpacity="0" />
-              </motion.linearGradient>
-            ))}
+            {paths.map((path, index) =>
+              (() => {
+                const gradient = getGradientConfig(index);
+
+                return (
+                  <motion.linearGradient
+                    id={`linearGradient-${index}`}
+                    key={`gradient-${index}`}
+                    initial={{
+                      x1: "0%",
+                      x2: "0%",
+                      y1: "0%",
+                      y2: "0%",
+                    }}
+                    animate={{
+                      x1: ["0%", "100%"],
+                      x2: ["0%", "95%"],
+                      y1: ["0%", "100%"],
+                      y2: ["0%", gradient.y2],
+                    }}
+                    transition={{
+                      duration: gradient.duration,
+                      ease: "easeInOut",
+                      repeat: Infinity,
+                      delay: gradient.delay,
+                    }}
+                  >
+                    <stop stopColor="#18CCFC" stopOpacity="0" />
+                    <stop stopColor="#18CCFC" />
+                    <stop offset="32.5%" stopColor="#6344F5" />
+                    <stop offset="100%" stopColor="#AE48FF" stopOpacity="0" />
+                  </motion.linearGradient>
+                );
+              })(),
+            )}
 
             <radialGradient
               id="paint0_radial_242_278"
@@ -141,8 +156,8 @@ export const BackgroundBeams = React.memo(
           </defs>
         </svg>
       </div>
-    )
+    );
   },
-)
+);
 
-BackgroundBeams.displayName = "BackgroundBeams"
+BackgroundBeams.displayName = "BackgroundBeams";

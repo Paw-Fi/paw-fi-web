@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { useReducedVisualEffects } from "@/hooks/use-reduced-visual-effects";
 
 interface Message {
   id: string;
@@ -19,7 +20,8 @@ const messages: Message[] = [
   {
     id: "2",
     role: "assistant",
-    content: "Saved 💸\n\nCategory: ☕️ Eating Out\nAmount: $4.50\n\nYou've spent $15.00 on coffee this week.",
+    content:
+      "Saved 💸\n\nCategory: ☕️ Eating Out\nAmount: $4.50\n\nYou've spent $15.00 on coffee this week.",
     timestamp: "9:41 AM",
   },
   {
@@ -37,8 +39,10 @@ const messages: Message[] = [
 ];
 
 export function ChatScreen() {
+  const reducedVisualEffects = useReducedVisualEffects();
+
   return (
-    <div className="flex h-full flex-col bg-[#0b141a] text-white font-sans">
+    <div className="flex h-full flex-col bg-[#0b141a] font-sans text-white">
       {/* WhatsApp-style Header */}
       <div className="flex items-center gap-3 bg-[#202c33] px-4 py-3 shadow-sm">
         <Avatar className="h-10 w-10">
@@ -52,31 +56,36 @@ export function ChatScreen() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat p-4">
         {messages.map((message, index) => (
           <motion.div
             key={message.id}
-            initial={{ opacity: 0, y: 10 }}
+            initial={reducedVisualEffects ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.8, duration: 0.4 }}
+            transition={{
+              delay: reducedVisualEffects ? 0 : index * 0.8,
+              duration: reducedVisualEffects ? 0.2 : 0.4,
+            }}
             className={cn(
               "flex w-full",
-              message.role === "user" ? "justify-end" : "justify-start"
+              message.role === "user" ? "justify-end" : "justify-start",
             )}
           >
             <div
               className={cn(
                 "max-w-[80%] rounded-lg px-3 py-2 text-sm shadow-sm",
                 message.role === "user"
-                  ? "bg-[#005c4b] text-[#e9edef] rounded-tr-none"
-                  : "bg-[#202c33] text-[#e9edef] rounded-tl-none"
+                  ? "rounded-tr-none bg-[#005c4b] text-[#e9edef]"
+                  : "rounded-tl-none bg-[#202c33] text-[#e9edef]",
               )}
             >
               <div className="whitespace-pre-wrap">{message.content}</div>
-              <div className={cn(
-                  "text-[10px] mt-1 text-right",
-                  message.role === "user" ? "text-[#8696a0]" : "text-[#8696a0]"
-              )}>
+              <div
+                className={cn(
+                  "mt-1 text-right text-[10px]",
+                  message.role === "user" ? "text-[#8696a0]" : "text-[#8696a0]",
+                )}
+              >
                 {message.timestamp}
               </div>
             </div>
@@ -85,15 +94,15 @@ export function ChatScreen() {
       </div>
 
       {/* Input Area (Visual only) */}
-      <div className="bg-[#202c33] px-4 py-3 flex items-center gap-3">
-        <div className="h-8 w-8 rounded-full bg-[#2a3942] flex items-center justify-center">
-            <span className="text-[#8696a0] text-lg">+</span>
+      <div className="flex items-center gap-3 bg-[#202c33] px-4 py-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a3942]">
+          <span className="text-lg text-[#8696a0]">+</span>
         </div>
-        <div className="flex-1 bg-[#2a3942] h-9 rounded-lg px-4 flex items-center text-[#8696a0] text-sm">
-            Message...
+        <div className="flex h-9 flex-1 items-center rounded-lg bg-[#2a3942] px-4 text-sm text-[#8696a0]">
+          Message...
         </div>
-        <div className="h-8 w-8 rounded-full bg-[#00a884] flex items-center justify-center">
-             <span className="text-white">🎙️</span>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00a884]">
+          <span className="text-white">🎙️</span>
         </div>
       </div>
     </div>

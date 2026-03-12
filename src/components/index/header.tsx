@@ -95,7 +95,7 @@ const resources = [
 ];
 
 export const HomeHeader = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
   const pathname = useRouterState({
@@ -110,7 +110,7 @@ export const HomeHeader = () => {
     resources.some((item) => isPathActive(item.href)) || isPathActive("/blogs");
 
   return (
-    <header className="bg-background/80 supports-[backdrop-filter]:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b border-white/10 backdrop-blur-md">
+    <header className="bg-background/95 md:bg-background/80 md:supports-[backdrop-filter]:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b border-white/10 md:backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         <div className="flex items-center gap-8">
           {/* Logo */}
@@ -133,7 +133,7 @@ export const HomeHeader = () => {
                   Features
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <ul className="bg-background/95 border-border grid w-[400px] gap-3 rounded-xl border p-4 shadow-2xl backdrop-blur-3xl md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                  <ul className="bg-background/95 border-border grid w-[400px] gap-3 rounded-xl border p-4 shadow-2xl md:w-[500px] md:grid-cols-2 lg:w-[600px] lg:backdrop-blur-3xl">
                     {features.map((feature) => (
                       <ListItem
                         key={feature.title}
@@ -191,7 +191,7 @@ export const HomeHeader = () => {
                   Resources
                 </NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <ul className="bg-background/95 border-border grid w-[400px] gap-3 rounded-xl border p-4 shadow-2xl backdrop-blur-3xl md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                  <ul className="bg-background/95 border-border grid w-[400px] gap-3 rounded-xl border p-4 shadow-2xl md:w-[500px] md:grid-cols-2 lg:w-[600px] lg:backdrop-blur-3xl">
                     {resources.slice(1).map((resource) => (
                       <ListItem
                         key={resource.title}
@@ -412,7 +412,11 @@ export const HomeHeader = () => {
               </MobileLink>
 
               <div className="mt-6 space-y-3 px-2">
-                {user ? (
+                {isLoading ? (
+                  <Button className="w-full rounded-xl" size="lg" disabled>
+                    Loading...
+                  </Button>
+                ) : user ? (
                   <Button
                     onClick={() => {
                       setIsOpen(false);
@@ -442,7 +446,19 @@ export const HomeHeader = () => {
 
         {/* Desktop Actions */}
         <div className="hidden items-center gap-4 md:flex">
-          {user ? (
+          {isLoading ? (
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" className="font-medium" disabled>
+                Loading...
+              </Button>
+              <Button
+                className="rounded-full px-5 font-medium dark:text-white"
+                disabled
+              >
+                Please wait
+              </Button>
+            </div>
+          ) : user ? (
             <div className="flex items-center gap-3">
               <UserAvatar
                 size="sm"

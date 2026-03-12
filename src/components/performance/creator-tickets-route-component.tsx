@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, lazyRouteComponent, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import {
@@ -99,11 +99,7 @@ import {
 } from "@tanstack/react-table";
 import { CreatorHeader } from "@/components/creator/creator-header";
 
-export const Route = createFileRoute("/creator/tickets")({
-  component: lazyRouteComponent(() => import("@/components/performance/creator-tickets-route-component"), "TicketsDashboardRouteComponent"),
-});
-
-function TicketsDashboard() {
+export function TicketsDashboardRouteComponent() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, isLoading: isAuthLoading } = useAuth();

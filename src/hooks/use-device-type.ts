@@ -16,20 +16,7 @@ const BREAKPOINTS = {
  * @returns Object containing the current device type and a boolean indicating if it's a mobile device
  */
 export const useDeviceType = () => {
-  const [deviceType, setDeviceType] = useState<DeviceType>(() => {
-    if (typeof window === "undefined") {
-      return DeviceType.DESKTOP;
-    }
-
-    const width = window.innerWidth;
-    if (width < BREAKPOINTS.MOBILE) {
-      return DeviceType.MOBILE;
-    }
-    if (width < BREAKPOINTS.TABLET) {
-      return DeviceType.TABLET;
-    }
-    return DeviceType.DESKTOP;
-  });
+  const [deviceType, setDeviceType] = useState<DeviceType>(DeviceType.DESKTOP);
 
   const isMobile = deviceType === DeviceType.MOBILE;
   const isTablet = deviceType === DeviceType.TABLET;
@@ -53,9 +40,9 @@ export const useDeviceType = () => {
         newDeviceType = DeviceType.DESKTOP;
       }
 
-      if (newDeviceType !== deviceType) {
-        setDeviceType(newDeviceType);
-      }
+      setDeviceType((currentType) =>
+        currentType === newDeviceType ? currentType : newDeviceType,
+      );
     };
 
     // Set initial device type based on current window size
@@ -66,7 +53,7 @@ export const useDeviceType = () => {
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, [deviceType]); // Remove window.innerWidth from dependency array
+  }, []);
 
   return { deviceType, isMobile, isTablet, isDesktop };
 };

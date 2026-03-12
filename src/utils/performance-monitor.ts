@@ -28,7 +28,7 @@ class PerformanceMonitor {
   private routeStartTime: number | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       this.initializeObservers();
       this.trackHydration();
     }
@@ -40,12 +40,12 @@ class PerformanceMonitor {
       // First Contentful Paint & Largest Contentful Paint
       const paintObserver = new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
-          if (entry.name === 'first-contentful-paint') {
+          if (entry.name === "first-contentful-paint") {
             this.metrics.fcp = entry.startTime;
           }
         }
       });
-      paintObserver.observe({ entryTypes: ['paint'] });
+      paintObserver.observe({ entryTypes: ["paint"] });
       this.observers.push(paintObserver);
 
       // Largest Contentful Paint
@@ -54,7 +54,7 @@ class PerformanceMonitor {
         const lastEntry = entries[entries.length - 1];
         this.metrics.lcp = lastEntry.startTime;
       });
-      lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+      lcpObserver.observe({ entryTypes: ["largest-contentful-paint"] });
       this.observers.push(lcpObserver);
 
       // First Input Delay
@@ -66,7 +66,7 @@ class PerformanceMonitor {
           }
         }
       });
-      fidObserver.observe({ entryTypes: ['first-input'] });
+      fidObserver.observe({ entryTypes: ["first-input"] });
       this.observers.push(fidObserver);
 
       // Cumulative Layout Shift
@@ -78,32 +78,31 @@ class PerformanceMonitor {
           }
         }
       });
-      clsObserver.observe({ entryTypes: ['layout-shift'] });
+      clsObserver.observe({ entryTypes: ["layout-shift"] });
       this.observers.push(clsObserver);
 
       // Time to First Byte
       const navObserver = new PerformanceObserver((entryList) => {
         for (const entry of entryList.getEntries()) {
-          if (entry.entryType === 'navigation') {
+          if (entry.entryType === "navigation") {
             const navEntry = entry as PerformanceNavigationTiming;
             this.metrics.ttfb = navEntry.responseStart - navEntry.fetchStart;
           }
         }
       });
-      navObserver.observe({ entryTypes: ['navigation'] });
+      navObserver.observe({ entryTypes: ["navigation"] });
       this.observers.push(navObserver);
-
     } catch (error) {
-      console.warn('Performance Observer not supported', error);
+      console.warn("Performance Observer not supported", error);
     }
   }
 
   private trackHydration() {
     const hydrationStart = performance.now();
-    
+
     // Mark hydration complete when React is ready
     const checkHydration = () => {
-      if (document.readyState === 'complete') {
+      if (document.readyState === "complete") {
         this.metrics.hydrationTime = performance.now() - hydrationStart;
         this.logMetrics();
       } else {
@@ -111,8 +110,8 @@ class PerformanceMonitor {
       }
     };
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', checkHydration);
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", checkHydration);
     } else {
       checkHydration();
     }
@@ -135,25 +134,26 @@ class PerformanceMonitor {
 
   public logMetrics() {
     const metrics = this.getMetrics();
-    
-    console.group('🚀 Performance Metrics');
-    console.log('📊 Core Web Vitals:');
-    console.log(`  FCP: ${metrics.fcp ? metrics.fcp.toFixed(2) + 'ms' : 'N/A'} (target: <1800ms)`);
-    console.log(`  LCP: ${metrics.lcp ? metrics.lcp.toFixed(2) + 'ms' : 'N/A'} (target: <2500ms)`);
-    console.log(`  FID: ${metrics.fid ? metrics.fid.toFixed(2) + 'ms' : 'N/A'} (target: <100ms)`);
-    console.log(`  CLS: ${metrics.cls ? metrics.cls.toFixed(3) : 'N/A'} (target: <0.1)`);
-    
-    console.log('\n⚡ Custom Metrics:');
-    console.log(`  TTFB: ${metrics.ttfb ? metrics.ttfb.toFixed(2) + 'ms' : 'N/A'} (target: <800ms)`);
-    console.log(`  Hydration: ${metrics.hydrationTime ? metrics.hydrationTime.toFixed(2) + 'ms' : 'N/A'} (target: <1000ms)`);
-    console.log(`  Route Change: ${metrics.routeChangeTime ? metrics.routeChangeTime.toFixed(2) + 'ms' : 'N/A'} (target: <200ms)`);
-    
-    console.log('\n📈 Performance Score:');
-    console.log(`  Overall: ${this.calculatePerformanceScore()}/100`);
-    console.groupEnd();
+
+    if (import.meta.env.DEV) {
+      console.group("Performance Metrics");
+      console.log("Core Web Vitals", {
+        fcp: metrics.fcp,
+        lcp: metrics.lcp,
+        fid: metrics.fid,
+        cls: metrics.cls,
+      });
+      console.log("Custom Metrics", {
+        ttfb: metrics.ttfb,
+        hydrationTime: metrics.hydrationTime,
+        routeChangeTime: metrics.routeChangeTime,
+        score: this.calculatePerformanceScore(),
+      });
+      console.groupEnd();
+    }
 
     // Send to analytics in production
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       this.sendToAnalytics(metrics);
     }
   }
@@ -203,29 +203,30 @@ class PerformanceMonitor {
 
   private sendToAnalytics(metrics: PerformanceMetrics) {
     // Send to Google Analytics or other analytics service
-    if (typeof gtag !== 'undefined') {
-      gtag('event', 'performance_metrics', {
+    if (typeof gtag !== "undefined") {
+      gtag("event", "performance_metrics", {
         custom_map: {
-          fcp: 'first_contentful_paint',
-          lcp: 'largest_contentful_paint',
-          fid: 'first_input_delay',
-          cls: 'cumulative_layout_shift',
-          ttfb: 'time_to_first_byte',
-          hydration: 'hydration_time'
+          fcp: "first_contentful_paint",
+          lcp: "largest_contentful_paint",
+          fid: "first_input_delay",
+          cls: "cumulative_layout_shift",
+          ttfb: "time_to_first_byte",
+          hydration: "hydration_time",
         },
-        ...metrics
+        ...metrics,
       });
     }
   }
 
   public cleanup() {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer.disconnect());
     this.observers = [];
   }
 }
 
 // Global performance monitor instance
-export const performanceMonitor = typeof window !== 'undefined' ? new PerformanceMonitor() : null;
+export const performanceMonitor =
+  typeof window !== "undefined" ? new PerformanceMonitor() : null;
 
 // Hook for tracking route performance
 export function useRoutePerformance() {
@@ -233,24 +234,27 @@ export function useRoutePerformance() {
     markStart: () => performanceMonitor?.markRouteStart(),
     markEnd: () => performanceMonitor?.markRouteEnd(),
     getMetrics: () => performanceMonitor?.getMetrics() || null,
-    logMetrics: () => performanceMonitor?.logMetrics()
+    logMetrics: () => performanceMonitor?.logMetrics(),
   };
 }
 
 // Utility for measuring component render time
 export function measureRenderTime<T extends (...args: any[]) => any>(
   fn: T,
-  componentName: string
+  componentName: string,
 ): T {
   return ((...args: any[]) => {
     const start = performance.now();
     const result = fn(...args);
     const end = performance.now();
-    
-    if (end - start > 16) { // Only log if render takes >16ms (affects 60fps)
-      console.warn(`🐌 Slow render: ${componentName} took ${(end - start).toFixed(2)}ms`);
+
+    if (end - start > 16) {
+      // Only log if render takes >16ms (affects 60fps)
+      console.warn(
+        `🐌 Slow render: ${componentName} took ${(end - start).toFixed(2)}ms`,
+      );
     }
-    
+
     return result;
   }) as T;
 }
