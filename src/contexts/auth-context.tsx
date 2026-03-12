@@ -58,21 +58,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     let hasInitialized = false;
 
+    const syncAuthState = (nextSession: Session | null) => {
+      setSession(nextSession);
+      setUser(transformUser(nextSession?.user ?? null));
+      setIsLoading(false);
+    };
+
+    const updateLastLogin = (userId: string) => {
+      window.setTimeout(() => {
+        void supabase
+          .from("users")
+          .update({ last_login: new Date().toISOString() })
+          .eq("id", userId)
+          .then(({ error }) => {
+            if (error) {
+              console.error("Error updating last login:", error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error updating last login:", error);
+          });
+      }, 0);
+    };
+
     const runAuthInit = () => {
       if (cancelled || hasInitialized) {
         return;
       }
 
       hasInitialized = true;
-
-      const sessionTimeoutId = window.setTimeout(() => {
-        if (!cancelled) {
-          console.error("Auth session bootstrap timed out");
-          setSession(null);
-          setUser(null);
-          setIsLoading(false);
-        }
-      }, 5000);
 
       supabase.auth
         .getSession()
@@ -81,60 +95,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          window.clearTimeout(sessionTimeoutId);
-          setSession(session);
-          setUser(transformUser(session?.user ?? null));
-          setIsLoading(false);
+          syncAuthState(session);
         })
         .catch((error) => {
           if (cancelled) {
             return;
           }
 
-          window.clearTimeout(sessionTimeoutId);
           console.error("Error getting auth session:", error);
-          setSession(null);
-          setUser(null);
-          setIsLoading(false);
+          syncAuthState(null);
         });
 
       try {
-        subscription = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (cancelled) {
-              return;
+        subscription = supabase.auth.onAuthStateChange((event, session) => {
+          if (cancelled) {
+            return;
+          }
+
+          if (event === "PASSWORD_RECOVERY") {
+            if (!window.location.pathname.includes("/reset-password")) {
+              window.location.href = "/reset-password";
             }
+            return;
+          }
 
-            if (event === "PASSWORD_RECOVERY") {
-              if (!window.location.pathname.includes("/reset-password")) {
-                window.location.href = "/reset-password";
-              }
-              return;
-            }
+          syncAuthState(session);
 
-            setSession(session);
-            setUser(transformUser(session?.user ?? null));
-
-            if (event === "SIGNED_IN" && session?.user) {
-              try {
-                await supabase
-                  .from("users")
-                  .update({ last_login: new Date().toISOString() })
-                  .eq("id", session.user.id);
-              } catch (error) {
-                console.error("Error updating last login:", error);
-              }
-            }
-
-            setIsLoading(false);
-          },
-        ).data.subscription;
+          if (event === "SIGNED_IN" && session?.user) {
+            updateLastLogin(session.user.id);
+          }
+        }).data.subscription;
       } catch (error) {
-        window.clearTimeout(sessionTimeoutId);
         console.error("Error subscribing to auth state:", error);
-        setSession(null);
-        setUser(null);
-        setIsLoading(false);
+        syncAuthState(null);
       }
     };
 
