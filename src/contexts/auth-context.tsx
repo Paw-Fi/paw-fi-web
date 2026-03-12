@@ -56,8 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         >["data"]["subscription"]
       | null = null;
     let cancelled = false;
+    let hasInitialized = false;
 
     const runAuthInit = () => {
+      if (cancelled || hasInitialized) {
+        return;
+      }
+
+      hasInitialized = true;
+
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (cancelled) {
           return;
@@ -105,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /^\/checkout/,
       /^\/login/,
       /^\/register/,
+      /^\/referral/,
       /^\/reset-password/,
       /^\/forgot-password/,
       /^\/auth/,
@@ -112,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (shouldDeferSessionBootstrap) {
       const deferredInit = () => runAuthInit();
+      const timeoutId = window.setTimeout(deferredInit, 1200);
 
       if (typeof window.requestIdleCallback === "function") {
         const idleId = window.requestIdleCallback(deferredInit, {
@@ -120,12 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         return () => {
           cancelled = true;
+          window.clearTimeout(timeoutId);
           window.cancelIdleCallback?.(idleId);
           subscription?.unsubscribe();
         };
       }
-
-      const timeoutId = window.setTimeout(deferredInit, 800);
 
       return () => {
         cancelled = true;
