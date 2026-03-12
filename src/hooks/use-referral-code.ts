@@ -5,9 +5,12 @@
  * Uses React Query for caching and automatic refetching.
  */
 
-import { supabase } from '@/lib/supabase'
-import { UseReferralCodeState, GetReferralCodeResponse } from '@/types/referral.types'
-import { useQuery } from '@tanstack/react-query'
+import { supabase } from "@/lib/supabase";
+import {
+  UseReferralCodeState,
+  GetReferralCodeResponse,
+} from "@/types/referral.types";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Hook to fetch and manage user's referral code
@@ -16,49 +19,62 @@ import { useQuery } from '@tanstack/react-query'
  * @param options.enabled - Whether to run the query (default: true)
  * @returns {UseReferralCodeState} Referral code data and loading state
  */
-export function useReferralCode(options?: { enabled?: boolean }): UseReferralCodeState {
+export function useReferralCode(options?: {
+  enabled?: boolean;
+}): UseReferralCodeState {
   const {
     data,
     isLoading,
     error,
     refetch: queryRefetch,
   } = useQuery({
-    queryKey: ['referral-code'],
+    queryKey: ["referral-code"],
     queryFn: async (): Promise<GetReferralCodeResponse> => {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 30000),
+      );
+
       const {
         data: { session },
-      } = await supabase.auth.getSession()
+      } = await supabase.auth.getSession();
 
       if (!session) {
-        throw new Error('Not authenticated')
+        throw new Error("Not authenticated");
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-referral-code`,
+      const invokePromise = supabase.functions.invoke<GetReferralCodeResponse>(
+        "get-referral-code",
         {
-          method: 'GET',
           headers: {
             Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
           },
-        }
-      )
+          method: "GET",
+        },
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch referral code')
+      const { data, error: invokeError } = await Promise.race([
+        invokePromise,
+        timeoutPromise,
+      ]);
+
+      if (invokeError) {
+        throw new Error(invokeError.message || "Failed to fetch referral code");
       }
 
-      return response.json()
+      if (!data) {
+        throw new Error("Failed to fetch referral code");
+      }
+
+      return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 2,
     enabled: options?.enabled !== false, // Default to true
-  })
+  });
 
   const refetch = async () => {
-    await queryRefetch()
-  }
+    await queryRefetch();
+  };
 
   return {
     code: data?.code ?? null,
@@ -73,5 +89,5 @@ export function useReferralCode(options?: { enabled?: boolean }): UseReferralCod
     isLoading,
     error: error as Error | null,
     refetch,
-  }
+  };
 }

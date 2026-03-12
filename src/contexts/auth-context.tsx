@@ -56,46 +56,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         >["data"]["subscription"]
       | null = null;
     let cancelled = false;
+    let hasInitialized = false;
 
     const runAuthInit = () => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (cancelled) {
-          return;
+      if (cancelled || hasInitialized) {
+        return;
+      }
+
+      hasInitialized = true;
+
+      const sessionTimeoutId = window.setTimeout(() => {
+        if (!cancelled) {
+          console.error("Auth session bootstrap timed out");
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
         }
+      }, 5000);
 
-        setSession(session);
-        setUser(transformUser(session?.user ?? null));
-        setIsLoading(false);
-      });
-
-      subscription = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (cancelled) {
-          return;
-        }
-
-        if (event === "PASSWORD_RECOVERY") {
-          if (!window.location.pathname.includes("/reset-password")) {
-            window.location.href = "/reset-password";
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          if (cancelled) {
+            return;
           }
-          return;
-        }
 
-        setSession(session);
-        setUser(transformUser(session?.user ?? null));
-
-        if (event === "SIGNED_IN" && session?.user) {
-          try {
-            await supabase
-              .from("users")
-              .update({ last_login: new Date().toISOString() })
-              .eq("id", session.user.id);
-          } catch (error) {
-            console.error("Error updating last login:", error);
+          window.clearTimeout(sessionTimeoutId);
+          setSession(session);
+          setUser(transformUser(session?.user ?? null));
+          setIsLoading(false);
+        })
+        .catch((error) => {
+          if (cancelled) {
+            return;
           }
-        }
 
+          window.clearTimeout(sessionTimeoutId);
+          console.error("Error getting auth session:", error);
+          setSession(null);
+          setUser(null);
+          setIsLoading(false);
+        });
+
+      try {
+        subscription = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            if (cancelled) {
+              return;
+            }
+
+            if (event === "PASSWORD_RECOVERY") {
+              if (!window.location.pathname.includes("/reset-password")) {
+                window.location.href = "/reset-password";
+              }
+              return;
+            }
+
+            setSession(session);
+            setUser(transformUser(session?.user ?? null));
+
+            if (event === "SIGNED_IN" && session?.user) {
+              try {
+                await supabase
+                  .from("users")
+                  .update({ last_login: new Date().toISOString() })
+                  .eq("id", session.user.id);
+              } catch (error) {
+                console.error("Error updating last login:", error);
+              }
+            }
+
+            setIsLoading(false);
+          },
+        ).data.subscription;
+      } catch (error) {
+        window.clearTimeout(sessionTimeoutId);
+        console.error("Error subscribing to auth state:", error);
+        setSession(null);
+        setUser(null);
         setIsLoading(false);
-      }).data.subscription;
+      }
     };
 
     const currentPath = window.location.pathname;
@@ -105,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /^\/checkout/,
       /^\/login/,
       /^\/register/,
+      /^\/referral/,
       /^\/reset-password/,
       /^\/forgot-password/,
       /^\/auth/,
@@ -112,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (shouldDeferSessionBootstrap) {
       const deferredInit = () => runAuthInit();
+      const timeoutId = window.setTimeout(deferredInit, 1200);
 
       if (typeof window.requestIdleCallback === "function") {
         const idleId = window.requestIdleCallback(deferredInit, {
@@ -120,12 +162,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         return () => {
           cancelled = true;
+          window.clearTimeout(timeoutId);
           window.cancelIdleCallback?.(idleId);
           subscription?.unsubscribe();
         };
       }
-
-      const timeoutId = window.setTimeout(deferredInit, 800);
 
       return () => {
         cancelled = true;
