@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow, format } from "date-fns";
 import {
@@ -22,7 +21,6 @@ import {
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/auth-context";
 import type { Database } from "@/types/database.types";
 import {
   Card,
@@ -100,23 +98,12 @@ import {
 import { CreatorHeader } from "@/components/creator/creator-header";
 
 export function TicketsDashboardRouteComponent() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user, isLoading: isAuthLoading } = useAuth();
-
-  const creatorAccessQuery = useQuery({
-    queryKey: ["creator-access", user?.id],
-    queryFn: async () => fetchCreatorAccess(user!.id),
-    enabled: !isAuthLoading && !!user,
-    staleTime: 60_000,
-    retry: false,
-  });
 
   const ticketsQuery = useQuery({
     queryKey: ["support-tickets"],
     queryFn: fetchSupportTickets,
     staleTime: 30_000,
-    enabled: creatorAccessQuery.data?.is_creator === true,
   });
 
   const updateStatusMutation = useMutation({
@@ -171,63 +158,6 @@ export function TicketsDashboardRouteComponent() {
 
   const tickets = useMemo(() => ticketsQuery.data ?? [], [ticketsQuery.data]);
   const statusStats = useMemo(() => buildStatusStats(tickets), [tickets]);
-
-  useEffect(() => {
-    if (isAuthLoading) {
-      return;
-    }
-
-    if (!user) {
-      void navigate({
-        to: "/login",
-        search: {
-          redirect: window.location.href,
-        },
-        replace: true,
-      });
-    }
-  }, [isAuthLoading, navigate, user]);
-
-  useEffect(() => {
-    if (!user || creatorAccessQuery.isLoading) {
-      return;
-    }
-
-    if (creatorAccessQuery.error) {
-      void navigate({
-        to: "/dashboard",
-        search: { notice: "creator_access_error" },
-        replace: true,
-      });
-      return;
-    }
-
-    if (creatorAccessQuery.data?.is_creator === false) {
-      void navigate({
-        to: "/dashboard",
-        search: { notice: "creator_only" },
-        replace: true,
-      });
-    }
-  }, [
-    creatorAccessQuery.data,
-    creatorAccessQuery.error,
-    creatorAccessQuery.isLoading,
-    navigate,
-    user,
-  ]);
-
-  if (isAuthLoading || (!user && !creatorAccessQuery.data)) {
-    return <TicketsPageState message="Checking your session..." />;
-  }
-
-  if (creatorAccessQuery.isLoading || creatorAccessQuery.isPending) {
-    return <TicketsPageState message="Verifying creator access..." />;
-  }
-
-  if (!creatorAccessQuery.data?.is_creator) {
-    return <TicketsPageState message="Redirecting..." />;
-  }
 
   return (
     <div className="min-h-screen bg-slate-950 py-10 text-white">
@@ -289,14 +219,6 @@ export function TicketsDashboardRouteComponent() {
           }
         />
       </div>
-    </div>
-  );
-}
-
-function TicketsPageState({ message }: { message: string }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
-      <div className="text-sm text-slate-300">{message}</div>
     </div>
   );
 }
@@ -1338,26 +1260,6 @@ async function fetchSupportTickets(): Promise<SupportTicketWithUser[]> {
   return (data as SupportTicketWithUser[]) ?? [];
 }
 
-async function fetchCreatorAccess(
-  userId: string,
-): Promise<CreatorAccessProfile> {
-  const { data, error } = await supabase
-    .from("users")
-    .select("id, is_creator")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Failed to verify creator access", error);
-    throw error;
-  }
-
-  return {
-    id: data?.id ?? userId,
-    is_creator: data?.is_creator ?? false,
-  };
-}
-
 async function updateTicketStatus({
   ticket,
   status,
@@ -1606,9 +1508,4 @@ interface TicketClosedEmailTemplate {
   subject: string;
   html: string;
   text: string;
-}
-
-interface CreatorAccessProfile {
-  id: string;
-  is_creator: boolean;
 }
