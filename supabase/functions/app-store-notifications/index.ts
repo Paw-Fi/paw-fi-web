@@ -3,11 +3,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import {
   Environment,
-  SignedDataVerifier,
-  type ResponseBodyV2DecodedPayload,
   type JWSTransactionDecodedPayload,
+  type ResponseBodyV2DecodedPayload,
+  SignedDataVerifier,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getCorsHeaders } from "../shared/cors.ts";
+import {
+  ensureAppStoreOwnership,
+  getAppStoreOwnershipBinding,
+  hasAppStoreOwnershipConflict,
+} from "../shared/iap-ownership.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
 
@@ -25,9 +30,24 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, {
-      httpClient: Stripe.createFetchHttpClient(),
-    })
+    httpClient: Stripe.createFetchHttpClient(),
+  })
   : null;
+
+function readBooleanEnv(name: string, defaultValue: boolean): boolean {
+  const raw = Deno.env.get(name);
+  if (!raw) return defaultValue;
+  return !["0", "false", "no", "off"].includes(raw.trim().toLowerCase());
+}
+
+const iapOwnershipBindingEnabled = readBooleanEnv(
+  "IAP_OWNERSHIP_BINDING_ENABLED",
+  true,
+);
+const iapOwnershipLegacyFallbackEnabled = readBooleanEnv(
+  "IAP_OWNERSHIP_LEGACY_FALLBACK_ENABLED",
+  true,
+);
 
 const appleRootCaUrls = [
   "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
@@ -101,13 +121,13 @@ async function cancelStripeSubscriptionIfPresent(
     .eq("user_id", userId)
     .maybeSingle();
 
-  const provider =
-    typeof existing?.provider === "string" ? existing.provider : null;
+  const provider = typeof existing?.provider === "string"
+    ? existing.provider
+    : null;
   const stripeSubscriptionId = existing?.stripe_subscription_id;
 
   // Heuristic: treat missing provider but present stripe subscription id as Stripe.
-  const shouldCancelStripe =
-    provider === "stripe" ||
+  const shouldCancelStripe = provider === "stripe" ||
     (provider == null && looksLikeStripeSubscriptionId(stripeSubscriptionId));
 
   if (!shouldCancelStripe) return;
@@ -199,8 +219,9 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { decoded, verifier, environment } =
-      await decodeNotification(signedPayload);
+    const { decoded, verifier, environment } = await decodeNotification(
+      signedPayload,
+    );
     const signedTransaction = asString(decoded.data?.signedTransactionInfo);
 
     if (!signedTransaction) {
@@ -213,8 +234,9 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const transaction =
-      await verifier.verifyAndDecodeTransaction(signedTransaction);
+    const transaction = await verifier.verifyAndDecodeTransaction(
+      signedTransaction,
+    );
     const storeProductId = asString(transaction.productId);
     const originalTransactionId = asString(transaction.originalTransactionId);
     const transactionId = asString(transaction.transactionId);
@@ -252,12 +274,49 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     let userId: string | null = null;
+    let hasLegacyOwnershipConflict = false;
+
+    if (iapOwnershipBindingEnabled) {
+      const existingBinding = await getAppStoreOwnershipBinding({
+        supabase,
+        originalTransactionId,
+      });
+      userId = existingBinding?.user_id ?? null;
+
+      if (userId == null) {
+        hasLegacyOwnershipConflict = await hasAppStoreOwnershipConflict({
+          supabase,
+          originalTransactionId,
+        });
+      }
+    }
+
     const appAccountToken = asString(transaction.appAccountToken);
-    if (appAccountToken && isUuid(appAccountToken)) {
+    if (!userId && appAccountToken && isUuid(appAccountToken)) {
       userId = appAccountToken;
     }
 
-    if (!userId) {
+    if (hasLegacyOwnershipConflict) {
+      console.warn(
+        "Ignoring App Store notification for unresolved legacy ownership conflict",
+        {
+          originalTransactionId,
+          transactionId,
+        },
+      );
+      return new Response(
+        JSON.stringify({
+          status: "ignored",
+          reason: "Ownership conflict requires review",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (!userId && iapOwnershipLegacyFallbackEnabled) {
       const orFilters = [
         `app_store_original_transaction_id.eq.${originalTransactionId}`,
       ];
@@ -290,7 +349,29 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const resolvedUserId = userId;
+    const bindingDecision = iapOwnershipBindingEnabled
+      ? await ensureAppStoreOwnership({
+        supabase,
+        provider: "app_store",
+        originalTransactionId,
+        currentUserId: userId,
+        transactionId,
+        storeProductId,
+        environment,
+        claimSource: "app_store_notification",
+      })
+      : null;
+
+    if (bindingDecision?.kind === "owned_by_another_user") {
+      console.warn("App Store notification resolved to existing owner", {
+        originalTransactionId,
+        transactionId,
+        candidateUserId: userId,
+        ownerUserId: bindingDecision.binding.user_id,
+      });
+    }
+
+    const resolvedUserId = bindingDecision?.binding.user_id ?? userId;
 
     // Best-effort: If user switches to App Store billing, cancel any existing Stripe recurring sub
     // to avoid double-billing.
@@ -306,8 +387,9 @@ serve(async (req: Request): Promise<Response> => {
       plan: catalogProduct.plan,
       status,
       billing_interval: catalogProduct.billing_interval,
-      current_period_end:
-        catalogProduct.plan === "lifetime" ? null : expiresIso,
+      current_period_end: catalogProduct.plan === "lifetime"
+        ? null
+        : expiresIso,
       cancel_at_period_end: false,
       // Provider hygiene: clear non-App-Store identifiers.
       stripe_customer_id: null,

@@ -8,12 +8,18 @@ import {
   AppStoreServerAPIClient,
   Environment,
   GetTransactionHistoryVersion,
+  type JWSTransactionDecodedPayload,
   Order,
   ProductType,
   SignedDataVerifier,
-  type JWSTransactionDecodedPayload,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getGoogleAccessToken } from "../shared/google-auth.ts";
+import {
+  ensureAppStoreOwnership,
+  hasAppStoreOwnershipConflict,
+  PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+  purchaseOwnershipConflictMessage,
+} from "../shared/iap-ownership.ts";
 
 type Platform = "ios" | "android";
 
@@ -103,7 +109,9 @@ const defaultAppStoreEnvironment = isProductionEnv
   : Environment.SANDBOX;
 
 console.log(
-  `🌍 Environment config: ENV="${envSecret}", isProduction=${isProductionEnv}, defaultAppStoreEnv=${isProductionEnv ? "Production" : "Sandbox"}`,
+  `🌍 Environment config: ENV="${envSecret}", isProduction=${isProductionEnv}, defaultAppStoreEnv=${
+    isProductionEnv ? "Production" : "Sandbox"
+  }`,
 );
 
 // APP_STORE_SHARED_SECRET
@@ -128,6 +136,17 @@ const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, { httpClient: Stripe.createFetchHttpClient() })
   : null;
+
+function readBooleanEnv(name: string, defaultValue: boolean): boolean {
+  const raw = Deno.env.get(name);
+  if (!raw) return defaultValue;
+  return !["0", "false", "no", "off"].includes(raw.trim().toLowerCase());
+}
+
+const iapOwnershipBindingEnabled = readBooleanEnv(
+  "IAP_OWNERSHIP_BINDING_ENABLED",
+  true,
+);
 
 const appleRootCaUrls = [
   "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
@@ -439,8 +458,7 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription =
-        !!ownerSub &&
+      const ownerHasActiveSubscription = !!ownerSub &&
         !ownerSub.bound_to_user_id &&
         ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
           ownerSub.status === "trialing" ||
@@ -552,10 +570,9 @@ serve(async (req: Request) => {
         }
 
         const envString = decodedHint.environment?.toLowerCase();
-        const envHint =
-          envString === "sandbox"
-            ? Environment.SANDBOX
-            : Environment.PRODUCTION;
+        const envHint = envString === "sandbox"
+          ? Environment.SANDBOX
+          : Environment.PRODUCTION;
 
         // ============================================================
         // DENO COMPATIBILITY: Skip local JWS cryptographic verification
@@ -581,7 +598,8 @@ serve(async (req: Request) => {
           return new Response(
             JSON.stringify({
               error: "Bundle ID mismatch",
-              details: `Expected ${appStoreBundleId}, got ${decodedHint.bundleId}`,
+              details:
+                `Expected ${appStoreBundleId}, got ${decodedHint.bundleId}`,
             }),
             {
               status: 400,
@@ -608,10 +626,9 @@ serve(async (req: Request) => {
 
             // If not found, try the other environment
             if (!serverTransaction) {
-              const otherEnv =
-                envHint === Environment.SANDBOX
-                  ? Environment.PRODUCTION
-                  : Environment.SANDBOX;
+              const otherEnv = envHint === Environment.SANDBOX
+                ? Environment.PRODUCTION
+                : Environment.SANDBOX;
               console.log("🔐 Retrying with environment:", otherEnv);
               serverTransaction = await fetchLatestAppStoreTransaction({
                 originalTransactionId: decodedHint.originalTransactionId,
@@ -787,7 +804,8 @@ serve(async (req: Request) => {
                 serverRevocationDate,
                 serverExpiresDate: serverTransaction.expiresDate,
                 clientExpiresDate: decodedTransaction.expiresDate,
-                note: "Using client transaction data, server API for revocation only",
+                note:
+                  "Using client transaction data, server API for revocation only",
               });
             } else {
               console.log(
@@ -838,8 +856,8 @@ serve(async (req: Request) => {
         }
 
         transactionId = decodedTransaction.transactionId ?? null;
-        originalTransactionId =
-          decodedTransaction.originalTransactionId ?? null;
+        originalTransactionId = decodedTransaction.originalTransactionId ??
+          null;
 
         if (plan === "lifetime") {
           // Non-consumable: just needs to exist and not be revoked
@@ -853,10 +871,9 @@ serve(async (req: Request) => {
           // Parse expiresDate safely (it's milliseconds as number or string)
           let expiresMs: number | null = null;
           if (expiresDate !== undefined && expiresDate !== null) {
-            expiresMs =
-              typeof expiresDate === "number"
-                ? expiresDate
-                : parseInt(String(expiresDate), 10);
+            expiresMs = typeof expiresDate === "number"
+              ? expiresDate
+              : parseInt(String(expiresDate), 10);
 
             if (!Number.isFinite(expiresMs)) {
               expiresMs = null;
@@ -885,8 +902,8 @@ serve(async (req: Request) => {
 
           // For Sandbox: ALWAYS calculate proper period end
           // For Production: Use Apple's date if valid and in future, otherwise calculate
-          const shouldUseAppleDate =
-            !isSandboxEnv && expiresMs && expiresMs > now;
+          const shouldUseAppleDate = !isSandboxEnv && expiresMs &&
+            expiresMs > now;
 
           if (shouldUseAppleDate) {
             // Production with valid future expiry date from Apple - use it
@@ -924,16 +941,17 @@ serve(async (req: Request) => {
               reason: isSandboxEnv
                 ? "Sandbox uses accelerated time - ignoring Apple's date"
                 : expiresMs === null
-                  ? "Missing expiry date"
-                  : "Expiry date in the past",
+                ? "Missing expiry date"
+                : "Expiry date in the past",
             });
           }
 
           console.log("Final subscription status:", {
             status,
             currentPeriodEnd,
-            environment:
-              environment === Environment.SANDBOX ? "Sandbox" : "Production",
+            environment: environment === Environment.SANDBOX
+              ? "Sandbox"
+              : "Production",
           });
         }
       } else {
@@ -981,10 +999,9 @@ serve(async (req: Request) => {
           );
         }
 
-        environment =
-          receiptResponse.environment?.toLowerCase() === "sandbox"
-            ? Environment.SANDBOX
-            : Environment.PRODUCTION;
+        environment = receiptResponse.environment?.toLowerCase() === "sandbox"
+          ? Environment.SANDBOX
+          : Environment.PRODUCTION;
 
         if (plan === "lifetime") {
           // Non-consumable: must exist in receipt.in_app without cancellation_date
@@ -1076,8 +1093,9 @@ serve(async (req: Request) => {
           if (!Number.isFinite(expiresMs) || expiresMs <= now) {
             status = "canceled";
           } else {
-            status =
-              latest["is_trial_period"] === "true" ? "trialing" : "active";
+            status = latest["is_trial_period"] === "true"
+              ? "trialing"
+              : "active";
           }
         }
 
@@ -1210,8 +1228,7 @@ serve(async (req: Request) => {
             currentPeriodEnd,
           });
           status = "active";
-        }
-        // For duplicates (repeated testing), check if recently created
+        } // For duplicates (repeated testing), check if recently created
         else if (isDuplicateVerification) {
           // Check when the subscription was last updated in our DB
           try {
@@ -1240,7 +1257,9 @@ serve(async (req: Request) => {
                 console.log("🔧 Sandbox duplicate override (recent):", {
                   wasStatus: status,
                   newStatus: "active",
-                  reason: `Duplicate verification but subscription updated ${Math.round(ageMinutes)} min ago`,
+                  reason: `Duplicate verification but subscription updated ${
+                    Math.round(ageMinutes)
+                  } min ago`,
                   currentPeriodEnd,
                 });
                 status = "active";
@@ -1260,8 +1279,77 @@ serve(async (req: Request) => {
         }
       }
 
-      const environmentString =
-        environment === Environment.SANDBOX ? "Sandbox" : "Production";
+      const environmentString = environment === Environment.SANDBOX
+        ? "Sandbox"
+        : "Production";
+
+      if (iapOwnershipBindingEnabled && originalTransactionId) {
+        const hasLegacyConflict = await hasAppStoreOwnershipConflict({
+          supabase,
+          originalTransactionId,
+        });
+
+        if (hasLegacyConflict) {
+          console.warn(
+            "Blocking verification for unresolved legacy ownership conflict",
+            {
+              originalTransactionId,
+              currentUserId: userId,
+            },
+          );
+          return new Response(
+            JSON.stringify({
+              error:
+                `${purchaseOwnershipConflictMessage()} If you still cannot restore after signing into the original account, please contact support.`,
+              code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+            }),
+            {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const ownershipDecision = await ensureAppStoreOwnership({
+          supabase,
+          provider: "app_store",
+          originalTransactionId,
+          currentUserId: userId,
+          transactionId,
+          storeProductId,
+          environment: environmentString,
+          claimSource: "verify_iap_purchase",
+        });
+
+        console.log("App Store ownership decision:", {
+          originalTransactionId,
+          currentUserId: userId,
+          ownerUserId: ownershipDecision.binding.user_id,
+          decision: ownershipDecision.kind,
+        });
+
+        if (ownershipDecision.kind === "owned_by_another_user") {
+          return new Response(
+            JSON.stringify({
+              error: purchaseOwnershipConflictMessage(),
+              code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+            }),
+            {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+      } else if (iapOwnershipBindingEnabled) {
+        console.warn(
+          "Skipping ownership binding because original transaction id is missing",
+          {
+            userId,
+            transactionId,
+            storeProductId,
+          },
+        );
+      }
 
       const subscriptionUpdate: Record<string, unknown> = {
         user_id: userId,
@@ -1313,10 +1401,9 @@ serve(async (req: Request) => {
           console.error("Failed to cancel previous Stripe subscription:", {
             userId,
             stripe_subscription_id: (existingSub as any).stripe_subscription_id,
-            error:
-              cancelError instanceof Error
-                ? cancelError.message
-                : String(cancelError),
+            error: cancelError instanceof Error
+              ? cancelError.message
+              : String(cancelError),
           });
         }
       }
@@ -1400,7 +1487,12 @@ serve(async (req: Request) => {
     let orderId: string | null = null;
 
     if (isLifetime) {
-      const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(androidPackageName)}/purchases/products/${encodeURIComponent(storeProductId)}/tokens/${encodeURIComponent(purchaseToken)}`;
+      const url =
+        `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${
+          encodeURIComponent(androidPackageName)
+        }/purchases/products/${encodeURIComponent(storeProductId)}/tokens/${
+          encodeURIComponent(purchaseToken)
+        }`;
       const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -1431,7 +1523,12 @@ serve(async (req: Request) => {
       }
       currentPeriodEnd = null;
     } else {
-      const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(androidPackageName)}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
+      const url =
+        `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${
+          encodeURIComponent(androidPackageName)
+        }/purchases/subscriptionsv2/tokens/${
+          encodeURIComponent(purchaseToken)
+        }`;
       const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -1562,10 +1659,9 @@ serve(async (req: Request) => {
         console.error("Failed to cancel previous Stripe subscription:", {
           userId,
           stripe_subscription_id: (existingSub as any).stripe_subscription_id,
-          error:
-            cancelError instanceof Error
-              ? cancelError.message
-              : String(cancelError),
+          error: cancelError instanceof Error
+            ? cancelError.message
+            : String(cancelError),
         });
       }
     }
