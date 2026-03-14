@@ -1,19 +1,54 @@
-// app/components/GoogleTagManager.jsx
-import { useEffect } from 'react';
-import ReactGA from 'react-ga4';
+import { useEffect, useRef } from "react";
 
-export function GoogleTagManager({ gtmId }: { gtmId: string }) {
+import { useRouterState } from "@tanstack/react-router";
+import ReactGA from "react-ga4";
+
+interface GoogleTagManagerProps {
+  gtmId: string;
+}
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+export function GoogleTagManager({ gtmId }: GoogleTagManagerProps) {
+  const initializedRef = useRef(false);
+  const location = useRouterState({
+    select: (state) => state.location,
+  });
+
   useEffect(() => {
-    // Initialize Google Analytics
+    if (initializedRef.current) {
+      return;
+    }
+
     ReactGA.initialize(gtmId);
-    
-    // Send pageview with current path
-    ReactGA.send({ 
-      hitType: "pageview", 
-      page: window.location.pathname,
-      title: document.title 
-    });
+    initializedRef.current = true;
   }, [gtmId]);
 
-  return null; // No JSX needed - react-ga4 handles script injection
+  useEffect(() => {
+    if (!initializedRef.current) {
+      return;
+    }
+
+    const page = `${location.pathname}${location.searchStr || ""}`;
+    const title = document.title;
+
+    ReactGA.send({
+      hitType: "pageview",
+      page,
+      title,
+    });
+
+    window.gtag?.("config", gtmId, {
+      page_path: page,
+      page_title: title,
+      page_location: window.location.href,
+    });
+  }, [gtmId, location.pathname, location.searchStr]);
+
+  return null;
 }

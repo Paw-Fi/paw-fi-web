@@ -32,6 +32,7 @@ import { useAuthQuerySync } from "@/hooks/use-auth-query-sync";
 import { ThemeInitScript } from "@/components/theme/theme-init-script";
 import ThemeSystemListener from "@/components/theme/theme-system-listener";
 import { PublicQueryShell } from "@/providers/public-query-shell";
+import { GoogleTagManager } from "@/components/google-tag-manager";
 
 export const Route = createRootRoute({
   head: () => {
@@ -124,6 +125,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-KBNN5QXD4G"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || []; function gtag(){window.dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-KBNN5QXD4G');`,
+          }}
+        />
         <PerformanceHints />
         <MonekoCriticalResources />
         <ThemeInitScript />
@@ -151,6 +161,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                   {/* Run auth/query sync only on the client to avoid SSR requiring QueryClient */}
                   <ClientOnly>
                     <AuthSyncClientOnly />
+                  </ClientOnly>
+
+                  <ClientOnly>
+                    <GoogleTagManager gtmId="G-KBNN5QXD4G" />
                   </ClientOnly>
 
                   {/* Use ClientOnly wrapper to prevent hydration mismatches */}
