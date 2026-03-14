@@ -415,7 +415,7 @@ async function main() {
 
   const campaignStartTime = Date.now();
   const campaignSubject = 'Quick update from Yifan (Co-founder of Moneko)';
-  const campaignPreviewText = 'We\'ve launched something special for our early members. Unlock lifetime access for you and a friend today.';
+  const campaignPreviewText = 'Thai language support is here 🇹🇭';
 
   const results = {
     total: userList.length,
