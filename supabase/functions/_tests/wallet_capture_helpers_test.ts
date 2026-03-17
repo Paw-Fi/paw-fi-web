@@ -4,6 +4,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   buildWalletCaptureIdempotencyKey,
+  isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
   resolveWalletCaptureScope,
   resolveWalletTransactionCurrency,
@@ -91,6 +92,31 @@ Deno.test("wallet capture idempotency key preserves explicit key", () => {
     "provided-key",
   );
 });
+
+Deno.test(
+  "wallet capture idempotency claim staleness handles fresh and stale claims",
+  () => {
+    const nowMs = new Date("2026-03-16T12:00:00.000Z").getTime();
+
+    assertEquals(
+      isWalletCaptureIdempotencyClaimStale(
+        "2026-03-16T11:59:30.000Z",
+        nowMs,
+        120_000,
+      ),
+      false,
+    );
+
+    assertEquals(
+      isWalletCaptureIdempotencyClaimStale(
+        "2026-03-16T11:57:30.000Z",
+        nowMs,
+        120_000,
+      ),
+      true,
+    );
+  },
+);
 
 Deno.test("wallet capture scope rejects unauthorized household access", () => {
   let errorMessage = "";

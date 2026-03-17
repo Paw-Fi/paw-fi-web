@@ -17,6 +17,8 @@ const VALID_CAPTURE_SOURCES = new Set([
   "android_notification_listener",
 ]);
 
+export const WALLET_CAPTURE_CLAIM_STALE_MS = 10 * 60 * 1000;
+
 function normalizeMerchantForDedup(value: string | null | undefined): string {
   if (!value) return "";
   return value
@@ -99,6 +101,22 @@ export function buildWalletCaptureIdempotencyKey(params: {
     normalizedPackage,
     normalizedExternalId,
   ].join("|");
+}
+
+export function isWalletCaptureIdempotencyClaimStale(
+  createdAt: string | Date | null | undefined,
+  nowMs = Date.now(),
+  staleMs = WALLET_CAPTURE_CLAIM_STALE_MS,
+): boolean {
+  if (!createdAt) return true;
+
+  const createdAtMs =
+    createdAt instanceof Date
+      ? createdAt.getTime()
+      : new Date(createdAt).getTime();
+
+  if (!Number.isFinite(createdAtMs)) return true;
+  return nowMs - createdAtMs >= staleMs;
 }
 
 export function resolveWalletCaptureScope(params: {

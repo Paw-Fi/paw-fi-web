@@ -221,6 +221,20 @@ BEGIN
   END IF;
 END $$;
 
+-- Add wallet capture idempotency key for auto-capture deduplication
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'expenses' AND column_name = 'wallet_capture_idempotency_key'
+  ) THEN
+    ALTER TABLE public.expenses
+    ADD COLUMN wallet_capture_idempotency_key TEXT;
+
+    COMMENT ON COLUMN public.expenses.wallet_capture_idempotency_key IS 'Unique idempotency key for Apple Wallet and Android notification auto-capture flows.';
+  END IF;
+END $$;
+
 -- ====================
 -- PERFORMANCE INDEXES
 -- ====================
@@ -245,6 +259,10 @@ CREATE INDEX IF NOT EXISTS idx_expenses_parent_recurring ON public.expenses(pare
 CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_idempotency
   ON public.expenses(household_id, user_id, idempotency_key)
   WHERE idempotency_key IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_wallet_capture_idempotency_key
+  ON public.expenses(wallet_capture_idempotency_key)
+  WHERE wallet_capture_idempotency_key IS NOT NULL;
 
 -- Multi-currency normalization queries
 CREATE INDEX IF NOT EXISTS idx_expenses_base_currency ON public.expenses(base_currency, household_id) WHERE base_currency IS NOT NULL;

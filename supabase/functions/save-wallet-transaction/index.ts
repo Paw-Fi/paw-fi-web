@@ -34,6 +34,7 @@ import {
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
 import {
   buildWalletCaptureIdempotencyKey,
+  isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
   resolveWalletCaptureScope,
   resolveWalletTransactionCurrency,
@@ -56,6 +57,9 @@ const CATEGORIZE_FUNCTION_CALLING_CONFIG = {
   mode: "ANY",
   allowedFunctionNames: ["categorize_transactions"],
 };
+
+const IDEMPOTENCY_PROCESSING_TTL_MS = 10 * 60 * 1000;
+const IDEMPOTENCY_KEY_TTL_HOURS = 24;
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -84,6 +88,18 @@ interface RequestBody {
   idempotencyKey?: string | null;
   clientCreatedAt?: string | null;
   transaction: TransactionPayload;
+}
+
+interface WalletCaptureIdempotencyRow {
+  id: string;
+  result?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+interface WalletCaptureClaimResult {
+  status: "claimed" | "cached" | "processing";
+  claimId?: string;
+  cachedResponse?: Record<string, unknown>;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -136,47 +152,200 @@ function buildDescription(tx: TransactionPayload): string {
 
 async function storeWalletCaptureIdempotencyResult(
   supabase: any,
+  claimId: string,
   key: string,
   result: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const { error } = await supabase.from("idempotency_keys").insert({
-    key,
-    result,
-    created_at: new Date().toISOString(),
-  });
+  const expiresAt = new Date(
+    Date.now() + IDEMPOTENCY_KEY_TTL_HOURS * 60 * 60 * 1000,
+  ).toISOString();
 
-  if (error && error.code !== "23505") {
+  const { data, error } = await supabase
+    .from("idempotency_keys")
+    .update({ result, expires_at: expiresAt })
+    .eq("id", claimId)
+    .is("result", null)
+    .select("result")
+    .maybeSingle();
+
+  if (!error && data?.result) {
+    return data.result as Record<string, unknown>;
+  }
+
+  if (error) {
     console.error(
       "[save-wallet-transaction] Failed to persist idempotency result:",
       error,
     );
   }
 
-  if (error?.code === "23505") {
-    const { data: existing } = await supabase
-      .from("idempotency_keys")
-      .select("result")
-      .eq("key", key)
-      .maybeSingle();
-
-    if (existing?.result) {
-      const cached = existing.result as Record<string, unknown>;
-      const cachedMeta = cached["meta"] && typeof cached["meta"] === "object"
-        ? (cached["meta"] as Record<string, unknown>)
-        : {};
-      return {
-        ...cached,
-        success: true,
-        duplicate: true,
-        meta: {
-          ...cachedMeta,
-          deduplicatedAt: new Date().toISOString(),
-        },
-      };
-    }
+  const existing = await readWalletCaptureIdempotencyRow(supabase, key);
+  if (existing?.result) {
+    return existing.result;
   }
 
   return result;
+}
+
+function buildDuplicateWalletCaptureResponse(
+  cached: Record<string, unknown>,
+  captureSource: string,
+): Record<string, unknown> {
+  const cachedMeta =
+    cached["meta"] && typeof cached["meta"] === "object"
+      ? (cached["meta"] as Record<string, unknown>)
+      : {};
+
+  return {
+    ...cached,
+    success: true,
+    duplicate: true,
+    meta: {
+      ...cachedMeta,
+      captureSource,
+      deduplicatedAt: new Date().toISOString(),
+    },
+  };
+}
+
+async function readWalletCaptureIdempotencyRow(
+  supabase: any,
+  key: string,
+): Promise<WalletCaptureIdempotencyRow | null> {
+  const { data, error } = await supabase
+    .from("idempotency_keys")
+    .select("id, result, created_at")
+    .eq("key", key)
+    .maybeSingle();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    id: data.id as string,
+    result: (data.result ?? null) as Record<string, unknown> | null,
+    created_at: data.created_at as string | null,
+  };
+}
+
+async function releaseWalletCaptureIdempotencyClaim(
+  supabase: any,
+  claimId: string | null,
+): Promise<void> {
+  if (!claimId) return;
+
+  const { error } = await supabase
+    .from("idempotency_keys")
+    .delete()
+    .eq("id", claimId)
+    .is("result", null);
+
+  if (error) {
+    console.error(
+      "[save-wallet-transaction] Failed to release idempotency claim:",
+      error,
+    );
+  }
+}
+
+async function claimWalletCaptureIdempotencyKey(
+  supabase: any,
+  key: string,
+  captureSource: string,
+  allowStaleTakeover = true,
+): Promise<WalletCaptureClaimResult> {
+  const now = new Date();
+  const expiresAt = new Date(
+    now.getTime() + IDEMPOTENCY_PROCESSING_TTL_MS,
+  ).toISOString();
+
+  const { data, error } = await supabase
+    .from("idempotency_keys")
+    .insert({
+      key,
+      result: null,
+      created_at: now.toISOString(),
+      expires_at: expiresAt,
+    })
+    .select("id")
+    .single();
+
+  if (!error && data?.id) {
+    return {
+      status: "claimed",
+      claimId: data.id as string,
+    };
+  }
+
+  if (error?.code !== "23505") {
+    throw error ?? new Error("Failed to claim idempotency key");
+  }
+
+  const existing = await readWalletCaptureIdempotencyRow(supabase, key);
+  if (existing?.result) {
+    return {
+      status: "cached",
+      cachedResponse: buildDuplicateWalletCaptureResponse(
+        existing.result,
+        captureSource,
+      ),
+    };
+  }
+
+  if (
+    allowStaleTakeover &&
+    existing?.id &&
+    isWalletCaptureIdempotencyClaimStale(
+      existing.created_at,
+      Date.now(),
+      IDEMPOTENCY_PROCESSING_TTL_MS,
+    )
+  ) {
+    const { error: deleteError } = await supabase
+      .from("idempotency_keys")
+      .delete()
+      .eq("id", existing.id)
+      .is("result", null);
+
+    if (!deleteError) {
+      return claimWalletCaptureIdempotencyKey(
+        supabase,
+        key,
+        captureSource,
+        false,
+      );
+    }
+  }
+
+  return { status: "processing" };
+}
+
+async function cleanupExpenseInsert(
+  supabase: any,
+  expenseId: string,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", expenseId);
+
+  if (error) {
+    console.error(
+      "[save-wallet-transaction] Failed to cleanup incomplete expense:",
+      error,
+    );
+    return false;
+  }
+
+  return true;
+}
+
+function requireWalletCaptureClaimId(claimId: string | null): string {
+  if (!claimId) {
+    throw new Error("Missing idempotency claim id");
+  }
+  return claimId;
 }
 
 // ─── Gemini AI helpers (adapted from analyze-core.ts) ───────────────────────
@@ -326,6 +495,8 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  let idempotencyClaimId: string | null = null;
+
   try {
     // ── Method gate ───────────────────────────────────────────────────
     if (req.method !== "POST") {
@@ -339,11 +510,9 @@ Deno.serve(async (req: Request) => {
     const captureSource = normalizeWalletCaptureSource(body.captureSource);
     if (!captureSource) {
       return errorResponse(
-        `captureSource must be one of: ${
-          [...VALID_CAPTURE_SOURCES].join(
-            ", ",
-          )
-        }`,
+        `captureSource must be one of: ${[...VALID_CAPTURE_SOURCES].join(
+          ", ",
+        )}`,
         400,
       );
     }
@@ -382,11 +551,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Merchant — need at least one of merchantName or rawMerchant
-    const merchantDisplay = (tx.merchantName ?? tx.rawMerchant ?? "").trim();
+    // Merchant — allow note/package fallback for notification-based captures.
+    const merchantDisplay = (
+      tx.merchantName ??
+      tx.rawMerchant ??
+      tx.note ??
+      resolveWalletTransactionPackageName(tx) ??
+      ""
+    ).trim();
     if (!merchantDisplay) {
       return errorResponse(
-        "At least one of transaction.merchantName or transaction.rawMerchant is required",
+        "At least one transaction descriptor is required",
         400,
       );
     }
@@ -488,9 +663,8 @@ Deno.serve(async (req: Request) => {
           .select("user_id")
           .eq("household_id", householdId);
 
-        householdMembers = membersError || !Array.isArray(members)
-          ? []
-          : members;
+        householdMembers =
+          membersError || !Array.isArray(members) ? [] : members;
       }
 
       try {
@@ -522,7 +696,7 @@ Deno.serve(async (req: Request) => {
     {
       const { data: contact, error: contactError } = await supabase
         .from("user_contacts")
-        .select("id, preferred_currency")
+        .select("id, preferred_currency, wallet_capture_enabled")
         .eq("user_id", userId)
         .order("id", { ascending: false })
         .limit(1)
@@ -537,6 +711,18 @@ Deno.serve(async (req: Request) => {
           "Failed to resolve user contact",
           500,
           "SERVER_ERROR",
+        );
+      }
+
+      if (contact && contact.wallet_capture_enabled === false) {
+        console.log(
+          "[save-wallet-transaction] Wallet capture disabled for user:",
+          userId,
+        );
+        return errorResponse(
+          "Wallet capture is disabled",
+          403,
+          "WALLET_CAPTURE_DISABLED",
         );
       }
 
@@ -572,28 +758,22 @@ Deno.serve(async (req: Request) => {
       packageName: resolveWalletTransactionPackageName(tx),
     });
 
-    const { data: existingIdempotency } = await supabase
-      .from("idempotency_keys")
-      .select("result")
-      .eq("key", requestIdempotencyKey)
-      .maybeSingle();
-
-    if (existingIdempotency?.result) {
-      const cached = existingIdempotency.result as Record<string, unknown>;
-      const cachedMeta = cached["meta"] && typeof cached["meta"] === "object"
-        ? (cached["meta"] as Record<string, unknown>)
-        : {};
-      return successResponse({
-        ...cached,
-        success: true,
-        duplicate: true,
-        meta: {
-          ...cachedMeta,
-          captureSource,
-          deduplicatedAt: new Date().toISOString(),
-        },
-      });
+    const claimResult = await claimWalletCaptureIdempotencyKey(
+      supabase,
+      requestIdempotencyKey,
+      captureSource,
+    );
+    if (claimResult.status === "cached" && claimResult.cachedResponse) {
+      return successResponse(claimResult.cachedResponse);
     }
+    if (claimResult.status === "processing") {
+      return errorResponse(
+        "An identical wallet capture is already being processed",
+        409,
+        "REQUEST_IN_PROGRESS",
+      );
+    }
+    idempotencyClaimId = claimResult.claimId ?? null;
 
     // ── Category resolution ───────────────────────────────────────────
     // Step 1: Load user category context (custom categories, preferences, remaps)
@@ -659,16 +839,53 @@ Deno.serve(async (req: Request) => {
         created_at: body.clientCreatedAt || new Date().toISOString(),
         is_recurring: false,
         recurrence_rule: null,
-        household_id: isPortfolio ? householdId || null : null,
+        household_id: householdId,
+        wallet_capture_idempotency_key: requestIdempotencyKey,
       })
       .select()
       .single();
 
     if (expenseError) {
+      if (expenseError.code === "23505") {
+        const { data: existingExpense } = await supabase
+          .from("expenses")
+          .select("id, category, amount_cents, currency")
+          .eq("wallet_capture_idempotency_key", requestIdempotencyKey)
+          .maybeSingle();
+
+        if (existingExpense) {
+          const duplicateResponse = {
+            success: true,
+            duplicate: true,
+            data: {
+              id: existingExpense.id,
+              category: existingExpense.category ?? resolvedCategory,
+              amount_cents: existingExpense.amount_cents ?? amountCents,
+              currency: existingExpense.currency ?? currency,
+            },
+            meta: {
+              captureSource,
+              resolvedCategory: existingExpense.category ?? resolvedCategory,
+              deduplicatedAt: new Date().toISOString(),
+            },
+          };
+
+          return successResponse(
+            await storeWalletCaptureIdempotencyResult(
+              supabase,
+              requireWalletCaptureClaimId(idempotencyClaimId),
+              requestIdempotencyKey,
+              duplicateResponse,
+            ),
+          );
+        }
+      }
+
       console.error(
         "[save-wallet-transaction] Error saving expense:",
         expenseError,
       );
+      await releaseWalletCaptureIdempotencyClaim(supabase, idempotencyClaimId);
       return errorResponse("Failed to save expense", 500, "SERVER_ERROR");
     }
 
@@ -718,6 +935,7 @@ Deno.serve(async (req: Request) => {
       return successResponse(
         await storeWalletCaptureIdempotencyResult(
           supabase,
+          requireWalletCaptureClaimId(idempotencyClaimId),
           requestIdempotencyKey,
           responseBody,
         ),
@@ -751,27 +969,20 @@ Deno.serve(async (req: Request) => {
           "[save-wallet-transaction] Error creating split group:",
           splitGroupError,
         );
-        const responseBody = {
-          success: true,
-          duplicate: false,
-          data: {
-            id: expense.id,
-            category: resolvedCategory,
-            amount_cents: amountCents,
-            currency,
-          },
-          meta: {
-            captureSource,
-            resolvedCategory,
-            warning: "Expense saved but split group creation failed",
-          },
-        };
-        return successResponse(
-          await storeWalletCaptureIdempotencyResult(
+        const didCleanupExpense = await cleanupExpenseInsert(
+          supabase,
+          expense.id,
+        );
+        if (didCleanupExpense) {
+          await releaseWalletCaptureIdempotencyClaim(
             supabase,
-            requestIdempotencyKey,
-            responseBody,
-          ),
+            idempotencyClaimId,
+          );
+        }
+        return errorResponse(
+          "Failed to save household split",
+          500,
+          "SERVER_ERROR",
         );
       }
 
@@ -798,6 +1009,21 @@ Deno.serve(async (req: Request) => {
           "[save-wallet-transaction] Error creating split lines:",
           splitLinesError,
         );
+        const didCleanupExpense = await cleanupExpenseInsert(
+          supabase,
+          expense.id,
+        );
+        if (didCleanupExpense) {
+          await releaseWalletCaptureIdempotencyClaim(
+            supabase,
+            idempotencyClaimId,
+          );
+        }
+        return errorResponse(
+          "Failed to save household split",
+          500,
+          "SERVER_ERROR",
+        );
       } else {
         console.log(
           "[save-wallet-transaction] Split lines created for",
@@ -807,13 +1033,35 @@ Deno.serve(async (req: Request) => {
       }
 
       // Update expense with split_group_id and household_id
-      await supabase
+      const { error: expenseUpdateError } = await supabase
         .from("expenses")
         .update({
           split_group_id: splitGroup.id,
           household_id: householdId,
         })
         .eq("id", expense.id);
+
+      if (expenseUpdateError) {
+        console.error(
+          "[save-wallet-transaction] Error updating split expense:",
+          expenseUpdateError,
+        );
+        const didCleanupExpense = await cleanupExpenseInsert(
+          supabase,
+          expense.id,
+        );
+        if (didCleanupExpense) {
+          await releaseWalletCaptureIdempotencyClaim(
+            supabase,
+            idempotencyClaimId,
+          );
+        }
+        return errorResponse(
+          "Failed to save household split",
+          500,
+          "SERVER_ERROR",
+        );
+      }
 
       // Refresh expense data
       const { data: refreshedExpense } = await supabase
@@ -889,12 +1137,38 @@ Deno.serve(async (req: Request) => {
     return successResponse(
       await storeWalletCaptureIdempotencyResult(
         supabase,
+        requireWalletCaptureClaimId(idempotencyClaimId),
         requestIdempotencyKey,
         responseBody,
       ),
     );
   } catch (error) {
     console.error("[save-wallet-transaction] Unhandled error:", error);
+    if (
+      typeof Deno.env.get("SUPABASE_URL") === "string" &&
+      typeof Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") === "string" &&
+      idempotencyClaimId
+    ) {
+      try {
+        const cleanupClient = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+          },
+        );
+        await releaseWalletCaptureIdempotencyClaim(
+          cleanupClient,
+          idempotencyClaimId,
+        );
+      } catch (_) {
+        // Best-effort cleanup only.
+      }
+    }
     await reportEdgeFunctionError({
       functionName: "save-wallet-transaction",
       error,

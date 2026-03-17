@@ -34,11 +34,35 @@ export function normalizeCalendarDateString(value: unknown): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
+  // 1. Already YYYY-MM-DD (optionally with time suffix)
   const ymdPrefix = /^(\d{4}-\d{2}-\d{2})(?:[Tt\s].*)?$/.exec(trimmed)?.[1];
   if (ymdPrefix && isValidYyyyMmDd(ymdPrefix)) {
     return ymdPrefix;
   }
 
+  // 2. DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY (day-first, common outside US)
+  const dmyMatch = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(trimmed);
+  if (dmyMatch) {
+    const d = Number(dmyMatch[1]);
+    const m = Number(dmyMatch[2]);
+    const y = Number(dmyMatch[3]);
+    // If day > 12, it can only be DD/MM/YYYY
+    // If both <= 12, prefer DD/MM/YYYY (international convention)
+    const candidate = `${y}-${pad2(m)}-${pad2(d)}`;
+    if (isValidYyyyMmDd(candidate)) return candidate;
+    // Try swapped (MM/DD/YYYY)
+    const swapped = `${y}-${pad2(d)}-${pad2(m)}`;
+    if (isValidYyyyMmDd(swapped)) return swapped;
+  }
+
+  // 3. YYYY/MM/DD or YYYY.MM.DD
+  const ymdAlt = /^(\d{4})[/.](\d{1,2})[/.](\d{1,2})$/.exec(trimmed);
+  if (ymdAlt) {
+    const candidate = `${ymdAlt[1]}-${pad2(Number(ymdAlt[2]))}-${pad2(Number(ymdAlt[3]))}`;
+    if (isValidYyyyMmDd(candidate)) return candidate;
+  }
+
+  // 4. Fallback: JS Date constructor
   const parsed = new Date(trimmed);
   if (Number.isNaN(parsed.getTime())) return null;
 
