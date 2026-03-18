@@ -128,6 +128,12 @@ Allow: /blogs/common-investing-mistakes-avoidance-strategies
 Allow: /blogs/investing-in-gold-2025-safe-haven-analysis
 Allow: /blogs/cryptocurrency-vs-gold-comparative-analysis-investment-hedge
 Allow: /blogs/real-estate-crowdfunding-investing-without-direct-ownership
+Allow: /blogs/budgeting-on-whatsapp-2026
+Allow: /blogs/ynab-alternatives-2026
+Allow: /blogs/telegram-bots-budgeting-2026
+Allow: /blogs/whatsapp-budget-setup-2026
+Allow: /blogs/whatsapp-vs-apps-2026
+Allow: /blogs/apple-wallet-sync-2026
 
 # Financial calculators - high SEO value
 Allow: /calculators/compound-calculator

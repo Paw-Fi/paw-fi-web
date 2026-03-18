@@ -1,5 +1,11 @@
 import { Blog, BlogAuthor, BlogTag } from "@/components/blogs/blogs.typing";
 import RoeImg from "@/assets/images/blogs/roe.jpg";// Replace with actual image path
+import whatsappBlog from './new-blog-whatsapp-budgeting';
+import ynabAlternativesBlog from './new-blog-ynab-alternatives';
+import telegramBotsBlog from './new-blog-telegram-bots';
+import whatsappBudgetSetupBlog from './new-blog-whatsapp-budget-setup';
+import whatsappVsAppsBlog from './new-blog-whatsapp-vs-apps';
+import appleWalletSyncBlog from './new-blog-apple-wallet-sync';
 
 // --- Reusable Authors ---
 export const authorsData: BlogAuthor[] = [
@@ -3682,4 +3688,10 @@ Moneko isn't just an app; it's a dashboard for your entire FIRE journey.
     keywords: "financial independence, fire movement, how to retire early, financial freedom, early retirement",
   },
 },
+whatsappBlog,
+  ynabAlternativesBlog,
+  telegramBotsBlog,
+  whatsappBudgetSetupBlog,
+  whatsappVsAppsBlog,
+  appleWalletSyncBlog,
 ];

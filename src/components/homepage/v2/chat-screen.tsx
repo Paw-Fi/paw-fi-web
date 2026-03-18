@@ -46,7 +46,7 @@ export function ChatScreen() {
       {/* WhatsApp-style Header */}
       <div className="flex items-center gap-3 bg-[#202c33] px-4 py-3 shadow-sm">
         <Avatar className="h-10 w-10">
-          <AvatarImage src="/logo192.png" />
+          <AvatarImage src="/logo192.webp" alt="Moneko logo" />
           <AvatarFallback>M</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
@@ -56,7 +56,14 @@ export function ChatScreen() {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 space-y-4 overflow-y-auto bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat p-4">
+      <div
+        className="flex-1 space-y-4 overflow-y-auto bg-[#0f1a21] p-4"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0)",
+          backgroundSize: "14px 14px",
+        }}
+      >
         {messages.map((message, index) => (
           <motion.div
             key={message.id}

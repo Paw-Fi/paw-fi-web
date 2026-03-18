@@ -46,6 +46,9 @@ export function CriticalResources({
 }
 
 export function MonekoCriticalResources() {
+  const googleFontsStylesheet =
+    "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap";
+
   return (
     <>
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -55,9 +58,21 @@ export function MonekoCriticalResources() {
         crossOrigin="anonymous"
       />
       <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
-        rel="stylesheet"
+        rel="preload"
+        href={googleFontsStylesheet}
+        as="style"
       />
+      <link
+        href={googleFontsStylesheet}
+        rel="stylesheet"
+        media="print"
+        onLoad={(event) => {
+          event.currentTarget.media = "all";
+        }}
+      />
+      <noscript>
+        <link href={googleFontsStylesheet} rel="stylesheet" />
+      </noscript>
 
       <CriticalResources fonts={[]} images={["/logo192.webp"]} />
     </>

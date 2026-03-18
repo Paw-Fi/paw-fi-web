@@ -109,7 +109,14 @@ const WhatsAppVisual = () => {
       ref={ref}
       className="relative flex h-full w-full flex-col overflow-hidden bg-[#efeae2] p-6 transition-colors duration-300 dark:bg-[#0b141a]"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat opacity-40 dark:opacity-5" />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-25 dark:opacity-10"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 1px, transparent 0)",
+          backgroundSize: "14px 14px",
+        }}
+      />
 
       <div
         ref={scrollRef}
@@ -140,7 +147,10 @@ const WhatsAppVisual = () => {
                   src={msg.imageSrc}
                   alt={msg.imageAlt ?? "Receipt"}
                   className="mb-1 w-full max-w-[220px] rounded-md border border-black/5 object-cover"
+                  width={220}
+                  height={140}
                   loading="lazy"
+                  decoding="async"
                 />
               )}
               {msg.content.length > 0 &&
@@ -347,7 +357,15 @@ const InsightsVisual = () => {
         {/* Answer */}
         {step >= 1 && (
           <div className="flex items-start gap-3">
-            <img src={monekoIcon} className="size-8 rounded-full" alt="AI" />
+            <img
+              src={monekoIcon}
+              className="size-8 rounded-full"
+              alt="AI"
+              width={32}
+              height={32}
+              loading="lazy"
+              decoding="async"
+            />
             <div className="bg-primary text-primary-foreground max-w-[90%] rounded-2xl rounded-tl-sm p-3 shadow-sm dark:text-white">
               <p className="text-sm">
                 Yes! Based on your current savings rate of {currencySymbol}

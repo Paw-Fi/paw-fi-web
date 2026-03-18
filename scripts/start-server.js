@@ -17,6 +17,39 @@ const defaultServer = resolve(projectRoot, 'dist/server/server.js')
 // Directory containing built client assets
 const clientDir = resolve(projectRoot, 'dist/client')
 
+function withSecurityHeaders(response) {
+  if (process.env.NODE_ENV !== 'production' || !response) {
+    return response
+  }
+
+  const headers = new Headers(response.headers)
+  headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: https: blob:",
+      "connect-src 'self' https://api.supabase.co https://*.supabase.co https://www.google-analytics.com https://www.reddit.com https://reddit.com https://api.reddit.com",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; '),
+  )
+  headers.set('X-Content-Type-Options', 'nosniff')
+  headers.set('X-Frame-Options', 'SAMEORIGIN')
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()')
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
 async function start() {
   // Set PORT from environment variable, default to 3000
   const port = process.env.PORT || '3000'
@@ -135,9 +168,10 @@ async function start() {
       fetch: async (request) => {
         const staticResponse = await handleStaticAsset(request)
         if (staticResponse) {
-          return staticResponse
+          return withSecurityHeaders(staticResponse)
         }
-        return fetchHandler(request)
+        const response = await fetchHandler(request)
+        return withSecurityHeaders(response)
       },
     })
 

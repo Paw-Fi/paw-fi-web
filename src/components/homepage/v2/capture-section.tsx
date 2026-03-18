@@ -160,7 +160,14 @@ function DemoScreen({ mode }: { mode: "text" | "voice" | "camera" }) {
       {/* Chat Area */}
       <div className="relative flex-1 space-y-4 overflow-y-auto p-4">
         {/* Background Pattern */}
-        <div className="pointer-events-none absolute inset-0 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] bg-repeat opacity-40 dark:opacity-5" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-30 dark:opacity-10"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, rgba(0,0,0,0.1) 1px, transparent 0)",
+            backgroundSize: "14px 14px",
+          }}
+        />
 
         <div className="relative z-10 mx-auto mb-6 w-max rounded-lg bg-[#e1f3fb] px-3 py-1 text-center text-[10px] tracking-wide text-[#54656f] uppercase opacity-90 shadow-sm transition-colors duration-300 dark:bg-[#1f2c34] dark:text-[#8696a0]">
           Today
@@ -239,6 +246,10 @@ function DemoScreen({ mode }: { mode: "text" | "voice" | "camera" }) {
                         src="https://github.com/shadcn.png"
                         className="h-full w-full opacity-50 grayscale"
                         alt="me"
+                        width={12}
+                        height={12}
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   </div>
@@ -291,6 +302,10 @@ function DemoScreen({ mode }: { mode: "text" | "voice" | "camera" }) {
                         src={receiptImg}
                         alt="Receipt"
                         className="h-auto w-48 object-cover opacity-80"
+                        width={192}
+                        height={256}
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <span className="block px-2 py-1 text-right text-[10px] text-gray-500 transition-colors duration-300 dark:text-[#8696a0]">

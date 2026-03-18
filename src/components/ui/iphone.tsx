@@ -95,6 +95,9 @@ export function Iphone({
             src={src}
             alt=""
             className="block size-full object-cover object-top"
+            width={Math.round(SCREEN_WIDTH)}
+            height={Math.round(SCREEN_HEIGHT)}
+            decoding="async"
           />
         </div>
       )}

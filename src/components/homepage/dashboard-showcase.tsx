@@ -121,6 +121,10 @@ export function DashboardShowcase() {
                     src={selectedFeature.imagePng}
                     alt={selectedFeature.title}
                     className="w-full h-auto object-cover"
+                    width={1280}
+                    height={720}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </picture>
               </div>
