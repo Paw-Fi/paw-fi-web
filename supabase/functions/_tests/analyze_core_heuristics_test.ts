@@ -3,6 +3,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   inferPayerFromText,
   inferSplitAmountsFromText,
+  normalizeTransactionDateAndDescription,
   normalizeCustomSplits,
   resolveHouseholdContext,
 } from "../shared/analyze-core.ts";
@@ -39,4 +40,48 @@ Deno.test("analyze-core: payer + split pronoun heuristic", () => {
   assertEquals(normalized.splitType, "amount");
   assertEquals(byUserId[charlesId], 15);
   assertEquals(byUserId[callerId], 5);
+});
+
+Deno.test("analyze-core: description date becomes transaction date", () => {
+  const normalized = normalizeTransactionDateAndDescription(
+    undefined,
+    "burger on 12/3/26",
+    "2026-03-18",
+  );
+
+  assertEquals(normalized.date, "2026-03-12");
+  assertEquals(normalized.description, "burger");
+});
+
+Deno.test("analyze-core: raw date is normalized before storage", () => {
+  const normalized = normalizeTransactionDateAndDescription(
+    "12/3/26",
+    "burger",
+    "2026-03-18",
+  );
+
+  assertEquals(normalized.date, "2026-03-12");
+  assertEquals(normalized.description, "burger");
+});
+
+Deno.test("analyze-core: unmarked numeric text does not override date", () => {
+  const normalized = normalizeTransactionDateAndDescription(
+    undefined,
+    "burger ref 12/3/26",
+    "2026-03-18",
+  );
+
+  assertEquals(normalized.date, "2026-03-18");
+  assertEquals(normalized.description, "burger ref 12/3/26");
+});
+
+Deno.test("analyze-core: invalid raw date falls back to caller date", () => {
+  const normalized = normalizeTransactionDateAndDescription(
+    "tomorrow-ish",
+    "burger",
+    "2026-03-18",
+  );
+
+  assertEquals(normalized.date, "2026-03-18");
+  assertEquals(normalized.description, "burger");
 });

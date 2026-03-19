@@ -60,6 +60,19 @@ const CATEGORIZE_FUNCTION_CALLING_CONFIG = {
 
 const IDEMPOTENCY_PROCESSING_TTL_MS = 10 * 60 * 1000;
 const IDEMPOTENCY_KEY_TTL_HOURS = 24;
+const readRuntimeEnv = (name: string): string | null => {
+  const env = (
+    globalThis as {
+      Deno?: { env?: { get?: (key: string) => string | undefined } };
+    }
+  ).Deno?.env;
+  if (!env?.get) return null;
+  return env.get(name) ?? null;
+};
+
+const iosBundleId = readRuntimeEnv("IOS_BUNDLE_ID") || "com.moneko.mobile";
+const firebaseServiceAccount = readRuntimeEnv("FIREBASE_SERVICE_ACCOUNT_JSON");
+const firebaseProjectId = readRuntimeEnv("FIREBASE_PROJECT_ID");
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +91,10 @@ interface TransactionPayload {
   packageName?: string | null;
   sourcePackage?: string | null;
   locale?: string | null;
+  shortcutTransaction?: string | null;
+  shortcutCardOrPass?: string | null;
+  shortcutMerchant?: string | null;
+  shortcutName?: string | null;
 }
 
 interface RequestBody {
@@ -102,12 +119,113 @@ interface WalletCaptureClaimResult {
   cachedResponse?: Record<string, unknown>;
 }
 
+type WalletBudgetScope = "personal" | "portfolio" | "household";
+
+interface PocketSummary {
+  id: string;
+  name: string;
+  limitCents: number;
+  spentCents: number;
+  remainingCents: number;
+}
+
+interface WalletPocketInsight {
+  scenario: "no_budget" | "no_pockets" | "category_unlinked" | "linked";
+  monthTotalBudgetCents: number;
+  monthTotalSpentCents: number;
+  monthTotalRemainingCents: number;
+  pocket?: PocketSummary;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function sanitizeUuid(value?: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
+
+function truncateForLog(
+  value: string | null | undefined,
+  maxLength = 160,
+): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength)}...`;
+}
+
+function buildWalletCaptureRequestLogContext(
+  req: Request,
+  body: RequestBody,
+): Record<string, unknown> {
+  const tx =
+    body?.transaction && typeof body.transaction === "object"
+      ? body.transaction
+      : null;
+
+  const safeHeaders = Object.fromEntries(
+    [
+      "content-type",
+      "user-agent",
+      "x-client-platform",
+      "x-client-version",
+      "x-request-id",
+      "cf-ray",
+    ]
+      .map((key) => [key, req.headers.get(key)] as const)
+      .filter(([, value]) => typeof value === "string" && value.length > 0),
+  );
+
+  return {
+    captureSource: body?.captureSource ?? null,
+    userId: truncateForLog(body?.userId ?? null, 80),
+    householdId: truncateForLog(body?.householdId ?? null, 80),
+    isPortfolio: body?.isPortfolio === true,
+    clientCreatedAt: body?.clientCreatedAt ?? null,
+    idempotencyKey: truncateForLog(body?.idempotencyKey ?? null, 120),
+    headers: safeHeaders,
+    transaction: tx
+      ? {
+          amount: typeof tx.amount === "number" ? tx.amount : null,
+          currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+          date: truncateForLog(resolveWalletTransactionDate(tx), 32),
+          merchantName: truncateForLog(tx.merchantName ?? null, 120),
+          rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
+          note: truncateForLog(tx.note ?? null, 200),
+          cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
+          shortcutTransaction: truncateForLog(
+            tx.shortcutTransaction ?? null,
+            200,
+          ),
+          shortcutCardOrPass: truncateForLog(
+            tx.shortcutCardOrPass ?? null,
+            120,
+          ),
+          shortcutMerchant: truncateForLog(tx.shortcutMerchant ?? null, 120),
+          shortcutName: truncateForLog(tx.shortcutName ?? null, 120),
+          packageName: truncateForLog(
+            resolveWalletTransactionPackageName(tx),
+            160,
+          ),
+          externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
+          locale: truncateForLog(tx.locale ?? null, 40),
+        }
+      : null,
+  };
+}
+
+function logWalletCaptureValidationFailure(
+  reason: string,
+  requestContext: Record<string, unknown> | null,
+  details?: Record<string, unknown>,
+): void {
+  console.warn("[save-wallet-transaction] Validation failed", {
+    reason,
+    ...(details ? { details } : {}),
+    ...(requestContext ? { request: requestContext } : {}),
+  });
 }
 
 function errorResponse(message: string, status = 400, code?: string): Response {
@@ -148,6 +266,710 @@ function buildDescription(tx: TransactionPayload): string {
 
   if (parts.length === 0) return "Wallet auto capture";
   return parts.join(" – ");
+}
+
+function normalizePocketCategory(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function resolveWalletBudgetScope(
+  householdId: string | null,
+  isPortfolio: boolean,
+): WalletBudgetScope {
+  if (!householdId) return "personal";
+  return isPortfolio ? "portfolio" : "household";
+}
+
+function applyWalletScopeFilter(params: {
+  query: any;
+  scope: WalletBudgetScope;
+  userId: string;
+  householdId: string | null;
+}): any {
+  const { query, scope, userId, householdId } = params;
+  if (scope === "personal") {
+    return query.eq("user_id", userId).is("household_id", null);
+  }
+  if (scope === "portfolio") {
+    return query.eq("user_id", userId).eq("household_id", householdId);
+  }
+  return query.eq("household_id", householdId);
+}
+
+function getMonthWindowFromDate(dateYmd: string): {
+  periodMonth: string;
+  monthStart: string;
+  monthEndExclusive: string;
+} {
+  const [yearPart, monthPart] = dateYmd.split("-");
+  const year = Number(yearPart);
+  const month = Number(monthPart);
+  const monthStart = `${yearPart}-${monthPart}-01`;
+
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextMonthPart = String(nextMonth).padStart(2, "0");
+  const monthEndExclusive = `${nextYear}-${nextMonthPart}-01`;
+
+  return {
+    periodMonth: monthStart,
+    monthStart,
+    monthEndExclusive,
+  };
+}
+
+function formatCurrencyAmount(cents: number, currency: string): string {
+  const major = cents / 100;
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(major);
+  } catch (_) {
+    return `${currency} ${major.toFixed(2)}`;
+  }
+}
+
+function getLocalYyyyMmDdInTimeZone(
+  timeZone: string | null | undefined,
+  date = new Date(),
+): string {
+  const normalizedTimeZone = (timeZone || "UTC").trim();
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: normalizedTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const map = new Map(parts.map((part) => [part.type, part.value]));
+    const year = map.get("year");
+    const month = map.get("month");
+    const day = map.get("day");
+    if (year && month && day) {
+      return `${year}-${month}-${day}`;
+    }
+  } catch (error) {
+    console.warn(
+      "[save-wallet-transaction] Failed to derive local date from timezone:",
+      normalizedTimeZone,
+      error,
+    );
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function extractCalendarDatePrefix(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  return normalizeCalendarDateString(trimmed);
+}
+
+async function getFcmAccessToken(): Promise<string | null> {
+  if (!firebaseServiceAccount) {
+    console.warn(
+      "[save-wallet-transaction] FIREBASE_SERVICE_ACCOUNT_JSON not configured",
+    );
+    return null;
+  }
+
+  try {
+    const serviceAccount = JSON.parse(firebaseServiceAccount);
+
+    const header = {
+      alg: "RS256",
+      typ: "JWT",
+      kid: serviceAccount.private_key_id,
+    };
+
+    const now = Math.floor(Date.now() / 1000);
+    const claims = {
+      iss: serviceAccount.client_email,
+      sub: serviceAccount.client_email,
+      aud: "https://oauth2.googleapis.com/token",
+      iat: now,
+      exp: now + 3600,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+    };
+
+    const encoder = new TextEncoder();
+    const encodedHeader = btoa(JSON.stringify(header))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+    const encodedClaims = btoa(JSON.stringify(claims))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+    const unsignedToken = `${encodedHeader}.${encodedClaims}`;
+
+    let privateKeyPem: string = serviceAccount.private_key as string;
+    if (!privateKeyPem) {
+      return null;
+    }
+    privateKeyPem = privateKeyPem.replace(/\\n/g, "\n").trim();
+    const match = privateKeyPem.match(
+      /-----BEGIN PRIVATE KEY-----([\s\S]*?)-----END PRIVATE KEY-----/,
+    );
+    if (!match || !match[1]) {
+      return null;
+    }
+
+    const pemBody = match[1].replace(/\r|\n/g, "");
+    const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+
+    const key = await crypto.subtle.importKey(
+      "pkcs8",
+      binaryKey,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+
+    const signature = await crypto.subtle.sign(
+      "RSASSA-PKCS1-v1_5",
+      key,
+      encoder.encode(unsignedToken),
+    );
+
+    const encodedSignature = btoa(
+      String.fromCharCode(...Array.from(new Uint8Array(signature))),
+    )
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+    const jwt = `${unsignedToken}.${encodedSignature}`;
+
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      return null;
+    }
+
+    const tokenData = await tokenResponse.json();
+    return tokenData.access_token as string;
+  } catch (error) {
+    console.error("[save-wallet-transaction] FCM token error:", error);
+    return null;
+  }
+}
+
+async function sendFcmV1Notification(params: {
+  supabase: any;
+  deviceToken: string;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+  accessToken: string;
+}): Promise<boolean> {
+  const { supabase, deviceToken, title, body, data, accessToken } = params;
+
+  if (!firebaseProjectId) {
+    console.warn(
+      "[save-wallet-transaction] FIREBASE_PROJECT_ID not configured",
+    );
+    return false;
+  }
+
+  try {
+    const message = {
+      message: {
+        token: deviceToken,
+        notification: {
+          title,
+          body,
+        },
+        data,
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+          },
+        },
+        apns: {
+          headers: {
+            "apns-topic": iosBundleId,
+            "apns-push-type": "alert",
+            "apns-priority": "10",
+          },
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
+          },
+        },
+      },
+    };
+
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${firebaseProjectId}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+      },
+    );
+
+    if (response.ok) {
+      return true;
+    }
+
+    const errorText = await response.text();
+    if (
+      errorText.includes("UNREGISTERED") ||
+      errorText.includes("INVALID_ARGUMENT")
+    ) {
+      try {
+        await supabase
+          .from("devices")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .eq("push_token", deviceToken);
+      } catch (deactivateError) {
+        console.error(
+          "[save-wallet-transaction] Failed to deactivate invalid token:",
+          deactivateError,
+        );
+      }
+    }
+
+    console.error(
+      "[save-wallet-transaction] FCM send failed:",
+      response.status,
+      errorText,
+    );
+    return false;
+  } catch (error) {
+    console.error("[save-wallet-transaction] FCM send error:", error);
+    return false;
+  }
+}
+
+async function fetchActiveDeviceTokens(
+  supabase: any,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("devices")
+    .select("push_token")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .not("push_token", "is", null);
+
+  if (error || !Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((row: any) =>
+      typeof row?.push_token === "string" ? row.push_token.trim() : "",
+    )
+    .filter((token: string) => token.length > 0);
+}
+
+async function buildWalletPocketInsight(params: {
+  supabase: any;
+  userId: string;
+  householdId: string | null;
+  isPortfolio: boolean;
+  category: string;
+  currency: string;
+  dateYmd: string;
+}): Promise<WalletPocketInsight> {
+  const {
+    supabase,
+    userId,
+    householdId,
+    isPortfolio,
+    category,
+    currency,
+    dateYmd,
+  } = params;
+  const scope = resolveWalletBudgetScope(householdId, isPortfolio);
+  const normalizedCategory = normalizePocketCategory(category);
+  const { periodMonth, monthStart, monthEndExclusive } =
+    getMonthWindowFromDate(dateYmd);
+
+  let budgetQuery = supabase
+    .from("budgets")
+    .select("id,total_budget_cents,currency")
+    .eq("period_month", periodMonth)
+    .eq("currency", currency);
+  budgetQuery = applyWalletScopeFilter({
+    query: budgetQuery,
+    scope,
+    userId,
+    householdId,
+  });
+
+  let budget = await budgetQuery.maybeSingle();
+  if (!budget) {
+    let fallbackBudgetQuery = supabase
+      .from("budgets")
+      .select("id,total_budget_cents,currency")
+      .eq("period_month", periodMonth);
+    fallbackBudgetQuery = applyWalletScopeFilter({
+      query: fallbackBudgetQuery,
+      scope,
+      userId,
+      householdId,
+    });
+    budget = await fallbackBudgetQuery.limit(1).maybeSingle();
+  }
+
+  if (!budget?.id) {
+    return {
+      scenario: "no_budget",
+      monthTotalBudgetCents: 0,
+      monthTotalSpentCents: 0,
+      monthTotalRemainingCents: 0,
+    };
+  }
+
+  const budgetCurrency =
+    typeof budget.currency === "string" && budget.currency.trim().length > 0
+      ? budget.currency.trim().toUpperCase()
+      : currency;
+  const monthTotalBudgetCents = Number(budget.total_budget_cents ?? 0);
+
+  let envelopeQuery = supabase
+    .from("budget_envelopes")
+    .select("id,name,budget_amount_cents")
+    .eq("budget_id", budget.id)
+    .eq("currency", budgetCurrency);
+  envelopeQuery = applyWalletScopeFilter({
+    query: envelopeQuery,
+    scope,
+    userId,
+    householdId,
+  });
+
+  const envelopes = ((await envelopeQuery) as Array<any> | null) ?? [];
+  if (envelopes.length === 0) {
+    return {
+      scenario: "no_pockets",
+      monthTotalBudgetCents,
+      monthTotalSpentCents: 0,
+      monthTotalRemainingCents: monthTotalBudgetCents,
+    };
+  }
+
+  const envelopeIds = envelopes
+    .map((row) => (typeof row?.id === "string" ? row.id : null))
+    .filter((id): id is string => Boolean(id));
+
+  const allocationRows =
+    ((await supabase
+      .from("envelope_allocations")
+      .select("envelope_id,amount_cents")
+      .eq("period_month", periodMonth)
+      .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
+  const allocationByEnvelopeId = new Map<string, number>();
+  for (const row of allocationRows) {
+    const envelopeId =
+      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    if (!envelopeId) continue;
+    const amountCents = Number(row?.amount_cents ?? 0);
+    if (Number.isFinite(amountCents) && amountCents > 0) {
+      allocationByEnvelopeId.set(envelopeId, Math.trunc(amountCents));
+    }
+  }
+
+  const categoryLinks =
+    ((await supabase
+      .from("envelope_category_links")
+      .select("envelope_id,category")
+      .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
+  const categoriesByEnvelopeId = new Map<string, string[]>();
+  for (const row of categoryLinks) {
+    const envelopeId =
+      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const linkedCategory = normalizePocketCategory(row?.category);
+    if (!envelopeId || !linkedCategory) continue;
+    const current = categoriesByEnvelopeId.get(envelopeId) ?? [];
+    current.push(linkedCategory);
+    categoriesByEnvelopeId.set(envelopeId, current);
+  }
+
+  let expenseQuery = supabase
+    .from("expenses")
+    .select("amount_cents,category,type")
+    .eq("currency", budgetCurrency)
+    .gte("date", monthStart)
+    .lt("date", monthEndExclusive);
+  expenseQuery = applyWalletScopeFilter({
+    query: expenseQuery,
+    scope,
+    userId,
+    householdId,
+  });
+  const expenseRows = ((await expenseQuery) as Array<any> | null) ?? [];
+
+  let monthTotalSpentCents = 0;
+  const spendByCategory = new Map<string, number>();
+  for (const row of expenseRows) {
+    const type = normalizePocketCategory(row?.type);
+    if (type === "income") continue;
+
+    const amountCents = Number(row?.amount_cents ?? 0);
+    if (!Number.isFinite(amountCents) || amountCents <= 0) continue;
+
+    const normalized = normalizePocketCategory(
+      row?.category || "uncategorized",
+    );
+    monthTotalSpentCents += Math.trunc(amountCents);
+    spendByCategory.set(
+      normalized,
+      (spendByCategory.get(normalized) ?? 0) + Math.trunc(amountCents),
+    );
+  }
+
+  const pocketSummaries: PocketSummary[] = envelopes.map((row) => {
+    const id = String(row.id);
+    const linkedCategories = categoriesByEnvelopeId.get(id) ?? [];
+    const spentCents = linkedCategories.reduce(
+      (sum, linked) => sum + (spendByCategory.get(linked) ?? 0),
+      0,
+    );
+    const baseLimit = Number(row?.budget_amount_cents ?? 0);
+    const limitCents =
+      allocationByEnvelopeId.get(id) ??
+      (Number.isFinite(baseLimit) ? Math.trunc(baseLimit) : 0);
+    return {
+      id,
+      name:
+        typeof row?.name === "string" && row.name.trim().length > 0
+          ? row.name.trim()
+          : "Pocket",
+      limitCents,
+      spentCents,
+      remainingCents: limitCents - spentCents,
+    };
+  });
+
+  const linkedPocketSummaries = pocketSummaries.filter((summary) => {
+    const categories = categoriesByEnvelopeId.get(summary.id) ?? [];
+    return categories.includes(normalizedCategory);
+  });
+
+  const monthTotalRemainingCents = monthTotalBudgetCents - monthTotalSpentCents;
+
+  if (linkedPocketSummaries.length === 0) {
+    return {
+      scenario: "category_unlinked",
+      monthTotalBudgetCents,
+      monthTotalSpentCents,
+      monthTotalRemainingCents,
+    };
+  }
+
+  linkedPocketSummaries.sort((a, b) => a.remainingCents - b.remainingCents);
+  return {
+    scenario: "linked",
+    monthTotalBudgetCents,
+    monthTotalSpentCents,
+    monthTotalRemainingCents,
+    pocket: linkedPocketSummaries[0],
+  };
+}
+
+function buildWalletPocketNotificationMessage(params: {
+  insight: WalletPocketInsight;
+  amountCents: number;
+  currency: string;
+  category: string;
+}): { title: string; body: string; scenario: string } {
+  const { insight, amountCents, currency, category } = params;
+  const amountLabel = formatCurrencyAmount(amountCents, currency);
+  const prettyCategory = category.trim().length > 0 ? category : "other";
+
+  if (insight.scenario === "no_budget") {
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel} in ${prettyCategory}. You’re all set to track better—add a monthly budget to start pocket insights.`,
+      scenario: insight.scenario,
+    };
+  }
+
+  if (insight.scenario === "no_pockets") {
+    const budgetLabel = formatCurrencyAmount(
+      insight.monthTotalBudgetCents,
+      currency,
+    );
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel}. Your monthly budget is ${budgetLabel}—create a few pockets to see what’s left in each one.`,
+      scenario: insight.scenario,
+    };
+  }
+
+  if (insight.scenario === "category_unlinked") {
+    const spentLabel = formatCurrencyAmount(
+      insight.monthTotalSpentCents,
+      currency,
+    );
+    const budgetLabel = formatCurrencyAmount(
+      insight.monthTotalBudgetCents,
+      currency,
+    );
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel} in ${prettyCategory}. This category isn’t linked to a pocket yet—add it to one for clearer tracking. Month: ${spentLabel} / ${budgetLabel}.`,
+      scenario: insight.scenario,
+    };
+  }
+
+  const pocket = insight.pocket;
+  if (!pocket) {
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel}. Nice work keeping your spending logged this month.`,
+      scenario: "linked",
+    };
+  }
+
+  const pocketLimit = formatCurrencyAmount(pocket.limitCents, currency);
+  const pocketSpent = formatCurrencyAmount(pocket.spentCents, currency);
+  const monthSpent = formatCurrencyAmount(
+    insight.monthTotalSpentCents,
+    currency,
+  );
+  const monthBudget = formatCurrencyAmount(
+    insight.monthTotalBudgetCents,
+    currency,
+  );
+
+  if (pocket.limitCents <= 0) {
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel} in ${pocket.name}. This pocket has no limit yet—set an amount to track what’s left this month.`,
+      scenario: "linked_no_limit",
+    };
+  }
+
+  if (pocket.remainingCents < 0) {
+    const overLabel = formatCurrencyAmount(
+      Math.abs(pocket.remainingCents),
+      currency,
+    );
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel} in ${pocket.name}. You’re ${overLabel} over this pocket (${pocketSpent} / ${pocketLimit})—a tiny adjustment can bring things back in balance.`,
+      scenario: "linked_over",
+    };
+  }
+
+  const remainingLabel = formatCurrencyAmount(pocket.remainingCents, currency);
+  const usedRatio =
+    pocket.limitCents > 0 ? pocket.spentCents / pocket.limitCents : 0;
+
+  if (usedRatio >= 0.85) {
+    return {
+      title: "Pocket update ✨",
+      body: `Saved ${amountLabel} in ${pocket.name}. You have ${remainingLabel} left this month (${pocketSpent} / ${pocketLimit})—you’re doing great, just close to the limit.`,
+      scenario: "linked_near_limit",
+    };
+  }
+
+  return {
+    title: "Pocket update ✨",
+    body: `Saved ${amountLabel} in ${pocket.name}. You still have ${remainingLabel} left (${pocketSpent} / ${pocketLimit}). Month total: ${monthSpent} / ${monthBudget}.`,
+    scenario: "linked_healthy",
+  };
+}
+
+async function sendWalletPocketNotificationBestEffort(params: {
+  supabase: any;
+  userId: string;
+  householdId: string | null;
+  isPortfolio: boolean;
+  amountCents: number;
+  currency: string;
+  category: string;
+  dateYmd: string;
+  expenseId: string;
+}): Promise<void> {
+  const {
+    supabase,
+    userId,
+    householdId,
+    isPortfolio,
+    amountCents,
+    currency,
+    category,
+    dateYmd,
+    expenseId,
+  } = params;
+
+  try {
+    const deviceTokens = await fetchActiveDeviceTokens(supabase, userId);
+    if (!deviceTokens.length) return;
+
+    const accessToken = await getFcmAccessToken();
+    if (!accessToken) return;
+
+    const insight = await buildWalletPocketInsight({
+      supabase,
+      userId,
+      householdId,
+      isPortfolio,
+      category,
+      currency,
+      dateYmd,
+    });
+    const message = buildWalletPocketNotificationMessage({
+      insight,
+      amountCents,
+      currency,
+      category,
+    });
+
+    const scope = resolveWalletBudgetScope(householdId, isPortfolio);
+    const payloadData: Record<string, string> = {
+      type: "wallet_pocket_update",
+      expense_id: expenseId,
+      scope,
+      scenario: message.scenario,
+      currency,
+      category,
+      amount_cents: String(amountCents),
+      household_id: householdId ?? "",
+    };
+
+    await Promise.allSettled(
+      deviceTokens.map((token) =>
+        sendFcmV1Notification({
+          supabase,
+          deviceToken: token,
+          title: message.title,
+          body: message.body,
+          data: payloadData,
+          accessToken,
+        }),
+      ),
+    );
+  } catch (error) {
+    console.error(
+      "[save-wallet-transaction] Wallet pocket notification failed (non-blocking):",
+      error,
+    );
+  }
 }
 
 async function storeWalletCaptureIdempotencyResult(
@@ -387,7 +1209,7 @@ function getFunctionCalls(response: any): any[] {
  * @returns The AI-suggested category (normalized for storage), or "other" on failure.
  */
 async function categorizeWithAI(params: {
-  genAI: GoogleGenerativeAI;
+  genAI?: GoogleGenerativeAI | null;
   merchantName: string;
   amount: number;
   currency: string;
@@ -406,6 +1228,10 @@ async function categorizeWithAI(params: {
     expenseCategories,
     incomeCategories,
   } = params;
+
+  if (!genAI) {
+    return "other";
+  }
 
   const tools: any = [
     {
@@ -496,6 +1322,7 @@ Deno.serve(async (req: Request) => {
   }
 
   let idempotencyClaimId: string | null = null;
+  let requestDebugContext: Record<string, unknown> | null = null;
 
   try {
     // ── Method gate ───────────────────────────────────────────────────
@@ -504,13 +1331,43 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Parse body ────────────────────────────────────────────────────
-    const body: RequestBody = await req.json();
+    const rawBodyText = await req.text();
+    let body: RequestBody;
+    try {
+      body = JSON.parse(rawBodyText) as RequestBody;
+    } catch (parseError) {
+      console.error("[save-wallet-transaction] Invalid JSON payload", {
+        error: parseError,
+        headers: {
+          contentType: req.headers.get("content-type"),
+          userAgent: req.headers.get("user-agent"),
+          requestId: req.headers.get("x-request-id"),
+        },
+        rawBodyLength: rawBodyText.length,
+        rawBodyPreview: truncateForLog(rawBodyText, 1200),
+      });
+      return errorResponse("Invalid JSON payload", 400, "INVALID_JSON");
+    }
+
+    requestDebugContext = buildWalletCaptureRequestLogContext(req, body);
+    console.log(
+      "[save-wallet-transaction] Incoming wallet capture payload",
+      requestDebugContext,
+    );
 
     // ── Validate captureSource ────────────────────────────────────────
     const captureSource = normalizeWalletCaptureSource(body.captureSource);
     if (!captureSource) {
+      logWalletCaptureValidationFailure(
+        "invalid_capture_source",
+        requestDebugContext,
+        {
+          receivedCaptureSource: body.captureSource ?? null,
+          allowedCaptureSources: Array.from(VALID_CAPTURE_SOURCES),
+        },
+      );
       return errorResponse(
-        `captureSource must be one of: ${[...VALID_CAPTURE_SOURCES].join(
+        `captureSource must be one of: ${Array.from(VALID_CAPTURE_SOURCES).join(
           ", ",
         )}`,
         400,
@@ -520,6 +1377,10 @@ Deno.serve(async (req: Request) => {
     // ── Validate transaction object ───────────────────────────────────
     const tx = body.transaction;
     if (!tx || typeof tx !== "object") {
+      logWalletCaptureValidationFailure(
+        "missing_transaction_object",
+        requestDebugContext,
+      );
       return errorResponse("transaction object is required", 400);
     }
 
@@ -529,22 +1390,31 @@ Deno.serve(async (req: Request) => {
       !Number.isFinite(tx.amount) ||
       tx.amount <= 0
     ) {
+      logWalletCaptureValidationFailure("invalid_amount", requestDebugContext, {
+        amount: tx.amount ?? null,
+      });
       return errorResponse("transaction.amount must be a positive number", 400);
     }
 
     // Currency
     const rawCurrency = resolveWalletTransactionCurrency(tx);
     if (!rawCurrency) {
+      logWalletCaptureValidationFailure(
+        "missing_currency",
+        requestDebugContext,
+      );
       return errorResponse("transaction.currency is required", 400);
     }
 
     // Date
     const rawDate = resolveWalletTransactionDate(tx);
-    if (!rawDate) {
-      return errorResponse("transaction.date is required", 400);
-    }
-    const normalizedDate = normalizeCalendarDateString(rawDate);
-    if (!normalizedDate) {
+    const normalizedProvidedDate = rawDate
+      ? normalizeCalendarDateString(rawDate)
+      : null;
+    if (rawDate && !normalizedProvidedDate) {
+      logWalletCaptureValidationFailure("invalid_date", requestDebugContext, {
+        receivedDate: rawDate,
+      });
       return errorResponse(
         "transaction.date must be a valid calendar date",
         400,
@@ -560,6 +1430,10 @@ Deno.serve(async (req: Request) => {
       ""
     ).trim();
     if (!merchantDisplay) {
+      logWalletCaptureValidationFailure(
+        "missing_transaction_descriptor",
+        requestDebugContext,
+      );
       return errorResponse(
         "At least one transaction descriptor is required",
         400,
@@ -571,10 +1445,6 @@ Deno.serve(async (req: Request) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return errorResponse("Server configuration error", 500, "SERVER_ERROR");
-    }
-    if (!GEMINI_API_KEY) {
-      console.error("[save-wallet-transaction] GEMINI_API_KEY not configured");
       return errorResponse("Server configuration error", 500, "SERVER_ERROR");
     }
 
@@ -589,11 +1459,23 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const genAI = GEMINI_API_KEY
+      ? new GoogleGenerativeAI(GEMINI_API_KEY)
+      : null;
+    if (!GEMINI_API_KEY) {
+      console.warn(
+        "[save-wallet-transaction] GEMINI_API_KEY not configured; using fallback category 'other'",
+      );
+    }
 
     // ── Authenticate ──────────────────────────────────────────────────
     const authResult = await authenticateUserOrInternalSecret(req, supabase);
     if (!authResult.success) {
+      console.warn("[save-wallet-transaction] Authentication failed", {
+        request: requestDebugContext,
+        statusCode: authResult.statusCode ?? 401,
+        error: authResult.error ?? "Unauthorized",
+      });
       return errorResponse(
         authResult.error || "Unauthorized",
         authResult.statusCode ?? 401,
@@ -607,6 +1489,11 @@ Deno.serve(async (req: Request) => {
       // Internal callers must provide userId in body
       userId = sanitizeUuid(body.userId);
       if (!userId) {
+        logWalletCaptureValidationFailure(
+          "missing_internal_user_id",
+          requestDebugContext,
+          { providedUserId: body.userId ?? null },
+        );
         return errorResponse(
           "userId is required for internal service calls",
           400,
@@ -618,6 +1505,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!userId) {
+      logWalletCaptureValidationFailure(
+        "unable_to_resolve_user_identity",
+        requestDebugContext,
+      );
       return errorResponse("Unable to resolve user identity", 400);
     }
 
@@ -627,17 +1518,6 @@ Deno.serve(async (req: Request) => {
     const isPortfolio = body.isPortfolio === true;
     const householdId = sanitizeUuid(body.householdId);
     const description = buildDescription(tx);
-
-    console.log("[save-wallet-transaction] Processing:", {
-      userId,
-      captureSource,
-      merchant: merchantDisplay,
-      amount: tx.amount,
-      currency,
-      date: normalizedDate,
-      householdId,
-      isPortfolio,
-    });
 
     let householdMembers: Array<{ user_id: string }> = [];
     let requiresHouseholdSplit = false;
@@ -693,10 +1573,13 @@ Deno.serve(async (req: Request) => {
 
     // ── Resolve user contact ──────────────────────────────────────────
     let contactId: string | null = null;
+    let preferredTimezone: string | null = null;
     {
       const { data: contact, error: contactError } = await supabase
         .from("user_contacts")
-        .select("id, preferred_currency, wallet_capture_enabled")
+        .select(
+          "id, preferred_currency, preferred_timezone, wallet_capture_enabled",
+        )
         .eq("user_id", userId)
         .order("id", { ascending: false })
         .limit(1)
@@ -728,6 +1611,10 @@ Deno.serve(async (req: Request) => {
 
       if (contact) {
         contactId = contact.id;
+        preferredTimezone =
+          typeof contact.preferred_timezone === "string"
+            ? contact.preferred_timezone.trim() || null
+            : null;
         // Back-fill preferred currency if missing
         if (!contact.preferred_currency && currency) {
           await supabase
@@ -742,6 +1629,56 @@ Deno.serve(async (req: Request) => {
         );
       }
     }
+
+    const clientCreatedAtPrefix = extractCalendarDatePrefix(
+      body.clientCreatedAt,
+    );
+    const fallbackDateBase = body.clientCreatedAt
+      ? new Date(body.clientCreatedAt)
+      : new Date();
+    const fallbackDate = Number.isNaN(fallbackDateBase.getTime())
+      ? new Date()
+      : fallbackDateBase;
+    const normalizedClientCreatedDate =
+      clientCreatedAtPrefix ??
+      (body.clientCreatedAt && !Number.isNaN(fallbackDateBase.getTime())
+        ? getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDateBase)
+        : null);
+    const normalizedDate =
+      normalizedProvidedDate ??
+      normalizedClientCreatedDate ??
+      getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDate);
+
+    if (!normalizedDate) {
+      logWalletCaptureValidationFailure(
+        "missing_or_invalid_date",
+        requestDebugContext,
+        {
+          receivedDate: rawDate ?? null,
+          clientCreatedAt: body.clientCreatedAt ?? null,
+          preferredTimezone,
+        },
+      );
+      return errorResponse(
+        "transaction.date must be a valid calendar date",
+        400,
+      );
+    }
+
+    console.log("[save-wallet-transaction] Processing:", {
+      userId,
+      captureSource,
+      merchant: merchantDisplay,
+      amount: tx.amount,
+      currency,
+      date: normalizedDate,
+      householdId,
+      isPortfolio,
+      preferredTimezone,
+      usedProvidedDate: Boolean(normalizedProvidedDate),
+      usedClientCreatedAtDate:
+        !normalizedProvidedDate && Boolean(normalizedClientCreatedDate),
+    });
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({
       explicitKey: body.idempotencyKey,
@@ -904,7 +1841,7 @@ Deno.serve(async (req: Request) => {
         userId,
         transactionType: "expense",
         categoryName: resolvedCategory,
-        descriptionText: merchantDisplay,
+        descriptionText: description,
       });
     } catch (learnError) {
       console.error(
@@ -918,6 +1855,18 @@ Deno.serve(async (req: Request) => {
 
     if (householdId && isPortfolio) {
       // Portfolio: save with household_id but no split
+      await sendWalletPocketNotificationBestEffort({
+        supabase,
+        userId,
+        householdId,
+        isPortfolio,
+        amountCents,
+        currency,
+        category: resolvedCategory,
+        dateYmd: normalizedDate,
+        expenseId: expense.id,
+      });
+
       const responseBody = {
         success: true,
         duplicate: false,
@@ -1120,6 +2069,18 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Success response ──────────────────────────────────────────────
+    await sendWalletPocketNotificationBestEffort({
+      supabase,
+      userId,
+      householdId,
+      isPortfolio,
+      amountCents,
+      currency,
+      category: resolvedCategory,
+      dateYmd: normalizedDate,
+      expenseId: responseExpense.id,
+    });
+
     const responseBody = {
       success: true,
       duplicate: false,
@@ -1143,7 +2104,10 @@ Deno.serve(async (req: Request) => {
       ),
     );
   } catch (error) {
-    console.error("[save-wallet-transaction] Unhandled error:", error);
+    console.error("[save-wallet-transaction] Unhandled error:", {
+      error,
+      request: requestDebugContext,
+    });
     if (
       typeof Deno.env.get("SUPABASE_URL") === "string" &&
       typeof Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") === "string" &&
@@ -1172,7 +2136,9 @@ Deno.serve(async (req: Request) => {
     await reportEdgeFunctionError({
       functionName: "save-wallet-transaction",
       error,
-      context: { step: "unhandled" },
+      context: requestDebugContext
+        ? { step: "unhandled", request: requestDebugContext }
+        : { step: "unhandled" },
     });
     return errorResponse(
       "Failed to save wallet transaction",

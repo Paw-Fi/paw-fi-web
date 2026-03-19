@@ -452,6 +452,73 @@ function parseDateFromText(line: string, callerDate: string): string | null {
   return null;
 }
 
+function extractExplicitDateFromDescription(
+  text: string,
+  callerDate: string,
+): { date: string; description: string } | null {
+  const patterns = [
+    /\b(?:on|dated)\s+(\d{4}-\d{2}-\d{2})\b/i,
+    /\b(?:on|dated)\s+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/i,
+    /\b(?:on|dated)\s+((?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{2,4})?)\b/i,
+    /\b(?:on|dated)\s+(\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+\d{2,4})?)\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const rawDate = match[1]?.trim();
+    if (!rawDate) continue;
+    const parsedDate = parseDateFromText(rawDate, callerDate);
+    if (!parsedDate) continue;
+    return {
+      date: parsedDate,
+      description: text
+        .replace(match[0], " ")
+        .replace(/\s{2,}/g, " ")
+        .trim(),
+    };
+  }
+
+  return null;
+}
+
+export function normalizeTransactionDateAndDescription(
+  rawDate: unknown,
+  rawDescription: unknown,
+  callerDate: string,
+): { date: string; description: string } {
+  const description =
+    typeof rawDescription === "string"
+      ? rawDescription.trim()
+      : rawDescription != null
+        ? String(rawDescription).trim()
+        : "";
+
+  const normalizedRawDate =
+    typeof rawDate === "string" && rawDate.trim().length > 0
+      ? parseDateFromText(rawDate.trim(), callerDate) || ""
+      : "";
+
+  if (normalizedRawDate) {
+    return {
+      date: normalizedRawDate,
+      description,
+    };
+  }
+
+  const explicitDate = description
+    ? extractExplicitDateFromDescription(description, callerDate)
+    : null;
+  if (!explicitDate) {
+    return {
+      date: callerDate,
+      description,
+    };
+  }
+
+  return explicitDate;
+}
+
 function normalizeAmountString(value: string): number | null {
   const cleaned = value.replace(/[^0-9,.-]/g, "");
   if (!cleaned || cleaned === "-" || cleaned === ".") return null;
@@ -2392,10 +2459,11 @@ function parseTransactionsJsonToItems(
       typeof item?.currency === "string" && item.currency.trim()
         ? item.currency.trim()
         : callerCurrency;
-    const dateValue =
-      typeof item?.date === "string"
-        ? parseDateFromText(item.date, callerDate) || item.date
-        : callerDate;
+    const normalizedDateAndDescription = normalizeTransactionDateAndDescription(
+      item?.date,
+      description,
+      callerDate,
+    );
     const typeRaw = String(item?.type || "").toLowerCase();
     const type =
       typeRaw === "income" || typeRaw === "expense"
@@ -2408,8 +2476,8 @@ function parseTransactionsJsonToItems(
       category: normalizeCategory(description),
       currency,
       currencySymbol: getCurrencySymbol(currency),
-      date: typeof dateValue === "string" ? dateValue : callerDate,
-      description,
+      date: normalizedDateAndDescription.date,
+      description: normalizedDateAndDescription.description,
     });
   }
 
@@ -2813,6 +2881,12 @@ function processRawItems(
       const itemCurrency = it.currency || callerCurrency;
       const rawCategory = it.category || "other";
       const normalizedCategory = normalizeCategoryForStorage(rawCategory);
+      const normalizedDateAndDescription =
+        normalizeTransactionDateAndDescription(
+          it.date,
+          it.description,
+          callerDate,
+        );
 
       if (DEBUG_LOGS) {
         console.log(
@@ -2862,8 +2936,8 @@ function processRawItems(
         category: normalizedCategory,
         currency: itemCurrency,
         currencySymbol: itemCurrencySymbol,
-        date: it.date || callerDate,
-        description: it.description || "",
+        date: normalizedDateAndDescription.date,
+        description: normalizedDateAndDescription.description,
         payerUserId,
         customSplits,
       } as ExpenseItem;

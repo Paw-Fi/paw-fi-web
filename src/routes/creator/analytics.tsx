@@ -663,6 +663,36 @@ function defaultEndDate() {
 
 function humanizeKey(value: string | null) {
   if (!value) return "Unknown";
+  
+  // Map specific onboarding page IDs to more readable names
+  const pageNameMap: Record<string, string> = {
+    'onboarding_intro': 'Intro Page',
+    'onboarding_setup_notifications': 'Post-auth Setup Notifications',
+    'onboarding_setup_import': 'Post-auth Setup Import',
+    'onboarding_setup_ai_log': 'Post-auth Setup AI Log',
+    'preauth_housing_situation': 'Pre-auth Housing Situation',
+    'preauth_bill_split': 'Pre-auth Bill Split',
+    'preauth_subscriptions': 'Pre-auth Subscriptions',
+    'preauth_eating_out': 'Pre-auth Eating Out',
+    'preauth_lifestyle': 'Pre-auth Lifestyle',
+    'preauth_goal': 'Pre-auth Goal',
+    'preauth_savings_target': 'Pre-auth Savings Target',
+    'preauth_currency': 'Pre-auth Currency',
+    'preauth_calculating': 'Pre-auth Calculating',
+    'preauth_starter_budget': 'Pre-auth Starter Budget',
+    'preauth_create_account': 'Pre-auth Create Account',
+    'post_auth_log_expense': 'Post-auth Log Expense',
+    'post_auth_import': 'Post-auth Import',
+    'post_auth_notifications': 'Post-auth Notifications',
+    'onboarding_account_preparing': 'Account Preparing',
+    'paywall': 'Paywall',
+  };
+  
+  // Return mapped name if exists, otherwise apply default humanization
+  if (pageNameMap[value]) {
+    return pageNameMap[value];
+  }
+  
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
