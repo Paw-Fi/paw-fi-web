@@ -1,14 +1,18 @@
 [
   {
     "relation": [
-      "delegate_permission/common.handle_all_urls"
+      "delegate_permission/common.handle_all_urls",
+            "delegate_permission/common.get_login_creds"
+
     ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.moneko.mobile",
       "sha256_cert_fingerprints": [
         "A7:40:E1:42:47:FE:5A:30:7D:7F:EB:EB:AF:79:AA:4A:EC:D1:15:2B:1B:11:1D:3A:20:37:4A:38:8E:2A:8C:FB",
-        "5B:3D:0E:4C:AE:1A:75:01:11:F2:A5:FB:D9:77:27:5D:F1:9D:2B:05:5C:07:56:35:7D:1E:B6:D8:C9:FF:62:06"
+        "5B:3D:0E:4C:AE:1A:75:01:11:F2:A5:FB:D9:77:27:5D:F1:9D:2B:05:5C:07:56:35:7D:1E:B6:D8:C9:FF:62:06",
+                "EC:0B:2F:94:BE:CA:49:00:44:1E:55:D2:2B:34:8C:5C:92:7C:C0:2A:D8:FD:2C:1E:2C:91:84:DB:E2:3D:85:53"
+
       ]
     }
   }

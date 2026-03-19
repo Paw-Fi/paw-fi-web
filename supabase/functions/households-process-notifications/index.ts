@@ -161,6 +161,7 @@ async function sendFCMv1Notification(
   data: Record<string, string>,
   accessToken: string,
   imageUrl?: string,
+  platform?: string,
 ): Promise<boolean> {
   if (!firebaseProjectId) {
     console.error("[fcm-v1] FIREBASE_PROJECT_ID not configured");
@@ -168,6 +169,11 @@ async function sendFCMv1Notification(
   }
 
   try {
+    const deepLink = data.deep_link || buildDeepLink(data.event_type, data);
+    const webLink = buildWebLink(data.event_type, data);
+    const isWeb = typeof platform === "string" &&
+      /^(web|webpush|web_push|browser)$/i.test(platform);
+
     const message = {
       message: {
         token: deviceToken,
@@ -195,8 +201,22 @@ async function sendFCMv1Notification(
               ...(imageUrl ? { ["mutable-content"]: 1 } : {}),
               badge: 1,
             },
+            deep_link: deepLink,
           },
         },
+        ...(isWeb && deepLink
+          ? {
+            webpush: {
+              data: {
+                ...data,
+                deep_link: deepLink,
+              },
+              fcm_options: {
+                link: webLink,
+              },
+            },
+          }
+          : {}),
       },
     };
 
@@ -246,6 +266,98 @@ async function sendFCMv1Notification(
   } catch (error) {
     console.error("[fcm-v1] Error sending notification:", error);
     return false;
+  }
+}
+
+function buildDeepLink(
+  eventType: string | undefined,
+  data: Record<string, string>,
+): string {
+  const appScheme = "moneko://";
+
+  switch (eventType) {
+    case "expense_added":
+    case "expense_edited":
+    case "expense_deleted":
+    case "income_added":
+    case "income_edited":
+      if (data.expense_id) {
+        return `${appScheme}expense/${data.expense_id}`;
+      }
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}`;
+      }
+      return `${appScheme}home`;
+
+    case "budget_warn":
+    case "budget_alert":
+      return data.budget_id
+        ? `${appScheme}budget/${data.budget_id}`
+        : `${appScheme}pockets`;
+
+    case "split_created":
+      if (data.split_group_id) {
+        return `${appScheme}split/${data.split_group_id}`;
+      }
+      if (data.split_id) {
+        return `${appScheme}split/${data.split_id}`;
+      }
+      if (data.household_id) {
+        return `${appScheme}household/${data.household_id}`;
+      }
+      return `${appScheme}home`;
+
+    case "split_settled":
+    case "settlement_completed":
+    case "invite_accepted":
+    case "member_joined":
+    case "member_left":
+    case "member_removed":
+    case "member_reminded":
+      return data.household_id
+        ? `${appScheme}household/${data.household_id}`
+        : `${appScheme}home`;
+
+    case "invite_reminder_inviter":
+      return data.household_id
+        ? `${appScheme}household/${data.household_id}/settings?tab=2`
+        : `${appScheme}home`;
+
+    case "invite_reminder_invitee":
+      return data.invite_token
+        ? `${appScheme}households/join?token=${
+          encodeURIComponent(
+            data.invite_token,
+          )
+        }`
+        : `${appScheme}home`;
+
+    case "recurring_reminder":
+      return data.expense_id
+        ? `${appScheme}recurring/${data.expense_id}`
+        : `${appScheme}recurring`;
+
+    case "log_expense_reminder":
+      return `${appScheme}expenses/log`;
+
+    default:
+      return `${appScheme}home`;
+  }
+}
+
+function buildWebLink(
+  eventType: string | undefined,
+  data: Record<string, string>,
+): string {
+  const webBase = "https://moneko.io";
+
+  switch (eventType) {
+    case "invite_reminder_invitee":
+      return data.invite_token
+        ? `${webBase}/invites/${encodeURIComponent(data.invite_token)}`
+        : `${webBase}/dashboard`;
+    default:
+      return `${webBase}/dashboard`;
   }
 }
 
@@ -397,14 +509,12 @@ serve(async (req) => {
         let body: string;
         let targetUserId: string | null = event.user_id;
         let messageData: Record<string, string> = {};
-        const payloadExpenseData =
-          event.payload?.expense_data &&
-          typeof event.payload.expense_data === "object" &&
-          !Array.isArray(event.payload.expense_data)
-            ? event.payload.expense_data
-            : {};
-        const isRecurringEvent =
-          event.payload?.is_recurring === true ||
+        const payloadExpenseData = event.payload?.expense_data &&
+            typeof event.payload.expense_data === "object" &&
+            !Array.isArray(event.payload.expense_data)
+          ? event.payload.expense_data
+          : {};
+        const isRecurringEvent = event.payload?.is_recurring === true ||
           payloadExpenseData.is_recurring === true;
 
         switch (event.event_type) {
@@ -415,7 +525,9 @@ serve(async (req) => {
           case "invite_accepted":
           case "member_joined":
             title = "🎉 New Member!";
-            body = `Someone just joined your household "${event.payload.household_name || "household"}"`;
+            body = `Someone just joined your household "${
+              event.payload.household_name || "household"
+            }"`;
             // Target all household members except the joiner
             targetUserId = null; // Will broadcast to all members
             break;
@@ -423,13 +535,17 @@ serve(async (req) => {
           case "member_left":
           case "member_removed":
             title = "👋 Member Left";
-            body = `A member has left "${event.payload.household_name || "household"}"`;
+            body = `A member has left "${
+              event.payload.household_name || "household"
+            }"`;
             targetUserId = null; // Broadcast to remaining members
             break;
 
           case "split_created":
             title = "💰 New Expense Split";
-            body = `A new expense has been split in "${event.payload.household_name || "household"}"`;
+            body = `A new expense has been split in "${
+              event.payload.household_name || "household"
+            }"`;
             targetUserId = null; // Broadcast to all members
             break;
 
@@ -447,13 +563,13 @@ serve(async (req) => {
               const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "💸 Expenses Added";
-                const recurringSuffix =
-                  recurringCount > 0
-                    ? recurringCount === batchCount
-                      ? " (all recurring)"
-                      : ` (${recurringCount} recurring)`
-                    : "";
-                body = `${batchCount} expenses were added in your household${recurringSuffix}`;
+                const recurringSuffix = recurringCount > 0
+                  ? recurringCount === batchCount
+                    ? " (all recurring)"
+                    : ` (${recurringCount} recurring)`
+                  : "";
+                body =
+                  `${batchCount} expenses were added in your household${recurringSuffix}`;
               } else {
                 title = isRecurring
                   ? "🔁 New Recurring Expense Added"
@@ -486,13 +602,13 @@ serve(async (req) => {
               const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "🗑️ Expenses Deleted";
-                const recurringSuffix =
-                  recurringCount > 0
-                    ? recurringCount === batchCount
-                      ? " (all recurring)"
-                      : ` (${recurringCount} recurring)`
-                    : "";
-                body = `${batchCount} expenses were deleted in your household${recurringSuffix}`;
+                const recurringSuffix = recurringCount > 0
+                  ? recurringCount === batchCount
+                    ? " (all recurring)"
+                    : ` (${recurringCount} recurring)`
+                  : "";
+                body =
+                  `${batchCount} expenses were deleted in your household${recurringSuffix}`;
               } else {
                 title = isRecurring
                   ? "🔁 Recurring Expense Deleted"
@@ -511,13 +627,13 @@ serve(async (req) => {
             const isRecurring = isRecurringEvent;
             if (batchCount > 1) {
               title = "💰 Income Added";
-              const recurringSuffix =
-                recurringCount > 0
-                  ? recurringCount === batchCount
-                    ? " (all recurring)"
-                    : ` (${recurringCount} recurring)`
-                  : "";
-              body = `${batchCount} income entries were added in your household${recurringSuffix}`;
+              const recurringSuffix = recurringCount > 0
+                ? recurringCount === batchCount
+                  ? " (all recurring)"
+                  : ` (${recurringCount} recurring)`
+                : "";
+              body =
+                `${batchCount} income entries were added in your household${recurringSuffix}`;
             } else {
               title = isRecurring
                 ? "🔁 Recurring Income Added"
@@ -540,6 +656,25 @@ serve(async (req) => {
             }
             targetUserId = null; // Broadcast to all members except actor
             break;
+
+          case "recurring_reminder": {
+            const transactionType = (
+              event.payload?.type === "income" ? "income" : "expense"
+            ) as "income" | "expense";
+            const category = (event.payload?.category ||
+              payloadExpenseData.category ||
+              "") as string;
+            const amount = (event.payload?.amount || "") as string;
+            const timeframe = (event.payload?.timeframe || "soon") as string;
+
+            title = transactionType === "income"
+              ? "💰 Incoming Payment"
+              : "🔔 Upcoming Expense";
+            body = transactionType === "income"
+              ? `${category || "Income"} of ${amount} arrives ${timeframe}`
+              : `${category || "Expense"} of ${amount} is due ${timeframe}`;
+            break;
+          }
 
           case "log_expense_reminder": {
             const reminderMessage = buildLogExpenseReminderMessage(
@@ -643,8 +778,8 @@ serve(async (req) => {
           if (!isImmediateTransactionEvent) {
             if (isLogExpenseReminder) {
               const quietStart = Number.isFinite(
-                Number(event.payload?.quiet_start),
-              )
+                  Number(event.payload?.quiet_start),
+                )
                 ? Number(event.payload.quiet_start)
                 : 22;
               const quietEnd = Number.isFinite(Number(event.payload?.quiet_end))
@@ -740,22 +875,27 @@ serve(async (req) => {
         let eventSentCount = 0;
         let eventFailedCount = 0;
 
-        const payloadData =
-          event.payload &&
-          typeof event.payload === "object" &&
-          !Array.isArray(event.payload)
-            ? Object.fromEntries(
-                Object.entries(event.payload).map(([k, v]) => [
-                  k,
-                  v != null && typeof v === "object"
-                    ? JSON.stringify(v)
-                    : String(v),
-                ]),
-              )
-            : {};
+        const payloadData = event.payload &&
+            typeof event.payload === "object" &&
+            !Array.isArray(event.payload)
+          ? Object.fromEntries(
+            Object.entries(event.payload).map(([k, v]) => [
+              k,
+              v != null && typeof v === "object"
+                ? JSON.stringify(v)
+                : String(v),
+            ]),
+          )
+          : {};
         const mergedData = {
           ...payloadData,
           ...messageData,
+          deep_link: payloadData.deep_link ||
+            messageData.deep_link ||
+            buildDeepLink(event.event_type, {
+              ...payloadData,
+              ...messageData,
+            }),
         };
 
         const pushPromises = devices.map(async (device) => {
@@ -771,6 +911,7 @@ serve(async (req) => {
             },
             accessToken,
             imageUrl,
+            device.platform,
           );
 
           return { device, success };
@@ -792,10 +933,9 @@ serve(async (req) => {
           .update({
             is_sent: eventSentCount > 0,
             sent_at: eventSentCount > 0 ? new Date().toISOString() : null,
-            error_message:
-              eventFailedCount > 0
-                ? `Failed to send to ${eventFailedCount} devices`
-                : null,
+            error_message: eventFailedCount > 0
+              ? `Failed to send to ${eventFailedCount} devices`
+              : null,
             payload: {
               ...event.payload,
               sent_count: eventSentCount,
@@ -824,8 +964,9 @@ serve(async (req) => {
           },
         });
         failedCount++;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
         errors.push(`Event ${event.id}: ${errorMessage}`);
 
         // Update event with error

@@ -160,10 +160,9 @@ function buildWalletCaptureRequestLogContext(
   req: Request,
   body: RequestBody,
 ): Record<string, unknown> {
-  const tx =
-    body?.transaction && typeof body.transaction === "object"
-      ? body.transaction
-      : null;
+  const tx = body?.transaction && typeof body.transaction === "object"
+    ? body.transaction
+    : null;
 
   const safeHeaders = Object.fromEntries(
     [
@@ -188,30 +187,30 @@ function buildWalletCaptureRequestLogContext(
     headers: safeHeaders,
     transaction: tx
       ? {
-          amount: typeof tx.amount === "number" ? tx.amount : null,
-          currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
-          date: truncateForLog(resolveWalletTransactionDate(tx), 32),
-          merchantName: truncateForLog(tx.merchantName ?? null, 120),
-          rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
-          note: truncateForLog(tx.note ?? null, 200),
-          cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
-          shortcutTransaction: truncateForLog(
-            tx.shortcutTransaction ?? null,
-            200,
-          ),
-          shortcutCardOrPass: truncateForLog(
-            tx.shortcutCardOrPass ?? null,
-            120,
-          ),
-          shortcutMerchant: truncateForLog(tx.shortcutMerchant ?? null, 120),
-          shortcutName: truncateForLog(tx.shortcutName ?? null, 120),
-          packageName: truncateForLog(
-            resolveWalletTransactionPackageName(tx),
-            160,
-          ),
-          externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
-          locale: truncateForLog(tx.locale ?? null, 40),
-        }
+        amount: typeof tx.amount === "number" ? tx.amount : null,
+        currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+        date: truncateForLog(resolveWalletTransactionDate(tx), 32),
+        merchantName: truncateForLog(tx.merchantName ?? null, 120),
+        rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
+        note: truncateForLog(tx.note ?? null, 200),
+        cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
+        shortcutTransaction: truncateForLog(
+          tx.shortcutTransaction ?? null,
+          200,
+        ),
+        shortcutCardOrPass: truncateForLog(
+          tx.shortcutCardOrPass ?? null,
+          120,
+        ),
+        shortcutMerchant: truncateForLog(tx.shortcutMerchant ?? null, 120),
+        shortcutName: truncateForLog(tx.shortcutName ?? null, 120),
+        packageName: truncateForLog(
+          resolveWalletTransactionPackageName(tx),
+          160,
+        ),
+        externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
+        locale: truncateForLog(tx.locale ?? null, 40),
+      }
       : null,
   };
 }
@@ -330,6 +329,17 @@ function formatCurrencyAmount(cents: number, currency: string): string {
   } catch (_) {
     return `${currency} ${major.toFixed(2)}`;
   }
+}
+
+function formatWalletNotificationCategory(value: string): string {
+  const normalized = value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+
+  if (!normalized) return "Other";
+
+  return normalized
+    .split(" ")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function getLocalYyyyMmDdInTimeZone(
@@ -485,6 +495,7 @@ async function sendFcmV1Notification(params: {
   }
 
   try {
+    const deepLink = data.deep_link || "";
     const message = {
       message: {
         token: deviceToken,
@@ -510,6 +521,7 @@ async function sendFcmV1Notification(params: {
               sound: "default",
               badge: 1,
             },
+            ...(deepLink ? { deep_link: deepLink } : {}),
           },
         },
       },
@@ -578,7 +590,7 @@ async function fetchActiveDeviceTokens(
 
   return data
     .map((row: any) =>
-      typeof row?.push_token === "string" ? row.push_token.trim() : "",
+      typeof row?.push_token === "string" ? row.push_token.trim() : ""
     )
     .filter((token: string) => token.length > 0);
 }
@@ -603,8 +615,9 @@ async function buildWalletPocketInsight(params: {
   } = params;
   const scope = resolveWalletBudgetScope(householdId, isPortfolio);
   const normalizedCategory = normalizePocketCategory(category);
-  const { periodMonth, monthStart, monthEndExclusive } =
-    getMonthWindowFromDate(dateYmd);
+  const { periodMonth, monthStart, monthEndExclusive } = getMonthWindowFromDate(
+    dateYmd,
+  );
 
   let budgetQuery = supabase
     .from("budgets")
@@ -674,16 +687,16 @@ async function buildWalletPocketInsight(params: {
     .map((row) => (typeof row?.id === "string" ? row.id : null))
     .filter((id): id is string => Boolean(id));
 
-  const allocationRows =
-    ((await supabase
-      .from("envelope_allocations")
-      .select("envelope_id,amount_cents")
-      .eq("period_month", periodMonth)
-      .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
+  const allocationRows = ((await supabase
+    .from("envelope_allocations")
+    .select("envelope_id,amount_cents")
+    .eq("period_month", periodMonth)
+    .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
   const allocationByEnvelopeId = new Map<string, number>();
   for (const row of allocationRows) {
-    const envelopeId =
-      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const envelopeId = typeof row?.envelope_id === "string"
+      ? row.envelope_id
+      : "";
     if (!envelopeId) continue;
     const amountCents = Number(row?.amount_cents ?? 0);
     if (Number.isFinite(amountCents) && amountCents > 0) {
@@ -691,15 +704,15 @@ async function buildWalletPocketInsight(params: {
     }
   }
 
-  const categoryLinks =
-    ((await supabase
-      .from("envelope_category_links")
-      .select("envelope_id,category")
-      .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
+  const categoryLinks = ((await supabase
+    .from("envelope_category_links")
+    .select("envelope_id,category")
+    .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
   const categoriesByEnvelopeId = new Map<string, string[]>();
   for (const row of categoryLinks) {
-    const envelopeId =
-      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const envelopeId = typeof row?.envelope_id === "string"
+      ? row.envelope_id
+      : "";
     const linkedCategory = normalizePocketCategory(row?.category);
     if (!envelopeId || !linkedCategory) continue;
     const current = categoriesByEnvelopeId.get(envelopeId) ?? [];
@@ -748,15 +761,13 @@ async function buildWalletPocketInsight(params: {
       0,
     );
     const baseLimit = Number(row?.budget_amount_cents ?? 0);
-    const limitCents =
-      allocationByEnvelopeId.get(id) ??
+    const limitCents = allocationByEnvelopeId.get(id) ??
       (Number.isFinite(baseLimit) ? Math.trunc(baseLimit) : 0);
     return {
       id,
-      name:
-        typeof row?.name === "string" && row.name.trim().length > 0
-          ? row.name.trim()
-          : "Pocket",
+      name: typeof row?.name === "string" && row.name.trim().length > 0
+        ? row.name.trim()
+        : "Pocket",
       limitCents,
       spentCents,
       remainingCents: limitCents - spentCents,
@@ -789,20 +800,60 @@ async function buildWalletPocketInsight(params: {
   };
 }
 
+async function resolveWalletNotificationSpaceLabel(params: {
+  supabase: any;
+  householdId: string | null;
+  isPortfolio: boolean;
+}): Promise<string> {
+  const { supabase, householdId, isPortfolio } = params;
+
+  if (!householdId) {
+    return "your personal space";
+  }
+
+  try {
+    const { data: household, error } = await supabase
+      .from("households")
+      .select("name")
+      .eq("id", householdId)
+      .maybeSingle();
+
+    if (!error && typeof household?.name === "string") {
+      const trimmedName = household.name.replace(/\s+/g, " ").trim();
+      if (trimmedName.length > 0) {
+        const displayName = trimmedName.length <= 40
+          ? trimmedName
+          : `${trimmedName.slice(0, 37)}...`;
+        return isPortfolio
+          ? `the ${displayName} private space`
+          : `the ${displayName} shared space`;
+      }
+    }
+  } catch (_) {
+    // Non-blocking best-effort lookup only.
+  }
+
+  return isPortfolio ? "your private space" : "your shared space";
+}
+
 function buildWalletPocketNotificationMessage(params: {
   insight: WalletPocketInsight;
   amountCents: number;
   currency: string;
   category: string;
+  spaceLabel: string;
 }): { title: string; body: string; scenario: string } {
-  const { insight, amountCents, currency, category } = params;
+  const { insight, amountCents, currency, category, spaceLabel } = params;
   const amountLabel = formatCurrencyAmount(amountCents, currency);
   const prettyCategory = category.trim().length > 0 ? category : "other";
+  const displayCategory = formatWalletNotificationCategory(prettyCategory);
+  const title = `Moneko logged ${amountLabel} for ${displayCategory}`;
 
   if (insight.scenario === "no_budget") {
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel} in ${prettyCategory}. You’re all set to track better—add a monthly budget to start pocket insights.`,
+      title,
+      body:
+        `Expense saved in ${spaceLabel}. Open your space to set a monthly budget and unlock pocket insights.`,
       scenario: insight.scenario,
     };
   }
@@ -813,8 +864,9 @@ function buildWalletPocketNotificationMessage(params: {
       currency,
     );
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel}. Your monthly budget is ${budgetLabel}—create a few pockets to see what’s left in each one.`,
+      title,
+      body:
+        `Expense saved in ${spaceLabel}. Your monthly budget is ${budgetLabel} - open pockets to break it into focused spending buckets.`,
       scenario: insight.scenario,
     };
   }
@@ -829,8 +881,9 @@ function buildWalletPocketNotificationMessage(params: {
       currency,
     );
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel} in ${prettyCategory}. This category isn’t linked to a pocket yet—add it to one for clearer tracking. Month: ${spentLabel} / ${budgetLabel}.`,
+      title,
+      body:
+        `Expense saved in ${spaceLabel}. Open pockets to link this category for clearer tracking. Month: ${spentLabel} / ${budgetLabel}.`,
       scenario: insight.scenario,
     };
   }
@@ -838,8 +891,9 @@ function buildWalletPocketNotificationMessage(params: {
   const pocket = insight.pocket;
   if (!pocket) {
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel}. Nice work keeping your spending logged this month.`,
+      title,
+      body:
+        `Expense saved in ${spaceLabel}. Nice work keeping your spending on track this month.`,
       scenario: "linked",
     };
   }
@@ -857,41 +911,70 @@ function buildWalletPocketNotificationMessage(params: {
 
   if (pocket.limitCents <= 0) {
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel} in ${pocket.name}. This pocket has no limit yet—set an amount to track what’s left this month.`,
+      title,
+      body:
+        `Expense saved in ${spaceLabel}. Open pockets to give ${pocket.name} a limit and start tracking what is left this month.`,
       scenario: "linked_no_limit",
     };
   }
 
   if (pocket.remainingCents < 0) {
-    const overLabel = formatCurrencyAmount(
-      Math.abs(pocket.remainingCents),
-      currency,
-    );
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel} in ${pocket.name}. You’re ${overLabel} over this pocket (${pocketSpent} / ${pocketLimit})—a tiny adjustment can bring things back in balance.`,
+      title,
+      body: `Expense saved in ${spaceLabel}. ${pocket.name} has ${
+        formatCurrencyAmount(
+          pocket.remainingCents,
+          currency,
+        )
+      } left this month (${pocketSpent} / ${pocketLimit}). Open pockets to rebalance it.`,
       scenario: "linked_over",
     };
   }
 
   const remainingLabel = formatCurrencyAmount(pocket.remainingCents, currency);
-  const usedRatio =
-    pocket.limitCents > 0 ? pocket.spentCents / pocket.limitCents : 0;
+  const usedRatio = pocket.limitCents > 0
+    ? pocket.spentCents / pocket.limitCents
+    : 0;
 
   if (usedRatio >= 0.85) {
     return {
-      title: "Pocket update ✨",
-      body: `Saved ${amountLabel} in ${pocket.name}. You have ${remainingLabel} left this month (${pocketSpent} / ${pocketLimit})—you’re doing great, just close to the limit.`,
+      title,
+      body:
+        `Expense saved in ${spaceLabel}. ${pocket.name} has ${remainingLabel} left this month (${pocketSpent} / ${pocketLimit}). Open pockets if you want to adjust the pace.`,
       scenario: "linked_near_limit",
     };
   }
 
   return {
-    title: "Pocket update ✨",
-    body: `Saved ${amountLabel} in ${pocket.name}. You still have ${remainingLabel} left (${pocketSpent} / ${pocketLimit}). Month total: ${monthSpent} / ${monthBudget}.`,
+    title,
+    body:
+      `Expense saved in ${spaceLabel}, in ${pocket.name}. You still have ${remainingLabel} left (${pocketSpent} / ${pocketLimit}). Month total: ${monthSpent} / ${monthBudget}.`,
     scenario: "linked_healthy",
   };
+}
+
+function buildWalletPocketNotificationDeepLink(params: {
+  scenario: string;
+  expenseId: string;
+  householdId: string | null;
+}): string {
+  const { scenario, expenseId, householdId } = params;
+
+  if (
+    scenario === "no_pockets" ||
+    scenario === "category_unlinked" ||
+    scenario === "linked_no_limit" ||
+    scenario === "linked_over" ||
+    scenario === "linked_near_limit"
+  ) {
+    return "moneko://pockets";
+  }
+
+  if (scenario === "no_budget") {
+    return householdId ? `moneko://household/${householdId}` : "moneko://home";
+  }
+
+  return `moneko://expense/${expenseId}`;
 }
 
 async function sendWalletPocketNotificationBestEffort(params: {
@@ -924,6 +1007,12 @@ async function sendWalletPocketNotificationBestEffort(params: {
     const accessToken = await getFcmAccessToken();
     if (!accessToken) return;
 
+    const spaceLabel = await resolveWalletNotificationSpaceLabel({
+      supabase,
+      householdId,
+      isPortfolio,
+    });
+
     const insight = await buildWalletPocketInsight({
       supabase,
       userId,
@@ -938,6 +1027,12 @@ async function sendWalletPocketNotificationBestEffort(params: {
       amountCents,
       currency,
       category,
+      spaceLabel,
+    });
+    const deepLink = buildWalletPocketNotificationDeepLink({
+      scenario: message.scenario,
+      expenseId,
+      householdId,
     });
 
     const scope = resolveWalletBudgetScope(householdId, isPortfolio);
@@ -950,6 +1045,7 @@ async function sendWalletPocketNotificationBestEffort(params: {
       category,
       amount_cents: String(amountCents),
       household_id: householdId ?? "",
+      deep_link: deepLink,
     };
 
     await Promise.allSettled(
@@ -961,7 +1057,7 @@ async function sendWalletPocketNotificationBestEffort(params: {
           body: message.body,
           data: payloadData,
           accessToken,
-        }),
+        })
       ),
     );
   } catch (error) {
@@ -1013,10 +1109,9 @@ function buildDuplicateWalletCaptureResponse(
   cached: Record<string, unknown>,
   captureSource: string,
 ): Record<string, unknown> {
-  const cachedMeta =
-    cached["meta"] && typeof cached["meta"] === "object"
-      ? (cached["meta"] as Record<string, unknown>)
-      : {};
+  const cachedMeta = cached["meta"] && typeof cached["meta"] === "object"
+    ? (cached["meta"] as Record<string, unknown>)
+    : {};
 
   return {
     ...cached,
@@ -1367,9 +1462,11 @@ Deno.serve(async (req: Request) => {
         },
       );
       return errorResponse(
-        `captureSource must be one of: ${Array.from(VALID_CAPTURE_SOURCES).join(
-          ", ",
-        )}`,
+        `captureSource must be one of: ${
+          Array.from(VALID_CAPTURE_SOURCES).join(
+            ", ",
+          )
+        }`,
         400,
       );
     }
@@ -1424,10 +1521,10 @@ Deno.serve(async (req: Request) => {
     // Merchant — allow note/package fallback for notification-based captures.
     const merchantDisplay = (
       tx.merchantName ??
-      tx.rawMerchant ??
-      tx.note ??
-      resolveWalletTransactionPackageName(tx) ??
-      ""
+        tx.rawMerchant ??
+        tx.note ??
+        resolveWalletTransactionPackageName(tx) ??
+        ""
     ).trim();
     if (!merchantDisplay) {
       logWalletCaptureValidationFailure(
@@ -1543,8 +1640,9 @@ Deno.serve(async (req: Request) => {
           .select("user_id")
           .eq("household_id", householdId);
 
-        householdMembers =
-          membersError || !Array.isArray(members) ? [] : members;
+        householdMembers = membersError || !Array.isArray(members)
+          ? []
+          : members;
       }
 
       try {
@@ -1611,10 +1709,9 @@ Deno.serve(async (req: Request) => {
 
       if (contact) {
         contactId = contact.id;
-        preferredTimezone =
-          typeof contact.preferred_timezone === "string"
-            ? contact.preferred_timezone.trim() || null
-            : null;
+        preferredTimezone = typeof contact.preferred_timezone === "string"
+          ? contact.preferred_timezone.trim() || null
+          : null;
         // Back-fill preferred currency if missing
         if (!contact.preferred_currency && currency) {
           await supabase
@@ -1639,13 +1736,11 @@ Deno.serve(async (req: Request) => {
     const fallbackDate = Number.isNaN(fallbackDateBase.getTime())
       ? new Date()
       : fallbackDateBase;
-    const normalizedClientCreatedDate =
-      clientCreatedAtPrefix ??
+    const normalizedClientCreatedDate = clientCreatedAtPrefix ??
       (body.clientCreatedAt && !Number.isNaN(fallbackDateBase.getTime())
         ? getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDateBase)
         : null);
-    const normalizedDate =
-      normalizedProvidedDate ??
+    const normalizedDate = normalizedProvidedDate ??
       normalizedClientCreatedDate ??
       getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDate);
 
@@ -1676,8 +1771,8 @@ Deno.serve(async (req: Request) => {
       isPortfolio,
       preferredTimezone,
       usedProvidedDate: Boolean(normalizedProvidedDate),
-      usedClientCreatedAtDate:
-        !normalizedProvidedDate && Boolean(normalizedClientCreatedDate),
+      usedClientCreatedAtDate: !normalizedProvidedDate &&
+        Boolean(normalizedClientCreatedDate),
     });
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({
