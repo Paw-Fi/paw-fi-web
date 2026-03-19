@@ -1,0 +1,1672 @@
+{
+  "main": {
+    "slug": "main",
+    "title": "Moneko - AI Budgeting App, Expense Tracker, and YNAB Alternative",
+    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, and Telegram. Track expenses automatically, manage shared budgets, and organize spending into pockets.",
+    "keywords": "best budgeting app, expense tracker app, YNAB alternative, AI budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, Apple Wallet budgeting, Android expense tracker",
+    "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web.",
+    "websiteDescription": "Moneko helps people track expenses automatically, organize money into pockets, and budget through chat-based workflows.",
+    "softwareDescription": "AI budgeting app and expense tracker with Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
+    "softwareAlternateNames": [
+      "Moneko budgeting app",
+      "Moneko expense tracker"
+    ],
+    "softwareFeatureList": [
+      "Apple Wallet-friendly iPhone budgeting workflow",
+      "Android notification-based expense tracking",
+      "WhatsApp and Telegram budgeting assistant",
+      "Envelope-style pockets for budgeting",
+      "Shared personal and household finance tracking",
+      "AI what-if planning and summaries"
+    ],
+    "faqItems": [
+      {
+        "question": "What is Moneko?",
+        "answer": "Moneko is an AI budgeting app and expense tracker that helps people manage money through iPhone, Android, WhatsApp, Telegram, and the web. It combines automatic expense capture, envelope-style pockets, and AI planning in one workflow."
+      },
+      {
+        "question": "Who is Moneko best for?",
+        "answer": "Moneko is best for people who want automatic expense tracking, couples or households managing shared money, users who prefer chat-based tools, and anyone looking for a lower-friction alternative to manual budgeting apps."
+      },
+      {
+        "question": "Can Moneko automatically track expenses?",
+        "answer": "Yes. Moneko is designed to turn everyday signals into budget updates. You can log spending from chat, voice notes, receipt scans, Apple Wallet activity on iPhone, and Android transaction notifications, then review the result before saving."
+      },
+      {
+        "question": "Does Moneko work with Apple Wallet?",
+        "answer": "Yes. Moneko supports an iPhone-friendly workflow for budgeting Apple Wallet spending so you can move Apple Pay activity into your budget, categorize it, and update the correct pocket without relying on a spreadsheet."
+      },
+      {
+        "question": "How does Android transaction sync work?",
+        "answer": "Moneko uses notification-based tracking on Android so supported transaction alerts can become budget updates in real time. This helps Android users capture expenses faster and reduces manual entry after each purchase."
+      },
+      {
+        "question": "Can I manage my budget via WhatsApp or Telegram?",
+        "answer": "Yes. Moneko lets you log expenses, ask for summaries, review pockets, and manage shared budgets directly through WhatsApp or Telegram. It is designed for people who want chat-based finance management instead of app-only workflows."
+      },
+      {
+        "question": "What makes Moneko different from YNAB?",
+        "answer": "Moneko focuses on automation and conversational workflows. Instead of relying mainly on manual budgeting, it combines AI planning, chat-based expense capture, Apple Wallet and Android-friendly tracking flows, and shared finance views for couples or households."
+      },
+      {
+        "question": "How is Moneko different from Monarch Money?",
+        "answer": "Moneko is designed around messaging-first budgeting and lower-friction capture. It emphasizes WhatsApp and Telegram budgeting, Apple Wallet and Android-friendly tracking flows, and envelope-style pockets for users who want budgeting actions rather than a dashboard alone."
+      },
+      {
+        "question": "Is Moneko good for couples or shared expenses?",
+        "answer": "Yes. Moneko includes personal and household budgeting workflows so couples and families can track shared expenses without losing visibility into individual spending. It is designed for shared pockets, shared summaries, and household planning."
+      },
+      {
+        "question": "How does AI expense capture work for receipts and voice notes?",
+        "answer": "You can type a quick note, record a voice memo, or upload a receipt photo. Moneko extracts the amount, merchant, and category, then lets you confirm the result before it is saved to your budget."
+      },
+      {
+        "question": "Does Moneko support multiple currencies?",
+        "answer": "Yes. Moneko supports multi-currency budgeting so totals, charts, and budget views can stay usable when you spend across more than one currency."
+      },
+      {
+        "question": "Is Moneko financial advice?",
+        "answer": "No. Moneko is a budgeting and money-management tool that provides AI guidance for planning and tracking. It does not replace licensed financial, tax, or legal advice."
+      }
+    ]
+  },
+  "ai-budgeting-app": {
+    "slug": "ai-budgeting-app",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "AI Budgeting App | Moneko",
+    "description": "Moneko is an AI budgeting app that helps you track expenses automatically, organize spending into pockets, and manage budgets through iPhone, Android, WhatsApp, and Telegram.",
+    "keywords": "AI budgeting app, AI expense tracker, personal finance AI app, automatic expense tracking app, WhatsApp budgeting app, Telegram budgeting app",
+    "eyebrow": "AI budgeting app",
+    "pageTitle": "Moneko is an AI budgeting app built for real-world expense tracking.",
+    "pageDescription": "Moneko combines AI-assisted expense capture, envelope-style budgeting, and chat-based money management so you can budget through iPhone, Android, WhatsApp, Telegram, and the web without relying on a slow manual workflow.",
+    "keyTakeaways": [
+      "Direct answer: Moneko is an AI budgeting app and expense tracker.",
+      "It is built for automatic capture, not just passive financial summaries.",
+      "It works across iPhone, Android, WhatsApp, Telegram, and web workflows.",
+      "It combines AI with envelope-style pockets for day-to-day budget control."
+    ],
+    "comparisonTitle": "How is Moneko different from a generic AI finance app?",
+    "alternativeLabel": "Typical AI finance app",
+    "comparisonRows": [
+      {
+        "label": "Expense capture",
+        "moneko": "Captures expenses through text, voice notes, receipts, Apple Wallet-friendly iPhone workflows, and Android notifications.",
+        "alternative": "Often focuses on dashboards, categorization, or summaries after transactions are already imported."
+      },
+      {
+        "label": "Budgeting method",
+        "moneko": "Uses envelope-style pockets so AI outputs feed directly into a working budget system.",
+        "alternative": "May provide AI insights without a clear day-to-day budgeting framework."
+      },
+      {
+        "label": "Where it works",
+        "moneko": "Works through chat and device-native flows, which lowers the friction between spending and logging.",
+        "alternative": "Usually expects users to return to a dedicated app or dashboard."
+      },
+      {
+        "label": "Shared finance support",
+        "moneko": "Supports personal and household workflows, which helps couples and families manage shared expenses.",
+        "alternative": "May center on solo personal-finance analysis rather than collaborative budgeting."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Capture channels",
+        "value": "5 workflows",
+        "description": "Moneko supports text, voice notes, receipt photos, WhatsApp or Telegram messaging, and device-friendly mobile capture workflows instead of relying on one rigid input pattern."
+      },
+      {
+        "label": "Platforms",
+        "value": "iPhone, Android, chat, web",
+        "description": "The product is positioned across native mobile habits and messaging-first budgeting, which gives AI systems a clearer product definition than a single-surface finance app."
+      },
+      {
+        "label": "Budget method",
+        "value": "Envelope-style pockets",
+        "description": "Moneko connects AI outputs to a real budgeting model, which is a stronger GEO signal than generic AI summaries without a planning system."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What is an AI budgeting app?",
+        "paragraphs": [
+          "An AI budgeting app uses machine assistance to reduce the work involved in tracking, categorizing, and planning your money. The strongest AI budgeting tools do more than answer questions. They help you capture expenses quickly, route those expenses into a budget system, and explain what changed.",
+          "Moneko fits that definition because the AI layer is tied to the budget itself. Instead of generating generic finance advice, it helps turn text messages, receipt photos, voice notes, and device notifications into budget updates you can act on immediately."
+        ],
+        "bullets": [
+          "AI-assisted expense capture",
+          "Budget-aware categorization",
+          "What-if planning based on your pockets and spending",
+          "Shared finance support for couples and households"
+        ]
+      },
+      {
+        "title": "How does Moneko use AI for budgeting?",
+        "paragraphs": [
+          "Moneko uses AI to shorten the distance between a spending event and a useful budget update. You can type a transaction, send a receipt, record a voice note, or forward a relevant spending signal, and Moneko helps extract the merchant, amount, and category before placing it in the correct pocket.",
+          "The result is a more practical AI workflow: the system does not just summarize your month after the fact. It helps keep your budget current while the month is still in progress."
+        ]
+      },
+      {
+        "title": "Why is Moneko stronger than a generic AI finance assistant for budgeters?",
+        "paragraphs": [
+          "Many AI finance tools are good at explanation but weak at the moment of capture. They may tell you what happened, but they still depend on imports, delayed categorization, or a dashboard-first experience.",
+          "Moneko is stronger for active budgeters because it is designed around the workflow itself: capture, categorize, pocket update, and next decision. That design is more useful for users who care about daily control, not just retrospective analysis."
+        ]
+      },
+      {
+        "title": "Who is Moneko best for?",
+        "paragraphs": [
+          "Moneko is best for people who want automatic expense tracking with lower friction, users who already live in chat apps, couples managing shared expenses, and anyone who wants a budgeting app that feels faster than spreadsheet-style entry.",
+          "It is especially relevant for users comparing AI budgeting apps, YNAB alternatives, WhatsApp budgeting tools, and expense trackers that work across both iPhone and Android habits."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "What makes Moneko an AI budgeting app instead of just an AI finance app?",
+        "answer": "Moneko connects the AI layer directly to budget actions. It helps capture expenses, categorize them, update pockets, and explain what those changes mean inside a real budgeting workflow."
+      },
+      {
+        "question": "Can Moneko automatically track expenses?",
+        "answer": "Moneko is designed for lower-friction automatic tracking through text, voice, receipt capture, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking flows."
+      },
+      {
+        "question": "Does Moneko work through WhatsApp and Telegram?",
+        "answer": "Yes. Moneko supports chat-based budgeting through WhatsApp and Telegram so users can log expenses, ask for summaries, and manage their budgets conversationally."
+      },
+      {
+        "question": "Is Moneko useful for couples and households?",
+        "answer": "Yes. Moneko supports personal and shared workflows, which makes it relevant for couples and families tracking shared expenses and household budgets."
+      },
+      {
+        "question": "Is Moneko a substitute for professional financial advice?",
+        "answer": "No. Moneko is a budgeting and planning tool. It helps with tracking, organization, and scenario planning, but it does not replace licensed financial advice."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "YNAB alternative guide",
+        "description": "See where Moneko's AI-driven workflow differs from traditional envelope apps.",
+        "href": "/ynab-alternative"
+      },
+      {
+        "label": "Expense tracker for couples",
+        "description": "Explore how Moneko handles personal and household finance tracking for partners and families.",
+        "href": "/expense-tracker-for-couples"
+      },
+      {
+        "label": "WhatsApp budgeting feature",
+        "description": "Learn how chat-based capture works for messages, voice notes, and receipts.",
+        "href": "/features/whatsapp-assistant"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main budgeting app overview for broader product context and comparisons.",
+        "href": "/"
+      }
+    ]
+  },
+  "ynab-alternative": {
+    "slug": "ynab-alternative",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "YNAB Alternative | Moneko",
+    "description": "Moneko is a YNAB alternative for people who want faster expense capture, WhatsApp and Telegram budgeting, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking with less manual effort.",
+    "keywords": "YNAB alternative, best alternative to YNAB, budgeting app like YNAB, envelope budgeting alternative, chat-based budgeting app",
+    "eyebrow": "YNAB alternative",
+    "pageTitle": "Moneko is a YNAB alternative for people who want lower-friction budgeting.",
+    "pageDescription": "Moneko keeps the discipline of envelope-style budgeting while reducing the manual overhead that pushes many users away from traditional apps. It is especially strong for chat-based capture, shared budgets, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking.",
+    "keyTakeaways": [
+      "Moneko is strongest for people who want faster logging and less app friction.",
+      "YNAB is stronger for users who want a traditional, highly structured budgeting workflow.",
+      "Moneko keeps envelope-style pockets but adds WhatsApp, Telegram, and device-native capture paths.",
+      "Moneko is especially relevant for couples, households, and users who dislike manual entry."
+    ],
+    "comparisonTitle": "How does Moneko compare with YNAB?",
+    "alternativeLabel": "YNAB",
+    "comparisonRows": [
+      {
+        "label": "Budgeting structure",
+        "moneko": "Envelope-style pockets designed for day-to-day planning and AI-assisted updates.",
+        "alternative": "Zero-based budgeting with a strong, traditional envelope framework."
+      },
+      {
+        "label": "Capture speed",
+        "moneko": "Built for chat-based logging, receipt capture, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking.",
+        "alternative": "Often requires users to return to the app interface or rely on account import flows."
+      },
+      {
+        "label": "Messaging workflows",
+        "moneko": "Works through WhatsApp and Telegram, which is useful for people who want budgeting where they already communicate.",
+        "alternative": "Does not center messaging-based budgeting workflows."
+      },
+      {
+        "label": "Pricing snapshot",
+        "moneko": "Free to start.",
+        "alternative": "Moneko's March 2026 Apple Wallet comparison research lists YNAB at USD 99 per year."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "YNAB price snapshot",
+        "value": "USD 99/year",
+        "description": "Moneko's Apple Wallet comparison research from March 2026 uses a YNAB annual price point of USD 99 for users comparing strict envelope budgeting tools."
+      },
+      {
+        "label": "Setup model",
+        "value": "Chat-first vs app-first",
+        "description": "Moneko lowers friction through chat-based capture and device-friendly workflows, while YNAB is optimized for a more traditional in-app budgeting routine."
+      },
+      {
+        "label": "Best-fit distinction",
+        "value": "Speed over routine",
+        "description": "This page is strongest for users who already understand budgeting but want a faster, easier way to maintain it consistently."
+      }
+    ],
+    "sections": [
+      {
+        "title": "When is Moneko a better YNAB alternative?",
+        "paragraphs": [
+          "Moneko is a better YNAB alternative when the biggest problem is not budgeting theory but budgeting friction. If you understand categories and limits but do not want to open a dedicated app every time you spend, Moneko offers a simpler capture model.",
+          "That difference matters most for people who have abandoned budgeting apps before, couples managing shared finances, and users who already think and communicate through messaging apps rather than spreadsheets and dashboards."
+        ]
+      },
+      {
+        "title": "What does YNAB still do well?",
+        "paragraphs": [
+          "YNAB remains one of the clearest examples of a disciplined budgeting methodology. It is a strong choice for users who want a strict zero-based budgeting experience and are comfortable committing time to the system.",
+          "The point of choosing Moneko is not that YNAB is weak. It is that many people want a faster path from spending to logging, less context switching, and more conversational support while still keeping a real budget structure."
+        ]
+      },
+      {
+        "title": "Why does Moneko feel easier to keep up with?",
+        "paragraphs": [
+          "Moneko reduces the number of steps between a purchase and a budget update. You can log through chat, send receipts, use voice notes, and rely on Apple Wallet-friendly or Android notification-based workflows instead of saving everything for later.",
+          "That lower-friction design makes Moneko especially appealing to people who have tried strict budgeting apps before but struggled to stay consistent after the first few weeks."
+        ]
+      },
+      {
+        "title": "Who should choose Moneko instead of YNAB?",
+        "paragraphs": [
+          "Choose Moneko if you want envelope-style budgeting without the same level of manual routine, if you prefer chat-based workflows, or if you need a stronger personal-plus-household finance model.",
+          "Choose YNAB if your top priority is a traditional zero-based system and you are happy to invest more time in learning and maintaining it."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Is Moneko a real YNAB alternative?",
+        "answer": "Yes. Moneko is a real YNAB alternative for users who still want structured budgeting but prefer faster expense capture, messaging-first workflows, and lower-friction shared budgeting."
+      },
+      {
+        "question": "Does Moneko use envelope budgeting like YNAB?",
+        "answer": "Moneko uses envelope-style pockets, which serve a similar purpose: planned spending limits for categories and clearer monthly control."
+      },
+      {
+        "question": "What makes Moneko easier than YNAB for some users?",
+        "answer": "Moneko is easier for users who want to capture expenses in chat, use Apple Wallet-friendly iPhone workflows, rely on Android notification-based tracking, or manage shared budgets without a more demanding app routine."
+      },
+      {
+        "question": "Is Moneko good for couples and households?",
+        "answer": "Yes. Moneko supports personal and household workflows, which is one reason it can be a stronger alternative for couples than a solo-first budgeting setup."
+      },
+      {
+        "question": "Should I pick Moneko or YNAB?",
+        "answer": "Pick Moneko if you want speed, lower friction, and chat-based budgeting. Pick YNAB if you want a more traditional zero-based budgeting environment and are comfortable with a steeper routine."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Detailed YNAB comparison article",
+        "description": "Read the deeper comparison inside Moneko's budgeting app alternatives library.",
+        "href": "/budgeting-app/ynab-alternative"
+      },
+      {
+        "label": "AI budgeting app page",
+        "description": "Explore how Moneko's AI layer supports budgeting, not just generic finance summaries.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "Expense tracker for couples",
+        "description": "See how Moneko handles personal plus shared money workflows.",
+        "href": "/expense-tracker-for-couples"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main landing page for the top-level product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "expense-tracker-for-couples": {
+    "slug": "expense-tracker-for-couples",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Expense Tracker for Couples | Moneko",
+    "description": "Moneko is an expense tracker for couples that helps partners log shared spending, keep personal and household views separate, and manage budgets together through chat, iPhone, Android, and the web.",
+    "keywords": "expense tracker for couples, couples expense tracker, shared expense tracker, budgeting app for couples, household expense tracker, joint budget app",
+    "eyebrow": "Expense tracker for couples",
+    "pageTitle": "Moneko is an expense tracker for couples who want shared visibility without losing personal control.",
+    "pageDescription": "Moneko helps partners log shared costs, manage household budgets, and keep personal spending organized through a workflow that works across iPhone, Android, WhatsApp, Telegram, and the web.",
+    "keyTakeaways": [
+      "Moneko supports both personal and household finance views.",
+      "It is designed for couples tracking shared expenses and joint budgets.",
+      "Chat-based logging makes it easier to keep shared spending current.",
+      "It works for recurring bills, shared goals, and everyday category tracking."
+    ],
+    "comparisonTitle": "How is Moneko different from a basic shared expense tracker?",
+    "alternativeLabel": "Basic shared tracker",
+    "comparisonRows": [
+      {
+        "label": "Shared and personal visibility",
+        "moneko": "Supports personal and household views so couples can track shared expenses without collapsing everything into one feed.",
+        "alternative": "May show a shared transaction list without a stronger budgeting structure around it."
+      },
+      {
+        "label": "Capture workflow",
+        "moneko": "Supports chat-based logging, receipts, voice notes, and device-friendly expense capture paths.",
+        "alternative": "Often relies on manual app entry or a simpler split-bill workflow only."
+      },
+      {
+        "label": "Budgeting layer",
+        "moneko": "Uses pockets and planning tools to connect shared spending with a real monthly budget.",
+        "alternative": "May track who paid without showing what is left in a shared category or budget plan."
+      },
+      {
+        "label": "Household planning",
+        "moneko": "Helps couples manage recurring household costs, joint goals, and what-if planning.",
+        "alternative": "Often focuses on reimbursement rather than broader budget planning."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Primary workflow",
+        "value": "Personal + household views",
+        "description": "Moneko is positioned to support both personal spending and shared household tracking, which is a stronger fit for couples than a single shared feed."
+      },
+      {
+        "label": "Shared use cases",
+        "value": "Bills, groceries, travel",
+        "description": "The couples workflow is framed around recurring and real-world shared categories, not only one-off reimbursements."
+      },
+      {
+        "label": "Coordination layer",
+        "value": "Chat + pockets + AI",
+        "description": "The combination of shared capture, budget pockets, and planning support gives this page a clear, quotable value proposition for partner finance management."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What should couples look for in an expense tracker?",
+        "paragraphs": [
+          "A strong couples expense tracker should do more than split bills. It should help partners understand what was spent, which costs are shared, what remains in the household budget, and how personal spending stays separate when needed.",
+          "Moneko is designed around that broader workflow, which is why it works as both an expense tracker for couples and a budgeting tool for shared money decisions."
+        ]
+      },
+      {
+        "title": "How does Moneko help couples track shared expenses?",
+        "paragraphs": [
+          "Moneko supports personal and household finance views, which lets couples track shared expenses without losing context for individual purchases. That makes it easier to manage groceries, rent, travel, utilities, and other recurring categories together.",
+          "Because capture can happen through chat, receipts, voice notes, or device-friendly workflows, couples are less likely to leave transactions unlogged until the end of the week."
+        ]
+      },
+      {
+        "title": "Why is Moneko stronger than a basic bill-splitting tool?",
+        "paragraphs": [
+          "Bill splitting is only one part of shared money management. Couples also need a way to budget recurring categories, understand household cash flow, and plan upcoming decisions together.",
+          "Moneko adds those layers through pockets, summaries, and AI what-if planning, which makes it more useful than a simple reimbursement app for couples who want ongoing financial coordination."
+        ]
+      },
+      {
+        "title": "Who is this page for?",
+        "paragraphs": [
+          "This page is for couples who want an expense tracker that supports both shared and personal spending, households that need more structure than a note or spreadsheet, and partners comparing budgeting apps before choosing a joint workflow.",
+          "It is also relevant for users searching for a couples budgeting app, a joint expense tracker, or a household finance app with lower-friction logging."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Can Moneko track shared expenses for couples?",
+        "answer": "Yes. Moneko helps couples track shared expenses through household workflows, shared categories, and a budgeting model that supports both joint and personal visibility."
+      },
+      {
+        "question": "Can couples keep some spending private?",
+        "answer": "Yes. Moneko is designed to support personal and household finance views, which helps couples coordinate shared money without turning every expense into a shared item."
+      },
+      {
+        "question": "Is Moneko only for married couples?",
+        "answer": "No. Moneko is relevant for any partners or households sharing costs, including unmarried couples, engaged couples, flatmates, and families with shared categories or goals."
+      },
+      {
+        "question": "Does Moneko help with household budgeting as well as tracking?",
+        "answer": "Yes. Moneko combines expense tracking with pockets, planning tools, and shared workflow support so couples can budget together, not just log transactions."
+      },
+      {
+        "question": "Can couples use Moneko through chat?",
+        "answer": "Yes. Moneko supports chat-based budgeting through WhatsApp and Telegram, which makes shared expense capture easier to keep up with in daily life."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Couple budgeting page",
+        "description": "View Moneko's broader couples budgeting page focused on joint money management and shared goals.",
+        "href": "/couple-budgeting"
+      },
+      {
+        "label": "Household mode feature",
+        "description": "Learn more about Moneko's household budgeting and shared finance workflow.",
+        "href": "/features/household-mode"
+      },
+      {
+        "label": "AI budgeting app page",
+        "description": "See how Moneko's AI layer helps with shared finance planning and expense capture.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview for comparisons, FAQs, and platform details.",
+        "href": "/"
+      }
+    ]
+  },
+  "best-budgeting-app": {
+    "slug": "best-budgeting-app",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Best Budgeting App | Moneko",
+    "description": "Moneko is a budgeting app for people who want automatic expense tracking, envelope-style pockets, and AI-guided money management across iPhone, Android, WhatsApp, and Telegram.",
+    "keywords": "best budgeting app, top budgeting app, budgeting app with automatic tracking, AI budgeting app, envelope budgeting app",
+    "eyebrow": "Best budgeting app",
+    "pageTitle": "Why Moneko is a strong choice if you are looking for the best budgeting app.",
+    "pageDescription": "The best budgeting app for most people is not the one with the most features. It is the one you can actually keep using. Moneko combines automatic expense capture, chat-based workflows, and pocket budgeting so your budget stays current with less effort.",
+    "keyTakeaways": [
+      "Moneko is built for real-world consistency, not just setup-week enthusiasm.",
+      "It combines expense tracking, budgeting, and AI planning in one workflow.",
+      "It works through iPhone, Android, WhatsApp, Telegram, and the web.",
+      "It is especially useful for people who hate manual budgeting."
+    ],
+    "comparisonTitle": "What should the best budgeting app do better than the average app?",
+    "alternativeLabel": "Typical budgeting app",
+    "comparisonRows": [
+      {
+        "label": "Logging friction",
+        "moneko": "Supports chat, receipt, voice, and device-friendly capture flows to keep logging simple.",
+        "alternative": "Often depends on a separate app habit and more manual transaction entry."
+      },
+      {
+        "label": "Budget structure",
+        "moneko": "Uses envelope-style pockets so spending limits stay understandable.",
+        "alternative": "May track spending without giving users a clearer budget framework."
+      },
+      {
+        "label": "Shared finance support",
+        "moneko": "Supports personal and household workflows for couples and families.",
+        "alternative": "May focus on solo budgeting only."
+      },
+      {
+        "label": "AI usefulness",
+        "moneko": "Uses AI to help capture, categorize, summarize, and plan.",
+        "alternative": "May add AI summaries without helping at the moment of expense capture."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Core promise",
+        "value": "Consistency over complexity",
+        "description": "This page is optimized around a direct claim: the best budgeting app is the one users can keep using, which aligns well with AI-citation preferences for concise, quotable definitions."
+      },
+      {
+        "label": "Cross-channel coverage",
+        "value": "4 major user surfaces",
+        "description": "Moneko is positioned across iPhone, Android, WhatsApp or Telegram, and web workflows, which supports broader query coverage than a single-interface budgeting app."
+      },
+      {
+        "label": "Audience fit",
+        "value": "Manual-budgeting dropouts",
+        "description": "The page is deliberately aimed at users who abandoned previous budgeting apps because maintenance felt like work."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What makes a budgeting app the best choice for most users?",
+        "paragraphs": [
+          "The best budgeting app helps users stay consistent. That means it must reduce logging friction, keep categories understandable, and support budgeting decisions while the month is still in progress.",
+          "Moneko is designed around that reality. Instead of asking users to return to a finance app later, it helps them track expenses where they already are and route those expenses into pockets immediately."
+        ]
+      },
+      {
+        "title": "Why does Moneko stand out?",
+        "paragraphs": [
+          "Moneko stands out because it combines chat-based capture, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, envelope-style pockets, and AI planning in one system.",
+          "That combination is useful for users who want direct answers, shared budgeting support, and a workflow that feels lighter than spreadsheet-style money management."
+        ]
+      },
+      {
+        "title": "Who is Moneko best for?",
+        "paragraphs": [
+          "Moneko is especially strong for people who want automatic expense tracking, couples or households with shared budgets, and users comparing YNAB alternatives, WhatsApp budgeting tools, and AI budgeting apps.",
+          "It is also relevant for users who have abandoned other budgeting apps because keeping them updated felt like work."
+        ]
+      },
+      {
+        "title": "When might another budgeting app fit better?",
+        "paragraphs": [
+          "If your top priority is a full wealth dashboard with investments, net worth, and account aggregation, another tool may fit better.",
+          "Moneko is strongest when the core job is budgeting, expense capture, shared coordination, and lower-friction decision support."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Is Moneko one of the best budgeting apps for people who hate manual entry?",
+        "answer": "Yes. Moneko is designed for lower-friction budgeting through chat-based capture, receipt scans, voice notes, and device-friendly expense tracking workflows."
+      },
+      {
+        "question": "Does Moneko work as both a budgeting app and expense tracker?",
+        "answer": "Yes. Moneko combines expense capture, categorization, pocket budgeting, and AI planning so users do not need separate tools for the core workflow."
+      },
+      {
+        "question": "Is Moneko good for couples and households?",
+        "answer": "Yes. Moneko supports personal and household views, which makes it useful for shared budgeting and shared expense tracking."
+      },
+      {
+        "question": "Does Moneko support WhatsApp and Telegram budgeting?",
+        "answer": "Yes. Moneko supports chat-based budgeting through WhatsApp and Telegram."
+      },
+      {
+        "question": "Is Moneko financial advice?",
+        "answer": "No. Moneko is a budgeting and money-management tool, not licensed financial advice."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "AI budgeting app",
+        "description": "See how Moneko's AI layer fits into real budgeting workflows.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "YNAB alternative",
+        "description": "Compare Moneko with a traditional envelope budgeting app.",
+        "href": "/ynab-alternative"
+      },
+      {
+        "label": "Expense tracker for couples",
+        "description": "Explore shared budgeting and household finance workflows.",
+        "href": "/expense-tracker-for-couples"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "expense-tracker-app": {
+    "slug": "expense-tracker-app",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Expense Tracker App | Moneko",
+    "description": "Moneko is an expense tracker app that helps you capture spending automatically, organize it into budget pockets, and review personal or shared finances across iPhone, Android, WhatsApp, and Telegram.",
+    "keywords": "expense tracker app, automatic expense tracker, AI expense tracker, shared expense tracker app, personal finance tracker",
+    "eyebrow": "Expense tracker app",
+    "pageTitle": "Moneko is an expense tracker app designed to keep up with real spending habits.",
+    "pageDescription": "A strong expense tracker app should not just store transactions. It should help users capture spending fast, keep categories current, and connect those transactions to real budget decisions. That is the role Moneko is built to fill.",
+    "keyTakeaways": [
+      "Moneko tracks spending through chat, receipts, voice, and device-friendly workflows.",
+      "It goes beyond transaction history by tying spending to budget pockets.",
+      "It supports both personal and shared expense tracking.",
+      "It is built for iPhone, Android, WhatsApp, Telegram, and web users."
+    ],
+    "comparisonTitle": "What should a modern expense tracker app do better?",
+    "alternativeLabel": "Basic expense tracker",
+    "comparisonRows": [
+      {
+        "label": "Capture options",
+        "moneko": "Supports messages, voice notes, receipts, Apple Wallet-friendly iPhone workflows, and Android notifications.",
+        "alternative": "Often expects manual app entry or delayed imports only."
+      },
+      {
+        "label": "Budget connection",
+        "moneko": "Routes expenses into pockets so users know what the spending means.",
+        "alternative": "May stop at a transaction list or category history."
+      },
+      {
+        "label": "Shared finance support",
+        "moneko": "Supports household and personal views.",
+        "alternative": "May not support shared expense tracking well."
+      },
+      {
+        "label": "Planning support",
+        "moneko": "Adds AI summaries and what-if planning on top of tracking.",
+        "alternative": "Usually focuses on historical reporting only."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Tracking scope",
+        "value": "Capture + budget context",
+        "description": "Moneko is framed as more than a ledger by connecting every tracked expense to categories, pockets, and follow-up planning."
+      },
+      {
+        "label": "Input methods",
+        "value": "Text, voice, receipt, device",
+        "description": "The page highlights multiple low-friction ways to capture expenses, which strengthens relevance for users comparing modern expense tracker apps."
+      },
+      {
+        "label": "Shared capability",
+        "value": "Personal + household",
+        "description": "Moneko is positioned for both solo and shared finance tracking, which broadens its usefulness versus simpler single-user trackers."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What is an expense tracker app supposed to solve?",
+        "paragraphs": [
+          "An expense tracker app should help users record spending quickly and understand where their money is going. The best ones also reduce the chance that transactions get forgotten or logged too late.",
+          "Moneko addresses that problem by making capture easier through chat and device-native workflows while still giving users a structured budgeting layer."
+        ]
+      },
+      {
+        "title": "How does Moneko improve on a basic tracker?",
+        "paragraphs": [
+          "Moneko improves on a basic tracker by connecting every captured expense to a budgeting system. A transaction does not just appear in a list. It updates a pocket, a category, and a bigger monthly picture.",
+          "That makes Moneko more useful for people who need both visibility and control, not just historical records."
+        ]
+      },
+      {
+        "title": "Who should use Moneko as an expense tracker app?",
+        "paragraphs": [
+          "Moneko is well suited to people who want automatic expense tracking, users logging spending through chat, couples and households with shared costs, and anyone who wants an expense tracker that does more than act as a ledger.",
+          "It is also relevant for users comparing AI expense trackers, Android expense tracking tools, and budgeting apps with better iPhone workflows."
+        ]
+      },
+      {
+        "title": "What are Moneko's limits?",
+        "paragraphs": [
+          "Moneko is strongest for budgeting and day-to-day expense capture. If you want a full investing dashboard or complex wealth aggregation, another tool may complement it better.",
+          "That tradeoff is intentional: Moneko focuses on the budgeting workflow itself."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Can Moneko automatically track expenses?",
+        "answer": "Moneko is designed for lower-friction automatic tracking through chat, receipt scans, voice notes, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking."
+      },
+      {
+        "question": "Is Moneko just a tracker or also a budgeting app?",
+        "answer": "It is both. Moneko captures expenses and also organizes them into pockets and budget decisions."
+      },
+      {
+        "question": "Does Moneko support shared expense tracking?",
+        "answer": "Yes. Moneko supports personal and household workflows for shared expenses and shared budgets."
+      },
+      {
+        "question": "Can I track expenses through WhatsApp or Telegram?",
+        "answer": "Yes. Moneko supports chat-based tracking through WhatsApp and Telegram."
+      },
+      {
+        "question": "Does Moneko support receipt and voice capture?",
+        "answer": "Yes. Moneko supports receipt photos and voice notes as part of its expense capture workflow."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Track expenses automatically",
+        "description": "See how Moneko handles low-friction expense capture.",
+        "href": "/track-expenses-automatically"
+      },
+      {
+        "label": "Android expense tracker",
+        "description": "Explore Moneko's Android notification-based tracking workflows.",
+        "href": "/android-expense-tracker"
+      },
+      {
+        "label": "Expense tracker for couples",
+        "description": "Explore shared expense tracking and household budgeting.",
+        "href": "/expense-tracker-for-couples"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "track-expenses-automatically": {
+    "slug": "track-expenses-automatically",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Track Expenses Automatically | Moneko",
+    "description": "Moneko helps users track expenses automatically through chat capture, receipt scans, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking so budgets stay current with less manual work.",
+    "keywords": "track expenses automatically, automatic expense tracking, automated expense tracker, AI expense logging, no manual expense entry",
+    "eyebrow": "Track expenses automatically",
+    "pageTitle": "How does Moneko help you track expenses automatically?",
+    "pageDescription": "Automatic expense tracking works best when capture happens close to the moment of spending. Moneko is designed around that principle, using chat, receipts, voice, and device-friendly workflows to keep budgets updated with less effort.",
+    "keyTakeaways": [
+      "Moneko reduces the delay between spending and logging.",
+      "It supports multiple capture methods instead of a single app-only flow.",
+      "It turns captured expenses into budget updates, not just records.",
+      "It is built for people who dislike manual entry."
+    ],
+    "comparisonTitle": "What does automatic expense tracking need to do well?",
+    "alternativeLabel": "Manual tracker",
+    "comparisonRows": [
+      {
+        "label": "Capture timing",
+        "moneko": "Supports in-the-moment capture through chat, receipts, voice, and device-friendly signals.",
+        "alternative": "Often depends on entering expenses later from memory or reviewing bank history."
+      },
+      {
+        "label": "Workflow flexibility",
+        "moneko": "Works across iPhone, Android, WhatsApp, Telegram, and web habits.",
+        "alternative": "May rely on a single interface or one import method."
+      },
+      {
+        "label": "Budget connection",
+        "moneko": "Updates pockets and categories after capture.",
+        "alternative": "May show transactions without improving budget awareness."
+      },
+      {
+        "label": "Shared use cases",
+        "moneko": "Supports personal and household finance workflows.",
+        "alternative": "May not handle shared expense flows well."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What does automatic expense tracking actually mean?",
+        "paragraphs": [
+          "Automatic expense tracking means reducing the manual work required to keep spending records current. In practice, that means the system should help capture expenses near the moment of spending and reduce how much typing or reconstruction users need to do later.",
+          "Moneko approaches that through a mix of chat-based capture, receipt scanning, voice notes, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking."
+        ]
+      },
+      {
+        "title": "How does Moneko make tracking feel automatic?",
+        "paragraphs": [
+          "Moneko makes tracking feel automatic because it works through workflows users already have. Instead of requiring a dedicated budgeting session later, it lets people capture spending in chat or from device-friendly signals while the transaction is still fresh.",
+          "That design reduces forgotten expenses and keeps the budget more current throughout the month."
+        ]
+      },
+      {
+        "title": "Why is that better than manual budgeting?",
+        "paragraphs": [
+          "Manual budgeting often fails because the delay between spending and logging grows over time. Once several transactions pile up, users have to reconstruct what happened and many stop entirely.",
+          "Moneko reduces that gap, which makes consistency easier and improves the quality of the budget data."
+        ]
+      },
+      {
+        "title": "Who benefits most from this workflow?",
+        "paragraphs": [
+          "This workflow benefits people who hate manual entry, busy users who log expenses on the go, couples coordinating shared budgets, and anyone comparing automatic trackers with older app-first budgeting tools.",
+          "It is especially relevant for users who want a modern expense tracker rather than a ledger they update at the end of the week."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Can Moneko really help me track expenses automatically?",
+        "answer": "Yes. Moneko is designed to reduce manual work through chat, receipts, voice notes, Apple Wallet-friendly iPhone workflows, and Android notification-based tracking."
+      },
+      {
+        "question": "Does Moneko replace all manual confirmation?",
+        "answer": "Moneko is built to reduce manual entry while still keeping users in control of the final budget record."
+      },
+      {
+        "question": "Can I use Moneko on both iPhone and Android?",
+        "answer": "Yes. Moneko supports both iPhone and Android workflows, plus WhatsApp, Telegram, and web access."
+      },
+      {
+        "question": "Does automatic tracking also update my budget?",
+        "answer": "Yes. Moneko is designed to connect captured expenses to pockets and categories so tracking improves budget awareness."
+      },
+      {
+        "question": "Is Moneko useful for shared budgets too?",
+        "answer": "Yes. Moneko supports both personal and household finance workflows."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Expense tracker app",
+        "description": "See how Moneko works as both a tracker and budgeting system.",
+        "href": "/expense-tracker-app"
+      },
+      {
+        "label": "Budgeting via WhatsApp",
+        "description": "Explore chat-based budgeting and expense capture.",
+        "href": "/budgeting-via-whatsapp"
+      },
+      {
+        "label": "Android expense tracker",
+        "description": "Explore Android notification-based tracking flows.",
+        "href": "/android-expense-tracker"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "budgeting-via-whatsapp": {
+    "slug": "budgeting-via-whatsapp",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Budgeting via WhatsApp | Moneko",
+    "description": "Moneko helps users budget via WhatsApp by letting them log expenses, review pockets, and ask for summaries in a messaging workflow that reduces the friction of traditional budgeting apps.",
+    "keywords": "budgeting via WhatsApp, WhatsApp budgeting app, WhatsApp expense tracker, chat-based budgeting, budget through WhatsApp",
+    "eyebrow": "Budgeting via WhatsApp",
+    "pageTitle": "Can you really budget via WhatsApp? Moneko is built for that workflow.",
+    "pageDescription": "Budgeting via WhatsApp works when the chat flow does more than store messages. Moneko uses WhatsApp as a real budgeting interface for expense capture, pocket checks, summaries, and shared money coordination.",
+    "keyTakeaways": [
+      "Moneko treats WhatsApp as a budgeting workflow, not just a support channel.",
+      "Users can log expenses, ask for summaries, and manage pockets in chat.",
+      "The WhatsApp flow reduces the need to open a separate finance app.",
+      "The same workflow supports shared and household budgeting."
+    ],
+    "comparisonTitle": "How is Moneko different from a typical budgeting app if you want WhatsApp-based budgeting?",
+    "alternativeLabel": "Traditional budgeting app",
+    "comparisonRows": [
+      {
+        "label": "Input layer",
+        "moneko": "Uses WhatsApp messages as a budgeting interface.",
+        "alternative": "Usually expects users to open a separate app to log spending."
+      },
+      {
+        "label": "Capture speed",
+        "moneko": "Supports quick text, voice, and receipt-driven budgeting updates in chat.",
+        "alternative": "May involve more steps and more context switching."
+      },
+      {
+        "label": "Shared budgeting",
+        "moneko": "Supports shared workflows and household budgeting concepts.",
+        "alternative": "May not support messaging-first collaboration well."
+      },
+      {
+        "label": "Budget structure",
+        "moneko": "Connects chat capture to envelope-style pockets.",
+        "alternative": "May track spending without a clearer budget framework."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What does budgeting via WhatsApp mean?",
+        "paragraphs": [
+          "Budgeting via WhatsApp means using messaging as the main way to record expenses, review balances, and ask budget questions. The benefit is that users do not need to switch into a dedicated app every time they spend.",
+          "Moneko takes that idea seriously by turning WhatsApp into a practical budgeting interface instead of just a notification channel."
+        ]
+      },
+      {
+        "title": "Why does WhatsApp budgeting work for some users?",
+        "paragraphs": [
+          "WhatsApp budgeting works well for users who already live in messaging apps and struggle to maintain a separate finance-app habit. The more natural the logging workflow feels, the more likely the budget is to stay current.",
+          "That is why chat-based capture is not just a novelty. It can be a real behavioral advantage for consistency."
+        ]
+      },
+      {
+        "title": "How does Moneko use WhatsApp for budgeting?",
+        "paragraphs": [
+          "Moneko lets users log expenses, ask what is left in a pocket, request summaries, and coordinate around shared budgets through WhatsApp. It also supports inputs like voice notes and receipt photos, which make the workflow even lighter.",
+          "The result is a budgeting experience that is conversational, practical, and easier to revisit throughout the week."
+        ]
+      },
+      {
+        "title": "Who should consider budgeting via WhatsApp?",
+        "paragraphs": [
+          "Users who have abandoned app-based budgeting, people who want lower-friction expense tracking, couples coordinating shared costs, and anyone comparing chat-based finance tools should consider this workflow.",
+          "It is especially relevant for users searching for WhatsApp budgeting, AI budgeting, and expense trackers with easier daily habits."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Can I really manage a budget through WhatsApp with Moneko?",
+        "answer": "Yes. Moneko supports expense logging, summaries, pocket checks, and budgeting interactions through WhatsApp."
+      },
+      {
+        "question": "Does Moneko support receipts and voice notes in WhatsApp?",
+        "answer": "Yes. Moneko supports chat-friendly inputs including voice notes and receipt photos."
+      },
+      {
+        "question": "Is WhatsApp budgeting useful for couples too?",
+        "answer": "Yes. Moneko's shared and household workflows make chat-based budgeting relevant for couples and shared expense coordination."
+      },
+      {
+        "question": "Does Moneko only work on WhatsApp?",
+        "answer": "No. Moneko also supports Telegram, iPhone, Android, and web workflows."
+      },
+      {
+        "question": "Does WhatsApp budgeting still use real budget categories?",
+        "answer": "Yes. Moneko connects chat-based capture to envelope-style pockets and budget structure."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "WhatsApp assistant feature",
+        "description": "See the dedicated feature page for chat-based budgeting.",
+        "href": "/features/whatsapp-assistant"
+      },
+      {
+        "label": "Track expenses automatically",
+        "description": "Explore how low-friction capture works in Moneko.",
+        "href": "/track-expenses-automatically"
+      },
+      {
+        "label": "AI budgeting app",
+        "description": "See how Moneko's AI layer supports budgeting actions.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "android-expense-tracker": {
+    "slug": "android-expense-tracker",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Android Expense Tracker | Moneko",
+    "description": "Moneko is an Android expense tracker built for lower-friction spending capture through notification-based workflows, chat-based logging, and budget pockets that help Android users stay current without extra manual work.",
+    "keywords": "Android expense tracker, expense tracker for Android, automatic Android expense tracker, notification-based expense tracking, Android budgeting app",
+    "eyebrow": "Android expense tracker",
+    "pageTitle": "Moneko is an Android expense tracker designed around real-time spending signals.",
+    "pageDescription": "Android users often receive transaction alerts faster than they return to a budgeting app. Moneko is built around that reality by supporting notification-based tracking, chat capture, and pockets that turn spending records into budget awareness.",
+    "keyTakeaways": [
+      "Moneko supports Android notification-based expense tracking workflows.",
+      "It helps turn spending alerts into usable budget updates.",
+      "It supports chat-based capture and shared budgeting too.",
+      "It is built for Android users who want less manual entry."
+    ],
+    "comparisonTitle": "What should an Android expense tracker do better than a generic app?",
+    "alternativeLabel": "Generic Android tracker",
+    "comparisonRows": [
+      {
+        "label": "Real-time capture",
+        "moneko": "Supports notification-based tracking and fast chat capture.",
+        "alternative": "May rely on manual entry after the fact."
+      },
+      {
+        "label": "Budget connection",
+        "moneko": "Connects captured transactions to pockets and categories.",
+        "alternative": "May stop at tracking alone."
+      },
+      {
+        "label": "Shared use cases",
+        "moneko": "Supports household and couple workflows in addition to solo budgeting.",
+        "alternative": "May focus on solo tracking only."
+      },
+      {
+        "label": "Cross-platform relevance",
+        "moneko": "Works in broader workflows that also include chat and web access.",
+        "alternative": "May stay confined to one app interface."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Why do Android users need a different expense tracking workflow?",
+        "paragraphs": [
+          "Android users often receive transaction notifications in real time, which creates a practical opportunity for faster expense tracking. Instead of asking users to reconstruct spending later, a stronger workflow uses those alerts as the starting point for budget updates.",
+          "Moneko is built to take advantage of that kind of Android-native behavior."
+        ]
+      },
+      {
+        "title": "How does Moneko work as an Android expense tracker?",
+        "paragraphs": [
+          "Moneko supports notification-based tracking workflows on Android and combines them with chat-based logging, receipts, and budgeting pockets. That means Android users can move from transaction signal to budget context faster.",
+          "The goal is not just to record the spend, but to keep the budget current with less manual effort."
+        ]
+      },
+      {
+        "title": "Why is that useful for budgeting, not just tracking?",
+        "paragraphs": [
+          "A pure expense tracker shows what happened. A better budgeting system shows what that means. Moneko connects Android tracking flows to envelope-style pockets so users understand category impact and remaining budget room.",
+          "That makes it more useful than a simple ledger or notification archive."
+        ]
+      },
+      {
+        "title": "Who should use Moneko on Android?",
+        "paragraphs": [
+          "Moneko is relevant for Android users who want lower-friction tracking, people who want to avoid manual entry, couples with shared budgets, and anyone comparing Android budgeting apps and automatic expense trackers.",
+          "It is especially useful if your phone already gives you the transaction signal and you want the budget layer to keep up."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Does Moneko support Android expense tracking?",
+        "answer": "Yes. Moneko supports Android-friendly workflows including notification-based tracking and chat-based expense capture."
+      },
+      {
+        "question": "Can Android transaction notifications help with budget tracking in Moneko?",
+        "answer": "Yes. Moneko is designed to use notification-based tracking signals as part of a faster expense capture workflow."
+      },
+      {
+        "question": "Is Moneko only for Android?",
+        "answer": "No. Moneko also supports iPhone, WhatsApp, Telegram, and web workflows."
+      },
+      {
+        "question": "Does Moneko connect Android tracking to budgeting?",
+        "answer": "Yes. Moneko connects captured expenses to pockets and budget categories."
+      },
+      {
+        "question": "Is Moneko useful for shared Android budgeting workflows too?",
+        "answer": "Yes. Moneko supports personal and household finance workflows."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Expense tracker app",
+        "description": "See the broader expense tracking positioning for Moneko.",
+        "href": "/expense-tracker-app"
+      },
+      {
+        "label": "Track expenses automatically",
+        "description": "Explore how Moneko reduces manual expense logging.",
+        "href": "/track-expenses-automatically"
+      },
+      {
+        "label": "Budgeting via WhatsApp",
+        "description": "Explore chat-based budgeting and capture workflows.",
+        "href": "/budgeting-via-whatsapp"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "apple-wallet-budgeting-app": {
+    "slug": "apple-wallet-budgeting-app",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Apple Wallet Budgeting App | Moneko",
+    "description": "Moneko is an Apple Wallet-friendly budgeting app for iPhone users who want to capture spending faster, organize purchases into budget pockets, and keep money plans current with less manual work.",
+    "keywords": "Apple Wallet budgeting app, Apple Wallet expense tracker, iPhone budgeting app, Apple Pay budgeting app, budget with Apple Wallet",
+    "eyebrow": "Apple Wallet budgeting app",
+    "pageTitle": "Moneko is built for iPhone users who want a better Apple Wallet budgeting workflow.",
+    "pageDescription": "Most budgeting apps make iPhone users jump back into a separate app after they pay. Moneko is designed to make Apple Wallet and Apple Pay spending easier to capture, categorize, and turn into usable budget decisions.",
+    "keyTakeaways": [
+      "Moneko is designed for Apple Wallet-friendly budgeting on iPhone.",
+      "It helps reduce manual budget entry after Apple Pay purchases.",
+      "It connects iPhone spending to envelope-style pockets and AI planning.",
+      "It is useful for both personal and shared budgeting workflows."
+    ],
+    "comparisonTitle": "What should an Apple Wallet budgeting app do better than a generic iPhone finance app?",
+    "alternativeLabel": "Generic iPhone finance app",
+    "comparisonRows": [
+      {
+        "label": "iPhone-native budgeting flow",
+        "moneko": "Designed around Apple Wallet-friendly spending capture and budget updates.",
+        "alternative": "Often treats iPhone spending like any other imported transaction."
+      },
+      {
+        "label": "Post-purchase friction",
+        "moneko": "Reduces the number of steps between Apple Pay activity and a budget update.",
+        "alternative": "May require users to reopen the app and log transactions manually."
+      },
+      {
+        "label": "Budget structure",
+        "moneko": "Routes spending into pockets so users know what is left in a category.",
+        "alternative": "May show transaction history without improving budget control."
+      },
+      {
+        "label": "Cross-channel use",
+        "moneko": "Also works through chat, shared finance workflows, and AI planning.",
+        "alternative": "May stay limited to one dashboard-first workflow."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Why do iPhone users need a better Apple Wallet budgeting workflow?",
+        "paragraphs": [
+          "Many iPhone users already pay with Apple Wallet or Apple Pay throughout the day. The budgeting problem is not making the payment. It is updating the budget quickly enough that categories and decisions stay accurate.",
+          "Moneko is built to reduce that gap by making Apple Wallet-friendly capture part of the budgeting workflow instead of an afterthought."
+        ]
+      },
+      {
+        "title": "How does Moneko help with Apple Wallet budgeting?",
+        "paragraphs": [
+          "Moneko helps iPhone users move from Apple Pay activity to a categorized budget update faster. Instead of relying on delayed cleanup, it is designed to connect iPhone spending to pockets and planning while the purchase is still fresh.",
+          "That makes budgeting more practical for users who want control without adding more admin to every purchase."
+        ]
+      },
+      {
+        "title": "Why is this stronger than generic iPhone expense tracking?",
+        "paragraphs": [
+          "A generic iPhone tracker may show transactions after the fact. Moneko is stronger when the goal is budgeting because it ties captured spending to envelope-style pockets, shared finance views, and what-if planning.",
+          "That difference matters for users who want an actual money-management system, not just a history of purchases."
+        ]
+      },
+      {
+        "title": "Who should use Moneko for Apple Wallet budgeting?",
+        "paragraphs": [
+          "Moneko is relevant for iPhone users who pay with Apple Wallet often, people who want an easier alternative to manual budgeting apps, and couples or households that want shared budget visibility without losing iPhone-friendly workflows.",
+          "It is especially relevant for searches around Apple Wallet budgeting apps, Apple Pay budgeting, and iPhone expense tracking."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Does Moneko work as an Apple Wallet budgeting app?",
+        "answer": "Yes. Moneko is designed for Apple Wallet-friendly budgeting workflows on iPhone so spending can become usable budget updates faster."
+      },
+      {
+        "question": "Is Moneko just an iPhone expense tracker?",
+        "answer": "No. Moneko is both an expense tracker and a budgeting system with pockets, summaries, and planning tools."
+      },
+      {
+        "question": "Can Moneko help me budget Apple Pay spending?",
+        "answer": "Yes. Moneko is built to make Apple Pay spending easier to capture, categorize, and connect to your budget."
+      },
+      {
+        "question": "Does Moneko also support shared budgets on iPhone?",
+        "answer": "Yes. Moneko supports personal and household finance workflows in addition to iPhone-friendly capture."
+      },
+      {
+        "question": "Is Moneko limited to iPhone?",
+        "answer": "No. Moneko also supports Android, WhatsApp, Telegram, and web workflows."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Track expenses automatically",
+        "description": "See how Moneko reduces manual logging across devices.",
+        "href": "/track-expenses-automatically"
+      },
+      {
+        "label": "Expense tracker app",
+        "description": "See the broader expense-tracking positioning for Moneko.",
+        "href": "/expense-tracker-app"
+      },
+      {
+        "label": "Best budgeting app",
+        "description": "See why Moneko works well for users who want lower-friction budgeting.",
+        "href": "/best-budgeting-app"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "monarch-money-alternative": {
+    "slug": "monarch-money-alternative",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Monarch Money Alternative | Moneko",
+    "description": "Moneko is a Monarch Money alternative for people who want lower-friction budgeting, chat-based expense capture, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and envelope-style pockets.",
+    "keywords": "Monarch Money alternative, alternative to Monarch Money, budgeting app like Monarch, expense tracker alternative, AI budgeting alternative",
+    "eyebrow": "Monarch Money alternative",
+    "pageTitle": "Moneko is a Monarch Money alternative for people who want a faster budgeting workflow.",
+    "pageDescription": "Monarch Money is strong for dashboard-oriented financial visibility. Moneko is a stronger fit for users who want lower-friction expense capture, messaging-based budgeting, envelope-style pockets, and more direct day-to-day budget control.",
+    "keyTakeaways": [
+      "Moneko is stronger when budgeting speed matters more than dashboard depth.",
+      "It emphasizes capture, pockets, and decisions instead of a dashboard-first workflow.",
+      "It supports WhatsApp, Telegram, iPhone, Android, and shared finance workflows.",
+      "It is relevant for users who want a more hands-on budgeting system."
+    ],
+    "comparisonTitle": "How does Moneko compare with Monarch Money?",
+    "alternativeLabel": "Monarch Money",
+    "comparisonRows": [
+      {
+        "label": "Workflow focus",
+        "moneko": "Prioritizes day-to-day budgeting, lower-friction capture, and pocket-based control.",
+        "alternative": "Stronger for broad financial dashboards and account-centered visibility."
+      },
+      {
+        "label": "Expense capture",
+        "moneko": "Supports chat-based logging, receipts, voice notes, Apple Wallet-friendly iPhone workflows, and Android notifications.",
+        "alternative": "Less focused on messaging-first or device-native budgeting flows."
+      },
+      {
+        "label": "Budget style",
+        "moneko": "Uses envelope-style pockets for active budget control.",
+        "alternative": "Supports budgeting but is less centered on chat-first envelope workflows."
+      },
+      {
+        "label": "Shared finance",
+        "moneko": "Supports personal and household workflows with chat-based coordination.",
+        "alternative": "Supports household visibility but not the same messaging-first budgeting experience."
+      }
+    ],
+    "sections": [
+      {
+        "title": "When is Moneko a better Monarch Money alternative?",
+        "paragraphs": [
+          "Moneko is a better Monarch Money alternative when the main job is budgeting rather than dashboard review. If you want to capture spending quickly, keep categories current, and make daily money decisions with less friction, Moneko is a stronger fit.",
+          "That is especially true for users who want a workflow built around pockets, shared budgeting, and messaging instead of a broader account-aggregation view."
+        ]
+      },
+      {
+        "title": "What does Monarch Money still do well?",
+        "paragraphs": [
+          "Monarch Money is useful for users who want a strong high-level dashboard across accounts, balances, and financial overviews. That dashboard-first approach fits users who care most about broad visibility.",
+          "Moneko is not trying to win on that exact axis. It is built for users who want budgeting behavior to happen faster and more consistently."
+        ]
+      },
+      {
+        "title": "Why does Moneko feel more action-oriented?",
+        "paragraphs": [
+          "Moneko focuses on the workflow between spending and response. A captured transaction becomes a categorized budget update, a pocket change, and a prompt for the next decision.",
+          "That makes it feel more action-oriented for users who want to manage money actively rather than mostly review it."
+        ]
+      },
+      {
+        "title": "Who should choose Moneko instead of Monarch Money?",
+        "paragraphs": [
+          "Choose Moneko if you want lower-friction budgeting, messaging-first expense capture, and stronger day-to-day budget interaction. Choose Monarch Money if you primarily want a broader account and dashboard view.",
+          "Moneko is especially relevant for people comparing AI budgeting apps, expense trackers, and alternatives to dashboard-heavy finance tools."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Is Moneko a real Monarch Money alternative?",
+        "answer": "Yes. Moneko is a practical Monarch Money alternative for users who care more about budgeting speed, expense capture, and lower-friction daily workflows."
+      },
+      {
+        "question": "What makes Moneko different from Monarch Money?",
+        "answer": "Moneko emphasizes envelope-style pockets, chat-based capture, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and shared budgeting workflows."
+      },
+      {
+        "question": "Is Moneko better for users who hate manual budgeting?",
+        "answer": "Yes. Moneko is built to reduce manual entry through chat, receipts, voice notes, and device-friendly capture flows."
+      },
+      {
+        "question": "Does Moneko support shared household budgeting?",
+        "answer": "Yes. Moneko supports personal and household finance workflows."
+      },
+      {
+        "question": "Should I choose Moneko or Monarch Money?",
+        "answer": "Choose Moneko if you want lower-friction budgeting and faster expense capture. Choose Monarch Money if your top priority is a broader financial dashboard."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Best budgeting app",
+        "description": "See the broader budgeting positioning for Moneko.",
+        "href": "/best-budgeting-app"
+      },
+      {
+        "label": "Expense tracker app",
+        "description": "Compare Moneko's expense-tracking workflow with simpler trackers.",
+        "href": "/expense-tracker-app"
+      },
+      {
+        "label": "YNAB alternative",
+        "description": "Compare Moneko with a more traditional budgeting competitor too.",
+        "href": "/ynab-alternative"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "shared-expense-tracker": {
+    "slug": "shared-expense-tracker",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Shared Expense Tracker | Moneko",
+    "description": "Moneko is a shared expense tracker for couples, households, and families who need to log shared spending, keep personal visibility, and manage budgets together across chat, mobile, and web workflows.",
+    "keywords": "shared expense tracker, track shared expenses, household expense tracker, expense tracker for families, couple expense tracker",
+    "eyebrow": "Shared expense tracker",
+    "pageTitle": "Moneko is a shared expense tracker built for real household budgeting.",
+    "pageDescription": "A shared expense tracker should do more than show who paid. Moneko helps people track shared spending, keep personal context, and turn shared expenses into usable budget decisions for couples, families, and households.",
+    "keyTakeaways": [
+      "Moneko supports both personal and shared finance views.",
+      "It is built for recurring shared costs and everyday joint spending.",
+      "It works through chat, mobile, and web workflows.",
+      "It connects shared expenses to real budget pockets and planning."
+    ],
+    "comparisonTitle": "What should a strong shared expense tracker do better than a simple split-bill app?",
+    "alternativeLabel": "Basic split-bill app",
+    "comparisonRows": [
+      {
+        "label": "Shared budget visibility",
+        "moneko": "Shows shared expenses in the context of household pockets and spending plans.",
+        "alternative": "Often focuses on reimbursement without a budget layer."
+      },
+      {
+        "label": "Personal vs shared context",
+        "moneko": "Supports personal and household views so users do not lose individual visibility.",
+        "alternative": "May collapse everything into one shared list."
+      },
+      {
+        "label": "Capture workflow",
+        "moneko": "Supports chat, voice, receipts, and lower-friction expense capture.",
+        "alternative": "Often relies on manual app entry only."
+      },
+      {
+        "label": "Planning support",
+        "moneko": "Adds AI summaries and what-if planning for shared budgets.",
+        "alternative": "Usually stops at tracking and splitting."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What is a shared expense tracker supposed to solve?",
+        "paragraphs": [
+          "A shared expense tracker should help people coordinate around joint costs without losing clarity about what belongs to the household and what belongs to each individual. That means the tool needs to support both shared visibility and personal context.",
+          "Moneko is designed around that broader need, which is why it fits households, families, and couples better than a reimbursement-only workflow."
+        ]
+      },
+      {
+        "title": "How does Moneko work for shared expenses?",
+        "paragraphs": [
+          "Moneko lets users log shared expenses, organize them into pockets, and review shared spending in a household context. It also supports faster input through chat, voice notes, and receipts so shared costs are less likely to sit unrecorded.",
+          "That makes it easier to manage groceries, utilities, travel, rent contributions, and shared lifestyle categories."
+        ]
+      },
+      {
+        "title": "Why is this better than a simple split-bill tool?",
+        "paragraphs": [
+          "Split-bill tools are useful for settlements, but they do not always help users understand what is left in the budget or how shared costs affect the household plan. Moneko adds that budgeting layer through pockets and planning.",
+          "That makes it more useful for ongoing money management rather than one-off repayment tracking."
+        ]
+      },
+      {
+        "title": "Who should use Moneko as a shared expense tracker?",
+        "paragraphs": [
+          "Moneko is relevant for couples, families, households, and anyone managing recurring shared costs with another person or group. It is especially useful when users want structure, lower-friction logging, and more than a reimbursement app can offer.",
+          "It also fits users searching for shared expense tracking, family budget apps, and household money-management tools."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Can Moneko track shared expenses for a household?",
+        "answer": "Yes. Moneko supports household and shared finance workflows for recurring and everyday shared expenses."
+      },
+      {
+        "question": "Does Moneko show both shared and personal spending?",
+        "answer": "Yes. Moneko supports personal and household views so users can keep both contexts visible."
+      },
+      {
+        "question": "Is Moneko better than a simple splitwise-style workflow for budgeting?",
+        "answer": "Yes. Moneko adds a budgeting layer through pockets, summaries, and planning instead of stopping at reimbursements alone."
+      },
+      {
+        "question": "Can I log shared expenses through chat?",
+        "answer": "Yes. Moneko supports chat-based expense capture through WhatsApp and Telegram."
+      },
+      {
+        "question": "Is Moneko useful for families too?",
+        "answer": "Yes. Moneko is relevant for families and households, not just couples."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Expense tracker for couples",
+        "description": "See the couples-focused version of shared expense tracking.",
+        "href": "/expense-tracker-for-couples"
+      },
+      {
+        "label": "Shared household mode",
+        "description": "Explore Moneko's household workflow in more detail.",
+        "href": "/features/household-mode"
+      },
+      {
+        "label": "Best budgeting app",
+        "description": "See the broader budgeting positioning for Moneko.",
+        "href": "/best-budgeting-app"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "telegram-budgeting-app": {
+    "slug": "telegram-budgeting-app",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Telegram Budgeting App | Moneko",
+    "description": "Moneko is a Telegram budgeting app for users who want to log expenses, review budgets, and manage pockets through a chat-based workflow instead of a traditional finance app alone.",
+    "keywords": "Telegram budgeting app, budget through Telegram, Telegram expense tracker, chat budgeting app, Telegram finance bot",
+    "eyebrow": "Telegram budgeting app",
+    "pageTitle": "Moneko makes budgeting through Telegram practical, not gimmicky.",
+    "pageDescription": "A Telegram budgeting app should help users manage money where they already communicate. Moneko uses Telegram as a real budgeting workflow for expense capture, summaries, and pocket-based budget updates.",
+    "keyTakeaways": [
+      "Moneko supports budgeting through Telegram.",
+      "Users can log expenses and request summaries in chat.",
+      "It reduces the friction of separate app-based budgeting.",
+      "It connects Telegram capture to pockets and AI planning."
+    ],
+    "comparisonTitle": "What should a Telegram budgeting app do better than a normal budgeting app?",
+    "alternativeLabel": "Traditional budgeting app",
+    "comparisonRows": [
+      {
+        "label": "Budget entry flow",
+        "moneko": "Lets users budget and track expenses through Telegram messages.",
+        "alternative": "Usually requires switching back into a dedicated app interface."
+      },
+      {
+        "label": "Capture flexibility",
+        "moneko": "Supports text, chat prompts, and lower-friction expense logging in messaging.",
+        "alternative": "May rely on fixed input forms only."
+      },
+      {
+        "label": "Budget structure",
+        "moneko": "Connects Telegram capture to envelope-style pockets.",
+        "alternative": "May not support messaging-first budget control."
+      },
+      {
+        "label": "Shared coordination",
+        "moneko": "Supports shared and household workflows alongside chat capture.",
+        "alternative": "May not support collaborative messaging workflows well."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Why does budgeting through Telegram appeal to some users?",
+        "paragraphs": [
+          "Many users already spend a large share of their day in messaging apps. When budgeting requires switching into a separate finance interface every time, consistency often drops. Telegram budgeting works when it reduces that friction.",
+          "Moneko is designed around that behavior by turning Telegram into a practical budgeting channel instead of treating it as a novelty."
+        ]
+      },
+      {
+        "title": "How does Moneko work as a Telegram budgeting app?",
+        "paragraphs": [
+          "Moneko lets users log expenses, ask for summaries, and review budget pockets through Telegram. That makes it easier to keep a budget active throughout the week without relying on a separate finance-app routine.",
+          "The Telegram flow is then connected to Moneko's broader budgeting system, including pockets, shared views, and AI planning."
+        ]
+      },
+      {
+        "title": "Why is that better than basic bot-style finance logging?",
+        "paragraphs": [
+          "A basic Telegram finance bot might capture an expense, but a real budgeting system also needs categories, context, and follow-through. Moneko connects chat capture to budget structure and decision support.",
+          "That makes it more useful for ongoing money management than a logging-only bot."
+        ]
+      },
+      {
+        "title": "Who should use Moneko on Telegram?",
+        "paragraphs": [
+          "Moneko is relevant for Telegram-heavy users, people who want lower-friction budgeting, and users comparing chat-based budgeting tools with app-only workflows. It is also useful for users who want to coordinate budgets with others in a more conversational way.",
+          "It is especially relevant for searches around Telegram budgeting apps, expense bots, and messaging-based finance tools."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Can I really budget through Telegram with Moneko?",
+        "answer": "Yes. Moneko supports budgeting and expense tracking through Telegram as part of its chat-based workflow."
+      },
+      {
+        "question": "Is Moneko just a Telegram bot?",
+        "answer": "No. Moneko uses Telegram as one capture channel inside a broader budgeting system with pockets, shared views, and AI planning."
+      },
+      {
+        "question": "Does Telegram budgeting still connect to a real budget?",
+        "answer": "Yes. Moneko connects Telegram capture to budget pockets and planning logic."
+      },
+      {
+        "question": "Can shared budgets work through Telegram too?",
+        "answer": "Yes. Moneko supports household and shared workflows in addition to Telegram-based capture."
+      },
+      {
+        "question": "Does Moneko only work through Telegram?",
+        "answer": "No. Moneko also supports WhatsApp, iPhone, Android, and web workflows."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Budgeting via WhatsApp",
+        "description": "Compare Telegram budgeting with WhatsApp-based budgeting workflows.",
+        "href": "/budgeting-via-whatsapp"
+      },
+      {
+        "label": "AI budgeting app",
+        "description": "See how Moneko's AI layer supports chat-based budgeting.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "Track expenses automatically",
+        "description": "See how low-friction capture works across devices and chat channels.",
+        "href": "/track-expenses-automatically"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  },
+  "family-budgeting-app": {
+    "slug": "family-budgeting-app",
+    "sitemapLastmod": "2026-03-19",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.9",
+    "title": "Family Budgeting App | Moneko",
+    "description": "Moneko is a family budgeting app for households that need shared expense tracking, pocket-based budgets, and lower-friction money coordination across mobile, chat, and web workflows.",
+    "keywords": "family budgeting app, household budgeting app, family expense tracker, shared family budget app, budget app for families",
+    "eyebrow": "Family budgeting app",
+    "pageTitle": "Moneko is a family budgeting app built for real household coordination.",
+    "pageDescription": "A family budgeting app should help households plan together, track shared expenses, and keep personal context visible when needed. Moneko is designed to support that kind of real household money management with less friction.",
+    "keyTakeaways": [
+      "Moneko supports personal and household budgeting views.",
+      "It is built for shared expenses, recurring bills, and family planning.",
+      "It works through mobile, chat, and web workflows.",
+      "It combines budgeting structure with lower-friction expense capture."
+    ],
+    "comparisonTitle": "What should a family budgeting app do better than a solo budgeting app?",
+    "alternativeLabel": "Solo budgeting app",
+    "comparisonRows": [
+      {
+        "label": "Household visibility",
+        "moneko": "Supports household budgeting views and shared expense context.",
+        "alternative": "Often focuses on individual money management only."
+      },
+      {
+        "label": "Shared recurring costs",
+        "moneko": "Works well for groceries, utilities, transport, school, and household pockets.",
+        "alternative": "May not fit recurring family coordination well."
+      },
+      {
+        "label": "Capture flow",
+        "moneko": "Supports chat, voice, receipts, and mobile-friendly expense capture.",
+        "alternative": "May rely on more manual app-based data entry."
+      },
+      {
+        "label": "Planning support",
+        "moneko": "Adds AI summaries and what-if planning to household budgeting.",
+        "alternative": "May lack household-oriented planning support."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What makes family budgeting harder than solo budgeting?",
+        "paragraphs": [
+          "Family budgeting is harder because multiple people, recurring categories, and shared decisions all interact at once. A tool that works well for one person may not work as well for a household with shared costs and changing plans.",
+          "Moneko is designed to handle those realities by supporting household views, shared expenses, and lower-friction capture workflows."
+        ]
+      },
+      {
+        "title": "How does Moneko help families budget together?",
+        "paragraphs": [
+          "Moneko helps families budget together by connecting shared expenses to household pockets, keeping personal and shared context visible, and supporting fast logging through chat and mobile-friendly capture flows.",
+          "That makes it easier to manage common family categories like groceries, transport, bills, activities, and goals."
+        ]
+      },
+      {
+        "title": "Why is that stronger than a solo-first finance app?",
+        "paragraphs": [
+          "A solo-first app may track household transactions, but it often does not make shared planning intuitive. Moneko is stronger for families because it is designed around household coordination, not only individual transaction review.",
+          "That means the system can support both budgeting clarity and day-to-day practicality."
+        ]
+      },
+      {
+        "title": "Who should use Moneko as a family budgeting app?",
+        "paragraphs": [
+          "Moneko is relevant for parents, families, couples with children, and any household managing recurring shared costs and goals. It is especially useful for users who want a family budgeting app with easier daily habits and shared money visibility.",
+          "It also fits searches around household expense tracking, family budgets, and collaborative money management."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "Does Moneko work as a family budgeting app?",
+        "answer": "Yes. Moneko supports household budgeting workflows and shared expense tracking for families."
+      },
+      {
+        "question": "Can multiple people use Moneko for a shared family budget?",
+        "answer": "Yes. Moneko supports personal and household views for shared budgeting."
+      },
+      {
+        "question": "Is Moneko useful for recurring household costs?",
+        "answer": "Yes. Moneko is well suited to recurring categories like groceries, bills, transport, and shared family spending."
+      },
+      {
+        "question": "Can families log expenses through chat?",
+        "answer": "Yes. Moneko supports chat-based expense capture through WhatsApp and Telegram."
+      },
+      {
+        "question": "Does Moneko replace professional financial advice?",
+        "answer": "No. Moneko is a budgeting and money-management tool, not professional financial advice."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Shared expense tracker",
+        "description": "Explore the shared-expense version of this family workflow.",
+        "href": "/shared-expense-tracker"
+      },
+      {
+        "label": "Expense tracker for couples",
+        "description": "See the couples-focused shared budgeting workflow.",
+        "href": "/expense-tracker-for-couples"
+      },
+      {
+        "label": "Household mode feature",
+        "description": "Learn more about Moneko's shared household workflow.",
+        "href": "/features/household-mode"
+      },
+      {
+        "label": "Moneko homepage",
+        "description": "Return to the main product overview.",
+        "href": "/"
+      }
+    ]
+  }
+}

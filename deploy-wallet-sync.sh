@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# Wallet Sync Functions Deployment Script
+# Apple Pay Integration Functions Deployment Script
 # Project: Moneko
 # Project Dev Ref: qbuynyxyemigtnvdujts
 # Project Prod Ref: pbopcsmrcykdzbilpilf
 #
-# Required Supabase secrets for Wallet Sync flow
+# Required Supabase secrets for Apple Pay Integration flow
 #
 # GEMINI_API_KEY
 #   API key used by save-wallet-transaction for AI categorization.
 #
-# Required migrations for Wallet Sync
+# Required migrations for Apple Pay Integration
 #   supabase/migrations/20251008_user_contacts_preferred_currency.sql
 #   supabase/migrations/20251019_rls_policies.sql
 #   supabase/migrations/20260327_user_contacts_wallet_capture_enabled.sql
@@ -34,7 +34,7 @@ else
 fi
 
 echo "════════════════════════════════════════════════════════════"
-echo "  Deploying Wallet Sync functions"
+echo "  Deploying Apple Pay Integration functions"
 echo "  Environment: $ENV_NAME"
 echo "  Project: $PROJECT_REF"
 echo "════════════════════════════════════════════════════════════"
@@ -67,7 +67,7 @@ deploy_function "save-wallet-transaction"
 deploy_function "update-wallet-capture-setting"
 
 echo "════════════════════════════════════════════════════════════"
-echo "  Wallet Sync functions deployed successfully"
+echo "  Apple Pay Integration functions deployed successfully"
 echo ""
 echo "  Deployment summary:"
 echo "     App/API (JWT verified):"

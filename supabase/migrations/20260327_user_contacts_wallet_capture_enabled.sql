@@ -1,7 +1,7 @@
 -- Add wallet_capture_enabled flag to user_contacts.
 --
 -- Why:
--- The iOS Wallet Sync feature (Apple Shortcuts + App Intents) must respect the
+-- The iOS Pay Integration feature (Apple Shortcuts + App Intents) must respect the
 -- user's in-app toggle at the backend level. Without a server-side flag the
 -- save-wallet-transaction Edge Function would accept captures even after the
 -- user disables the feature in the app.

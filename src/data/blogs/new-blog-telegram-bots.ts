@@ -1,19 +1,22 @@
-import { Blog } from '@/components/blogs/blogs.typing';
+import { Blog } from "@/components/blogs/blogs.typing";
 
-import { authorsData } from './authors';
-import { tags } from './authors';
+import { authorsData } from "./authors";
+import { tags } from "./authors";
 
 const newBlog: Blog = {
-  id: 'telegram-bots-budgeting-2026',
-  title: 'Best Telegram Bots for Budgeting in 2026 — Ranked and Reviewed',
-  slug: 'telegram-bots-budgeting-2026',
-  excerpt: 'Discover the best Telegram bots for budgeting in 2026, including Moneko for envelope budgeting via chat, Cointry for multi-currency tracking, and more, ranked and reviewed for low-friction financial management.',
-  coverImage: 'https://placekitten.com/800/400',
+  id: "telegram-bots-budgeting-2026",
+  title: "Best Telegram Bots for Budgeting in 2026 — Ranked and Reviewed",
+  slug: "telegram-bots-budgeting-2026",
+  excerpt:
+    "Discover the best Telegram bots for budgeting in 2026, including Moneko for envelope budgeting via chat, Cointry for multi-currency tracking, and more, ranked and reviewed for low-friction financial management.",
+  coverImage: "https://placekitten.com/800/400",
   readTime: 8,
   seo: {
-    metaTitle: 'Best Telegram Bots for Budgeting in 2026 — Ranked and Reviewed',
-    metaDescription: 'Explore top Telegram bots for budgeting in 2026 like Moneko, offering envelope budgeting via chat, and Cointry for multi-currency tracking, with detailed reviews and rankings.',
-    keywords: 'Telegram budgeting bots 2026, best budgeting tools, Moneko Telegram bot, envelope budgeting, personal finance apps'
+    metaTitle: "Best Telegram Bots for Budgeting in 2026 — Ranked and Reviewed",
+    metaDescription:
+      "Explore top Telegram bots for budgeting in 2026 like Moneko, offering envelope budgeting via chat, and Cointry for multi-currency tracking, with detailed reviews and rankings.",
+    keywords:
+      "Telegram budgeting bots 2026, best budgeting tools, Moneko Telegram bot, envelope budgeting, personal finance apps",
   },
   content: `
 ## Why Telegram Has Become a Serious Personal Finance Platform
@@ -126,6 +129,8 @@ What most of them do not solve is the structure problem — knowing not just wha
 If you log USD 800 in food expenses in March, that number is meaningless without context. Is that over or under budget? Which category is eating into your savings? What can you cut before the month ends?
 That is exactly what envelope budgeting solves — and it is exactly why Moneko is the only bot on this list that goes beyond tracking into actual monthly budget management. You know what is left in every pocket at any moment without having to do any mental arithmetic.
 
+If you want the short version focused on product fit, see Moneko's [Telegram budgeting app page](/telegram-budgeting-app) and [shared expense tracker page](/shared-expense-tracker).
+
 ## Who Should Use Which Bot
 
 - You want envelope budgeting with zero friction → Moneko
@@ -147,12 +152,12 @@ No bank login. No tutorial. No onboarding checklist.
 **Try Moneko free — the Telegram budgeting assistant with built-in envelope pockets.**
   
   `,
-  author: authorsData.find(author => author.id === 'alex-rivera')!,
+  author: authorsData.find((author) => author.id === "alex-rivera")!,
   tags: [
-    tags.find(tag => tag.id === 'tag-5')!, // Investment Strategy or similar relevant tag
+    tags.find((tag) => tag.id === "tag-5")!, // Investment Strategy or similar relevant tag
   ],
-  publishedAt: '2026-03-18T09:00:00Z',
-  featured: true
+  publishedAt: "2026-03-18T09:00:00Z",
+  featured: true,
 };
 
 export default newBlog;

@@ -484,8 +484,10 @@ async function sendFcmV1Notification(params: {
   body: string;
   data: Record<string, string>;
   accessToken: string;
+  platform?: string;
 }): Promise<boolean> {
-  const { supabase, deviceToken, title, body, data, accessToken } = params;
+  const { supabase, deviceToken, title, body, data, accessToken, platform } =
+    params;
 
   if (!firebaseProjectId) {
     console.warn(
@@ -496,6 +498,8 @@ async function sendFcmV1Notification(params: {
 
   try {
     const deepLink = data.deep_link || "";
+    const isWeb = typeof platform === "string" &&
+      /^(web|webpush|web_push|browser)$/i.test(platform);
     const message = {
       message: {
         token: deviceToken,
@@ -503,11 +507,15 @@ async function sendFcmV1Notification(params: {
           title,
           body,
         },
-        data,
+        data: {
+          ...data,
+          click_action: "FLUTTER_NOTIFICATION_CLICK",
+        },
         android: {
           priority: "high",
           notification: {
             sound: "default",
+            click_action: "FLUTTER_NOTIFICATION_CLICK",
           },
         },
         apns: {
@@ -522,8 +530,22 @@ async function sendFcmV1Notification(params: {
               badge: 1,
             },
             ...(deepLink ? { deep_link: deepLink } : {}),
+            click_action: "FLUTTER_NOTIFICATION_CLICK",
           },
         },
+        ...(isWeb
+          ? {
+            webpush: {
+              data: {
+                ...data,
+                deep_link: deepLink,
+              },
+              fcm_options: {
+                link: "https://moneko.io/dashboard",
+              },
+            },
+          }
+          : {}),
       },
     };
 
@@ -573,13 +595,13 @@ async function sendFcmV1Notification(params: {
   }
 }
 
-async function fetchActiveDeviceTokens(
+async function fetchActiveDevices(
   supabase: any,
   userId: string,
-): Promise<string[]> {
+): Promise<Array<{ token: string; platform: string | null }>> {
   const { data, error } = await supabase
     .from("devices")
-    .select("push_token")
+    .select("push_token, platform")
     .eq("user_id", userId)
     .eq("is_active", true)
     .not("push_token", "is", null);
@@ -589,10 +611,11 @@ async function fetchActiveDeviceTokens(
   }
 
   return data
-    .map((row: any) =>
-      typeof row?.push_token === "string" ? row.push_token.trim() : ""
-    )
-    .filter((token: string) => token.length > 0);
+    .map((row: any) => ({
+      token: typeof row?.push_token === "string" ? row.push_token.trim() : "",
+      platform: typeof row?.platform === "string" ? row.platform : null,
+    }))
+    .filter((row: { token: string }) => row.token.length > 0);
 }
 
 async function buildWalletPocketInsight(params: {
@@ -824,9 +847,7 @@ async function resolveWalletNotificationSpaceLabel(params: {
         const displayName = trimmedName.length <= 40
           ? trimmedName
           : `${trimmedName.slice(0, 37)}...`;
-        return isPortfolio
-          ? `the ${displayName} private space`
-          : `the ${displayName} shared space`;
+        return displayName        
       }
     }
   } catch (_) {
@@ -958,22 +979,7 @@ function buildWalletPocketNotificationDeepLink(params: {
   expenseId: string;
   householdId: string | null;
 }): string {
-  const { scenario, expenseId, householdId } = params;
-
-  if (
-    scenario === "no_pockets" ||
-    scenario === "category_unlinked" ||
-    scenario === "linked_no_limit" ||
-    scenario === "linked_over" ||
-    scenario === "linked_near_limit"
-  ) {
-    return "moneko://pockets";
-  }
-
-  if (scenario === "no_budget") {
-    return householdId ? `moneko://household/${householdId}` : "moneko://home";
-  }
-
+  const { expenseId } = params;
   return `moneko://expense/${expenseId}`;
 }
 
@@ -1001,8 +1007,8 @@ async function sendWalletPocketNotificationBestEffort(params: {
   } = params;
 
   try {
-    const deviceTokens = await fetchActiveDeviceTokens(supabase, userId);
-    if (!deviceTokens.length) return;
+    const devices = await fetchActiveDevices(supabase, userId);
+    if (!devices.length) return;
 
     const accessToken = await getFcmAccessToken();
     if (!accessToken) return;
@@ -1037,7 +1043,8 @@ async function sendWalletPocketNotificationBestEffort(params: {
 
     const scope = resolveWalletBudgetScope(householdId, isPortfolio);
     const payloadData: Record<string, string> = {
-      type: "wallet_pocket_update",
+      event_type: "expense_added",
+      notification_type: "wallet_pocket_update",
       expense_id: expenseId,
       scope,
       scenario: message.scenario,
@@ -1049,14 +1056,15 @@ async function sendWalletPocketNotificationBestEffort(params: {
     };
 
     await Promise.allSettled(
-      deviceTokens.map((token) =>
+      devices.map((device) =>
         sendFcmV1Notification({
           supabase,
-          deviceToken: token,
+          deviceToken: device.token,
           title: message.title,
           body: message.body,
           data: payloadData,
           accessToken,
+          platform: device.platform ?? undefined,
         })
       ),
     );

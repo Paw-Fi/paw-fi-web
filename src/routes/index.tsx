@@ -2,17 +2,13 @@
 
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 
-import homeFaqData from "@/data/home/home-faq.json";
+import { getMainGeoLandingPage } from "@/lib/geo-landing-pages";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
-const META_TITLE = "Moneko - AI Budgeting App & Expense Tracker";
-const META_DESCRIPTION =
-  "The AI financial assistant that chats with you. Track spending, manage pockets, and plan with AI-right from WhatsApp or our dedicated app.";
-const META_KEYWORDS =
-  "budgeting app, expense tracker, AI finance, whatsapp budget, pocket budgeting, envelope system, joint finances";
+const mainLandingPage = getMainGeoLandingPage();
 
 export const Route = createFileRoute("/")({
   component: lazyRouteComponent(
@@ -31,8 +27,7 @@ export const Route = createFileRoute("/")({
           name: "Moneko",
           url: "https://moneko.io",
           logo: "https://moneko.io/logo192.png",
-          description:
-            "Moneko is an AI-powered budgeting app and expense tracker available on WhatsApp, iOS, Android, and Web.",
+          description: mainLandingPage.organizationDescription,
           sameAs: [
             "https://x.com/moneko_ai",
             "https://www.linkedin.com/company/moneko-ai",
@@ -45,16 +40,15 @@ export const Route = createFileRoute("/")({
           "@id": "https://moneko.io/#website",
           name: "Moneko",
           url: "https://moneko.io",
-          description:
-            "Moneko helps people budget better with AI-assisted planning, WhatsApp capture, and smart expense tracking.",
+          description: mainLandingPage.websiteDescription,
           publisher: { "@id": "https://moneko.io/#organization" },
         },
         {
           "@type": "WebPage",
           "@id": pageUrl,
           url: pageUrl,
-          name: META_TITLE,
-          description: META_DESCRIPTION,
+          name: mainLandingPage.title,
+          description: mainLandingPage.description,
           isPartOf: { "@id": "https://moneko.io/#website" },
           inLanguage: "en-US",
         },
@@ -62,11 +56,13 @@ export const Route = createFileRoute("/")({
           "@type": "SoftwareApplication",
           "@id": "https://moneko.io/#software",
           name: "Moneko",
+          alternateName: mainLandingPage.softwareAlternateNames,
           operatingSystem: "Android, iOS, Web",
           applicationCategory: "FinanceApplication",
-          description:
-            "AI budgeting app and expense tracker that lets you manage finances via WhatsApp or a dedicated app.",
+          applicationSubCategory: "BudgetingApplication",
+          description: mainLandingPage.softwareDescription,
           url: "https://moneko.io",
+          featureList: mainLandingPage.softwareFeatureList,
           offers: {
             "@type": "Offer",
             price: "0",
@@ -82,7 +78,7 @@ export const Route = createFileRoute("/")({
         {
           "@type": "FAQPage",
           "@id": `${pageUrl}#faq`,
-          mainEntity: homeFaqData.map((item) => ({
+          mainEntity: mainLandingPage.faqItems.map((item) => ({
             "@type": "Question",
             name: item.question,
             acceptedAnswer: {
@@ -95,9 +91,9 @@ export const Route = createFileRoute("/")({
     };
 
     const meta = seo({
-      title: META_TITLE,
-      description: META_DESCRIPTION,
-      keywords: META_KEYWORDS,
+      title: mainLandingPage.title,
+      description: mainLandingPage.description,
+      keywords: mainLandingPage.keywords,
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });

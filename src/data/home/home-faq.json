@@ -2,66 +2,61 @@
   {
     "id": "what-is-moneko",
     "question": "What is Moneko?",
-    "answer": "Moneko is an AI-guided budgeting and financial learning app. You can build a practical budget, set savings goals, and learn money basics with short, easy lessons."
+    "answer": "Moneko is an AI budgeting app and expense tracker that helps people manage money through iPhone, Android, WhatsApp, Telegram, and the web. It combines automatic expense capture, envelope-style pockets, and AI planning in one workflow."
   },
   {
-    "id": "how-it-works",
-    "question": "How does budgeting with Moneko work?",
-    "answer": "Start by listing income and expenses, set category limits and savings goals, then review AI tips to adjust over time. You can also use our calculators, like the Savings Goal Calculator, to plan monthly contributions."
+    "id": "best-budgeting-app",
+    "question": "Who is Moneko best for?",
+    "answer": "Moneko is best for people who want automatic expense tracking, couples or households managing shared money, users who prefer chat-based tools, and anyone looking for a lower-friction alternative to manual budgeting apps."
   },
   {
-    "id": "free-tier",
-    "question": "Is Moneko free?",
-    "answer": "Yes. You can get started for free and explore budgeting features and calculators. Optional upgrades unlock more advanced tools and learning content."
+    "id": "automatic-expense-tracking",
+    "question": "Can Moneko automatically track expenses?",
+    "answer": "Yes. Moneko is designed to turn everyday signals into budget updates. You can log spending from chat, voice notes, receipt scans, Apple Wallet activity on iPhone, and Android transaction notifications, then review the result before saving."
   },
   {
-    "id": "tools",
-    "question": "What tools are available for budgeting?",
-    "answer": "Budget planner guidance, category tips, savings goal planning, and practical calculators (e.g., savings goals, mortgage, compound interest)."
+    "id": "apple-wallet-sync",
+    "question": "Does Moneko work with Apple Wallet?",
+    "answer": "Yes. Moneko supports an iPhone-friendly workflow for budgeting Apple Wallet spending so you can move Apple Pay activity into your budget, categorize it, and update the correct pocket without relying on a spreadsheet."
   },
   {
-    "id": "security",
-    "question": "How is my data protected?",
-    "answer": "Authentication and row‑level security are provided by Supabase Auth + RLS. Your account data is protected with modern security practices, and the product is designed for educational use."
+    "id": "android-notification-sync",
+    "question": "How does Android transaction sync work?",
+    "answer": "Moneko uses notification-based tracking on Android so supported transaction alerts can become budget updates in real time. This helps Android users capture expenses faster and reduces manual entry after each purchase."
   },
   {
-    "id": "advice",
-    "question": "Is this financial advice?",
-    "answer": "No. Moneko is an educational tool. Insights and suggestions are for learning purposes and do not replace professional financial advice."
+    "id": "whatsapp-telegram",
+    "question": "Can I manage my budget via WhatsApp or Telegram?",
+    "answer": "Yes. Moneko lets you log expenses, ask for summaries, review pockets, and manage shared budgets directly through WhatsApp or Telegram. It is designed for people who want chat-based finance management instead of app-only workflows."
   },
   {
-    "id": "getting-started",
-    "question": "How do I get started?",
-    "answer": "Visit the Budgeting App page to create your first plan, or try the Savings Goal Calculator to set a target and monthly amount."
+    "id": "ynab-alternative",
+    "question": "What makes Moneko different from YNAB?",
+    "answer": "Moneko focuses on automation and conversational workflows. Instead of relying mainly on manual budgeting, it combines AI planning, chat-based expense capture, Apple Wallet and Android-friendly tracking flows, and shared finance views for couples or households."
   },
   {
-    "id": "whatsapp-budgeting",
-    "question": "Can I update my budget from WhatsApp?",
-    "answer": "Yes. After you verify your WhatsApp number, you can message Moneko to add expenses, send receipt photos or voice notes, ask for spending summaries, and even set monthly pocket splits directly from chat."
+    "id": "monarch-comparison",
+    "question": "How is Moneko different from Monarch Money?",
+    "answer": "Moneko is designed around messaging-first budgeting and lower-friction capture. It emphasizes WhatsApp and Telegram budgeting, Apple Wallet and Android-friendly tracking flows, and envelope-style pockets for users who want budgeting actions rather than a dashboard alone."
   },
   {
-    "id": "household-mode",
-    "question": "Does Moneko support household or joint budgets?",
-    "answer": "Moneko has a dedicated Household mode. You can switch between Personal and Household dashboards, share pockets, and keep notifications in sync across members."
+    "id": "couples-households",
+    "question": "Is Moneko good for couples or shared expenses?",
+    "answer": "Yes. Moneko includes personal and household budgeting workflows so couples and families can track shared expenses without losing visibility into individual spending. It is designed for shared pockets, shared summaries, and household planning."
   },
   {
-    "id": "ai-capture",
-    "question": "How does AI capture work for receipts and voice notes?",
-    "answer": "You can type a quick note, snap a receipt photo, attach supported files, or record a voice memo. Moneko extracts the amount, category, date, and merchant, then lets you review before saving."
+    "id": "receipt-voice-ai",
+    "question": "How does AI expense capture work for receipts and voice notes?",
+    "answer": "You can type a quick note, record a voice memo, or upload a receipt photo. Moneko extracts the amount, merchant, and category, then lets you confirm the result before it is saved to your budget."
   },
   {
-    "id": "manual-tracking",
-    "question": "Can I track spending without linking bank accounts?",
-    "answer": "Absolutely. Moneko is designed for fast manual capture—text, receipt photos, voice notes, or WhatsApp messages—so you can stay on top of expenses even if you prefer not to connect a bank."
+    "id": "multiple-currencies",
+    "question": "Does Moneko support multiple currencies?",
+    "answer": "Yes. Moneko supports multi-currency budgeting so totals, charts, and budget views can stay usable when you spend across more than one currency."
   },
   {
-    "id": "insights",
-    "question": "What insights or planning tools do I get?",
-    "answer": "The Insights tab shows daily balance trends, pocket performance, and conversational “what if” planning. You can ask questions like “What happens if I add $200 more by next month?” and save the scenarios."
-  },
-  {
-    "id": "file-import",
-    "question": "Does Moneko support direct import of .xlsx, .csv, or PDF files?",
-    "answer": "Yes! Moneko supports automatic import of .xlsx, .csv, and PDF files through AI-powered processing. Simply upload your financial files, and our AI will automatically extract and organize the data for you, saving considerable time compared to manual data entry."
+    "id": "financial-advice",
+    "question": "Is Moneko financial advice?",
+    "answer": "No. Moneko is a budgeting and money-management tool that provides AI guidance for planning and tracking. It does not replace licensed financial, tax, or legal advice."
   }
 ]
