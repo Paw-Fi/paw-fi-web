@@ -23,6 +23,7 @@ import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { formatMoney } from "../shared/currency-symbols.ts";
 import {
   ensureUserCategory,
   learnUserCategoryPreference,
@@ -90,11 +91,6 @@ interface TransactionPayload {
   externalSourceId?: string | null;
   packageName?: string | null;
   sourcePackage?: string | null;
-  locale?: string | null;
-  shortcutTransaction?: string | null;
-  shortcutCardOrPass?: string | null;
-  shortcutMerchant?: string | null;
-  shortcutName?: string | null;
 }
 
 interface RequestBody {
@@ -194,22 +190,11 @@ function buildWalletCaptureRequestLogContext(
         rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
         note: truncateForLog(tx.note ?? null, 200),
         cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
-        shortcutTransaction: truncateForLog(
-          tx.shortcutTransaction ?? null,
-          200,
-        ),
-        shortcutCardOrPass: truncateForLog(
-          tx.shortcutCardOrPass ?? null,
-          120,
-        ),
-        shortcutMerchant: truncateForLog(tx.shortcutMerchant ?? null, 120),
-        shortcutName: truncateForLog(tx.shortcutName ?? null, 120),
         packageName: truncateForLog(
           resolveWalletTransactionPackageName(tx),
           160,
         ),
         externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
-        locale: truncateForLog(tx.locale ?? null, 40),
       }
       : null,
   };
@@ -318,17 +303,7 @@ function getMonthWindowFromDate(dateYmd: string): {
 }
 
 function formatCurrencyAmount(cents: number, currency: string): string {
-  const major = cents / 100;
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(major);
-  } catch (_) {
-    return `${currency} ${major.toFixed(2)}`;
-  }
+  return formatMoney(cents, currency);
 }
 
 function formatWalletNotificationCategory(value: string): string {
@@ -615,7 +590,11 @@ async function fetchActiveDevices(
       token: typeof row?.push_token === "string" ? row.push_token.trim() : "",
       platform: typeof row?.platform === "string" ? row.platform : null,
     }))
-    .filter((row: { token: string }) => row.token.length > 0);
+    .filter((row: { token: string }) => row.token.length > 0)
+    .filter(
+      (row, index, rows) =>
+        rows.findIndex((item) => item.token === row.token) === index,
+    );
 }
 
 async function buildWalletPocketInsight(params: {
@@ -654,20 +633,16 @@ async function buildWalletPocketInsight(params: {
     householdId,
   });
 
-  let budget = await budgetQuery.maybeSingle();
-  if (!budget) {
-    let fallbackBudgetQuery = supabase
-      .from("budgets")
-      .select("id,total_budget_cents,currency")
-      .eq("period_month", periodMonth);
-    fallbackBudgetQuery = applyWalletScopeFilter({
-      query: fallbackBudgetQuery,
-      scope,
-      userId,
-      householdId,
-    });
-    budget = await fallbackBudgetQuery.limit(1).maybeSingle();
+  const { data: matchedBudget, error: matchedBudgetError } = await budgetQuery
+    .maybeSingle();
+  if (matchedBudgetError) {
+    console.error(
+      "[save-wallet-transaction] Failed to load scoped budget by currency:",
+      matchedBudgetError,
+    );
   }
+
+  const budget = matchedBudget;
 
   if (!budget?.id) {
     return {
@@ -696,7 +671,16 @@ async function buildWalletPocketInsight(params: {
     householdId,
   });
 
-  const envelopes = ((await envelopeQuery) as Array<any> | null) ?? [];
+  const { data: envelopesData, error: envelopesError } = await envelopeQuery;
+  if (envelopesError) {
+    console.error(
+      "[save-wallet-transaction] Failed to load budget envelopes:",
+      envelopesError,
+    );
+  }
+  const envelopes = (
+    Array.isArray(envelopesData) ? envelopesData : []
+  ) as Array<any>;
   if (envelopes.length === 0) {
     return {
       scenario: "no_pockets",
@@ -710,11 +694,21 @@ async function buildWalletPocketInsight(params: {
     .map((row) => (typeof row?.id === "string" ? row.id : null))
     .filter((id): id is string => Boolean(id));
 
-  const allocationRows = ((await supabase
-    .from("envelope_allocations")
-    .select("envelope_id,amount_cents")
-    .eq("period_month", periodMonth)
-    .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
+  const { data: allocationRowsData, error: allocationRowsError } =
+    await supabase
+      .from("envelope_allocations")
+      .select("envelope_id,amount_cents")
+      .eq("period_month", periodMonth)
+      .in("envelope_id", envelopeIds);
+  if (allocationRowsError) {
+    console.error(
+      "[save-wallet-transaction] Failed to load envelope allocations:",
+      allocationRowsError,
+    );
+  }
+  const allocationRows = (
+    Array.isArray(allocationRowsData) ? allocationRowsData : []
+  ) as Array<any>;
   const allocationByEnvelopeId = new Map<string, number>();
   for (const row of allocationRows) {
     const envelopeId = typeof row?.envelope_id === "string"
@@ -727,10 +721,19 @@ async function buildWalletPocketInsight(params: {
     }
   }
 
-  const categoryLinks = ((await supabase
+  const { data: categoryLinksData, error: categoryLinksError } = await supabase
     .from("envelope_category_links")
     .select("envelope_id,category")
-    .in("envelope_id", envelopeIds)) as Array<any> | null) ?? [];
+    .in("envelope_id", envelopeIds);
+  if (categoryLinksError) {
+    console.error(
+      "[save-wallet-transaction] Failed to load envelope category links:",
+      categoryLinksError,
+    );
+  }
+  const categoryLinks = (
+    Array.isArray(categoryLinksData) ? categoryLinksData : []
+  ) as Array<any>;
   const categoriesByEnvelopeId = new Map<string, string[]>();
   for (const row of categoryLinks) {
     const envelopeId = typeof row?.envelope_id === "string"
@@ -755,7 +758,16 @@ async function buildWalletPocketInsight(params: {
     userId,
     householdId,
   });
-  const expenseRows = ((await expenseQuery) as Array<any> | null) ?? [];
+  const { data: expenseRowsData, error: expenseRowsError } = await expenseQuery;
+  if (expenseRowsError) {
+    console.error(
+      "[save-wallet-transaction] Failed to load scoped expenses for pocket insight:",
+      expenseRowsError,
+    );
+  }
+  const expenseRows = (
+    Array.isArray(expenseRowsData) ? expenseRowsData : []
+  ) as Array<any>;
 
   let monthTotalSpentCents = 0;
   const spendByCategory = new Map<string, number>();
@@ -847,7 +859,7 @@ async function resolveWalletNotificationSpaceLabel(params: {
         const displayName = trimmedName.length <= 40
           ? trimmedName
           : `${trimmedName.slice(0, 37)}...`;
-        return displayName        
+        return displayName;
       }
     }
   } catch (_) {
@@ -868,13 +880,16 @@ function buildWalletPocketNotificationMessage(params: {
   const amountLabel = formatCurrencyAmount(amountCents, currency);
   const prettyCategory = category.trim().length > 0 ? category : "other";
   const displayCategory = formatWalletNotificationCategory(prettyCategory);
-  const title = `Moneko logged ${amountLabel} for ${displayCategory}`;
+  const title = `Moneko captured ${amountLabel}`;
+  const headerLine = `💸 ${amountLabel} -> ${spaceLabel}`;
+  const categoryLine = `🏷️ ${displayCategory}`;
+  const buildBody = (thirdLine: string) =>
+    `${headerLine}\n${categoryLine}\n${thirdLine}`;
 
   if (insight.scenario === "no_budget") {
     return {
       title,
-      body:
-        `Expense saved in ${spaceLabel}. Open your space to set a monthly budget and unlock pocket insights.`,
+      body: buildBody(`💰 No budget set for ${spaceLabel}`),
       scenario: insight.scenario,
     };
   }
@@ -886,25 +901,15 @@ function buildWalletPocketNotificationMessage(params: {
     );
     return {
       title,
-      body:
-        `Expense saved in ${spaceLabel}. Your monthly budget is ${budgetLabel} - open pockets to break it into focused spending buckets.`,
+      body: buildBody(`💰 ${budgetLabel} budget this month`),
       scenario: insight.scenario,
     };
   }
 
   if (insight.scenario === "category_unlinked") {
-    const spentLabel = formatCurrencyAmount(
-      insight.monthTotalSpentCents,
-      currency,
-    );
-    const budgetLabel = formatCurrencyAmount(
-      insight.monthTotalBudgetCents,
-      currency,
-    );
     return {
       title,
-      body:
-        `Expense saved in ${spaceLabel}. Open pockets to link this category for clearer tracking. Month: ${spentLabel} / ${budgetLabel}.`,
+      body: buildBody("🎯 Link this category to a pocket"),
       scenario: insight.scenario,
     };
   }
@@ -913,64 +918,39 @@ function buildWalletPocketNotificationMessage(params: {
   if (!pocket) {
     return {
       title,
-      body:
-        `Expense saved in ${spaceLabel}. Nice work keeping your spending on track this month.`,
+      body: buildBody("👝 Pocket status updated"),
       scenario: "linked",
     };
   }
 
-  const pocketLimit = formatCurrencyAmount(pocket.limitCents, currency);
-  const pocketSpent = formatCurrencyAmount(pocket.spentCents, currency);
-  const monthSpent = formatCurrencyAmount(
-    insight.monthTotalSpentCents,
-    currency,
-  );
-  const monthBudget = formatCurrencyAmount(
-    insight.monthTotalBudgetCents,
-    currency,
-  );
-
   if (pocket.limitCents <= 0) {
     return {
       title,
-      body:
-        `Expense saved in ${spaceLabel}. Open pockets to give ${pocket.name} a limit and start tracking what is left this month.`,
+      body: buildBody(`🎯 Set a limit on ${pocket.name}`),
       scenario: "linked_no_limit",
     };
   }
 
   if (pocket.remainingCents < 0) {
+    const overLabel = formatCurrencyAmount(
+      Math.abs(pocket.remainingCents),
+      currency,
+    );
     return {
       title,
-      body: `Expense saved in ${spaceLabel}. ${pocket.name} has ${
-        formatCurrencyAmount(
-          pocket.remainingCents,
-          currency,
-        )
-      } left this month (${pocketSpent} / ${pocketLimit}). Open pockets to rebalance it.`,
+      body: buildBody(`⚠️ ${overLabel} over on ${pocket.name}`),
       scenario: "linked_over",
     };
   }
 
-  const remainingLabel = formatCurrencyAmount(pocket.remainingCents, currency);
-  const usedRatio = pocket.limitCents > 0
-    ? pocket.spentCents / pocket.limitCents
-    : 0;
-
-  if (usedRatio >= 0.85) {
-    return {
-      title,
-      body:
-        `Expense saved in ${spaceLabel}. ${pocket.name} has ${remainingLabel} left this month (${pocketSpent} / ${pocketLimit}). Open pockets if you want to adjust the pace.`,
-      scenario: "linked_near_limit",
-    };
-  }
-
+  const remainingLabel = formatCurrencyAmount(
+    pocket.remainingCents,
+    currency,
+  );
   return {
     title,
-    body:
-      `Expense saved in ${spaceLabel}, in ${pocket.name}. You still have ${remainingLabel} left (${pocketSpent} / ${pocketLimit}). Month total: ${monthSpent} / ${monthBudget}.`,
-    scenario: "linked_healthy",
+    body: buildBody(`🪙 ${remainingLabel} left on ${pocket.name}`),
+    scenario: "linked",
   };
 }
 
@@ -1501,16 +1481,6 @@ Deno.serve(async (req: Request) => {
       return errorResponse("transaction.amount must be a positive number", 400);
     }
 
-    // Currency
-    const rawCurrency = resolveWalletTransactionCurrency(tx);
-    if (!rawCurrency) {
-      logWalletCaptureValidationFailure(
-        "missing_currency",
-        requestDebugContext,
-      );
-      return errorResponse("transaction.currency is required", 400);
-    }
-
     // Date
     const rawDate = resolveWalletTransactionDate(tx);
     const normalizedProvidedDate = rawDate
@@ -1618,7 +1588,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Normalize inputs ──────────────────────────────────────────────
-    const currency = validateCurrency(rawCurrency);
     const amountCents = Math.round(tx.amount * 100);
     const isPortfolio = body.isPortfolio === true;
     const householdId = sanitizeUuid(body.householdId);
@@ -1679,6 +1648,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Resolve user contact ──────────────────────────────────────────
     let contactId: string | null = null;
+    let preferredCurrency: string | null = null;
     let preferredTimezone: string | null = null;
     {
       const { data: contact, error: contactError } = await supabase
@@ -1717,16 +1687,12 @@ Deno.serve(async (req: Request) => {
 
       if (contact) {
         contactId = contact.id;
+        preferredCurrency = typeof contact.preferred_currency === "string"
+          ? contact.preferred_currency.trim().toUpperCase() || null
+          : null;
         preferredTimezone = typeof contact.preferred_timezone === "string"
           ? contact.preferred_timezone.trim() || null
           : null;
-        // Back-fill preferred currency if missing
-        if (!contact.preferred_currency && currency) {
-          await supabase
-            .from("user_contacts")
-            .update({ preferred_currency: currency })
-            .eq("id", contact.id);
-        }
       } else {
         console.log(
           "[save-wallet-transaction] No user_contact row found; proceeding with null contact_id.",
@@ -1734,6 +1700,31 @@ Deno.serve(async (req: Request) => {
         );
       }
     }
+
+    if (!preferredCurrency) {
+      await reportEdgeFunctionError({
+        functionName: "save-wallet-transaction",
+        error: new Error(
+          "Wallet capture missing preferred currency on user contact",
+        ),
+        context: {
+          step: "resolve_currency",
+          captureSource,
+          userId,
+          householdId,
+          payloadCurrency: resolveWalletTransactionCurrency(tx),
+          transaction: requestDebugContext?.transaction ?? null,
+        },
+      });
+      logWalletCaptureValidationFailure(
+        "missing_currency",
+        requestDebugContext,
+        { preferredCurrency },
+      );
+      return errorResponse("transaction.currency is required", 400);
+    }
+
+    const currency = validateCurrency(preferredCurrency);
 
     const clientCreatedAtPrefix = extractCalendarDatePrefix(
       body.clientCreatedAt,

@@ -3,7 +3,10 @@ import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 // @ts-ignore
 
 export const Route = createFileRoute("/changelog")({
-  component: lazyRouteComponent(() => import("@/components/performance/changelog-route-component"), "ChangelogRouteComponent"),
+  component: lazyRouteComponent(
+    () => import("@/components/performance/changelog-route-component"),
+    "ChangelogRouteComponent",
+  ),
   head: () => {
     return {
       meta: [

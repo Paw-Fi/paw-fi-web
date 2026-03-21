@@ -14,7 +14,6 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HomeHeader } from "@/components/index/header";
 
-
 interface ChangelogEntry {
   title: string;
   date: string;
@@ -25,22 +24,39 @@ interface ChangelogEntry {
 }
 
 const changelogs: ChangelogEntry[] = [
-{
-  title: "Thai Language Support & Recurring Improvements",
-  date: "2026-03-11",
-  version: "1.4.7",
-  tags: ["Feature", "Currency", "Recurring", "Localization"],
-  description:
-    "This release introduces Thai language support, expands currency coverage, improves CSV imports, and adds a new 6-month option for recurring transactions while making transaction updates more reliable.",
-  items: [
-    "Thai language is now supported",
-    "Add Nepalese Rupee (NPR) to supported currencies",
-    "Enhanced CSV import with better column mapping and deduplication",
-    "6-month frequency option added to recurring transactions",
-    "Improved reliability for transaction updates and category changes",
-    "Fixed pie chart legend display issues",
-  ],
-},
+  {
+    title: "Wallet & Apple Pay Integration Improvements",
+    date: "2026-03-23",
+    version: "1.5.0",
+    tags: ["Feature", "Wallet", "Apple Pay"],
+    description:
+      "This release enhances wallet synchronization, adds Apple Wallet integration, and fixes various bugs related to budget calculations, payments, and data imports.",
+    items: [
+      "Added Apple Wallet integration for seamless payment card management",
+      "Improved wallet synchronization across devices",
+      "Fixed budget calculations to properly recalculate pocket amounts when total budget changes",
+      "Resolved payment processing issues for more reliable transactions",
+      "Enhanced CSV import functionality with better error handling",
+      "Fixed Firebase synchronization issues",
+      "Various UI improvements and bug fixes",
+    ],
+  },
+  {
+    title: "Thai Language Support & Recurring Improvements",
+    date: "2026-03-11",
+    version: "1.4.7",
+    tags: ["Feature", "Currency", "Recurring", "Localization"],
+    description:
+      "This release introduces Thai language support, expands currency coverage, improves CSV imports, and adds a new 6-month option for recurring transactions while making transaction updates more reliable.",
+    items: [
+      "Thai language is now supported",
+      "Add Nepalese Rupee (NPR) to supported currencies",
+      "Enhanced CSV import with better column mapping and deduplication",
+      "6-month frequency option added to recurring transactions",
+      "Improved reliability for transaction updates and category changes",
+      "Fixed pie chart legend display issues",
+    ],
+  },
   {
     title: "Custom Categories, Regional Support & Faster Currency Flow",
     date: "2026-03-03",
