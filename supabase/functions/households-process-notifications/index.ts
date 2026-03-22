@@ -171,7 +171,8 @@ async function sendFCMv1Notification(
   try {
     const deepLink = data.deep_link || buildDeepLink(data.event_type, data);
     const webLink = buildWebLink(data.event_type, data);
-    const isWeb = typeof platform === "string" &&
+    const isWeb =
+      typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
 
     const message = {
@@ -206,16 +207,16 @@ async function sendFCMv1Notification(
         },
         ...(isWeb && deepLink
           ? {
-            webpush: {
-              data: {
-                ...data,
-                deep_link: deepLink,
+              webpush: {
+                data: {
+                  ...data,
+                  deep_link: deepLink,
+                },
+                fcm_options: {
+                  link: webLink,
+                },
               },
-              fcm_options: {
-                link: webLink,
-              },
-            },
-          }
+            }
           : {}),
       },
     };
@@ -325,17 +326,17 @@ function buildDeepLink(
 
     case "invite_reminder_invitee":
       return data.invite_token
-        ? `${appScheme}households/join?token=${
-          encodeURIComponent(
+        ? `${appScheme}households/join?token=${encodeURIComponent(
             data.invite_token,
-          )
-        }`
+          )}`
         : `${appScheme}home`;
 
     case "recurring_reminder":
-      return data.expense_id
-        ? `${appScheme}recurring/${data.expense_id}`
-        : `${appScheme}recurring`;
+      return data.recurring_id
+        ? `${appScheme}recurring/${data.recurring_id}`
+        : data.expense_id
+          ? `${appScheme}recurring/${data.expense_id}`
+          : `${appScheme}recurring`;
 
     case "log_expense_reminder":
       return `${appScheme}expenses/log`;
@@ -343,6 +344,75 @@ function buildDeepLink(
     default:
       return `${appScheme}home`;
   }
+}
+
+function normalizeNotificationPayloadData(
+  payloadData: Record<string, string>,
+  messageData: Record<string, string>,
+): Record<string, string> {
+  const merged = {
+    ...payloadData,
+    ...messageData,
+  };
+
+  const parseObject = (value: string | undefined): Record<string, unknown> => {
+    if (!value) return {};
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const nestedExpenseData = parseObject(merged.expense_data);
+  const nestedPayload = parseObject(merged.payload);
+
+  const readValue = (...keys: string[]): string | null => {
+    for (const key of keys) {
+      const direct = merged[key];
+      if (typeof direct === "string" && direct.trim().length > 0) {
+        return direct.trim();
+      }
+
+      const fromExpense = nestedExpenseData[key];
+      if (fromExpense != null && String(fromExpense).trim().length > 0) {
+        return String(fromExpense).trim();
+      }
+
+      const fromPayload = nestedPayload[key];
+      if (fromPayload != null && String(fromPayload).trim().length > 0) {
+        return String(fromPayload).trim();
+      }
+    }
+    return null;
+  };
+
+  const normalized = { ...merged };
+  const expenseId = readValue("expense_id", "transaction_id", "id");
+  const splitGroupId = readValue("split_group_id", "split_id");
+  const recurringId = readValue("recurring_id", "expense_id");
+  const budgetId = readValue("budget_id");
+  const inviteToken = readValue("invite_token");
+  const householdId = readValue("household_id");
+
+  if (expenseId) normalized.expense_id = expenseId;
+  if (splitGroupId) {
+    normalized.split_group_id = splitGroupId;
+    if (!normalized.split_id || normalized.split_id.trim().length === 0) {
+      normalized.split_id = splitGroupId;
+    }
+  }
+  if (recurringId) {
+    normalized.recurring_id = recurringId;
+  }
+  if (budgetId) normalized.budget_id = budgetId;
+  if (inviteToken) normalized.invite_token = inviteToken;
+  if (householdId) normalized.household_id = householdId;
+
+  return normalized;
 }
 
 function buildWebLink(
@@ -509,12 +579,14 @@ serve(async (req) => {
         let body: string;
         let targetUserId: string | null = event.user_id;
         let messageData: Record<string, string> = {};
-        const payloadExpenseData = event.payload?.expense_data &&
-            typeof event.payload.expense_data === "object" &&
-            !Array.isArray(event.payload.expense_data)
-          ? event.payload.expense_data
-          : {};
-        const isRecurringEvent = event.payload?.is_recurring === true ||
+        const payloadExpenseData =
+          event.payload?.expense_data &&
+          typeof event.payload.expense_data === "object" &&
+          !Array.isArray(event.payload.expense_data)
+            ? event.payload.expense_data
+            : {};
+        const isRecurringEvent =
+          event.payload?.is_recurring === true ||
           payloadExpenseData.is_recurring === true;
 
         switch (event.event_type) {
@@ -541,6 +613,21 @@ serve(async (req) => {
             targetUserId = null; // Broadcast to remaining members
             break;
 
+          case "member_reminded": {
+            const senderName = (event.payload?.sender_name ||
+              "A member") as string;
+            const householdName = (event.payload?.household_name ||
+              "your household") as string;
+            const customMessage = (event.payload?.message || "") as string;
+
+            title = "🔔 Household Reminder";
+            body =
+              customMessage.trim().length > 0
+                ? `${senderName} reminded you in "${householdName}": ${customMessage.trim()}`
+                : `${senderName} reminded you about "${householdName}"`;
+            break;
+          }
+
           case "split_created":
             title = "💰 New Expense Split";
             body = `A new expense has been split in "${
@@ -563,13 +650,13 @@ serve(async (req) => {
               const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "💸 Expenses Added";
-                const recurringSuffix = recurringCount > 0
-                  ? recurringCount === batchCount
-                    ? " (all recurring)"
-                    : ` (${recurringCount} recurring)`
-                  : "";
-                body =
-                  `${batchCount} expenses were added in your household${recurringSuffix}`;
+                const recurringSuffix =
+                  recurringCount > 0
+                    ? recurringCount === batchCount
+                      ? " (all recurring)"
+                      : ` (${recurringCount} recurring)`
+                    : "";
+                body = `${batchCount} expenses were added in your household${recurringSuffix}`;
               } else {
                 title = isRecurring
                   ? "🔁 New Recurring Expense Added"
@@ -602,13 +689,13 @@ serve(async (req) => {
               const isRecurring = isRecurringEvent;
               if (batchCount > 1) {
                 title = "🗑️ Expenses Deleted";
-                const recurringSuffix = recurringCount > 0
-                  ? recurringCount === batchCount
-                    ? " (all recurring)"
-                    : ` (${recurringCount} recurring)`
-                  : "";
-                body =
-                  `${batchCount} expenses were deleted in your household${recurringSuffix}`;
+                const recurringSuffix =
+                  recurringCount > 0
+                    ? recurringCount === batchCount
+                      ? " (all recurring)"
+                      : ` (${recurringCount} recurring)`
+                    : "";
+                body = `${batchCount} expenses were deleted in your household${recurringSuffix}`;
               } else {
                 title = isRecurring
                   ? "🔁 Recurring Expense Deleted"
@@ -627,13 +714,13 @@ serve(async (req) => {
             const isRecurring = isRecurringEvent;
             if (batchCount > 1) {
               title = "💰 Income Added";
-              const recurringSuffix = recurringCount > 0
-                ? recurringCount === batchCount
-                  ? " (all recurring)"
-                  : ` (${recurringCount} recurring)`
-                : "";
-              body =
-                `${batchCount} income entries were added in your household${recurringSuffix}`;
+              const recurringSuffix =
+                recurringCount > 0
+                  ? recurringCount === batchCount
+                    ? " (all recurring)"
+                    : ` (${recurringCount} recurring)`
+                  : "";
+              body = `${batchCount} income entries were added in your household${recurringSuffix}`;
             } else {
               title = isRecurring
                 ? "🔁 Recurring Income Added"
@@ -667,12 +754,37 @@ serve(async (req) => {
             const amount = (event.payload?.amount || "") as string;
             const timeframe = (event.payload?.timeframe || "soon") as string;
 
-            title = transactionType === "income"
-              ? "💰 Incoming Payment"
-              : "🔔 Upcoming Expense";
-            body = transactionType === "income"
-              ? `${category || "Income"} of ${amount} arrives ${timeframe}`
-              : `${category || "Expense"} of ${amount} is due ${timeframe}`;
+            title =
+              transactionType === "income"
+                ? "💰 Incoming Payment"
+                : "🔔 Upcoming Expense";
+            body =
+              transactionType === "income"
+                ? `${category || "Income"} of ${amount} arrives ${timeframe}`
+                : `${category || "Expense"} of ${amount} is due ${timeframe}`;
+            break;
+          }
+
+          case "invite_reminder_inviter": {
+            const householdName = (event.payload?.household_name ||
+              "your household") as string;
+            const inviteeName = (event.payload?.invitee_name ||
+              event.payload?.invited_email ||
+              "your invitee") as string;
+
+            title = "⏰ Invitation Reminder";
+            body = `${inviteeName} has not joined "${householdName}" yet`;
+            break;
+          }
+
+          case "invite_reminder_invitee": {
+            const householdName = (event.payload?.household_name ||
+              "a household") as string;
+            const inviterName = (event.payload?.inviter_name ||
+              "Someone") as string;
+
+            title = "📨 Invitation Reminder";
+            body = `${inviterName} invited you to join "${householdName}"`;
             break;
           }
 
@@ -778,8 +890,8 @@ serve(async (req) => {
           if (!isImmediateTransactionEvent) {
             if (isLogExpenseReminder) {
               const quietStart = Number.isFinite(
-                  Number(event.payload?.quiet_start),
-                )
+                Number(event.payload?.quiet_start),
+              )
                 ? Number(event.payload.quiet_start)
                 : 22;
               const quietEnd = Number.isFinite(Number(event.payload?.quiet_end))
@@ -875,26 +987,30 @@ serve(async (req) => {
         let eventSentCount = 0;
         let eventFailedCount = 0;
 
-        const payloadData = event.payload &&
-            typeof event.payload === "object" &&
-            !Array.isArray(event.payload)
-          ? Object.fromEntries(
-            Object.entries(event.payload).map(([k, v]) => [
-              k,
-              v != null && typeof v === "object"
-                ? JSON.stringify(v)
-                : String(v),
-            ]),
-          )
-          : {};
+        const payloadData =
+          event.payload &&
+          typeof event.payload === "object" &&
+          !Array.isArray(event.payload)
+            ? Object.fromEntries(
+                Object.entries(event.payload).map(([k, v]) => [
+                  k,
+                  v != null && typeof v === "object"
+                    ? JSON.stringify(v)
+                    : String(v),
+                ]),
+              )
+            : {};
+        const normalizedPayloadData = normalizeNotificationPayloadData(
+          payloadData,
+          messageData,
+        );
         const mergedData = {
-          ...payloadData,
-          ...messageData,
-          deep_link: payloadData.deep_link ||
+          ...normalizedPayloadData,
+          deep_link:
+            payloadData.deep_link ||
             messageData.deep_link ||
             buildDeepLink(event.event_type, {
-              ...payloadData,
-              ...messageData,
+              ...normalizedPayloadData,
             }),
         };
 
@@ -933,9 +1049,10 @@ serve(async (req) => {
           .update({
             is_sent: eventSentCount > 0,
             sent_at: eventSentCount > 0 ? new Date().toISOString() : null,
-            error_message: eventFailedCount > 0
-              ? `Failed to send to ${eventFailedCount} devices`
-              : null,
+            error_message:
+              eventFailedCount > 0
+                ? `Failed to send to ${eventFailedCount} devices`
+                : null,
             payload: {
               ...event.payload,
               sent_count: eventSentCount,
@@ -964,9 +1081,8 @@ serve(async (req) => {
           },
         });
         failedCount++;
-        const errorMessage = error instanceof Error
-          ? error.message
-          : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         errors.push(`Event ${event.id}: ${errorMessage}`);
 
         // Update event with error

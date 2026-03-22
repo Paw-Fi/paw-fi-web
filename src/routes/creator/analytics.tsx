@@ -685,6 +685,10 @@ function humanizeKey(value: string | null) {
     'post_auth_import': 'Post-auth Import',
     'post_auth_notifications': 'Post-auth Notifications',
     'onboarding_account_preparing': 'Account Preparing',
+    'onboarding_save_budget': 'Save Budget',
+    'onboarding_preview_clicked': 'Save Budget Preview Clicked',
+    'preview_app_tapped': 'Paywall Preview Clicked',
+    'try_demo': 'Try Demo',
     'paywall': 'Paywall',
   };
   
