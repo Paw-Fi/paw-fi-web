@@ -24,6 +24,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'HKD': 'HK$',
   'JMD': 'J$',
   'IDR': 'Rp',
+  'ILS': '₪',
   'INR': '₹',
   'JPY': '¥',
   'KES': 'KSh',

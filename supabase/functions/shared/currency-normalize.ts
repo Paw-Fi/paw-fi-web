@@ -37,6 +37,7 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Pound, Euro, Yen signs
     '£': 'GBP',
     '€': 'EUR',
+    '₪': 'ILS',
     // Ambiguous: '¥' = JPY or CNY → treat as null, caller should fallback to preferred
     '¥': '',
 
