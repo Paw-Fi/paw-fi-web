@@ -36,7 +36,10 @@ import {
 } from "../shared/formatting-helpers.ts";
 import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
-import { sendGeminiMessageWithRetry } from "../shared/gemini-retry.ts";
+import {
+  isRetryableGeminiError,
+  sendGeminiMessageWithRetry,
+} from "../shared/gemini-retry.ts";
 import {
   fetchUserCategoryPreferences,
   fetchUserCustomCategories,
@@ -132,7 +135,8 @@ const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_FOLLOW_UP_DELAY_MS = 24000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
-const GEMINI_MAX_RETRIES = 3;
+const GEMINI_MAX_RETRIES = 1;
+const GEMINI_REQUEST_TIMEOUT_MS = 12000;
 const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
 const DELIVERY_FAILURE_MESSAGE =
   "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";
@@ -173,16 +177,44 @@ function buildTwimlMessage(message?: string | null, mediaUrl?: string | null) {
   const body = (message || "").trim();
   const media = (mediaUrl || "").trim();
   if (!body && !media) {
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`;
   }
 
   if (!media) {
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${escapeXml(body)}</Message></Response>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(body)}</Message></Response>`;
   }
 
   const bodyXml = body ? `<Body>${escapeXml(body)}</Body>` : "";
   const mediaXml = `<Media>${escapeXml(media)}</Media>`;
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<Response><Message>${bodyXml}${mediaXml}</Message></Response>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${bodyXml}${mediaXml}</Message></Response>`;
+}
+
+function buildGeminiHighDemandMessage(language?: string | null) {
+  const normalized = String(language || "en")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  if (normalized === "zh") {
+    return "Moneko 当前请求量较高。请稍后再试。";
+  }
+  if (normalized === "zh_tw") {
+    return "Moneko 當前請求量較高。請稍後再試。";
+  }
+  return "We’re experiencing high demand right now. Please try again shortly.";
+}
+
+function buildProcessingFailureMessage(language?: string | null) {
+  const normalized = String(language || "en")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  if (normalized === "zh") {
+    return "我刚刚处理你的消息时遇到了临时问题。请过几秒再试一次。";
+  }
+  if (normalized === "zh_tw") {
+    return "我剛剛處理你的訊息時遇到了臨時問題。請過幾秒再試一次。";
+  }
+  return "I hit a temporary issue while processing your message. Please try again in a few seconds.";
 }
 
 function truncateTextByCodePoints(input: string, max: number): string {
@@ -2099,7 +2131,7 @@ Deno.serve(async (req: Request) => {
           .replace("{{CATEGORIES}}", categoryGuideForUser)
           .replace("{{LANGUAGE}}", userLangLabel) +
         buildLanguageOverride(userLang),
-    });
+    }, { timeout: GEMINI_REQUEST_TIMEOUT_MS });
 
     const toolsApp = [
       {
@@ -2451,22 +2483,40 @@ Deno.serve(async (req: Request) => {
       history: rawHistory,
       tools: [{ function_declarations: toolsApp }] as any,
     });
-    const result = await sendGeminiMessageWithRetry(
-      chat as any,
-      userMessageContent,
-      {
-        preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
-        maxRetries: GEMINI_MAX_RETRIES,
-        logPrefix: "twilio-whatsapp-ai-bot",
-      },
-    );
-    let response = await result.response;
-    let functionCalls = (response.functionCalls() as any[]) || [];
-    let finalResponseText = response.text();
+    let response: any = null;
+    let functionCalls: any[] = [];
+    let finalResponseText = "";
     let mediaUrl: string | undefined;
     let lastToolResult: any = null;
     let lastToolCallName: string | null = null;
     let toolIterations = 0;
+
+    try {
+      const result = await sendGeminiMessageWithRetry(
+        chat as any,
+        userMessageContent,
+        {
+          preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+          maxRetries: GEMINI_MAX_RETRIES,
+          logPrefix: "twilio-whatsapp-ai-bot",
+        },
+      );
+      response = await result.response;
+      functionCalls = (response.functionCalls() as any[]) || [];
+      finalResponseText = response.text();
+    } catch (error) {
+      console.error(
+        "[twilio-whatsapp-ai-bot] Failed to get initial AI response:",
+        error,
+      );
+      if (WHATSAPP_DEBUG) {
+        debugNotes.push(`initial-ai-error: ${String(error)}`);
+      }
+      finalResponseText = isRetryableGeminiError(error)
+        ? buildGeminiHighDemandMessage(userLang)
+        : buildProcessingFailureMessage(userLang);
+    }
+
     while (functionCalls && functionCalls.length > 0 && toolIterations < 3) {
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
@@ -2989,20 +3039,34 @@ Deno.serve(async (req: Request) => {
           functionResponse: { name: call.name, response: toolResult },
         });
       }
-      const finalResult = await sendGeminiMessageWithRetry(
-        chat as any,
-        toolResponses,
-        {
-          preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
-          maxRetries: GEMINI_MAX_RETRIES,
-          logPrefix: "twilio-whatsapp-ai-bot",
-        },
-      );
-      response = await finalResult.response;
-      functionCalls = (response.functionCalls() as any[]) || [];
-      const candidate = response.text();
-      if (candidate && candidate.trim()) {
-        finalResponseText = candidate;
+      try {
+        const finalResult = await sendGeminiMessageWithRetry(
+          chat as any,
+          toolResponses,
+          {
+            preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+            maxRetries: GEMINI_MAX_RETRIES,
+            logPrefix: "twilio-whatsapp-ai-bot",
+          },
+        );
+        response = await finalResult.response;
+        functionCalls = (response.functionCalls() as any[]) || [];
+        const candidate = response.text();
+        if (candidate && candidate.trim()) {
+          finalResponseText = candidate;
+        }
+      } catch (error) {
+        console.error(
+          "[twilio-whatsapp-ai-bot] Failed to get final AI response:",
+          error,
+        );
+        if (WHATSAPP_DEBUG) {
+          debugNotes.push(`final-ai-error: ${String(error)}`);
+        }
+        finalResponseText = isRetryableGeminiError(error)
+          ? buildGeminiHighDemandMessage(userLang)
+          : buildProcessingFailureMessage(userLang);
+        functionCalls = [];
       }
       toolIterations++;
     }
@@ -3724,7 +3788,7 @@ Deno.serve(async (req: Request) => {
           .replace("{{CATEGORIES}}", categoryGuideForUser)
           .replace("{{LANGUAGE}}", userLangLabel) +
         buildLanguageOverride(userLang),
-    });
+    }, { timeout: GEMINI_REQUEST_TIMEOUT_MS });
 
     // Define Tools
     const tools = [
@@ -4428,8 +4492,9 @@ Deno.serve(async (req: Request) => {
       response = await result.response;
     } catch (e) {
       console.error("[twilio-whatsapp-ai-bot] Initial AI call failed:", e);
-      finalResponseText =
-        "I'm having trouble processing your request right now. Please try again in a moment.";
+      finalResponseText = isRetryableGeminiError(e)
+        ? buildGeminiHighDemandMessage(userLang)
+        : buildProcessingFailureMessage(userLang);
       if (WHATSAPP_DEBUG) {
         debugNotes.push(`initial-ai-error: ${String(e)}`);
       }
@@ -4441,7 +4506,7 @@ Deno.serve(async (req: Request) => {
     if (!finalResponseText) {
       finalResponseText = response
         ? response.text()
-        : "I'm having trouble processing your request right now. Please try again in a moment.";
+        : buildProcessingFailureMessage(userLang);
     }
     let persistedContent: string | undefined;
 
@@ -6299,8 +6364,9 @@ Deno.serve(async (req: Request) => {
           "[twilio-whatsapp-ai-bot] Failed to get final AI response:",
           e,
         );
-        finalResponseText =
-          "I processed your request but encountered an issue generating a response. Please try again.";
+        finalResponseText = isRetryableGeminiError(e)
+          ? buildGeminiHighDemandMessage(userLang)
+          : buildProcessingFailureMessage(userLang);
         if (WHATSAPP_DEBUG) debugNotes.push(`AI response error: ${String(e)}`);
         functionCalls = null;
       }
@@ -6326,8 +6392,7 @@ Deno.serve(async (req: Request) => {
       finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
     }
     if (!finalResponseText || !finalResponseText.trim()) {
-      finalResponseText =
-        "I couldn't generate a response right now. Please try again in a few seconds.";
+      finalResponseText = buildProcessingFailureMessage(userLang);
     }
     const chartFromText = extractQuickChartUrl(finalResponseText);
     let mediaUrl: string | null = chartFromText.url || lastGeneratedChartUrl;
@@ -6583,8 +6648,9 @@ Deno.serve(async (req: Request) => {
             "[twilio-whatsapp-ai-bot] Async processing failed:",
             error,
           );
-          const errorMessage =
-            "I ran into an issue processing that. Please try again in a moment.";
+          const errorMessage = isRetryableGeminiError(error)
+            ? buildGeminiHighDemandMessage(userLang)
+            : buildProcessingFailureMessage(userLang);
           await sendWhatsAppMessage(
             twilioAccountSid,
             twilioAuthToken,
@@ -6641,7 +6707,9 @@ Deno.serve(async (req: Request) => {
       }
       return xmlResponse(
         buildTwimlMessage(
-          "I ran into an issue processing that. Please try again in a moment.",
+          isRetryableGeminiError(error)
+            ? buildGeminiHighDemandMessage(userLang)
+            : buildProcessingFailureMessage(userLang),
         ),
       );
     }
@@ -6673,7 +6741,9 @@ Deno.serve(async (req: Request) => {
     }
     return xmlResponse(
       buildTwimlMessage(
-        "I ran into an issue processing that. Please try again in a moment.",
+        isRetryableGeminiError(raceResult.error)
+          ? buildGeminiHighDemandMessage(userLang)
+          : buildProcessingFailureMessage(userLang),
       ),
     );
   }
@@ -6695,8 +6765,9 @@ Deno.serve(async (req: Request) => {
         if (result.type === "done") {
           await deliverTwilioResponse(result.data, "api");
         } else {
-          const errorMessage =
-            "I ran into an issue processing that. Please try again in a moment.";
+          const errorMessage = isRetryableGeminiError(result.error)
+            ? buildGeminiHighDemandMessage(userLang)
+            : buildProcessingFailureMessage(userLang);
           await sendWhatsAppMessage(
             twilioAccountSid,
             twilioAuthToken,

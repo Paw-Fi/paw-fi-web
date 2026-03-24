@@ -27,7 +27,10 @@ import {
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
 import { runAnalyzeExpense } from "../shared/analyze-core.ts";
-import { sendGeminiMessageWithRetry } from "../shared/gemini-retry.ts";
+import {
+  isRetryableGeminiError,
+  sendGeminiMessageWithRetry,
+} from "../shared/gemini-retry.ts";
 import {
   reserveIdempotency,
   updateIdempotency,
@@ -144,7 +147,8 @@ const IDEMPOTENCY_TTL_MINUTES = 60;
 const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_ACTION_INTERVAL_MS = 4000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
-const GEMINI_MAX_RETRIES = 3;
+const GEMINI_MAX_RETRIES = 0;
+const GEMINI_REQUEST_TIMEOUT_MS = 12000;
 
 const INTERNAL_FUNCTION_KEY = (
   Deno.env.get("SECRET_API_KEY") ||
@@ -208,6 +212,34 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function buildGeminiBusyMessage(language?: string | null) {
+  const normalized = String(language || "en")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  if (normalized === "zh") {
+    return "Moneko 当前请求量较高。请稍后再试。";
+  }
+  if (normalized === "zh_tw") {
+    return "Moneko 當前請求量較高。請稍後再試。";
+  }
+  return "We’re experiencing high demand right now. Please try again shortly.";
+}
+
+function buildProcessingFailureMessage(language?: string | null) {
+  const normalized = String(language || "en")
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, "_");
+  if (normalized === "zh") {
+    return "我刚刚处理你的消息时遇到了临时问题。请过几秒再试一次。";
+  }
+  if (normalized === "zh_tw") {
+    return "我剛剛處理你的訊息時遇到了臨時問題。請過幾秒再試一次。";
+  }
+  return "I hit a temporary issue while processing your message. Please try again in a few seconds.";
 }
 
 function runBackgroundTask(task: Promise<unknown>) {
@@ -1642,6 +1674,8 @@ Deno.serve(async (req: Request) => {
   runBackgroundTask(
     (async () => {
       const debugNotes: string[] = [];
+      let telegramResponseSent = false;
+      let replyLanguage = "en";
       const stopTypingHeartbeat = startTelegramTypingHeartbeat(
         TELEGRAM_BOT_TOKEN,
         chatId,
@@ -1662,6 +1696,11 @@ Deno.serve(async (req: Request) => {
               preferred_timezone: contextData.preferred_timezone,
             }
           : null;
+
+        replyLanguage = resolvePreferredReplyLanguage(
+          contact?.preferred_language,
+          contact?.preferred_currency,
+        );
 
         if (contextError) {
           debugNotes.push(`context error: ${formatInvokeError(contextError)}`);
@@ -1723,6 +1762,7 @@ Deno.serve(async (req: Request) => {
               ],
             ],
           });
+          telegramResponseSent = true;
           await updateIdempotency(supabase, idempotencyKey, {
             status: "done",
             response_text: msg,
@@ -1743,6 +1783,7 @@ Deno.serve(async (req: Request) => {
               ],
             ],
           });
+          telegramResponseSent = true;
           await updateIdempotency(supabase, idempotencyKey, {
             status: "done",
             response_text: prompt,
@@ -1764,6 +1805,7 @@ Deno.serve(async (req: Request) => {
             chatId,
             nonSubscriberMessage,
           );
+          telegramResponseSent = true;
           await updateIdempotency(supabase, idempotencyKey, {
             status: "done",
             response_text: nonSubscriberMessage,
@@ -1850,13 +1892,14 @@ Deno.serve(async (req: Request) => {
               chatId,
               "Failed to initialize chat session.",
             );
+            telegramResponseSent = true;
             await updateIdempotency(supabase, idempotencyKey, {
               status: "failed",
               response_text: "session_failed",
             });
             return;
           }
-          session = newSession;
+          session = { id: newSession.id };
         }
 
         const sessionId = session?.id;
@@ -1931,7 +1974,7 @@ Deno.serve(async (req: Request) => {
               .replace("{{CATEGORIES}}", categoryGuideForUser)
               .replace("{{LANGUAGE}}", userLangLabel) +
             buildLanguageOverride(userLang),
-        });
+        }, { timeout: GEMINI_REQUEST_TIMEOUT_MS });
 
         const tools = [
           {
@@ -2393,31 +2436,48 @@ Deno.serve(async (req: Request) => {
           history: rawHistory,
           tools: [{ function_declarations: tools }] as any,
         });
-        const result = await sendGeminiMessageWithRetry(
-          chat as any,
-          userMessageContent,
-          {
-            preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
-            maxRetries: GEMINI_MAX_RETRIES,
-            logPrefix: "telegram-ai-bot",
-          },
-        );
-        let response = await result.response;
-        let functionCalls = (response.functionCalls() as any[]) || [];
-        let finalResponseText = response.text();
+        let response: any = null;
+        let functionCalls: any[] = [];
+        let finalResponseText = "";
 
-        console.log("[telegram-ai-bot] model response", {
-          traceId,
-          functionCalls: functionCalls.map((c: any) => ({
-            name: c?.name,
-            argsKeys: Object.keys(
-              c?.args && typeof c.args === "object" && !Array.isArray(c.args)
-                ? c.args
-                : {},
-            ),
-          })),
-          hasText: !!(response.text() || "").trim(),
-        });
+        try {
+          const result = await sendGeminiMessageWithRetry(
+            chat as any,
+            userMessageContent,
+            {
+              preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
+              maxRetries: GEMINI_MAX_RETRIES,
+              logPrefix: "telegram-ai-bot",
+            },
+          );
+          response = await result.response;
+          functionCalls = (response.functionCalls() as any[]) || [];
+          finalResponseText = response.text();
+
+          console.log("[telegram-ai-bot] model response", {
+            traceId,
+            functionCalls: functionCalls.map((c: any) => ({
+              name: c?.name,
+              argsKeys: Object.keys(
+                c?.args && typeof c.args === "object" && !Array.isArray(c.args)
+                  ? c.args
+                  : {},
+              ),
+            })),
+            hasText: !!(response.text() || "").trim(),
+          });
+        } catch (error) {
+          console.error(
+            "[telegram-ai-bot] Failed to get initial AI response:",
+            error,
+          );
+          debugNotes.push(
+            `initial Gemini failure: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          finalResponseText = isRetryableGeminiError(error)
+            ? buildGeminiBusyMessage(replyLanguage)
+            : buildProcessingFailureMessage(replyLanguage);
+        }
 
         if (
           shouldForceListExpensesCall(incomingText) &&
@@ -4193,8 +4253,9 @@ Deno.serve(async (req: Request) => {
               "[telegram-ai-bot] Failed to get final AI response:",
               e,
             );
-            finalResponseText =
-              "I processed your request but encountered an issue generating a response. Please try again.";
+            finalResponseText = isRetryableGeminiError(e)
+              ? buildGeminiBusyMessage(replyLanguage)
+              : buildProcessingFailureMessage(replyLanguage);
             functionCalls = [];
           }
 
@@ -4277,6 +4338,7 @@ Deno.serve(async (req: Request) => {
             caption,
             choiceKeyboard,
           );
+          telegramResponseSent = true;
         } else {
           await sendTelegramMessage(
             TELEGRAM_BOT_TOKEN,
@@ -4284,6 +4346,7 @@ Deno.serve(async (req: Request) => {
             cleanedText,
             choiceKeyboard,
           );
+          telegramResponseSent = true;
         }
 
         await updateIdempotency(supabase, idempotencyKey, {
@@ -4300,6 +4363,21 @@ Deno.serve(async (req: Request) => {
             step: "process_message",
           },
         });
+        if (!telegramResponseSent) {
+          try {
+            await sendTelegramMessage(
+              TELEGRAM_BOT_TOKEN,
+              chatId,
+              buildProcessingFailureMessage(replyLanguage),
+            );
+            telegramResponseSent = true;
+          } catch (sendError) {
+            console.error(
+              "[telegram-ai-bot] Failed to send fallback Telegram message:",
+              sendError,
+            );
+          }
+        }
         await updateIdempotency(supabase, idempotencyKey, {
           status: "failed",
           response_text: "processing_failed",
