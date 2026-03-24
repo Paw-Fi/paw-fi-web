@@ -1799,6 +1799,55 @@ function buildTransactionSystemInstruction(
   ].join("\n");
 }
 
+function isQuickTextFastPathCandidate(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (trimmed.length > 320) return false;
+  const lineCount = trimmed.split(/\n+/).filter(Boolean).length;
+  if (lineCount > 4) return false;
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  return wordCount <= 50;
+}
+
+function buildQuickTextSystemInstruction(
+  language: string,
+  expenseCategories: string[],
+  incomeCategories: string[],
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+  typeHint?: AnalyzeRequestBody["typeHint"],
+): string {
+  const normalizedHint =
+    typeHint && typeHint !== "mixed" ? `Hint: ${typeHint}.` : "";
+
+  return [
+    "You extract transactions from short user text.",
+    "Return transactions only by calling add_transactions.",
+    "Do not output prose or JSON.",
+    normalizedHint,
+    `Expense categories: ${expenseCategories.join(", ")}.`,
+    `Income categories: ${incomeCategories.join(", ")}.`,
+    "Rules:",
+    "- Amount must be positive.",
+    "- Infer expense|income from wording.",
+    "- If input contains multiple amount phrases, return one item per phrase.",
+    "- For compound text joined with words like 'and', still extract each transaction separately.",
+    "- Category must be selected semantically from the provided category lists.",
+    "- Use 'other' only when the text is truly ambiguous.",
+    "- Use caller currency/date when absent.",
+    "- Description should be short and natural.",
+    `- Free-text fields must be in ${language}.`,
+    ...(householdContext
+      ? [
+          "- Household context is present for expenses.",
+          "- Set payerUserId only when someone else paid.",
+          "- Provide customSplits only for explicit non-equal splits.",
+        ]
+      : []),
+  ]
+    .filter((line) => line.length > 0)
+    .join("\n");
+}
+
 export function resolveHouseholdContext(
   body: AnalyzeRequestBody,
   callerUserId: string,
@@ -2756,6 +2805,112 @@ async function analyzeFromText(
   return cleanedItems;
 }
 
+async function analyzeFromQuickText(
+  genAI: GoogleGenerativeAI,
+  callerCurrency: string,
+  callerDate: string,
+  language: string,
+  bodyText: string,
+  tools: any,
+  expenseCategories: string[],
+  incomeCategories: string[],
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+  typeHint?: AnalyzeRequestBody["typeHint"],
+): Promise<ExpenseItem[]> {
+  const systemInstruction = buildQuickTextSystemInstruction(
+    language,
+    expenseCategories,
+    incomeCategories,
+    householdContext,
+    typeHint,
+  );
+  const householdPrompt = householdContext
+    ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
+    : "\n";
+
+  const request = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text:
+              `Caller Currency: ${callerCurrency}\n` +
+              `Caller Date: ${callerDate}` +
+              householdPrompt +
+              `User: ${bodyText.trim()}`,
+          },
+        ],
+      },
+    ],
+    toolConfig: {
+      functionCallingConfig: ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
+    },
+    generationConfig: {
+      maxOutputTokens: 1024,
+      candidateCount: 1,
+      temperature: 0,
+      topP: 0.8,
+    },
+  } as any;
+
+  const quickModelAttempts = [
+    { name: "gemini-3.1-flash-lite-preview", timeoutMs: 60000, maxRetries: 1 },
+    { name: "gemini-3-flash-preview", timeoutMs: 60000, maxRetries: 1 },
+  ];
+
+  let lastError = "";
+
+  for (const attempt of quickModelAttempts) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: attempt.name,
+        tools,
+        systemInstruction,
+      });
+      const response = await generateGeminiWithRetry({
+        model,
+        modelName: attempt.name,
+        request,
+        timeoutMs: attempt.timeoutMs,
+        maxRetries: attempt.maxRetries,
+      });
+
+      const toolCalls = getFunctionCalls(response).filter(
+        (call: any) => call && call.name === "add_transactions",
+      );
+      if (toolCalls.length === 0) {
+        lastError = `${attempt.name} returned no tool calls`;
+        continue;
+      }
+
+      const rawItems: any[] = toolCalls.flatMap((call: any) =>
+        Array.isArray(call.args?.items) ? call.args.items : [],
+      );
+
+      const aiItems = deduplicateAndCleanItems(
+        processRawItems(
+          rawItems,
+          callerCurrency,
+          callerDate,
+          householdContext,
+          "QuickText",
+        ),
+        { skipTotalSumHeuristic: true },
+      );
+
+      if (aiItems.length > 0) return aiItems;
+      lastError = `${attempt.name} returned empty items`;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      lastError = `${attempt.name} failed: ${message}`;
+      console.warn(`[analyze-expense] QuickText model failure: ${lastError}`);
+    }
+  }
+
+  throw new Error(lastError || "Quick text AI extraction failed");
+}
+
 /**
  * Process a single text chunk with Gemini AI.
  * Extracted to support parallel processing.
@@ -2967,20 +3122,27 @@ function processRawItems(
 /**
  * Deduplicates items and removes total-like entries
  */
-function deduplicateAndCleanItems(items: ExpenseItem[]): ExpenseItem[] {
+function deduplicateAndCleanItems(
+  items: ExpenseItem[],
+  options?: {
+    skipTotalSumHeuristic?: boolean;
+  },
+): ExpenseItem[] {
   if (items.length <= 1) return items;
 
   // Remove total-like entries
   const withoutTotals = items.filter((it) => !isTotalLike(it.description));
   let result = withoutTotals.length > 0 ? withoutTotals : items;
 
-  // Remove items that equal the sum of other items (likely totals)
-  const sums = result.map((_, i) =>
-    result
-      .filter((__, j) => i !== j)
-      .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
-  );
-  result = result.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+  if (!options?.skipTotalSumHeuristic) {
+    // Remove items that equal the sum of other items (likely totals)
+    const sums = result.map((_, i) =>
+      result
+        .filter((__, j) => i !== j)
+        .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
+    );
+    result = result.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
+  }
 
   // Deduplicate by (date, amount, description) composite key
   // Be conservative when description is missing to avoid dropping valid rows
@@ -3565,7 +3727,7 @@ async function analyzeFromAudio(
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
     : "\n";
 
-  const response = await model.generateContent({
+  const request = {
     toolConfig: {
       functionCallingConfig: ADD_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
     },
@@ -3589,29 +3751,76 @@ async function analyzeFromAudio(
         ],
       },
     ],
-    generationConfig: { maxOutputTokens: 16384 }, // Increased from 4096
-  } as any);
+    generationConfig: {
+      maxOutputTokens: 4096,
+      candidateCount: 1,
+      temperature: 0,
+      topP: 0.8,
+    },
+  } as any;
 
-  const toolCalls = getFunctionCalls(response).filter(
-    (call: any) => call && call.name === "add_transactions",
-  );
+  const modelAttempts = [
+    { name: "gemini-3.1-flash-lite-preview", timeoutMs: 60000, maxRetries: 1 },
+    { name: "gemini-3-flash-preview", timeoutMs: 60000, maxRetries: 1 },
+  ];
 
-  if (toolCalls.length > 0) {
-    const rawItems: any[] = toolCalls.flatMap((call: any) =>
-      Array.isArray(call.args?.items) ? call.args.items : [],
-    );
+  let lastError = "";
 
-    const items = processRawItems(
-      rawItems,
-      callerCurrency,
-      callerDate,
-      householdContext,
-      "Audio",
-    );
+  for (const attempt of modelAttempts) {
+    try {
+      const attemptModel = genAI.getGenerativeModel({
+        model: attempt.name,
+        tools,
+        systemInstruction,
+      });
 
-    console.log(`[analyze-expense] Audio: Extracted ${items.length} items`);
+      const response = await generateGeminiWithRetry({
+        model: attemptModel,
+        modelName: attempt.name,
+        request,
+        timeoutMs: attempt.timeoutMs,
+        maxRetries: attempt.maxRetries,
+      });
 
-    return deduplicateAndCleanItems(items);
+      const toolCalls = getFunctionCalls(response).filter(
+        (call: any) => call && call.name === "add_transactions",
+      );
+      if (toolCalls.length === 0) {
+        lastError = `${attempt.name} returned no tool calls`;
+        continue;
+      }
+
+      const rawItems: any[] = toolCalls.flatMap((call: any) =>
+        Array.isArray(call.args?.items) ? call.args.items : [],
+      );
+
+      const items = processRawItems(
+        rawItems,
+        callerCurrency,
+        callerDate,
+        householdContext,
+        "Audio",
+      );
+
+      const cleaned = deduplicateAndCleanItems(items, {
+        skipTotalSumHeuristic: true,
+      });
+
+      console.log(`[analyze-expense] Audio: Extracted ${cleaned.length} items`);
+      if (cleaned.length > 0) {
+        return cleaned;
+      }
+
+      lastError = `${attempt.name} returned empty items`;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      lastError = `${attempt.name} failed: ${message}`;
+      console.warn(`[analyze-expense] Audio model failure: ${lastError}`);
+    }
+  }
+
+  if (lastError) {
+    throw new Error(lastError);
   }
 
   return [];
@@ -3684,10 +3893,11 @@ async function generateGeminiWithRetry(params: {
   modelName: string;
   request: any;
   timeoutMs: number;
+  maxRetries?: number;
 }): Promise<any> {
-  const { model, modelName, request, timeoutMs } = params;
+  const { model, modelName, request, timeoutMs, maxRetries = 3 } = params;
   const startedAt = Date.now();
-  const delays = [250, 750, 1500];
+  const delays = [250, 750, 1500].slice(0, Math.max(0, maxRetries));
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
@@ -3745,6 +3955,7 @@ async function attemptAnalysis(
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   timeoutMs: number = 30000,
   overrideContentType?: string,
+  maxRetries: number = 1,
 ): Promise<{ success: boolean; items?: ExpenseItem[]; error?: string }> {
   try {
     const model = genAI.getGenerativeModel({
@@ -3776,7 +3987,12 @@ async function attemptAnalysis(
           ],
         },
       ],
-      generationConfig: { maxOutputTokens: 32768 }, // Increased from 4096 for images with many transactions
+      generationConfig: {
+        maxOutputTokens: 8192,
+        candidateCount: 1,
+        temperature: 0,
+        topP: 0.8,
+      },
     } as any;
 
     const response = await generateGeminiWithRetry({
@@ -3784,6 +4000,7 @@ async function attemptAnalysis(
       modelName,
       request,
       timeoutMs,
+      maxRetries,
     });
 
     const toolCalls = getFunctionCalls(response).filter(
@@ -3806,16 +4023,9 @@ async function attemptAnalysis(
         `[analyze-expense] Image: Extracted ${tempItems.length} raw items`,
       );
 
-      let items = deduplicateAndCleanItems(tempItems);
-      if (items.length > 1) {
-        // Basic dedup check for sums (logic kept from original)
-        const sums = items.map((_, i) =>
-          items
-            .filter((__, j) => i !== j)
-            .reduce((acc: number, b: any) => acc + (Number(b.amount) || 0), 0),
-        );
-        items = items.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
-      }
+      const items = deduplicateAndCleanItems(tempItems, {
+        skipTotalSumHeuristic: true,
+      });
 
       if (items.length > 0) {
         return { success: true, items };
@@ -4090,6 +4300,43 @@ export async function runAnalyzeExpense(
                         },
                         required: ["splitType", "memberSplits"],
                       },
+                    },
+                    required: ["type", "amount", "category"],
+                  },
+                },
+              },
+              required: ["items"],
+            },
+          },
+        ],
+      },
+    ];
+
+    const quickTextTools = [
+      {
+        functionDeclarations: [
+          {
+            name: "add_transactions",
+            description: "Extract structured transactions.",
+            parameters: {
+              type: "object",
+              properties: {
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      type: {
+                        type: "string",
+                        enum: ["expense", "income"],
+                      },
+                      amount: { type: "number" },
+                      category: { type: "string" },
+                      currency: { type: "string" },
+                      date: { type: "string" },
+                      description: { type: "string" },
+                      payerUserId: { type: "string" },
+                      customSplits: { type: "object" },
                     },
                     required: ["type", "amount", "category"],
                   },
@@ -4394,20 +4641,36 @@ export async function runAnalyzeExpense(
         }
       }
     } else if (hasText) {
-      items = await analyzeFromText(
-        genAI,
-        callerCurrency,
-        callerDate,
-        language,
-        body.text!,
-        tools,
-        expenseCategories,
-        incomeCategories,
-        householdContext,
-        typeHint,
-        undefined, // no pre-chunked pages
-        onProgress,
-      );
+      const isQuickTextMode = isQuickTextFastPathCandidate(body.text!);
+      if (isQuickTextMode) {
+        items = await analyzeFromQuickText(
+          genAI,
+          callerCurrency,
+          callerDate,
+          language,
+          body.text!,
+          quickTextTools,
+          expenseCategories,
+          incomeCategories,
+          householdContext,
+          typeHint,
+        );
+      } else {
+        items = await analyzeFromText(
+          genAI,
+          callerCurrency,
+          callerDate,
+          language,
+          body.text!,
+          tools,
+          expenseCategories,
+          incomeCategories,
+          householdContext,
+          typeHint,
+          undefined, // no pre-chunked pages
+          onProgress,
+        );
+      }
     } else if (hasAudio) {
       const audio = body.audio!;
       if (!audio.contentType || !audio.contentType.startsWith("audio/")) {
@@ -4581,16 +4844,19 @@ export async function runAnalyzeExpense(
       // Model progression: prefer stable fast model first.
       // Preview models can be more prone to overload.
       const modelAttempts = [
-        { name: "gemini-3.1-flash-lite-preview", timeout: 30000 },
-        { name: "gemini-3-flash-preview", timeout: 30000 },
-        { name: "gemini-3-pro-preview", timeout: 55000 },
+        {
+          name: "gemini-3.1-flash-lite-preview",
+          timeout: 30000,
+          maxRetries: 1,
+        },
+        { name: "gemini-3-flash-preview", timeout: 30000, maxRetries: 1 },
       ];
 
       // Removed shadowing variables
       // let lastError = "";
       // let items: ExpenseItem[] = [];
 
-      for (const { name, timeout } of modelAttempts) {
+      for (const { name, timeout, maxRetries } of modelAttempts) {
         console.log(`[analyze-expense] Attempting with model: ${name}`);
 
         try {
@@ -4606,6 +4872,7 @@ export async function runAnalyzeExpense(
             householdContext,
             timeout,
             finalContentType,
+            maxRetries,
           );
 
           if (result.success && result.items && result.items.length > 0) {
@@ -4658,7 +4925,9 @@ export async function runAnalyzeExpense(
             callerDate,
             tools,
             householdContext,
-            8000,
+            12000,
+            finalContentType,
+            1,
           );
 
           if (fallback.success && fallback.items && fallback.items.length > 0) {

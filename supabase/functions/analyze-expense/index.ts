@@ -12,12 +12,47 @@ import {
 } from "../shared/analyze-core.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
+  applyPreferencesToItems,
   fetchUserCustomCategories,
-  fetchUserCategoryRemaps,
   fetchUserHiddenCategories,
   fetchUserCategoryPreferences,
   mergeAllowedCategories,
+  normalizeStoredUserCategory,
+  UserCategoryPreferenceRow,
 } from "../shared/user-categories.ts";
+
+const CATEGORY_CACHE_TTL_MS = 2 * 60 * 1000;
+const PREFERENCE_CACHE_TTL_MS = 60 * 1000;
+
+const allowedCategoriesCache = new Map<
+  string,
+  {
+    expenseCategories: string[];
+    incomeCategories: string[];
+    expiresAt: number;
+  }
+>();
+
+const categoryPreferencesCache = new Map<
+  string,
+  {
+    preferences: UserCategoryPreferenceRow[];
+    expiresAt: number;
+  }
+>();
+
+const ENABLE_ANALYZE_PREF_DEBUG = Deno.env.get("ANALYZE_PREF_DEBUG") === "true";
+
+function debugPrefLog(message: string, payload?: unknown) {
+  if (!ENABLE_ANALYZE_PREF_DEBUG) return;
+  if (payload === undefined) {
+    console.log(`[analyze-expense][pref-debug] ${message}`);
+    return;
+  }
+  console.log(
+    `[analyze-expense][pref-debug] ${message} ${JSON.stringify(payload)}`,
+  );
+}
 
 /**
  * Formats an SSE event message
@@ -255,6 +290,247 @@ function resolveAnalyzeResultCode(result: AnalyzeRequestBody | any): string {
   return resolveErrorCode(result?.status ?? 400);
 }
 
+function getElapsedMs(startedAt: number): number {
+  return Date.now() - startedAt;
+}
+
+function logStage(stage: string, startedAt: number) {
+  console.log(
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(startedAt)}`,
+  );
+}
+
+function isQuickTextRequest(body: AnalyzeRequestBody): boolean {
+  const hasText = typeof body.text === "string" && body.text.trim().length > 0;
+  const hasImage = Boolean(body.image);
+  const hasAudio = Boolean(body.audio);
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
+  if (!hasText || hasImage || hasAudio || hasAttachments) return false;
+
+  const text = body.text!.trim();
+  if (text.length > 320) return false;
+  const lineCount = text.split(/\n+/).filter(Boolean).length;
+  if (lineCount > 4) return false;
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  return wordCount <= 50;
+}
+
+async function awaitWithSoftTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T | null> {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
+async function getAllowedCategoriesCached(params: {
+  supabase: any;
+  userId: string;
+}): Promise<{ expenseCategories: string[]; incomeCategories: string[] }> {
+  const now = Date.now();
+  const cached = allowedCategoriesCache.get(params.userId);
+  if (cached && cached.expiresAt > now) {
+    return {
+      expenseCategories: [...cached.expenseCategories],
+      incomeCategories: [...cached.incomeCategories],
+    };
+  }
+
+  const [customCategories, hiddenCategories] = await Promise.all([
+    fetchUserCustomCategories({
+      supabase: params.supabase,
+      userId: params.userId,
+    }),
+    fetchUserHiddenCategories({
+      supabase: params.supabase,
+      userId: params.userId,
+    }),
+  ]);
+  const merged = mergeAllowedCategories({
+    customCategories,
+    hiddenCategories,
+  });
+
+  allowedCategoriesCache.set(params.userId, {
+    expenseCategories: merged.expenseCategories,
+    incomeCategories: merged.incomeCategories,
+    expiresAt: now + CATEGORY_CACHE_TTL_MS,
+  });
+
+  return {
+    expenseCategories: [...merged.expenseCategories],
+    incomeCategories: [...merged.incomeCategories],
+  };
+}
+
+async function getCategoryPreferencesCached(params: {
+  supabase: any;
+  userId: string;
+}): Promise<UserCategoryPreferenceRow[]> {
+  const now = Date.now();
+  const cached = categoryPreferencesCache.get(params.userId);
+  if (cached && cached.expiresAt > now) {
+    return [...cached.preferences];
+  }
+
+  const preferences = await fetchUserCategoryPreferences({
+    supabase: params.supabase,
+    userId: params.userId,
+    limit: 60,
+  });
+
+  categoryPreferencesCache.set(params.userId, {
+    preferences,
+    expiresAt: now + PREFERENCE_CACHE_TTL_MS,
+  });
+
+  return [...preferences];
+}
+
+function applyCategoryPersonalization(params: {
+  items: any[];
+  allowedExpenseCategories: string[];
+  allowedIncomeCategories: string[];
+  preferences: UserCategoryPreferenceRow[];
+}): any[] {
+  const {
+    items,
+    allowedExpenseCategories,
+    allowedIncomeCategories,
+    preferences,
+  } = params;
+  if (!Array.isArray(items) || items.length === 0) return items;
+
+  const allowedExpenseSet = new Set(
+    allowedExpenseCategories.map((c) => normalizeStoredUserCategory(c)),
+  );
+  const allowedIncomeSet = new Set(
+    allowedIncomeCategories.map((c) => normalizeStoredUserCategory(c)),
+  );
+
+  const baseItems = items.map((it) => ({ ...it }));
+
+  const descriptionForPreference = (value: unknown): string | undefined => {
+    if (typeof value !== "string") return undefined;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    return trimmed
+      .replace(/^\s*[€$£¥₹]?\s*\d+(?:[.,]\d{1,2})?\s*/i, "")
+      .replace(/^\s*(for|on|at|to)\s+/i, "")
+      .trim();
+  };
+
+  debugPrefLog("applyCategoryPersonalization:input", {
+    itemCount: baseItems.length,
+    preferenceCount: preferences.length,
+    allowedExpenseCount: allowedExpenseCategories.length,
+    allowedIncomeCount: allowedIncomeCategories.length,
+    preview: baseItems.slice(0, 5).map((it) => ({
+      type: it?.type,
+      category: it?.category,
+      description: it?.description,
+    })),
+  });
+
+  const expensePrefMap = new Map<string, string>();
+  const incomePrefMap = new Map<string, string>();
+  for (const pref of preferences) {
+    const key = (pref.match_key || "").trim();
+    if (!key) continue;
+    const category = normalizeStoredUserCategory(pref.category_name);
+    if (pref.transaction_type === "income") {
+      incomePrefMap.set(key, category);
+    } else {
+      expensePrefMap.set(key, category);
+    }
+  }
+
+  debugPrefLog("applyCategoryPersonalization:preference_maps", {
+    expenseKeys: Array.from(expensePrefMap.keys()).slice(0, 20),
+    incomeKeys: Array.from(incomePrefMap.keys()).slice(0, 20),
+  });
+
+  const preferredItems = applyPreferencesToItems({
+    items: baseItems.map((it) => ({
+      type: it.type,
+      description: descriptionForPreference(it.description) ?? it.description,
+      category: it.category,
+    })),
+    preferences,
+    allowedExpenseCategories: allowedExpenseSet,
+    allowedIncomeCategories: allowedIncomeSet,
+  });
+
+  debugPrefLog(
+    "applyCategoryPersonalization:match_evaluation",
+    baseItems.slice(0, 10).map((item, idx) => {
+      const keySource =
+        descriptionForPreference(item?.description) ??
+        (typeof item?.description === "string" ? item.description : null);
+      const matchKey =
+        keySource
+          ?.toLowerCase()
+          .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+          .replace(/\s+/g, " ")
+          .trim() || null;
+      const expected =
+        item?.type === "income"
+          ? matchKey
+            ? incomePrefMap.get(matchKey)
+            : undefined
+          : matchKey
+            ? expensePrefMap.get(matchKey)
+            : undefined;
+      return {
+        idx,
+        type: item?.type,
+        aiCategory: item?.category,
+        description: item?.description,
+        matchKey,
+        expectedPreferenceCategory: expected ?? null,
+        preferredResultCategory: preferredItems[idx]?.category ?? null,
+      };
+    }),
+  );
+
+  const resolved = preferredItems.map((it, idx) => {
+    const base = baseItems[idx];
+    const preferredCategory =
+      typeof it.category === "string" ? it.category.trim() : "";
+    if (!preferredCategory || preferredCategory === base.category) {
+      return base;
+    }
+    return {
+      ...base,
+      category: preferredCategory,
+    };
+  });
+
+  debugPrefLog(
+    "applyCategoryPersonalization:output",
+    resolved.slice(0, 10).map((item, idx) => ({
+      idx,
+      type: item?.type,
+      finalCategory: item?.category,
+      description: item?.description,
+    })),
+  );
+
+  return resolved;
+}
+
 /**
  * Creates a readable stream that sends SSE events during analysis
  */
@@ -347,6 +623,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const requestStartedAt = Date.now();
     if (req.method !== "POST") {
       return errorResponse("Method not allowed. Use POST.", 405);
     }
@@ -387,6 +664,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userErr } =
       await supabaseAuthed.auth.getUser();
+    logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
       return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
@@ -397,34 +675,24 @@ Deno.serve(async (req: Request) => {
     }
     body.userId = callerId;
 
+    const isQuickTextMode = isQuickTextRequest(body);
+
     // Load per-user custom categories + learned preferences for category assignment
     try {
-      const [customCategories, hiddenCategories] = await Promise.all([
-        fetchUserCustomCategories({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-        fetchUserHiddenCategories({
-          supabase: supabaseAuthed,
-          userId: callerId,
-        }),
-      ]);
-      const merged = mergeAllowedCategories({
-        customCategories,
-        hiddenCategories,
+      const merged = await getAllowedCategoriesCached({
+        supabase: supabaseAuthed,
+        userId: callerId,
       });
       body.allowedExpenseCategories = merged.expenseCategories;
       body.allowedIncomeCategories = merged.incomeCategories;
-      body.categoryPreferences = await fetchUserCategoryPreferences({
-        supabase: supabaseAuthed,
-        userId: callerId,
-        limit: 60,
-      });
-      body.categoryRemaps = await fetchUserCategoryRemaps({
-        supabase: supabaseAuthed,
-        userId: callerId,
-        limit: 120,
-      });
+      if (!isQuickTextMode) {
+        const preferences = await getCategoryPreferencesCached({
+          supabase: supabaseAuthed,
+          userId: callerId,
+        });
+        body.categoryPreferences = preferences;
+      }
+      logStage("category_context_loading", requestStartedAt);
     } catch (e) {
       console.error(
         "[analyze-expense] Failed to load user categories/preferences:",
@@ -473,6 +741,7 @@ Deno.serve(async (req: Request) => {
             userName: m.users?.full_name ?? null,
           }));
         }
+        logStage("household_enrichment", requestStartedAt);
       }
     }
 
@@ -492,6 +761,18 @@ Deno.serve(async (req: Request) => {
     }
 
     let result: any;
+    const quickPreferencesPromise = isQuickTextMode
+      ? getCategoryPreferencesCached({
+          supabase: supabaseAuthed,
+          userId: callerId,
+        }).catch((error) => {
+          console.warn(
+            "[analyze-expense] Background preference fetch failed, skipping personalization",
+            error,
+          );
+          return [] as UserCategoryPreferenceRow[];
+        })
+      : null;
     try {
       const analysisPromise = runAnalyzeExpense(body, GEMINI_API_KEY);
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -501,6 +782,39 @@ Deno.serve(async (req: Request) => {
         ),
       );
       result = await Promise.race([analysisPromise, timeoutPromise]);
+      logStage("analyze_core", requestStartedAt);
+
+      if (
+        isQuickTextMode &&
+        result?.success &&
+        Array.isArray(result?.items) &&
+        result.items.length > 0
+      ) {
+        try {
+          const preferences = quickPreferencesPromise
+            ? await awaitWithSoftTimeout(quickPreferencesPromise, 250)
+            : null;
+          if (Array.isArray(preferences) && preferences.length > 0) {
+            body.categoryPreferences = preferences;
+            result.items = applyCategoryPersonalization({
+              items: result.items,
+              allowedExpenseCategories: body.allowedExpenseCategories ?? [],
+              allowedIncomeCategories: body.allowedIncomeCategories ?? [],
+              preferences,
+            });
+            logStage("post_processing_remaps", requestStartedAt);
+          } else if (preferences === null) {
+            console.log(
+              "[analyze-expense] Skipping preference personalization for quick text (soft-timeout)",
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "[analyze-expense] Preference personalization failed, returning AI categories",
+            error,
+          );
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const status = message.includes("timed out") ? 504 : 500;
@@ -515,6 +829,8 @@ Deno.serve(async (req: Request) => {
         resolveAnalyzeResultCode(result),
       );
     }
+
+    logStage("total", requestStartedAt);
 
     return new Response(
       JSON.stringify({
