@@ -27,6 +27,8 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
+const EMAIL_SUBJECT='Apple Pay , now on Moneko'
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -349,8 +351,8 @@ async function main() {
     };
 
     const testHtml = replaceVariables(template, testVariables);
-    const testSubject = 'Quick update from Yifan (Co-founder of Moneko)';
-    const testPreviewText = 'We\'ve launched something special for our early members. Unlock lifetime access for you and a friend today.';
+    const testSubject = EMAIL_SUBJECT
+    const testPreviewText = EMAIL_SUBJECT;
 
     console.log('Sending test email...');
     const result = await sendEmail(config.testEmail, testSubject, testHtml, testPreviewText);
@@ -414,8 +416,8 @@ async function main() {
   console.log('\n📤 Sending emails...\n');
 
   const campaignStartTime = Date.now();
-  const campaignSubject = 'Quick update from Yifan (Co-founder of Moneko)';
-  const campaignPreviewText = 'Thai language support is here 🇹🇭';
+  const campaignSubject = EMAIL_SUBJECT;
+  const campaignPreviewText = EMAIL_SUBJECT;
 
   const results = {
     total: userList.length,
