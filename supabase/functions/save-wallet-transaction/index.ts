@@ -80,6 +80,7 @@ const firebaseProjectId = readRuntimeEnv("FIREBASE_PROJECT_ID");
 interface TransactionPayload {
   merchantName?: string | null;
   rawMerchant?: string | null;
+  type?: string | null;
   amount: number;
   currency?: string | null;
   currencyCode?: string | null;
@@ -183,6 +184,7 @@ function buildWalletCaptureRequestLogContext(
     headers: safeHeaders,
     transaction: tx
       ? {
+        type: truncateForLog(tx.type ?? null, 16),
         amount: typeof tx.amount === "number" ? tx.amount : null,
         currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
         date: truncateForLog(resolveWalletTransactionDate(tx), 32),
@@ -1294,6 +1296,7 @@ function getFunctionCalls(response: any): any[] {
 async function categorizeWithAI(params: {
   genAI?: GoogleGenerativeAI | null;
   merchantName: string;
+  transactionType: "expense" | "income";
   amount: number;
   currency: string;
   date: string;
@@ -1304,6 +1307,7 @@ async function categorizeWithAI(params: {
   const {
     genAI,
     merchantName,
+    transactionType,
     amount,
     currency,
     date,
@@ -1360,7 +1364,7 @@ Expense categories: ${expenseCategories.join(", ")}
 Income categories: ${incomeCategories.join(", ")}
 
 Transactions:
-1. EXPENSE | ${date} | ${description} | ${amount} ${currency}`,
+1. ${transactionType.toUpperCase()} | ${date} | ${description} | ${amount} ${currency}`,
           },
         ],
       },
@@ -1592,6 +1596,10 @@ Deno.serve(async (req: Request) => {
     const isPortfolio = body.isPortfolio === true;
     const householdId = sanitizeUuid(body.householdId);
     const description = buildDescription(tx);
+    const transactionType = typeof tx.type === "string" &&
+        tx.type.trim().toLowerCase() === "income"
+      ? "income"
+      : "expense";
 
     let householdMembers: Array<{ user_id: string }> = [];
     let requiresHouseholdSplit = false;
@@ -1701,30 +1709,34 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const payloadCurrency = resolveWalletTransactionCurrency(tx);
+
     if (!preferredCurrency) {
-      await reportEdgeFunctionError({
-        functionName: "save-wallet-transaction",
-        error: new Error(
-          "Wallet capture missing preferred currency on user contact",
-        ),
-        context: {
-          step: "resolve_currency",
-          captureSource,
-          userId,
-          householdId,
-          payloadCurrency: resolveWalletTransactionCurrency(tx),
-          transaction: requestDebugContext?.transaction ?? null,
-        },
-      });
-      logWalletCaptureValidationFailure(
-        "missing_currency",
-        requestDebugContext,
-        { preferredCurrency },
-      );
-      return errorResponse("transaction.currency is required", 400);
+      if (!payloadCurrency) {
+        await reportEdgeFunctionError({
+          functionName: "save-wallet-transaction",
+          error: new Error(
+            "Wallet capture missing currency on both payload and user contact",
+          ),
+          context: {
+            step: "resolve_currency",
+            captureSource,
+            userId,
+            householdId,
+            payloadCurrency,
+            transaction: requestDebugContext?.transaction ?? null,
+          },
+        });
+        logWalletCaptureValidationFailure(
+          "missing_currency",
+          requestDebugContext,
+          { preferredCurrency, payloadCurrency },
+        );
+        return errorResponse("transaction.currency is required", 400);
+      }
     }
 
-    const currency = validateCurrency(preferredCurrency);
+    const currency = validateCurrency(payloadCurrency ?? preferredCurrency);
 
     const clientCreatedAtPrefix = extractCalendarDatePrefix(
       body.clientCreatedAt,
@@ -1762,6 +1774,7 @@ Deno.serve(async (req: Request) => {
     console.log("[save-wallet-transaction] Processing:", {
       userId,
       captureSource,
+      transactionType,
       merchant: merchantDisplay,
       amount: tx.amount,
       currency,
@@ -1780,6 +1793,7 @@ Deno.serve(async (req: Request) => {
       userId,
       householdId,
       isPortfolio,
+      transactionType,
       merchantName: merchantDisplay,
       amountCents,
       currency,
@@ -1820,6 +1834,7 @@ Deno.serve(async (req: Request) => {
       const aiCategory = await categorizeWithAI({
         genAI,
         merchantName: merchantDisplay,
+        transactionType,
         amount: tx.amount,
         currency,
         date: normalizedDate,
@@ -1837,7 +1852,7 @@ Deno.serve(async (req: Request) => {
       resolvedCategory = resolveCategory({
         initialGuess: aiCategory,
         description: merchantDisplay,
-        transactionType: "expense",
+        transactionType,
         ctx,
       });
 
@@ -1860,6 +1875,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         contact_id: contactId,
         user_id: userId,
+        type: transactionType,
         amount_cents: amountCents,
         category: resolvedCategory,
         date: normalizedDate,
@@ -1928,12 +1944,12 @@ Deno.serve(async (req: Request) => {
         supabase,
         userId,
         categoryName: resolvedCategory,
-        transactionType: "expense",
+        transactionType,
       });
       await learnUserCategoryPreference({
         supabase,
         userId,
-        transactionType: "expense",
+        transactionType,
         categoryName: resolvedCategory,
         descriptionText: description,
       });
@@ -1985,7 +2001,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (householdId) {
+    if (householdId && requiresHouseholdSplit && transactionType === "expense") {
       console.log(
         "[save-wallet-transaction] Creating household split for:",
         householdId,

@@ -45,6 +45,7 @@ Deno.test("wallet capture idempotency key varies by merchant and scope", () => {
   const base = {
     captureSource: "ios_wallet_shortcut",
     userId: "user-1",
+    transactionType: "expense" as const,
     amountCents: 1299,
     currency: "USD",
     date: "2026-03-11",
@@ -74,6 +75,31 @@ Deno.test("wallet capture idempotency key varies by merchant and scope", () => {
 
   assertEquals(coffee === groceries, false);
   assertEquals(coffee === portfolio, false);
+});
+
+Deno.test("wallet capture idempotency key varies by transaction type", () => {
+  const base = {
+    explicitKey: null,
+    captureSource: "android_notification_listener",
+    userId: "user-1",
+    householdId: null,
+    isPortfolio: false,
+    merchantName: "Acme",
+    amountCents: 5000,
+    currency: "USD",
+    date: "2026-03-11",
+  };
+
+  const expense = buildWalletCaptureIdempotencyKey({
+    ...base,
+    transactionType: "expense",
+  });
+  const income = buildWalletCaptureIdempotencyKey({
+    ...base,
+    transactionType: "income",
+  });
+
+  assertEquals(expense === income, false);
 });
 
 Deno.test("wallet capture idempotency key preserves explicit key", () => {

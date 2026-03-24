@@ -67,6 +67,7 @@ export function buildWalletCaptureIdempotencyKey(params: {
   userId: string;
   householdId: string | null;
   isPortfolio: boolean;
+  transactionType?: "expense" | "income" | null;
   merchantName: string;
   amountCents: number;
   currency: string;
@@ -81,6 +82,9 @@ export function buildWalletCaptureIdempotencyKey(params: {
   const scopeKey = params.householdId
     ? `${params.householdId}:${params.isPortfolio ? "portfolio" : "household"}`
     : "personal";
+  const normalizedTransactionType = params.transactionType === "income"
+    ? "income"
+    : "expense";
   const normalizedMerchant = normalizeMerchantForDedup(params.merchantName);
   const normalizedCard = (params.cardLabel ?? "").trim().toLowerCase();
   const normalizedPackage = (params.packageName ?? "").trim().toLowerCase();
@@ -93,6 +97,7 @@ export function buildWalletCaptureIdempotencyKey(params: {
     params.captureSource,
     params.userId,
     scopeKey,
+    normalizedTransactionType,
     normalizedMerchant,
     String(params.amountCents),
     params.currency,

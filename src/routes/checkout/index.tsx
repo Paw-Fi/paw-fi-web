@@ -26,11 +26,11 @@ type CheckoutSearchParams = {
   status?: string; // Payment status: success, failed, canceled
   session_id?: string; // Stripe session ID for status verification
   v?: string; // Public verification nonce for logged-out verify-payment
-  userId?: string; // User ID for mobile app checkout (when user not logged in)
   source?: string; // Source platform: 'mobile' or 'web'
   redirectUrl?: string; // Deep link URL to redirect back to mobile app after success
-  accessToken?: string; // JWT access token from mobile app for authentication
-  refreshToken?: string; // JWT refresh token from mobile app
+  accessToken?: string;
+  refreshToken?: string;
+  userId?: string;
   // NOTE: Trial eligibility is determined by backend based on subscription history
 };
 
@@ -91,22 +91,20 @@ function CheckoutPage() {
     status,
     session_id,
     v,
-    userId: paramUserId,
     source,
     redirectUrl,
     accessToken,
     refreshToken,
+    userId,
   } = searchParams;
 
   // Default to lifetime if plan not provided to avoid user confusion
   const selectedPlan = plan || "lifetime";
   const selectedBilling = billing || "monthly";
 
-  // Debug log to see what we're receiving (avoid logging raw tokens)
+  // Debug log to see what we're receiving
   console.log("Checkout page search params:", {
     ...searchParams,
-    accessToken: accessToken ? "present" : undefined,
-    refreshToken: refreshToken ? "present" : undefined,
   });
   console.log("Plan:", selectedPlan, "(explicit:", plan, ")");
   console.log("Billing interval:", selectedBilling);
@@ -136,19 +134,11 @@ function CheckoutPage() {
           : "idle",
   );
 
+  const hasLegacyMobileSessionParams =
+    Boolean(accessToken) && Boolean(refreshToken) && Boolean(userId);
+
   // Determine if this is a mobile checkout
   const isMobileCheckout = source === "mobile" || !!redirectUrl;
-
-  // Strip sensitive tokens from the URL after initial load
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!accessToken && !refreshToken) return;
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete("accessToken");
-    url.searchParams.delete("refreshToken");
-    window.history.replaceState({}, document.title, url.toString());
-  }, [accessToken, refreshToken]);
 
   // Load Stripe.js
   useEffect(() => {
@@ -175,8 +165,6 @@ function CheckoutPage() {
 
   // Validate userId parameter if provided (for mobile app checkout)
   useEffect(() => {
-    // CRITICAL: Wait for auth context to initialize before making any decisions
-    // This prevents infinite redirect loops when returning from OAuth
     if (authLoading || status) {
       console.log("🔒 validateUserId blocked:", { authLoading, status });
       return;
@@ -186,9 +174,72 @@ function CheckoutPage() {
       console.log("🔍 validateUserId running:", {
         hasUser: !!user?.id,
         userId: user?.id,
+        isMobileCheckout,
+        hasLegacyMobileSessionParams,
       });
 
-      // If user is logged in, use their ID
+      if (hasLegacyMobileSessionParams) {
+        setIsValidatingUser(true);
+
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken!,
+          refresh_token: refreshToken!,
+        });
+
+        if (sessionError) {
+          console.error("❌ Legacy mobile session bootstrap failed:", sessionError);
+          setValidatedUserId(null);
+          setIsValidatingUser(false);
+          setCheckoutLoading(false);
+          setError("Authentication required. Please log in to continue.");
+          return;
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user?.id) {
+          setValidatedUserId(null);
+          setIsValidatingUser(false);
+          setCheckoutLoading(false);
+          setError("Authentication required. Please log in to continue.");
+          return;
+        }
+
+        if (userId && session.user.id !== userId) {
+          console.error("❌ Legacy mobile session user mismatch:", {
+            expected: userId,
+            actual: session.user.id,
+          });
+          await supabase.auth.signOut();
+          setValidatedUserId(null);
+          setIsValidatingUser(false);
+          setCheckoutLoading(false);
+          setError("Authentication required. Please log in to continue.");
+          return;
+        }
+
+        console.log(
+          "✅ Legacy mobile session restored, setting validatedUserId:",
+          session.user.id,
+        );
+        setValidatedUserId(session.user.id);
+        setIsValidatingUser(false);
+        setCheckoutLoading(false);
+        return;
+      }
+
+      if (isMobileCheckout) {
+        setValidatedUserId(null);
+        setIsValidatingUser(false);
+        setCheckoutLoading(false);
+        setError(
+          "Mobile checkout must be started from the app. Please return to Moneko and try again.",
+        );
+        return;
+      }
+
       if (user?.id) {
         console.log("✅ User authenticated, setting validatedUserId:", user.id);
         setValidatedUserId(user.id);
@@ -196,98 +247,21 @@ function CheckoutPage() {
         return;
       }
 
-      // For mobile checkout with access token: Set up authenticated session
-      if (accessToken && refreshToken && !user && isMobileCheckout) {
-        setIsValidatingUser(true);
-        setCheckoutLoading(true);
-
-        try {
-          console.log("Mobile checkout: Setting session from provided tokens");
-
-          // Set the session using tokens from mobile app
-          const { data: sessionData, error: sessionError } =
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-          if (sessionError || !sessionData.session) {
-            console.error("Failed to set session:", sessionError);
-            setError(
-              "Unable to authenticate for mobile checkout. Please try again from the app.",
-            );
-            setCheckoutLoading(false);
-            setIsValidatingUser(false);
-            return;
-          }
-
-          console.log(
-            "Mobile user authenticated in browser:",
-            sessionData.session.user.id,
-          );
-
-          // CRITICAL: Wait a moment for session to propagate through Supabase client
-          // This ensures the JWT token is included in subsequent Edge Function calls
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
-          // Verify session is actually set in Supabase client
-          const currentSession = await supabase.auth.getSession();
-          if (!currentSession.data.session) {
-            console.error(
-              "Session not set in Supabase client after setSession call",
-            );
-            setError(
-              "Failed to establish authenticated session. Please try again.",
-            );
-            setCheckoutLoading(false);
-            setIsValidatingUser(false);
-            return;
-          }
-
-          console.log(
-            "Session verified in Supabase client:",
-            currentSession.data.session.user.id,
-          );
-          setValidatedUserId(sessionData.session.user.id);
-          setIsValidatingUser(false);
-          setCheckoutLoading(false);
-        } catch (err) {
-          console.error("Error authenticating mobile user:", err);
-          setError(
-            "Failed to authenticate for mobile checkout. Please try again.",
-          );
-          setCheckoutLoading(false);
-          setIsValidatingUser(false);
-        }
-        return;
-      }
-
-      // If no user is logged in but userId param is provided (old flow - not secure)
-      if (paramUserId && !user && !accessToken) {
-        // Old mobile flow used to pass userId via query params without an auth session.
-        // This is no longer supported; Edge Functions must be called with a valid JWT.
-        setError(
-          "Authentication required. Please return to the app and restart checkout.",
-        );
-        setCheckoutLoading(false);
-        setIsValidatingUser(false);
-        return;
-      } else if (!user && !paramUserId) {
-        // No user logged in and no userId provided
-        setError("Authentication required. Please log in to continue.");
-        setCheckoutLoading(false);
-      }
+      setValidatedUserId(null);
+      setCheckoutLoading(false);
+      setError("Authentication required. Please log in to continue.");
     };
 
     validateUserId();
   }, [
     authLoading,
     user,
-    paramUserId,
     status,
+    isMobileCheckout,
+    hasLegacyMobileSessionParams,
     accessToken,
     refreshToken,
-    isMobileCheckout,
+    userId,
   ]);
 
   // Handle payment status verification when returning from Stripe checkout
@@ -317,7 +291,6 @@ function CheckoutPage() {
             status: "success",
             session_id: session_id,
             v,
-            plan: selectedPlan,
           },
         });
         return;
@@ -327,7 +300,6 @@ function CheckoutPage() {
           search: {
             status: "failed",
             error: "Payment failed. Please try again.",
-            plan: selectedPlan,
           },
         });
         return;
@@ -336,7 +308,6 @@ function CheckoutPage() {
           to: "/payment-status",
           search: {
             status: "canceled",
-            plan: selectedPlan,
           },
         });
       }
@@ -357,12 +328,16 @@ function CheckoutPage() {
       authLoading,
       hasUser: !!user,
       validatedUserId,
+      isMobileCheckout,
     });
 
-    // Don't initialize Stripe if we're handling a payment status callback
-    // or if we're still validating the user or if auth is still loading
-    // CRITICAL: Wait for auth to fully initialize to prevent redirect loops
-    if (!stripeLoaded || status || isValidatingUser || authLoading) {
+    if (
+      !stripeLoaded ||
+      status ||
+      isValidatingUser ||
+      authLoading ||
+      (isMobileCheckout && !hasLegacyMobileSessionParams)
+    ) {
       console.log("🔒 Stripe init blocked by initial guards");
       return;
     }
@@ -407,7 +382,10 @@ function CheckoutPage() {
 
           navigate({
             to: "/register",
-            search: { redirect: `/checkout?${redirectParams.toString()}` },
+            search: {
+              redirect: `/checkout?${redirectParams.toString()}`,
+              code: undefined,
+            },
           });
           throw new Error("User authentication required to make a purchase");
         }
@@ -657,6 +635,7 @@ function CheckoutPage() {
     status,
     isValidatingUser,
     isMobileCheckout,
+    hasLegacyMobileSessionParams,
     redirectUrl,
     source,
     promo,
