@@ -28,6 +28,7 @@ import {
   BillingInterval,
 } from "../shared/subscription-constants.ts";
 import { getPlanFromPriceId } from "../shared/stripe-subscription-prices.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface EmailTemplate {
   html: string;
@@ -52,6 +53,9 @@ async function flushQueuedEmails(emails: QueuedEmail[]): Promise<void> {
     try {
       await sendUserEmail(item.email, item.name, item.template);
     } catch (error) {
+      reportStripeWebhookError("flush_queued_emails", error, {
+        email: item.email,
+      });
       const msg = error instanceof Error ? error.message : String(error);
       console.error("Failed to send queued email (non-fatal):", {
         email: item.email,
@@ -180,6 +184,9 @@ async function downgradeOwnerSubscriptionToFree(params: {
       );
     }
   } catch (error) {
+    reportStripeWebhookError("downgrade_owner_subscription_cascade", error, {
+      userId: params.userId,
+    });
     console.error("Unexpected error during downgrade cascade:", {
       userId: params.userId,
       error,
@@ -202,6 +209,21 @@ const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey);
 
 // Dashboard URL for links in emails
 const DASHBOARD_URL = env.appUrl;
+
+function reportStripeWebhookError(
+  phase: string,
+  error: unknown,
+  context?: Record<string, unknown>,
+): void {
+  void reportEdgeFunctionError({
+    functionName: "stripe-webhook",
+    error,
+    context: {
+      phase,
+      ...context,
+    },
+  });
+}
 
 serve(async (req) => {
   const startTime = Date.now();
@@ -254,6 +276,7 @@ serve(async (req) => {
 
       console.log(`Webhook verified: ${event.type} (${event.id})`);
     } catch (err) {
+      reportStripeWebhookError("verify_webhook_signature", err);
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`Webhook signature verification failed:`, {
         error: msg,
@@ -443,6 +466,10 @@ serve(async (req) => {
         },
       );
     } catch (error: any) {
+      reportStripeWebhookError("process_webhook_event", error, {
+        eventId: event.id,
+        eventType: event.type,
+      });
       const processingTime = Date.now() - startTime;
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -492,6 +519,7 @@ serve(async (req) => {
       );
     }
   } catch (error: any) {
+    reportStripeWebhookError("serve_handler", error);
     console.error(`Unexpected webhook error:`, {
       error: error.message,
       stack: error.stack,
@@ -568,6 +596,10 @@ async function handleChargeRefunded(
 
     await revokeLifetimeAccess({ userId, eventId, enqueueUserEmail });
   } catch (error: any) {
+    reportStripeWebhookError("handle_charge_refunded", error, {
+      chargeId: charge.id,
+      eventId,
+    });
     console.error("Error in handleChargeRefunded:", {
       error: (error as any).message,
       stack: (error as any).stack,
@@ -629,6 +661,10 @@ async function revokeLifetimeAccess(params: {
       p_owner_user_id: userId,
     });
   } catch (error) {
+    reportStripeWebhookError("revoke_lifetime_access_cascade", error, {
+      userId,
+      eventId,
+    });
     console.error(
       "Unexpected error during lifetime refund cascade cancellation:",
       error,
@@ -740,6 +776,10 @@ async function handlePaymentIntentSucceeded(
       );
     }
   } catch (error: any) {
+    reportStripeWebhookError("handle_payment_intent_succeeded", error, {
+      paymentIntentId: paymentIntent.id,
+      eventId,
+    });
     console.error("Error in handlePaymentIntentSucceeded:", {
       paymentIntentId: paymentIntent.id,
       error: (error as any).message,
@@ -797,6 +837,9 @@ async function getPlanNameFromProductId(productId: string | null | undefined) {
     const product = await stripe.products.retrieve(productId);
     return product.name || "Premium";
   } catch (error: any) {
+    reportStripeWebhookError("get_plan_name_from_product_id", error, {
+      productId,
+    });
     console.error("Error getting product name:", error);
     return "Premium";
   }
@@ -952,6 +995,11 @@ async function completeReferralAcceptance(params: {
       );
     }
   } catch (emailError) {
+    reportStripeWebhookError("complete_referral_acceptance_email", emailError, {
+      referralCodeId,
+      referrerUserId,
+      refereeUserId,
+    });
     const msg =
       emailError instanceof Error ? emailError.message : String(emailError);
     console.error("Referral email send failed (non-fatal):", msg);
@@ -1030,6 +1078,15 @@ async function handleSubscriptionUpdated(
             shouldAcceptIncomingSubscriptionId = true;
           }
         } catch (stripeError: any) {
+          reportStripeWebhookError(
+            "handle_subscription_updated_compare_subscription_ids",
+            stripeError,
+            {
+              userId,
+              incomingSubscriptionId: subscription.id,
+              existingSubscriptionId: previousSub.stripe_subscription_id,
+            },
+          );
           console.error("Could not compare old vs incoming subscription IDs", {
             userId: redactUserId(userId),
             existingSubscriptionId: previousSub.stripe_subscription_id,
@@ -1187,6 +1244,14 @@ async function handleSubscriptionUpdated(
             }
           }
         } catch (error: any) {
+          reportStripeWebhookError(
+            "handle_subscription_updated_fetch_expanded_discounts",
+            error,
+            {
+              userId,
+              subscriptionId: subscription.id,
+            },
+          );
           console.error(
             "Error fetching expanded subscription discounts:",
             error,
@@ -1308,6 +1373,10 @@ async function handleSubscriptionUpdated(
         );
       }
     } catch (error: any) {
+      reportStripeWebhookError("handle_subscription_updated_cascade", error, {
+        userId,
+        subscriptionId: subscription.id,
+      });
       console.error(
         "Unexpected error during subscription update cascade:",
         error,
@@ -1394,6 +1463,10 @@ async function handleSubscriptionUpdated(
       );
     }
   } catch (error: any) {
+    reportStripeWebhookError("handle_subscription_updated", error, {
+      subscriptionId: subscription.id,
+      eventId,
+    });
     console.error("Error in handleSubscriptionUpdated:", {
       subscriptionId: subscription.id,
       error: error.message,
@@ -1503,6 +1576,10 @@ async function handleSubscriptionDeleted(
       `Subscription cancellation email queued for ${affectedUser.email}`,
     );
   } catch (error: any) {
+    reportStripeWebhookError("handle_subscription_deleted", error, {
+      subscriptionId: subscription.id,
+      eventId,
+    });
     console.error("Error in handleSubscriptionDeleted:", {
       subscriptionId: subscription.id,
       error: error.message,
@@ -1643,6 +1720,14 @@ async function handleInvoicePaymentSucceeded(
           if (piPlan) determinedPlan = piPlan;
           if (piUserId) determinedUserId = piUserId;
         } catch (piErr) {
+          reportStripeWebhookError(
+            "handle_invoice_payment_succeeded_retrieve_payment_intent",
+            piErr,
+            {
+              invoiceId: invoice.id,
+              paymentIntentId,
+            },
+          );
           console.error("Error retrieving payment_intent metadata:", piErr);
         }
       }
@@ -1683,6 +1768,14 @@ async function handleInvoicePaymentSucceeded(
               determinedPlan = "lifetime";
             }
           } catch (prodErr) {
+            reportStripeWebhookError(
+              "handle_invoice_payment_succeeded_retrieve_product",
+              prodErr,
+              {
+                invoiceId: invoice.id,
+                productId,
+              },
+            );
             console.error(
               "Error retrieving product for invoice line:",
               prodErr,
@@ -1785,6 +1878,14 @@ async function handleInvoicePaymentSucceeded(
             }
           }
         } catch (sidecarErr) {
+          reportStripeWebhookError(
+            "handle_invoice_payment_succeeded_referral_sidecar",
+            sidecarErr,
+            {
+              invoiceId: invoice.id,
+              eventId,
+            },
+          );
           const msg =
             sidecarErr instanceof Error
               ? sidecarErr.message
@@ -1883,6 +1984,10 @@ async function handleInvoicePaymentSucceeded(
       }
     }
   } catch (error: any) {
+    reportStripeWebhookError("handle_invoice_payment_succeeded", error, {
+      invoiceId: invoice.id,
+      eventId,
+    });
     console.error("Error in handleInvoicePaymentSucceeded:", {
       invoiceId: invoice.id,
       error: error.message,
@@ -1934,6 +2039,10 @@ async function handleInvoicePaymentFailed(
         await stripe.subscriptions.retrieve(subscriptionId);
       latestStripeStatus = latestSubscription.status;
     } catch (retrieveError: any) {
+      reportStripeWebhookError("handle_invoice_payment_failed_retrieve_status", retrieveError, {
+        invoiceId: invoice.id,
+        subscriptionId,
+      });
       console.error(
         "Failed to retrieve latest subscription after payment failure",
         {
@@ -1978,6 +2087,10 @@ async function handleInvoicePaymentFailed(
             p_new_status: mappedStatus,
           });
         } catch (cascadeError) {
+          reportStripeWebhookError("handle_invoice_payment_failed_cascade", cascadeError, {
+            invoiceId: invoice.id,
+            userId,
+          });
           console.error(
             "Error cascading payment-failed status to household members (non-fatal):",
             cascadeError,
@@ -2006,6 +2119,14 @@ async function handleInvoicePaymentFailed(
         planName = await getPlanNameFromProductId(productId);
       }
     } catch (subscriptionFetchError: any) {
+      reportStripeWebhookError(
+        "handle_invoice_payment_failed_fetch_subscription_for_email",
+        subscriptionFetchError,
+        {
+          invoiceId: invoice.id,
+          subscriptionId,
+        },
+      );
       console.error(
         "Could not fetch subscription details for payment-failed email",
         {
@@ -2030,6 +2151,9 @@ async function handleInvoicePaymentFailed(
     enqueueUserEmail(userData.email, name, emailTemplate);
     console.log(`Payment failure email queued for ${userData.email}`);
   } catch (error: any) {
+    reportStripeWebhookError("handle_invoice_payment_failed", error, {
+      invoiceId: invoice.id,
+    });
     console.error("Error in handleInvoicePaymentFailed:", {
       invoiceId: invoice.id,
       error: error.message,
@@ -2105,6 +2229,9 @@ async function handleInvoicePaymentActionRequired(
     enqueueUserEmail(userData.email, name, emailTemplate);
     console.log(`Payment action required email queued for ${userData.email}`);
   } catch (error: any) {
+    reportStripeWebhookError("handle_invoice_payment_action_required", error, {
+      invoiceId: invoice.id,
+    });
     console.error("Error in handleInvoicePaymentActionRequired:", {
       invoiceId: invoice.id,
       error: error.message,
@@ -2169,6 +2296,9 @@ async function handleSubscriptionTrialEnding(
     enqueueUserEmail(user.email, name, emailTemplate);
     console.log(`Trial ending email queued for ${user.email}`);
   } catch (error: any) {
+    reportStripeWebhookError("handle_subscription_trial_ending", error, {
+      subscriptionId: subscription.id,
+    });
     console.error("Error in handleSubscriptionTrialEnding:", {
       subscriptionId: subscription.id,
       error: error.message,
@@ -2600,6 +2730,15 @@ async function handleCheckoutSessionCompleted(
               `✅ Old subscription ${oldStripeSubscriptionId} canceled successfully`,
             );
           } catch (cancelError) {
+            reportStripeWebhookError(
+              "handle_checkout_session_completed_cancel_old_subscription",
+              cancelError,
+              {
+                oldStripeSubscriptionId,
+                userId,
+                sessionId: session.id,
+              },
+            );
             // Log but don't throw - lifetime is already granted
             const msg =
               cancelError instanceof Error
@@ -2679,6 +2818,10 @@ async function handleCheckoutSessionCompleted(
       }
     }
   } catch (error: any) {
+    reportStripeWebhookError("handle_checkout_session_completed", error, {
+      sessionId: session.id,
+      eventId,
+    });
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
     console.error("Error in handleCheckoutSessionCompleted:", {
@@ -2726,6 +2869,9 @@ async function handleCheckoutSessionAsyncPaymentFailed(
       console.log(`Async payment failure email queued for ${userData.email}`);
     }
   } catch (error: any) {
+    reportStripeWebhookError("handle_checkout_session_async_payment_failed", error, {
+      sessionId: session.id,
+    });
     console.error("Error in handleCheckoutSessionAsyncPaymentFailed:", {
       sessionId: session.id,
       error: error.message,
@@ -2797,6 +2943,9 @@ async function handleInvoiceFinalized(
     enqueueUserEmail(userData.email, name, emailTemplate);
     console.log(`Invoice finalized email queued for ${userData.email}`);
   } catch (error: any) {
+    reportStripeWebhookError("handle_invoice_finalized", error, {
+      invoiceId: invoice.id,
+    });
     console.error("Error in handleInvoiceFinalized:", {
       invoiceId: invoice.id,
       error: error.message,
@@ -2860,6 +3009,10 @@ async function handleInvoiceUpcoming(
         )) as Stripe.Customer;
         hasPaymentMethod = !!customer.invoice_settings?.default_payment_method;
       } catch (err) {
+        reportStripeWebhookError("handle_invoice_upcoming_retrieve_customer", err, {
+          invoiceId: invoice.id,
+          customerId,
+        });
         console.error(
           "Error retrieving customer for payment method check:",
           err,
@@ -2959,6 +3112,9 @@ async function handleInvoiceUpcoming(
     enqueueUserEmail(userData.email, name, emailTemplate);
     console.log(`Renewal reminder email queued for ${userData.email}`);
   } catch (error: any) {
+    reportStripeWebhookError("handle_invoice_upcoming", error, {
+      invoiceId: invoice.id,
+    });
     console.error("Error in handleInvoiceUpcoming:", {
       invoiceId: invoice.id,
       error: error.message,
@@ -3044,6 +3200,9 @@ async function handlePaymentMethodAttached(
       `Payment method confirmation email queued for ${userData.email}`,
     );
   } catch (error: any) {
+    reportStripeWebhookError("handle_payment_method_attached", error, {
+      paymentMethodId: paymentMethod.id,
+    });
     console.error("Error in handlePaymentMethodAttached:", {
       paymentMethodId: paymentMethod.id,
       error: error.message,
@@ -3152,6 +3311,10 @@ async function handleSubscriptionPendingUpdateApplied(
     enqueueUserEmail(user.email, user.full_name || "", emailTemplate);
     console.log(`Scheduled change notification queued for ${user.email}`);
   } catch (error: any) {
+    reportStripeWebhookError("handle_subscription_pending_update_applied", error, {
+      subscriptionId: subscription.id,
+      eventId,
+    });
     console.error("Error in handleSubscriptionPendingUpdateApplied:", {
       subscriptionId: subscription.id,
       error: error.message,
@@ -3200,6 +3363,9 @@ async function handleSubscriptionPendingUpdateExpired(
 
     console.log("Scheduled subscription change expired for user:", user.id);
   } catch (error: any) {
+    reportStripeWebhookError("handle_subscription_pending_update_expired", error, {
+      subscriptionId: subscription.id,
+    });
     console.error("Error in handleSubscriptionPendingUpdateExpired:", {
       subscriptionId: subscription.id,
       error: error.message,
@@ -3289,6 +3455,9 @@ async function handleSetupIntentSucceeded(
       `Setup intent ${setupIntent.id} completed successfully for user ${user.id}`,
     );
   } catch (error: any) {
+    reportStripeWebhookError("handle_setup_intent_succeeded", error, {
+      setupIntentId: setupIntent.id,
+    });
     console.error("Error in handleSetupIntentSucceeded:", {
       setupIntentId: setupIntent.id,
       error: error.message,
@@ -3334,6 +3503,9 @@ async function handleSetupIntentFailed(
     // Optionally send email notification to user about the failure
     // (Not implementing here to avoid spam, but could be useful)
   } catch (error: any) {
+    reportStripeWebhookError("handle_setup_intent_failed", error, {
+      setupIntentId: setupIntent.id,
+    });
     console.error("Error in handleSetupIntentFailed:", {
       setupIntentId: setupIntent.id,
       error: error.message,

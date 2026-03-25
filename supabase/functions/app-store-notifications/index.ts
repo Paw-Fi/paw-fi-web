@@ -2,10 +2,12 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import {
+  AppStoreServerAPIClient,
   Environment,
+  GetTransactionHistoryVersion,
   type JWSTransactionDecodedPayload,
-  type ResponseBodyV2DecodedPayload,
-  SignedDataVerifier,
+  Order,
+  ProductType,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getCorsHeaders } from "../shared/cors.ts";
 import {
@@ -13,13 +15,25 @@ import {
   getAppStoreOwnershipBinding,
   hasAppStoreOwnershipConflict,
 } from "../shared/iap-ownership.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
+
+interface AppStoreNotificationDecodedPayload {
+  data?: {
+    signedTransactionInfo?: string;
+    environment?: string;
+    bundleId?: string;
+  };
+}
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const appStoreBundleId = Deno.env.get("APPLE_BUNDLE_ID") || "";
 const appStoreAppId = Deno.env.get("APPLE_APP_ID") || "";
+const appStoreIssuerId = Deno.env.get("APPLE_APP_STORE_ISSUER_ID") || "";
+const appStoreKeyId = Deno.env.get("APPLE_APP_STORE_KEY_ID") || "";
+const appStorePrivateKeyRaw = Deno.env.get("APPLE_APP_STORE_PRIVATE_KEY") || "";
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -49,29 +63,200 @@ const iapOwnershipLegacyFallbackEnabled = readBooleanEnv(
   true,
 );
 
-const appleRootCaUrls = [
-  "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
-  "https://www.apple.com/certificateauthority/AppleRootCA-G2.cer",
-];
+function normalizePrivateKey(value: string): string {
+  if (!value) return "";
 
-let cachedRootCAs: Uint8Array[] | null = null;
+  let normalized = value.trim();
 
-async function getAppleRootCAs(): Promise<Uint8Array[]> {
-  if (cachedRootCAs) return cachedRootCAs;
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1);
+  }
 
-  const certs = await Promise.all(
-    appleRootCaUrls.map(async (url) => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Apple root CA: ${url}`);
+  normalized = normalized
+    .replace(/\\\\n/g, "\n")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "")
+    .trim();
+
+  const compactValue = normalized.replace(/\s+/g, "");
+
+  if (!normalized.includes("-----BEGIN") && compactValue.length > 0) {
+    const decodeCandidates = [
+      normalized,
+      compactValue,
+      compactValue.replace(/-/g, "+").replace(/_/g, "/"),
+    ];
+
+    for (const candidate of decodeCandidates) {
+      try {
+        const decoded = atob(candidate);
+        if (decoded.includes("-----BEGIN") && decoded.includes("PRIVATE KEY")) {
+          normalized = decoded.trim();
+          break;
+        }
+      } catch {
+        // Try next candidate.
       }
-      const buffer = await response.arrayBuffer();
-      return new Uint8Array(buffer);
-    }),
+    }
+  }
+
+  if (normalized.includes("-----BEGIN") && normalized.includes("-----END")) {
+    normalized = normalized.replace(/\r/g, "");
+
+    const beginMarker = normalized.includes("-----BEGIN PRIVATE KEY-----")
+      ? "-----BEGIN PRIVATE KEY-----"
+      : normalized.includes("-----BEGIN EC PRIVATE KEY-----")
+      ? "-----BEGIN EC PRIVATE KEY-----"
+      : null;
+
+    const endMarker = normalized.includes("-----END PRIVATE KEY-----")
+      ? "-----END PRIVATE KEY-----"
+      : normalized.includes("-----END EC PRIVATE KEY-----")
+      ? "-----END EC PRIVATE KEY-----"
+      : null;
+
+    if (beginMarker && endMarker) {
+      const beginIndex = normalized.indexOf(beginMarker);
+      const endIndex = normalized.indexOf(endMarker);
+      const bodyStart = beginIndex + beginMarker.length;
+      const bodyRaw = normalized.slice(bodyStart, endIndex).replace(/\s+/g, "");
+      const bodyLines = bodyRaw.match(/.{1,64}/g)?.join("\n") ?? "";
+      normalized = `${beginMarker}\n${bodyLines}\n${endMarker}`.trim();
+    }
+  }
+
+  return normalized;
+}
+
+function summarizePrivateKeyMaterial(raw: string, normalized: string): Record<string, unknown> {
+  return {
+    rawLength: raw.length,
+    normalizedLength: normalized.length,
+    rawHasBegin: raw.includes("-----BEGIN"),
+    rawHasEnd: raw.includes("-----END"),
+    normalizedHasBegin: normalized.includes("-----BEGIN"),
+    normalizedHasEnd: normalized.includes("-----END"),
+    normalizedHasPrivateKeyMarker: normalized.includes("PRIVATE KEY"),
+    rawHasEscapedNewline: raw.includes("\\n"),
+  };
+}
+
+function getValidatedApplePrivateKey(): string {
+  const normalized = normalizePrivateKey(appStorePrivateKeyRaw);
+  if (!normalized) {
+    throw new Error("APPLE_APP_STORE_PRIVATE_KEY is empty after normalization");
+  }
+
+  const hasBegin = normalized.includes("-----BEGIN") &&
+    normalized.includes("PRIVATE KEY-----");
+  const hasEnd = normalized.includes("-----END") &&
+    normalized.includes("PRIVATE KEY-----");
+
+  if (!hasBegin || !hasEnd) {
+    throw new Error("APPLE_APP_STORE_PRIVATE_KEY is missing PEM markers");
+  }
+
+  return normalized;
+}
+
+function isAppleServerApiConfigured(): boolean {
+  return Boolean(
+    appStoreIssuerId &&
+      appStoreKeyId &&
+      appStorePrivateKeyRaw &&
+      appStoreBundleId &&
+      appStoreAppId,
+  );
+}
+
+function base64UrlDecode(input: string): string {
+  let base64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padding = base64.length % 4;
+  if (padding) {
+    base64 += "=".repeat(4 - padding);
+  }
+  return atob(base64);
+}
+
+function decodeJwsPayload<T>(jws: string): T {
+  const parts = jws.split(".");
+  if (parts.length !== 3) {
+    throw new Error("Invalid JWS format: expected 3 parts");
+  }
+
+  const payloadJson = base64UrlDecode(parts[1]);
+  return JSON.parse(payloadJson) as T;
+}
+
+function toAppStoreEnvironmentLabel(value: string | null): AppStoreEnvironment {
+  return value?.toLowerCase() === "sandbox" ? "sandbox" : "production";
+}
+
+function toAppleEnvironment(value: string | null): Environment {
+  return value?.toLowerCase() === "sandbox"
+    ? Environment.SANDBOX
+    : Environment.PRODUCTION;
+}
+
+function otherEnvironment(env: Environment): Environment {
+  return env === Environment.SANDBOX
+    ? Environment.PRODUCTION
+    : Environment.SANDBOX;
+}
+
+async function fetchAppStoreTransactionByTransactionId(params: {
+  privateKey: string;
+  transactionId: string;
+  environment: Environment;
+}): Promise<JWSTransactionDecodedPayload | null> {
+  const client = new AppStoreServerAPIClient(
+    params.privateKey,
+    appStoreKeyId,
+    appStoreIssuerId,
+    appStoreBundleId,
+    params.environment,
   );
 
-  cachedRootCAs = certs;
-  return certs;
+  const response = await client.getTransactionInfo(params.transactionId);
+  const signedTransaction = asString(response?.signedTransactionInfo);
+  if (!signedTransaction) return null;
+
+  return decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
+}
+
+async function fetchLatestAppStoreTransactionByOriginalId(params: {
+  privateKey: string;
+  originalTransactionId: string;
+  environment: Environment;
+}): Promise<JWSTransactionDecodedPayload | null> {
+  const client = new AppStoreServerAPIClient(
+    params.privateKey,
+    appStoreKeyId,
+    appStoreIssuerId,
+    appStoreBundleId,
+    params.environment,
+  );
+
+  const historyRequest = {
+    sort: Order.DESCENDING,
+    revoked: true,
+    productTypes: [ProductType.AUTO_RENEWABLE, ProductType.NON_CONSUMABLE],
+  };
+
+  const response = await client.getTransactionHistory(
+    params.originalTransactionId,
+    null,
+    historyRequest,
+    GetTransactionHistoryVersion.V2,
+  );
+
+  const signedTransaction = response?.signedTransactions?.[0];
+  if (!signedTransaction) return null;
+  return decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
 }
 
 function asString(value: unknown): string | null {
@@ -136,6 +321,15 @@ async function cancelStripeSubscriptionIfPresent(
   try {
     await stripe.subscriptions.cancel(stripeSubscriptionId, { prorate: false });
   } catch (error) {
+    void reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error,
+      context: {
+        phase: "cancel_stripe_subscription_if_present",
+        userId,
+        stripeSubscriptionId,
+      },
+    });
     const msg = error instanceof Error ? error.message : String(error);
     console.error(
       "Warning: failed to cancel Stripe subscription during App Store update",
@@ -149,36 +343,161 @@ async function cancelStripeSubscriptionIfPresent(
 }
 
 async function decodeNotification(signedPayload: string): Promise<{
-  decoded: ResponseBodyV2DecodedPayload;
-  verifier: SignedDataVerifier;
+  transaction: JWSTransactionDecodedPayload;
   environment: AppStoreEnvironment;
 }> {
-  const rootCAs = await getAppleRootCAs();
-  const environments: Array<{ env: Environment; label: AppStoreEnvironment }> =
-    [
-      { env: Environment.PRODUCTION, label: "production" },
-      { env: Environment.SANDBOX, label: "sandbox" },
-    ];
+  if (!isAppleServerApiConfigured()) {
+    throw new Error(
+      "Missing APPLE_APP_STORE_ISSUER_ID / APPLE_APP_STORE_KEY_ID / APPLE_APP_STORE_PRIVATE_KEY",
+    );
+  }
 
-  let lastError: unknown = null;
-  for (const candidate of environments) {
+  let privateKey: string;
+  try {
+    privateKey = getValidatedApplePrivateKey();
+  } catch (error) {
+    void reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error,
+      context: {
+        phase: "private_key_validation",
+        keyDiagnostics: summarizePrivateKeyMaterial(
+          appStorePrivateKeyRaw,
+          normalizePrivateKey(appStorePrivateKeyRaw),
+        ),
+      },
+    });
+    throw error;
+  }
+
+  const decoded = decodeJwsPayload<AppStoreNotificationDecodedPayload>(
+    signedPayload,
+  );
+  const signedTransaction = asString(decoded.data?.signedTransactionInfo);
+  if (!signedTransaction) {
+    throw new Error("Notification missing signedTransactionInfo");
+  }
+
+  const transactionHint = decodeJwsPayload<JWSTransactionDecodedPayload>(
+    signedTransaction,
+  );
+  const envHint = toAppleEnvironment(
+    asString(transactionHint.environment) ?? asString(decoded.data?.environment),
+  );
+
+  const transactionId = asString(transactionHint.transactionId);
+  const originalTransactionId = asString(transactionHint.originalTransactionId);
+  let verifiedTransaction: JWSTransactionDecodedPayload | null = null;
+  let resolvedEnvironment = envHint;
+
+  if (transactionId) {
     try {
-      const verifier = new SignedDataVerifier(
-        rootCAs,
-        true,
-        candidate.env,
-        appStoreBundleId,
-        Number(appStoreAppId),
-      );
-
-      const decoded = await verifier.verifyAndDecodeNotification(signedPayload);
-      return { decoded, verifier, environment: candidate.label };
+      verifiedTransaction = await fetchAppStoreTransactionByTransactionId({
+        privateKey,
+        transactionId,
+        environment: envHint,
+      });
     } catch (error) {
-      lastError = error;
+      void reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error,
+        context: {
+          phase: "fetch_transaction_info",
+          environment: envHint === Environment.SANDBOX
+            ? "sandbox"
+            : "production",
+          transactionId,
+        },
+      });
+    }
+
+    if (!verifiedTransaction) {
+      const fallbackEnv = otherEnvironment(envHint);
+      try {
+        verifiedTransaction = await fetchAppStoreTransactionByTransactionId({
+          privateKey,
+          transactionId,
+          environment: fallbackEnv,
+        });
+        if (verifiedTransaction) {
+          resolvedEnvironment = fallbackEnv;
+        }
+      } catch (error) {
+        void reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error,
+          context: {
+            phase: "fetch_transaction_info_fallback",
+            environment: fallbackEnv === Environment.SANDBOX
+              ? "sandbox"
+              : "production",
+            transactionId,
+          },
+        });
+      }
     }
   }
 
-  throw lastError ?? new Error("Unable to verify App Store notification");
+  if (!verifiedTransaction && originalTransactionId) {
+    try {
+      verifiedTransaction = await fetchLatestAppStoreTransactionByOriginalId({
+        privateKey,
+        originalTransactionId,
+        environment: envHint,
+      });
+    } catch (error) {
+      void reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error,
+        context: {
+          phase: "fetch_transaction_history",
+          environment: envHint === Environment.SANDBOX
+            ? "sandbox"
+            : "production",
+          originalTransactionId,
+        },
+      });
+    }
+
+    if (!verifiedTransaction) {
+      const fallbackEnv = otherEnvironment(envHint);
+      try {
+        verifiedTransaction = await fetchLatestAppStoreTransactionByOriginalId({
+          privateKey,
+          originalTransactionId,
+          environment: fallbackEnv,
+        });
+        if (verifiedTransaction) {
+          resolvedEnvironment = fallbackEnv;
+        }
+      } catch (error) {
+        void reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error,
+          context: {
+            phase: "fetch_transaction_history_fallback",
+            environment: fallbackEnv === Environment.SANDBOX
+              ? "sandbox"
+              : "production",
+            originalTransactionId,
+          },
+        });
+      }
+    }
+  }
+
+  if (!verifiedTransaction) {
+    throw new Error("Unable to validate App Store transaction via server API");
+  }
+
+  if (verifiedTransaction.bundleId !== appStoreBundleId) {
+    throw new Error("App Store bundleId mismatch");
+  }
+
+  return {
+    transaction: verifiedTransaction,
+    environment: toAppStoreEnvironmentLabel(asString(verifiedTransaction.environment)),
+  };
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -198,6 +517,15 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     if (!appStoreBundleId || !appStoreAppId) {
+      void reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: new Error("App Store identifiers not configured"),
+        context: {
+          phase: "configuration_validation",
+          hasBundleId: Boolean(appStoreBundleId),
+          hasAppStoreAppId: Boolean(appStoreAppId),
+        },
+      });
       return new Response(
         JSON.stringify({ error: "App Store identifiers not configured" }),
         {
@@ -219,24 +547,10 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { decoded, verifier, environment } = await decodeNotification(
+    const { transaction, environment } = await decodeNotification(
       signedPayload,
     );
-    const signedTransaction = asString(decoded.data?.signedTransactionInfo);
 
-    if (!signedTransaction) {
-      return new Response(
-        JSON.stringify({ status: "ignored", reason: "No transaction info" }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const transaction = await verifier.verifyAndDecodeTransaction(
-      signedTransaction,
-    );
     const storeProductId = asString(transaction.productId);
     const originalTransactionId = asString(transaction.originalTransactionId);
     const transactionId = asString(transaction.transactionId);
@@ -408,6 +722,18 @@ serve(async (req: Request): Promise<Response> => {
       .upsert(subscriptionUpdate, { onConflict: "user_id" });
 
     if (upsertError) {
+      void reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: upsertError,
+        context: {
+          phase: "upsert_subscription",
+          userId: resolvedUserId,
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          environment,
+        },
+      });
       console.error(
         "Failed to upsert subscription from App Store notification:",
         upsertError,
@@ -426,6 +752,13 @@ serve(async (req: Request): Promise<Response> => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    void reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error,
+      context: {
+        phase: "serve_handler",
+      },
+    });
     console.error("app-store-notifications error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
