@@ -226,54 +226,14 @@ Deno.serve(async (req) => {
       },
     });
 
-    const authHeader = req.headers.get("Authorization");
-    // Skip auth check if called from cron job (no Authorization header)
-    if (authHeader) {
-      const requestToken = authHeader.replace("Bearer ", "").trim();
-      const expectedToken = serviceRoleKey.trim();
-      const isServiceRole = requestToken === expectedToken;
-
-      if (!isServiceRole) {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser(requestToken);
-
-        if (authError || !user) {
-          const authCode = (authError as { code?: string } | null)?.code;
-          const authMessage = (authError as { message?: string } | null)
-            ?.message;
-
-          // pg_cron / net.http_post invocations may include a non-user token
-          // that cannot be resolved via auth.getUser (missing `sub`).
-          // Treat those as internal scheduled invocations and continue.
-          if (
-            authCode === "bad_jwt" ||
-            authMessage?.toLowerCase().includes("missing sub claim")
-          ) {
-            console.warn(
-              "[edge-error-digest] Non-user JWT detected; proceeding as internal scheduler call",
-              { authCode, authMessage },
-            );
-          } else {
-            console.error("[edge-error-digest] Auth failed:", authError);
-            return new Response(JSON.stringify({ error: "Unauthorized" }), {
-              status: 401,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-        }
-      }
-    }
-
   const currentWindow = floorToFiveMinuteWindow(new Date());
 
   const { data: pendingWindows, error: pendingWindowsError } = await supabase
     .from("edge_error_aggregates")
     .select("window_start")
     .lt("window_start", currentWindow.toISOString())
-    .order("window_start", { ascending: true })
-    .limit(50);
+    .order("window_start", { ascending: false })
+    .limit(200);
 
   if (pendingWindowsError) {
     console.error("[edge-error-digest] Failed to fetch pending windows:", pendingWindowsError);
@@ -287,10 +247,50 @@ Deno.serve(async (req) => {
   }
 
   const uniqueWindows = Array.from(
-    new Set((pendingWindows || []).map((row) => row.window_start)),
+    new Set(
+      (pendingWindows || []).map(
+        (row: { window_start: string }) => row.window_start,
+      ),
+    ),
   );
 
-  if (!uniqueWindows.length) {
+  let candidateWindows = uniqueWindows;
+  if (uniqueWindows.length > 0) {
+    const { data: digestStatuses, error: digestStatusesError } = await supabase
+      .from("edge_error_digest_windows")
+      .select("window_start,status")
+      .in("window_start", uniqueWindows);
+
+    if (digestStatusesError) {
+      console.error(
+        "[edge-error-digest] Failed to load digest window statuses:",
+        digestStatusesError,
+      );
+    } else {
+      const sentWindowSet = new Set(
+        (digestStatuses || [])
+          .filter(
+            (row: { window_start: string; status: string }) =>
+              row?.status === "sent",
+          )
+          .map(
+            (row: { window_start: string; status: string }) =>
+              row.window_start,
+          ),
+      );
+      candidateWindows = uniqueWindows.filter(
+        (windowStart) => !sentWindowSet.has(windowStart),
+      );
+      console.log("[edge-error-digest] Window selection summary", {
+        fetched: uniqueWindows.length,
+        sentFilteredOut: sentWindowSet.size,
+        candidates: candidateWindows.length,
+      });
+    }
+  }
+
+  if (!candidateWindows.length) {
+    console.log("[edge-error-digest] No candidate windows after filtering");
     return new Response(
       JSON.stringify({ ok: true, processed_windows: 0, sent_windows: 0 }),
       {
@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
   const rowsForDigest: ErrorAggregateRow[] = [];
   const windowsForDigest: string[] = [];
 
-  for (const windowStart of uniqueWindows) {
+  for (const windowStart of candidateWindows) {
     try {
       const { data: claimData, error: claimError } = await supabase.rpc(
         "claim_edge_error_digest_window",
@@ -434,6 +434,12 @@ Deno.serve(async (req) => {
       signal: resendAbortController.signal,
     }).finally(() => clearTimeout(resendTimeout));
 
+    console.log("[edge-error-digest] Batched resend response", {
+      status: resendResponse.status,
+      windowsInBatch: windowsForDigest.length,
+      rowsInBatch: rowsForDigest.length,
+    });
+
     if (!resendResponse.ok) {
       const resendError = trimText(await resendResponse.text(), 2000);
       console.error("[edge-error-digest] Resend API error for batched digest:", {
@@ -484,13 +490,43 @@ Deno.serve(async (req) => {
         total_errors: digest.totalCount,
         unique_fingerprints: rowsForDigest.length,
       });
+
+      // Immediate cleanup after successful digest delivery.
+      const { error: deleteAggregatesError } = await supabase
+        .from("edge_error_aggregates")
+        .delete()
+        .in("window_start", windowsForDigest);
+
+      if (deleteAggregatesError) {
+        console.error(
+          "[edge-error-digest] Failed to cleanup edge_error_aggregates:",
+          deleteAggregatesError,
+        );
+      }
+
+      const { error: deleteDigestWindowsError } = await supabase
+        .from("edge_error_digest_windows")
+        .delete()
+        .in("window_start", windowsForDigest);
+
+      if (deleteDigestWindowsError) {
+        console.error(
+          "[edge-error-digest] Failed to cleanup edge_error_digest_windows:",
+          deleteDigestWindowsError,
+        );
+      }
     }
+  } else {
+    console.log("[edge-error-digest] No rows collected for digest send", {
+      candidateWindows: candidateWindows.length,
+      sentWindows,
+    });
   }
   
   return new Response(
     JSON.stringify({
       ok: true,
-      processed_windows: uniqueWindows.length,
+      processed_windows: candidateWindows.length,
       sent_windows: sentWindows,
       results,
     }),
