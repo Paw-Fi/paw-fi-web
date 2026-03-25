@@ -636,3 +636,56 @@ BEGIN
   RAISE NOTICE 'Income support migration completed successfully';
   RAISE NOTICE 'New features: transaction types, privacy scopes, acknowledgements, recurring income, multi-currency normalization';
 END $$;
+
+-- ====================
+-- FORWARD-COMPAT BOOTSTRAP: PAYMENT PLAN SUPPORT (2026-03-27)
+-- NOTE: Kept here to ensure clean fresh deployments from historical baseline.
+-- The dedicated migration 20260327_installment_payment_plans.sql remains canonical.
+-- ====================
+
+DO $$ BEGIN
+  CREATE TYPE public.payment_plan_type_enum AS ENUM ('recurring', 'installment');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.payment_plan_status_enum AS ENUM ('active', 'paused', 'completed', 'cancelled', 'defaulted');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.payment_plan_occurrence_status_enum AS ENUM ('scheduled', 'paid', 'skipped', 'cancelled', 'overdue', 'partially_paid', 'settled_early');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE public.payment_plan_payment_kind_enum AS ENUM ('normal', 'partial', 'extra', 'early_payoff', 'correction');
+EXCEPTION WHEN duplicate_object THEN null;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'expenses' AND column_name = 'payment_plan_type'
+  ) THEN
+    ALTER TABLE public.expenses
+      ADD COLUMN payment_plan_type public.payment_plan_type_enum;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'expenses' AND column_name = 'payment_plan_id'
+  ) THEN
+    ALTER TABLE public.expenses
+      ADD COLUMN payment_plan_id uuid;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'expenses' AND column_name = 'payment_plan_occurrence_id'
+  ) THEN
+    ALTER TABLE public.expenses
+      ADD COLUMN payment_plan_occurrence_id uuid;
+  END IF;
+END $$;
