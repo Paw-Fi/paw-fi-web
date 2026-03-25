@@ -519,8 +519,7 @@ Deno.serve(async (req: Request) => {
     if (toInsert.length) {
       const { data: insertedRows, error: insertErr } = await supabase
         .from("notification_events")
-        .upsert(toInsert, {
-          onConflict: "user_id,event_type,local_date",
+        .insert(toInsert, {
           ignoreDuplicates: true,
         })
         .select("id");

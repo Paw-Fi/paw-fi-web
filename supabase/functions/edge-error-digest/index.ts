@@ -168,79 +168,103 @@ ${htmlSections.join("\n")}
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
+  
+  try {
 
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
+    }
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  const resendFrom = "no-reply@moneko.io";
-  const alertsTo = Deno.env.get("EDGE_ERROR_ALERT_TO");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const resendFrom = "no-reply@moneko.io";
+    const alertsTo = Deno.env.get("EDGE_ERROR_ALERT_TO");
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    return new Response(JSON.stringify({ error: "Server not configured" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  if (!resendApiKey) {
-    return new Response(
-      JSON.stringify({ error: "RESEND_API_KEY is not configured" }),
-      {
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("[edge-error-digest] Missing Supabase config");
+      return new Response(JSON.stringify({ error: "Server not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
+      });
+    }
 
-  if (!alertsTo) {
-    return new Response(
-      JSON.stringify({ error: "EDGE_ERROR_ALERT_TO is not configured" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
-  }
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-  });
-
-  const authHeader = req.headers.get("Authorization");
-  if (authHeader) {
-    const requestToken = authHeader.replace("Bearer ", "").trim();
-    const expectedToken = serviceRoleKey.trim();
-    const isServiceRole = requestToken === expectedToken;
-
-    if (!isServiceRole) {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser(requestToken);
-
-      if (authError || !user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
+    if (!resendApiKey) {
+      console.error("[edge-error-digest] RESEND_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "RESEND_API_KEY is not configured" }),
+        {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        },
+      );
+    }
+
+    if (!alertsTo) {
+      console.error("[edge-error-digest] EDGE_ERROR_ALERT_TO is not configured");
+      return new Response(
+        JSON.stringify({ error: "EDGE_ERROR_ALERT_TO is not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const authHeader = req.headers.get("Authorization");
+    // Skip auth check if called from cron job (no Authorization header)
+    if (authHeader) {
+      const requestToken = authHeader.replace("Bearer ", "").trim();
+      const expectedToken = serviceRoleKey.trim();
+      const isServiceRole = requestToken === expectedToken;
+
+      if (!isServiceRole) {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser(requestToken);
+
+        if (authError || !user) {
+          const authCode = (authError as { code?: string } | null)?.code;
+          const authMessage = (authError as { message?: string } | null)
+            ?.message;
+
+          // pg_cron / net.http_post invocations may include a non-user token
+          // that cannot be resolved via auth.getUser (missing `sub`).
+          // Treat those as internal scheduled invocations and continue.
+          if (
+            authCode === "bad_jwt" ||
+            authMessage?.toLowerCase().includes("missing sub claim")
+          ) {
+            console.warn(
+              "[edge-error-digest] Non-user JWT detected; proceeding as internal scheduler call",
+              { authCode, authMessage },
+            );
+          } else {
+            console.error("[edge-error-digest] Auth failed:", authError);
+            return new Response(JSON.stringify({ error: "Unauthorized" }), {
+              status: 401,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+        }
       }
     }
-  }
 
   const currentWindow = floorToFiveMinuteWindow(new Date());
 
@@ -249,9 +273,10 @@ Deno.serve(async (req) => {
     .select("window_start")
     .lt("window_start", currentWindow.toISOString())
     .order("window_start", { ascending: true })
-    .limit(20);
+    .limit(50);
 
   if (pendingWindowsError) {
+    console.error("[edge-error-digest] Failed to fetch pending windows:", pendingWindowsError);
     return new Response(
       JSON.stringify({ error: "Failed to fetch pending windows" }),
       {
@@ -277,6 +302,8 @@ Deno.serve(async (req) => {
 
   let sentWindows = 0;
   const results: Array<Record<string, unknown>> = [];
+  const rowsForDigest: ErrorAggregateRow[] = [];
+  const windowsForDigest: string[] = [];
 
   for (const windowStart of uniqueWindows) {
     try {
@@ -286,6 +313,7 @@ Deno.serve(async (req) => {
       );
 
       if (claimError) {
+        console.error(`[edge-error-digest] Claim failed for ${windowStart}:`, claimError);
         results.push({ window_start: windowStart, error: "claim_failed" });
         continue;
       }
@@ -304,6 +332,7 @@ Deno.serve(async (req) => {
         .order("count", { ascending: false });
 
       if (rowsError) {
+        console.error(`[edge-error-digest] Failed to load rows for ${windowStart}:`, rowsError);
         const { error: markFailedError } = await supabase
           .from("edge_error_digest_windows")
           .upsert({
@@ -337,71 +366,13 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const digest = buildDigestEmail(rows as ErrorAggregateRow[], windowStart);
-
-      const resendAbortController = new AbortController();
-      const resendTimeout = setTimeout(
-        () => resendAbortController.abort(),
-        20000,
-      );
-
-      const resendResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: resendFrom,
-          to: [alertsTo],
-          subject: digest.subject,
-          html: digest.html,
-          text: digest.text,
-        }),
-        signal: resendAbortController.signal,
-      }).finally(() => clearTimeout(resendTimeout));
-
-      if (!resendResponse.ok) {
-        const resendError = trimText(await resendResponse.text(), 2000);
-        const { error: markFailedError } = await supabase
-          .from("edge_error_digest_windows")
-          .upsert({
-            window_start: windowStart,
-            status: "failed",
-            last_error: `resend_error:${resendResponse.status}:${resendError}`,
-            updated_at: new Date().toISOString(),
-          });
-        if (markFailedError) throw markFailedError;
-
-        results.push({
-          window_start: windowStart,
-          error: "resend_send_failed",
-          status: resendResponse.status,
-        });
-        continue;
-      }
-
-      const { error: markSentError } = await supabase
-        .from("edge_error_digest_windows")
-        .upsert({
-          window_start: windowStart,
-          status: "sent",
-          sent_at: new Date().toISOString(),
-          last_error: null,
-          updated_at: new Date().toISOString(),
-        });
-      if (markSentError) throw markSentError;
-
-      sentWindows++;
+      rowsForDigest.push(...(rows as ErrorAggregateRow[]));
+      windowsForDigest.push(windowStart);
       results.push({
         window_start: windowStart,
-        sent: true,
-        total_errors: digest.totalCount,
+        queued_for_batch: true,
         unique_fingerprints: rows.length,
       });
-
-      // Send at most one digest email per invocation.
-      break;
     } catch (windowError) {
       const lastError = trimText(
         windowError instanceof Error
@@ -433,6 +404,89 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (rowsForDigest.length > 0 && windowsForDigest.length > 0) {
+    const firstWindow = windowsForDigest[0];
+    const lastWindow = windowsForDigest[windowsForDigest.length - 1];
+    const digestWindowLabel = firstWindow === lastWindow
+      ? firstWindow
+      : `${firstWindow} .. ${lastWindow}`;
+
+    const digest = buildDigestEmail(rowsForDigest, digestWindowLabel);
+    const resendAbortController = new AbortController();
+    const resendTimeout = setTimeout(
+      () => resendAbortController.abort(),
+      20000,
+    );
+
+    const resendResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: resendFrom,
+        to: [alertsTo],
+        subject: digest.subject,
+        html: digest.html,
+        text: digest.text,
+      }),
+      signal: resendAbortController.signal,
+    }).finally(() => clearTimeout(resendTimeout));
+
+    if (!resendResponse.ok) {
+      const resendError = trimText(await resendResponse.text(), 2000);
+      console.error("[edge-error-digest] Resend API error for batched digest:", {
+        status: resendResponse.status,
+        error: resendError,
+      });
+
+      for (const windowStart of windowsForDigest) {
+        const { error: markFailedError } = await supabase
+          .from("edge_error_digest_windows")
+          .upsert({
+            window_start: windowStart,
+            status: "failed",
+            last_error: `resend_error:${resendResponse.status}:${resendError}`,
+            updated_at: new Date().toISOString(),
+          });
+        if (markFailedError) {
+          console.error("[edge-error-digest] Failed to mark window as failed:", {
+            windowStart,
+            markFailedError,
+          });
+        }
+      }
+
+      results.push({
+        error: "batched_resend_send_failed",
+        status: resendResponse.status,
+        windows_in_batch: windowsForDigest.length,
+      });
+    } else {
+      for (const windowStart of windowsForDigest) {
+        const { error: markSentError } = await supabase
+          .from("edge_error_digest_windows")
+          .upsert({
+            window_start: windowStart,
+            status: "sent",
+            sent_at: new Date().toISOString(),
+            last_error: null,
+            updated_at: new Date().toISOString(),
+          });
+        if (markSentError) throw markSentError;
+        sentWindows++;
+      }
+
+      results.push({
+        sent: true,
+        windows_in_batch: windowsForDigest.length,
+        total_errors: digest.totalCount,
+        unique_fingerprints: rowsForDigest.length,
+      });
+    }
+  }
+  
   return new Response(
     JSON.stringify({
       ok: true,
@@ -445,4 +499,21 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     },
   );
+  } catch (error) {
+    console.error("[edge-error-digest] Unhandled error:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    
+    return new Response(
+      JSON.stringify({ 
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : String(error)
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
 });

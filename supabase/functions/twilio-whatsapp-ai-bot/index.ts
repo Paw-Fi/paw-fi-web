@@ -2509,6 +2509,19 @@ Deno.serve(async (req: Request) => {
         "[twilio-whatsapp-ai-bot] Failed to get initial AI response:",
         error,
       );
+      
+      // Report Gemini error for instant notification
+      await reportEdgeFunctionError({
+        functionName: "twilio-whatsapp-ai-bot",
+        error,
+        context: {
+          phase: "initial_ai_response",
+          modelName: MODEL_NAME,
+          message: messageText,
+          hasAttachment: attachments.length > 0,
+        },
+      });
+      
       if (WHATSAPP_DEBUG) {
         debugNotes.push(`initial-ai-error: ${String(error)}`);
       }
@@ -3060,6 +3073,19 @@ Deno.serve(async (req: Request) => {
           "[twilio-whatsapp-ai-bot] Failed to get final AI response:",
           error,
         );
+        
+        // Report Gemini error for instant notification
+        await reportEdgeFunctionError({
+          functionName: "twilio-whatsapp-ai-bot",
+          error,
+          context: {
+            phase: "final_ai_response",
+            modelName: MODEL_NAME,
+            toolIterations,
+            lastToolCalls: functionCalls?.length || 0,
+          },
+        });
+        
         if (WHATSAPP_DEBUG) {
           debugNotes.push(`final-ai-error: ${String(error)}`);
         }

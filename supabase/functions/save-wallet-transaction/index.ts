@@ -1304,59 +1304,60 @@ async function categorizeWithAI(params: {
   expenseCategories: string[];
   incomeCategories: string[];
 }): Promise<string> {
-  const {
-    genAI,
-    merchantName,
-    transactionType,
-    amount,
-    currency,
-    date,
-    note,
-    expenseCategories,
-    incomeCategories,
-  } = params;
+  try {
+    const {
+      genAI,
+      merchantName,
+      transactionType,
+      amount,
+      currency,
+      date,
+      note,
+      expenseCategories,
+      incomeCategories,
+    } = params;
 
-  if (!genAI) {
-    return "other";
-  }
+    if (!genAI) {
+      return "other";
+    }
 
-  const tools: any = [
-    {
-      functionDeclarations: [
-        {
-          name: "categorize_transactions",
-          description: "Return categories for each transaction in order.",
-          parameters: {
-            type: "object",
-            properties: {
-              categories: {
-                type: "array",
-                items: { type: "string" },
-              },
-            },
-            required: ["categories"],
-          },
-        },
-      ],
-    },
-  ];
-
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite-preview",
-    tools: tools as any,
-  });
-
-  const descriptionParts = [merchantName];
-  if (note) descriptionParts.push(note);
-  const description = descriptionParts.join(" – ");
-
-  const response = await model.generateContent({
-    contents: [
+    const tools: any = [
       {
-        role: "user",
-        parts: [
+        functionDeclarations: [
           {
-            text: `You are a transaction categorization engine.
+            name: "categorize_transactions",
+            description: "Return categories for each transaction in order.",
+            parameters: {
+              type: "object",
+              properties: {
+                categories: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+              },
+              required: ["categories"],
+            },
+          },
+        ],
+      },
+    ];
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite-preview",
+      tools: tools as any,
+    });
+
+    const descriptionParts = [merchantName];
+    if (note) descriptionParts.push(note);
+    const description = descriptionParts.join(" – ");
+
+    const response = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `You are a transaction categorization engine.
 Return exactly 1 category for the transaction below.
 Use only the allowed categories listed.
 
@@ -1365,39 +1366,58 @@ Income categories: ${incomeCategories.join(", ")}
 
 Transactions:
 1. ${transactionType.toUpperCase()} | ${date} | ${description} | ${amount} ${currency}`,
-          },
-        ],
+            },
+          ],
+        },
+      ],
+      toolConfig: {
+        functionCallingConfig: CATEGORIZE_FUNCTION_CALLING_CONFIG,
       },
-    ],
-    toolConfig: {
-      functionCallingConfig: CATEGORIZE_FUNCTION_CALLING_CONFIG,
-    },
-    generationConfig: { maxOutputTokens: 256 },
-  } as any);
+      generationConfig: { maxOutputTokens: 256 },
+    } as any);
 
-  const toolCalls = getFunctionCalls(response).filter(
-    (call: any) => call && call.name === "categorize_transactions",
-  );
+    const toolCalls = getFunctionCalls(response).filter(
+      (call: any) => call && call.name === "categorize_transactions",
+    );
 
-  if (toolCalls.length > 0) {
-    for (const call of toolCalls) {
-      const categories = Array.isArray(call.args?.categories)
-        ? call.args.categories
-        : [];
-      if (categories.length >= 1) {
-        return normalizeCategoryForStorage(categories[0]);
+    if (toolCalls.length > 0) {
+      for (const call of toolCalls) {
+        const categories = Array.isArray(call.args?.categories)
+          ? call.args.categories
+          : [];
+        if (categories.length >= 1) {
+          return normalizeCategoryForStorage(categories[0]);
+        }
       }
     }
-  }
 
-  // Fallback: if AI didn't return structured output, try parsing text response
-  const text = response?.response?.text?.();
-  if (text) {
-    const normalized = normalizeCategoryForStorage(text.trim());
-    if (normalized !== "other") return normalized;
-  }
+    // Fallback: if AI didn't return structured output, try parsing text response
+    const text = response?.response?.text?.();
+    if (text) {
+      const normalized = normalizeCategoryForStorage(text.trim());
+      if (normalized !== "other") return normalized;
+    }
 
-  return "other";
+    return "other";
+  } catch (error) {
+    console.error("[save-wallet-transaction] AI categorization failed:", error);
+    
+    // Report Gemini error for instant notification
+    await reportEdgeFunctionError({
+      functionName: "save-wallet-transaction",
+      error,
+      context: {
+        phase: "ai_categorization",
+        modelName: "gemini-3.1-flash-lite-preview",
+        merchantName: params.merchantName,
+        transactionType: params.transactionType,
+        amount: params.amount,
+        currency: params.currency,
+      },
+    });
+    
+    return "other";
+  }
 }
 
 // ─── Handler ────────────────────────────────────────────────────────────────

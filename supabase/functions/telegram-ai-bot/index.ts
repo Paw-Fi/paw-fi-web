@@ -2471,6 +2471,19 @@ Deno.serve(async (req: Request) => {
             "[telegram-ai-bot] Failed to get initial AI response:",
             error,
           );
+          
+          // Report Gemini error for instant notification
+          await reportEdgeFunctionError({
+            functionName: "telegram-ai-bot",
+            error,
+            context: {
+              phase: "initial_ai_response",
+              modelName: MODEL_NAME,
+              message: incomingText,
+              hasAttachment: !!(message?.photo || message?.document || message?.audio || message?.voice),
+            },
+          });
+          
           debugNotes.push(
             `initial Gemini failure: ${error instanceof Error ? error.message : String(error)}`,
           );
@@ -4253,6 +4266,19 @@ Deno.serve(async (req: Request) => {
               "[telegram-ai-bot] Failed to get final AI response:",
               e,
             );
+            
+            // Report Gemini error for instant notification
+            await reportEdgeFunctionError({
+              functionName: "telegram-ai-bot",
+              error: e,
+              context: {
+                phase: "final_ai_response",
+                modelName: MODEL_NAME,
+                toolIterations,
+                lastToolCalls: functionCalls?.length || 0,
+              },
+            });
+            
             finalResponseText = isRetryableGeminiError(e)
               ? buildGeminiBusyMessage(replyLanguage)
               : buildProcessingFailureMessage(replyLanguage);
