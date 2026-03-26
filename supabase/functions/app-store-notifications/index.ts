@@ -434,6 +434,75 @@ function looksLikeStripeSubscriptionId(value: unknown): value is string {
   return typeof value === "string" && value.startsWith("sub_");
 }
 
+async function authUserExists(userId: string): Promise<boolean> {
+  const { data, error } = await supabase.auth.admin.getUserById(userId);
+
+  if (error) {
+    if (error.status === 404) {
+      return false;
+    }
+
+    throw new Error(
+      `Failed to verify auth user existence: ${error.message ?? String(error)}`,
+    );
+  }
+
+  return Boolean(data?.user?.id);
+}
+
+async function resolveVerifiedUserId(params: {
+  candidateUserId: string | null;
+  candidateSource:
+    | "ownership_binding"
+    | "app_account_token"
+    | "legacy_subscription";
+  originalTransactionId: string;
+  transactionId: string | null;
+  environment: AppStoreEnvironment;
+}): Promise<string | null> {
+  if (!params.candidateUserId) return null;
+
+  try {
+    const exists = await authUserExists(params.candidateUserId);
+    if (exists) {
+      return params.candidateUserId;
+    }
+
+    void reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error: new Error("Candidate App Store user does not exist in auth.users"),
+      context: getAppStoreDiagnosticsContext({
+        phase: "candidate_user_not_found",
+        candidateUserId: params.candidateUserId,
+        candidateUserSource: params.candidateSource,
+        originalTransactionId: params.originalTransactionId,
+        transactionId: params.transactionId,
+        environment: params.environment,
+      }),
+    }).catch((reportError) => {
+      console.error(
+        "Failed to report missing candidate App Store user:",
+        reportError,
+      );
+    });
+    return null;
+  } catch (error) {
+    await reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error,
+      context: getAppStoreDiagnosticsContext({
+        phase: "verify_candidate_user",
+        candidateUserId: params.candidateUserId,
+        candidateUserSource: params.candidateSource,
+        originalTransactionId: params.originalTransactionId,
+        transactionId: params.transactionId,
+        environment: params.environment,
+      }),
+    });
+    throw error;
+  }
+}
+
 async function cancelStripeSubscriptionIfPresent(
   userId: string,
 ): Promise<void> {
@@ -762,6 +831,11 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     let userId: string | null = null;
+    let userIdSource:
+      | "ownership_binding"
+      | "app_account_token"
+      | "legacy_subscription"
+      | null = null;
     let hasLegacyOwnershipConflict = false;
 
     if (iapOwnershipBindingEnabled) {
@@ -769,7 +843,17 @@ serve(async (req: Request): Promise<Response> => {
         supabase,
         originalTransactionId,
       });
-      userId = existingBinding?.user_id ?? null;
+      const verifiedBindingUserId = await resolveVerifiedUserId({
+        candidateUserId: existingBinding?.user_id ?? null,
+        candidateSource: "ownership_binding",
+        originalTransactionId,
+        transactionId,
+        environment,
+      });
+      userId = verifiedBindingUserId;
+      if (verifiedBindingUserId) {
+        userIdSource = "ownership_binding";
+      }
 
       if (userId == null) {
         hasLegacyOwnershipConflict = await hasAppStoreOwnershipConflict({
@@ -781,10 +865,19 @@ serve(async (req: Request): Promise<Response> => {
 
     const appAccountToken = asString(transaction.appAccountToken);
     if (!userId && appAccountToken && isUuid(appAccountToken)) {
-      userId = appAccountToken;
+      userId = await resolveVerifiedUserId({
+        candidateUserId: appAccountToken,
+        candidateSource: "app_account_token",
+        originalTransactionId,
+        transactionId,
+        environment,
+      });
+      if (userId) {
+        userIdSource = "app_account_token";
+      }
     }
 
-    if (hasLegacyOwnershipConflict) {
+    if (hasLegacyOwnershipConflict && !userId) {
       console.warn(
         "Ignoring App Store notification for unresolved legacy ownership conflict",
         {
@@ -840,13 +933,25 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
 
-      userId = asString(existingSub?.user_id);
+      userId = await resolveVerifiedUserId({
+        candidateUserId: asString(existingSub?.user_id),
+        candidateSource: "legacy_subscription",
+        originalTransactionId,
+        transactionId,
+        environment,
+      });
+      if (userId) {
+        userIdSource = "legacy_subscription";
+      }
     }
 
     if (!userId) {
       console.warn("App Store notification without user mapping", {
         originalTransactionId,
         transactionId,
+        userIdSource,
+        appAccountToken:
+          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
       });
       return new Response(
         JSON.stringify({ status: "ignored", reason: "Unknown user" }),
