@@ -94,6 +94,7 @@
     "https://esm.sh/pdf-lib@1.17.1/deno/es/utils/index.mjs": "89c908bb2fab9fe421e4bcbdfe1e459ba49a6f91304ff1f2e8262f86ac8140ff",
     "https://esm.sh/pdf-lib@1.17.1/deno/pdf-lib.mjs": "2aea93b15ea9891297ca75a49c56538b7da8dab340bc8f1c8570f53cd3b13576",
     "https://esm.sh/pdf-lib@1.17.1?target=deno": "f05ab18d91820fe2a8ac345b9ffb1e40b218653ab54d26b25843dd8a01676d48",
+    "https://esm.sh/stripe@13.10.0": "67f702b2494447fe1446c136d206b6767229df21696ec2f33e78bae40f1220ac",
     "https://esm.sh/tr46@0.0.3/denonext/tr46.mjs": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2",
     "https://esm.sh/tr46@0.0.3?target=denonext": "19cb9be0f0d418a0c3abb81f2df31f080e9540a04e43b0f699bce1149cba0cbb",
     "https://esm.sh/tslib@1.14.1/deno/tslib.mjs": "748739307d67fbaa8ae634eed70715714dd1f54f04fe8635bcb7f72cb0aaed62",

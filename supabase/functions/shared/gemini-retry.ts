@@ -62,8 +62,8 @@ function normalizeErrorText(error: unknown): string {
 export function isRetryableGeminiError(error: unknown): boolean {
   const statusCode = extractStatusCode(error);
   if (statusCode != null) {
-    if (statusCode === 429) return true;
-    if ([500, 503, 504].includes(statusCode)) return true;
+    if (statusCode === 408 || statusCode === 429) return true;
+    if ([500, 502, 503, 504].includes(statusCode)) return true;
     return false;
   }
 
@@ -82,6 +82,11 @@ export function isRetryableGeminiError(error: unknown): boolean {
     "deadline exceeded",
     "internal error",
     "service unavailable",
+    "aborterror",
+    "aborted",
+    "signal has been aborted",
+    "timeout",
+    "timed out",
   ];
 
   return retryablePhrases.some((phrase) => text.includes(phrase));

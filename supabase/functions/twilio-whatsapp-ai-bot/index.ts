@@ -136,7 +136,7 @@ const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_FOLLOW_UP_DELAY_MS = 24000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
 const GEMINI_MAX_RETRIES = 1;
-const GEMINI_REQUEST_TIMEOUT_MS = 12000;
+const GEMINI_REQUEST_TIMEOUT_MS = 30000;
 const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
 const DELIVERY_FAILURE_MESSAGE =
   "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";

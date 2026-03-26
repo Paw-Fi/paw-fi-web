@@ -71,16 +71,20 @@ function buildExpenseContext(payload: Record<string, any>) {
   if (!trimmedLabel && !amountText) return "";
 
   if (trimmedLabel && amountText) {
-    const connector = labelType === "source" ? "at" : "for";
-    return `Last time: ${amountText} ${connector} ${trimmedLabel}.`;
+    const isAt = labelType === "source";
+    return isAt 
+      ? `You recently spent ${amountText} at ${trimmedLabel}.`
+      : `You recently spent ${amountText} on ${trimmedLabel}.`;
   }
 
   if (trimmedLabel) {
-    const connector = labelType === "source" ? "at" : "for";
-    return `Last time: ${connector} ${trimmedLabel}.`;
+    const isAt = labelType === "source";
+    return isAt
+      ? `You recently added a purchase at ${trimmedLabel}.`
+      : `You recently added a purchase for ${trimmedLabel}.`;
   }
 
-  return `Last time: ${amountText}.`;
+  return `You recently logged an expense for ${amountText}.`;
 }
 
 export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
@@ -99,87 +103,86 @@ export function buildLogExpenseReminderMessage(payload: Record<string, any>) {
   const todayKey = String(payload.local_date ?? payload.day_key ?? getLocalDateKey());
 
   const titlesDaily = [
-    "🧾 Quick money check-in",
-    "📝 Tiny expense note?",
-    "💸 Keep your tracker warm",
-    "📌 One-minute catch-up",
-    "🌿 Gentle budget nudge",
-    "🧠 Future-you will approve",
-    "✨ Small step, big clarity",
-    "🔔 Friendly reminder",
-    "📒 Keep it simple today",
-    "🧭 Stay on course",
-    "🪙 Pocket log time",
-    "☕ While it’s fresh…",
+   "🧾 Quick check-in",
+    "📝 Add an expense?",
+    "💸 A quick budget check",
+    "📌 One small update",
+    "🌿 Friendly reminder",
+    "✨ Keep things up to date",
+    "🔔 Just a reminder",
+    "📒 Quick budget update",
+    "🧭 Stay on top of things",
+    "🪙 Log a purchase?",
+    "☕ While it's still fresh...",
+    "💡 A quick money check-in",
   ];
 
   const titlesLong = [
-    "🧾 A calm check-in",
-    "🧘 No pressure — just a nudge",
-    "📌 Whenever you’re ready",
-    "🌙 Picking it back up is progress",
-    "🧭 Let’s get your overview back",
-    "✨ A small restart",
-    "🪴 Tiny habit, steady clarity",
-    "🤝 We can ease back in",
-    "📒 Your budget misses you",
-    "🧠 Future-you says thanks",
-    "🧩 Reconnect the dots",
-    "🕊️ Gentle catch-up",
+    "🧾 Just checking in",
+    "🧘 A gentle nudge",
+    "📌 Whenever you're ready",
+    "🌙 Pick it back up anytime",
+    "🧭 Ready to get back into it?",
+    "✨ A fresh start is okay",
+    "🤝 Ease back in",
+    "📒 Time for a quick catch-up",
+    "🔮 Start again anytime",
+    "🧩 A few expenses to add?",
+    "🕊️ No rush",
   ];
 
   const dailySet = [
-    "Have you logged an expense today? A quick note keeps you on track.",
-    "1 minute is all it takes — want to log today’s spending?",
-    "Small habits, big wins — ready to add an expense?",
-    "Capture today’s expense while it’s fresh — you’ll thank yourself later.",
-    "Quick check-in: add one expense and your overview stays accurate.",
-    "A tiny update now beats a big catch-up later — log one expense?",
-    "Before the day slips away: jot down any spending you remember.",
-    "Keeping it lightweight: just log one expense to stay in rhythm.",
-    "Got any small purchases today? Pop one in and you’re done.",
-    "A quick note = clearer totals. Want to log an expense now?",
-    "Fast and painless: add one expense and close the loop for today.",
-    "Even a coffee counts — record one item and you’re back in sync.",
-    "If you bought anything today, tap once and keep your tracker tidy.",
-    "Micro-moment: log one expense and keep your progress rolling.",
-    "Tiny nudge: record a purchase so your numbers stay honest.",
-    "Just one entry today keeps the streak alive — want to log it?",
-    "Short and sweet: add an expense and you’re good for the day.",
-    "Budget clarity in 60 seconds — log one expense?",
-    "A small update now saves future confusion — add today’s expense.",
-    "Keep it simple: pick one purchase and record it.",
-    "Your tracker is ready when you are — add one expense?",
-    "This is the “easy mode” reminder: log one thing, done.",
-    "A quick tap today keeps your trends accurate.",
-    "One expense logged = less mental load later.",
+    "Got a moment? Add today's spending to keep things up to date.",
+    "It only takes a minute to add a recent expense.",
+    "A quick update now makes your budget easier to follow.",
+    "Add today's spending while it's still fresh.",
+    "Just a quick check-in. Want to add an expense?",
+    "A small update now can save you catching up later.",
+    "Before the day ends, add any spending you remember.",
+    "Keep things current with one quick expense.",
+    "Made a purchase today? Add it in.",
+    "One quick note can keep your budget clear.",
+    "Fast and easy: add an expense and you're done.",
+    "Even small purchases count. Add one if you haven't yet.",
+    "Buy anything today? Take a second to add it.",
+    "Got a second? Add a quick expense.",
+    "A little reminder to record any recent spending.",
+    "One quick entry is all it takes.",
+    "Short and simple: add an expense and you're set.",
+    "Want to keep things clear? Add a recent expense.",
+    "A quick update now makes tomorrow easier.",
+    "Keep it simple. Just add one recent purchase.",
+    "Your budget is ready whenever you want to update it.",
+    "Just one recent expense is enough for today.",
+    "A quick tap now helps keep everything current.",
+    "Add an expense now so you don't have to remember it later.",
   ];
 
   const longSet = [
-    "No rush — when you’re ready, logging one helps your overview.",
-    "A tiny habit today can make next month easier.",
-    "Pick it up when it feels right — your progress is waiting.",
-    "One small step to get back on track, whenever you’re ready.",
-    "You don’t have to catch up all at once — logging one is enough for today.",
-    "It’s okay to fall off the routine. A single entry is a great restart.",
-    "Your budget isn’t judging you — it just wants one little update.",
-    "If it feels like a lot, start tiny: one expense, that’s it.",
-    "Momentum comes back fast — log one expense and you’re moving again.",
-    "No perfection needed. One quick entry gets you closer to clarity.",
-    "Even if you don’t remember everything, one recent purchase is a great start.",
-    "A gentle reset: log one expense and let the rest wait.",
-    "Future-you will love having any data — one entry is already a win.",
-    "You can rebuild the habit in seconds. Want to log one expense now?",
-    "No pressure to be exact — approximate is better than missing.",
-    "Just checking in: one small log today can make the overview feel “alive” again.",
-    "If it’s been a while, start with the easiest thing you remember.",
-    "A calm restart beats a perfect plan — add one expense when ready.",
-    "You’re allowed to restart as many times as you want. One entry is enough.",
-    "If you’re busy, keep it minimal: log one purchase and move on.",
-    "Little by little is the whole game — one expense today is progress.",
-    "A quick anchor point helps: log your most recent expense.",
-    "No need to fix the past — just add something from today.",
-    "One tiny step now makes the next step easier.",
+    "No rush. Adding a recent expense can help you ease back in.",
+    "A small update today can make budgeting feel easier.",
+    "Whenever you're ready, you can pick things back up here.",
+    "One small step is enough. Want to add a recent purchase?",
+    "You don't have to catch up all at once. One expense is enough for today.",
+    "Missing a few days is okay. You can start again with one entry.",
+    "A quick update can help you get a clearer picture of your spending.",
+    "If catching up feels like a lot, start with just one expense.",
+    "Getting back into it can be as simple as logging one purchase.",
+    "You don't need to do everything today. One quick entry is a good start.",
+    "Don't remember everything? That's okay. Just add what you can.",
+    "A gentle reset can start with one expense.",
+    "Even one small update is progress.",
+    "You can get back into the habit in just a few seconds.",
+    "It doesn't have to be exact. A rough amount is okay too.",
+    "Just checking in. A quick log today can help you get back on track.",
+    "Been away for a bit? Start with the easiest purchase to remember.",
+    "A calm restart is better than trying to do it all at once.",
+    "You can restart anytime. One quick entry is enough.",
+    "Busy day? Just log one purchase and leave the rest for later.",
+    "Little by little works too. One expense today is a solid step.",
+    "Need an easy place to start? Add your most recent expense.",
+    "No need to fix everything. Just add something recent.",
+    "A small step now can make the next one easier.",
   ];
 
   const poolBody = inactivityDays > 14 ? longSet : dailySet;
