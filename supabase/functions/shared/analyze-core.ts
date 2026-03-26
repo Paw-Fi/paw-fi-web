@@ -1217,12 +1217,7 @@ async function resolveCandidateCategories(
     },
   ];
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite-preview",
-    tools: tools as any,
-  });
-
-  const response = await model.generateContent({
+  const request = {
     contents: [
       {
         role: "user",
@@ -1248,7 +1243,39 @@ async function resolveCandidateCategories(
       functionCallingConfig: CATEGORIZE_TRANSACTIONS_FUNCTION_CALLING_CONFIG,
     },
     generationConfig: { maxOutputTokens: 4096 },
-  } as any);
+  } as any;
+
+  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
+  let response: any = null;
+  let lastError: unknown = null;
+  for (const modelName of modelNames) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        tools: tools as any,
+      });
+      response = await generateGeminiWithRetry({
+        model,
+        modelName,
+        request,
+        timeoutMs: 30000,
+        maxRetries: 1,
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+      if (!isRetriableGeminiError(error)) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `[analyze-expense] Categorization model ${modelName} failed: ${message}`,
+      );
+    }
+  }
+  if (!response) {
+    throw lastError ?? new Error("Category resolution failed");
+  }
 
   const toolCalls = getFunctionCalls(response).filter(
     (call: any) => call && call.name === "categorize_transactions",
@@ -2320,9 +2347,7 @@ async function preprocessExtractedTextWithGemini(
     });
   }
 
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite-preview",
-  });
+  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
 
   const schemaLine =
     '{"formatVersion":1,"source":"' +
@@ -2359,12 +2384,32 @@ async function preprocessExtractedTextWithGemini(
       generationConfig: { maxOutputTokens: 8192 },
     } as any;
 
-    const response = await generateGeminiWithRetry({
-      model,
-      modelName: "gemini-3.1-flash-lite-preview",
-      request,
-      timeoutMs: 30000,
-    });
+    let response: any = null;
+    let lastError: unknown = null;
+    for (const modelName of modelNames) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        response = await generateGeminiWithRetry({
+          model,
+          modelName,
+          request,
+          timeoutMs: 30000,
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (!isRetriableGeminiError(error)) {
+          throw error;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[analyze-expense] Preprocess model ${modelName} failed: ${message}`,
+        );
+      }
+    }
+    if (!response) {
+      throw lastError ?? new Error("Preprocess normalization failed");
+    }
 
     const responseText = response?.response?.text?.() || "";
     const parsed = extractJsonObject(responseText);
@@ -2389,8 +2434,7 @@ async function extractTransactionsJsonWithGemini(
   const trimmed = rawText.trim();
   if (!trimmed) return null;
 
-  const modelName = "gemini-3.1-flash-lite-preview";
-  const model = genAI.getGenerativeModel({ model: modelName });
+  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
   const request = {
     contents: [
       {
@@ -2424,12 +2468,32 @@ async function extractTransactionsJsonWithGemini(
   } as any;
 
   try {
-    const response = await generateGeminiWithRetry({
-      model,
-      modelName,
-      request,
-      timeoutMs: 60000,
-    });
+    let response: any = null;
+    let lastError: unknown = null;
+    for (const modelName of modelNames) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        response = await generateGeminiWithRetry({
+          model,
+          modelName,
+          request,
+          timeoutMs: 60000,
+        });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (!isRetriableGeminiError(error)) {
+          throw error;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(
+          `[analyze-expense] Transaction JSON model ${modelName} failed: ${message}`,
+        );
+      }
+    }
+    if (!response) {
+      throw lastError ?? new Error("Transaction JSON extraction failed");
+    }
     const responseText = response?.response?.text?.() || "";
     const parsed = extractJsonObject(responseText);
     if (!parsed) return null;
@@ -2856,7 +2920,7 @@ async function analyzeFromQuickText(
 
   const quickModelAttempts = [
     { name: "gemini-3.1-flash-lite-preview", timeoutMs: 60000, maxRetries: 1 },
-    { name: "gemini-3-flash-preview", timeoutMs: 60000, maxRetries: 1 },
+    { name: "gemini-2.5-pro", timeoutMs: 60000, maxRetries: 1 },
   ];
 
   let lastError = "";
@@ -2949,12 +3013,7 @@ Do NOT summarize - extract every single transaction.
 `
     : "";
 
-  const modelName = "gemini-3.1-flash-lite-preview";
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    tools,
-    systemInstruction,
-  });
+  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
 
   const request = {
     contents: [
@@ -2978,12 +3037,36 @@ Do NOT summarize - extract every single transaction.
     generationConfig: { maxOutputTokens: 32768 },
   } as any;
 
-  const response = await generateGeminiWithRetry({
-    model,
-    modelName,
-    request,
-    timeoutMs: 60000,
-  });
+  let response: any = null;
+  let lastError: unknown = null;
+  for (const modelName of modelNames) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        tools,
+        systemInstruction,
+      });
+      response = await generateGeminiWithRetry({
+        model,
+        modelName,
+        request,
+        timeoutMs: 60000,
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+      if (!isRetriableGeminiError(error)) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `[analyze-expense] Text chunk model ${modelName} failed: ${message}`,
+      );
+    }
+  }
+  if (!response) {
+    throw lastError ?? new Error("Text chunk analysis failed");
+  }
 
   const toolCalls = getFunctionCalls(response).filter(
     (call: any) => call && call.name === "add_transactions",
@@ -3532,7 +3615,7 @@ async function analyzeFromPdfVision(
       timeout: 180000,
       maxTokens: 65536,
     },
-    { name: "gemini-3-flash-preview", timeout: 180000, maxTokens: 65536 },
+    { name: "gemini-2.5-pro", timeout: 180000, maxTokens: 65536 },
   ];
 
   const householdPrompt = householdContext
@@ -3718,11 +3801,6 @@ async function analyzeFromAudio(
     householdContext,
     typeHint,
   );
-  const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite-preview",
-    tools,
-    systemInstruction,
-  });
   const householdPrompt = householdContext
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
     : "\n";
@@ -3761,7 +3839,7 @@ async function analyzeFromAudio(
 
   const modelAttempts = [
     { name: "gemini-3.1-flash-lite-preview", timeoutMs: 60000, maxRetries: 1 },
-    { name: "gemini-3-flash-preview", timeoutMs: 60000, maxRetries: 1 },
+    { name: "gemini-2.5-pro", timeoutMs: 60000, maxRetries: 1 },
   ];
 
   let lastError = "";
@@ -4849,7 +4927,7 @@ export async function runAnalyzeExpense(
           timeout: 30000,
           maxRetries: 1,
         },
-        { name: "gemini-3-flash-preview", timeout: 30000, maxRetries: 1 },
+        { name: "gemini-2.5-pro", timeout: 30000, maxRetries: 1 },
       ];
 
       // Removed shadowing variables
@@ -4915,33 +4993,44 @@ export async function runAnalyzeExpense(
         ].join("\n");
 
         try {
-          const fallback = await attemptAnalysis(
-            genAI,
+          const handwritingFallbackModels = [
             "gemini-3.1-flash-lite-preview",
-            handwritingInstruction,
-            body,
-            base64Image,
-            callerCurrency,
-            callerDate,
-            tools,
-            householdContext,
-            12000,
-            finalContentType,
-            1,
-          );
-
-          if (fallback.success && fallback.items && fallback.items.length > 0) {
-            console.log(
-              `[analyze-expense] Handwriting fallback succeeded: extracted ${fallback.items.length} items`,
+            "gemini-2.5-pro",
+          ];
+          for (const modelName of handwritingFallbackModels) {
+            const fallback = await attemptAnalysis(
+              genAI,
+              modelName,
+              handwritingInstruction,
+              body,
+              base64Image,
+              callerCurrency,
+              callerDate,
+              tools,
+              householdContext,
+              12000,
+              finalContentType,
+              1,
             );
-            items = fallback.items;
-          } else {
+
+            if (
+              fallback.success &&
+              fallback.items &&
+              fallback.items.length > 0
+            ) {
+              console.log(
+                `[analyze-expense] Handwriting fallback succeeded with ${modelName}: extracted ${fallback.items.length} items`,
+              );
+              items = fallback.items;
+              break;
+            }
+
             lastError =
               fallback.error ||
               lastError ||
               "Handwriting fallback returned no items";
             console.log(
-              "[analyze-expense] Handwriting fallback failed:",
+              `[analyze-expense] Handwriting fallback failed with ${modelName}:`,
               lastError,
             );
           }
@@ -5373,10 +5462,7 @@ export async function summarizePdfWithGemini(
 
     const startedAt = Date.now();
     const totalTimeoutMs = 120000; // Increased from 60s to 120s for large PDFs
-    const modelNames = [
-      "gemini-3.1-flash-lite-preview",
-      "gemini-3-flash-preview",
-    ];
+    const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
 
     const request = {
       contents: [

@@ -5,9 +5,21 @@ interface GeminiRetryOptions {
   maxRetryDelayMs?: number;
   jitterRatio?: number;
   logPrefix?: string;
+  fallbackModelName?: string;
+  fallbackChatFactory?: (
+    modelName: string,
+    history: any[],
+  ) => { sendMessage: (content: unknown) => Promise<any> };
+  onChatSwitched?: (
+    chat: { sendMessage: (content: unknown) => Promise<any> },
+    modelName: string,
+  ) => void;
 }
 
-const DEFAULT_OPTIONS: Required<GeminiRetryOptions> = {
+const DEFAULT_OPTIONS: Omit<
+  Required<GeminiRetryOptions>,
+  "fallbackModelName" | "fallbackChatFactory" | "onChatSwitched"
+> = {
   preRequestDelayMs: 1200,
   maxRetries: 3,
   initialRetryDelayMs: 900,
@@ -97,7 +109,7 @@ export async function sendGeminiMessageWithRetry(
   content: unknown,
   options: GeminiRetryOptions = {},
 ): Promise<any> {
-  const config: Required<GeminiRetryOptions> = {
+  const config = {
     ...DEFAULT_OPTIONS,
     ...options,
   };
@@ -106,13 +118,60 @@ export async function sendGeminiMessageWithRetry(
     await sleep(config.preRequestDelayMs);
   }
 
-  for (let attempt = 0;; attempt++) {
+  let activeChat = chat;
+  let usedFallbackModel = false;
+
+  let attempt = 0;
+  for (;;) {
     try {
-      return await chat.sendMessage(content);
+      return await activeChat.sendMessage(content);
     } catch (error) {
-      const shouldRetry = attempt < config.maxRetries &&
-        isRetryableGeminiError(error);
+      const shouldRetry =
+        attempt < config.maxRetries && isRetryableGeminiError(error);
+
       if (!shouldRetry) {
+        const canFallback =
+          !usedFallbackModel &&
+          Boolean(config.fallbackModelName) &&
+          Boolean(config.fallbackChatFactory) &&
+          isRetryableGeminiError(error);
+
+        if (canFallback) {
+          let history: any[] = [];
+          if (typeof (activeChat as any)?.getHistory === "function") {
+            try {
+              const loaded = await (activeChat as any).getHistory();
+              if (!Array.isArray(loaded)) {
+                throw new Error("Gemini chat history is not an array");
+              }
+              history = loaded;
+            } catch {
+              throw error;
+            }
+          }
+          console.warn(
+            `[${config.logPrefix}] switching Gemini model fallback`,
+            {
+              from: "primary",
+              to: config.fallbackModelName,
+              statusCode: extractStatusCode(error),
+              error:
+                error instanceof Error
+                  ? `${error.name}: ${error.message}`
+                  : String(error),
+            },
+          );
+          activeChat = config.fallbackChatFactory!(
+            config.fallbackModelName!,
+            history,
+          );
+          usedFallbackModel = true;
+          if (typeof config.onChatSwitched === "function") {
+            config.onChatSwitched(activeChat, config.fallbackModelName!);
+          }
+          continue;
+        }
+
         throw error;
       }
 
@@ -129,12 +188,14 @@ export async function sendGeminiMessageWithRetry(
         attempt: attempt + 1,
         nextDelayMs: delayMs,
         statusCode: extractStatusCode(error),
-        error: error instanceof Error
-          ? `${error.name}: ${error.message}`
-          : String(error),
+        error:
+          error instanceof Error
+            ? `${error.name}: ${error.message}`
+            : String(error),
       });
 
       await sleep(delayMs);
+      attempt += 1;
     }
   }
 }

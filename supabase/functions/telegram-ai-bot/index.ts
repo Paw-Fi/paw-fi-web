@@ -56,6 +56,7 @@ import {
 } from "../shared/detect-language.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
+const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
@@ -1962,19 +1963,23 @@ Deno.serve(async (req: Request) => {
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({
-          model: MODEL_NAME,
-          systemInstruction:
-            SYSTEM_INSTRUCTION.replace(
-              "{{DATE}}",
-              formatDateInTimeZone(userTimezone),
-            )
-              .replace("{{CURRENCY}}", userCurrency)
-              .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
-              .replace("{{CATEGORIES}}", categoryGuideForUser)
-              .replace("{{LANGUAGE}}", userLangLabel) +
-            buildLanguageOverride(userLang),
-        }, { timeout: GEMINI_REQUEST_TIMEOUT_MS });
+        const telegramSystemInstruction =
+          SYSTEM_INSTRUCTION.replace(
+            "{{DATE}}",
+            formatDateInTimeZone(userTimezone),
+          )
+            .replace("{{CURRENCY}}", userCurrency)
+            .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
+            .replace("{{CATEGORIES}}", categoryGuideForUser)
+            .replace("{{LANGUAGE}}", userLangLabel) +
+          buildLanguageOverride(userLang);
+        const model = genAI.getGenerativeModel(
+          {
+            model: MODEL_NAME,
+            systemInstruction: telegramSystemInstruction,
+          },
+          { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+        );
 
         const tools = [
           {
@@ -2432,7 +2437,7 @@ Deno.serve(async (req: Request) => {
           debugNotes.push("telegram tool set is below parity baseline");
         }
 
-        const chat = model.startChat({
+        let activeChat = model.startChat({
           history: rawHistory,
           tools: [{ function_declarations: tools }] as any,
         });
@@ -2442,12 +2447,29 @@ Deno.serve(async (req: Request) => {
 
         try {
           const result = await sendGeminiMessageWithRetry(
-            chat as any,
+            activeChat as any,
             userMessageContent,
             {
               preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
               maxRetries: GEMINI_MAX_RETRIES,
               logPrefix: "telegram-ai-bot",
+              fallbackModelName: FALLBACK_MODEL_NAME,
+              fallbackChatFactory: (modelName, history) => {
+                const fallbackModel = genAI.getGenerativeModel(
+                  {
+                    model: modelName,
+                    systemInstruction: telegramSystemInstruction,
+                  },
+                  { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+                );
+                return fallbackModel.startChat({
+                  history,
+                  tools: [{ function_declarations: tools }] as any,
+                }) as any;
+              },
+              onChatSwitched: (chatSession) => {
+                activeChat = chatSession as any;
+              },
             },
           );
           response = await result.response;
@@ -2471,7 +2493,7 @@ Deno.serve(async (req: Request) => {
             "[telegram-ai-bot] Failed to get initial AI response:",
             error,
           );
-          
+
           // Report Gemini error for instant notification
           await reportEdgeFunctionError({
             functionName: "telegram-ai-bot",
@@ -2480,10 +2502,15 @@ Deno.serve(async (req: Request) => {
               phase: "initial_ai_response",
               modelName: MODEL_NAME,
               message: incomingText,
-              hasAttachment: !!(message?.photo || message?.document || message?.audio || message?.voice),
+              hasAttachment: !!(
+                message?.photo ||
+                message?.document ||
+                message?.audio ||
+                message?.voice
+              ),
             },
           });
-          
+
           debugNotes.push(
             `initial Gemini failure: ${error instanceof Error ? error.message : String(error)}`,
           );
@@ -4247,12 +4274,29 @@ Deno.serve(async (req: Request) => {
 
           try {
             const nextResult = await sendGeminiMessageWithRetry(
-              chat as any,
+              activeChat as any,
               toolResponses,
               {
                 preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
                 maxRetries: GEMINI_MAX_RETRIES,
                 logPrefix: "telegram-ai-bot",
+                fallbackModelName: FALLBACK_MODEL_NAME,
+                fallbackChatFactory: (modelName, history) => {
+                  const fallbackModel = genAI.getGenerativeModel(
+                    {
+                      model: modelName,
+                      systemInstruction: telegramSystemInstruction,
+                    },
+                    { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+                  );
+                  return fallbackModel.startChat({
+                    history,
+                    tools: [{ function_declarations: tools }] as any,
+                  }) as any;
+                },
+                onChatSwitched: (chatSession) => {
+                  activeChat = chatSession as any;
+                },
               },
             );
             response = await nextResult.response;
@@ -4266,7 +4310,7 @@ Deno.serve(async (req: Request) => {
               "[telegram-ai-bot] Failed to get final AI response:",
               e,
             );
-            
+
             // Report Gemini error for instant notification
             await reportEdgeFunctionError({
               functionName: "telegram-ai-bot",
@@ -4278,7 +4322,7 @@ Deno.serve(async (req: Request) => {
                 lastToolCalls: functionCalls?.length || 0,
               },
             });
-            
+
             finalResponseText = isRetryableGeminiError(e)
               ? buildGeminiBusyMessage(replyLanguage)
               : buildProcessingFailureMessage(replyLanguage);
