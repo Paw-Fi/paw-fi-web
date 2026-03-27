@@ -27,6 +27,7 @@ import {
   createCustomerWithRetry,
   retrieveCustomerWithRetry,
 } from "../shared/stripe-retry.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   PlanType,
   BillingInterval,
@@ -37,6 +38,21 @@ import {
 
 // Validate environment on startup
 const env = validateEnvironment();
+
+function reportCreateCheckoutSessionError(
+  phase: string,
+  error: unknown,
+  context?: Record<string, unknown>,
+): void {
+  void reportEdgeFunctionError({
+    functionName: "create-checkout-session",
+    error,
+    context: {
+      phase,
+      ...context,
+    },
+  });
+}
 
 // Initialize Stripe with validated configuration
 const stripe = new Stripe(env.stripeSecretKey, {
@@ -127,7 +143,8 @@ serve(async (req: Request) => {
     // Parse the request body (plan, billingInterval, successUrl, cancelUrl, promoCode)
     // NOTE: isTrial is determined by backend based on subscription history (security)
     // NOTE: billingInterval is optional for Lifetime (one-time payment)
-    const { plan, billingInterval, successUrl, cancelUrl, promoCode } = await req.json();
+    const { plan, billingInterval, successUrl, cancelUrl, promoCode } =
+      await req.json();
 
     // Validate plan
     if (!plan || !isValidPlan(plan)) {
@@ -455,10 +472,13 @@ serve(async (req: Request) => {
               active: true,
               limit: 1,
             });
-            
+
             if (promoCodes.data.length > 0) {
               promotionCodeId = promoCodes.data[0].id;
-              console.log("Found promotion code:", { code: promoCode, id: promotionCodeId });
+              console.log("Found promotion code:", {
+                code: promoCode,
+                id: promotionCodeId,
+              });
             } else {
               console.error("Promotion code not found or inactive:", promoCode);
               return new Response(
@@ -468,7 +488,10 @@ serve(async (req: Request) => {
                 }),
                 {
                   status: 400,
-                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                  headers: {
+                    ...corsHeaders,
+                    "Content-Type": "application/json",
+                  },
                 },
               );
             }
@@ -501,10 +524,9 @@ serve(async (req: Request) => {
           success_url: finalSuccessUrlWithNonce,
           cancel_url: finalCancelUrlWithNonce,
           // Use discounts if promo code provided, otherwise allow promotion codes
-          ...(promotionCodeId 
+          ...(promotionCodeId
             ? { discounts: [{ promotion_code: promotionCodeId }] }
-            : { allow_promotion_codes: true }
-          ),
+            : { allow_promotion_codes: true }),
           // CRITICAL: Enable invoice creation for one-time payments (Stripe official invoices)
           invoice_creation: {
             enabled: true,
@@ -583,18 +605,43 @@ serve(async (req: Request) => {
 
         // Persist nonce keyed to the Stripe Checkout Session ID.
         try {
-          await supabase.from("stripe_checkout_session_verifications").upsert(
-            {
-              session_id: session.id,
-              user_id: userId,
-              nonce: verificationNonce,
-              plan,
-            },
-            {
-              onConflict: "session_id",
-            },
-          );
+          const { error: verificationPersistError } = await supabase
+            .from("stripe_checkout_session_verifications")
+            .upsert(
+              {
+                session_id: session.id,
+                user_id: userId,
+                nonce: verificationNonce,
+                plan,
+              },
+              {
+                onConflict: "session_id",
+              },
+            );
+
+          if (verificationPersistError) {
+            reportCreateCheckoutSessionError(
+              "persist_verification_nonce",
+              verificationPersistError,
+              {
+                sessionId: session.id,
+                userId,
+                plan,
+                mode: "payment",
+              },
+            );
+            console.error(
+              "Failed to persist stripe checkout session verification nonce:",
+              verificationPersistError,
+            );
+          }
         } catch (e) {
+          reportCreateCheckoutSessionError("persist_verification_nonce", e, {
+            sessionId: session.id,
+            userId,
+            plan,
+            mode: "payment",
+          });
           console.error(
             "Failed to persist stripe checkout session verification nonce:",
             e,
@@ -633,10 +680,13 @@ serve(async (req: Request) => {
             active: true,
             limit: 1,
           });
-          
+
           if (promoCodes.data.length > 0) {
             subscriptionPromotionCodeId = promoCodes.data[0].id;
-            console.log("Found promotion code for subscription:", { code: promoCode, id: subscriptionPromotionCodeId });
+            console.log("Found promotion code for subscription:", {
+              code: promoCode,
+              id: subscriptionPromotionCodeId,
+            });
           } else {
             console.error("Promotion code not found or inactive:", promoCode);
             return new Response(
@@ -680,10 +730,9 @@ serve(async (req: Request) => {
         success_url: finalSuccessUrlWithNonce,
         cancel_url: finalCancelUrlWithNonce,
         // Use discounts if promo code provided, otherwise allow promotion codes
-        ...(subscriptionPromotionCodeId 
+        ...(subscriptionPromotionCodeId
           ? { discounts: [{ promotion_code: subscriptionPromotionCodeId }] }
-          : { allow_promotion_codes: true }
-        ),
+          : { allow_promotion_codes: true }),
         // Subscription metadata - persists on the subscription object
         subscription_data: {
           metadata: {
@@ -719,7 +768,9 @@ serve(async (req: Request) => {
         if (subscriptionPromotionCodeId) {
           // Promo code takes precedence over allow_promotion_codes
           delete (sessionConfig as any).allow_promotion_codes;
-          (sessionConfig as any).discounts = [{ promotion_code: subscriptionPromotionCodeId }];
+          (sessionConfig as any).discounts = [
+            { promotion_code: subscriptionPromotionCodeId },
+          ];
         } else {
           sessionConfig.allow_promotion_codes = false;
         }
@@ -796,18 +847,43 @@ serve(async (req: Request) => {
       // Persist a nonce keyed to the Stripe Checkout Session ID.
       // This allows verify-payment to be called by logged-out users safely.
       try {
-        await supabase.from("stripe_checkout_session_verifications").upsert(
-          {
-            session_id: session.id,
-            user_id: userId,
-            nonce: verificationNonce,
-            plan,
-          },
-          {
-            onConflict: "session_id",
-          },
-        );
+        const { error: verificationPersistError } = await supabase
+          .from("stripe_checkout_session_verifications")
+          .upsert(
+            {
+              session_id: session.id,
+              user_id: userId,
+              nonce: verificationNonce,
+              plan,
+            },
+            {
+              onConflict: "session_id",
+            },
+          );
+
+        if (verificationPersistError) {
+          reportCreateCheckoutSessionError(
+            "persist_verification_nonce",
+            verificationPersistError,
+            {
+              sessionId: session.id,
+              userId,
+              plan,
+              mode: "subscription",
+            },
+          );
+          console.error(
+            "Failed to persist stripe checkout session verification nonce:",
+            verificationPersistError,
+          );
+        }
       } catch (e) {
+        reportCreateCheckoutSessionError("persist_verification_nonce", e, {
+          sessionId: session.id,
+          userId,
+          plan,
+          mode: "subscription",
+        });
         console.error(
           "Failed to persist stripe checkout session verification nonce:",
           e,
