@@ -53,12 +53,136 @@ serve(async (req) => {
       typeof body.billingInterval === "string" ? body.billingInterval : null;
     const prorationDate =
       typeof body.prorationDate === "number" ? body.prorationDate : null;
+    const exitAtIso =
+      typeof body.exitAtIso === "string" ? body.exitAtIso : null;
+    const returnTrialThresholdMinutesRaw = Number(
+      Deno.env.get("PAYWALL_RETURN_THRESHOLD_MINUTES") ?? "3",
+    );
+    const returnTrialThresholdMinutes =
+      Number.isFinite(returnTrialThresholdMinutesRaw) &&
+      returnTrialThresholdMinutesRaw > 0
+        ? Math.floor(returnTrialThresholdMinutesRaw)
+        : 3;
+
+    const returnTrialDurationMinutesRaw = Number(
+      Deno.env.get("PAYWALL_RETURN_TRIAL_DURATION_MINUTES") ??
+        String(14 * 24 * 60),
+    );
+    const returnTrialDurationMinutes =
+      Number.isFinite(returnTrialDurationMinutesRaw) &&
+      returnTrialDurationMinutesRaw > 0
+        ? Math.floor(returnTrialDurationMinutesRaw)
+        : 14 * 24 * 60;
 
     if (!action) {
       return new Response(JSON.stringify({ error: "Action is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (action === "mark_paywall_return_exit") {
+      const now = new Date();
+      const parsedExitAt = exitAtIso ? new Date(exitAtIso) : null;
+      const effectiveExitAt =
+        parsedExitAt && !Number.isNaN(parsedExitAt.getTime())
+          ? parsedExitAt
+          : now;
+
+      // Never accept future timestamps from client.
+      if (effectiveExitAt.getTime() > now.getTime()) {
+        return new Response(
+          JSON.stringify({ error: "Invalid paywall exit timestamp" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      console.log(
+        `[PaywallReturnTrial] mark_exit user=${userId} at=${effectiveExitAt.toISOString()}`,
+      );
+      const { data: markSubscription, error: markSubscriptionError } =
+        await supabase
+          .from("subscriptions")
+          .select("status, plan, current_period_end, bound_to_user_id")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (markSubscriptionError) {
+        console.error(
+          "Error checking subscription before recording paywall exit:",
+          markSubscriptionError,
+        );
+        return new Response(
+          JSON.stringify({ error: "Failed to validate paywall exit" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const markPeriodEnd = markSubscription?.current_period_end
+        ? new Date(markSubscription.current_period_end).getTime()
+        : NaN;
+      const hasActiveAccess = Boolean(
+        markSubscription &&
+          ((markSubscription.status === "active" &&
+            markSubscription.plan === "lifetime") ||
+            (markSubscription.status === "active" &&
+              Boolean(markSubscription.bound_to_user_id) &&
+              !Number.isNaN(markPeriodEnd) &&
+              markPeriodEnd > now.getTime()) ||
+            (markSubscription.status === "active" &&
+              !Number.isNaN(markPeriodEnd) &&
+              markPeriodEnd > now.getTime()) ||
+            (markSubscription.status === "trialing" &&
+              !Number.isNaN(markPeriodEnd) &&
+              markPeriodEnd > now.getTime())),
+      );
+
+      if (hasActiveAccess) {
+        return new Response(
+          JSON.stringify({
+            error: "User already has active subscription access",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const { error: markExitError } = await supabase
+        .from("users")
+        .update({ paywall_return_trial_exit_at: effectiveExitAt.toISOString() })
+        .eq("id", userId);
+
+      if (markExitError) {
+        console.error(
+          "Error recording paywall return exit timestamp:",
+          markExitError,
+        );
+        return new Response(
+          JSON.stringify({ error: "Failed to record paywall exit" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Paywall exit recorded" }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Get the user's current subscription
@@ -529,6 +653,283 @@ serve(async (req) => {
             success: true,
             message: "Subscription resumed successfully",
             subscription: resumedSubscription,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      case "grant_paywall_return_trial": {
+        const now = new Date();
+        console.log(
+          `[PaywallReturnTrial] grant_attempt user=${userId} now=${now.toISOString()} threshold_min=${returnTrialThresholdMinutes} duration_min=${returnTrialDurationMinutes}`,
+        );
+        const trialEndAt = new Date(
+          now.getTime() + returnTrialDurationMinutes * 60 * 1000,
+        );
+
+        const isPeriodStillActive = (periodEnd: string | null | undefined) => {
+          if (!periodEnd) return false;
+          const endMs = new Date(periodEnd).getTime();
+          if (Number.isNaN(endMs)) return false;
+          return endMs > now.getTime();
+        };
+
+        const hasActiveAccess = Boolean(
+          subscription &&
+            ((subscription.status === "active" &&
+              subscription.plan === "lifetime") ||
+              ((subscription.status === "active" ||
+                subscription.status === "trialing") &&
+                isPeriodStillActive(subscription.current_period_end))),
+        );
+
+        if (hasActiveAccess) {
+          return new Response(
+            JSON.stringify({
+              error: "User already has active subscription access",
+            }),
+            {
+              status: 400,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const { data: userEligibility, error: userEligibilityError } =
+          await supabase
+            .from("users")
+            .select(
+              "paywall_return_trial_granted_at, paywall_return_trial_exit_at",
+            )
+            .eq("id", userId)
+            .maybeSingle();
+
+        if (userEligibilityError) {
+          console.error(
+            "Error loading paywall return trial eligibility:",
+            userEligibilityError,
+          );
+          return new Response(
+            JSON.stringify({ error: "Failed to validate trial eligibility" }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (!userEligibility) {
+          return new Response(
+            JSON.stringify({ error: "User eligibility record not found" }),
+            {
+              status: 404,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const grantedAt = userEligibility?.paywall_return_trial_granted_at;
+        if (grantedAt) {
+          console.log(
+            `[PaywallReturnTrial] grant_blocked_already_granted user=${userId} granted_at=${grantedAt}`,
+          );
+          return new Response(
+            JSON.stringify({
+              error: "Return trial already granted previously",
+            }),
+            {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const trialGrantedAt = now.toISOString();
+        const rollbackGrantMarker = async () => {
+          const { error: rollbackError } = await supabase
+            .from("users")
+            .update({ paywall_return_trial_granted_at: null })
+            .eq("id", userId)
+            .eq("paywall_return_trial_granted_at", trialGrantedAt);
+
+          if (rollbackError) {
+            console.error(
+              "Failed to rollback paywall return trial marker:",
+              rollbackError,
+            );
+          }
+        };
+
+        const { data: markerReservation, error: markerReservationError } =
+          await supabase
+            .from("users")
+            .update({ paywall_return_trial_granted_at: trialGrantedAt })
+            .eq("id", userId)
+            .is("paywall_return_trial_granted_at", null)
+            .select("id")
+            .maybeSingle();
+
+        if (markerReservationError) {
+          console.error(
+            "Error reserving paywall return trial marker:",
+            markerReservationError,
+          );
+          return new Response(
+            JSON.stringify({ error: "Failed to validate trial eligibility" }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        if (!markerReservation) {
+          console.log(
+            `[PaywallReturnTrial] grant_blocked_marker_reservation user=${userId}`,
+          );
+          return new Response(
+            JSON.stringify({
+              error: "Return trial already granted previously",
+            }),
+            {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const trialPlan = "plus";
+        const trialBillingInterval = "yearly";
+
+        if (subscription?.id) {
+          const { data: updatedSubscriptionRow, error: updateError } =
+            await supabase
+              .from("subscriptions")
+              .update({
+                plan: trialPlan,
+                status: "trialing",
+                billing_interval: trialBillingInterval,
+                current_period_end: trialEndAt.toISOString(),
+                trial_start: now.toISOString(),
+                trial_end: trialEndAt.toISOString(),
+                cancel_at_period_end: false,
+                provider: "stripe",
+                store_product_id: null,
+                stripe_subscription_id: null,
+                stripe_customer_id: null,
+                bound_to_user_id: null,
+                bound_to_household_id: null,
+                updated_at: now.toISOString(),
+              })
+              .eq("id", subscription.id)
+              .or(
+                `status.is.null,status.in.(canceled,inactive,past_due,unpaid,incomplete_expired),and(status.eq.active,current_period_end.lte.${now.toISOString()}),and(status.eq.active,current_period_end.is.null),and(status.eq.trialing,current_period_end.lte.${now.toISOString()}),and(status.eq.trialing,current_period_end.is.null)`,
+              )
+              .select("id")
+              .maybeSingle();
+
+          if (updateError) {
+            console.error(
+              "Error updating return trial subscription:",
+              updateError,
+            );
+            const response = new Response(
+              JSON.stringify({ error: "Failed to grant return trial" }),
+              {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+            await rollbackGrantMarker();
+            return response;
+          }
+
+          if (!updatedSubscriptionRow) {
+            const response = new Response(
+              JSON.stringify({
+                error: "Subscription state changed. Trial was not granted.",
+              }),
+              {
+                status: 409,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+            await rollbackGrantMarker();
+            return response;
+          }
+        } else {
+          const { error: insertError } = await supabase
+            .from("subscriptions")
+            .insert({
+              user_id: userId,
+              plan: trialPlan,
+              status: "trialing",
+              billing_interval: trialBillingInterval,
+              current_period_end: trialEndAt.toISOString(),
+              trial_start: now.toISOString(),
+              trial_end: trialEndAt.toISOString(),
+              provider: "stripe",
+              store_product_id: null,
+              cancel_at_period_end: false,
+              stripe_subscription_id: null,
+              stripe_customer_id: null,
+              bound_to_user_id: null,
+              bound_to_household_id: null,
+            });
+
+          if (insertError) {
+            console.error(
+              "Error inserting return trial subscription:",
+              insertError,
+            );
+
+            if ((insertError as { code?: string }).code === "23505") {
+              const response = new Response(
+                JSON.stringify({
+                  error: "Subscription already exists. Trial was not granted.",
+                }),
+                {
+                  status: 409,
+                  headers: {
+                    ...corsHeaders,
+                    "Content-Type": "application/json",
+                  },
+                },
+              );
+              await rollbackGrantMarker();
+              return response;
+            }
+
+            const response = new Response(
+              JSON.stringify({ error: "Failed to grant return trial" }),
+              {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+            await rollbackGrantMarker();
+            return response;
+          }
+        }
+
+        await supabase
+          .from("users")
+          .update({ paywall_return_trial_exit_at: null })
+          .eq("id", userId);
+
+        console.log(
+          `[PaywallReturnTrial] grant_success user=${userId} trial_end=${trialEndAt.toISOString()}`,
+        );
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Return trial granted",
+            trial_duration_minutes: returnTrialDurationMinutes,
+            trial_end: trialEndAt.toISOString(),
           }),
           {
             status: 200,

@@ -171,7 +171,7 @@ function CreatorAnalyticsPage() {
             </CardContent>
           </Card>
 
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {summaryCards.map((card) => (
               <Card key={card.label} className={card.className}>
                 <CardHeader className="space-y-3 px-5 py-4">
@@ -639,6 +639,14 @@ function buildSummaryCards(summary: CreatorSummary) {
         "border-white/10 bg-gradient-to-br from-amber-500/20 to-transparent",
     },
     {
+      label: "Return Trial Grants",
+      value: formatInteger(summary.paywall_return_trial_grants),
+      helpText: "Users granted 14-day trial after returning to paywall",
+      icon: BarChart3,
+      className:
+        "border-white/10 bg-gradient-to-br from-emerald-500/20 to-transparent",
+    },
+    {
       label: "Exit Focus",
       value: formatInteger(
         summary.purchase_cancellations + summary.purchase_failures,
@@ -663,40 +671,64 @@ function defaultEndDate() {
 
 function humanizeKey(value: string | null) {
   if (!value) return "Unknown";
-  
+
   // Map specific onboarding page IDs to more readable names
   const pageNameMap: Record<string, string> = {
-    'onboarding_intro': 'Intro Page',
-    'onboarding_setup_notifications': 'Post-auth Setup Notifications',
-    'onboarding_setup_import': 'Post-auth Setup Import',
-    'onboarding_setup_ai_log': 'Post-auth Setup AI Log',
-    'preauth_housing_situation': 'Pre-auth Housing Situation',
-    'preauth_bill_split': 'Pre-auth Bill Split',
-    'preauth_subscriptions': 'Pre-auth Subscriptions',
-    'preauth_eating_out': 'Pre-auth Eating Out',
-    'preauth_lifestyle': 'Pre-auth Lifestyle',
-    'preauth_goal': 'Pre-auth Goal',
-    'preauth_savings_target': 'Pre-auth Savings Target',
-    'preauth_currency': 'Pre-auth Currency',
-    'preauth_calculating': 'Pre-auth Calculating',
-    'preauth_starter_budget': 'Pre-auth Starter Budget',
-    'preauth_create_account': 'Pre-auth Create Account',
-    'post_auth_log_expense': 'Post-auth Log Expense',
-    'post_auth_import': 'Post-auth Import',
-    'post_auth_notifications': 'Post-auth Notifications',
-    'onboarding_account_preparing': 'Account Preparing',
-    'onboarding_save_budget': 'Save Budget',
-    'onboarding_preview_clicked': 'Save Budget Preview Clicked',
-    'preview_app_tapped': 'Paywall Preview Clicked',
-    'try_demo': 'Try Demo',
-    'paywall': 'Paywall',
+    onboarding_intro: "Intro Page",
+    onboarding_preview: "Onboarding Preview",
+    onboarding_setup_notifications: "Post-auth Setup Notifications",
+    onboarding_setup_import: "Post-auth Setup Import",
+    onboarding_setup_ai_log: "Post-auth Setup AI Log",
+    preauth_housing_situation: "Pre-auth Housing Situation",
+    preauth_bill_split: "Pre-auth Bill Split",
+    preauth_subscriptions: "Pre-auth Subscriptions",
+    preauth_eating_out: "Pre-auth Eating Out",
+    preauth_testimonial: "Pre-auth Testimonial",
+    preauth_lifestyle: "Pre-auth Lifestyle",
+    preauth_goal: "Pre-auth Goal",
+    preauth_savings_target: "Pre-auth Savings Target",
+    preauth_currency: "Pre-auth Currency",
+    preauth_calculating: "Pre-auth Calculating",
+    preauth_starter_budget: "Pre-auth Starter Budget",
+    preauth_create_account: "Pre-auth Create Account",
+    create_account: "Pre-auth Create Account",
+    post_auth_log_expense: "Post-auth Log Expense",
+    post_auth_import: "Post-auth Import",
+    post_auth_notifications: "Post-auth Notifications",
+    onboarding_account_preparing: "Account Preparing",
+    onboarding_save_budget: "Save Budget",
+    save_budget_sign_in_tapped: "Save Budget Sign In",
+    onboarding_preview_clicked: "Save Budget Preview Clicked",
+    preview_app_tapped: "Paywall Preview Clicked",
+    intro_preview_app: "Intro Preview App",
+    intro_sign_in_tapped: "Intro Sign In",
+    intro_completed: "Intro Get My Plan",
+    intro_next: "Intro Next",
+    intro_back: "Intro Back",
+    try_demo: "Try Demo",
+    paywall: "Paywall",
+    plan_selected: "Paywall Plan Selected",
+    subscribe_tapped: "Paywall Subscribe Tapped",
+    restore_purchases_tapped: "Paywall Restore Tapped",
+    terms_privacy_tapped: "Paywall Terms Tapped",
+    retry_load_options_tapped: "Paywall Retry Load Options",
+    auto_renew_ack_toggled: "Paywall Auto-Renew Ack Toggled",
+    manage_store_subscription_tapped: "Paywall Manage Store Subscription",
+    paywall_checkout_started: "Paywall Checkout Started",
+    paywall_purchase_succeeded: "Paywall Purchase Succeeded",
+    paywall_return_trial_granted: "Paywall Return Trial Granted",
+    paywall_purchase_cancelled: "Paywall Purchase Cancelled",
+    paywall_purchase_failed: "Paywall Purchase Failed",
+    prepare_open_dashboard_tapped: "Preparing Open Dashboard",
+    prepare_try_again_tapped: "Preparing Try Again",
+    prepare_continue_tapped: "Preparing Continue",
   };
-  
+
   // Return mapped name if exists, otherwise apply default humanization
   if (pageNameMap[value]) {
     return pageNameMap[value];
   }
-  
+
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -753,6 +785,7 @@ const emptySummary: CreatorSummary = {
   paywall_views: 0,
   checkout_starts: 0,
   purchase_successes: 0,
+  paywall_return_trial_grants: 0,
   purchase_cancellations: 0,
   purchase_failures: 0,
   abandoned_sessions: 0,
@@ -778,6 +811,7 @@ interface CreatorSummary {
   paywall_views: number;
   checkout_starts: number;
   purchase_successes: number;
+  paywall_return_trial_grants: number;
   purchase_cancellations: number;
   purchase_failures: number;
   abandoned_sessions: number;

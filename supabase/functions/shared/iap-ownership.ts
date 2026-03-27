@@ -27,6 +27,43 @@ export interface OwnershipDecision {
   binding: IapAccountBinding;
 }
 
+async function authUserExists(params: {
+  supabase: any;
+  userId: string;
+}): Promise<boolean> {
+  const { data, error } = await params.supabase.auth.admin.getUserById(
+    params.userId,
+  );
+
+  if (error) {
+    if (error.status === 404) {
+      return false;
+    }
+
+    throw new Error(
+      `Failed to verify ownership user: ${error.message ?? String(error)}`,
+    );
+  }
+
+  return Boolean(data?.user?.id);
+}
+
+async function deleteBinding(params: {
+  supabase: any;
+  bindingId: string;
+}): Promise<void> {
+  const { error } = await params.supabase
+    .from("iap_account_bindings")
+    .delete()
+    .eq("id", params.bindingId);
+
+  if (error) {
+    throw new Error(
+      `Failed to remove orphaned purchase ownership: ${error.message ?? error.code ?? String(error)}`,
+    );
+  }
+}
+
 export interface EnsureOwnershipParams {
   supabase: any;
   provider: "app_store";
@@ -97,7 +134,24 @@ export async function getAppStoreOwnershipBinding(params: {
     );
   }
 
-  return (data as IapAccountBinding | null) ?? null;
+  const binding = (data as IapAccountBinding | null) ?? null;
+
+  if (binding?.user_id) {
+    const ownerExists = await authUserExists({
+      supabase: params.supabase,
+      userId: binding.user_id,
+    });
+
+    if (!ownerExists) {
+      await deleteBinding({
+        supabase: params.supabase,
+        bindingId: binding.id,
+      });
+      return null;
+    }
+  }
+
+  return binding;
 }
 
 function buildBindingUpdate(params: {
@@ -122,20 +176,39 @@ export async function ensureAppStoreOwnership(
 ): Promise<OwnershipDecision> {
   const now = params.nowIso ?? new Date().toISOString();
 
-  const { data: existingBinding, error: existingBindingError } = await params
-    .supabase.from("iap_account_bindings")
-    .select("*")
-    .eq("provider", params.provider)
-    .eq("original_transaction_id", params.originalTransactionId)
-    .maybeSingle();
+  const { data: rawExistingBinding, error: existingBindingError } =
+    await params.supabase
+      .from("iap_account_bindings")
+      .select("*")
+      .eq("provider", params.provider)
+      .eq("original_transaction_id", params.originalTransactionId)
+      .maybeSingle();
 
   if (existingBindingError) {
     throw new Error(
       `Failed to look up purchase ownership: ${
-        existingBindingError.message ?? existingBindingError.code ??
-          String(existingBindingError)
+        existingBindingError.message ??
+        existingBindingError.code ??
+        String(existingBindingError)
       }`,
     );
+  }
+
+  let existingBinding = rawExistingBinding as IapAccountBinding | null;
+
+  if (existingBinding?.user_id) {
+    const existingOwnerExists = await authUserExists({
+      supabase: params.supabase,
+      userId: existingBinding.user_id,
+    });
+
+    if (!existingOwnerExists) {
+      await deleteBinding({
+        supabase: params.supabase,
+        bindingId: existingBinding.id,
+      });
+      existingBinding = null;
+    }
   }
 
   const ownership = classifyOwnership({
@@ -144,13 +217,25 @@ export async function ensureAppStoreOwnership(
   });
 
   if (ownership === "owned_by_another_user") {
+    if (!existingBinding) {
+      throw new Error(
+        "Missing purchase ownership binding for another-user state",
+      );
+    }
+
     return {
       kind: ownership,
-      binding: existingBinding as IapAccountBinding,
+      binding: existingBinding,
     };
   }
 
   if (ownership === "owned_by_current_user") {
+    if (!existingBinding) {
+      throw new Error(
+        "Missing purchase ownership binding for current-user state",
+      );
+    }
+
     const updatePayload = buildBindingUpdate({
       transactionId: params.transactionId,
       storeProductId: params.storeProductId,
@@ -226,8 +311,9 @@ export async function ensureAppStoreOwnership(
   if (racedBindingError) {
     throw new Error(
       `Failed to resolve purchase ownership after conflict: ${
-        racedBindingError.message ?? racedBindingError.code ??
-          String(racedBindingError)
+        racedBindingError.message ??
+        racedBindingError.code ??
+        String(racedBindingError)
       }`,
     );
   }

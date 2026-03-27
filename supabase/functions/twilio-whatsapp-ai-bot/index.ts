@@ -57,6 +57,7 @@ import {
 // --- Constants & Types ---
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview"; // Fast and capable
+const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
@@ -136,7 +137,7 @@ const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_FOLLOW_UP_DELAY_MS = 24000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
 const GEMINI_MAX_RETRIES = 1;
-const GEMINI_REQUEST_TIMEOUT_MS = 12000;
+const GEMINI_REQUEST_TIMEOUT_MS = 30000;
 const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
 const DELIVERY_FAILURE_MESSAGE =
   "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";
@@ -2119,19 +2120,20 @@ Deno.serve(async (req: Request) => {
     );
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      systemInstruction:
-        SYSTEM_INSTRUCTION.replace(
-          "{{DATE}}",
-          formatDateInTimeZone(userTimezone),
-        )
-          .replace("{{CURRENCY}}", userCurrency)
-          .replace("{{HOUSEHOLDS}}", "None")
-          .replace("{{CATEGORIES}}", categoryGuideForUser)
-          .replace("{{LANGUAGE}}", userLangLabel) +
-        buildLanguageOverride(userLang),
-    }, { timeout: GEMINI_REQUEST_TIMEOUT_MS });
+    const appSystemInstruction =
+      SYSTEM_INSTRUCTION.replace("{{DATE}}", formatDateInTimeZone(userTimezone))
+        .replace("{{CURRENCY}}", userCurrency)
+        .replace("{{HOUSEHOLDS}}", "None")
+        .replace("{{CATEGORIES}}", categoryGuideForUser)
+        .replace("{{LANGUAGE}}", userLangLabel) +
+      buildLanguageOverride(userLang);
+    const model = genAI.getGenerativeModel(
+      {
+        model: MODEL_NAME,
+        systemInstruction: appSystemInstruction,
+      },
+      { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+    );
 
     const toolsApp = [
       {
@@ -2479,7 +2481,7 @@ Deno.serve(async (req: Request) => {
       },
     ];
 
-    const chat = model.startChat({
+    let activeChat = model.startChat({
       history: rawHistory,
       tools: [{ function_declarations: toolsApp }] as any,
     });
@@ -2493,12 +2495,29 @@ Deno.serve(async (req: Request) => {
 
     try {
       const result = await sendGeminiMessageWithRetry(
-        chat as any,
+        activeChat as any,
         userMessageContent,
         {
           preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
           maxRetries: GEMINI_MAX_RETRIES,
           logPrefix: "twilio-whatsapp-ai-bot",
+          fallbackModelName: FALLBACK_MODEL_NAME,
+          fallbackChatFactory: (modelName, history) => {
+            const fallbackModel = genAI.getGenerativeModel(
+              {
+                model: modelName,
+                systemInstruction: appSystemInstruction,
+              },
+              { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+            );
+            return fallbackModel.startChat({
+              history,
+              tools: [{ function_declarations: toolsApp }] as any,
+            }) as any;
+          },
+          onChatSwitched: (chatSession) => {
+            activeChat = chatSession as any;
+          },
         },
       );
       response = await result.response;
@@ -2509,7 +2528,7 @@ Deno.serve(async (req: Request) => {
         "[twilio-whatsapp-ai-bot] Failed to get initial AI response:",
         error,
       );
-      
+
       // Report Gemini error for instant notification
       await reportEdgeFunctionError({
         functionName: "twilio-whatsapp-ai-bot",
@@ -2521,7 +2540,7 @@ Deno.serve(async (req: Request) => {
           hasAttachment: attachments.length > 0,
         },
       });
-      
+
       if (WHATSAPP_DEBUG) {
         debugNotes.push(`initial-ai-error: ${String(error)}`);
       }
@@ -3054,12 +3073,29 @@ Deno.serve(async (req: Request) => {
       }
       try {
         const finalResult = await sendGeminiMessageWithRetry(
-          chat as any,
+          activeChat as any,
           toolResponses,
           {
             preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
             maxRetries: GEMINI_MAX_RETRIES,
             logPrefix: "twilio-whatsapp-ai-bot",
+            fallbackModelName: FALLBACK_MODEL_NAME,
+            fallbackChatFactory: (modelName, history) => {
+              const fallbackModel = genAI.getGenerativeModel(
+                {
+                  model: modelName,
+                  systemInstruction: appSystemInstruction,
+                },
+                { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+              );
+              return fallbackModel.startChat({
+                history,
+                tools: [{ function_declarations: toolsApp }] as any,
+              }) as any;
+            },
+            onChatSwitched: (chatSession) => {
+              activeChat = chatSession as any;
+            },
           },
         );
         response = await finalResult.response;
@@ -3073,7 +3109,7 @@ Deno.serve(async (req: Request) => {
           "[twilio-whatsapp-ai-bot] Failed to get final AI response:",
           error,
         );
-        
+
         // Report Gemini error for instant notification
         await reportEdgeFunctionError({
           functionName: "twilio-whatsapp-ai-bot",
@@ -3085,7 +3121,7 @@ Deno.serve(async (req: Request) => {
             lastToolCalls: functionCalls?.length || 0,
           },
         });
-        
+
         if (WHATSAPP_DEBUG) {
           debugNotes.push(`final-ai-error: ${String(error)}`);
         }
@@ -3802,19 +3838,23 @@ Deno.serve(async (req: Request) => {
     }
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
-      systemInstruction:
-        WHATSAPP_SYSTEM_INSTRUCTION.replace(
-          "{{DATE}}",
-          formatDateInTimeZone(userTimezone),
-        )
-          .replace("{{CURRENCY}}", userCurrency)
-          .replace("{{HOUSEHOLDS}}", householdContext)
-          .replace("{{CATEGORIES}}", categoryGuideForUser)
-          .replace("{{LANGUAGE}}", userLangLabel) +
-        buildLanguageOverride(userLang),
-    }, { timeout: GEMINI_REQUEST_TIMEOUT_MS });
+    const whatsappSystemInstruction =
+      WHATSAPP_SYSTEM_INSTRUCTION.replace(
+        "{{DATE}}",
+        formatDateInTimeZone(userTimezone),
+      )
+        .replace("{{CURRENCY}}", userCurrency)
+        .replace("{{HOUSEHOLDS}}", householdContext)
+        .replace("{{CATEGORIES}}", categoryGuideForUser)
+        .replace("{{LANGUAGE}}", userLangLabel) +
+      buildLanguageOverride(userLang);
+    const model = genAI.getGenerativeModel(
+      {
+        model: MODEL_NAME,
+        systemInstruction: whatsappSystemInstruction,
+      },
+      { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+    );
 
     // Define Tools
     const tools = [
@@ -4489,7 +4529,7 @@ Deno.serve(async (req: Request) => {
     ];
 
     // 6. Chat Loop (Model Turn)
-    const chat = model.startChat({
+    let activeChat = model.startChat({
       history: historyParts,
       tools: [{ function_declarations: tools }] as any,
     });
@@ -4499,12 +4539,29 @@ Deno.serve(async (req: Request) => {
     let finalResponseText = "";
     try {
       const messagePromise = sendGeminiMessageWithRetry(
-        chat as any,
+        activeChat as any,
         userMessageContent,
         {
           preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
           maxRetries: GEMINI_MAX_RETRIES,
           logPrefix: "twilio-whatsapp-ai-bot",
+          fallbackModelName: FALLBACK_MODEL_NAME,
+          fallbackChatFactory: (modelName, history) => {
+            const fallbackModel = genAI.getGenerativeModel(
+              {
+                model: modelName,
+                systemInstruction: whatsappSystemInstruction,
+              },
+              { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+            );
+            return fallbackModel.startChat({
+              history,
+              tools: [{ function_declarations: tools }] as any,
+            }) as any;
+          },
+          onChatSwitched: (chatSession) => {
+            activeChat = chatSession as any;
+          },
         },
       );
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -6371,12 +6428,29 @@ Deno.serve(async (req: Request) => {
       // Send tool outputs back to Gemini with error handling
       try {
         const nextResult = await sendGeminiMessageWithRetry(
-          chat as any,
+          activeChat as any,
           toolResponses,
           {
             preRequestDelayMs: GEMINI_PRE_REQUEST_DELAY_MS,
             maxRetries: GEMINI_MAX_RETRIES,
             logPrefix: "twilio-whatsapp-ai-bot",
+            fallbackModelName: FALLBACK_MODEL_NAME,
+            fallbackChatFactory: (modelName, history) => {
+              const fallbackModel = genAI.getGenerativeModel(
+                {
+                  model: modelName,
+                  systemInstruction: whatsappSystemInstruction,
+                },
+                { timeout: GEMINI_REQUEST_TIMEOUT_MS },
+              );
+              return fallbackModel.startChat({
+                history,
+                tools: [{ function_declarations: tools }] as any,
+              }) as any;
+            },
+            onChatSwitched: (chatSession) => {
+              activeChat = chatSession as any;
+            },
           },
         );
         response = await nextResult.response;

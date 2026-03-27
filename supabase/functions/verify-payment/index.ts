@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { validate as validateUuid } from "https://deno.land/std@0.177.0/uuid/mod.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -20,6 +21,21 @@ const stripe = new Stripe(stripeSecretKey, {
 });
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+function reportVerifyPaymentError(
+  phase: string,
+  error: unknown,
+  context?: Record<string, unknown>,
+): void {
+  void reportEdgeFunctionError({
+    functionName: "verify-payment",
+    error,
+    context: {
+      phase,
+      ...context,
+    },
+  });
+}
 
 type VerifyPaymentResponse = {
   verified: boolean;
@@ -174,7 +190,25 @@ serve(async (req: Request) => {
         .eq("session_id", sessionId)
         .maybeSingle();
 
-      if (verificationError || !verificationRow) {
+      if (verificationError) {
+        reportVerifyPaymentError(
+          "lookup_verification_session",
+          verificationError,
+          {
+            sessionId,
+            callerUserId,
+          },
+        );
+        return new Response(
+          JSON.stringify({ error: "Verification temporarily unavailable" }),
+          {
+            status: 503,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (!verificationRow) {
         return new Response(
           JSON.stringify({ error: "Verification session not found" }),
           {
@@ -197,15 +231,29 @@ serve(async (req: Request) => {
       // Lightweight abuse mitigation: track calls.
       // We don't block here, but we record usage for later throttling/monitoring.
       try {
-        await supabase
+        const { error: verificationUpdateError } = await supabase
           .from("stripe_checkout_session_verifications")
           .update({
             last_called_at: new Date().toISOString(),
             call_count: (verificationRow.call_count ?? 0) + 1,
           })
           .eq("session_id", sessionId);
-      } catch {
-        // Ignore.
+
+        if (verificationUpdateError) {
+          reportVerifyPaymentError(
+            "update_verification_session_usage",
+            verificationUpdateError,
+            {
+              sessionId,
+              callerUserId,
+            },
+          );
+        }
+      } catch (error) {
+        reportVerifyPaymentError("update_verification_session_usage", error, {
+          sessionId,
+          callerUserId,
+        });
       }
 
       expectedUserIdFromVerification =
