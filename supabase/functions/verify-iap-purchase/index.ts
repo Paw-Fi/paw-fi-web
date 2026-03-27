@@ -4,16 +4,20 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  AppStoreServerAPIClient,
   Environment,
-  GetTransactionHistoryVersion,
   type JWSTransactionDecodedPayload,
-  Order,
-  ProductType,
-  SignedDataVerifier,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getGoogleAccessToken } from "../shared/google-auth.ts";
+import {
+  decodeJwsPayload,
+  findAppStoreTransactionWithEnvironmentFallback,
+  fetchLatestAppStoreTransactionByOriginalId,
+  getValidatedAppStorePrivateKey,
+  isAppStoreServerApiConfigured,
+  matchesVerifiedAppStoreTransaction,
+} from "../shared/app-store-api.ts";
 import {
   ensureAppStoreOwnership,
   hasAppStoreOwnershipConflict,
@@ -103,6 +107,45 @@ function safeJson<T>(value: unknown): T {
   return value as T;
 }
 
+function buildVerificationLogContext(params: {
+  userId?: string | null;
+  body?: VerifyRequestBody | null;
+  storeProductId?: string | null;
+  transactionId?: string | null;
+  originalTransactionId?: string | null;
+  environment?: Environment | null;
+  phase?: string;
+}) {
+  const serverReceipt = asString(
+    params.body?.verificationData?.serverVerificationData,
+  );
+  const localReceipt = asString(
+    params.body?.verificationData?.localVerificationData,
+  );
+
+  return {
+    phase: params.phase ?? "unknown",
+    userId: params.userId ?? null,
+    platform: params.body?.platform ?? null,
+    storeProductId: params.storeProductId ?? null,
+    purchaseId: params.body?.purchaseId ?? null,
+    transactionDate: params.body?.transactionDate ?? null,
+    verificationSource: params.body?.verificationData?.source ?? null,
+    serverReceiptLength: serverReceipt?.length ?? 0,
+    localReceiptLength: localReceipt?.length ?? 0,
+    serverReceiptPrefix: serverReceipt ? serverReceipt.slice(0, 12) : null,
+    localReceiptPrefix: localReceipt ? localReceipt.slice(0, 12) : null,
+    transactionId: params.transactionId ?? null,
+    originalTransactionId: params.originalTransactionId ?? null,
+    environmentHint:
+      params.environment === Environment.SANDBOX
+        ? "sandbox"
+        : params.environment === Environment.PRODUCTION
+          ? "production"
+          : null,
+  };
+}
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 if (!supabaseUrl || !supabaseServiceRoleKey) {
@@ -134,6 +177,9 @@ const isProductionEnv = envSecret.toUpperCase() === "PROD";
 const defaultAppStoreEnvironment = isProductionEnv
   ? Environment.PRODUCTION
   : Environment.SANDBOX;
+const allowUnverifiedIapDevFallback =
+  !isProductionEnv &&
+  readBooleanEnv("ALLOW_UNVERIFIED_IAP_DEV_FALLBACK", false);
 
 console.log(
   `🌍 Environment config: ENV="${envSecret}", isProduction=${isProductionEnv}, defaultAppStoreEnv=${
@@ -154,7 +200,6 @@ const appStoreIssuerId = Deno.env.get("APPLE_APP_STORE_ISSUER_ID") || "";
 const appStoreKeyId = Deno.env.get("APPLE_APP_STORE_KEY_ID") || "";
 const appStorePrivateKeyRaw = Deno.env.get("APPLE_APP_STORE_PRIVATE_KEY") || "";
 const appStoreBundleId = Deno.env.get("APPLE_BUNDLE_ID") || "";
-const appStoreAppId = Deno.env.get("APPLE_APP_ID") || "";
 const googleServiceAccountJson =
   Deno.env.get("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON") || "";
 const androidPackageName = Deno.env.get("ANDROID_PACKAGE_NAME") || "";
@@ -175,75 +220,6 @@ const iapOwnershipBindingEnabled = readBooleanEnv(
   true,
 );
 
-const appleRootCaUrls = [
-  "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
-  "https://www.apple.com/certificateauthority/AppleRootCA-G2.cer",
-];
-
-let cachedRootCAs: Uint8Array[] | null = null;
-
-async function getAppleRootCAs(): Promise<Uint8Array[]> {
-  if (cachedRootCAs) return cachedRootCAs;
-
-  const certs = await Promise.all(
-    appleRootCaUrls.map(async (url) => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Apple root CA: ${url}`);
-      }
-      const buffer = await response.arrayBuffer();
-      return new Uint8Array(buffer);
-    }),
-  );
-
-  cachedRootCAs = certs;
-  return certs;
-}
-
-function normalizePrivateKey(value: string): string {
-  if (!value) return "";
-
-  // Handle various escape formats that might come from environment variables
-  let normalized = value
-    .replace(/\\n/g, "\n") // Escaped \n to actual newline
-    .replace(/\\r/g, "") // Remove any \r
-    .trim();
-
-  // If the key doesn't have proper PEM structure, it might be base64 encoded
-  if (!normalized.includes("-----BEGIN")) {
-    // Try to decode if it looks like it might be base64 encoded
-    try {
-      const decoded = atob(normalized);
-      if (decoded.includes("-----BEGIN")) {
-        normalized = decoded;
-      }
-    } catch {
-      // Not base64, use as-is
-    }
-  }
-
-  // Ensure proper line breaks in PEM format
-  // Some systems store the key as a single line with spaces instead of newlines
-  if (normalized.includes("-----BEGIN") && !normalized.includes("\n")) {
-    normalized = normalized
-      .replace(
-        /-----BEGIN PRIVATE KEY-----\s*/,
-        "-----BEGIN PRIVATE KEY-----\n",
-      )
-      .replace(/\s*-----END PRIVATE KEY-----/, "\n-----END PRIVATE KEY-----")
-      .replace(/\s+/g, "\n");
-  }
-
-  console.log("Private key format check:", {
-    hasBeginMarker: normalized.includes("-----BEGIN PRIVATE KEY-----"),
-    hasEndMarker: normalized.includes("-----END PRIVATE KEY-----"),
-    hasNewlines: normalized.includes("\n"),
-    length: normalized.length,
-  });
-
-  return normalized;
-}
-
 function asIsoMillis(value: string | null): string | null {
   if (!value) return null;
   const n = Number(value);
@@ -251,16 +227,6 @@ function asIsoMillis(value: string | null): string | null {
   const date = new Date(n);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
-}
-
-function isAppleServerApiConfigured(): boolean {
-  return Boolean(
-    appStoreIssuerId &&
-      appStoreKeyId &&
-      appStorePrivateKeyRaw &&
-      appStoreBundleId &&
-      appStoreAppId,
-  );
 }
 
 /**
@@ -273,122 +239,57 @@ function isJws(data: string): boolean {
   return data.startsWith("eyJ");
 }
 
-/**
- * Decodes a base64url string to a regular string.
- */
-function base64UrlDecode(input: string): string {
-  // Replace base64url characters with base64 characters
-  let base64 = input.replace(/-/g, "+").replace(/_/g, "/");
-  // Add padding if needed
-  const padding = base64.length % 4;
-  if (padding) {
-    base64 += "=".repeat(4 - padding);
-  }
-  // Decode
-  return atob(base64);
+const appStoreApiConfig = {
+  issuerId: appStoreIssuerId,
+  keyId: appStoreKeyId,
+  bundleId: appStoreBundleId,
+  privateKey: appStorePrivateKeyRaw,
+};
+
+function isAppleServerApiConfigured(): boolean {
+  return isAppStoreServerApiConfigured(appStoreApiConfig);
 }
 
-/**
- * Decodes a JWS payload without cryptographic verification.
- * The JWS format is: header.payload.signature (all base64url encoded)
- *
- * Note: This does NOT verify the signature. We validate the transaction
- * by calling the App Store Server API with the extracted transactionId.
- */
-function decodeJwsPayload(jws: string): JWSTransactionDecodedPayload {
-  const parts = jws.split(".");
-  if (parts.length !== 3) {
-    throw new Error("Invalid JWS format: expected 3 parts");
-  }
+function getNormalizedAppStoreApiConfig() {
+  const normalizedPrivateKey = getValidatedAppStorePrivateKey(
+    appStorePrivateKeyRaw,
+  );
+  console.log("Private key format check:", {
+    hasBeginMarker: normalizedPrivateKey.includes(
+      "-----BEGIN PRIVATE KEY-----",
+    ),
+    hasEndMarker: normalizedPrivateKey.includes("-----END PRIVATE KEY-----"),
+    hasNewlines: normalizedPrivateKey.includes("\n"),
+    length: normalizedPrivateKey.length,
+  });
 
-  const payloadJson = base64UrlDecode(parts[1]);
-  const payload = JSON.parse(payloadJson);
-
-  // Map the raw payload to JWSTransactionDecodedPayload structure
   return {
-    transactionId: payload.transactionId,
-    originalTransactionId: payload.originalTransactionId,
-    bundleId: payload.bundleId,
-    productId: payload.productId,
-    purchaseDate: payload.purchaseDate,
-    originalPurchaseDate: payload.originalPurchaseDate,
-    quantity: payload.quantity,
-    type: payload.type,
-    inAppOwnershipType: payload.inAppOwnershipType,
-    signedDate: payload.signedDate,
-    environment: payload.environment,
-    transactionReason: payload.transactionReason,
-    appAccountToken: payload.appAccountToken,
-    storefront: payload.storefront,
-    storefrontId: payload.storefrontId,
-    price: payload.price,
-    currency: payload.currency,
-    // Subscription-specific fields
-    expiresDate: payload.expiresDate,
-    renewalDate: payload.renewalDate,
-    isUpgraded: payload.isUpgraded,
-    offerType: payload.offerType,
-    offerIdentifier: payload.offerIdentifier,
-    // Revocation fields
-    revocationDate: payload.revocationDate,
-    revocationReason: payload.revocationReason,
-  } as JWSTransactionDecodedPayload;
+    ...appStoreApiConfig,
+    privateKey: normalizedPrivateKey,
+  };
 }
 
-/**
- * Fetches and validates a transaction from the App Store Server API.
- * This is the primary validation method since Deno doesn't support crypto.X509Certificate
- * which is required for local JWS signature verification.
- *
- * The App Store Server API response is trusted because:
- * 1. We authenticate with Apple using our private key
- * 2. The response comes directly from Apple's servers over HTTPS
- * 3. Apple validates the transaction on their end
- */
 async function fetchLatestAppStoreTransaction(params: {
   originalTransactionId: string;
   environment: Environment;
 }): Promise<JWSTransactionDecodedPayload | null> {
   if (!isAppleServerApiConfigured()) return null;
 
-  const privateKey = normalizePrivateKey(appStorePrivateKeyRaw);
-  if (!privateKey) return null;
-
-  const client = new AppStoreServerAPIClient(
-    privateKey,
-    appStoreKeyId,
-    appStoreIssuerId,
-    appStoreBundleId,
-    params.environment,
-  );
-
-  const historyRequest = {
-    sort: Order.DESCENDING,
+  return await fetchLatestAppStoreTransactionByOriginalId({
+    config: getNormalizedAppStoreApiConfig(),
+    originalTransactionId: params.originalTransactionId,
+    environment: params.environment,
     revoked: false,
-    productTypes: [ProductType.AUTO_RENEWABLE, ProductType.NON_CONSUMABLE],
-  };
-
-  const response = await client.getTransactionHistory(
-    params.originalTransactionId,
-    null,
-    historyRequest,
-    GetTransactionHistoryVersion.V2,
-  );
-
-  const signedTransaction = response?.signedTransactions?.[0];
-  if (!signedTransaction) return null;
-
-  // Decode the JWS payload without cryptographic verification.
-  // This is safe because:
-  // 1. The JWS comes from Apple's App Store Server API (authenticated request)
-  // 2. We're not using client-provided data directly
-  // 3. The API response is trusted as it comes over HTTPS from Apple
-  return decodeJwsPayload(signedTransaction);
+  });
 }
 
 serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
+  let errorReportContext: Record<string, unknown> = {
+    phase: "request_start",
+    path: new URL(req.url).pathname,
+  };
 
   try {
     if (req.method === "OPTIONS") {
@@ -424,6 +325,13 @@ serve(async (req: Request) => {
 
     const storeProductId = asString(body.storeProductId);
     const requestAppAccountToken = asString(body.appAccountToken);
+    let verificationLogContext = buildVerificationLogContext({
+      userId,
+      body,
+      storeProductId,
+      phase: "request_received",
+    });
+    errorReportContext = verificationLogContext;
     if (!storeProductId) {
       return new Response(
         JSON.stringify({ error: "storeProductId is required" }),
@@ -573,8 +481,9 @@ serve(async (req: Request) => {
           );
         }
 
-        // Step 1 (CRITICAL): Verify the signed transaction cryptographically.
-        // Never trust unverified JWS payloads.
+        // Step 1: Decode the client JWS only to extract lookup hints.
+        // Trust is established only after Apple confirms the transaction via the
+        // App Store Server API unless explicit non-production fallback is enabled.
         let decodedHint: JWSTransactionDecodedPayload;
         try {
           decodedHint = decodeJwsPayload(serverReceipt);
@@ -589,12 +498,12 @@ serve(async (req: Request) => {
           );
         }
 
-        const appAppleId = Number(appStoreAppId);
-        if (!Number.isFinite(appAppleId)) {
+        if (!decodedHint.transactionId) {
+          console.error("❌ StoreKit 2 transaction is missing transactionId");
           return new Response(
-            JSON.stringify({ error: "APPLE_APP_ID not configured" }),
+            JSON.stringify({ error: "Invalid transaction" }),
             {
-              status: 500,
+              status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
@@ -605,6 +514,16 @@ serve(async (req: Request) => {
           envString === "sandbox"
             ? Environment.SANDBOX
             : Environment.PRODUCTION;
+        verificationLogContext = buildVerificationLogContext({
+          userId,
+          body,
+          storeProductId,
+          transactionId: decodedHint.transactionId ?? null,
+          originalTransactionId: decodedHint.originalTransactionId ?? null,
+          environment: envHint,
+          phase: "decoded_storekit2_jws",
+        });
+        errorReportContext = verificationLogContext;
 
         // ============================================================
         // DENO COMPATIBILITY: Skip local JWS cryptographic verification
@@ -619,6 +538,7 @@ serve(async (req: Request) => {
         // ============================================================
 
         let decodedTransaction: JWSTransactionDecodedPayload;
+        let usedServerValidatedTransaction = false;
         let serverRevocationDate: number | undefined = undefined;
 
         // Validate bundle ID matches our app
@@ -640,8 +560,12 @@ serve(async (req: Request) => {
         }
 
         // Try to validate via App Store Server API (preferred method for Deno)
-        if (isAppleServerApiConfigured() && decodedHint.originalTransactionId) {
+        if (
+          isAppleServerApiConfigured() &&
+          (decodedHint.transactionId || decodedHint.originalTransactionId)
+        ) {
           console.log("🔐 Validating transaction via App Store Server API...");
+          console.log("🔐 Transaction ID:", decodedHint.transactionId ?? null);
           console.log(
             "🔐 Original Transaction ID:",
             decodedHint.originalTransactionId,
@@ -649,31 +573,63 @@ serve(async (req: Request) => {
           console.log("🔐 Environment hint:", envHint);
 
           try {
-            // Try with the hinted environment first
-            let serverTransaction = await fetchLatestAppStoreTransaction({
-              originalTransactionId: decodedHint.originalTransactionId,
-              environment: envHint,
-            });
-
-            // If not found, try the other environment
-            if (!serverTransaction) {
-              const otherEnv =
-                envHint === Environment.SANDBOX
-                  ? Environment.PRODUCTION
-                  : Environment.SANDBOX;
-              console.log("🔐 Retrying with environment:", otherEnv);
-              serverTransaction = await fetchLatestAppStoreTransaction({
+            const transactionLookup =
+              await findAppStoreTransactionWithEnvironmentFallback({
+                config: getNormalizedAppStoreApiConfig(),
+                environmentHint: envHint,
+                transactionId: decodedHint.transactionId,
                 originalTransactionId: decodedHint.originalTransactionId,
-                environment: otherEnv,
               });
-              if (serverTransaction) {
-                environment = otherEnv;
-              }
-            } else {
-              environment = envHint;
+            const serverTransaction = transactionLookup.transaction;
+            environment = transactionLookup.environment;
+
+            if (serverTransaction && environment !== envHint) {
+              console.log("🔐 Retrying with environment:", environment);
             }
 
             if (serverTransaction) {
+              if (
+                decodedHint.transactionId &&
+                !matchesVerifiedAppStoreTransaction({
+                  hint: {
+                    transactionId: decodedHint.transactionId,
+                    originalTransactionId: decodedHint.originalTransactionId,
+                    bundleId: decodedHint.bundleId,
+                  },
+                  verified: {
+                    transactionId: serverTransaction.transactionId,
+                    originalTransactionId:
+                      serverTransaction.originalTransactionId,
+                    bundleId: serverTransaction.bundleId,
+                  },
+                })
+              ) {
+                console.error(
+                  "❌ App Store transaction mismatch between client JWS and Apple response",
+                  {
+                    hintedTransactionId: decodedHint.transactionId,
+                    hintedOriginalTransactionId:
+                      decodedHint.originalTransactionId,
+                    verifiedTransactionId: serverTransaction.transactionId,
+                    verifiedOriginalTransactionId:
+                      serverTransaction.originalTransactionId,
+                  },
+                );
+                return new Response(
+                  JSON.stringify({
+                    error: "Transaction verification failed",
+                    details: "Apple could not verify the submitted purchase.",
+                  }),
+                  {
+                    status: 400,
+                    headers: {
+                      ...corsHeaders,
+                      "Content-Type": "application/json",
+                    },
+                  },
+                );
+              }
+
               console.log(
                 "✅ Transaction validated via App Store Server API:",
                 {
@@ -687,13 +643,23 @@ serve(async (req: Request) => {
 
               // Use the server-validated transaction data
               decodedTransaction = serverTransaction;
+              usedServerValidatedTransaction = true;
               serverRevocationDate = serverTransaction.revocationDate;
             } else {
               // Server API didn't return a transaction
-              // SECURITY: In production, we MUST fail-closed - no fallback to unverified JWS
-              if (isProductionEnv) {
+              if (!allowUnverifiedIapDevFallback) {
+                await reportEdgeFunctionError({
+                  functionName: "verify-iap-purchase",
+                  error: new Error(
+                    "App Store API returned no transaction for submitted purchase",
+                  ),
+                  context: {
+                    ...verificationLogContext,
+                    phase: "app_store_api_transaction_not_found",
+                  },
+                });
                 console.error(
-                  "🚨 PRODUCTION SECURITY: App Store Server API returned no transaction. Rejecting request.",
+                  "🚨 App Store Server API returned no transaction. Rejecting request.",
                 );
                 console.error(
                   "🚨 This could indicate: (1) Very new transaction not yet propagated, (2) Invalid transaction ID, or (3) Fraudulent request.",
@@ -713,19 +679,24 @@ serve(async (req: Request) => {
                   },
                 );
               }
-              // In DEV/Sandbox, allow fallback for testing convenience
               console.warn(
-                "⚠️ DEV MODE: App Store Server API returned no transaction, using decoded JWS data (unverified)",
+                "⚠️ Explicit unverified App Store fallback enabled; using decoded JWS data because Apple returned no transaction.",
               );
               decodedTransaction = decodedHint;
               environment = envHint;
             }
           } catch (apiError) {
-            // API call failed
-            // SECURITY: In production, we MUST fail-closed - no fallback to unverified JWS
-            if (isProductionEnv) {
+            if (!allowUnverifiedIapDevFallback) {
+              await reportEdgeFunctionError({
+                functionName: "verify-iap-purchase",
+                error: apiError,
+                context: {
+                  ...verificationLogContext,
+                  phase: "app_store_api_call_failed",
+                },
+              });
               console.error(
-                "🚨 PRODUCTION SECURITY: App Store Server API call failed. Rejecting request.",
+                "🚨 App Store Server API call failed. Rejecting request.",
               );
               console.error(
                 "🚨 Error:",
@@ -749,23 +720,29 @@ serve(async (req: Request) => {
                 },
               );
             }
-            // In DEV/Sandbox, allow fallback for testing convenience
             console.warn(
-              "⚠️ DEV MODE: App Store Server API call failed:",
+              "⚠️ Explicit unverified App Store fallback enabled after API failure:",
               apiError instanceof Error ? apiError.message : apiError,
-            );
-            console.warn(
-              "⚠️ DEV MODE: Falling back to decoded JWS data (unverified)",
             );
             decodedTransaction = decodedHint;
             environment = envHint;
           }
         } else {
-          // App Store Server API not configured
-          // SECURITY: In production, this is a misconfiguration - we MUST reject
-          if (isProductionEnv) {
+          if (!allowUnverifiedIapDevFallback) {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error("App Store API configuration missing"),
+              context: {
+                ...verificationLogContext,
+                phase: "app_store_api_config_missing",
+                hasIssuerId: Boolean(appStoreIssuerId),
+                hasKeyId: Boolean(appStoreKeyId),
+                hasPrivateKey: Boolean(appStorePrivateKeyRaw),
+                hasBundleId: Boolean(appStoreBundleId),
+              },
+            });
             console.error(
-              "🚨 PRODUCTION SECURITY: App Store Server API not configured. Rejecting request.",
+              "🚨 App Store Server API not configured. Rejecting request.",
             );
             console.error(
               "🚨 Configure APPLE_APP_STORE_ISSUER_ID, APPLE_APP_STORE_KEY_ID, APPLE_APP_STORE_PRIVATE_KEY, and APPLE_BUNDLE_ID.",
@@ -782,12 +759,8 @@ serve(async (req: Request) => {
               },
             );
           }
-          // In DEV/Sandbox, allow fallback for testing without full API setup
           console.warn(
-            "⚠️ DEV MODE: App Store Server API not configured, using decoded JWS data (unverified)",
-          );
-          console.warn(
-            "⚠️ Configure APPLE_APP_STORE_* env vars for secure validation",
+            "⚠️ Explicit unverified App Store fallback enabled without full App Store API configuration.",
           );
           decodedTransaction = decodedHint;
           environment = envHint;
@@ -810,7 +783,8 @@ serve(async (req: Request) => {
         if (
           isAppleServerApiConfigured() &&
           decodedTransaction.originalTransactionId &&
-          !serverRevocationDate // Only if we haven't already checked
+          !serverRevocationDate &&
+          !usedServerValidatedTransaction
         ) {
           try {
             console.log(
@@ -1785,6 +1759,14 @@ serve(async (req: Request) => {
       },
     );
   } catch (e) {
+    await reportEdgeFunctionError({
+      functionName: "verify-iap-purchase",
+      error: e,
+      context: {
+        ...errorReportContext,
+        phase: "serve_handler",
+      },
+    });
     console.error("verify-iap-purchase error:", e);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
