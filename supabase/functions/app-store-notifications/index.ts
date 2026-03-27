@@ -264,10 +264,16 @@ function deriveLifecycleStatus(
   const baseStatus = deriveStatus(transaction);
   if (baseStatus === "canceled") return "canceled";
 
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
-  const isTrialLike = offerType === 1 || offerIdentifier.includes("trial");
+  const isTrialLike =
+    offerDiscountType === "FREE_TRIAL" ||
+    (offerType === 1 && offerIdentifier.includes("trial"));
 
   return isTrialLike ? "trialing" : "active";
 }
@@ -665,6 +671,7 @@ serve(async (req: Request): Promise<Response> => {
       transactionId,
       environment,
       offerType: transaction.offerType ?? null,
+      offerDiscountType: transaction.offerDiscountType ?? null,
       offerIdentifier: transaction.offerIdentifier ?? null,
       expiresDate: transaction.expiresDate ?? null,
       revocationDate: transaction.revocationDate ?? null,
@@ -948,6 +955,20 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log("[app-store-notifications] existing subscription snapshot", {
+      userId: resolvedUserId,
+      provider: existingSubscription?.provider ?? null,
+      existingStatus: existingSubscription?.status ?? null,
+      existingBillingInterval: existingSubscription?.billing_interval ?? null,
+      existingStoreProductId: existingSubscription?.store_product_id ?? null,
+      existingOriginalTransactionId:
+        existingSubscription?.app_store_original_transaction_id ?? null,
+      existingCurrentPeriodEnd:
+        existingSubscription?.current_period_end ?? null,
+      existingTrialStart: existingSubscription?.trial_start ?? null,
+      existingTrialEnd: existingSubscription?.trial_end ?? null,
+    });
+
     let effectiveTransaction = transaction;
     let periodEndSource = "notification_transaction";
     let resolvedEnvironment = environment;
@@ -997,6 +1018,33 @@ serve(async (req: Request): Promise<Response> => {
           if (resolvedExpiresIso) {
             periodEndSource = "matched_notification_transaction";
           }
+
+          console.log(
+            "[app-store-notifications] reconciliation lookup applied",
+            {
+              userId: resolvedUserId,
+              requestedTransactionId: transactionId,
+              requestedOriginalTransactionId: originalTransactionId,
+              matchedTransactionId:
+                reconciledTransactionLookup.transaction.transactionId ?? null,
+              matchedOriginalTransactionId:
+                reconciledTransactionLookup.transaction.originalTransactionId ??
+                null,
+              matchedPurchaseDate:
+                reconciledTransactionLookup.transaction.purchaseDate ?? null,
+              matchedExpiresDate:
+                reconciledTransactionLookup.transaction.expiresDate ?? null,
+              matchedOfferType:
+                reconciledTransactionLookup.transaction.offerType ?? null,
+              matchedOfferDiscountType:
+                reconciledTransactionLookup.transaction.offerDiscountType ??
+                null,
+              matchedOfferIdentifier:
+                reconciledTransactionLookup.transaction.offerIdentifier ?? null,
+              resolvedEnvironment,
+              resolvedExpiresIso,
+            },
+          );
         }
       } catch (error) {
         await reportEdgeFunctionError({
@@ -1034,6 +1082,16 @@ serve(async (req: Request): Promise<Response> => {
       ) {
         resolvedExpiresIso = existingPeriodEnd;
         periodEndSource = "existing_subscription";
+        console.log(
+          "[app-store-notifications] reusing existing subscription expiry",
+          {
+            userId: resolvedUserId,
+            storeProductId,
+            originalTransactionId,
+            existingPeriodEnd,
+            existingStatus: existingSubscription?.status ?? null,
+          },
+        );
       } else {
         await reportEdgeFunctionError({
           functionName: "app-store-notifications",
@@ -1065,7 +1123,7 @@ serve(async (req: Request): Promise<Response> => {
     const status = deriveLifecycleStatus(effectiveTransaction);
     const trialStartIso =
       status === "trialing"
-        ? asIsoMillis(asString(effectiveTransaction.purchaseDate))
+        ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
         : null;
     const trialEndIso = status === "trialing" ? resolvedExpiresIso : null;
 
@@ -1080,7 +1138,10 @@ serve(async (req: Request): Promise<Response> => {
       periodEndSource,
       transactionExpiresDate: effectiveTransaction.expiresDate ?? null,
       offerType: effectiveTransaction.offerType ?? null,
+      offerDiscountType: effectiveTransaction.offerDiscountType ?? null,
       offerIdentifier: effectiveTransaction.offerIdentifier ?? null,
+      trialStartIso,
+      trialEndIso,
     });
 
     const subscriptionUpdate: Record<string, unknown> = {

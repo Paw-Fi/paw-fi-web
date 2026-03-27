@@ -143,7 +143,48 @@ function buildVerificationLogContext(params: {
         : params.environment === Environment.PRODUCTION
           ? "production"
           : null,
+    appAccountToken: params.body?.appAccountToken ?? null,
   };
+}
+
+function deriveStoreKitLifecycleStatus(params: {
+  transaction: JWSTransactionDecodedPayload;
+  expiresMs: number | null;
+  nowMs: number;
+}): "active" | "trialing" | "canceled" {
+  if (params.transaction.revocationDate) {
+    return "canceled";
+  }
+
+  if (params.expiresMs !== null && params.expiresMs <= params.nowMs) {
+    return "canceled";
+  }
+
+  const offerDiscountType =
+    typeof params.transaction.offerDiscountType === "string"
+      ? params.transaction.offerDiscountType.toUpperCase()
+      : "";
+  const offerIdentifier =
+    asString(params.transaction.offerIdentifier)?.toLowerCase() ?? "";
+  const offerType = Number(params.transaction.offerType);
+  const isTrialLike =
+    offerDiscountType === "FREE_TRIAL" ||
+    (offerType === 1 && offerIdentifier.includes("trial"));
+
+  return isTrialLike ? "trialing" : "active";
+}
+
+function asIsoMillisUnknown(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  if (typeof value === "string") {
+    return asIsoMillis(value);
+  }
+  return null;
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -439,11 +480,15 @@ serve(async (req: Request) => {
       const serverPrefix = serverReceipt ? serverReceipt.slice(0, 12) : "";
       const localPrefix = localReceipt ? localReceipt.slice(0, 12) : "";
       console.log("Receipt payload", {
+        userId,
         source: body.verificationData?.source ?? null,
         serverLength: serverReceipt?.length ?? 0,
         localLength: localReceipt?.length ?? 0,
         serverPrefix,
         localPrefix,
+        requestAppAccountToken,
+        purchaseId: body.purchaseId ?? null,
+        transactionDate: body.transactionDate ?? null,
       });
 
       // StoreKit 2 sends JWS (starts with "eyJ"), StoreKit 1 sends base64 receipt
@@ -459,6 +504,11 @@ serve(async (req: Request) => {
       let originalTransactionId: string | null = null;
       let transactionId: string | null = null;
       let verifiedTransactionAppAccountUserId: string | null = null;
+      let appStoreTrialStart: string | null = null;
+      let appStoreTrialEnd: string | null = null;
+      let appStoreOfferType: number | string | null = null;
+      let appStoreOfferDiscountType: string | null = null;
+      let appStoreOfferIdentifier: string | null = null;
       // Use the environment from ENV secret as default.
       // Will be updated based on JWS payload or App Store Server API response if available.
       // See ENV configuration comments at the top of this file for details.
@@ -525,6 +575,24 @@ serve(async (req: Request) => {
         });
         errorReportContext = verificationLogContext;
 
+        console.log("Decoded StoreKit 2 transaction hint:", {
+          userId,
+          storeProductId,
+          requestAppAccountToken,
+          transactionId: decodedHint.transactionId ?? null,
+          originalTransactionId: decodedHint.originalTransactionId ?? null,
+          bundleId: decodedHint.bundleId ?? null,
+          productId: decodedHint.productId ?? null,
+          purchaseDate: decodedHint.purchaseDate ?? null,
+          expiresDate: decodedHint.expiresDate ?? null,
+          transactionReason: decodedHint.transactionReason ?? null,
+          offerType: decodedHint.offerType ?? null,
+          offerDiscountType: decodedHint.offerDiscountType ?? null,
+          offerIdentifier: decodedHint.offerIdentifier ?? null,
+          appAccountToken: decodedHint.appAccountToken ?? null,
+          environment: decodedHint.environment ?? null,
+        });
+
         // ============================================================
         // DENO COMPATIBILITY: Skip local JWS cryptographic verification
         // ============================================================
@@ -582,6 +650,26 @@ serve(async (req: Request) => {
               });
             const serverTransaction = transactionLookup.transaction;
             environment = transactionLookup.environment;
+
+            console.log("App Store transaction lookup result:", {
+              userId,
+              storeProductId,
+              requestedTransactionId: decodedHint.transactionId ?? null,
+              requestedOriginalTransactionId:
+                decodedHint.originalTransactionId ?? null,
+              resolvedEnvironment:
+                environment === Environment.SANDBOX ? "Sandbox" : "Production",
+              foundTransactionId: serverTransaction?.transactionId ?? null,
+              foundOriginalTransactionId:
+                serverTransaction?.originalTransactionId ?? null,
+              foundExpiresDate: serverTransaction?.expiresDate ?? null,
+              foundOfferType: serverTransaction?.offerType ?? null,
+              foundOfferDiscountType:
+                serverTransaction?.offerDiscountType ?? null,
+              foundOfferIdentifier: serverTransaction?.offerIdentifier ?? null,
+              foundTransactionReason:
+                serverTransaction?.transactionReason ?? null,
+            });
 
             if (serverTransaction && environment !== envHint) {
               console.log("🔐 Retrying with environment:", environment);
@@ -767,6 +855,7 @@ serve(async (req: Request) => {
         }
 
         console.log("Transaction data to use:", {
+          userId,
           transactionId: decodedTransaction.transactionId,
           originalTransactionId: decodedTransaction.originalTransactionId,
           productId: decodedTransaction.productId,
@@ -776,6 +865,10 @@ serve(async (req: Request) => {
           purchaseDate: decodedTransaction.purchaseDate,
           expiresDate: decodedTransaction.expiresDate,
           revocationDate: decodedTransaction.revocationDate,
+          offerType: decodedTransaction.offerType ?? null,
+          offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+          offerIdentifier: decodedTransaction.offerIdentifier ?? null,
+          transactionReason: decodedTransaction.transactionReason ?? null,
         });
 
         // Legacy code path for additional server validation (kept for compatibility)
@@ -970,21 +1063,41 @@ serve(async (req: Request) => {
           }
 
           console.log("Parsing expiry date:", {
+            userId,
+            transactionId: decodedTransaction.transactionId ?? null,
+            originalTransactionId:
+              decodedTransaction.originalTransactionId ?? null,
             rawExpiresDate: expiresDate,
             parsedExpiresMs: expiresMs,
             nowMs: now,
             isExpired: expiresMs ? expiresMs <= now : "unknown",
+            purchaseDate: decodedTransaction.purchaseDate ?? null,
+            offerType: decodedTransaction.offerType ?? null,
+            offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+            offerIdentifier: decodedTransaction.offerIdentifier ?? null,
           });
 
           const shouldUseAppleDate = expiresMs && expiresMs > now;
 
           if (shouldUseAppleDate) {
             currentPeriodEnd = new Date(expiresMs!).toISOString();
-            status = "active";
+            status = deriveStoreKitLifecycleStatus({
+              transaction: decodedTransaction,
+              expiresMs,
+              nowMs: now,
+            });
             console.log("Using Apple's verified expiry date:", {
+              userId,
+              transactionId: decodedTransaction.transactionId ?? null,
+              originalTransactionId:
+                decodedTransaction.originalTransactionId ?? null,
               currentPeriodEnd,
               status,
               expiresMs,
+              purchaseDate: decodedTransaction.purchaseDate ?? null,
+              offerType: decodedTransaction.offerType ?? null,
+              offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+              offerIdentifier: decodedTransaction.offerIdentifier ?? null,
             });
           } else {
             await reportEdgeFunctionError({
@@ -1019,11 +1132,38 @@ serve(async (req: Request) => {
           }
 
           console.log("Final subscription status:", {
+            userId,
+            transactionId: decodedTransaction.transactionId ?? null,
+            originalTransactionId:
+              decodedTransaction.originalTransactionId ?? null,
             status,
             currentPeriodEnd,
+            trialStart:
+              status === "trialing"
+                ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
+                : null,
+            trialEnd: status === "trialing" ? currentPeriodEnd : null,
+            offerType: decodedTransaction.offerType ?? null,
+            offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+            offerIdentifier: decodedTransaction.offerIdentifier ?? null,
             environment:
               environment === Environment.SANDBOX ? "Sandbox" : "Production",
           });
+
+          appStoreTrialStart =
+            status === "trialing"
+              ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
+              : null;
+          appStoreTrialEnd = status === "trialing" ? currentPeriodEnd : null;
+          appStoreOfferType = decodedTransaction.offerType ?? null;
+          appStoreOfferDiscountType =
+            typeof decodedTransaction.offerDiscountType === "string"
+              ? decodedTransaction.offerDiscountType
+              : null;
+          appStoreOfferIdentifier =
+            typeof decodedTransaction.offerIdentifier === "string"
+              ? decodedTransaction.offerIdentifier
+              : null;
         }
       } else {
         // ============================================================
@@ -1448,6 +1588,8 @@ serve(async (req: Request) => {
         play_order_id: null,
         play_package_name: null,
         current_period_end: plan === "lifetime" ? null : currentPeriodEnd,
+        trial_start: appStoreTrialStart,
+        trial_end: appStoreTrialEnd,
         cancel_at_period_end: false,
         app_store_transaction_id: transactionId,
         app_store_original_transaction_id: originalTransactionId,
@@ -1460,6 +1602,11 @@ serve(async (req: Request) => {
         plan,
         status,
         currentPeriodEnd,
+        trialStart: appStoreTrialStart,
+        trialEnd: appStoreTrialEnd,
+        offerType: appStoreOfferType,
+        offerDiscountType: appStoreOfferDiscountType,
+        offerIdentifier: appStoreOfferIdentifier,
         environment: environmentString,
       });
 
