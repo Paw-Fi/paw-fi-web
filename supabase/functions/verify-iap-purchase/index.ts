@@ -160,16 +160,7 @@ function deriveStoreKitLifecycleStatus(params: {
     return "canceled";
   }
 
-  const offerDiscountType =
-    typeof params.transaction.offerDiscountType === "string"
-      ? params.transaction.offerDiscountType.toUpperCase()
-      : "";
-  const offerIdentifier =
-    asString(params.transaction.offerIdentifier)?.toLowerCase() ?? "";
-  const offerType = Number(params.transaction.offerType);
-  const isTrialLike =
-    offerDiscountType === "FREE_TRIAL" ||
-    (offerType === 1 && offerIdentifier.includes("trial"));
+  const isTrialLike = isFreeTrialTransaction(params.transaction);
 
   return isTrialLike ? "trialing" : "active";
 }
@@ -185,6 +176,26 @@ function asIsoMillisUnknown(value: unknown): string | null {
     return asIsoMillis(value);
   }
   return null;
+}
+
+function isFreeTrialTransaction(
+  transaction: Pick<
+    JWSTransactionDecodedPayload,
+    "offerDiscountType" | "offerType" | "offerIdentifier"
+  >,
+): boolean {
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
+  const offerIdentifier =
+    asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
+  const offerType = Number(transaction.offerType);
+
+  return (
+    offerDiscountType === "FREE_TRIAL" ||
+    (offerType === 1 && offerIdentifier.includes("trial"))
+  );
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -404,7 +415,7 @@ serve(async (req: Request) => {
     const { data: existingSub } = await supabase
       .from("subscriptions")
       .select(
-        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id",
+        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, store_product_id, app_store_original_transaction_id",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -477,15 +488,11 @@ serve(async (req: Request) => {
       const localReceipt = asString(
         body.verificationData?.localVerificationData,
       );
-      const serverPrefix = serverReceipt ? serverReceipt.slice(0, 12) : "";
-      const localPrefix = localReceipt ? localReceipt.slice(0, 12) : "";
       console.log("Receipt payload", {
         userId,
         source: body.verificationData?.source ?? null,
         serverLength: serverReceipt?.length ?? 0,
         localLength: localReceipt?.length ?? 0,
-        serverPrefix,
-        localPrefix,
         requestAppAccountToken,
         purchaseId: body.purchaseId ?? null,
         transactionDate: body.transactionDate ?? null,
@@ -1153,8 +1160,11 @@ serve(async (req: Request) => {
           appStoreTrialStart =
             status === "trialing"
               ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
-              : null;
-          appStoreTrialEnd = status === "trialing" ? currentPeriodEnd : null;
+              : asString((existingSub as any)?.trial_start);
+          appStoreTrialEnd =
+            status === "trialing"
+              ? currentPeriodEnd
+              : asString((existingSub as any)?.trial_end);
           appStoreOfferType = decodedTransaction.offerType ?? null;
           appStoreOfferDiscountType =
             typeof decodedTransaction.offerDiscountType === "string"
@@ -1164,6 +1174,51 @@ serve(async (req: Request) => {
             typeof decodedTransaction.offerIdentifier === "string"
               ? decodedTransaction.offerIdentifier
               : null;
+
+          if (
+            status !== "trialing" &&
+            originalTransactionId &&
+            !appStoreTrialStart &&
+            !appStoreTrialEnd
+          ) {
+            try {
+              const originalTransactionLookup =
+                await findAppStoreTransactionWithEnvironmentFallback({
+                  config: getNormalizedAppStoreApiConfig(),
+                  environmentHint: environment,
+                  transactionId: originalTransactionId,
+                  originalTransactionId,
+                });
+              const originalTransaction = originalTransactionLookup.transaction;
+              if (
+                originalTransaction &&
+                isFreeTrialTransaction(originalTransaction)
+              ) {
+                appStoreTrialStart = asIsoMillisUnknown(
+                  originalTransaction.purchaseDate,
+                );
+                appStoreTrialEnd = asIsoMillisUnknown(
+                  originalTransaction.expiresDate,
+                );
+                console.log("Recovered original App Store trial history:", {
+                  userId,
+                  originalTransactionId,
+                  recoveredTrialStart: appStoreTrialStart,
+                  recoveredTrialEnd: appStoreTrialEnd,
+                });
+              }
+            } catch (error) {
+              await reportEdgeFunctionError({
+                functionName: "verify-iap-purchase",
+                error,
+                context: {
+                  ...verificationLogContext,
+                  phase: "recover_original_trial_history",
+                  originalTransactionId,
+                },
+              });
+            }
+          }
         }
       } else {
         // ============================================================
