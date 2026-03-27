@@ -827,7 +827,7 @@ serve(async (req: Request) => {
           }
         } else {
           console.log(
-            "App Store Server API not configured or no originalTransactionId, using decoded JWS data",
+            "Skipping legacy revocation re-check because the transaction already came from the App Store API",
           );
         }
 
@@ -879,6 +879,18 @@ serve(async (req: Request) => {
           verifiedTransactionAppAccountUserId &&
           verifiedTransactionAppAccountUserId !== userId
         ) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: new Error(
+              "Verified App Store appAccountToken does not match auth user",
+            ),
+            context: {
+              ...verificationLogContext,
+              phase: "verified_app_account_token_mismatch",
+              verifiedTransactionAppAccountUserId,
+              authUserId: userId,
+            },
+          });
           console.error("App Store appAccountToken does not match auth user", {
             authUserId: userId,
             requestAppAccountToken,
@@ -901,6 +913,18 @@ serve(async (req: Request) => {
         }
 
         if (requestAppAccountToken && requestAppAccountToken !== userId) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: new Error(
+              "Request appAccountToken does not match auth user",
+            ),
+            context: {
+              ...verificationLogContext,
+              phase: "request_app_account_token_mismatch",
+              requestAppAccountToken,
+              authUserId: userId,
+            },
+          });
           console.error(
             "verify-iap-purchase request appAccountToken mismatch",
             {
@@ -909,6 +933,16 @@ serve(async (req: Request) => {
               originalTransactionId,
               transactionId,
               storeProductId,
+            },
+          );
+          return new Response(
+            JSON.stringify({
+              error: purchaseOwnershipConflictMessage(),
+              code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+            }),
+            {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
         }
@@ -942,63 +976,46 @@ serve(async (req: Request) => {
             isExpired: expiresMs ? expiresMs <= now : "unknown",
           });
 
-          // ROBUST PERIOD END CALCULATION
-          // For subscriptions, we need a valid future current_period_end
-          //
-          // CRITICAL: Apple Sandbox uses ACCELERATED TIME:
-          // - Monthly subscriptions expire in ~5 minutes
-          // - Yearly subscriptions expire in ~1 hour
-          // So even though Sandbox dates ARE "in the future", they're WRONG for our purposes!
-          //
-          // Approach:
-          // - SANDBOX: ALWAYS calculate period end (ignore Apple's accelerated dates)
-          // - PRODUCTION: Use Apple's date if valid and in the future
-          const isSandboxEnv = environment === Environment.SANDBOX;
-
-          // For Sandbox: ALWAYS calculate proper period end
-          // For Production: Use Apple's date if valid and in future, otherwise calculate
-          const shouldUseAppleDate =
-            !isSandboxEnv && expiresMs && expiresMs > now;
+          const shouldUseAppleDate = expiresMs && expiresMs > now;
 
           if (shouldUseAppleDate) {
-            // Production with valid future expiry date from Apple - use it
             currentPeriodEnd = new Date(expiresMs!).toISOString();
             status = "active";
-            console.log("PRODUCTION: Using Apple's expiry date:", {
+            console.log("Using Apple's verified expiry date:", {
               currentPeriodEnd,
               status,
               expiresMs,
             });
           } else {
-            // Sandbox OR Production with invalid/expired date
-            // Calculate proper period end based on billing interval
-            const periodEnd = new Date();
-            if (billingInterval === "monthly") {
-              periodEnd.setMonth(periodEnd.getMonth() + 1);
-            } else if (billingInterval === "yearly") {
-              periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-            } else {
-              // Default to 1 month if billing interval unknown
-              periodEnd.setMonth(periodEnd.getMonth() + 1);
-            }
-
-            currentPeriodEnd = periodEnd.toISOString();
-            status = "active"; // New purchase should be active
-
-            console.log("CALCULATED period end:", {
-              isSandbox: isSandboxEnv,
-              appleExpiresMs: expiresMs,
-              appleExpiresDate: expiresMs
-                ? new Date(expiresMs).toISOString()
-                : null,
-              calculatedPeriodEnd: currentPeriodEnd,
-              billingInterval,
-              reason: isSandboxEnv
-                ? "Sandbox uses accelerated time - ignoring Apple's date"
-                : expiresMs === null
-                  ? "Missing expiry date"
-                  : "Expiry date in the past",
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error(
+                "Production App Store transaction missing valid expiry",
+              ),
+              context: {
+                ...verificationLogContext,
+                phase: "production_missing_expiry",
+                billingInterval,
+                appleExpiresMs: expiresMs,
+                appleExpiresDate: expiresMs
+                  ? new Date(expiresMs).toISOString()
+                  : null,
+                reason:
+                  expiresMs === null
+                    ? "Missing expiry date"
+                    : "Expiry date in the past",
+              },
             });
+            return new Response(
+              JSON.stringify({
+                error: "Transaction verification failed",
+                details: "Apple returned an invalid subscription expiry.",
+              }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
           }
 
           console.log("Final subscription status:", {
