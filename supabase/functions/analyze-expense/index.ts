@@ -335,6 +335,26 @@ async function awaitWithSoftTimeout<T>(
   }
 }
 
+async function awaitWithHardTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<T> {
+  let timer: number | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 async function getAllowedCategoriesCached(params: {
   supabase: any;
   userId: string;
@@ -550,22 +570,12 @@ function createSSEStream(
           controller.enqueue(encoder.encode(sseMessage));
         };
 
-        // Run analysis with progress callback
-        const analysisPromise = runAnalyzeExpense(
-          body,
-          geminiApiKey,
-          onProgress,
+        // Run analysis with progress callback and a hard timeout.
+        const result = await awaitWithHardTimeout(
+          runAnalyzeExpense(body, geminiApiKey, onProgress),
+          180000,
+          "Analysis timed out after 180 seconds",
         );
-
-        // Timeout for the entire analysis (3 minutes)
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("Analysis timed out after 180 seconds")),
-            180000,
-          ),
-        );
-
-        const result = await Promise.race([analysisPromise, timeoutPromise]);
 
         // Send final result as complete event
         if (result.success) {
@@ -774,14 +784,11 @@ Deno.serve(async (req: Request) => {
         })
       : null;
     try {
-      const analysisPromise = runAnalyzeExpense(body, GEMINI_API_KEY);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Analysis timed out after 140 seconds")),
-          140000,
-        ),
+      result = await awaitWithHardTimeout(
+        runAnalyzeExpense(body, GEMINI_API_KEY),
+        140000,
+        "Analysis timed out after 140 seconds",
       );
-      result = await Promise.race([analysisPromise, timeoutPromise]);
       logStage("analyze_core", requestStartedAt);
 
       if (

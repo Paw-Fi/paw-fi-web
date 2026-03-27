@@ -53,6 +53,8 @@ serve(async (req) => {
       typeof body.billingInterval === "string" ? body.billingInterval : null;
     const prorationDate =
       typeof body.prorationDate === "number" ? body.prorationDate : null;
+    const exitAtIso =
+      typeof body.exitAtIso === "string" ? body.exitAtIso : null;
     const returnTrialThresholdMinutesRaw = Number(
       Deno.env.get("PAYWALL_RETURN_THRESHOLD_MINUTES") ?? "3",
     );
@@ -81,8 +83,25 @@ serve(async (req) => {
 
     if (action === "mark_paywall_return_exit") {
       const now = new Date();
+      const parsedExitAt = exitAtIso ? new Date(exitAtIso) : null;
+      const effectiveExitAt =
+        parsedExitAt && !Number.isNaN(parsedExitAt.getTime())
+          ? parsedExitAt
+          : now;
+
+      // Never accept future timestamps from client.
+      if (effectiveExitAt.getTime() > now.getTime()) {
+        return new Response(
+          JSON.stringify({ error: "Invalid paywall exit timestamp" }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       console.log(
-        `[PaywallReturnTrial] mark_exit user=${userId} at=${now.toISOString()}`,
+        `[PaywallReturnTrial] mark_exit user=${userId} at=${effectiveExitAt.toISOString()}`,
       );
       const { data: markSubscription, error: markSubscriptionError } =
         await supabase
@@ -140,7 +159,7 @@ serve(async (req) => {
 
       const { error: markExitError } = await supabase
         .from("users")
-        .update({ paywall_return_trial_exit_at: now.toISOString() })
+        .update({ paywall_return_trial_exit_at: effectiveExitAt.toISOString() })
         .eq("id", userId);
 
       if (markExitError) {
@@ -702,24 +721,20 @@ serve(async (req) => {
           );
         }
 
-        if (!userEligibility?.paywall_return_trial_exit_at) {
-          console.log(
-            `[PaywallReturnTrial] grant_blocked_no_exit user=${userId}`,
-          );
+        if (!userEligibility) {
           return new Response(
-            JSON.stringify({
-              error: "No eligible paywall exit recorded for return trial",
-            }),
+            JSON.stringify({ error: "User eligibility record not found" }),
             {
-              status: 403,
+              status: 404,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
         }
 
-        if (userEligibility.paywall_return_trial_granted_at) {
+        const grantedAt = userEligibility?.paywall_return_trial_granted_at;
+        if (grantedAt) {
           console.log(
-            `[PaywallReturnTrial] grant_blocked_already_granted user=${userId} granted_at=${userEligibility.paywall_return_trial_granted_at}`,
+            `[PaywallReturnTrial] grant_blocked_already_granted user=${userId} granted_at=${grantedAt}`,
           );
           return new Response(
             JSON.stringify({
@@ -727,36 +742,6 @@ serve(async (req) => {
             }),
             {
               status: 409,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        const exitAt = new Date(userEligibility.paywall_return_trial_exit_at);
-        if (Number.isNaN(exitAt.getTime())) {
-          return new Response(
-            JSON.stringify({ error: "Invalid paywall exit timestamp" }),
-            {
-              status: 400,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-
-        const minEligibleReturnAt = new Date(
-          now.getTime() - returnTrialThresholdMinutes * 60 * 1000,
-        ).toISOString();
-
-        if (exitAt.getTime() > new Date(minEligibleReturnAt).getTime()) {
-          console.log(
-            `[PaywallReturnTrial] grant_blocked_threshold user=${userId} exit_at=${userEligibility.paywall_return_trial_exit_at} min_eligible_at=${minEligibleReturnAt}`,
-          );
-          return new Response(
-            JSON.stringify({
-              error: "Return trial threshold not met",
-            }),
-            {
-              status: 403,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
@@ -784,7 +769,6 @@ serve(async (req) => {
             .update({ paywall_return_trial_granted_at: trialGrantedAt })
             .eq("id", userId)
             .is("paywall_return_trial_granted_at", null)
-            .lte("paywall_return_trial_exit_at", minEligibleReturnAt)
             .select("id")
             .maybeSingle();
 
