@@ -1,9 +1,10 @@
+/// <reference lib="deno.ns" />
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "./cors.ts";
 import { authenticateUserOrInternalSecret } from "./auth.ts";
 
 export interface PaymentPlanContext {
-  supabase: ReturnType<typeof createClient>;
+  supabase: any;
   userId: string;
   requestBody: Record<string, unknown>;
 }
