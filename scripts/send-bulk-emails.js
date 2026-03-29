@@ -27,7 +27,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-const EMAIL_SUBJECT='Apple Pay , now on Moneko'
+const DEFAULT_EMAIL_SUBJECT='Thanks for choosing Moneko'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -148,9 +148,9 @@ function replaceVariables(template, variables) {
  * Extract first name from full name
  */
 function getFirstName(fullName) {
-  if (!fullName) return 'there';
+  if (!fullName) return null;
   const parts = fullName.trim().split(' ');
-  return parts[0] || 'there';
+  return parts[0] || null;
 }
 
 /**
@@ -343,6 +343,7 @@ async function main() {
     console.log(`Test email will be sent to: ${config.testEmail}\n`);
 
     const testVariables = {
+      name: 'Test User',
       first_name: 'Test User',
       email: config.testEmail,
       unsubscribe_url: `https://moneko.io/unsubscribe?email=${encodeURIComponent(
@@ -351,8 +352,8 @@ async function main() {
     };
 
     const testHtml = replaceVariables(template, testVariables);
-    const testSubject = EMAIL_SUBJECT
-    const testPreviewText = EMAIL_SUBJECT;
+    const testSubject = testVariables.first_name ? `${testVariables.first_name} - ${DEFAULT_EMAIL_SUBJECT}` : DEFAULT_EMAIL_SUBJECT;
+    const testPreviewText = testSubject;
 
     console.log('Sending test email...');
     const result = await sendEmail(config.testEmail, testSubject, testHtml, testPreviewText);
@@ -416,8 +417,8 @@ async function main() {
   console.log('\n📤 Sending emails...\n');
 
   const campaignStartTime = Date.now();
-  const campaignSubject = EMAIL_SUBJECT;
-  const campaignPreviewText = EMAIL_SUBJECT;
+  const campaignDefaultSubject = DEFAULT_EMAIL_SUBJECT;
+  const campaignPreviewText = campaignDefaultSubject;
 
   const results = {
     total: userList.length,
@@ -431,6 +432,7 @@ async function main() {
     const firstName = getFirstName(user.full_name);
 
     const variables = {
+      name: firstName || 'there',
       first_name: firstName,
       full_name: user.full_name || firstName,
       email: user.email,
@@ -438,10 +440,11 @@ async function main() {
     };
 
     const html = replaceVariables(template, variables);
+    const personalizedSubject = firstName ? `${firstName} - ${campaignDefaultSubject}` : campaignDefaultSubject;
 
     console.log(`[${i + 1}/${userList.length}] Sending to ${user.email}...`);
 
-    const result = await sendEmail(user.email, campaignSubject, html, campaignPreviewText);
+    const result = await sendEmail(user.email, personalizedSubject, html, campaignPreviewText);
 
     if (result.success) {
       results.success++;
@@ -478,7 +481,7 @@ async function main() {
   
   const campaignEndTime = Date.now();
   const summaryHtml = generateSummaryReport(results, {
-    subject: campaignSubject,
+    subject: campaignDefaultSubject,
     startTime: campaignStartTime,
     endTime: campaignEndTime,
   });
@@ -500,7 +503,7 @@ async function main() {
   // Send summary report
   const summaryResult = await sendEmail(
     ADMIN_EMAIL,
-    `📊 Campaign Report: ${campaignSubject}`,
+    `📊 Campaign Report: ${campaignDefaultSubject}`,
     summaryHtml
   );
 
@@ -514,7 +517,7 @@ async function main() {
   await sleep(RATE_LIMIT_DELAY);
   const campaignCopyResult = await sendEmail(
     ADMIN_EMAIL,
-    `[COPY] ${campaignSubject}`,
+    `[COPY] ${campaignDefaultSubject}`,
     adminCampaignEmail,
     campaignPreviewText
   );
