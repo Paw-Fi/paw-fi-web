@@ -23,7 +23,10 @@ function isTransientTransportError(error: unknown) {
     message.includes("error sending request") ||
     message.includes("fetch failed") ||
     message.includes("connection reset") ||
-    message.includes("timed out")
+    message.includes("timed out") ||
+    message.includes("bad gateway") ||
+    message.includes("error code 502") ||
+    message.includes("cloudflare")
   );
 }
 
@@ -365,14 +368,24 @@ Deno.serve(async (req: Request) => {
       let reminderRows: ReminderUserRow[] = [];
       let reminderErr: unknown = null;
 
-      const reminderRpcResult = await runWithRetry<ReminderUserRow[]>(() =>
-        supabase.rpc("get_recent_log_expense_reminder_users", {
-          p_user_ids: chunk,
-          p_since: last24hIso,
-        })
+      const reminderRpcResult = await runWithRetry<ReminderUserRow[]>(
+        () =>
+          supabase.rpc("get_recent_log_expense_reminder_users", {
+            p_user_ids: chunk,
+            p_since: last24hIso,
+          }),
+        3,
       );
 
-      if (reminderRpcResult.error && isMissingFunctionError(reminderRpcResult.error)) {
+      const reminderFallbackReason = reminderRpcResult.error
+        ? isMissingFunctionError(reminderRpcResult.error)
+          ? "rpc_missing"
+          : isTransientTransportError(reminderRpcResult.error)
+            ? "rpc_transient"
+            : "rpc_error"
+        : null;
+
+      if (reminderRpcResult.error) {
         const fallbackChunkSize = 25;
         const fallbackRows: ReminderUserRow[] = [];
         let fallbackChunksTried = 0;
@@ -428,10 +441,9 @@ Deno.serve(async (req: Request) => {
             step: "load_recent_reminders",
             operation: "recent_reminder_guard",
             lookupMode: reminderRpcResult.error
-              ? isMissingFunctionError(reminderRpcResult.error)
-                ? "fallback_get"
-                : "rpc"
+              ? "fallback_get"
               : "rpc",
+            fallbackReason: reminderFallbackReason,
             rpcAttempts: reminderRpcResult.attempts,
             isRpcMissingFunctionError:
               !!reminderRpcResult.error &&
@@ -486,10 +498,7 @@ Deno.serve(async (req: Request) => {
         })
       );
 
-      if (
-        reminderStatsRpcResult.error &&
-        isMissingFunctionError(reminderStatsRpcResult.error)
-      ) {
+      if (reminderStatsRpcResult.error) {
         const fallbackChunkSize = 25;
         const statsAccumulator = new Map<string, ReminderStats>();
         let fallbackChunksTried = 0;
