@@ -443,6 +443,47 @@ interface ResolvedNotificationUser {
   hasLegacyOwnershipConflict: boolean;
 }
 
+async function enqueuePendingNotification(params: {
+  originalTransactionId: string;
+  transactionId: string | null;
+  storeProductId: string | null;
+  environment: AppStoreEnvironment;
+  appAccountToken: string | null;
+  userIdSource:
+    | "ownership_binding"
+    | "app_account_token"
+    | "legacy_subscription"
+    | null;
+  lastError: string;
+}): Promise<void> {
+  const payload = {
+    provider: "app_store",
+    original_transaction_id: params.originalTransactionId,
+    transaction_id: params.transactionId,
+    store_product_id: params.storeProductId,
+    notification_environment: toStoredAppStoreEnvironment(params.environment),
+    candidate_app_account_token: params.appAccountToken,
+    user_id_source: params.userIdSource,
+    pending_attempts: 1,
+    first_seen_at: new Date().toISOString(),
+    last_seen_at: new Date().toISOString(),
+    last_error: params.lastError,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("app_store_notification_backlog")
+    .upsert(payload, {
+      onConflict: "provider,original_transaction_id,transaction_key",
+    });
+
+  if (error) {
+    throw new Error(
+      `Failed to queue pending App Store notification: ${error.message ?? error.code ?? String(error)}`,
+    );
+  }
+}
+
 async function resolveNotificationUser(params: {
   originalTransactionId: string;
   transactionId: string | null;
@@ -960,28 +1001,24 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     if (!userId) {
-      await reportEdgeFunctionError({
-        functionName: "app-store-notifications",
-        error: new Error("App Store notification without user mapping"),
-        context: getAppStoreDiagnosticsContext({
-          phase: "unknown_user_mapping",
-          originalTransactionId,
-          transactionId,
-          environment,
-          userIdSource,
-          appAccountToken:
-            appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
-        }),
+      await enqueuePendingNotification({
+        originalTransactionId,
+        transactionId,
+        storeProductId,
+        environment,
+        appAccountToken:
+          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
+        userIdSource,
+        lastError: "unknown_user_mapping",
       });
-      console.warn("App Store notification without user mapping", {
+      console.warn("App Store notification queued for later reconciliation", {
         originalTransactionId,
         transactionId,
         userIdSource,
-        appAccountToken:
-          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
+        environment,
       });
       return new Response(
-        JSON.stringify({ status: "ignored", reason: "Unknown user" }),
+        JSON.stringify({ status: "queued", reason: "Pending user mapping" }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

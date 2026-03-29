@@ -1710,6 +1710,32 @@ serve(async (req: Request) => {
 
       console.log("✅ Successfully wrote subscription to database");
 
+      if (originalTransactionId) {
+        const { error: backlogResolveError } = await supabase
+          .from("app_store_notification_backlog")
+          .update({
+            resolved_at: nowIso(),
+            resolved_user_id: userId,
+            resolution_source: "verify_iap_purchase",
+            updated_at: nowIso(),
+          })
+          .eq("provider", "app_store")
+          .eq("original_transaction_id", originalTransactionId)
+          .is("resolved_at", null);
+
+        if (backlogResolveError) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: backlogResolveError,
+            context: {
+              ...verificationLogContext,
+              phase: "resolve_pending_notification_backlog",
+              originalTransactionId,
+            },
+          });
+        }
+      }
+
       const { data: finalSub } = await supabase
         .from("subscriptions")
         .select("*")
