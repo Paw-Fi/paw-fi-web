@@ -307,19 +307,19 @@ function looksLikeStripeSubscriptionId(value: unknown): value is string {
 }
 
 async function authUserExists(userId: string): Promise<boolean> {
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
 
   if (error) {
-    if (error.status === 404) {
-      return false;
-    }
-
     throw new Error(
       `Failed to verify auth user existence: ${error.message ?? String(error)}`,
     );
   }
 
-  return Boolean(data?.user?.id);
+  return Boolean(data?.id);
 }
 
 async function resolveVerifiedUserId(params: {

@@ -20,6 +20,7 @@ import {
 } from "../shared/app-store-api.ts";
 import {
   ensureAppStoreOwnership,
+  getAppStoreOwnershipBinding,
   hasAppStoreOwnershipConflict,
   PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
   purchaseOwnershipConflictMessage,
@@ -70,20 +71,83 @@ async function resolveActiveAuthUserId(
 ): Promise<string | null> {
   if (!candidateUserId) return null;
 
-  const { data, error } =
-    await supabase.auth.admin.getUserById(candidateUserId);
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", candidateUserId)
+    .maybeSingle();
 
   if (error) {
-    if (error.status === 404) {
-      return null;
-    }
-
     throw new Error(
       `Failed to verify auth user existence: ${error.message ?? String(error)}`,
     );
   }
 
-  return data?.user?.id ?? null;
+  return data?.id ?? null;
+}
+
+async function attemptAutomaticAppStoreOwnershipTransfer(params: {
+  supabase: any;
+  originalTransactionId: string;
+  currentUserId: string;
+  transactionId: string | null;
+  storeProductId: string;
+  environment: string;
+}): Promise<
+  | { transferred: true; previousOwnerUserId: string }
+  | { transferred: false; reason: string }
+> {
+  const binding = await getAppStoreOwnershipBinding({
+    supabase: params.supabase,
+    originalTransactionId: params.originalTransactionId,
+  });
+
+  if (!binding?.user_id) {
+    return { transferred: false, reason: "binding_missing" };
+  }
+
+  if (binding.user_id === params.currentUserId) {
+    return { transferred: false, reason: "already_owned_by_current_user" };
+  }
+
+  const { count: dependentCount, error: dependentCountError } =
+    await params.supabase
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("bound_to_user_id", binding.user_id)
+      .or("status.eq.trialing,and(status.eq.active,plan.neq.free)");
+
+  if (dependentCountError) {
+    throw new Error(
+      `Failed to inspect bound dependents before ownership transfer: ${dependentCountError.message ?? dependentCountError.code ?? String(dependentCountError)}`,
+    );
+  }
+
+  if ((dependentCount ?? 0) > 0) {
+    return { transferred: false, reason: "active_bound_dependents" };
+  }
+
+  const now = new Date().toISOString();
+  const { error: transferError } = await params.supabase
+    .from("iap_account_bindings")
+    .update({
+      user_id: params.currentUserId,
+      latest_transaction_id: params.transactionId,
+      store_product_id: params.storeProductId,
+      app_store_environment: params.environment,
+      claim_source: "verify_iap_purchase_auto_transfer",
+      last_verified_at: now,
+      updated_at: now,
+    })
+    .eq("id", binding.id);
+
+  if (transferError) {
+    throw new Error(
+      `Failed to transfer App Store ownership binding: ${transferError.message ?? transferError.code ?? String(transferError)}`,
+    );
+  }
+
+  return { transferred: true, previousOwnerUserId: binding.user_id };
 }
 
 function parseMsToIso(ms: string | null): string | null {
@@ -511,6 +575,7 @@ serve(async (req: Request) => {
       let originalTransactionId: string | null = null;
       let transactionId: string | null = null;
       let verifiedTransactionAppAccountUserId: string | null = null;
+      let transferredOwnershipFromUserId: string | null = null;
       let appStoreTrialStart: string | null = null;
       let appStoreTrialEnd: string | null = null;
       let appStoreOfferType: number | string | null = null;
@@ -979,37 +1044,69 @@ serve(async (req: Request) => {
           verifiedTransactionAppAccountUserId &&
           verifiedTransactionAppAccountUserId !== userId
         ) {
-          await reportEdgeFunctionError({
-            functionName: "verify-iap-purchase",
-            error: new Error(
-              "Verified App Store appAccountToken does not match auth user",
-            ),
-            context: {
-              ...verificationLogContext,
-              phase: "verified_app_account_token_mismatch",
-              verifiedTransactionAppAccountUserId,
-              authUserId: userId,
-            },
-          });
-          console.error("App Store appAccountToken does not match auth user", {
-            authUserId: userId,
-            requestAppAccountToken,
-            transactionAppAccountToken,
-            verifiedTransactionAppAccountUserId,
-            originalTransactionId,
-            transactionId,
-            storeProductId,
-          });
-          return new Response(
-            JSON.stringify({
-              error: purchaseOwnershipConflictMessage(),
-              code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
-            }),
-            {
-              status: 409,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          const transferResult =
+            await attemptAutomaticAppStoreOwnershipTransfer({
+              supabase,
+              originalTransactionId:
+                decodedTransaction.originalTransactionId ??
+                decodedTransaction.transactionId!,
+              currentUserId: userId,
+              transactionId: decodedTransaction.transactionId ?? null,
+              storeProductId,
+              environment:
+                environment === Environment.SANDBOX ? "Sandbox" : "Production",
+            });
+
+          if (transferResult.transferred) {
+            transferredOwnershipFromUserId = transferResult.previousOwnerUserId;
+            verifiedTransactionAppAccountUserId = userId;
+            console.warn(
+              "Auto-transferred App Store ownership after verified token mismatch",
+              {
+                fromUserId: transferResult.previousOwnerUserId,
+                toUserId: userId,
+                originalTransactionId: decodedTransaction.originalTransactionId,
+                transactionId: decodedTransaction.transactionId,
+              },
+            );
+          } else {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error(
+                "Verified App Store appAccountToken does not match auth user",
+              ),
+              context: {
+                ...verificationLogContext,
+                phase: "verified_app_account_token_mismatch",
+                verifiedTransactionAppAccountUserId,
+                authUserId: userId,
+                transferBlockedReason: transferResult.reason,
+              },
+            });
+            console.error(
+              "App Store appAccountToken does not match auth user",
+              {
+                authUserId: userId,
+                requestAppAccountToken,
+                transactionAppAccountToken,
+                verifiedTransactionAppAccountUserId,
+                originalTransactionId,
+                transactionId,
+                storeProductId,
+                transferBlockedReason: transferResult.reason,
+              },
+            );
+            return new Response(
+              JSON.stringify({
+                error: purchaseOwnershipConflictMessage(),
+                code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+              }),
+              {
+                status: 409,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
         }
 
         if (requestAppAccountToken && requestAppAccountToken !== userId) {
@@ -1605,16 +1702,50 @@ serve(async (req: Request) => {
         });
 
         if (ownershipDecision.kind === "owned_by_another_user") {
-          return new Response(
-            JSON.stringify({
-              error: purchaseOwnershipConflictMessage(),
-              code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
-            }),
-            {
-              status: 409,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          const transferResult =
+            await attemptAutomaticAppStoreOwnershipTransfer({
+              supabase,
+              originalTransactionId,
+              currentUserId: userId,
+              transactionId,
+              storeProductId,
+              environment: environmentString,
+            });
+
+          if (transferResult.transferred) {
+            transferredOwnershipFromUserId = transferResult.previousOwnerUserId;
+            console.warn(
+              "Auto-transferred App Store ownership after binding conflict",
+              {
+                fromUserId: transferResult.previousOwnerUserId,
+                toUserId: userId,
+                originalTransactionId,
+                transactionId,
+              },
+            );
+          } else {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error("App Store ownership bound to another user"),
+              context: {
+                ...verificationLogContext,
+                phase: "ownership_bound_to_another_user",
+                ownerUserId: ownershipDecision.binding.user_id,
+                authUserId: userId,
+                transferBlockedReason: transferResult.reason,
+              },
+            });
+            return new Response(
+              JSON.stringify({
+                error: purchaseOwnershipConflictMessage(),
+                code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+              }),
+              {
+                status: 409,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
         }
       } else if (iapOwnershipBindingEnabled) {
         console.warn(
@@ -1706,6 +1837,46 @@ serve(async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           },
         );
+      }
+
+      if (transferredOwnershipFromUserId) {
+        const { error: resetPreviousOwnerError } = await supabase
+          .from("subscriptions")
+          .update({
+            plan: "free",
+            status: "active",
+            billing_interval: null,
+            current_period_end: null,
+            trial_start: null,
+            trial_end: null,
+            cancel_at_period_end: false,
+            store_product_id: null,
+            app_store_transaction_id: null,
+            app_store_original_transaction_id: null,
+            stripe_subscription_id: null,
+            stripe_customer_id: null,
+            play_purchase_token: null,
+            play_order_id: null,
+            play_package_name: null,
+            ended_at: nowIso(),
+            updated_at: nowIso(),
+          })
+          .eq("user_id", transferredOwnershipFromUserId)
+          .eq("provider", "app_store")
+          .eq("app_store_original_transaction_id", originalTransactionId);
+
+        if (resetPreviousOwnerError) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: resetPreviousOwnerError,
+            context: {
+              ...verificationLogContext,
+              phase: "reset_previous_owner_subscription_after_transfer",
+              previousOwnerUserId: transferredOwnershipFromUserId,
+              originalTransactionId,
+            },
+          });
+        }
       }
 
       console.log("✅ Successfully wrote subscription to database");
