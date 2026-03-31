@@ -60,7 +60,6 @@ import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 import { Button } from "@/components/ui/button";
 import monekoLogo from "@/assets/images/logo/moneko.png";
 import finniLogo from "@/assets/images/logo/finni.png";
-import DownloadPage from "@/routes/download";
 import { DashboardAppProviders } from "@/providers/dashboard-app-providers";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
@@ -87,6 +86,7 @@ interface MenuItem {
   icon: IconDefinition;
   path: string;
   submenu?: SubMenuItem[];
+  comingSoon?: boolean;
 }
 
 
@@ -477,24 +477,27 @@ export function Dashboard() {
   };
 
   const menuItems = [
-    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard" },
+    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard", comingSoon: true },
     {
       id: "tracker",
       label: "Goal Guide",
       icon: faTrophy,
       path: "/dashboard/tracker",
+      comingSoon: true,
     },
     {
       id: "portfolio",
       label: "Portfolio",
       icon: faHandHoldingDollar,
       path: "/dashboard/portfolio",
+      comingSoon: true,
     },
     {
       id: "income-builder",
       label: "Income Builder",
       icon: faHammer,
       path: "/dashboard/income-builder",
+      comingSoon: true,
     },
 
     {
@@ -502,10 +505,25 @@ export function Dashboard() {
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
+      comingSoon: true,
     },
   ];
 
-  // Effect to handle menu expansion based on current route (simplified since no submenus)
+  // Handle menu item click - show coming soon for all except membership
+  const handleMenuItemClick = (e: React.MouseEvent, item: MenuItem) => {
+    // Allow membership to navigate normally
+    if (item.id === "membership") {
+      setMobileMenuOpen(false);
+      return;
+    }
+    
+    // For items marked as coming soon, prevent navigation and show toast
+    if (item.comingSoon) {
+      e.preventDefault();
+      setMobileMenuOpen(false);
+      toast.info("Coming soon! This feature is under development.");
+    }
+  };
   useEffect(() => {
     // Clear expanded menu since we no longer use submenus
     setExpandedMenu(null);
@@ -656,20 +674,7 @@ export function Dashboard() {
                       <Link
                         to={item.path}
                         className="group"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          // Track visits for calculators
-                          if (item.id === "calculators") {
-                            markCalculatorsVisited();
-                          }
-                          // Track learning and portfolio visits
-                          if (item.id === "learning") {
-                            trackUserAction("learning_visited");
-                          }
-                          if (item.id === "portfolio") {
-                            trackUserAction("portfolio_visited");
-                          }
-                        }}
+                        onClick={(e) => handleMenuItemClick(e, item)}
                       >
                         <motion.div
                           className={`dashboard-nav-item flex min-h-[44px] w-full items-center justify-between rounded-lg px-3 py-3 transition-all duration-200 sm:px-4 sm:py-3.5 ${
@@ -765,9 +770,11 @@ export function Dashboard() {
                           <Link
                             to="/dashboard/user-settings"
                             className="block"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
                               setUserMenuOpen(false);
                               setMobileMenuOpen(false);
+                              toast.info("Coming soon! This feature is under development.");
                             }}
                           >
                             <motion.div
@@ -790,9 +797,11 @@ export function Dashboard() {
                           <Link
                             to="/dashboard/user-settings/profile"
                             className="block"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
                               setUserMenuOpen(false);
                               setMobileMenuOpen(false);
+                              toast.info("Coming soon! This feature is under development.");
                             }}
                           >
                             <motion.div
@@ -835,7 +844,16 @@ export function Dashboard() {
                               </span>
                             </motion.div>
                           </Link>
-                          <a href="mailto:hello@moneko.io" className="block">
+                          <a 
+                            href="mailto:hello@moneko.io" 
+                            className="block"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setUserMenuOpen(false);
+                              setMobileMenuOpen(false);
+                              toast.info("Coming soon! This feature is under development.");
+                            }}
+                          >
                             <motion.div
                               className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
                               whileHover={{ x: 1 }}
