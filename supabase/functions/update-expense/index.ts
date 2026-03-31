@@ -19,6 +19,10 @@ import {
   fetchUserCategoryRemaps,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
+import {
+  assertAccountInScope,
+  resolveDefaultAccountId,
+} from "../shared/accounts.ts";
 
 interface MemberSplitPayload {
   userId: string;
@@ -54,6 +58,8 @@ interface UpdateExpenseRequest {
     };
     source?: string;
     split_group_id?: string;
+    account_id?: string | null;
+    accountId?: string | null;
     payer_user_id?: string;
     payerUserId?: string;
   };
@@ -1112,6 +1118,48 @@ Deno.serve(async (req: Request) => {
       ? sanitizeUuid(updatesHouseholdIdRaw)
       : null;
     const effectiveHouseholdForSplit = expenseHouseholdId ?? updatesHouseholdId;
+
+    const requestedAccountIdRaw = (updates as any)?.account_id ??
+      (updates as any)?.accountId;
+    const requestedAccountId = requestedAccountIdRaw == null ||
+        String(requestedAccountIdRaw).trim().length === 0
+      ? null
+      : sanitizeUuid(String(requestedAccountIdRaw));
+
+    if (
+      requestedAccountIdRaw != null &&
+      String(requestedAccountIdRaw).trim().length > 0 &&
+      !requestedAccountId
+    ) {
+      return errorResponse("Invalid account_id format", "VALIDATION_ERROR");
+    }
+
+    if (requestedAccountIdRaw !== undefined) {
+      const targetScopeHouseholdId = updatesHouseholdId ?? expenseHouseholdId;
+      if (requestedAccountId) {
+        const isInScope = await assertAccountInScope(
+          supabase,
+          requestedAccountId,
+          {
+            userId,
+            householdId: targetScopeHouseholdId,
+          },
+        );
+        if (!isInScope) {
+          return errorResponse(
+            "Provided account_id does not belong to this scope",
+            "VALIDATION_ERROR",
+          );
+        }
+        (updates as any).account_id = requestedAccountId;
+      } else {
+        (updates as any).account_id = await resolveDefaultAccountId(supabase, {
+          userId,
+          householdId: targetScopeHouseholdId,
+        });
+      }
+      delete (updates as any).accountId;
+    }
 
     const shouldCreateSplitGroup = !!effectiveHouseholdForSplit &&
       !isPortfolioHousehold &&

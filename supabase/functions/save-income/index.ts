@@ -18,6 +18,10 @@ import {
   fetchUserCategoryRemaps,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
+import {
+  assertAccountInScope,
+  resolveDefaultAccountId,
+} from "../shared/accounts.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -62,6 +66,7 @@ interface RequestBody {
   privacyScope?: "private" | "balances_only" | "full"; // Visibility scope (default: 'full')
   householdId?: string; // If provided, share with this household
   isPortfolio?: boolean; // If true, treat as personal even with householdId
+  accountId?: string; // Optional financial account id
   fxRate?: number; // Optional FX rate for currency normalization
   idempotencyKey?: string; // Optional idempotency key for deduplication
   attachments?: Array<{
@@ -366,6 +371,27 @@ Deno.serve(async (req: Request) => {
     // Convert amount to cents
     const amountCents = Math.round(body.amount * 100);
 
+    let accountId: string | null = null;
+    if (body.accountId) {
+      const isInScope = await assertAccountInScope(supabase, body.accountId, {
+        userId,
+        householdId: resolvedHouseholdId,
+      });
+      if (!isInScope) {
+        return errorResponse(
+          "Provided accountId does not belong to this scope",
+          400,
+          "VALIDATION_ERROR",
+        );
+      }
+      accountId = body.accountId;
+    } else {
+      accountId = await resolveDefaultAccountId(supabase, {
+        userId,
+        householdId: resolvedHouseholdId,
+      });
+    }
+
     // Build income record
     const incomeRecord: any = {
       contact_id: contactId,
@@ -383,6 +409,7 @@ Deno.serve(async (req: Request) => {
       attachments: Array.isArray(body.attachments) ? body.attachments : [],
       is_recurring: body.isRecurring || false,
       recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
+      account_id: accountId,
     };
 
     // Add household reference if resolved (portfolio uses household_id as a private space scope)

@@ -19,6 +19,10 @@ import {
   fetchUserCategoryRemaps,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
+import {
+  assertAccountInScope,
+  resolveDefaultAccountId,
+} from "../shared/accounts.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -124,6 +128,7 @@ interface TransactionItem {
   receiptImageUrl?: string;
   customSplits?: CustomSplits;
   payerUserId?: string;
+  accountId?: string;
   // Income-specific fields
   source?: string;
   ownerType?: "me" | "partner" | "household";
@@ -350,6 +355,9 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
+      const scopeHouseholdId =
+        resolvedHouseholdId || (isPortfolio ? requestedHouseholdId : null);
+
       const normalizedDate = normalizeCalendarDateString(tx.date);
       if (!normalizedDate) {
         validationErrors.push({
@@ -372,9 +380,10 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        const normalizedEndDate = tx.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(tx.recurrence_rule.end_date);
+        const normalizedEndDate =
+          tx.recurrence_rule.end_date == null
+            ? undefined
+            : normalizeCalendarDateString(tx.recurrence_rule.end_date);
 
         if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
           validationErrors.push({
@@ -402,8 +411,8 @@ Deno.serve(async (req: Request) => {
         });
         continue;
       }
-      const resolvedCategory = sanitizedCategory ??
-        normalizeCategoryForStorage(tx.category);
+      const resolvedCategory =
+        sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
       const effectiveCategory = applyCategoryRemap({
         categoryName: resolvedCategory,
         transactionType: tx.type === "income" ? "income" : "expense",
@@ -427,9 +436,36 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      const requestedAccountId = sanitizeUuid(tx.accountId ?? null);
+      let resolvedAccountId: string | null = null;
+      if (requestedAccountId) {
+        const accountInScope = await assertAccountInScope(
+          supabase,
+          requestedAccountId,
+          {
+            userId,
+            householdId: scopeHouseholdId,
+          },
+        );
+        if (!accountInScope) {
+          validationErrors.push({
+            index: i,
+            error: "Provided accountId does not belong to this scope",
+          });
+          continue;
+        }
+        resolvedAccountId = requestedAccountId;
+      } else {
+        resolvedAccountId = await resolveDefaultAccountId(supabase, {
+          userId,
+          householdId: scopeHouseholdId,
+        });
+      }
+
       const baseRecord = {
         contact_id: contactId,
         user_id: userId,
+        account_id: resolvedAccountId,
         amount_cents: amountCents,
         category: effectiveCategory,
         date: tx.date,
@@ -440,9 +476,8 @@ Deno.serve(async (req: Request) => {
         created_at: tx.clientCreatedAt || new Date().toISOString(),
         household_id: isPortfolio ? requestedHouseholdId : null,
         is_recurring: tx.isRecurring === true,
-        recurrence_rule: tx.isRecurring === true
-          ? tx.recurrence_rule || null
-          : null,
+        recurrence_rule:
+          tx.isRecurring === true ? tx.recurrence_rule || null : null,
       };
 
       if (tx.type === "income") {
@@ -452,8 +487,8 @@ Deno.serve(async (req: Request) => {
           source: tx.source || null,
           owner_type: tx.ownerType || "me",
           privacy_scope: tx.privacyScope || "full",
-          household_id: resolvedHouseholdId ||
-            (isPortfolio ? requestedHouseholdId : null),
+          household_id:
+            resolvedHouseholdId || (isPortfolio ? requestedHouseholdId : null),
         };
         incomeRecords.push(incomeRecord);
         incomeIndices.push(i);
@@ -650,11 +685,11 @@ Deno.serve(async (req: Request) => {
                 ? meta.customSplits.splitType.trim().toLowerCase()
                 : "equal";
             const normalizedSplitType = [
-                "equal",
-                "amount",
-                "percentage",
-                "shares",
-              ].includes(rawSplitType)
+              "equal",
+              "amount",
+              "percentage",
+              "shares",
+            ].includes(rawSplitType)
               ? rawSplitType
               : "equal";
             const hasMemberSplits =
@@ -705,8 +740,8 @@ Deno.serve(async (req: Request) => {
               const amountPerMember = Math.floor(
                 amountCents / householdMembers.length,
               );
-              const remainder = amountCents -
-                amountPerMember * householdMembers.length;
+              const remainder =
+                amountCents - amountPerMember * householdMembers.length;
               lines = householdMembers.map((member, idx) => ({
                 user_id: member.user_id,
                 amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
@@ -714,7 +749,7 @@ Deno.serve(async (req: Request) => {
             } else if (splitType === "amount" && customSplits) {
               const memberSplits = customSplits.memberSplits as MemberSplit[];
               const cents = memberSplits.map((s) =>
-                Math.max(0, Math.round((normalizeAmount(s.amount) || 0) * 100))
+                Math.max(0, Math.round((normalizeAmount(s.amount) || 0) * 100)),
               );
               const sumCents = cents.reduce(
                 (sum: number, v: number) => sum + v,
@@ -764,8 +799,8 @@ Deno.serve(async (req: Request) => {
               const amountPerMember = Math.floor(
                 amountCents / householdMembers.length,
               );
-              const remainder = amountCents -
-                amountPerMember * householdMembers.length;
+              const remainder =
+                amountCents - amountPerMember * householdMembers.length;
               lines = householdMembers.map((member, idx) => ({
                 user_id: member.user_id,
                 amount_cents: amountPerMember + (idx === 0 ? remainder : 0),

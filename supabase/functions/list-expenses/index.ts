@@ -54,6 +54,7 @@ function uniqueStrings(values: unknown[]): string[] {
 interface ExpenseRecord {
   id: string;
   user_id: string;
+  account_id: string | null;
   amount_cents: number;
   currency: string;
   category: string;
@@ -205,9 +206,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: memberSpaces } = memberSpaceIds.length
       ? await supabase
-          .from("households")
-          .select("id, is_portfolio")
-          .in("id", memberSpaceIds)
+        .from("households")
+        .select("id, is_portfolio")
+        .in("id", memberSpaceIds)
       : { data: [] };
 
     const allSpaces = [...(ownedSpaces || []), ...(memberSpaces || [])];
@@ -259,7 +260,7 @@ Deno.serve(async (req: Request) => {
     let query = supabase
       .from("expenses")
       .select(
-        "id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, is_recurring, recurrence_rule, attachments, created_at, contact_id, user_id",
+        "id, type, date, category, raw_text, amount_cents, currency, receipt_image_url, split_group_id, household_id, account_id, is_recurring, recurrence_rule, attachments, created_at, contact_id, user_id, accounts(name, icon, color)",
         { count: "exact" },
       )
       .eq("type", "expense") // CRITICAL: Only fetch expenses (not income)
@@ -308,7 +309,11 @@ Deno.serve(async (req: Request) => {
         query = query.eq("user_id", userId);
         if (portfolioSpaceIds.length) {
           query = query.or(
-            `household_id.is.null,household_id.in.(${portfolioSpaceIds.join(",")})`,
+            `household_id.is.null,household_id.in.(${
+              portfolioSpaceIds.join(
+                ",",
+              )
+            })`,
           );
         } else {
           query = query.is("household_id", null);
@@ -371,12 +376,20 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      const accountRow = (expense as any).accounts as {
+        name?: string | null;
+        icon?: string | null;
+        color?: string | null;
+      } | null;
+      const fallbackAccountName = expense.account_id ? null : "Spending";
+      const fallbackAccountIcon = expense.account_id ? null : "wallet";
+      const fallbackAccountColor = expense.account_id ? null : "#6B7280";
+
       return {
         id: expense.id,
         type: expense.type || "expense",
         date: expense.date,
-        category:
-          sanitizeCategoryName(expense.category ?? "") ??
+        category: sanitizeCategoryName(expense.category ?? "") ??
           normalizeCategoryForStorage(expense.category),
         raw_text: expense.raw_text,
         amount_cents: expense.amount_cents, // Keep as cents, mobile divides by 100
@@ -384,6 +397,10 @@ Deno.serve(async (req: Request) => {
         receipt_image_url: expense.receipt_image_url,
         split_group_id: expense.split_group_id,
         household_id: expense.household_id,
+        account_id: expense.account_id,
+        account_name: accountRow?.name ?? fallbackAccountName,
+        account_icon: accountRow?.icon ?? fallbackAccountIcon,
+        account_color: accountRow?.color ?? fallbackAccountColor,
         is_recurring: expense.is_recurring || false,
         recurrence_rule: recurrenceRule,
         attachments: attachments,

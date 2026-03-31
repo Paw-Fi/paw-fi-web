@@ -19,6 +19,10 @@ import {
   fetchUserCategoryRemaps,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
+import {
+  assertAccountInScope,
+  resolveDefaultAccountId,
+} from "../shared/accounts.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -168,6 +172,7 @@ interface RequestBody {
     };
   };
   payerUserId?: string; // Optional explicit payer for household split
+  accountId?: string; // Optional financial account
 }
 
 Deno.serve(async (req: Request) => {
@@ -420,6 +425,47 @@ Deno.serve(async (req: Request) => {
     // Convert amount to cents
     const amountCents = Math.round(body.amount * 100);
 
+    async function resolveScopedAccountId(
+      scopeHouseholdId: string | null,
+    ): Promise<string | null> {
+      if (body.accountId) {
+        const isInScope = await assertAccountInScope(supabase, body.accountId, {
+          userId: userId as string,
+          householdId: scopeHouseholdId,
+        });
+        if (!isInScope) {
+          throw new Error("ACCOUNT_SCOPE_MISMATCH");
+        }
+        return body.accountId;
+      }
+
+      return await resolveDefaultAccountId(supabase, {
+        userId: userId as string,
+        householdId: scopeHouseholdId,
+      });
+    }
+
+    let preliminaryAccountId: string | null = null;
+    if (!body.householdId || isPortfolio) {
+      try {
+        preliminaryAccountId = await resolveScopedAccountId(
+          isPortfolio ? (body.householdId ?? null) : null,
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === "ACCOUNT_SCOPE_MISMATCH"
+        ) {
+          return errorResponse(
+            "Provided accountId does not belong to this scope",
+            400,
+            "VALIDATION_ERROR",
+          );
+        }
+        throw error;
+      }
+    }
+
     // Insert expense into expenses table
     const { data: expense, error: expenseError } = await supabase
       .from("expenses")
@@ -437,6 +483,7 @@ Deno.serve(async (req: Request) => {
         is_recurring: body.isRecurring || false,
         recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
         household_id: isPortfolio ? body.householdId || null : null,
+        account_id: preliminaryAccountId,
       })
       .select()
       .single();
@@ -447,6 +494,20 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[save-expense] Expense saved:", expense.id);
+
+    if (body.householdId && !isPortfolio && !preliminaryAccountId) {
+      const personalDefault = await resolveDefaultAccountId(supabase, {
+        userId,
+        householdId: null,
+      });
+      if (personalDefault) {
+        await supabase
+          .from("expenses")
+          .update({ account_id: personalDefault })
+          .eq("id", expense.id);
+        (expense as any).account_id = personalDefault;
+      }
+    }
 
     // Learn/ensure custom category + preference mapping for future AI categorization
     try {
@@ -881,12 +942,35 @@ Deno.serve(async (req: Request) => {
         "members",
       );
 
-      // Update expense with split_group_id AND household_id
+      let sharedScopeAccountId: string | null = await resolveDefaultAccountId(
+        supabase,
+        {
+          userId,
+          householdId: body.householdId,
+        },
+      );
+
+      if (body.accountId) {
+        const isInSharedScope = await assertAccountInScope(
+          supabase,
+          body.accountId,
+          {
+            userId,
+            householdId: body.householdId,
+          },
+        );
+        if (isInSharedScope) {
+          sharedScopeAccountId = body.accountId;
+        }
+      }
+
+      // Update expense with split_group_id, household_id, and account_id
       await supabase
         .from("expenses")
         .update({
           split_group_id: splitGroup.id,
           household_id: body.householdId,
+          account_id: sharedScopeAccountId,
         })
         .eq("id", expense.id);
 
