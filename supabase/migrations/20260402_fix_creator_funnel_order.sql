@@ -347,4 +347,4 @@ revoke all on function public.get_creator_onboarding_paywall_metrics(timestamptz
 grant execute on function public.get_creator_onboarding_paywall_metrics(timestamptz, timestamptz, text, text, text) to authenticated;
 
 comment on function public.get_creator_onboarding_paywall_metrics(timestamptz, timestamptz, text, text, text) is
-  'Returns creator-only onboarding and paywall analytics with manager-friendly funnel milestones, preview entry taps, and paywall attribution fallback.';
+  'Returns creator-only onboarding and paywall analytics with corrected funnel order, preview entry taps, and paywall attribution fallback.';

@@ -750,10 +750,6 @@ function humanizeKey(value: string | null) {
 
 function getFunnelStepMeta(stepKey: string) {
   const mapping: Record<string, { label: string; description: string }> = {
-    preview_seen: {
-      label: "Preview page",
-      description: "People reached the optional preview page.",
-    },
     intro_seen: {
       label: "Get started page",
       description: "People reached the opening intro carousel.",
@@ -778,17 +774,13 @@ function getFunnelStepMeta(stepKey: string) {
       label: "Signed-in setup",
       description: "People reached the signed-in setup tasks.",
     },
-    main_app_seen: {
-      label: "Main app",
-      description: "People finished onboarding and entered the app.",
-    },
     subscribe_tapped: {
       label: "Started payment",
       description: "People tapped to start payment from the pricing page.",
     },
     purchase_succeeded: {
-      label: "Paid plan",
-      description: "People finished a paid purchase.",
+      label: "Finished payment",
+      description: "People finished payment and unlocked access.",
     },
   };
 
@@ -923,12 +915,18 @@ function buildCreatorJourneySteps(analytics: CreatorAnalyticsResponse) {
       funnelMap.get("paywall_seen")?.session_count ?? 0,
     ),
     createJourneyStep(
-      "postauth_seen",
-      funnelMap.get("postauth_seen")?.session_count ?? 0,
+      "subscribe_tapped",
+      funnelMap.get("subscribe_tapped")?.session_count ??
+        analytics.summary.checkout_starts,
     ),
     createJourneyStep(
-      "main_app_seen",
-      analytics.summary.completed_flow_sessions,
+      "purchase_succeeded",
+      funnelMap.get("purchase_succeeded")?.session_count ??
+        analytics.summary.purchase_successes,
+    ),
+    createJourneyStep(
+      "postauth_seen",
+      funnelMap.get("postauth_seen")?.session_count ?? 0,
     ),
   ];
 }
