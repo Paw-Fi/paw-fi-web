@@ -1,16 +1,36 @@
 import {
   Environment,
   GetTransactionHistoryVersion,
+  type JWSRenewalInfoDecodedPayload,
   type JWSTransactionDecodedPayload,
   Order,
   ProductType,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
+
+interface AppStoreStatusResponse {
+  environment?: Environment | string;
+  data?: Array<{
+    lastTransactions?: Array<{
+      status?: number;
+      originalTransactionId?: string;
+      signedTransactionInfo?: string;
+      signedRenewalInfo?: string;
+    }>;
+  }>;
+}
 
 export interface AppStoreApiConfig {
   issuerId: string;
   keyId: string;
   bundleId: string;
   privateKey: string;
+}
+
+export interface AppStoreSubscriptionStatusLookup {
+  status: number | null;
+  originalTransactionId: string | null;
+  transaction: JWSTransactionDecodedPayload | null;
+  renewalInfo: JWSRenewalInfoDecodedPayload | null;
 }
 
 interface AppStoreApiRequestParams {
@@ -319,6 +339,50 @@ export async function fetchLatestAppStoreTransactionByOriginalId(params: {
   } while (true);
 }
 
+export async function fetchAppStoreSubscriptionStatusByTransactionId(params: {
+  config: AppStoreApiConfig;
+  transactionId: string;
+  environment: Environment;
+  originalTransactionId?: string | null;
+  productId?: string | null;
+  fetchImpl?: typeof fetch;
+}): Promise<AppStoreSubscriptionStatusLookup | null> {
+  const response = await makeAppStoreApiRequest<AppStoreStatusResponse>({
+    config: params.config,
+    path: `/inApps/v1/subscriptions/${params.transactionId}`,
+    environment: params.environment,
+    userAgent: "moneko-verify-iap-purchase",
+    fetchImpl: params.fetchImpl,
+  });
+
+  const candidates = (response.data ?? [])
+    .flatMap((group) => group.lastTransactions ?? [])
+    .map((item, index) => decodeSubscriptionStatusItem(item, index));
+
+  let bestMatch: AppStoreSubscriptionStatusLookup | null = null;
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    const score = scoreSubscriptionStatusCandidate({
+      candidate,
+      transactionId: params.transactionId,
+      originalTransactionId: params.originalTransactionId ?? null,
+      productId: params.productId ?? null,
+    });
+
+    if (score > bestScore) {
+      bestMatch = candidate;
+      bestScore = score;
+    }
+  }
+
+  if (bestScore <= 0) {
+    return null;
+  }
+
+  return bestMatch;
+}
+
 export function matchesVerifiedAppStoreTransaction(params: {
   hint: Pick<
     JWSTransactionDecodedPayload,
@@ -437,8 +501,142 @@ export async function findAppStoreTransactionWithEnvironmentFallback(params: {
   };
 }
 
+export async function findAppStoreSubscriptionStatusWithEnvironmentFallback(params: {
+  config: AppStoreApiConfig;
+  environmentHint: Environment;
+  transactionId: string;
+  originalTransactionId?: string | null;
+  productId?: string | null;
+  fetchImpl?: typeof fetch;
+}): Promise<{
+  subscription: AppStoreSubscriptionStatusLookup | null;
+  environment: Environment;
+}> {
+  const lookupInEnvironment = async (
+    environment: Environment,
+  ): Promise<AppStoreSubscriptionStatusLookup | null> => {
+    try {
+      return await fetchAppStoreSubscriptionStatusByTransactionId({
+        config: params.config,
+        transactionId: params.transactionId,
+        environment,
+        originalTransactionId: params.originalTransactionId,
+        productId: params.productId,
+        fetchImpl: params.fetchImpl,
+      });
+    } catch (error) {
+      if (isAppStoreLookupNotFoundError(error)) {
+        return null;
+      }
+      throw error;
+    }
+  };
+
+  const hintedSubscription = await lookupInEnvironment(params.environmentHint);
+  if (hintedSubscription) {
+    return {
+      subscription: hintedSubscription,
+      environment: params.environmentHint,
+    };
+  }
+
+  const fallbackEnvironment =
+    params.environmentHint === Environment.SANDBOX
+      ? Environment.PRODUCTION
+      : Environment.SANDBOX;
+  const fallbackSubscription = await lookupInEnvironment(fallbackEnvironment);
+
+  return {
+    subscription: fallbackSubscription,
+    environment: fallbackSubscription
+      ? fallbackEnvironment
+      : params.environmentHint,
+  };
+}
+
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function scoreSubscriptionStatusCandidate(params: {
+  candidate: AppStoreSubscriptionStatusLookup;
+  transactionId: string;
+  originalTransactionId: string | null;
+  productId: string | null;
+}): number {
+  let score = 0;
+
+  if (params.candidate.transaction?.transactionId === params.transactionId) {
+    score += 8;
+  }
+
+  if (
+    params.originalTransactionId &&
+    params.candidate.originalTransactionId === params.originalTransactionId
+  ) {
+    score += 10;
+  }
+
+  if (
+    params.originalTransactionId &&
+    params.candidate.transaction?.originalTransactionId ===
+      params.originalTransactionId
+  ) {
+    score += 10;
+  }
+
+  if (params.productId && matchesSubscriptionProduct(params)) {
+    score += 6;
+  }
+
+  return score;
+}
+
+function matchesSubscriptionProduct(params: {
+  candidate: AppStoreSubscriptionStatusLookup;
+  transactionId: string;
+  originalTransactionId: string | null;
+  productId: string | null;
+}): boolean {
+  if (!params.productId) return false;
+
+  return [
+    params.candidate.transaction?.productId,
+    asString(params.candidate.renewalInfo?.productId),
+    asString(params.candidate.renewalInfo?.autoRenewProductId),
+  ].includes(params.productId);
+}
+
+function decodeSubscriptionStatusItem(
+  item: NonNullable<
+    NonNullable<AppStoreStatusResponse["data"]>[number]["lastTransactions"]
+  >[number],
+  index: number,
+): AppStoreSubscriptionStatusLookup {
+  try {
+    const transaction = item.signedTransactionInfo
+      ? decodeJwsPayload<JWSTransactionDecodedPayload>(
+          item.signedTransactionInfo,
+        )
+      : null;
+    const renewalInfo = item.signedRenewalInfo
+      ? decodeJwsPayload<JWSRenewalInfoDecodedPayload>(item.signedRenewalInfo)
+      : null;
+
+    return {
+      status: typeof item.status === "number" ? item.status : null,
+      originalTransactionId:
+        asString(item.originalTransactionId) ??
+        asString(transaction?.originalTransactionId),
+      transaction,
+      renewalInfo,
+    } satisfies AppStoreSubscriptionStatusLookup;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to decode App Store subscription status item ${index}: ${message}; status=${item.status ?? "null"}; originalTransactionId=${item.originalTransactionId ?? "null"}; hasSignedTransactionInfo=${Boolean(item.signedTransactionInfo)}; hasSignedRenewalInfo=${Boolean(item.signedRenewalInfo)}`,
+    );
+  }
 }
 
 function base64UrlDecode(input: string): string {

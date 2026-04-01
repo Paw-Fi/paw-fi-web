@@ -7,17 +7,21 @@ import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   Environment,
+  Status,
   type JWSTransactionDecodedPayload,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getGoogleAccessToken } from "../shared/google-auth.ts";
 import {
+  type AppStoreSubscriptionStatusLookup,
   decodeJwsPayload,
+  findAppStoreSubscriptionStatusWithEnvironmentFallback,
   findAppStoreTransactionWithEnvironmentFallback,
   fetchLatestAppStoreTransactionByOriginalId,
   getValidatedAppStorePrivateKey,
   isAppStoreServerApiConfigured,
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
+import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
 import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
@@ -211,22 +215,40 @@ function buildVerificationLogContext(params: {
   };
 }
 
-function deriveStoreKitLifecycleStatus(params: {
-  transaction: JWSTransactionDecodedPayload;
-  expiresMs: number | null;
-  nowMs: number;
-}): "active" | "trialing" | "canceled" {
-  if (params.transaction.revocationDate) {
-    return "canceled";
-  }
-
-  if (params.expiresMs !== null && params.expiresMs <= params.nowMs) {
-    return "canceled";
-  }
-
-  const isTrialLike = isFreeTrialTransaction(params.transaction);
-
-  return isTrialLike ? "trialing" : "active";
+function buildAppStoreSubscriptionStatusContext(
+  subscriptionStatusLookup: AppStoreSubscriptionStatusLookup | null,
+) {
+  return {
+    appStoreSubscriptionStatus: subscriptionStatusLookup?.status ?? null,
+    appStoreStatusOriginalTransactionId:
+      subscriptionStatusLookup?.originalTransactionId ?? null,
+    appStoreStatusTransactionId:
+      subscriptionStatusLookup?.transaction?.transactionId ?? null,
+    appStoreStatusTransactionProductId:
+      subscriptionStatusLookup?.transaction?.productId ?? null,
+    appStoreStatusTransactionExpiresDate: asIsoMillisUnknown(
+      subscriptionStatusLookup?.transaction?.expiresDate,
+    ),
+    appStoreStatusRenewalProductId:
+      typeof subscriptionStatusLookup?.renewalInfo?.productId === "string"
+        ? subscriptionStatusLookup.renewalInfo.productId
+        : null,
+    appStoreStatusAutoRenewProductId:
+      typeof subscriptionStatusLookup?.renewalInfo?.autoRenewProductId ===
+      "string"
+        ? subscriptionStatusLookup.renewalInfo.autoRenewProductId
+        : null,
+    appStoreStatusRenewalDate: asIsoMillisUnknown(
+      subscriptionStatusLookup?.renewalInfo?.renewalDate,
+    ),
+    appStoreStatusGracePeriodExpiresDate: asIsoMillisUnknown(
+      subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate,
+    ),
+    appStoreStatusBillingRetry:
+      subscriptionStatusLookup?.renewalInfo?.isInBillingRetryPeriod ?? null,
+    appStoreStatusAutoRenewStatus:
+      subscriptionStatusLookup?.renewalInfo?.autoRenewStatus ?? null,
+  };
 }
 
 function asIsoMillisUnknown(value: unknown): string | null {
@@ -1149,11 +1171,11 @@ serve(async (req: Request) => {
           status = "active";
           currentPeriodEnd = null;
         } else {
-          // Subscription: Parse expiry date from client transaction
+          // Subscription: resolve the verified transaction into a lifecycle
+          // state. A past expiresDate is valid for expired subscriptions.
           const expiresDate = decodedTransaction.expiresDate;
           const now = Date.now();
 
-          // Parse expiresDate safely (it's milliseconds as number or string)
           let expiresMs: number | null = null;
           if (expiresDate !== undefined && expiresDate !== null) {
             expiresMs =
@@ -1163,6 +1185,54 @@ serve(async (req: Request) => {
 
             if (!Number.isFinite(expiresMs)) {
               expiresMs = null;
+            }
+          }
+
+          let subscriptionStatusLookup: AppStoreSubscriptionStatusLookup | null =
+            null;
+
+          if (isAppleServerApiConfigured() && transactionId) {
+            try {
+              const subscriptionStatusResult =
+                await findAppStoreSubscriptionStatusWithEnvironmentFallback({
+                  config: getNormalizedAppStoreApiConfig(),
+                  environmentHint: environment,
+                  transactionId,
+                  originalTransactionId,
+                  productId: storeProductId,
+                });
+              subscriptionStatusLookup = subscriptionStatusResult.subscription;
+
+              if (
+                subscriptionStatusLookup &&
+                subscriptionStatusResult.environment !== environment
+              ) {
+                environment = subscriptionStatusResult.environment;
+              }
+            } catch (error) {
+              await reportEdgeFunctionError({
+                functionName: "verify-iap-purchase",
+                error,
+                context: {
+                  ...verificationLogContext,
+                  phase: "app_store_subscription_status_lookup_failed",
+                  billingInterval,
+                  originalTransactionId,
+                  transactionId,
+                  environment:
+                    environment === Environment.SANDBOX
+                      ? "Sandbox"
+                      : "Production",
+                  appleExpiresMs: expiresMs,
+                  appleExpiresDate: expiresMs
+                    ? new Date(expiresMs).toISOString()
+                    : null,
+                  submittedProductId: decodedTransaction.productId ?? null,
+                  submittedPurchaseDate: asIsoMillisUnknown(
+                    decodedTransaction.purchaseDate,
+                  ),
+                },
+              });
             }
           }
 
@@ -1179,17 +1249,46 @@ serve(async (req: Request) => {
             offerType: decodedTransaction.offerType ?? null,
             offerDiscountType: decodedTransaction.offerDiscountType ?? null,
             offerIdentifier: decodedTransaction.offerIdentifier ?? null,
+            subscriptionStatus: subscriptionStatusLookup?.status ?? null,
+            renewalDate:
+              subscriptionStatusLookup?.renewalInfo?.renewalDate ?? null,
+            gracePeriodExpiresDate:
+              subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate ??
+              null,
           });
 
-          const shouldUseAppleDate = expiresMs && expiresMs > now;
-
-          if (shouldUseAppleDate) {
-            currentPeriodEnd = new Date(expiresMs!).toISOString();
-            status = deriveStoreKitLifecycleStatus({
-              transaction: decodedTransaction,
-              expiresMs,
-              nowMs: now,
+          if (
+            subscriptionStatusLookup?.status === Status.REVOKED &&
+            !decodedTransaction.revocationDate &&
+            !serverRevocationDate
+          ) {
+            console.log("Purchase was revoked by App Store status lookup:", {
+              userId,
+              transactionId: decodedTransaction.transactionId ?? null,
+              originalTransactionId:
+                decodedTransaction.originalTransactionId ?? null,
+              subscriptionStatus: subscriptionStatusLookup.status,
             });
+            return new Response(
+              JSON.stringify({ error: "Purchase was refunded" }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+
+          const lifecycle = resolveAppStoreSubscriptionLifecycle({
+            transaction: decodedTransaction,
+            statusTransaction: subscriptionStatusLookup?.transaction ?? null,
+            renewalInfo: subscriptionStatusLookup?.renewalInfo ?? null,
+            subscriptionStatus: subscriptionStatusLookup?.status ?? null,
+            nowMs: now,
+          });
+
+          if (lifecycle.currentPeriodEnd) {
+            currentPeriodEnd = lifecycle.currentPeriodEnd;
+            status = lifecycle.status;
             console.log("Using Apple's verified expiry date:", {
               userId,
               transactionId: decodedTransaction.transactionId ?? null,
@@ -1202,6 +1301,12 @@ serve(async (req: Request) => {
               offerType: decodedTransaction.offerType ?? null,
               offerDiscountType: decodedTransaction.offerDiscountType ?? null,
               offerIdentifier: decodedTransaction.offerIdentifier ?? null,
+              subscriptionStatus: subscriptionStatusLookup?.status ?? null,
+              renewalDate:
+                subscriptionStatusLookup?.renewalInfo?.renewalDate ?? null,
+              gracePeriodExpiresDate:
+                subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate ??
+                null,
             });
           } else {
             await reportEdgeFunctionError({
@@ -1220,7 +1325,19 @@ serve(async (req: Request) => {
                 reason:
                   expiresMs === null
                     ? "Missing expiry date"
-                    : "Expiry date in the past",
+                    : "No resolvable entitlement end",
+                resolvedLifecycleStatus: lifecycle.status,
+                resolvedCurrentPeriodEnd: lifecycle.currentPeriodEnd,
+                submittedProductId: decodedTransaction.productId ?? null,
+                submittedPurchaseDate: asIsoMillisUnknown(
+                  decodedTransaction.purchaseDate,
+                ),
+                submittedExpiresDate: asIsoMillisUnknown(
+                  decodedTransaction.expiresDate,
+                ),
+                ...buildAppStoreSubscriptionStatusContext(
+                  subscriptionStatusLookup,
+                ),
               },
             });
             return new Response(
