@@ -223,12 +223,9 @@ function CreatorAnalyticsPage() {
                             </div>
                             <div className="text-slate-400">
                               {formatPercent(
-                                safeRate(
-                                  step.session_count,
-                                  analytics.summary.sessions,
-                                ),
+                                step.conversion_rate_from_previous,
                               )}{" "}
-                              of starts
+                              conversion from previous
                             </div>
                           </div>
                         </div>
@@ -895,49 +892,67 @@ function buildPreviewTapRows(rows: CreatorPreviewEntryPointRow[]) {
 function buildCreatorJourneySteps(analytics: CreatorAnalyticsResponse) {
   const funnelMap = new Map(analytics.funnel.map((row) => [row.step_key, row]));
 
-  return [
-    createJourneyStep(
-      "intro_seen",
-      funnelMap.get("intro_seen")?.session_count ?? 0,
-    ),
-    createJourneyStep(
-      "preauth_started",
-      funnelMap.get("preauth_started")?.session_count ??
+  const rawSteps = [
+    {
+      step_key: "intro_seen",
+      session_count: funnelMap.get("intro_seen")?.session_count ?? 0,
+    },
+    {
+      step_key: "preauth_started",
+      session_count:
+        funnelMap.get("preauth_started")?.session_count ??
         funnelMap.get("preauth_seen")?.session_count ??
         0,
-    ),
-    createJourneyStep(
-      "account_preparing_seen",
-      funnelMap.get("account_preparing_seen")?.session_count ?? 0,
-    ),
-    createJourneyStep(
-      "paywall_seen",
-      funnelMap.get("paywall_seen")?.session_count ?? 0,
-    ),
-    createJourneyStep(
-      "subscribe_tapped",
-      funnelMap.get("subscribe_tapped")?.session_count ??
+    },
+    {
+      step_key: "account_preparing_seen",
+      session_count:
+        funnelMap.get("account_preparing_seen")?.session_count ?? 0,
+    },
+    {
+      step_key: "paywall_seen",
+      session_count: funnelMap.get("paywall_seen")?.session_count ?? 0,
+    },
+    {
+      step_key: "subscribe_tapped",
+      session_count:
+        funnelMap.get("subscribe_tapped")?.session_count ??
         analytics.summary.checkout_starts,
-    ),
-    createJourneyStep(
-      "purchase_succeeded",
-      funnelMap.get("purchase_succeeded")?.session_count ??
+    },
+    {
+      step_key: "purchase_succeeded",
+      session_count:
+        funnelMap.get("purchase_succeeded")?.session_count ??
         analytics.summary.purchase_successes,
-    ),
-    createJourneyStep(
-      "postauth_seen",
-      funnelMap.get("postauth_seen")?.session_count ?? 0,
-    ),
+    },
+    {
+      step_key: "postauth_seen",
+      session_count: funnelMap.get("postauth_seen")?.session_count ?? 0,
+    },
   ];
-}
 
-function createJourneyStep(step_key: string, session_count: number) {
-  return {
-    step_key,
-    session_count,
-    conversion_rate_from_previous: null,
-    dropoff_rate_from_previous: null,
-  };
+  return rawSteps.reduce<CreatorFunnelRow[]>((steps, step, index) => {
+    const previousCount =
+      index === 0 ? null : (steps[index - 1]?.session_count ?? 0);
+    const normalizedCount =
+      previousCount === null
+        ? step.session_count
+        : Math.min(step.session_count, previousCount);
+
+    steps.push({
+      step_rank: index + 1,
+      step_key: step.step_key,
+      session_count: normalizedCount,
+      conversion_rate_from_previous:
+        previousCount === null ? 100 : safeRate(normalizedCount, previousCount),
+      dropoff_rate_from_previous:
+        previousCount === null
+          ? 0
+          : Math.max(0, 100 - safeRate(normalizedCount, previousCount)),
+    });
+
+    return steps;
+  }, []);
 }
 
 function formatPreviewEntryPoint(value: string) {

@@ -145,8 +145,18 @@ begin
   latest_selected_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'action_taken'
       and e.properties ->> 'action_id' = 'plan_selected'
@@ -155,8 +165,18 @@ begin
   latest_presented_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'paywall_plan_presented'
     order by e.session_id, e.created_at desc
@@ -164,8 +184,18 @@ begin
   latest_checkout_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'paywall_checkout_started'
     order by e.session_id, e.created_at desc
@@ -173,8 +203,18 @@ begin
   latest_purchase_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'paywall_purchase_succeeded'
     order by e.session_id, e.created_at desc
@@ -182,8 +222,18 @@ begin
   latest_paywall_completion_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'flow_completed'
       and e.page_id = 'paywall'
