@@ -28,8 +28,8 @@ function sanitizeUuid(value?: string | null): string | null {
 }
 
 function parseExpenseIds(body: DeleteExpenseRequest): string[] {
-  const raw = body.expenseIds ?? body.expense_ids ?? body.expenseId ??
-    body.expense_id;
+  const raw =
+    body.expenseIds ?? body.expense_ids ?? body.expenseId ?? body.expense_id;
   if (!raw) return [];
   const rawString = Array.isArray(raw) ? raw.join(",") : String(raw);
   const parts = rawString
@@ -185,7 +185,7 @@ Deno.serve(async (req: Request) => {
     const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring",
+        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring",
       )
       .in("id", expenseIds);
 
@@ -206,11 +206,42 @@ Deno.serve(async (req: Request) => {
       ),
     );
 
+    // Some legacy rows are contact-owned (contact_id set) but missing user_id.
+    // Only in that case do we resolve owner user_id via user_contacts.
+    const shouldResolveOwnersViaContacts = expenses.some((expense) => {
+      const hasUserId = !!(expense as any)?.user_id;
+      const hasContactId = !!(expense as any)?.contact_id;
+      return !hasUserId && hasContactId;
+    });
+
+    const expenseContactIds = shouldResolveOwnersViaContacts
+      ? Array.from(
+          new Set(
+            expenses
+              .map((expense) => expense.contact_id as string | null | undefined)
+              .filter((id): id is string => !!id),
+          ),
+        )
+      : [];
+
+    const { data: contactOwnerRows } = expenseContactIds.length
+      ? await supabase
+          .from("user_contacts")
+          .select("id, user_id")
+          .in("id", expenseContactIds)
+      : { data: [] as { id: string; user_id: string | null }[] };
+
+    const ownerByContactId = new Map(
+      (contactOwnerRows || [])
+        .filter((row) => typeof row?.id === "string" && !!row.user_id)
+        .map((row) => [row.id, row.user_id as string]),
+    );
+
     const { data: householdRows } = householdIds.length
       ? await supabase
-        .from("households")
-        .select("id, is_portfolio")
-        .in("id", householdIds)
+          .from("households")
+          .select("id, is_portfolio")
+          .in("id", householdIds)
       : { data: [] as { id: string; is_portfolio: boolean | null }[] };
 
     const householdPortfolioMap = new Map(
@@ -221,13 +252,14 @@ Deno.serve(async (req: Request) => {
       (id) => householdPortfolioMap.get(id) !== true,
     );
 
-    const { data: membershipRows } = nonPortfolioHouseholdIds.length > 0
-      ? await supabase
-        .from("household_members")
-        .select("household_id")
-        .eq("user_id", userId)
-        .in("household_id", nonPortfolioHouseholdIds)
-      : { data: [] as { household_id: string }[] };
+    const { data: membershipRows } =
+      nonPortfolioHouseholdIds.length > 0
+        ? await supabase
+            .from("household_members")
+            .select("household_id")
+            .eq("user_id", userId)
+            .in("household_id", nonPortfolioHouseholdIds)
+        : { data: [] as { household_id: string }[] };
 
     const membershipSet = new Set(
       (membershipRows || []).map((row) => row.household_id),
@@ -243,7 +275,18 @@ Deno.serve(async (req: Request) => {
       const expense = expenseById.get(id);
       if (!expense) continue;
 
-      const expenseUserId = (expense as any)?.user_id as string | undefined;
+      const rawExpenseUserId = (expense as any)?.user_id as
+        | string
+        | null
+        | undefined;
+      const expenseContactId = (expense as any)?.contact_id as
+        | string
+        | null
+        | undefined;
+      const expenseUserId =
+        rawExpenseUserId ||
+        (expenseContactId ? ownerByContactId.get(expenseContactId) : undefined);
+
       if (!expenseUserId) {
         failedIds.push({ id, reason: "missing_owner" });
         continue;
