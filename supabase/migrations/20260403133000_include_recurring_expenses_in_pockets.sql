@@ -53,7 +53,6 @@ begin
 
   v_currency := upper(coalesce(nullif(trim(p_currency), ''), 'USD'));
 
-  -- Resolve budget for this scope/month/currency, with optional currency fallback.
   with budget_exact as (
     select b.id, b.currency, b.total_budget_cents
     from public.budgets b
@@ -137,8 +136,6 @@ begin
     v_currency := v_budget_currency;
   end if;
 
-  -- Legacy migration: envelopes historically existed without budget_id.
-  -- Mobile attaches these to the viewed month budget when there are no budget-bound envelopes.
   if v_budget_id is not null and not exists (
     select 1
     from public.budget_envelopes e
@@ -161,8 +158,6 @@ begin
       );
   end if;
 
-  -- If no budget exists for this month, suggest the most recent previous budget total
-  -- using the same currency filter as the client.
   if v_budget_id is null then
     select b.total_budget_cents
     into v_previous_budget_cents
@@ -180,8 +175,6 @@ begin
     v_previous_budget_cents := 0;
   end if;
 
-  -- Determine if the immediate previous month has any pockets configured.
-  -- Mirrors mobile logic: previousMonth budget must exist + at least one envelope.
   v_prev_month := (p_period_month - interval '1 month')::date;
   select b.id
   into v_prev_budget_id
@@ -210,7 +203,6 @@ begin
     );
   end if;
 
-  -- Build month payload.
   with envelope_rows as (
     select
       e.id,
@@ -474,20 +466,12 @@ begin
 end;
 $$;
 
--- Supporting indexes for pockets monthly aggregation
-create index if not exists idx_budget_envelopes_budget_currency
-  on public.budget_envelopes(budget_id, currency);
-
-create index if not exists idx_envelope_category_links_category_envelope
-  on public.envelope_category_links(category, envelope_id);
-
-create index if not exists idx_envelope_category_links_envelope_category
-  on public.envelope_category_links(envelope_id, category);
-
+drop index if exists public.idx_expenses_pockets_user_currency_date;
 create index if not exists idx_expenses_pockets_user_currency_date
   on public.expenses(user_id, currency, date)
   where type = 'expense';
 
+drop index if exists public.idx_expenses_pockets_household_currency_date;
 create index if not exists idx_expenses_pockets_household_currency_date
   on public.expenses(household_id, currency, date)
   where type = 'expense'
