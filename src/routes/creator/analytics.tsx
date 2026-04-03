@@ -728,9 +728,7 @@ function buildSummaryCards(summary: CreatorSummary) {
 }
 
 function defaultStartDate() {
-  const date = new Date();
-  date.setDate(date.getDate() - 29);
-  return date.toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
 }
 
 function defaultEndDate() {
