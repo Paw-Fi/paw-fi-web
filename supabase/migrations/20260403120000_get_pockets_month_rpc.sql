@@ -242,7 +242,7 @@ begin
       and ea.envelope_id in (select unnest(ids) from env_ids)
   ),
   link_rows as (
-    select l.envelope_id, lower(coalesce(l.category, '')) as category
+    select l.envelope_id, lower(trim(coalesce(l.category, ''))) as category
     from public.envelope_category_links l
     where l.envelope_id in (select unnest(ids) from env_ids)
   ),
@@ -287,7 +287,7 @@ begin
       sum(fe.amount_cents)::bigint as spent_cents
     from filtered_expenses fe
     join link_rows lr
-      on lr.category = lower(coalesce(fe.category, ''))
+      on lr.category = lower(trim(coalesce(fe.category, '')))
     group by lr.envelope_id
   ),
   total_spend as (
@@ -296,7 +296,7 @@ begin
   ),
   category_totals as (
     select
-      lower(coalesce(fe.category, 'uncategorized')) as category,
+      lower(trim(coalesce(fe.category, 'uncategorized'))) as category,
       sum(fe.amount_cents)::bigint as amount_cents
     from filtered_expenses fe
     group by 1
@@ -311,7 +311,7 @@ begin
   ),
   uncategorized_expenses as (
     select
-      lower(coalesce(fe.category, 'uncategorized')) as category,
+      lower(trim(coalesce(fe.category, 'uncategorized'))) as category,
       jsonb_agg(
         jsonb_build_object(
           'id', fe.id,
@@ -333,7 +333,7 @@ begin
     from filtered_expenses fe
     where not exists (
       select 1 from linked_categories lc
-      where lc.category = lower(coalesce(fe.category, 'uncategorized'))
+      where lc.category = lower(trim(coalesce(fe.category, 'uncategorized')))
     )
     group by 1
   ),
