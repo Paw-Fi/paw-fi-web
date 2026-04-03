@@ -81,10 +81,39 @@ begin
     order by b.updated_at desc nulls last, b.created_at desc nulls last
     limit 1
   ),
+  budget_legacy_personal_exact as (
+    select b.id, b.currency, b.total_budget_cents
+    from public.budgets b
+    where v_scope = 'personal'
+      and not exists (select 1 from budget_exact)
+      and not exists (select 1 from budget_any_currency)
+      and b.period_month = p_period_month
+      and upper(b.currency) = v_currency
+      and b.household_id is null
+    order by b.updated_at desc nulls last, b.created_at desc nulls last
+    limit 1
+  ),
+  budget_legacy_personal_any_currency as (
+    select b.id, b.currency, b.total_budget_cents
+    from public.budgets b
+    where v_scope = 'personal'
+      and p_allow_currency_fallback = true
+      and not exists (select 1 from budget_exact)
+      and not exists (select 1 from budget_any_currency)
+      and not exists (select 1 from budget_legacy_personal_exact)
+      and b.period_month = p_period_month
+      and b.household_id is null
+    order by b.updated_at desc nulls last, b.created_at desc nulls last
+    limit 1
+  ),
   budget_final as (
     select * from budget_exact
     union all
     select * from budget_any_currency
+    union all
+    select * from budget_legacy_personal_exact
+    union all
+    select * from budget_legacy_personal_any_currency
     limit 1
   )
   select
@@ -259,7 +288,7 @@ begin
       sum(fe.amount_cents)::bigint as spent_cents
     from filtered_expenses fe
     join link_rows lr
-      on lr.category = lower(coalesce(nullif(trim(fe.category), ''), 'uncategorized'))
+      on lr.category = lower(coalesce(fe.category, ''))
     group by lr.envelope_id
   ),
   total_spend as (
@@ -268,7 +297,7 @@ begin
   ),
   category_totals as (
     select
-      lower(coalesce(nullif(trim(fe.category), ''), 'uncategorized')) as category,
+      lower(coalesce(fe.category, 'uncategorized')) as category,
       sum(fe.amount_cents)::bigint as amount_cents
     from filtered_expenses fe
     group by 1
@@ -283,7 +312,7 @@ begin
   ),
   uncategorized_expenses as (
     select
-      lower(coalesce(nullif(trim(fe.category), ''), 'uncategorized')) as category,
+      lower(coalesce(fe.category, 'uncategorized')) as category,
       jsonb_agg(
         jsonb_build_object(
           'id', fe.id,
@@ -305,7 +334,7 @@ begin
     from filtered_expenses fe
     where not exists (
       select 1 from linked_categories lc
-      where lc.category = lower(coalesce(nullif(trim(fe.category), ''), 'uncategorized'))
+      where lc.category = lower(coalesce(fe.category, 'uncategorized'))
     )
     group by 1
   ),
@@ -452,6 +481,9 @@ create index if not exists idx_budget_envelopes_budget_currency
 
 create index if not exists idx_envelope_category_links_category_envelope
   on public.envelope_category_links(category, envelope_id);
+
+create index if not exists idx_envelope_category_links_envelope_category
+  on public.envelope_category_links(envelope_id, category);
 
 create index if not exists idx_expenses_pockets_user_currency_date
   on public.expenses(user_id, currency, date)
