@@ -6,7 +6,7 @@
 # Project Prod Ref: pbopcsmrcykdzbilpilf
 #
 # Required migrations for Accounts feature
-#   supabase/migrations/20260331_accounts_feature.sql
+#   supabase/migrations/20260331_wallets_feature.sql
 
 set -euo pipefail
 
@@ -53,16 +53,16 @@ if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
   echo ""
 fi
 
-# Core account management endpoints
-deploy_function "list-accounts"
-deploy_function "save-account"
-deploy_function "update-account"
-deploy_function "archive-account"
-deploy_function "restore-account"
-deploy_function "create-account-transfer"
-deploy_function "update-account-balance"
+# Core wallet management endpoints
+deploy_function "list-wallets"
+deploy_function "save-wallet"
+deploy_function "update-wallet"
+deploy_function "archive-wallet"
+deploy_function "restore-wallet"
+deploy_function "create-wallet-transfer"
+deploy_function "update-wallet-balance"
 
-# Transaction endpoints that now support account_id/accountId
+# Transaction endpoints that now support wallet_id/walletId
 deploy_function "list-expenses"
 deploy_function "save-expense"
 deploy_function "save-income"
@@ -73,13 +73,13 @@ echo "  Accounts feature functions deployed successfully"
 echo ""
 echo "  Deployment summary:"
 echo "     Account management:"
-echo "       - list-accounts"
-echo "       - save-account"
-echo "       - update-account"
-echo "       - archive-account"
-echo "       - restore-account"
-echo "       - create-account-transfer"
-echo "       - update-account-balance"
+echo "       - list-wallets"
+echo "       - save-wallet"
+echo "       - update-wallet"
+echo "       - archive-wallet"
+echo "       - restore-wallet"
+echo "       - create-wallet-transfer"
+echo "       - update-wallet-balance"
 echo ""
 echo "     Account-aware transactions:"
 echo "       - list-expenses"
@@ -90,6 +90,6 @@ echo ""
 echo "  Post-deployment checklist:"
 echo "     1. Apply migrations: supabase db push --project-ref $PROJECT_REF"
 echo "     2. Verify functions: supabase functions list --project-ref $PROJECT_REF"
-echo "     3. Smoke test account CRUD + transfer endpoints"
-echo "     4. Smoke test expense/income create + update with accountId"
+echo "     3. Smoke test wallet CRUD + transfer endpoints"
+echo "     4. Smoke test expense/income create + update with walletId"
 echo "════════════════════════════════════════════════════════════"
