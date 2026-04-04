@@ -12,7 +12,7 @@
  * - STRIPE_YEARLY_PREMIUM_PLAN_ID (optional - Premium not yet available)
  */
 
-import { PlanType, BillingInterval } from "./subscription-constants.ts";
+import { BillingInterval, PlanType } from "./subscription-constants.ts";
 
 interface PriceConfig {
   monthly: string;
@@ -34,12 +34,10 @@ export function getSubscriptionPrices(): SubscriptionPrices {
   return {
     free: null,
     plus: {
-      monthly:
-        Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
+      monthly: Deno.env.get("STRIPE_MONTHLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_MONTHLY_PRICE_ID") ||
         "",
-      yearly:
-        Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
+      yearly: Deno.env.get("STRIPE_YEARLY_PLUS_PLAN_ID") ||
         Deno.env.get("STRIPE_PLUS_YEARLY_PRICE_ID") ||
         "",
     },
@@ -52,10 +50,14 @@ export function getSubscriptionPrices(): SubscriptionPrices {
 }
 
 /**
- * Legacy export for backward compatibility
- * Prefer using getPriceId() for better type safety
+ * Legacy export for backward compatibility.
+ * Keep it lazy so pure unit tests can import this module without env access.
  */
-export const SUBSCRIPTION_PRICES = getSubscriptionPrices();
+export const SUBSCRIPTION_PRICES = new Proxy({} as SubscriptionPrices, {
+  get(_target, property) {
+    return getSubscriptionPrices()[property as keyof SubscriptionPrices];
+  },
+});
 
 /**
  * Get price ID for a specific plan and billing interval
@@ -99,8 +101,11 @@ export function getPriceId(plan: PlanType, interval?: BillingInterval): string {
     throw new Error(`Billing interval is required for plan "${plan}"`);
   }
 
-  const recurringPrices =
-    plan === "plus" ? prices.plus : plan === "premium" ? prices.premium : null;
+  const recurringPrices = plan === "plus"
+    ? prices.plus
+    : plan === "premium"
+    ? prices.premium
+    : null;
 
   const priceId = recurringPrices?.[interval] || "";
 

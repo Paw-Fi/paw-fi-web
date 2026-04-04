@@ -3,6 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  recomputeProjectedSubscription,
+  syncStripeEntitlementSourcesForUser,
+} from "../shared/subscription-entitlement-sources.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -44,6 +49,28 @@ serve(async (req: Request) => {
 
     const userId = authResult.userId!;
 
+    try {
+      await syncStripeEntitlementSourcesForUser({
+        supabase,
+        stripe,
+        userId,
+      });
+      await recomputeProjectedSubscription({
+        supabase,
+        userId,
+      });
+    } catch (projectionError) {
+      await reportEdgeFunctionError({
+        functionName: "get-subscription",
+        error: projectionError,
+        context: { phase: "reconcile_subscription_projection", userId },
+      });
+      console.error(
+        "Non-fatal subscription projection reconciliation failed:",
+        projectionError,
+      );
+    }
+
     // First, directly check if there's a subscription in the subscriptions table
     const { data: directSubscription, error: directError } = await supabase
       .from("subscriptions")
@@ -53,32 +80,10 @@ serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
 
-    // Then try the RPC function
-    const { data: subscription, error: subscriptionError } = await supabase.rpc(
-      "get_user_subscription",
-      { p_user_id: userId },
-    );
-
-    if (subscriptionError) {
-      console.error("Error getting subscription:", subscriptionError);
-      return new Response(
-        JSON.stringify({ error: "Failed to get subscription" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    // If the RPC function returns no data but we found a subscription directly, use that instead
-    // IMPORTANT: RPC functions return arrays, so we need to extract the first element
-    let finalSubscription = Array.isArray(subscription)
-      ? subscription[0]
-      : subscription;
-
-    if (!finalSubscription && directSubscription) {
-      // Map the direct subscription to match the expected format
-      finalSubscription = {
+    // Prefer the compatibility projection row. The legacy RPC can be incomplete
+    // for provider-specific fields and should only be a fallback.
+    let finalSubscription = directSubscription
+      ? {
         id: directSubscription.id,
         provider: directSubscription.provider,
         plan: directSubscription.plan,
@@ -94,7 +99,36 @@ serve(async (req: Request) => {
         store_product_id: directSubscription.store_product_id,
         created_at: directSubscription.created_at,
         updated_at: directSubscription.updated_at,
-      };
+      }
+      : null;
+
+    if (!finalSubscription) {
+      const { data: subscription, error: subscriptionError } = await supabase
+        .rpc(
+          "get_user_subscription",
+          { p_user_id: userId },
+        );
+
+      if (subscriptionError) {
+        await reportEdgeFunctionError({
+          functionName: "get-subscription",
+          error: subscriptionError,
+          context: { phase: "load_legacy_subscription_rpc", userId },
+        });
+        console.error("Error getting subscription:", subscriptionError);
+        return new Response(
+          JSON.stringify({ error: "Failed to get subscription" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // IMPORTANT: RPC functions return arrays, so we need to extract the first element
+      finalSubscription = Array.isArray(subscription)
+        ? subscription[0]
+        : subscription;
     }
 
     // If no subscription found, return free tier info
@@ -132,16 +166,43 @@ serve(async (req: Request) => {
     let paymentMethod: any = null;
     let invoices: any[] = [];
 
-    const provider = (finalSubscription as any).provider || "stripe";
+    const provider = (finalSubscription as any).provider ?? null;
+    let stripeCustomerIdForBilling = finalSubscription.stripe_customer_id ??
+      null;
+
+    if (!stripeCustomerIdForBilling && provider == null) {
+      const { data: mapping, error: mappingError } = await supabase
+        .from("user_stripe_mapping")
+        .select("stripe_customer_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (mappingError) {
+        await reportEdgeFunctionError({
+          functionName: "get-subscription",
+          error: mappingError,
+          context: { phase: "load_stripe_customer_mapping", userId },
+        });
+        console.error(
+          "Failed to load Stripe customer mapping for billing history:",
+          mappingError,
+        );
+      } else {
+        stripeCustomerIdForBilling =
+          (mapping?.stripe_customer_id as string | null) ?? null;
+      }
+    }
 
     // Only Stripe subscriptions have Stripe invoices/payment method
-    if (provider === "stripe" && finalSubscription.stripe_customer_id) {
+    if (
+      (provider === "stripe" || provider == null) && stripeCustomerIdForBilling
+    ) {
       try {
         // Get all invoices for the customer (works for both Lifetime and recurring)
         // Lifetime: invoice_creation enabled in checkout creates official invoices
         // Recurring: invoices created automatically by subscription
         const invoiceList = await stripe.invoices.list({
-          customer: finalSubscription.stripe_customer_id,
+          customer: stripeCustomerIdForBilling,
           limit: 20,
         });
 
@@ -167,12 +228,12 @@ serve(async (req: Request) => {
             const pm = stripeSubscription.default_payment_method;
             paymentMethod = pm.card
               ? {
-                  id: pm.id,
-                  brand: pm.card.brand,
-                  last4: pm.card.last4,
-                  exp_month: pm.card.exp_month,
-                  exp_year: pm.card.exp_year,
-                }
+                id: pm.id,
+                brand: pm.card.brand,
+                last4: pm.card.last4,
+                exp_month: pm.card.exp_month,
+                exp_year: pm.card.exp_year,
+              }
               : null;
           }
         }
@@ -185,7 +246,7 @@ serve(async (req: Request) => {
     // Calculate days until next payment
     // Lifetime plan: No next payment (one-time purchase)
     const now = new Date();
-    let daysUntilNextPayment = null;
+    let daysUntilNextPayment: number | null = null;
 
     if (finalSubscription.plan === "lifetime") {
       // Lifetime never has a next payment

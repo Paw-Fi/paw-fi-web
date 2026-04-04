@@ -4,6 +4,12 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { validate as validateUuid } from "https://deno.land/std@0.177.0/uuid/mod.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  buildStripeLifetimeSourceKey,
+  mapStripeSubscriptionToSource,
+  recomputeProjectedSubscription,
+  upsertSubscriptionEntitlementSource,
+} from "../shared/subscription-entitlement-sources.ts";
 
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -335,35 +341,44 @@ serve(async (req: Request) => {
       try {
         const now = new Date();
         const stripeCustomerId = getStripeCustomerId(session);
-
-        const subscriptionData = {
-          user_id: userId,
-          provider: "stripe",
-          stripe_subscription_id: null,
-          stripe_customer_id: stripeCustomerId,
-          // Provider hygiene: prevent mixed-source subscription rows.
-          store_product_id: null,
-          app_store_transaction_id: null,
-          app_store_original_transaction_id: null,
-          app_store_environment: null,
-          play_purchase_token: null,
-          play_order_id: null,
-          play_package_name: null,
-          plan,
-          status: "active",
-          billing_interval: null,
-          current_period_end: null, // Lifetime must have NULL period end
-          cancel_at_period_end: false,
-          bound_to_user_id: null,
-          bound_to_household_id: null,
-          trial_start: null,
-          trial_end: null,
-          updated_at: now.toISOString(),
-        };
-
-        await supabase
-          .from("subscriptions")
-          .upsert(subscriptionData, { onConflict: "user_id" });
+        await upsertSubscriptionEntitlementSource({
+          supabase,
+          source: {
+            provider: "stripe",
+            sourceKey: buildStripeLifetimeSourceKey({
+              userId,
+              customerId: stripeCustomerId,
+            }),
+            userId,
+            plan: "lifetime",
+            status: "active",
+            billingInterval: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+            trialStart: null,
+            trialEnd: null,
+            stripeCustomerId,
+            stripeSubscriptionId: null,
+            storeProductId: null,
+            appStoreTransactionId: null,
+            appStoreOriginalTransactionId: null,
+            appStoreEnvironment: null,
+            playPurchaseToken: null,
+            playOrderId: null,
+            playPackageName: null,
+            currentPriceId: null,
+            originalPriceId: null,
+            previousPlan: null,
+            previousInterval: null,
+            lastEventId: null,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          },
+        });
+        await recomputeProjectedSubscription({
+          supabase,
+          userId,
+        });
 
         console.log("Lifetime subscription upserted for user:", userId);
       } catch (dbError) {
@@ -457,41 +472,18 @@ serve(async (req: Request) => {
     // Update the user's subscription in the database
     // userId is already validated as a valid UUID
     try {
-      const now = new Date();
-      const stripeCustomerId = getStripeCustomerId(session);
-
-      const subscriptionData = {
-        user_id: userId,
-        provider: "stripe",
-        stripe_subscription_id: subscriptionId,
-        stripe_customer_id: stripeCustomerId,
-        // Provider hygiene: prevent mixed-source subscription rows.
-        store_product_id: null,
-        app_store_transaction_id: null,
-        app_store_original_transaction_id: null,
-        app_store_environment: null,
-        play_purchase_token: null,
-        play_order_id: null,
-        play_package_name: null,
-        bound_to_user_id: null,
-        bound_to_household_id: null,
-        plan,
-        status,
-        billing_interval: billingInterval,
-        current_period_end: currentPeriodEnd,
-        cancel_at_period_end: cancelAtPeriodEnd,
-        trial_start: safeUnixToISO(subscription.trial_start),
-        trial_end: trialEnd,
-        updated_at: now.toISOString(),
-      };
-
-      const { error: upsertError } = await supabase
-        .from("subscriptions")
-        .upsert(subscriptionData, { onConflict: "user_id" });
-
-      if (upsertError) {
-        console.error("Error upserting subscription:", upsertError);
-      }
+      await upsertSubscriptionEntitlementSource({
+        supabase,
+        source: mapStripeSubscriptionToSource({
+          userId,
+          subscription,
+          stripeCustomerId: getStripeCustomerId(session),
+        }),
+      });
+      await recomputeProjectedSubscription({
+        supabase,
+        userId,
+      });
     } catch (dbError) {
       console.error("Database error:", dbError);
       // Continue with verification even if database operations fail

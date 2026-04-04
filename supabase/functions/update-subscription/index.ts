@@ -4,6 +4,15 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
 import { SUBSCRIPTION_PRICES } from "../shared/stripe-subscription-prices.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  buildStripeSyntheticSourceKey,
+  mapStripeSubscriptionToSource,
+  recomputeProjectedSubscription,
+  syncStripeEntitlementSourcesForUser,
+  upsertSubscriptionEntitlementSource,
+} from "../shared/subscription-entitlement-sources.ts";
+import { sourceGrantsAccess } from "../shared/subscription-projection.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -14,6 +23,50 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function reportUpdateSubscriptionError(
+  error: unknown,
+  phase: string,
+  context: Record<string, unknown> = {},
+): Promise<void> {
+  await reportEdgeFunctionError({
+    functionName: "update-subscription",
+    error,
+    context: {
+      phase,
+      ...context,
+    },
+  });
+}
+
+async function reconcileStripeSourceForUser(params: {
+  userId: string;
+  subscription: Stripe.Subscription;
+  lastEventId: string;
+}): Promise<void> {
+  const stripeCustomerId = typeof params.subscription.customer === "string"
+    ? params.subscription.customer
+    : params.subscription.customer?.id ?? null;
+  const source = mapStripeSubscriptionToSource({
+    userId: params.userId,
+    subscription: params.subscription,
+    stripeCustomerId,
+  });
+
+  await upsertSubscriptionEntitlementSource({
+    supabase,
+    source: {
+      ...source,
+      lastEventId: params.lastEventId,
+      updatedAt: new Date().toISOString(),
+    },
+  });
+
+  await recomputeProjectedSubscription({
+    supabase,
+    userId: params.userId,
+  });
+}
 
 serve(async (req) => {
   try {
@@ -49,18 +102,21 @@ serve(async (req) => {
     >;
     const action = typeof body.action === "string" ? body.action : null;
     const plan = typeof body.plan === "string" ? body.plan : null;
-    const billingInterval =
-      typeof body.billingInterval === "string" ? body.billingInterval : null;
-    const prorationDate =
-      typeof body.prorationDate === "number" ? body.prorationDate : null;
-    const exitAtIso =
-      typeof body.exitAtIso === "string" ? body.exitAtIso : null;
+    const billingInterval = typeof body.billingInterval === "string"
+      ? body.billingInterval
+      : null;
+    const prorationDate = typeof body.prorationDate === "number"
+      ? body.prorationDate
+      : null;
+    const exitAtIso = typeof body.exitAtIso === "string"
+      ? body.exitAtIso
+      : null;
     const returnTrialThresholdMinutesRaw = Number(
       Deno.env.get("PAYWALL_RETURN_THRESHOLD_MINUTES") ?? "3",
     );
     const returnTrialThresholdMinutes =
       Number.isFinite(returnTrialThresholdMinutesRaw) &&
-      returnTrialThresholdMinutesRaw > 0
+        returnTrialThresholdMinutesRaw > 0
         ? Math.floor(returnTrialThresholdMinutesRaw)
         : 3;
 
@@ -70,7 +126,7 @@ serve(async (req) => {
     );
     const returnTrialDurationMinutes =
       Number.isFinite(returnTrialDurationMinutesRaw) &&
-      returnTrialDurationMinutesRaw > 0
+        returnTrialDurationMinutesRaw > 0
         ? Math.floor(returnTrialDurationMinutesRaw)
         : 14 * 24 * 60;
 
@@ -113,6 +169,11 @@ serve(async (req) => {
           .maybeSingle();
 
       if (markSubscriptionError) {
+        await reportUpdateSubscriptionError(
+          markSubscriptionError,
+          "load_paywall_exit_subscription",
+          { userId },
+        );
         console.error(
           "Error checking subscription before recording paywall exit:",
           markSubscriptionError,
@@ -163,6 +224,13 @@ serve(async (req) => {
         .eq("id", userId);
 
       if (markExitError) {
+        await reportUpdateSubscriptionError(
+          markExitError,
+          "record_paywall_exit",
+          {
+            userId,
+          },
+        );
         console.error(
           "Error recording paywall return exit timestamp:",
           markExitError,
@@ -185,6 +253,26 @@ serve(async (req) => {
       );
     }
 
+    if (action === "grant_paywall_return_trial") {
+      try {
+        await syncStripeEntitlementSourcesForUser({
+          supabase,
+          stripe,
+          userId,
+        });
+        await recomputeProjectedSubscription({
+          supabase,
+          userId,
+        });
+      } catch (returnTrialReconciliationError) {
+        await reportUpdateSubscriptionError(
+          returnTrialReconciliationError,
+          "reconcile_return_trial_subscription_state",
+          { userId },
+        );
+      }
+    }
+
     // Get the user's current subscription
     const { data: subscription, error: subscriptionError } = await supabase
       .from("subscriptions")
@@ -196,6 +284,13 @@ serve(async (req) => {
 
     if (subscriptionError && subscriptionError.code !== "PGRST116") {
       // PGRST116 is "no rows returned"
+      await reportUpdateSubscriptionError(
+        subscriptionError,
+        "load_subscription",
+        {
+          userId,
+        },
+      );
       console.error("Error fetching subscription:", subscriptionError);
       return new Response(
         JSON.stringify({ error: "Failed to fetch subscription" }),
@@ -291,14 +386,11 @@ serve(async (req) => {
             { cancel_at_period_end: true },
           );
 
-          // Update the subscription in the database
-          await supabase
-            .from("subscriptions")
-            .update({
-              cancel_at_period_end: true,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", subscription.id);
+          await reconcileStripeSourceForUser({
+            userId,
+            subscription: canceledSubscription,
+            lastEventId: "update_subscription_cancel_at_period_end",
+          });
 
           return new Response(
             JSON.stringify({
@@ -323,7 +415,8 @@ serve(async (req) => {
           currentPlan === "free"
         ) {
           const origin = req.headers.get("origin") || "https://moneko.io";
-          const checkoutUrl = `${origin}/checkout?plan=${plan}&billing=${billingInterval}`;
+          const checkoutUrl =
+            `${origin}/checkout?plan=${plan}&billing=${billingInterval}`;
 
           return new Response(
             JSON.stringify({
@@ -397,18 +490,41 @@ serve(async (req) => {
             updateParams,
           );
 
-          await supabase
+          const { error: clearPendingError } = await supabase
             .from("subscriptions")
             .update({
-              plan,
-              billing_interval: billingInterval,
-              cancel_at_period_end: false,
               pending_plan: null,
               pending_interval: null,
               pending_effective_date: null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", subscription.id);
+
+          if (clearPendingError) {
+            await reportUpdateSubscriptionError(
+              clearPendingError,
+              "clear_pending_change_after_upgrade",
+              {
+                userId,
+                subscriptionId: subscription.id,
+                plan,
+                billingInterval,
+              },
+            );
+            return new Response(
+              JSON.stringify({ error: "Failed to update subscription" }),
+              {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+
+          await reconcileStripeSourceForUser({
+            userId,
+            subscription: updatedSubscription,
+            lastEventId: "update_subscription_change_plan_upgrade",
+          });
 
           return new Response(
             JSON.stringify({
@@ -464,7 +580,7 @@ serve(async (req) => {
           });
 
           // Track pending change in database
-          await supabase
+          const { error: pendingUpdateError } = await supabase
             .from("subscriptions")
             .update({
               pending_plan: plan,
@@ -476,10 +592,31 @@ serve(async (req) => {
             })
             .eq("id", subscription.id);
 
+          if (pendingUpdateError) {
+            await reportUpdateSubscriptionError(
+              pendingUpdateError,
+              "store_pending_downgrade",
+              {
+                userId,
+                subscriptionId: subscription.id,
+                plan,
+                billingInterval,
+              },
+            );
+            return new Response(
+              JSON.stringify({ error: "Failed to schedule downgrade" }),
+              {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+
           return new Response(
             JSON.stringify({
               success: true,
-              message: `Subscription will downgrade to ${plan} (${billingInterval}) at end of current period`,
+              message:
+                `Subscription will downgrade to ${plan} (${billingInterval}) at end of current period`,
               subscription: stripeSubscription,
               isUpgrade: false,
               pendingChange: {
@@ -496,9 +633,21 @@ serve(async (req) => {
             },
           );
         } catch (scheduleError: any) {
+          await reportUpdateSubscriptionError(
+            scheduleError,
+            "schedule_downgrade",
+            {
+              userId,
+              subscriptionId: subscription?.id ?? null,
+              plan,
+              billingInterval,
+            },
+          );
           console.error("Error creating subscription schedule:", scheduleError);
           throw new Error(
-            `Failed to schedule downgrade: ${scheduleError?.message ?? "unknown"}`,
+            `Failed to schedule downgrade: ${
+              scheduleError?.message ?? "unknown"
+            }`,
           );
         }
       }
@@ -538,14 +687,11 @@ serve(async (req) => {
           { cancel_at_period_end: true },
         );
 
-        // Update the subscription in the database
-        await supabase
-          .from("subscriptions")
-          .update({
-            cancel_at_period_end: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", subscription.id);
+        await reconcileStripeSourceForUser({
+          userId,
+          subscription: canceledSubscription,
+          lastEventId: "update_subscription_cancel",
+        });
 
         return new Response(
           JSON.stringify({
@@ -595,15 +741,11 @@ serve(async (req) => {
           subscription.stripe_subscription_id,
         );
 
-        // Update the subscription in the database
-        await supabase
-          .from("subscriptions")
-          .update({
-            status: "canceled",
-            cancel_at_period_end: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", subscription.id);
+        await reconcileStripeSourceForUser({
+          userId,
+          subscription: canceledSubscription,
+          lastEventId: "update_subscription_cancel_immediately",
+        });
 
         return new Response(
           JSON.stringify({
@@ -639,14 +781,11 @@ serve(async (req) => {
           { cancel_at_period_end: false },
         );
 
-        // Update the subscription in the database
-        await supabase
-          .from("subscriptions")
-          .update({
-            cancel_at_period_end: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", subscription.id);
+        await reconcileStripeSourceForUser({
+          userId,
+          subscription: resumedSubscription,
+          lastEventId: "update_subscription_resume",
+        });
 
         return new Response(
           JSON.stringify({
@@ -708,6 +847,11 @@ serve(async (req) => {
             .maybeSingle();
 
         if (userEligibilityError) {
+          await reportUpdateSubscriptionError(
+            userEligibilityError,
+            "load_return_trial_eligibility",
+            { userId },
+          );
           console.error(
             "Error loading paywall return trial eligibility:",
             userEligibilityError,
@@ -756,6 +900,11 @@ serve(async (req) => {
             .eq("paywall_return_trial_granted_at", trialGrantedAt);
 
           if (rollbackError) {
+            await reportUpdateSubscriptionError(
+              rollbackError,
+              "rollback_return_trial_marker",
+              { userId, trialGrantedAt },
+            );
             console.error(
               "Failed to rollback paywall return trial marker:",
               rollbackError,
@@ -773,6 +922,11 @@ serve(async (req) => {
             .maybeSingle();
 
         if (markerReservationError) {
+          await reportUpdateSubscriptionError(
+            markerReservationError,
+            "reserve_return_trial_marker",
+            { userId, trialGrantedAt },
+          );
           console.error(
             "Error reserving paywall return trial marker:",
             markerReservationError,
@@ -803,122 +957,132 @@ serve(async (req) => {
 
         const trialPlan = "plus";
         const trialBillingInterval = "yearly";
+        const returnTrialSourceKey = buildStripeSyntheticSourceKey({
+          kind: "paywall_return_trial",
+          userId,
+        });
+        const rollbackReturnTrialSource = async () => {
+          const { error: deleteSourceError } = await supabase
+            .from("subscription_entitlement_sources")
+            .delete()
+            .eq("provider", "stripe")
+            .eq("source_key", returnTrialSourceKey);
 
-        if (subscription?.id) {
-          const { data: updatedSubscriptionRow, error: updateError } =
-            await supabase
-              .from("subscriptions")
-              .update({
-                plan: trialPlan,
-                status: "trialing",
-                billing_interval: trialBillingInterval,
-                current_period_end: trialEndAt.toISOString(),
-                trial_start: now.toISOString(),
-                trial_end: trialEndAt.toISOString(),
-                cancel_at_period_end: false,
-                provider: "stripe",
-                store_product_id: null,
-                stripe_subscription_id: null,
-                stripe_customer_id: null,
-                bound_to_user_id: null,
-                bound_to_household_id: null,
-                updated_at: now.toISOString(),
-              })
-              .eq("id", subscription.id)
-              .or(
-                `status.is.null,status.in.(canceled,inactive,past_due,unpaid,incomplete_expired),and(status.eq.active,current_period_end.lte.${now.toISOString()}),and(status.eq.active,current_period_end.is.null),and(status.eq.trialing,current_period_end.lte.${now.toISOString()}),and(status.eq.trialing,current_period_end.is.null)`,
-              )
-              .select("id")
-              .maybeSingle();
-
-          if (updateError) {
-            console.error(
-              "Error updating return trial subscription:",
-              updateError,
+          if (deleteSourceError) {
+            await reportUpdateSubscriptionError(
+              deleteSourceError,
+              "rollback_return_trial_entitlement_source",
+              { userId, returnTrialSourceKey },
             );
-            const response = new Response(
-              JSON.stringify({ error: "Failed to grant return trial" }),
-              {
-                status: 500,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-            await rollbackGrantMarker();
-            return response;
           }
+        };
 
-          if (!updatedSubscriptionRow) {
-            const response = new Response(
-              JSON.stringify({
-                error: "Subscription state changed. Trial was not granted.",
-              }),
-              {
-                status: 409,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-            await rollbackGrantMarker();
-            return response;
-          }
-        } else {
-          const { error: insertError } = await supabase
-            .from("subscriptions")
-            .insert({
-              user_id: userId,
+        let projectionResult:
+          | Awaited<ReturnType<typeof recomputeProjectedSubscription>>
+          | null = null;
+
+        try {
+          await upsertSubscriptionEntitlementSource({
+            supabase,
+            source: {
+              provider: "stripe",
+              sourceKey: returnTrialSourceKey,
+              userId,
               plan: trialPlan,
               status: "trialing",
-              billing_interval: trialBillingInterval,
-              current_period_end: trialEndAt.toISOString(),
-              trial_start: now.toISOString(),
-              trial_end: trialEndAt.toISOString(),
-              provider: "stripe",
-              store_product_id: null,
-              cancel_at_period_end: false,
-              stripe_subscription_id: null,
-              stripe_customer_id: null,
-              bound_to_user_id: null,
-              bound_to_household_id: null,
-            });
+              billingInterval: trialBillingInterval,
+              currentPeriodEnd: trialEndAt.toISOString(),
+              cancelAtPeriodEnd: false,
+              trialStart: now.toISOString(),
+              trialEnd: trialEndAt.toISOString(),
+              stripeCustomerId: null,
+              stripeSubscriptionId: null,
+              storeProductId: null,
+              appStoreTransactionId: null,
+              appStoreOriginalTransactionId: null,
+              appStoreEnvironment: null,
+              playPurchaseToken: null,
+              playOrderId: null,
+              playPackageName: null,
+              currentPriceId: null,
+              originalPriceId: null,
+              previousPlan: null,
+              previousInterval: null,
+              lastEventId: "update_subscription_grant_paywall_return_trial",
+              createdAt: now.toISOString(),
+              updatedAt: now.toISOString(),
+            },
+          });
 
-          if (insertError) {
-            console.error(
-              "Error inserting return trial subscription:",
-              insertError,
-            );
-
-            if ((insertError as { code?: string }).code === "23505") {
-              const response = new Response(
-                JSON.stringify({
-                  error: "Subscription already exists. Trial was not granted.",
-                }),
-                {
-                  status: 409,
-                  headers: {
-                    ...corsHeaders,
-                    "Content-Type": "application/json",
-                  },
-                },
-              );
-              await rollbackGrantMarker();
-              return response;
-            }
-
-            const response = new Response(
-              JSON.stringify({ error: "Failed to grant return trial" }),
-              {
-                status: 500,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-            await rollbackGrantMarker();
-            return response;
-          }
+          projectionResult = await recomputeProjectedSubscription({
+            supabase,
+            userId,
+          });
+        } catch (returnTrialSourceError) {
+          await reportUpdateSubscriptionError(
+            returnTrialSourceError,
+            "persist_return_trial_entitlement_source",
+            { userId, returnTrialSourceKey },
+          );
+          console.error(
+            "Error persisting return trial entitlement source:",
+            returnTrialSourceError,
+          );
+          await rollbackReturnTrialSource();
+          await rollbackGrantMarker();
+          return new Response(
+            JSON.stringify({ error: "Failed to grant return trial" }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
         }
 
-        await supabase
+        const isProjectedReturnTrialPrimary =
+          projectionResult?.primary?.provider === "stripe" &&
+          projectionResult.primary.sourceKey === returnTrialSourceKey &&
+          projectionResult.primary.status === "trialing" &&
+          sourceGrantsAccess(projectionResult.primary);
+
+        if (!isProjectedReturnTrialPrimary) {
+          await rollbackReturnTrialSource();
+          try {
+            await recomputeProjectedSubscription({
+              supabase,
+              userId,
+            });
+          } catch (rollbackProjectionError) {
+            await reportUpdateSubscriptionError(
+              rollbackProjectionError,
+              "recompute_after_return_trial_rollback",
+              { userId, returnTrialSourceKey },
+            );
+          }
+          await rollbackGrantMarker();
+          return new Response(
+            JSON.stringify({
+              error: "Subscription state changed. Trial was not granted.",
+            }),
+            {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        const { error: clearExitError } = await supabase
           .from("users")
           .update({ paywall_return_trial_exit_at: null })
           .eq("id", userId);
+
+        if (clearExitError) {
+          await reportUpdateSubscriptionError(
+            clearExitError,
+            "clear_paywall_return_exit_marker",
+            { userId },
+          );
+        }
 
         console.log(
           `[PaywallReturnTrial] grant_success user=${userId} trial_end=${trialEndAt.toISOString()}`,
@@ -945,6 +1109,7 @@ serve(async (req) => {
         });
     }
   } catch (error) {
+    await reportUpdateSubscriptionError(error, "unhandled", {});
     console.error("Error in update-subscription:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,

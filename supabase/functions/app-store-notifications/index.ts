@@ -18,6 +18,14 @@ import {
   isAppStoreServerApiConfigured as isSharedAppStoreServerApiConfigured,
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
+import {
+  buildAppStoreSourceKey,
+  findAppStoreEntitlementSourceUser,
+  recomputeProjectedSubscription,
+  syncStripeEntitlementSourcesForUser,
+  upsertAppStoreEntitlementSourceWithPromotion,
+} from "../shared/subscription-entitlement-sources.ts";
+import { getCancelableStripeSubscriptionIdAfterProjection } from "../shared/subscription-projection.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
 
@@ -50,8 +58,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, {
-      httpClient: Stripe.createFetchHttpClient(),
-    })
+    httpClient: Stripe.createFetchHttpClient(),
+  })
   : null;
 
 function readBooleanEnv(name: string, defaultValue: boolean): boolean {
@@ -123,14 +131,14 @@ function normalizePrivateKey(value: string): string {
     const beginMarker = normalized.includes("-----BEGIN PRIVATE KEY-----")
       ? "-----BEGIN PRIVATE KEY-----"
       : normalized.includes("-----BEGIN EC PRIVATE KEY-----")
-        ? "-----BEGIN EC PRIVATE KEY-----"
-        : null;
+      ? "-----BEGIN EC PRIVATE KEY-----"
+      : null;
 
     const endMarker = normalized.includes("-----END PRIVATE KEY-----")
       ? "-----END PRIVATE KEY-----"
       : normalized.includes("-----END EC PRIVATE KEY-----")
-        ? "-----END EC PRIVATE KEY-----"
-        : null;
+      ? "-----END EC PRIVATE KEY-----"
+      : null;
 
     if (beginMarker && endMarker) {
       const beginIndex = normalized.indexOf(beginMarker);
@@ -158,8 +166,9 @@ function summarizePrivateKeyMaterial(
     normalizedHasEnd: normalized.includes("-----END"),
     normalizedHasPrivateKeyMarker: normalized.includes("PRIVATE KEY"),
     rawHasEscapedNewline: raw.includes("\\n"),
-    normalizedLineCount:
-      normalized.length > 0 ? normalized.split("\n").length : 0,
+    normalizedLineCount: normalized.length > 0
+      ? normalized.split("\n").length
+      : 0,
   };
 }
 
@@ -264,15 +273,13 @@ function deriveLifecycleStatus(
   const baseStatus = deriveStatus(transaction);
   if (baseStatus === "canceled") return "canceled";
 
-  const offerDiscountType =
-    typeof transaction.offerDiscountType === "string"
-      ? transaction.offerDiscountType.toUpperCase()
-      : "";
+  const offerDiscountType = typeof transaction.offerDiscountType === "string"
+    ? transaction.offerDiscountType.toUpperCase()
+    : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
-  const isTrialLike =
-    offerDiscountType === "FREE_TRIAL" ||
+  const isTrialLike = offerDiscountType === "FREE_TRIAL" ||
     (offerType === 1 && offerIdentifier.includes("trial"));
 
   return isTrialLike ? "trialing" : "active";
@@ -284,10 +291,9 @@ function isFreeTrialTransaction(
     "offerDiscountType" | "offerType" | "offerIdentifier"
   >,
 ): boolean {
-  const offerDiscountType =
-    typeof transaction.offerDiscountType === "string"
-      ? transaction.offerDiscountType.toUpperCase()
-      : "";
+  const offerDiscountType = typeof transaction.offerDiscountType === "string"
+    ? transaction.offerDiscountType.toUpperCase()
+    : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
@@ -327,6 +333,7 @@ async function resolveVerifiedUserId(params: {
   candidateSource:
     | "ownership_binding"
     | "app_account_token"
+    | "entitlement_source"
     | "legacy_subscription";
   originalTransactionId: string;
   transactionId: string | null;
@@ -375,61 +382,39 @@ async function resolveVerifiedUserId(params: {
   }
 }
 
-async function cancelStripeSubscriptionIfPresent(
+async function cancelStripeSubscriptions(
   userId: string,
+  stripeSubscriptionIds: string[],
 ): Promise<void> {
   if (!stripe) return;
 
-  const { data: existing, error: existingError } = await supabase
-    .from("subscriptions")
-    .select("provider, stripe_subscription_id")
-    .eq("user_id", userId)
-    .maybeSingle();
+  for (const stripeSubscriptionId of stripeSubscriptionIds) {
+    if (!looksLikeStripeSubscriptionId(stripeSubscriptionId)) continue;
 
-  if (existingError) {
-    await reportEdgeFunctionError({
-      functionName: "app-store-notifications",
-      error: existingError,
-      context: {
-        phase: "load_existing_subscription_for_stripe_cancel",
-        userId,
-      },
-    });
-    return;
-  }
-
-  const provider =
-    typeof existing?.provider === "string" ? existing.provider : null;
-  const stripeSubscriptionId = existing?.stripe_subscription_id;
-
-  const shouldCancelStripe =
-    provider === "stripe" ||
-    (provider == null && looksLikeStripeSubscriptionId(stripeSubscriptionId));
-
-  if (!shouldCancelStripe) return;
-  if (!looksLikeStripeSubscriptionId(stripeSubscriptionId)) return;
-
-  try {
-    await stripe.subscriptions.cancel(stripeSubscriptionId, { prorate: false });
-  } catch (error) {
-    await reportEdgeFunctionError({
-      functionName: "app-store-notifications",
-      error,
-      context: {
-        phase: "cancel_stripe_subscription_if_present",
-        userId,
-        stripeSubscriptionId,
-      },
-    });
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error(
-      "Warning: failed to cancel Stripe subscription during App Store update",
-      {
-        userId,
-        stripeSubscriptionId,
-        error: msg,
-      },
-    );
+    try {
+      await stripe.subscriptions.cancel(stripeSubscriptionId, {
+        prorate: false,
+      });
+    } catch (error) {
+      await reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error,
+        context: {
+          phase: "cancel_stripe_subscription_after_projection",
+          userId,
+          stripeSubscriptionId,
+        },
+      });
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error(
+        "Warning: failed to cancel Stripe subscription during App Store update",
+        {
+          userId,
+          stripeSubscriptionId,
+          error: msg,
+        },
+      );
+    }
   }
 }
 
@@ -438,6 +423,7 @@ interface ResolvedNotificationUser {
   userIdSource:
     | "ownership_binding"
     | "app_account_token"
+    | "entitlement_source"
     | "legacy_subscription"
     | null;
   hasLegacyOwnershipConflict: boolean;
@@ -452,6 +438,7 @@ async function enqueuePendingNotification(params: {
   userIdSource:
     | "ownership_binding"
     | "app_account_token"
+    | "entitlement_source"
     | "legacy_subscription"
     | null;
   lastError: string;
@@ -479,7 +466,9 @@ async function enqueuePendingNotification(params: {
 
   if (error) {
     throw new Error(
-      `Failed to queue pending App Store notification: ${error.message ?? error.code ?? String(error)}`,
+      `Failed to queue pending App Store notification: ${
+        error.message ?? error.code ?? String(error)
+      }`,
     );
   }
 }
@@ -494,6 +483,7 @@ async function resolveNotificationUser(params: {
   let userIdSource:
     | "ownership_binding"
     | "app_account_token"
+    | "entitlement_source"
     | "legacy_subscription"
     | null = null;
   let hasLegacyOwnershipConflict = false;
@@ -533,6 +523,25 @@ async function resolveNotificationUser(params: {
     });
     if (userId) {
       userIdSource = "app_account_token";
+    }
+  }
+
+  if (!userId && iapOwnershipLegacyFallbackEnabled) {
+    const sourceUserId = await findAppStoreEntitlementSourceUser({
+      supabase,
+      originalTransactionId: params.originalTransactionId,
+      transactionId: params.transactionId,
+    });
+
+    userId = await resolveVerifiedUserId({
+      candidateUserId: sourceUserId,
+      candidateSource: "entitlement_source",
+      originalTransactionId: params.originalTransactionId,
+      transactionId: params.transactionId,
+      environment: params.environment,
+    });
+    if (userId) {
+      userIdSource = "entitlement_source";
     }
   }
 
@@ -630,16 +639,16 @@ async function resolveNotificationUserWithRetry(params: {
 
 async function decodeNotification(signedPayload: string): Promise<
   | {
-      kind: "test";
-      notificationType: string;
-      subtype: string | null;
-      environment: AppStoreEnvironment;
-    }
+    kind: "test";
+    notificationType: string;
+    subtype: string | null;
+    environment: AppStoreEnvironment;
+  }
   | {
-      kind: "transaction";
-      transaction: JWSTransactionDecodedPayload;
-      environment: AppStoreEnvironment;
-    }
+    kind: "transaction";
+    transaction: JWSTransactionDecodedPayload;
+    environment: AppStoreEnvironment;
+  }
 > {
   if (!isAppleServerApiConfigured()) {
     throw new Error(
@@ -667,8 +676,9 @@ async function decodeNotification(signedPayload: string): Promise<
     throw error;
   }
 
-  const decoded =
-    decodeJwsPayload<AppStoreNotificationDecodedPayload>(signedPayload);
+  const decoded = decodeJwsPayload<AppStoreNotificationDecodedPayload>(
+    signedPayload,
+  );
 
   const notificationType = asString(decoded.notificationType) ?? "UNKNOWN";
   const subtype = asString(decoded.subtype);
@@ -689,8 +699,9 @@ async function decodeNotification(signedPayload: string): Promise<
     throw new Error("Notification missing signedTransactionInfo");
   }
 
-  const transactionHint =
-    decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
+  const transactionHint = decodeJwsPayload<JWSTransactionDecodedPayload>(
+    signedTransaction,
+  );
   const envHint = toAppleEnvironment(
     asString(transactionHint.environment) ??
       asString(decoded.data?.environment),
@@ -744,8 +755,8 @@ async function decodeNotification(signedPayload: string): Promise<
       },
       verified: {
         transactionId: verifiedTransaction.transactionId,
-        originalTransactionId:
-          verifiedTransaction.originalTransactionId ?? undefined,
+        originalTransactionId: verifiedTransaction.originalTransactionId ??
+          undefined,
         bundleId: verifiedTransaction.bundleId,
       },
     })
@@ -1006,8 +1017,9 @@ serve(async (req: Request): Promise<Response> => {
         transactionId,
         storeProductId,
         environment,
-        appAccountToken:
-          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
+        appAccountToken: appAccountToken && isUuid(appAccountToken)
+          ? appAccountToken
+          : null,
         userIdSource,
         lastError: "unknown_user_mapping",
       });
@@ -1028,15 +1040,15 @@ serve(async (req: Request): Promise<Response> => {
 
     const bindingDecision = iapOwnershipBindingEnabled
       ? await ensureAppStoreOwnership({
-          supabase,
-          provider: "app_store",
-          originalTransactionId,
-          currentUserId: userId,
-          transactionId,
-          storeProductId,
-          environment,
-          claimSource: "app_store_notification",
-        })
+        supabase,
+        provider: "app_store",
+        originalTransactionId,
+        currentUserId: userId,
+        transactionId,
+        storeProductId,
+        environment,
+        claimSource: "app_store_notification",
+      })
       : null;
 
     if (bindingDecision?.kind === "owned_by_another_user") {
@@ -1049,8 +1061,6 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     const resolvedUserId = bindingDecision?.binding.user_id ?? userId;
-
-    await cancelStripeSubscriptionIfPresent(resolvedUserId);
 
     const { data: existingSubscription, error: existingSubscriptionError } =
       await supabase
@@ -1200,12 +1210,12 @@ serve(async (req: Request): Promise<Response> => {
     const status = deriveLifecycleStatus(effectiveTransaction);
     const existingTrialStart = asString(existingSubscription?.trial_start);
     const existingTrialEnd = asString(existingSubscription?.trial_end);
-    let trialStartIso =
-      status === "trialing"
-        ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
-        : existingTrialStart;
-    let trialEndIso =
-      status === "trialing" ? resolvedExpiresIso : existingTrialEnd;
+    let trialStartIso = status === "trialing"
+      ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
+      : existingTrialStart;
+    let trialEndIso = status === "trialing"
+      ? resolvedExpiresIso
+      : existingTrialEnd;
 
     if (
       status !== "trialing" &&
@@ -1273,34 +1283,72 @@ serve(async (req: Request): Promise<Response> => {
       trialEndIso,
     });
 
-    const subscriptionUpdate: Record<string, unknown> = {
-      user_id: resolvedUserId,
-      provider: "app_store",
-      store_product_id: storeProductId,
-      plan: catalogProduct.plan,
-      status,
-      billing_interval: catalogProduct.billing_interval,
-      current_period_end:
-        catalogProduct.plan === "lifetime" ? null : resolvedExpiresIso,
-      trial_start: trialStartIso,
-      trial_end: trialEndIso,
-      cancel_at_period_end: false,
-      stripe_customer_id: null,
-      stripe_subscription_id: null,
-      play_purchase_token: null,
-      play_order_id: null,
-      play_package_name: null,
-      app_store_transaction_id: transactionId,
-      app_store_original_transaction_id: originalTransactionId,
-      app_store_environment: toStoredAppStoreEnvironment(resolvedEnvironment),
-      updated_at: new Date().toISOString(),
-    };
+    const nowIso = new Date().toISOString();
+    const appStoreSourceKey = buildAppStoreSourceKey(originalTransactionId);
 
-    const { error: upsertError } = await supabase
-      .from("subscriptions")
-      .upsert(subscriptionUpdate, { onConflict: "user_id" });
+    try {
+      await upsertAppStoreEntitlementSourceWithPromotion({
+        supabase,
+        source: {
+          provider: "app_store",
+          sourceKey: appStoreSourceKey,
+          userId: resolvedUserId,
+          plan: catalogProduct.plan,
+          status,
+          billingInterval: catalogProduct.billing_interval,
+          currentPeriodEnd: catalogProduct.plan === "lifetime"
+            ? null
+            : resolvedExpiresIso,
+          cancelAtPeriodEnd: false,
+          trialStart: trialStartIso,
+          trialEnd: trialEndIso,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          storeProductId,
+          appStoreTransactionId: transactionId,
+          appStoreOriginalTransactionId: originalTransactionId,
+          appStoreEnvironment: toStoredAppStoreEnvironment(resolvedEnvironment),
+          playPurchaseToken: null,
+          playOrderId: null,
+          playPackageName: null,
+          currentPriceId: null,
+          originalPriceId: null,
+          previousPlan: null,
+          previousInterval: null,
+          lastEventId: null,
+          createdAt: asIsoMillisUnknown(effectiveTransaction.purchaseDate) ??
+            nowIso,
+          updatedAt: nowIso,
+        },
+        transactionId,
+        originalTransactionId,
+      });
 
-    if (upsertError) {
+      await syncStripeEntitlementSourcesForUser({
+        supabase,
+        stripe,
+        userId: resolvedUserId,
+      });
+
+      const projectionResult = await recomputeProjectedSubscription({
+        supabase,
+        userId: resolvedUserId,
+      });
+
+      const previousStripeSubscriptionId =
+        getCancelableStripeSubscriptionIdAfterProjection({
+          previous: projectionResult.previous,
+          primary: projectionResult.primary,
+          nextProvider: "app_store",
+          nextSourceKey: appStoreSourceKey,
+        });
+
+      if (previousStripeSubscriptionId) {
+        await cancelStripeSubscriptions(resolvedUserId, [
+          previousStripeSubscriptionId,
+        ]);
+      }
+    } catch (upsertError) {
       await reportEdgeFunctionError({
         functionName: "app-store-notifications",
         error: upsertError,
