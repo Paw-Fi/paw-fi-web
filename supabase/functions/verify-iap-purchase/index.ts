@@ -186,6 +186,16 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function getSandboxSubscriptionOverrideEndIso(
+  billingInterval: BillingInterval | null,
+): string {
+  const now = Date.now();
+  const durationMs = billingInterval === "yearly"
+    ? 60 * 60 * 1000
+    : 5 * 60 * 1000;
+  return new Date(now + durationMs).toISOString();
+}
+
 function safeJson<T>(value: unknown): T {
   return value as T;
 }
@@ -1281,7 +1291,7 @@ serve(async (req: Request) => {
               transactionId: decodedTransaction.transactionId ?? null,
               originalTransactionId: decodedTransaction.originalTransactionId ??
                 null,
-              subscriptionStatus: subscriptionStatusLookup.status,
+              subscriptionStatus: subscriptionStatusLookup?.status ?? null,
             });
             return new Response(
               JSON.stringify({ error: "Purchase was refunded" }),
@@ -1728,13 +1738,18 @@ serve(async (req: Request) => {
       if (isSandbox && status === "canceled" && plan !== "lifetime") {
         // Always override for first-time verifications
         if (isFirstTimeVerification) {
+          const sandboxCurrentPeriodEnd = getSandboxSubscriptionOverrideEndIso(
+            billingInterval,
+          );
           console.log("🔧 Sandbox first-time purchase override:", {
             wasStatus: status,
             newStatus: "active",
             reason: "First-time sandbox verification - user just purchased",
             currentPeriodEnd,
+            sandboxCurrentPeriodEnd,
           });
           status = "active";
+          currentPeriodEnd = sandboxCurrentPeriodEnd;
         } // For duplicates (repeated testing), check if recently created
         else if (isDuplicateVerification) {
           // Check when the subscription was last updated in our DB
@@ -1761,6 +1776,8 @@ serve(async (req: Request) => {
               );
 
               if (ageMinutes < recentThresholdMinutes) {
+                const sandboxCurrentPeriodEnd =
+                  getSandboxSubscriptionOverrideEndIso(billingInterval);
                 console.log("🔧 Sandbox duplicate override (recent):", {
                   wasStatus: status,
                   newStatus: "active",
@@ -1770,20 +1787,26 @@ serve(async (req: Request) => {
                     )
                   } min ago`,
                   currentPeriodEnd,
+                  sandboxCurrentPeriodEnd,
                 });
                 status = "active";
+                currentPeriodEnd = sandboxCurrentPeriodEnd;
               }
             }
           } catch (checkError) {
             console.warn("Failed to check subscription age:", checkError);
             // Fail safe: treat as active anyway for sandbox testing
+            const sandboxCurrentPeriodEnd =
+              getSandboxSubscriptionOverrideEndIso(billingInterval);
             console.log("🔧 Sandbox duplicate override (fallback):", {
               wasStatus: status,
               newStatus: "active",
               reason:
                 "Failed to check age, treating as active for sandbox testing",
+              sandboxCurrentPeriodEnd,
             });
             status = "active";
+            currentPeriodEnd = sandboxCurrentPeriodEnd;
           }
         }
       }

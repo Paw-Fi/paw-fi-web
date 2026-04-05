@@ -1,12 +1,23 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import Stripe from "https://esm.sh/stripe@13.10.0";
+import { Environment } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
+  findAppStoreSubscriptionStatusWithEnvironmentFallback,
+  findAppStoreTransactionWithEnvironmentFallback,
+  getValidatedAppStorePrivateKey,
+  isAppStoreServerApiConfigured,
+} from "../shared/app-store-api.ts";
+import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import {
+  buildAppStoreSourceKey,
+  getUserSubscriptionEntitlementSources,
   recomputeProjectedSubscription,
   syncStripeEntitlementSourcesForUser,
+  upsertAppStoreEntitlementSourceWithPromotion,
 } from "../shared/subscription-entitlement-sources.ts";
 
 // Initialize Stripe with your secret key
@@ -18,6 +29,256 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
+const appStoreIssuerId = Deno.env.get("APPLE_APP_STORE_ISSUER_ID") || "";
+const appStoreKeyId = Deno.env.get("APPLE_APP_STORE_KEY_ID") || "";
+const appStorePrivateKeyRaw = Deno.env.get("APPLE_APP_STORE_PRIVATE_KEY") || "";
+const appStoreBundleId = Deno.env.get("APPLE_BUNDLE_ID") || "";
+const appStoreApiConfig = {
+  issuerId: appStoreIssuerId,
+  keyId: appStoreKeyId,
+  bundleId: appStoreBundleId,
+  privateKey: appStorePrivateKeyRaw,
+};
+
+function getNormalizedAppStoreApiConfig() {
+  return {
+    ...appStoreApiConfig,
+    privateKey: getValidatedAppStorePrivateKey(appStorePrivateKeyRaw),
+  };
+}
+
+function toAppleEnvironment(value: string | null): Environment {
+  return value?.toLowerCase() === "production"
+    ? Environment.PRODUCTION
+    : Environment.SANDBOX;
+}
+
+function toStoredAppStoreEnvironment(environment: Environment): string {
+  return environment === Environment.PRODUCTION ? "production" : "sandbox";
+}
+
+function parseEpochMsToIso(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  const date = new Date(parsed);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function parseIsoToMs(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function resolveRecentSandboxLifecycleOverride(params: {
+  source: Awaited<ReturnType<typeof getUserSubscriptionEntitlementSources>>[number];
+  lifecycle: ReturnType<typeof resolveAppStoreSubscriptionLifecycle>;
+}) {
+  if (toAppleEnvironment(params.source.appStoreEnvironment) !== Environment.SANDBOX) {
+    return null;
+  }
+
+  if (params.lifecycle.status !== "canceled") {
+    return null;
+  }
+
+  const lastSyncedAtMs = parseIsoToMs(
+    params.source.updatedAt ?? params.source.createdAt,
+  );
+  if (lastSyncedAtMs == null) {
+    return null;
+  }
+
+  const ageMs = Date.now() - lastSyncedAtMs;
+  const recentThresholdMs = 60 * 60 * 1000;
+  if (ageMs > recentThresholdMs) {
+    return null;
+  }
+
+  const preservedCurrentPeriodEndMs = parseIsoToMs(
+    params.source.currentPeriodEnd,
+  );
+  if (preservedCurrentPeriodEndMs == null || preservedCurrentPeriodEndMs <= Date.now()) {
+    return null;
+  }
+
+  const preservedStatus =
+    params.source.status === "trialing" ? "trialing" : "active";
+
+  return {
+    status: preservedStatus,
+    currentPeriodEnd: params.source.currentPeriodEnd,
+    trialStart: preservedStatus === "trialing"
+      ? params.source.trialStart
+      : params.source.trialStart,
+    trialEnd: preservedStatus === "trialing"
+      ? (params.source.trialEnd ?? params.source.currentPeriodEnd)
+      : params.source.trialEnd,
+  };
+}
+
+async function syncAppStoreEntitlementSourcesForUser(params: {
+  userId: string;
+}): Promise<number> {
+  if (!isAppStoreServerApiConfigured(appStoreApiConfig)) {
+    return 0;
+  }
+
+  const appStoreSources = (await getUserSubscriptionEntitlementSources({
+    supabase,
+    userId: params.userId,
+  })).filter((source) =>
+    source.provider === "app_store" &&
+    typeof source.appStoreOriginalTransactionId === "string" &&
+    source.appStoreOriginalTransactionId.length > 0
+  );
+
+  if (appStoreSources.length === 0) {
+    return 0;
+  }
+
+  const config = getNormalizedAppStoreApiConfig();
+  const reconciledOriginalTransactionIds = new Set<string>();
+  let synced = 0;
+
+  for (const source of appStoreSources) {
+    const originalTransactionId = source.appStoreOriginalTransactionId;
+    if (originalTransactionId == null ||
+        reconciledOriginalTransactionIds.has(originalTransactionId)) {
+      continue;
+    }
+    reconciledOriginalTransactionIds.add(originalTransactionId);
+
+    try {
+      const transactionLookup =
+          await findAppStoreTransactionWithEnvironmentFallback({
+        config,
+        environmentHint: toAppleEnvironment(source.appStoreEnvironment),
+        transactionId: source.appStoreTransactionId,
+        originalTransactionId,
+      });
+      const latestTransaction = transactionLookup.transaction;
+      if (latestTransaction == null) {
+        continue;
+      }
+
+      const statusLookup = latestTransaction.transactionId != null
+          ? await findAppStoreSubscriptionStatusWithEnvironmentFallback({
+              config,
+              environmentHint: transactionLookup.environment,
+              transactionId: latestTransaction.transactionId,
+              originalTransactionId,
+              productId: latestTransaction.productId ?? source.storeProductId,
+            })
+          : {
+              subscription: null,
+              environment: transactionLookup.environment,
+            };
+
+      const lifecycle = resolveAppStoreSubscriptionLifecycle({
+        transaction: latestTransaction,
+        statusTransaction: statusLookup.subscription?.transaction ?? null,
+        renewalInfo: statusLookup.subscription?.renewalInfo ?? null,
+        subscriptionStatus: statusLookup.subscription?.status ?? null,
+        nowMs: Date.now(),
+      });
+
+      const sandboxLifecycleOverride = resolveRecentSandboxLifecycleOverride({
+        source,
+        lifecycle,
+      });
+      const resolvedStatus =
+        (sandboxLifecycleOverride?.status ?? lifecycle.status) as typeof source.status;
+
+      const currentPeriodEnd = source.plan === "lifetime"
+          ? null
+          : (sandboxLifecycleOverride?.currentPeriodEnd ?? lifecycle.currentPeriodEnd);
+      const purchaseDateIso = parseEpochMsToIso(latestTransaction.purchaseDate);
+      const nextTrialStart = resolvedStatus === "trialing"
+          ? (sandboxLifecycleOverride?.trialStart ?? source.trialStart ?? purchaseDateIso)
+          : source.trialStart;
+      const nextTrialEnd = resolvedStatus === "trialing"
+          ? (sandboxLifecycleOverride?.trialEnd ?? currentPeriodEnd)
+          : source.trialEnd;
+      const nowIso = new Date().toISOString();
+
+      if (sandboxLifecycleOverride != null) {
+        console.log("Preserving recent sandbox entitlement during get-subscription reconciliation", {
+          userId: params.userId,
+          originalTransactionId,
+          sourceStatus: source.status,
+          lifecycleStatus: lifecycle.status,
+          preservedStatus: sandboxLifecycleOverride.status,
+          preservedCurrentPeriodEnd: sandboxLifecycleOverride.currentPeriodEnd,
+        });
+      }
+
+      await upsertAppStoreEntitlementSourceWithPromotion({
+        supabase,
+        source: {
+          provider: "app_store",
+          sourceKey: buildAppStoreSourceKey(originalTransactionId),
+          userId: params.userId,
+          plan: source.plan,
+          status: resolvedStatus,
+          billingInterval: source.billingInterval,
+          currentPeriodEnd,
+          cancelAtPeriodEnd: false,
+          trialStart: nextTrialStart,
+          trialEnd: nextTrialEnd,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          storeProductId:
+            typeof latestTransaction.productId === "string" &&
+                latestTransaction.productId.length > 0
+              ? latestTransaction.productId
+              : source.storeProductId,
+          appStoreTransactionId:
+            latestTransaction.transactionId ?? source.appStoreTransactionId,
+          appStoreOriginalTransactionId:
+            latestTransaction.originalTransactionId ?? originalTransactionId,
+          appStoreEnvironment: toStoredAppStoreEnvironment(
+            statusLookup.environment,
+          ),
+          playPurchaseToken: null,
+          playOrderId: null,
+          playPackageName: null,
+          currentPriceId: null,
+          originalPriceId: null,
+          previousPlan: null,
+          previousInterval: null,
+          lastEventId: null,
+          createdAt: source.createdAt ?? purchaseDateIso ?? nowIso,
+          updatedAt: nowIso,
+        },
+        transactionId:
+          latestTransaction.transactionId ?? source.appStoreTransactionId,
+        originalTransactionId,
+      });
+      synced += 1;
+    } catch (error) {
+      await reportEdgeFunctionError({
+        functionName: "get-subscription",
+        error,
+        context: {
+          phase: "reconcile_app_store_source_on_launch",
+          userId: params.userId,
+          originalTransactionId,
+          appStoreTransactionId: source.appStoreTransactionId,
+          sourceKey: source.sourceKey,
+          environmentHint: source.appStoreEnvironment,
+        },
+      });
+      console.error(
+        "Non-fatal App Store source reconciliation failed:",
+        error,
+      );
+    }
+  }
+
+  return synced;
+}
 
 serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
@@ -50,6 +311,9 @@ serve(async (req: Request) => {
     const userId = authResult.userId!;
 
     try {
+      await syncAppStoreEntitlementSourcesForUser({
+        userId,
+      });
       await syncStripeEntitlementSourcesForUser({
         supabase,
         stripe,
