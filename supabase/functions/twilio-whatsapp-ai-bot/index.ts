@@ -298,6 +298,30 @@ async function normalizeQuickChartMediaUrl(url: string): Promise<string> {
   return (await createQuickChartShortUrl(cfg)) || input;
 }
 
+function extractChartMediaUrlFromToolResult(toolResult: unknown): string | null {
+  if (!toolResult || typeof toolResult !== "object") return null;
+
+  // Keep this list aligned with tool outputs that may carry chart links.
+  // We intentionally do not rely on model text because prompts instruct the model
+  // to avoid printing raw chart URLs.
+  const candidateValues = [
+    (toolResult as Record<string, unknown>).url,
+    (toolResult as Record<string, unknown>).chart_url,
+    (toolResult as Record<string, any>).snapshot?.chart_url,
+    (toolResult as Record<string, any>).data?.chart_url,
+  ];
+
+  for (const value of candidateValues) {
+    if (typeof value !== "string") continue;
+    const cleaned = value.trim();
+    if (!cleaned) continue;
+    if (!/^https?:\/\/quickchart\.io\/chart/i.test(cleaned)) continue;
+    return cleaned;
+  }
+
+  return null;
+}
+
 function runBackgroundTask(task: Promise<unknown>) {
   const edgeRuntime = (globalThis as any)?.EdgeRuntime;
   if (edgeRuntime?.waitUntil) {
@@ -6403,6 +6427,12 @@ Deno.serve(async (req: Request) => {
 
         lastToolResult = toolResult;
         lastToolCallName = typeof call?.name === "string" ? call.name : null;
+        // Promote chart URLs from tool payloads so media still attaches when
+        // the model follows instructions and does not echo the URL in text.
+        const chartFromTool = extractChartMediaUrlFromToolResult(toolResult);
+        if (chartFromTool) {
+          lastGeneratedChartUrl = chartFromTool;
+        }
 
         const succeeded = (toolResult as any)?.success === true;
         if (succeeded) {
@@ -6559,23 +6589,72 @@ Deno.serve(async (req: Request) => {
   ): Promise<Response> => {
     const { bodyToSend, persistedContent, immediateText, mediaUrl } = computed;
 
-    if (deliveryMode === "api") {
-      const sendResult = mediaUrl
-        ? await sendWhatsAppMessage(
-            twilioAccountSid,
-            twilioAuthToken,
-            to,
-            from,
-            bodyToSend,
-            mediaUrl,
-          )
-        : await sendWhatsAppMessageInChunks(
-            twilioAccountSid,
-            twilioAuthToken,
-            to,
-            from,
-            bodyToSend,
+    if (mediaUrl) {
+      // Always deliver media through the Twilio Messages API path so we can
+      // observe send failures and apply a deterministic fallback/idempotency state.
+      const mediaBody = truncateTextByCodePoints(
+        bodyToSend || immediateText,
+        Math.min(WHATSAPP_CHUNK_TARGET_CHARS, 1500),
+      );
+      const sendResult = await sendWhatsAppMessage(
+        twilioAccountSid,
+        twilioAuthToken,
+        to,
+        from,
+        mediaBody,
+        mediaUrl,
+      );
+
+      if (!sendResult.success) {
+        console.error(
+          "[twilio-whatsapp-ai-bot] Failed to send media WhatsApp message:",
+          { error: sendResult.error, deliveryMode },
+        );
+        const fallbackResult = await sendWhatsAppMessage(
+          twilioAccountSid,
+          twilioAuthToken,
+          to,
+          from,
+          DELIVERY_FAILURE_MESSAGE,
+        );
+        if (!fallbackResult.success) {
+          console.error(
+            "[twilio-whatsapp-ai-bot] Failed to send fallback WhatsApp message:",
+            fallbackResult.error,
           );
+        }
+        if (idempotencyKey) {
+          await updateTwilioIdempotency(supabase, idempotencyKey, {
+            status: "failed",
+            delivery: "api",
+            response_text: persistedContent,
+            media_url: mediaUrl || undefined,
+            error: sendResult.error || "unknown",
+          });
+        }
+        return xmlResponse(buildTwimlMessage(null));
+      }
+
+      if (idempotencyKey) {
+        await updateTwilioIdempotency(supabase, idempotencyKey, {
+          status: "done",
+          delivery: "api",
+          response_text: persistedContent,
+          media_url: mediaUrl || undefined,
+        });
+      }
+
+      return xmlResponse(buildTwimlMessage(null));
+    }
+
+    if (deliveryMode === "api") {
+      const sendResult = await sendWhatsAppMessageInChunks(
+        twilioAccountSid,
+        twilioAuthToken,
+        to,
+        from,
+        bodyToSend,
+      );
       if (!sendResult.success) {
         console.error(
           "[twilio-whatsapp-ai-bot] Failed to send WhatsApp message:",
@@ -6621,47 +6700,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (Array.from(immediateText).length > WHATSAPP_CHUNK_TARGET_CHARS) {
-      // If a chart is attached, enforce single-message delivery.
-      if (mediaUrl) {
-        const clipped = truncateTextByCodePoints(
-          immediateText,
-          WHATSAPP_CHUNK_TARGET_CHARS,
-        );
-        const sendResult = await sendWhatsAppMessage(
-          twilioAccountSid,
-          twilioAuthToken,
-          to,
-          from,
-          clipped,
-          mediaUrl,
-        );
-        if (!sendResult.success) {
-          console.error(
-            "[twilio-whatsapp-ai-bot] Failed to send media TwiML response via API:",
-            { error: sendResult.error },
-          );
-          if (idempotencyKey) {
-            await updateTwilioIdempotency(supabase, idempotencyKey, {
-              status: "failed",
-              delivery: "api",
-              response_text: persistedContent,
-              media_url: mediaUrl || undefined,
-              error: sendResult.error || "unknown",
-            });
-          }
-          return xmlResponse(buildTwimlMessage(null));
-        }
-        if (idempotencyKey) {
-          await updateTwilioIdempotency(supabase, idempotencyKey, {
-            status: "done",
-            delivery: "api",
-            response_text: persistedContent,
-            media_url: mediaUrl || undefined,
-          });
-        }
-        return xmlResponse(buildTwimlMessage(null));
-      }
-
       const sendResult = await sendWhatsAppMessageInChunks(
         twilioAccountSid,
         twilioAuthToken,

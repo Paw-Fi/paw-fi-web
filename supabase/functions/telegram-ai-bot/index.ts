@@ -365,7 +365,27 @@ async function sendTelegramMessage(
       reply_markup: replyMarkup,
     }),
   });
-  return res.ok;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[telegram-ai-bot] sendMessage http error", {
+      chatId,
+      status: res.status,
+      body,
+    });
+    return false;
+  }
+
+  const payload = await res.json().catch(() => null);
+  // Telegram can reply HTTP 200 with { ok: false }, so check API payload too.
+  if (!payload?.ok) {
+    console.error("[telegram-ai-bot] sendMessage api error", {
+      chatId,
+      payload,
+    });
+    return false;
+  }
+
+  return true;
 }
 
 async function sendTelegramPhoto(
@@ -389,7 +409,29 @@ async function sendTelegramPhoto(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.ok;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[telegram-ai-bot] sendPhoto http error", {
+      chatId,
+      status: res.status,
+      photoUrl,
+      body,
+    });
+    return false;
+  }
+
+  const apiPayload = await res.json().catch(() => null);
+  // sendPhoto can also fail at Telegram API level with HTTP 200.
+  if (!apiPayload?.ok) {
+    console.error("[telegram-ai-bot] sendPhoto api error", {
+      chatId,
+      photoUrl,
+      payload: apiPayload,
+    });
+    return false;
+  }
+
+  return true;
 }
 
 function truncateTextByCodePoints(input: string, max: number): string {
@@ -472,6 +514,29 @@ async function normalizeQuickChartMediaUrl(url: string): Promise<string> {
   const cfg = parseQuickChartConfigFromUrl(input);
   if (!cfg) return input;
   return (await createQuickChartShortUrl(cfg)) || input;
+}
+
+function extractChartMediaUrlFromToolResult(toolResult: unknown): string | null {
+  if (!toolResult || typeof toolResult !== "object") return null;
+
+  // Keep this aligned with tool response fields that may contain chart URLs.
+  // We cannot depend on model text because prompts explicitly discourage URL echoing.
+  const candidateValues = [
+    (toolResult as Record<string, unknown>).url,
+    (toolResult as Record<string, unknown>).chart_url,
+    (toolResult as Record<string, any>).snapshot?.chart_url,
+    (toolResult as Record<string, any>).data?.chart_url,
+  ];
+
+  for (const value of candidateValues) {
+    if (typeof value !== "string") continue;
+    const cleaned = value.trim();
+    if (!cleaned) continue;
+    if (!/^https?:\/\/quickchart\.io\/chart/i.test(cleaned)) continue;
+    return cleaned;
+  }
+
+  return null;
 }
 
 async function sendTelegramChatAction(
@@ -1651,13 +1716,29 @@ Deno.serve(async (req: Request) => {
       });
       const choiceKeyboard = buildChoiceKeyboard(cached.response_text);
       if (cached.media_url) {
-        await sendTelegramPhoto(
+        const sentPhoto = await sendTelegramPhoto(
           TELEGRAM_BOT_TOKEN,
           chatId,
           cached.media_url,
           truncateTextByCodePoints(cached.response_text, 900),
           choiceKeyboard,
         );
+        if (!sentPhoto) {
+          // Keep duplicate replays resilient: if photo delivery fails, still return
+          // the answer with a direct chart link so users are never left with silence.
+          const fallbackText = [
+            cached.response_text,
+            cached.media_url,
+          ]
+            .filter((part) => typeof part === "string" && part.trim())
+            .join("\n\n");
+          await sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            chatId,
+            truncateTextByCodePoints(fallbackText, 3500),
+            choiceKeyboard,
+          );
+        }
       } else {
         await sendTelegramMessage(
           TELEGRAM_BOT_TOKEN,
@@ -4264,6 +4345,11 @@ Deno.serve(async (req: Request) => {
                 }));
               }
             }
+            const chartFromTool = extractChartMediaUrlFromToolResult(toolResult);
+            if (chartFromTool) {
+              // Persist chart from tool payload even when the model doesn't print it.
+              lastGeneratedChartUrl = chartFromTool;
+            }
             toolResponses.push({
               functionResponse: {
                 name: call.name,
@@ -4401,13 +4487,27 @@ Deno.serve(async (req: Request) => {
 
         const caption = truncateTextByCodePoints(cleanedText, 900);
         if (mediaUrl) {
-          await sendTelegramPhoto(
+          const sentPhoto = await sendTelegramPhoto(
             TELEGRAM_BOT_TOKEN,
             chatId,
             mediaUrl,
             caption,
             choiceKeyboard,
           );
+          if (!sentPhoto) {
+            const fallbackText = [cleanedText, mediaUrl]
+              .filter((part) => typeof part === "string" && part.trim())
+              .join("\n\n");
+            const sentFallback = await sendTelegramMessage(
+              TELEGRAM_BOT_TOKEN,
+              chatId,
+              truncateTextByCodePoints(fallbackText, 3500),
+              choiceKeyboard,
+            );
+            if (!sentFallback) {
+              throw new Error("Failed to deliver Telegram chart response");
+            }
+          }
           telegramResponseSent = true;
         } else {
           await sendTelegramMessage(
