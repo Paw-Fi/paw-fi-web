@@ -177,6 +177,25 @@ function isTotalLike(description: unknown): boolean {
   return /(sub\s*total|subtotal|grand\s*total|total)/i.test(description);
 }
 
+/**
+ * Identifies receipt-style output from OCR/LLM parsing.
+ *
+ * Why this exists:
+ * - We only want to merge multiple parsed rows into one transaction for
+ *   "single receipt" scenarios.
+ * - Bank/payment app screenshots often contain many independent transactions,
+ *   and those must remain separate rows for downstream logging.
+ *
+ * Current signal:
+ * - Presence of explicit receipt summary rows like total/subtotal.
+ *
+ * If you expand this heuristic in the future, keep it conservative.
+ * A false positive here will collapse legitimate multi-transaction lists.
+ */
+function hasExplicitReceiptSignals(items: any[]): boolean {
+  return items.some((item) => isTotalLike(item?.description));
+}
+
 function resolveReceiptCategory(items: any[]): string | undefined {
   const counts = new Map<string, number>();
   for (const item of items) {
@@ -201,7 +220,16 @@ function collapseReceiptItems(
   body: AnalyzeRequestBody,
 ): any[] | undefined {
   if (!Array.isArray(items) || items.length <= 1) return items;
+
+  // Collapse is only considered for plain image uploads (no attachments).
+  // Text/audio/files should keep the parser's original granularity.
   if (!shouldCollapseReceipt(body)) return items;
+
+  // Critical safety guard:
+  // Do NOT collapse image results unless we have explicit receipt evidence.
+  // This prevents regressions where bank/app history screenshots get merged
+  // into a single expense instead of returning one item per transaction row.
+  if (!hasExplicitReceiptSignals(items)) return items;
 
   const filteredItems =
     items.length > 1
