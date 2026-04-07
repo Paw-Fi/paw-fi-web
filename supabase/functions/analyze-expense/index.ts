@@ -279,6 +279,7 @@ function collapseReceiptItems(
 function resolveErrorCode(status: number): string {
   if (status === 401 || status === 403) return "UNAUTHORIZED";
   if (status === 404) return "NOT_FOUND";
+  if (status === 503) return "AI_TEMPORARILY_UNAVAILABLE";
   if (status >= 500) return "SERVER_ERROR";
   return "VALIDATION_ERROR";
 }
@@ -304,6 +305,8 @@ function statusForErrorCode(code?: string): number {
       return 401;
     case "NOT_FOUND":
       return 404;
+    case "AI_TEMPORARILY_UNAVAILABLE":
+      return 503;
     case "SERVER_ERROR":
       return 500;
     default:

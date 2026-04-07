@@ -138,6 +138,12 @@ const DOCUMENT_AI_ENDPOINT =
 const GOOGLE_CLOUD_SERVICE_ACCOUNT =
   Deno.env.get("GOOGLE_CLOUD_SERVICE_ACCOUNT") || "";
 const DEBUG_LOGS = Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
+const GEMINI_FALLBACK_MODEL_NAMES = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+] as const;
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1195,6 +1201,7 @@ async function resolveCandidateCategories(
   expenseCategories: string[],
   incomeCategories: string[],
   language: string,
+  onProgress?: ProgressCallback,
 ): Promise<string[]> {
   const tools: any = [
     {
@@ -1245,10 +1252,21 @@ async function resolveCandidateCategories(
     generationConfig: { maxOutputTokens: 4096 },
   } as any;
 
-  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
+  const modelNames = [...GEMINI_FALLBACK_MODEL_NAMES];
   let response: any = null;
   let lastError: unknown = null;
-  for (const modelName of modelNames) {
+  for (let modelIndex = 0; modelIndex < modelNames.length; modelIndex++) {
+    const modelName = modelNames[modelIndex];
+    if (onProgress) {
+      onProgress({
+        type: "analyzing_chunk",
+        message:
+          modelIndex === 0
+            ? "Sorting your transactions into categories..."
+            : "Refining category mapping for accuracy...",
+      });
+    }
+
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
@@ -2347,7 +2365,7 @@ async function preprocessExtractedTextWithGemini(
     });
   }
 
-  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
+  const modelNames = [...GEMINI_FALLBACK_MODEL_NAMES];
 
   const schemaLine =
     '{"formatVersion":1,"source":"' +
@@ -2434,7 +2452,7 @@ async function extractTransactionsJsonWithGemini(
   const trimmed = rawText.trim();
   if (!trimmed) return null;
 
-  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
+  const modelNames = [...GEMINI_FALLBACK_MODEL_NAMES];
   const request = {
     contents: [
       {
@@ -2718,6 +2736,7 @@ async function analyzeFromText(
       expenseCategories,
       incomeCategories,
       language,
+      onProgress,
     );
 
     const deterministicItems: ExpenseItem[] = deterministicCandidates.map(
@@ -2761,6 +2780,7 @@ async function analyzeFromText(
         0,
         1,
         bodyText,
+        onProgress,
       );
       return deduplicateAndCleanItems(items);
     } catch (error) {
@@ -2820,6 +2840,7 @@ async function analyzeFromText(
         batchStart + idx,
         textChunks.length,
         "", // Empty for multi-chunk
+        onProgress,
       ),
     );
 
@@ -2880,6 +2901,7 @@ async function analyzeFromQuickText(
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  onProgress?: ProgressCallback,
 ): Promise<ExpenseItem[]> {
   const systemInstruction = buildQuickTextSystemInstruction(
     language,
@@ -2918,14 +2940,28 @@ async function analyzeFromQuickText(
     },
   } as any;
 
-  const quickModelAttempts = [
-    { name: "gemini-3.1-flash-lite-preview", timeoutMs: 60000, maxRetries: 1 },
-    { name: "gemini-2.5-pro", timeoutMs: 60000, maxRetries: 1 },
-  ];
+  const quickModelAttempts = GEMINI_FALLBACK_MODEL_NAMES.map((name) => ({
+    name,
+    timeoutMs: 60000,
+    maxRetries: 1,
+  }));
 
   let lastError = "";
 
-  for (const attempt of quickModelAttempts) {
+  for (let index = 0; index < quickModelAttempts.length; index++) {
+    const attempt = quickModelAttempts[index];
+    if (onProgress) {
+      onProgress({
+        type: "analyzing_chunk",
+        current: index + 1,
+        total: quickModelAttempts.length,
+        message:
+          index === 0
+            ? "Understanding your transaction details..."
+            : "Refining transaction details for accuracy...",
+      });
+    }
+
     try {
       const model = genAI.getGenerativeModel({
         model: attempt.name,
@@ -2992,6 +3028,7 @@ async function processTextChunk(
   chunkIndex: number,
   totalChunks: number,
   originalText: string,
+  onProgress?: ProgressCallback,
 ): Promise<ExpenseItem[]> {
   const isMultiChunk = totalChunks > 1;
 
@@ -3013,7 +3050,7 @@ Do NOT summarize - extract every single transaction.
 `
     : "";
 
-  const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
+  const modelNames = [...GEMINI_FALLBACK_MODEL_NAMES];
 
   const request = {
     contents: [
@@ -3039,7 +3076,30 @@ Do NOT summarize - extract every single transaction.
 
   let response: any = null;
   let lastError: unknown = null;
-  for (const modelName of modelNames) {
+  for (let modelIndex = 0; modelIndex < modelNames.length; modelIndex++) {
+    const modelName = modelNames[modelIndex];
+    if (onProgress) {
+      if (isMultiChunk) {
+        onProgress({
+          type: "analyzing_chunk",
+          message:
+            modelIndex === 0
+              ? `Reviewing part ${chunkIndex + 1}...`
+              : `Retrying part ${chunkIndex + 1} with another method...`,
+        });
+      } else {
+        onProgress({
+          type: "analyzing_chunk",
+          current: modelIndex + 1,
+          total: modelNames.length,
+          message:
+            modelIndex === 0
+              ? "Understanding your transaction details..."
+              : "Refining transaction details for accuracy...",
+        });
+      }
+    }
+
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
@@ -3609,14 +3669,11 @@ async function analyzeFromPdfVision(
 
   // Model progression for PDF analysis with higher token limits and extended timeouts
   // Increased timeouts to 3 minutes for large PDFs with many transactions
-  const modelConfigs = [
-    {
-      name: "gemini-3.1-flash-lite-preview",
-      timeout: 180000,
-      maxTokens: 65536,
-    },
-    { name: "gemini-2.5-pro", timeout: 180000, maxTokens: 65536 },
-  ];
+  const modelConfigs = GEMINI_FALLBACK_MODEL_NAMES.map((name) => ({
+    name,
+    timeout: 180000,
+    maxTokens: 65536,
+  }));
 
   const householdPrompt = householdContext
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
@@ -3837,10 +3894,11 @@ async function analyzeFromAudio(
     },
   } as any;
 
-  const modelAttempts = [
-    { name: "gemini-3.1-flash-lite-preview", timeoutMs: 60000, maxRetries: 1 },
-    { name: "gemini-2.5-pro", timeoutMs: 60000, maxRetries: 1 },
-  ];
+  const modelAttempts = GEMINI_FALLBACK_MODEL_NAMES.map((name) => ({
+    name,
+    timeoutMs: 60000,
+    maxRetries: 1,
+  }));
 
   let lastError = "";
 
@@ -3942,6 +4000,19 @@ function isRetriableGeminiError(error: unknown): boolean {
   return false;
 }
 
+function isTransientModelErrorMessage(message: string): boolean {
+  const lowered = message.toLowerCase();
+  return (
+    /\b(429|500|502|503|504)\b/.test(lowered) ||
+    lowered.includes("high demand") ||
+    lowered.includes("resource_exhausted") ||
+    lowered.includes("temporarily unavailable") ||
+    lowered.includes("service unavailable") ||
+    lowered.includes("try again later") ||
+    lowered.includes("overloaded")
+  );
+}
+
 function formatGeminiError(error: unknown): string {
   if (error instanceof GoogleGenerativeAIFetchError) {
     const status = (error as any).status ? String((error as any).status) : "";
@@ -3973,7 +4044,7 @@ async function generateGeminiWithRetry(params: {
   timeoutMs: number;
   maxRetries?: number;
 }): Promise<any> {
-  const { model, modelName, request, timeoutMs, maxRetries = 3 } = params;
+  const { model, modelName, request, timeoutMs, maxRetries = 1 } = params;
   const startedAt = Date.now();
   const delays = [250, 750, 1500].slice(0, Math.max(0, maxRetries));
 
@@ -4433,6 +4504,13 @@ export async function runAnalyzeExpense(
       | undefined;
 
     if (hasAttachments) {
+      if (onProgress) {
+        onProgress({
+          type: "extracting_text",
+          message: "Reading your file...",
+        });
+      }
+
       const att = body.attachments![0];
       if (
         !att ||
@@ -4719,6 +4797,13 @@ export async function runAnalyzeExpense(
         }
       }
     } else if (hasText) {
+      if (onProgress) {
+        onProgress({
+          type: "extracting_text",
+          message: "Reading what you typed...",
+        });
+      }
+
       const isQuickTextMode = isQuickTextFastPathCandidate(body.text!);
       if (isQuickTextMode) {
         items = await analyzeFromQuickText(
@@ -4732,6 +4817,7 @@ export async function runAnalyzeExpense(
           incomeCategories,
           householdContext,
           typeHint,
+          onProgress,
         );
       } else {
         items = await analyzeFromText(
@@ -4750,6 +4836,13 @@ export async function runAnalyzeExpense(
         );
       }
     } else if (hasAudio) {
+      if (onProgress) {
+        onProgress({
+          type: "extracting_text",
+          message: "Listening to your recording...",
+        });
+      }
+
       const audio = body.audio!;
       if (!audio.contentType || !audio.contentType.startsWith("audio/")) {
         return {
@@ -4798,6 +4891,13 @@ export async function runAnalyzeExpense(
         typeHint,
       );
     } else if (hasImage) {
+      if (onProgress) {
+        onProgress({
+          type: "processing_vision",
+          message: "Looking through your image...",
+        });
+      }
+
       const image = body.image!;
       if (!image.contentType || !image.contentType.startsWith("image/")) {
         return {
@@ -4921,14 +5021,11 @@ export async function runAnalyzeExpense(
 
       // Model progression: prefer stable fast model first.
       // Preview models can be more prone to overload.
-      const modelAttempts = [
-        {
-          name: "gemini-3.1-flash-lite-preview",
-          timeout: 30000,
-          maxRetries: 1,
-        },
-        { name: "gemini-2.5-pro", timeout: 30000, maxRetries: 1 },
-      ];
+      const modelAttempts = GEMINI_FALLBACK_MODEL_NAMES.map((name) => ({
+        name,
+        timeout: 30000,
+        maxRetries: 1,
+      }));
 
       // Removed shadowing variables
       // let lastError = "";
@@ -4993,10 +5090,7 @@ export async function runAnalyzeExpense(
         ].join("\n");
 
         try {
-          const handwritingFallbackModels = [
-            "gemini-3.1-flash-lite-preview",
-            "gemini-2.5-pro",
-          ];
+          const handwritingFallbackModels = [...GEMINI_FALLBACK_MODEL_NAMES];
           for (const modelName of handwritingFallbackModels) {
             const fallback = await attemptAnalysis(
               genAI,
@@ -5044,12 +5138,18 @@ export async function runAnalyzeExpense(
 
     if (items.length === 0) {
       console.log("[analyze-expense] All models failed to extract items");
+      const transientFailure = isTransientModelErrorMessage(lastError || "");
       return {
         success: false,
         error:
-          lastError ||
+          (transientFailure
+            ? "AI service is temporarily experiencing high demand. Please try again shortly."
+            : lastError) ||
           "Could not extract transaction information. Please try clearer text, a screenshot, or a photo.",
-        status: 400,
+        code: transientFailure
+          ? "AI_TEMPORARILY_UNAVAILABLE"
+          : "VALIDATION_ERROR",
+        status: transientFailure ? 503 : 400,
         language,
       };
     }
@@ -5146,10 +5246,15 @@ export async function runAnalyzeExpense(
       diagnostics: parseDiagnostics,
     };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const transientFailure = isTransientModelErrorMessage(message);
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
-      status: 500,
+      error: transientFailure
+        ? "AI service is temporarily experiencing high demand. Please try again shortly."
+        : message,
+      code: transientFailure ? "AI_TEMPORARILY_UNAVAILABLE" : "SERVER_ERROR",
+      status: transientFailure ? 503 : 500,
       language: "en",
     };
   }
@@ -5462,7 +5567,7 @@ export async function summarizePdfWithGemini(
 
     const startedAt = Date.now();
     const totalTimeoutMs = 120000; // Increased from 60s to 120s for large PDFs
-    const modelNames = ["gemini-3.1-flash-lite-preview", "gemini-2.5-pro"];
+    const modelNames = [...GEMINI_FALLBACK_MODEL_NAMES];
 
     const request = {
       contents: [

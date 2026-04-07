@@ -106,6 +106,16 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
+    if (account.is_default) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Default account cannot be archived",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
 
     const householdId = account.household_id as string | null;
     if (!householdId && account.user_id !== userId) {
@@ -146,24 +156,6 @@ Deno.serve(async (req: Request) => {
         },
         500,
       );
-    }
-
-    if (account.is_default) {
-      let spendingQuery = supabase
-        .from("accounts")
-        .update({ is_default: true, updated_at: new Date().toISOString() })
-        .eq("is_system", true)
-        .eq("is_archived", false);
-
-      if (householdId) {
-        spendingQuery = spendingQuery.eq("household_id", householdId);
-      } else {
-        spendingQuery = spendingQuery
-          .eq("user_id", userId)
-          .is("household_id", null);
-      }
-
-      await spendingQuery;
     }
 
     return jsonResponse({

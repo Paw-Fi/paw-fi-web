@@ -62,8 +62,13 @@ const CATEGORIZE_FUNCTION_CALLING_CONFIG = {
 
 const IDEMPOTENCY_PROCESSING_TTL_MS = 10 * 60 * 1000;
 const IDEMPOTENCY_KEY_TTL_HOURS = 24;
-const PRIMARY_GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
-const FALLBACK_GEMINI_MODEL = "gemini-2.5-pro";
+const GEMINI_CATEGORIZATION_MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+] as const;
+const GEMINI_RETRY_DELAYS_MS = [300] as const;
 const readRuntimeEnv = (name: string): string | null => {
   const env = (
     globalThis as {
@@ -359,6 +364,10 @@ function extractCalendarDatePrefix(value: unknown): string | null {
   if (!trimmed) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
   return normalizeCalendarDateString(trimmed);
+}
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function getFcmAccessToken(): Promise<string | null> {
@@ -1374,16 +1383,37 @@ Transactions:
       generationConfig: { maxOutputTokens: 256 },
     } as any;
 
-    const modelNames = [PRIMARY_GEMINI_MODEL, FALLBACK_GEMINI_MODEL];
-    for (let index = 0; index < modelNames.length; index++) {
-      const modelName = modelNames[index];
+    for (let index = 0; index < GEMINI_CATEGORIZATION_MODELS.length; index++) {
+      const modelName = GEMINI_CATEGORIZATION_MODELS[index];
       try {
         const model = genAI.getGenerativeModel({
           model: modelName,
           tools: tools as any,
         });
 
-        const response = await model.generateContent(request);
+        let response: any = null;
+        for (
+          let attempt = 0;
+          attempt <= GEMINI_RETRY_DELAYS_MS.length;
+          attempt++
+        ) {
+          try {
+            response = await model.generateContent(request);
+            break;
+          } catch (error) {
+            const retryable = isRetryableGeminiError(error);
+            const hasRetryLeft = attempt < GEMINI_RETRY_DELAYS_MS.length;
+            if (!retryable || !hasRetryLeft) {
+              throw error;
+            }
+            const waitMs = GEMINI_RETRY_DELAYS_MS[attempt];
+            console.warn(
+              `[save-wallet-transaction] ${modelName} transient categorization failure (attempt ${attempt + 1}/${GEMINI_RETRY_DELAYS_MS.length + 1}), retrying in ${waitMs}ms`,
+            );
+            await sleepMs(waitMs);
+          }
+        }
+
         const toolCalls = getFunctionCalls(response).filter(
           (call: any) => call && call.name === "categorize_transactions",
         );
@@ -1408,10 +1438,10 @@ Transactions:
         return "other";
       } catch (error) {
         const retryable = isRetryableGeminiError(error);
-        const hasNextModel = index < modelNames.length - 1;
+        const hasNextModel = index < GEMINI_CATEGORIZATION_MODELS.length - 1;
         if (retryable && hasNextModel) {
           console.warn(
-            `[save-wallet-transaction] ${modelName} transient categorization failure, switching to ${modelNames[index + 1]}`,
+            `[save-wallet-transaction] ${modelName} transient categorization failure, switching to ${GEMINI_CATEGORIZATION_MODELS[index + 1]}`,
             error,
           );
           continue;
@@ -1430,8 +1460,8 @@ Transactions:
       error,
       context: {
         phase: "ai_categorization",
-        modelName: PRIMARY_GEMINI_MODEL,
-        fallbackModelName: FALLBACK_GEMINI_MODEL,
+        modelName: GEMINI_CATEGORIZATION_MODELS[0],
+        fallbackModelName: GEMINI_CATEGORIZATION_MODELS.slice(1).join(","),
         merchantName: params.merchantName,
         transactionType: params.transactionType,
         amount: params.amount,
