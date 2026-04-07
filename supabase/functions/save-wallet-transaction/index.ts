@@ -1783,32 +1783,33 @@ Deno.serve(async (req: Request) => {
 
     const payloadCurrency = resolveWalletTransactionCurrency(tx);
 
-    if (!preferredCurrency) {
-      if (!payloadCurrency) {
-        await reportEdgeFunctionError({
-          functionName: "save-wallet-transaction",
-          error: new Error(
-            "Wallet capture missing currency on both payload and user contact",
-          ),
-          context: {
-            step: "resolve_currency",
-            captureSource,
-            userId,
-            householdId,
-            payloadCurrency,
-            transaction: requestDebugContext?.transaction ?? null,
-          },
-        });
-        logWalletCaptureValidationFailure(
-          "missing_currency",
-          requestDebugContext,
-          { preferredCurrency, payloadCurrency },
-        );
-        return errorResponse("transaction.currency is required", 400);
-      }
+    if (!payloadCurrency && !preferredCurrency) {
+      await reportEdgeFunctionError({
+        functionName: "save-wallet-transaction",
+        error: new Error(
+          "Wallet capture missing currency on both payload and user contact",
+        ),
+        context: {
+          step: "resolve_currency",
+          captureSource,
+          userId,
+          householdId,
+          payloadCurrency,
+          preferredCurrency,
+          fallbackCurrency: "USD",
+          transaction: requestDebugContext?.transaction ?? null,
+        },
+      });
+      logWalletCaptureValidationFailure(
+        "missing_currency_fallback_to_usd",
+        requestDebugContext,
+        { preferredCurrency, payloadCurrency, fallbackCurrency: "USD" },
+      );
     }
 
-    const currency = validateCurrency(payloadCurrency ?? preferredCurrency);
+    const currency = validateCurrency(
+      payloadCurrency ?? preferredCurrency ?? "USD",
+    );
 
     const clientCreatedAtPrefix = extractCalendarDatePrefix(
       body.clientCreatedAt,
