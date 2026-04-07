@@ -70,6 +70,21 @@ as $$
 declare
   v_account_id uuid;
 begin
+  if auth.uid() is not null then
+    if p_household_id is null and auth.uid() <> p_user_id then
+      return null;
+    end if;
+
+    if p_household_id is not null and not exists (
+      select 1
+      from public.household_members hm
+      where hm.household_id = p_household_id
+        and hm.user_id = auth.uid()
+    ) then
+      return null;
+    end if;
+  end if;
+
   if p_household_id is null then
     select a.id into v_account_id
     from public.accounts a
@@ -109,6 +124,127 @@ begin
   end if;
 
   return v_account_id;
+end;
+$$;
+
+create or replace function public.resolve_spending_account(
+  p_user_id uuid,
+  p_household_id uuid
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_account_id uuid;
+begin
+  if auth.uid() is not null then
+    if p_household_id is null and auth.uid() <> p_user_id then
+      return null;
+    end if;
+
+    if p_household_id is not null and not exists (
+      select 1
+      from public.household_members hm
+      where hm.household_id = p_household_id
+        and hm.user_id = auth.uid()
+    ) then
+      return null;
+    end if;
+  end if;
+
+  if p_household_id is null then
+    select a.id into v_account_id
+    from public.accounts a
+    where a.user_id = p_user_id
+      and a.household_id is null
+      and a.is_archived = false
+      and a.is_system = true
+      and lower(trim(a.name)) = 'spending'
+    order by a.created_at asc
+    limit 1;
+  else
+    select a.id into v_account_id
+    from public.accounts a
+    where a.household_id = p_household_id
+      and a.is_archived = false
+      and a.is_system = true
+      and lower(trim(a.name)) = 'spending'
+    order by a.created_at asc
+    limit 1;
+  end if;
+
+  return v_account_id;
+end;
+$$;
+
+create or replace function public.ensure_expense_account_id()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.user_id is not null and new.account_id is null then
+    new.account_id := public.resolve_default_account(new.user_id, new.household_id);
+  end if;
+
+  if new.account_id is not null and not exists (
+    select 1
+    from public.accounts a
+    where a.id = new.account_id
+      and a.is_archived = false
+      and (
+        (
+          new.household_id is null
+          and a.household_id is null
+          and a.user_id = new.user_id
+        )
+        or (
+          new.household_id is not null
+          and a.household_id = new.household_id
+        )
+      )
+  ) then
+    raise exception 'account_id does not belong to expense scope';
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.prevent_system_account_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'DELETE' then
+    if old.is_system then
+      raise exception 'System account cannot be deleted';
+    end if;
+
+    return old;
+  end if;
+
+  if old.is_system and (
+    new.user_id is distinct from old.user_id
+    or new.household_id is distinct from old.household_id
+    or new.name is distinct from old.name
+    or new.icon is distinct from old.icon
+    or new.color is distinct from old.color
+    or new.opening_balance_cents is distinct from old.opening_balance_cents
+    or new.goal_amount_cents is distinct from old.goal_amount_cents
+    or new.is_system is distinct from old.is_system
+    or new.is_archived is distinct from old.is_archived
+    or new.linked_bank_account_id is distinct from old.linked_bank_account_id
+  ) then
+    raise exception 'System account cannot be modified';
+  end if;
+
+  return new;
 end;
 $$;
 
@@ -186,9 +322,29 @@ where a.is_archived = false
   );
 
 update public.expenses e
-set account_id = public.resolve_default_account(e.user_id, e.household_id)
+set account_id = public.resolve_spending_account(e.user_id, e.household_id)
 where e.account_id is null
   and e.user_id is not null;
+
+alter table public.expenses
+  drop constraint if exists expenses_account_id_fkey;
+
+alter table public.expenses
+  add constraint expenses_account_id_fkey
+  foreign key (account_id) references public.accounts(id) on delete restrict;
+
+drop trigger if exists expenses_account_id_defaults on public.expenses;
+create trigger expenses_account_id_defaults
+before insert or update of user_id, household_id, account_id on public.expenses
+for each row execute function public.ensure_expense_account_id();
+
+drop trigger if exists accounts_prevent_system_mutation on public.accounts;
+create trigger accounts_prevent_system_mutation
+before update or delete on public.accounts
+for each row execute function public.prevent_system_account_mutation();
+
+alter table public.expenses
+  alter column account_id set not null;
 
 alter table public.accounts enable row level security;
 alter table public.account_transfers enable row level security;
@@ -296,23 +452,30 @@ create policy "Transfers insert by scope"
 on public.account_transfers for insert
 with check (
   created_by_user_id = auth.uid()
-  and (
-    (household_id is null)
-    or exists (
-      select 1
-      from public.household_members hm
-      where hm.household_id = account_transfers.household_id
-        and hm.user_id = auth.uid()
-    )
-  )
   and exists (
     select 1
     from public.accounts fa
     join public.accounts ta on ta.id = account_transfers.to_account_id
     where fa.id = account_transfers.from_account_id
       and (
-        (fa.household_id is null and ta.household_id is null and fa.user_id = auth.uid() and ta.user_id = auth.uid())
-        or (fa.household_id is not null and ta.household_id = fa.household_id)
+        (
+          fa.household_id is null
+          and ta.household_id is null
+          and account_transfers.household_id is null
+          and fa.user_id = auth.uid()
+          and ta.user_id = auth.uid()
+        )
+        or (
+          fa.household_id is not null
+          and ta.household_id = fa.household_id
+          and account_transfers.household_id = fa.household_id
+          and exists (
+            select 1
+            from public.household_members hm
+            where hm.household_id = fa.household_id
+              and hm.user_id = auth.uid()
+          )
+        )
       )
   )
 );
