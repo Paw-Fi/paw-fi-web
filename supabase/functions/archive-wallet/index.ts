@@ -129,27 +129,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { count: expenseCount } = await supabase
-      .from("expenses")
-      .select("id", { count: "exact", head: true })
-      .eq("account_id", accountId)
-      .is("deleted_at", null);
-    const { count: transferCount } = await supabase
-      .from("account_transfers")
-      .select("id", { count: "exact", head: true })
-      .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`);
-
-    if ((expenseCount ?? 0) > 0 || (transferCount ?? 0) > 0) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "Cannot archive account with transactions or transfers",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-
     const { error: archiveError } = await supabase
       .from("accounts")
       .update({
