@@ -471,19 +471,26 @@ Deno.serve(async (req: Request) => {
     }
 
     if (updates.raw_text !== undefined) {
-      if (typeof updates.raw_text !== "string") {
-        return errorResponse("raw_text must be a string", "VALIDATION_ERROR");
-      }
-      if (updates.raw_text.trim().length === 0) {
-        return errorResponse("raw_text cannot be empty", "VALIDATION_ERROR");
-      }
-      if (updates.raw_text.length > 1000) {
+      if (updates.raw_text !== null && typeof updates.raw_text !== "string") {
         return errorResponse(
-          "raw_text must be less than 1000 characters",
+          "raw_text must be a string or null",
           "VALIDATION_ERROR",
         );
       }
-      updates.raw_text = updates.raw_text.trim();
+      if (typeof updates.raw_text === "string") {
+        const trimmedRawText = updates.raw_text.trim();
+        if (trimmedRawText.length === 0) {
+          updates.raw_text = null;
+        } else {
+          if (trimmedRawText.length > 1000) {
+            return errorResponse(
+              "raw_text must be less than 1000 characters",
+              "VALIDATION_ERROR",
+            );
+          }
+          updates.raw_text = trimmedRawText;
+        }
+      }
     }
 
     if (updates.date !== undefined) {
@@ -1100,10 +1107,25 @@ Deno.serve(async (req: Request) => {
     const existingSplitGroupId: string | null =
       (expense as any)?.split_group_id ?? null;
 
-    const bodyHouseholdIdRaw = (body as any).householdId as string | undefined;
-    const bodyHouseholdId = bodyHouseholdIdRaw
-      ? sanitizeUuid(bodyHouseholdIdRaw)
-      : null;
+    const bodyHouseholdIdRaw = (body as any).householdId;
+    if (
+      bodyHouseholdIdRaw != null &&
+      typeof bodyHouseholdIdRaw !== "string"
+    ) {
+      return errorResponse("householdId must be a string", "VALIDATION_ERROR");
+    }
+    const bodyHouseholdIdValue = typeof bodyHouseholdIdRaw === "string"
+      ? bodyHouseholdIdRaw.trim()
+      : "";
+    const bodyHouseholdId = bodyHouseholdIdValue.length === 0
+      ? null
+      : sanitizeUuid(bodyHouseholdIdValue);
+    if (
+      bodyHouseholdIdValue.length > 0 &&
+      !bodyHouseholdId
+    ) {
+      return errorResponse("Invalid householdId format", "VALIDATION_ERROR");
+    }
     const customSplits = (body as any).customSplits as
       | CustomSplitsPayload
       | undefined;
@@ -1112,12 +1134,72 @@ Deno.serve(async (req: Request) => {
       | CustomSplitsPayload
       | undefined;
 
-    const updatesHouseholdIdRaw = (updates as any)?.household_id ??
-      (updates as any)?.householdId ?? null;
-    const updatesHouseholdId = typeof updatesHouseholdIdRaw === "string"
-      ? sanitizeUuid(updatesHouseholdIdRaw)
-      : null;
-    const effectiveHouseholdForSplit = expenseHouseholdId ?? updatesHouseholdId;
+    const updatesHasHouseholdId = Object.prototype.hasOwnProperty.call(
+      updates,
+      "household_id",
+    ) || Object.prototype.hasOwnProperty.call(updates, "householdId");
+    const updatesHouseholdIdRaw = Object.prototype.hasOwnProperty.call(
+        updates,
+        "household_id",
+      )
+      ? (updates as any).household_id
+      : Object.prototype.hasOwnProperty.call(updates, "householdId")
+      ? (updates as any).householdId
+      : undefined;
+    let updatesHouseholdId: string | null | undefined = undefined;
+    if (updatesHasHouseholdId) {
+      if (
+        updatesHouseholdIdRaw == null ||
+        (typeof updatesHouseholdIdRaw === "string" &&
+          updatesHouseholdIdRaw.trim().length === 0)
+      ) {
+        updatesHouseholdId = null;
+      } else if (typeof updatesHouseholdIdRaw === "string") {
+        updatesHouseholdId = sanitizeUuid(updatesHouseholdIdRaw);
+        if (!updatesHouseholdId) {
+          return errorResponse(
+            "Invalid household_id format",
+            "VALIDATION_ERROR",
+          );
+        }
+      } else {
+        return errorResponse(
+          "household_id must be a string or null",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      (updates as any).household_id = updatesHouseholdId;
+      delete (updates as any).householdId;
+    }
+
+    const targetHouseholdId = updatesHasHouseholdId
+      ? (updatesHouseholdId ?? null)
+      : expenseHouseholdId;
+    const sameHouseholdScope = targetHouseholdId === expenseHouseholdId;
+    let targetIsPortfolioHousehold = isPortfolioHousehold;
+    if (targetHouseholdId && !sameHouseholdScope) {
+      const { data: targetHouseholdRow, error: targetHouseholdError } =
+        await supabase
+          .from("households")
+          .select("is_portfolio")
+          .eq("id", targetHouseholdId)
+          .maybeSingle();
+
+      if (targetHouseholdError) {
+        console.warn(
+          "[update-expense] Failed to load target household.is_portfolio; treating as non-portfolio",
+          targetHouseholdError,
+        );
+        targetIsPortfolioHousehold = false;
+      } else {
+        targetIsPortfolioHousehold = targetHouseholdRow?.is_portfolio === true;
+      }
+    }
+
+    if (!sameHouseholdScope) {
+      (updates as any).split_group_id = null;
+    }
 
     const requestedAccountIdRaw = (updates as any)?.account_id ??
       (updates as any)?.accountId;
@@ -1135,7 +1217,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (requestedAccountIdRaw !== undefined) {
-      const targetScopeHouseholdId = updatesHouseholdId ?? expenseHouseholdId;
+      const targetScopeHouseholdId = targetHouseholdId;
       if (requestedAccountId) {
         const isInScope = await assertAccountInScope(
           supabase,
@@ -1161,11 +1243,50 @@ Deno.serve(async (req: Request) => {
       delete (updates as any).accountId;
     }
 
-    const shouldCreateSplitGroup = !!effectiveHouseholdForSplit &&
+    const shouldCleanupPreviousSplitGroup = !sameHouseholdScope &&
+      !!expenseHouseholdId &&
       !isPortfolioHousehold &&
-      !existingSplitGroupId &&
+      !!existingSplitGroupId;
+
+    if (shouldCleanupPreviousSplitGroup && existingSplitGroupId) {
+      const { data: previousSplitGroup, error: previousSplitGroupError } =
+        await supabase
+          .from("expense_split_groups")
+          .select("id, expense_split_lines(is_settled)")
+          .eq("id", existingSplitGroupId)
+          .maybeSingle();
+
+      if (previousSplitGroupError) {
+        console.error(
+          "[update-expense] Failed to load previous split group during scope change:",
+          previousSplitGroupError,
+        );
+        return errorResponse(
+          "Failed to move expense split configuration",
+          "SERVER_ERROR",
+          500,
+        );
+      }
+
+      const previousLines = ((previousSplitGroup as any)?.expense_split_lines ||
+        []) as { is_settled?: boolean }[];
+      const previousHasSettledLines = previousLines.some(
+        (line) => line && line.is_settled === true,
+      );
+
+      if (previousHasSettledLines) {
+        return errorResponse(
+          "Cannot move split expenses after any lines have been settled",
+          "VALIDATION_ERROR",
+        );
+      }
+    }
+
+    const shouldCreateSplitGroup = !!targetHouseholdId &&
+      !targetIsPortfolioHousehold &&
+      (!existingSplitGroupId || !sameHouseholdScope) &&
       !!bodyHouseholdId &&
-      bodyHouseholdId === effectiveHouseholdForSplit &&
+      bodyHouseholdId === targetHouseholdId &&
       !!customSplits &&
       !!customSplits.memberSplits &&
       customSplits.memberSplits.length > 0;
@@ -1178,7 +1299,7 @@ Deno.serve(async (req: Request) => {
       const { data: members } = await supabase
         .from("household_members")
         .select("user_id")
-        .eq("household_id", expenseHouseholdId);
+        .eq("household_id", targetHouseholdId);
 
       if (members && members.length > 0) {
         const effectiveAmountCents = typeof updates.amount_cents === "number"
@@ -1238,7 +1359,7 @@ Deno.serve(async (req: Request) => {
             const { data: validPayer } = await supabase
               .from("household_members")
               .select("user_id")
-              .eq("household_id", expenseHouseholdId)
+              .eq("household_id", targetHouseholdId)
               .eq("user_id", payerUserId)
               .maybeSingle();
             if (!validPayer) {
@@ -1253,13 +1374,13 @@ Deno.serve(async (req: Request) => {
           const { data: splitGroup, error: splitGroupError } = await supabase
             .from("expense_split_groups")
             .insert({
-              household_id: expenseHouseholdId,
+              household_id: targetHouseholdId,
               expense_id: expense.id,
               payer_user_id: payerUserId,
               split_type: splitType,
               currency: newCurrency,
               total_amount_cents: effectiveAmountCents,
-              description: updates.raw_text || (expense as any)?.raw_text ||
+              description: updates.raw_text ?? (expense as any)?.raw_text ??
                 null,
               created_at: new Date().toISOString(),
             })
@@ -1371,8 +1492,9 @@ Deno.serve(async (req: Request) => {
     // This is separate from initial split group creation and is only allowed
     // when the expense already has a split_group_id and no lines have been
     // settled yet (to preserve settlement history correctness).
-    const wantsSplitUpdate = !!expenseHouseholdId &&
-      !isPortfolioHousehold &&
+    const wantsSplitUpdate = !!targetHouseholdId &&
+      sameHouseholdScope &&
+      !targetIsPortfolioHousehold &&
       !!existingSplitGroupId &&
       !!splitUpdate &&
       !!splitUpdate.memberSplits &&
@@ -1387,7 +1509,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Safety guard: split updates only make sense for household expenses
-      if (!expenseHouseholdId) {
+      if (!targetHouseholdId) {
         return errorResponse(
           "Cannot update splits for personal expenses",
           "VALIDATION_ERROR",
@@ -1428,11 +1550,11 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      if ((existingGroup as any).household_id !== expenseHouseholdId) {
+      if ((existingGroup as any).household_id !== targetHouseholdId) {
         console.warn(
           "[update-expense] Split group household mismatch during update",
           {
-            expenseHouseholdId,
+            targetHouseholdId,
             splitGroupHouseholdId: (existingGroup as any).household_id,
           },
         );
@@ -1464,7 +1586,7 @@ Deno.serve(async (req: Request) => {
       const { data: members } = await supabase
         .from("household_members")
         .select("user_id")
-        .eq("household_id", expenseHouseholdId);
+        .eq("household_id", targetHouseholdId);
 
       if (!members || members.length === 0) {
         console.error(
@@ -1680,7 +1802,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Update payer on existing split group if requested
-    const targetSplitGroupId = createdSplitGroupId ?? existingSplitGroupId;
+    const targetSplitGroupId = createdSplitGroupId ??
+      (sameHouseholdScope ? existingSplitGroupId : null);
     if (normalizedPayerUserId && targetSplitGroupId) {
       const { error: payerUpdateError } = await supabase
         .from("expense_split_groups")
@@ -1716,6 +1839,32 @@ Deno.serve(async (req: Request) => {
         return errorResponse("Invalid expenseId format", "VALIDATION_ERROR");
       }
       return errorResponse("Failed to update expense", "SERVER_ERROR", 500);
+    }
+
+    if (shouldCleanupPreviousSplitGroup && existingSplitGroupId) {
+      const { error: deletePreviousLinesError } = await supabase
+        .from("expense_split_lines")
+        .delete()
+        .eq("split_group_id", existingSplitGroupId);
+
+      if (deletePreviousLinesError) {
+        console.error(
+          "[update-expense] Failed to delete previous split lines after scope change:",
+          deletePreviousLinesError,
+        );
+      } else {
+        const { error: deletePreviousGroupError } = await supabase
+          .from("expense_split_groups")
+          .delete()
+          .eq("id", existingSplitGroupId);
+
+        if (deletePreviousGroupError) {
+          console.error(
+            "[update-expense] Failed to delete previous split group after scope change:",
+            deletePreviousGroupError,
+          );
+        }
+      }
     }
 
     console.log(
