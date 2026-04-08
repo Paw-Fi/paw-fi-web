@@ -164,6 +164,11 @@ stable
 security invoker
 set search_path = public
 as $$
+  -- CRITICAL: this shared helper expands recurring rules by the requested
+  -- calendar range for both pockets and wallets.
+  -- STRICT REQUIREMENT: do not turn this back into a "future only from today"
+  -- projection, or a recurring rule anchored earlier in the viewed month will
+  -- disappear from that month's pockets/wallet details after a late create/edit.
   with recurring_scope as (
     select
       e.id as recurring_id,
@@ -300,6 +305,11 @@ declare
   v_payload jsonb;
   v_month_end date := (p_period_month + interval '1 month - 1 day')::date;
 begin
+  -- CRITICAL: keep this wrapper recurring-aware even if the legacy v1 payload
+  -- still exists.
+  -- STRICT REQUIREMENT: pockets must receive month-projected recurring spend
+  -- in the same RPC path used for the main page, or users will report that
+  -- recurring transactions are missing from pocket totals again.
   v_base_payload := public.get_pockets_month_v1(
     p_user_id => p_user_id,
     p_scope => p_scope,
@@ -487,6 +497,10 @@ declare
   v_base_payload jsonb;
   v_payload jsonb;
 begin
+  -- CRITICAL: wallet month snapshots must add recurring month occurrences on
+  -- top of posted wallet activity.
+  -- STRICT REQUIREMENT: wallet balances and month totals are not correct if
+  -- they only read non-recurring expense rows from v1.
   v_base_payload := public.get_wallets_month_snapshot_v1(
     p_user_id => p_user_id,
     p_household_id => p_household_id,
@@ -566,6 +580,10 @@ begin
   ),
   projected_wallet_deltas as (
     select
+      -- CRITICAL: preserve wallet ownership on projected recurring rows.
+      -- STRICT REQUIREMENT: account_id must win when present so recurring
+      -- occurrences land on the correct wallet; only legacy unassigned rows
+      -- may fall back to the default wallet mapping.
       coalesce(pr.account_id, (select wallet_id from legacy_wallet)) as wallet_id,
       sum(
         case
@@ -634,6 +652,10 @@ declare
   v_base_payload jsonb;
   v_payload jsonb;
 begin
+  -- CRITICAL: wallet history must apply recurring deltas cumulatively across
+  -- months, not just the current month snapshot.
+  -- STRICT REQUIREMENT: if recurring month deltas are removed here, the main
+  -- wallets page graph/history drifts away from wallet details and pockets.
   v_base_payload := public.get_wallets_history_v1(
     p_user_id => p_user_id,
     p_household_id => p_household_id,

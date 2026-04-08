@@ -94,8 +94,9 @@ CRITICAL RULES:
 17. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
 18. **Telegram UX (choices)**: When asking the user to choose among transactions/options, ALWAYS format options as numbered lines like "1. <short label>" (one per line; label <= ~60 chars) so Telegram inline buttons can be generated. Ask them to tap a button.
 19. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
-21. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
+20. **Wallets**: Wallets belong to one space only. Do not list or assume wallets unless the user explicitly asks about wallets or names one. When a wallet is mentioned, resolve it only inside the selected space.
+21. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
+22. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
 
 MESSAGE FORMATTING (Telegram-specific):
 - Your response is sent as **plain text** — do NOT use Markdown symbols like *bold* or _italic_ because they will appear as literal characters, not formatted text.
@@ -110,6 +111,7 @@ CURRENT CONTEXT:
 - Date: {{DATE}}
 - User Currency: {{CURRENCY}}
 - Spaces: {{HOUSEHOLDS}}
+- Wallets: {{WALLETS}}
 - Categories (with brand colors): {{CATEGORIES}}
 `;
 
@@ -718,6 +720,96 @@ function resolveTextFromCallbackChoice(
 
 function normalizeNameForMatch(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeWalletName(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+async function listWalletRowsForScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  includeArchived = false,
+) {
+  let query = supabase
+    .from("accounts")
+    .select(
+      "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
+    )
+    .order("is_default", { ascending: false })
+    .order("is_system", { ascending: false })
+    .order("name", { ascending: true });
+
+  if (!includeArchived) {
+    query = query.eq("is_archived", false);
+  }
+
+  if (householdId) {
+    query = query.eq("household_id", householdId);
+  } else {
+    query = query.eq("user_id", userId).is("household_id", null);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[telegram-ai-bot] Failed to load wallets for scope", {
+      userId,
+      householdId,
+      error,
+    });
+    return [];
+  }
+
+  return (data || []) as Array<{
+    id: string;
+    user_id: string;
+    household_id: string | null;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    opening_balance_cents: number | null;
+    goal_amount_cents: number | null;
+    is_default: boolean;
+    is_system: boolean;
+    is_archived: boolean;
+    linked_bank_account_id: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+}
+
+async function resolveWalletIdInScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  walletName: unknown,
+): Promise<{ accountId?: string; error?: string }> {
+  const normalizedName = normalizeWalletName(walletName);
+  if (!normalizedName) return {};
+
+  const wallets = await listWalletRowsForScope(supabase, userId, householdId);
+  const matches = wallets.filter(
+    (wallet) => normalizeWalletName(wallet.name) === normalizedName,
+  );
+
+  if (matches.length === 0) {
+    return {
+      error: `Wallet '${
+        String(walletName).trim()
+      }' was not found in the selected scope.`,
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      error: `More than one wallet named '${
+        String(walletName).trim()
+      }' exists in the selected scope. Please rename one of them or be more specific.`,
+    };
+  }
+
+  return { accountId: matches[0].id };
 }
 
 type LastListedTransaction = {
@@ -1448,6 +1540,7 @@ async function invokeTransactionSave(
     source?: string;
     ownerType?: string;
     privacyScope?: string;
+    accountId?: string;
   },
 ) {
   const type = (params.type || "expense").toLowerCase() === "income"
@@ -1465,6 +1558,7 @@ async function invokeTransactionSave(
       source: params.source,
       ownerType: params.ownerType || "me",
       privacyScope: params.privacyScope || "full",
+      accountId: params.accountId,
       householdId: params.householdId,
       isPortfolio: params.isPortfolio === true,
       isRecurring: params.isRecurring === true,
@@ -1480,6 +1574,7 @@ async function invokeTransactionSave(
       currency: params.currency,
       date: params.date,
       description: params.description,
+      accountId: params.accountId,
       householdId: params.householdId,
       isPortfolio: params.isPortfolio === true,
       payerUserId: params.payerUserId,
@@ -2055,6 +2150,10 @@ Deno.serve(async (req: Request) => {
         )
           .replace("{{CURRENCY}}", userCurrency)
           .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
+          .replace(
+            "{{WALLETS}}",
+            "Available on request for the selected space only",
+          )
           .replace("{{CATEGORIES}}", categoryGuideForUser)
           .replace("{{LANGUAGE}}", userLangLabel) +
           buildLanguageOverride(userLang);
@@ -2123,6 +2222,7 @@ Deno.serve(async (req: Request) => {
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
                 is_portfolio: { type: "BOOLEAN" },
+                wallet_name: { type: "STRING" },
                 payer_name: { type: "STRING" },
                 split_type: {
                   type: "STRING",
@@ -2180,6 +2280,7 @@ Deno.serve(async (req: Request) => {
                       description: { type: "STRING" },
                       date: { type: "STRING" },
                       currency: { type: "STRING" },
+                      wallet_name: { type: "STRING" },
                       payer_name: { type: "STRING" },
                       split_type: {
                         type: "STRING",
@@ -2220,6 +2321,75 @@ Deno.serve(async (req: Request) => {
                 },
               },
               required: ["transactions"],
+            },
+          },
+          {
+            name: "list_wallets",
+            description:
+              "List wallets in personal scope or in a selected space, including balances and the default wallet.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+                include_archived: { type: "BOOLEAN" },
+              },
+            },
+          },
+          {
+            name: "create_wallet",
+            description:
+              "Create a new wallet in personal scope or in a selected space.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                name: { type: "STRING" },
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+                icon: { type: "STRING" },
+                color: { type: "STRING" },
+                opening_balance: { type: "NUMBER" },
+                goal_amount: { type: "NUMBER" },
+                is_default: { type: "BOOLEAN" },
+              },
+              required: ["name"],
+            },
+          },
+          {
+            name: "update_wallet",
+            description:
+              "Rename or update a wallet in the selected scope. Use wallet_name to choose which wallet to edit.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                wallet_name: { type: "STRING" },
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+                new_name: { type: "STRING" },
+                icon: { type: "STRING" },
+                color: { type: "STRING" },
+                goal_amount: { type: "NUMBER" },
+                is_default: { type: "BOOLEAN" },
+              },
+              required: ["wallet_name"],
+            },
+          },
+          {
+            name: "create_wallet_transfer",
+            description: "Move money between two wallets in the same scope.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                from_wallet_name: { type: "STRING" },
+                to_wallet_name: { type: "STRING" },
+                amount: { type: "NUMBER" },
+                currency: { type: "STRING" },
+                date: { type: "STRING" },
+                note: { type: "STRING" },
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+              },
+              required: ["from_wallet_name", "to_wallet_name", "amount"],
             },
           },
           {
@@ -3054,6 +3224,20 @@ Deno.serve(async (req: Request) => {
                       call.args,
                     )
                     : {};
+                const requestedWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.wallet_name,
+                );
+                if (requestedWallet.error) {
+                  toolResult = { error: requestedWallet.error };
+                  lastToolResult = toolResult;
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
                 const { data, error } = await invokeTransactionSave(
                   supabase,
                   INTERNAL_FUNCTION_KEY,
@@ -3075,6 +3259,7 @@ Deno.serve(async (req: Request) => {
                     householdId,
                     isPortfolio: spaceMeta?.isPortfolio ??
                       call.args.is_portfolio === true,
+                    accountId: requestedWallet.accountId ?? undefined,
                     isRecurring: call.args.is_recurring === true,
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
@@ -3122,6 +3307,16 @@ Deno.serve(async (req: Request) => {
 
                 for (const row of rows) {
                   const amount = Number(row.amount || 0);
+                  const requestedWallet = await resolveWalletIdInScope(
+                    supabase,
+                    userId,
+                    householdId,
+                    row.wallet_name,
+                  );
+                  if (requestedWallet.error) {
+                    toolResult = { error: requestedWallet.error };
+                    break;
+                  }
                   const splitConfig =
                     householdId && !isPortfolio && row.type !== "income"
                       ? await resolveHouseholdSplitConfig(
@@ -3140,6 +3335,7 @@ Deno.serve(async (req: Request) => {
                     description: row.description || "",
                     date: row.date || formatDateInTimeZone(userTimezone),
                     currency: row.currency || userCurrency,
+                    accountId: requestedWallet.accountId ?? undefined,
                     source: row.source,
                     ownerType: row.owner_type || "me",
                     privacyScope: row.privacy_scope || "full",
@@ -3180,6 +3376,209 @@ Deno.serve(async (req: Request) => {
                     error: formatInvokeError(error ?? data?.error) ||
                       "Failed to save transactions",
                   };
+              } else if (call.name === "list_wallets") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const { data, error } = await supabase.functions.invoke(
+                  "list-wallets",
+                  {
+                    body: {
+                      userId,
+                      householdId,
+                      includeArchived: call.args.include_archived === true,
+                    },
+                    headers: {
+                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                    },
+                  },
+                );
+                toolResult = !error && data?.success === true
+                  ? { success: true, data: data?.data ?? [] }
+                  : {
+                    error: formatInvokeError(error ?? data?.error) ||
+                      "Failed to list wallets",
+                  };
+              } else if (call.name === "create_wallet") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const { data, error } = await supabase.functions.invoke(
+                  "save-wallet",
+                  {
+                    body: {
+                      userId,
+                      householdId,
+                      name: call.args.name,
+                      icon: call.args.icon,
+                      color: call.args.color,
+                      openingBalanceCents: Number.isFinite(
+                          call.args.opening_balance,
+                        )
+                        ? Math.round(Number(call.args.opening_balance) * 100)
+                        : undefined,
+                      goalAmountCents: Number.isFinite(call.args.goal_amount)
+                        ? Math.round(Number(call.args.goal_amount) * 100)
+                        : undefined,
+                      isDefault: call.args.is_default === true,
+                    },
+                    headers: {
+                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                    },
+                  },
+                );
+                toolResult = !error && data?.success === true
+                  ? { success: true, data: data?.data ?? data }
+                  : {
+                    error: formatInvokeError(error ?? data?.error) ||
+                      "Failed to create wallet",
+                  };
+              } else if (call.name === "update_wallet") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const requestedWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.wallet_name,
+                );
+                if (requestedWallet.error || !requestedWallet.accountId) {
+                  toolResult = {
+                    error: requestedWallet.error ||
+                      "Wallet was not found in the selected scope.",
+                  };
+                } else {
+                  const { data, error } = await supabase.functions.invoke(
+                    "update-wallet",
+                    {
+                      body: {
+                        userId,
+                        accountId: requestedWallet.accountId,
+                        name: call.args.new_name,
+                        icon: call.args.icon,
+                        color: call.args.color,
+                        goalAmountCents: Number.isFinite(call.args.goal_amount)
+                          ? Math.round(Number(call.args.goal_amount) * 100)
+                          : undefined,
+                        isDefault: typeof call.args.is_default === "boolean"
+                          ? call.args.is_default
+                          : undefined,
+                      },
+                      headers: {
+                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                      },
+                    },
+                  );
+                  toolResult = !error && data?.success === true
+                    ? { success: true, data: data?.data ?? data }
+                    : {
+                      error: formatInvokeError(error ?? data?.error) ||
+                        "Failed to update wallet",
+                    };
+                }
+              } else if (call.name === "create_wallet_transfer") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const fromWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.from_wallet_name,
+                );
+                const toWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.to_wallet_name,
+                );
+                if (fromWallet.error || !fromWallet.accountId) {
+                  toolResult = {
+                    error: fromWallet.error ||
+                      "Source wallet was not found in the selected scope.",
+                  };
+                } else if (toWallet.error || !toWallet.accountId) {
+                  toolResult = {
+                    error: toWallet.error ||
+                      "Destination wallet was not found in the selected scope.",
+                  };
+                } else {
+                  const { data, error } = await supabase.functions.invoke(
+                    "create-wallet-transfer",
+                    {
+                      body: {
+                        userId,
+                        fromAccountId: fromWallet.accountId,
+                        toAccountId: toWallet.accountId,
+                        amountCents: Math.round(
+                          Number(call.args.amount || 0) * 100,
+                        ),
+                        currency: call.args.currency || userCurrency,
+                        date: call.args.date ||
+                          formatDateInTimeZone(userTimezone),
+                        note: call.args.note,
+                      },
+                      headers: {
+                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                      },
+                    },
+                  );
+                  toolResult = !error && data?.success === true
+                    ? { success: true, data: data?.data ?? data }
+                    : {
+                      error: formatInvokeError(error ?? data?.error) ||
+                        "Failed to create wallet transfer",
+                    };
+                }
               } else if (call.name === "generate_chart_url") {
                 const chartConfig = {
                   type: call.args.chart_type || "bar",
@@ -4288,30 +4687,41 @@ Deno.serve(async (req: Request) => {
                       call.args,
                     )
                     : {};
-                  const { data, error } = await invokeTransactionSave(
+                  const requestedWallet = await resolveWalletIdInScope(
                     supabase,
-                    INTERNAL_FUNCTION_KEY,
                     userId,
-                    {
-                      amount,
-                      category: call.args.category,
-                      description: call.args.description || "",
-                      date: dateValue,
-                      currency: call.args.currency || userCurrency,
-                      type: call.args.type || "expense",
-                      householdId,
-                      isPortfolio: spaceMeta?.isPortfolio ??
-                        call.args.is_portfolio === true,
-                      isRecurring: true,
-                      recurrence_rule: recurrenceRule,
-                      payerUserId: splitConfig.payerUserId,
-                      customSplits: splitConfig.customSplits,
-                      source: call.args.source,
-                      ownerType: call.args.owner_type,
-                      privacyScope: call.args.privacy_scope,
-                    },
+                    householdId,
+                    call.args.wallet_name,
                   );
-                  toolResult = { data, error };
+                  if (requestedWallet.error) {
+                    toolResult = { error: requestedWallet.error };
+                  } else {
+                    const { data, error } = await invokeTransactionSave(
+                      supabase,
+                      INTERNAL_FUNCTION_KEY,
+                      userId,
+                      {
+                        amount,
+                        category: call.args.category,
+                        description: call.args.description || "",
+                        date: dateValue,
+                        currency: call.args.currency || userCurrency,
+                        type: call.args.type || "expense",
+                        householdId,
+                        isPortfolio: spaceMeta?.isPortfolio ??
+                          call.args.is_portfolio === true,
+                        accountId: requestedWallet.accountId ?? undefined,
+                        isRecurring: true,
+                        recurrence_rule: recurrenceRule,
+                        payerUserId: splitConfig.payerUserId,
+                        customSplits: splitConfig.customSplits,
+                        source: call.args.source,
+                        ownerType: call.args.owner_type,
+                        privacyScope: call.args.privacy_scope,
+                      },
+                    );
+                    toolResult = { data, error };
+                  }
                 }
               }
             } catch (e) {
