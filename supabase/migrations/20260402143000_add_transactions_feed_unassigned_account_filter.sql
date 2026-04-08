@@ -299,14 +299,12 @@ begin
   ),
   filtered_expenses as (
     select
-      e.id,
       e.date,
       e.amount_cents,
       e.currency,
       e.category,
-      e.created_at,
       e.raw_text,
-      e.type
+      lower(coalesce(e.type::text, 'expense')) as type
     from public.expenses e
     where coalesce(e.is_recurring, false) = false
       and (
@@ -340,32 +338,84 @@ begin
         or e.account_id = p_account_id
         or (p_include_unassigned_account = true and e.account_id is null)
       )
+  ),
+  filtered_transfers as (
+    select
+      t.date,
+      abs(t.amount_cents)::bigint as amount_cents,
+      t.currency,
+      'transfers'::text as category,
+      coalesce(
+        nullif(trim(t.note), ''),
+        case
+          when t.to_account_id = p_account_id then 'Transfer in'
+          else 'Transfer out'
+        end
+      ) as raw_text,
+      case
+        when t.to_account_id = p_account_id then 'income'
+        else 'expense'
+      end as type
+    from public.account_transfers t
+    where p_account_id is not null
+      and (
+        t.from_account_id = p_account_id
+        or t.to_account_id = p_account_id
+      )
+      and (
+        (
+          p_household_id is null
+          and t.household_id is null
+          and t.created_by_user_id = p_user_id
+        )
+        or (
+          p_household_id is not null
+          and t.household_id = p_household_id
+        )
+      )
+      and (
+        p_currency is null
+        or upper(coalesce(t.currency, '')) = upper(p_currency)
+      )
+  ),
+  combined_items as (
+    select * from filtered_expenses
+    union all
+    select * from filtered_transfers
+  ),
+  filtered_items as (
+    select *
+    from combined_items i
+    where (
+        p_category is null
+        or lower(coalesce(i.category, 'uncategorized')) = lower(p_category)
+      )
       and (
         p_categories is null
         or array_length(p_categories, 1) is null
-        or lower(coalesce(e.category, 'uncategorized')) = any(p_categories)
+        or lower(coalesce(i.category, 'uncategorized')) = any(p_categories)
       )
       and (
         coalesce(lower(p_type), 'all') = 'all'
-        or lower(coalesce(e.type::text, 'expense')) = lower(p_type)
+        or lower(coalesce(i.type, 'expense')) = lower(p_type)
       )
-      and (p_start_date is null or e.date >= p_start_date)
-      and (p_end_date is null or e.date <= p_end_date)
+      and (p_start_date is null or i.date >= p_start_date)
+      and (p_end_date is null or i.date <= p_end_date)
       and (
         coalesce(trim(p_search_query), '') = ''
-        or lower(coalesce(e.category, 'uncategorized')) like '%' || lower(trim(p_search_query)) || '%'
-        or lower(coalesce(e.raw_text, '')) like '%' || lower(trim(p_search_query)) || '%'
-        or ((e.amount_cents::numeric / 100.0)::text like '%' || trim(p_search_query) || '%')
+        or lower(coalesce(i.category, 'uncategorized')) like '%' || lower(trim(p_search_query)) || '%'
+        or lower(coalesce(i.raw_text, '')) like '%' || lower(trim(p_search_query)) || '%'
+        or ((i.amount_cents::numeric / 100.0)::text like '%' || trim(p_search_query) || '%')
       )
   ),
   spend_rows as (
     select *
-    from filtered_expenses
+    from filtered_items
     where lower(coalesce(type::text, 'expense')) <> 'income'
   ),
   income_rows as (
     select *
-    from filtered_expenses
+    from filtered_items
     where lower(coalesce(type::text, 'expense')) = 'income'
   ),
   category_rollup as (
@@ -391,7 +441,7 @@ begin
     group by 1
   )
   select jsonb_build_object(
-    'transaction_count', (select count(*) from filtered_expenses),
+    'transaction_count', (select count(*) from filtered_items),
     'expense_total_cents', coalesce((select sum(abs(amount_cents)) from spend_rows), 0),
     'income_total_cents', coalesce((select sum(abs(amount_cents)) from income_rows), 0),
     'has_multiple_currencies', (select count(*) from currency_rollup) > 1,

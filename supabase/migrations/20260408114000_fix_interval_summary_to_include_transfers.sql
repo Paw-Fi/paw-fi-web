@@ -72,10 +72,6 @@ begin
         or upper(coalesce(e.currency, '')) = upper(p_currency)
       )
       and (
-        p_category is null
-        or lower(coalesce(e.category, 'uncategorized')) = lower(p_category)
-      )
-      and (
         p_account_id is null
         or e.account_id = p_account_id
         or (p_include_unassigned_account = true and e.account_id is null)

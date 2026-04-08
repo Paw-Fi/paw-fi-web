@@ -9,8 +9,7 @@ create or replace function public.get_user_transactions_summary_v1(
   p_type text default 'all',
   p_search_query text default null,
   p_start_date date default null,
-  p_end_date date default null,
-  p_interval_granularity text default null
+  p_end_date date default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -70,10 +69,6 @@ begin
       and (
         p_currency is null
         or upper(coalesce(e.currency, '')) = upper(p_currency)
-      )
-      and (
-        p_category is null
-        or lower(coalesce(e.category, 'uncategorized')) = lower(p_category)
       )
       and (
         p_account_id is null
