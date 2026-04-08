@@ -9,6 +9,7 @@ interface RequestBody {
   name?: string;
   icon?: string;
   color?: string;
+  openingBalanceCents?: number;
   goalAmountCents?: number | null;
   isDefault?: boolean;
 }
@@ -29,13 +30,13 @@ function jsonResponse(payload: unknown, status = 200) {
 function extractDatabaseError(error: unknown): DatabaseErrorPayload {
   if (error && typeof error === "object") {
     const source = error as Record<string, unknown>;
-    const message = typeof source.message === "string"
-      ? source.message
-      : "Failed to update account";
+    const message =
+      typeof source.message === "string"
+        ? source.message
+        : "Failed to update account";
     const code = typeof source.code === "string" ? source.code : undefined;
-    const status = typeof source.status === "number"
-      ? source.status
-      : undefined;
+    const status =
+      typeof source.status === "number" ? source.status : undefined;
 
     return { message, code, status };
   }
@@ -186,13 +187,19 @@ Deno.serve(async (req: Request) => {
     if (typeof body.color === "string" && body.color.trim().length > 0) {
       updates.color = body.color.trim();
     }
+    if (Number.isFinite(body.openingBalanceCents)) {
+      updates.opening_balance_cents = Math.round(
+        Number(body.openingBalanceCents),
+      );
+    }
     if (
       body.goalAmountCents === null ||
       Number.isFinite(body.goalAmountCents)
     ) {
-      updates.goal_amount_cents = body.goalAmountCents == null
-        ? null
-        : Math.round(Number(body.goalAmountCents));
+      updates.goal_amount_cents =
+        body.goalAmountCents == null
+          ? null
+          : Math.round(Number(body.goalAmountCents));
     }
     if (typeof body.isDefault === "boolean") {
       updates.is_default = body.isDefault;
@@ -207,13 +214,14 @@ Deno.serve(async (req: Request) => {
 
     if (error || !data) {
       const databaseError = extractDatabaseError(error);
-      const status = databaseError.status != null &&
-          databaseError.status >= 400 &&
-          databaseError.status < 600
-        ? databaseError.status
-        : error == null
-        ? 500
-        : 400;
+      const status =
+        databaseError.status != null &&
+        databaseError.status >= 400 &&
+        databaseError.status < 600
+          ? databaseError.status
+          : error == null
+            ? 500
+            : 400;
       console.error("[update-account]", databaseError);
       return jsonResponse(
         {

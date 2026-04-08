@@ -95,8 +95,9 @@ CRITICAL RULES:
 16. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
 17. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
 18. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-19. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
-20. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
+19. **Wallets**: Wallets belong to one space only. Do not list or assume wallets unless the user explicitly asks about wallets or names one. When a wallet is mentioned, resolve it only inside the selected space.
+20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
+21. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
 
 MESSAGE FORMATTING (WhatsApp-specific):
 - WhatsApp renders these formatting symbols natively — use them:
@@ -123,6 +124,7 @@ CURRENT CONTEXT:
 - Date: {{DATE}}
 - User Currency: {{CURRENCY}}
 - Spaces: {{HOUSEHOLDS}}
+- Wallets: {{WALLETS}}
 - Categories (with brand colors): {{CATEGORIES}}
 `;
 const WHATSAPP_BUDGET_FLOW = `
@@ -186,7 +188,9 @@ function buildTwimlMessage(message?: string | null, mediaUrl?: string | null) {
 
   if (!media) {
     return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${
-      escapeXml(body)
+      escapeXml(
+        body,
+      )
     }</Message></Response>`;
   }
 
@@ -548,6 +552,79 @@ type NormalizedPocket = {
   color?: string;
   icon?: string;
 };
+
+function normalizeWalletName(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+async function listWalletRowsForScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+) {
+  let query = supabase
+    .from("accounts")
+    .select("id, name, household_id, is_default")
+    .eq("is_archived", false)
+    .order("is_default", { ascending: false })
+    .order("name", { ascending: true });
+
+  if (householdId) {
+    query = query.eq("household_id", householdId);
+  } else {
+    query = query.eq("user_id", userId).is("household_id", null);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[twilio-whatsapp-ai-bot] Failed to load wallets for scope", {
+      userId,
+      householdId,
+      error,
+    });
+    return [];
+  }
+
+  return (data || []) as Array<{
+    id: string;
+    name: string;
+    household_id: string | null;
+    is_default: boolean;
+  }>;
+}
+
+async function resolveWalletIdInScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  walletName: unknown,
+): Promise<{ accountId?: string; error?: string }> {
+  const normalizedName = normalizeWalletName(walletName);
+  if (!normalizedName) return {};
+
+  const wallets = await listWalletRowsForScope(supabase, userId, householdId);
+  const matches = wallets.filter(
+    (wallet) => normalizeWalletName(wallet.name) === normalizedName,
+  );
+
+  if (matches.length === 0) {
+    return {
+      error: `Wallet '${
+        String(walletName).trim()
+      }' was not found in the selected scope.`,
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      error: `More than one wallet named '${
+        String(walletName).trim()
+      }' exists in the selected scope. Please rename one of them or be more specific.`,
+    };
+  }
+
+  return { accountId: matches[0].id };
+}
 
 function normalizePockets(input: unknown): NormalizedPocket[] {
   const rawList: any[] = Array.isArray(input)
@@ -1367,6 +1444,7 @@ async function invokeTransactionSave(
     source?: string;
     ownerType?: string;
     privacyScope?: string;
+    accountId?: string;
   },
 ) {
   const type = (params.type || "expense").toLowerCase() === "income"
@@ -1384,6 +1462,7 @@ async function invokeTransactionSave(
       source: params.source,
       ownerType: params.ownerType || "me",
       privacyScope: params.privacyScope || "full",
+      accountId: params.accountId,
       householdId: params.householdId,
       isPortfolio: params.isPortfolio === true,
       isRecurring: params.isRecurring === true,
@@ -1399,6 +1478,7 @@ async function invokeTransactionSave(
       currency: params.currency,
       date: params.date,
       description: params.description,
+      accountId: params.accountId,
       householdId: params.householdId,
       isPortfolio: params.isPortfolio === true,
       payerUserId: params.payerUserId,
@@ -2056,6 +2136,11 @@ Deno.serve(async (req: Request) => {
       // best-effort
     }
 
+    const resolveAppRequestedWalletId = async (
+      walletName: unknown,
+      householdId: string | null,
+    ) => resolveWalletIdInScope(supabase, userId, householdId, walletName);
+
     const sessionId = payload.session_id || `app:${userId}`;
     const messageText = payload.message?.toString() || "";
     const attachments: any[] = Array.isArray(payload.attachments)
@@ -2157,6 +2242,10 @@ Deno.serve(async (req: Request) => {
       SYSTEM_INSTRUCTION.replace("{{DATE}}", formatDateInTimeZone(userTimezone))
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", "None")
+        .replace(
+          "{{WALLETS}}",
+          "Available on request for the selected space only",
+        )
         .replace("{{CATEGORIES}}", categoryGuideForUser)
         .replace("{{LANGUAGE}}", userLangLabel) +
       buildLanguageOverride(userLang);
@@ -2225,6 +2314,11 @@ Deno.serve(async (req: Request) => {
             is_portfolio: {
               type: "BOOLEAN",
               description: "Optional: Whether the target space is a portfolio",
+            },
+            wallet_name: {
+              type: "STRING",
+              description:
+                "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
             },
             payer_name: {
               type: "STRING",
@@ -2326,6 +2420,11 @@ Deno.serve(async (req: Request) => {
                     type: "STRING",
                     description: "ISO Currency Code",
                   },
+                  wallet_name: {
+                    type: "STRING",
+                    description:
+                      "Optional wallet name within the selected scope.",
+                  },
                   payer_name: {
                     type: "STRING",
                     description:
@@ -2381,6 +2480,75 @@ Deno.serve(async (req: Request) => {
             },
           },
           required: ["transactions"],
+        },
+      },
+      {
+        name: "list_wallets",
+        description:
+          "List wallets in personal scope or in a selected space, including current balances and which one is the default.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+            include_archived: { type: "BOOLEAN" },
+          },
+        },
+      },
+      {
+        name: "create_wallet",
+        description:
+          "Create a new wallet in personal scope or in a selected space.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING" },
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+            icon: { type: "STRING" },
+            color: { type: "STRING" },
+            opening_balance: { type: "NUMBER" },
+            goal_amount: { type: "NUMBER" },
+            is_default: { type: "BOOLEAN" },
+          },
+          required: ["name"],
+        },
+      },
+      {
+        name: "update_wallet",
+        description:
+          "Rename or update a wallet in the selected scope. Use wallet_name to choose which wallet to edit.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            wallet_name: { type: "STRING" },
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+            new_name: { type: "STRING" },
+            icon: { type: "STRING" },
+            color: { type: "STRING" },
+            goal_amount: { type: "NUMBER" },
+            is_default: { type: "BOOLEAN" },
+          },
+          required: ["wallet_name"],
+        },
+      },
+      {
+        name: "create_wallet_transfer",
+        description: "Move money between two wallets in the same scope.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            from_wallet_name: { type: "STRING" },
+            to_wallet_name: { type: "STRING" },
+            amount: { type: "NUMBER" },
+            currency: { type: "STRING" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            note: { type: "STRING" },
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+          },
+          required: ["from_wallet_name", "to_wallet_name", "amount"],
         },
       },
       {
@@ -2935,6 +3103,14 @@ Deno.serve(async (req: Request) => {
                 call.args,
               )
               : {};
+            const requestedWallet = await resolveAppRequestedWalletId(
+              call.args.wallet_name,
+              householdId,
+            );
+            if (requestedWallet.error) {
+              toolResult = { error: requestedWallet.error };
+              continue;
+            }
             const { data, error } = await invokeTransactionSave(
               supabase,
               EDGE_FUNCTION_KEY,
@@ -2949,6 +3125,7 @@ Deno.serve(async (req: Request) => {
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio ??
                   call.args.is_portfolio === true,
+                accountId: requestedWallet.accountId ?? undefined,
                 payerUserId: splitConfig.payerUserId,
                 customSplits: splitConfig.customSplits,
                 isRecurring: call.args.is_recurring === true,
@@ -3000,6 +3177,14 @@ Deno.serve(async (req: Request) => {
                   ? tx.type.toLowerCase()
                   : "expense";
                 const dateStr = normalizeDateInput(tx.date, defaultDate);
+                const requestedWallet = await resolveAppRequestedWalletId(
+                  tx.wallet_name,
+                  householdId,
+                );
+                if (requestedWallet.error) {
+                  toolResult = { error: requestedWallet.error };
+                  break;
+                }
 
                 // Resolve splits for household expenses
                 let payerUserId: string | undefined;
@@ -3022,6 +3207,7 @@ Deno.serve(async (req: Request) => {
                   amount: tx.amount,
                   category: tx.category,
                   currency: tx.currency || userCurrency,
+                  accountId: requestedWallet.accountId ?? undefined,
                   date: dateStr,
                   description: tx.description,
                   source: tx.source,
@@ -3040,6 +3226,10 @@ Deno.serve(async (req: Request) => {
                     }
                     : undefined,
                 });
+              }
+
+              if ((toolResult as any)?.error) {
+                continue;
               }
 
               // Call save-transactions-batch via direct function invoke
@@ -3666,6 +3856,11 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    const resolveRequestedAccountId = async (
+      walletName: unknown,
+      householdId: string | null,
+    ) => resolveWalletIdInScope(supabase, userId, householdId, walletName);
+
     let sessionState = await loadSessionState(
       supabase,
       sessionId,
@@ -3865,6 +4060,10 @@ Deno.serve(async (req: Request) => {
     )
       .replace("{{CURRENCY}}", userCurrency)
       .replace("{{HOUSEHOLDS}}", householdContext)
+      .replace(
+        "{{WALLETS}}",
+        "Available on request for the selected space only",
+      )
       .replace("{{CATEGORIES}}", categoryGuideForUser)
       .replace("{{LANGUAGE}}", userLangLabel) +
       buildLanguageOverride(userLang);
@@ -3947,6 +4146,11 @@ Deno.serve(async (req: Request) => {
             is_portfolio: {
               type: "BOOLEAN",
               description: "Optional: Whether the target space is a portfolio",
+            },
+            wallet_name: {
+              type: "STRING",
+              description:
+                "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
             },
             payer_name: {
               type: "STRING",
@@ -4047,6 +4251,11 @@ Deno.serve(async (req: Request) => {
                   currency: {
                     type: "STRING",
                     description: "ISO Currency Code",
+                  },
+                  wallet_name: {
+                    type: "STRING",
+                    description:
+                      "Optional wallet name within the selected scope.",
                   },
                   payer_name: {
                     type: "STRING",
@@ -4865,6 +5074,18 @@ Deno.serve(async (req: Request) => {
               continue;
             }
 
+            const requestedAccount = await resolveRequestedAccountId(
+              call.args.wallet_name,
+              householdId,
+            );
+            if (requestedAccount.error) {
+              toolResult = { error: requestedAccount.error };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+
             const dateStr = normalizeDateInput(
               call.args.date,
               formatDateInTimeZone(userTimezone),
@@ -4891,6 +5112,7 @@ Deno.serve(async (req: Request) => {
                 source: call.args.source,
                 ownerType: call.args.owner_type || "me",
                 privacyScope: call.args.privacy_scope || "full",
+                accountId: requestedAccount.accountId ?? undefined,
                 householdId,
                 isRecurring: !!call.args.is_recurring,
                 recurrence_rule: recurrenceRule || undefined,
@@ -4936,6 +5158,7 @@ Deno.serve(async (req: Request) => {
                 currency: call.args.currency || userCurrency,
                 date: dateStr,
                 description: call.args.description,
+                accountId: requestedAccount.accountId ?? undefined,
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio ?? false,
                 payerUserId: splitConfig.payerUserId,
@@ -5017,6 +5240,14 @@ Deno.serve(async (req: Request) => {
                 ? tx.type.toLowerCase()
                 : "expense";
               const dateStr = normalizeDateInput(tx.date, defaultDate);
+              const requestedWallet = await resolveRequestedAccountId(
+                tx.wallet_name,
+                householdId,
+              );
+              if (requestedWallet.error) {
+                toolResult = { error: requestedWallet.error };
+                break;
+              }
 
               // Resolve splits for household expenses
               let payerUserId: string | undefined;
@@ -5039,6 +5270,7 @@ Deno.serve(async (req: Request) => {
                 amount: tx.amount,
                 category: tx.category,
                 currency: tx.currency || userCurrency,
+                accountId: requestedWallet.accountId ?? undefined,
                 date: dateStr,
                 description: tx.description,
                 source: tx.source,
@@ -5057,6 +5289,13 @@ Deno.serve(async (req: Request) => {
                   }
                   : undefined,
               });
+            }
+
+            if ((toolResult as any)?.error) {
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
             }
 
             // Call save-transactions-batch
@@ -5104,6 +5343,193 @@ Deno.serve(async (req: Request) => {
                 error: formatted || "Failed to save transactions",
               };
             }
+          } else if (call.name === "list_wallets") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "list-wallets",
+              {
+                body: {
+                  userId,
+                  householdId,
+                  includeArchived: call.args.include_archived === true,
+                },
+                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+              },
+            );
+            const success = !error && data?.success === true;
+            toolResult = success
+              ? { success: true, data: data?.data ?? [] }
+              : { error: error ?? data?.error ?? "Failed to list wallets" };
+          } else if (call.name === "create_wallet") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "save-wallet",
+              {
+                body: {
+                  userId,
+                  householdId,
+                  name: call.args.name,
+                  icon: call.args.icon,
+                  color: call.args.color,
+                  openingBalanceCents: Number.isFinite(
+                      call.args.opening_balance,
+                    )
+                    ? Math.round(Number(call.args.opening_balance) * 100)
+                    : undefined,
+                  goalAmountCents: Number.isFinite(call.args.goal_amount)
+                    ? Math.round(Number(call.args.goal_amount) * 100)
+                    : undefined,
+                  isDefault: call.args.is_default === true,
+                },
+                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+              },
+            );
+            const success = !error && data?.success === true;
+            toolResult = success
+              ? { success: true, data: data?.data ?? data }
+              : { error: error ?? data?.error ?? "Failed to create wallet" };
+          } else if (call.name === "update_wallet") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const requestedWallet = await resolveRequestedAccountId(
+              call.args.wallet_name,
+              householdId,
+            );
+            if (requestedWallet.error || !requestedWallet.accountId) {
+              toolResult = {
+                error: requestedWallet.error ||
+                  "Wallet was not found in the selected scope.",
+              };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "update-wallet",
+              {
+                body: {
+                  userId,
+                  accountId: requestedWallet.accountId,
+                  name: call.args.new_name,
+                  icon: call.args.icon,
+                  color: call.args.color,
+                  goalAmountCents: Number.isFinite(call.args.goal_amount)
+                    ? Math.round(Number(call.args.goal_amount) * 100)
+                    : undefined,
+                  isDefault: typeof call.args.is_default === "boolean"
+                    ? call.args.is_default
+                    : undefined,
+                },
+                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+              },
+            );
+            const success = !error && data?.success === true;
+            toolResult = success
+              ? { success: true, data: data?.data ?? data }
+              : { error: error ?? data?.error ?? "Failed to update wallet" };
+          } else if (call.name === "create_wallet_transfer") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const fromWallet = await resolveRequestedAccountId(
+              call.args.from_wallet_name,
+              householdId,
+            );
+            const toWallet = await resolveRequestedAccountId(
+              call.args.to_wallet_name,
+              householdId,
+            );
+            if (fromWallet.error || !fromWallet.accountId) {
+              toolResult = {
+                error: fromWallet.error ||
+                  "Source wallet was not found in the selected scope.",
+              };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+            if (toWallet.error || !toWallet.accountId) {
+              toolResult = {
+                error: toWallet.error ||
+                  "Destination wallet was not found in the selected scope.",
+              };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "create-wallet-transfer",
+              {
+                body: {
+                  userId,
+                  fromAccountId: fromWallet.accountId,
+                  toAccountId: toWallet.accountId,
+                  amountCents: Math.round(Number(call.args.amount || 0) * 100),
+                  currency: call.args.currency || userCurrency,
+                  date: normalizeDateInput(
+                    call.args.date,
+                    formatDateInTimeZone(userTimezone),
+                  ),
+                  note: call.args.note,
+                },
+                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+              },
+            );
+            const success = !error && data?.success === true;
+            toolResult = success
+              ? { success: true, data: data?.data ?? data }
+              : {
+                error: error ?? data?.error ??
+                  "Failed to create wallet transfer",
+              };
           } else if (call.name === "update_transaction") {
             const updatesArgs = call.args?.updates &&
                 typeof call.args.updates === "object" &&
