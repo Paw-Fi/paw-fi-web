@@ -61,3 +61,21 @@ Deno.test(
     assertStringIncludes(source, "Unsupported or unreadable attachment format");
   },
 );
+
+Deno.test(
+  "import contract: save-transactions-batch exposes streaming progress",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../save-transactions-batch/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, 'url.searchParams.get("stream") === "true"');
+    assertStringIncludes(source, '"Content-Type": "text/event-stream"');
+    assertStringIncludes(source, 'formatSSEEvent("progress"');
+    assertStringIncludes(source, '"currentItem"');
+    assertStringIncludes(source, '"totalItems"');
+    assertStringIncludes(source, "progressOffset");
+    assertStringIncludes(source, "progressTotal");
+    assertStringIncludes(source, ': keep-alive\\n\\n');
+  },
+);
