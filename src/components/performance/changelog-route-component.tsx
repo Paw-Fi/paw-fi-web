@@ -25,6 +25,28 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Wallets Feature, Faster Transactions & Better Pocket Budgeting",
+    date: "2026-04-07",
+    version: "1.5.4",
+    tags: ["Feature", "Wallet", "Performance", "Budget"],
+    description:
+      "This release introduces the new Wallets feature for managing multiple payment cards, enhances spending visualization with redesigned breakdowns, improves data import reliability, and includes numerous performance and bug fixes.",
+    items: [
+      "New Wallets feature for managing multiple payment cards and bank accounts",
+      "Redesigned spending breakdown visualization with improved pie charts",
+      "Faster transaction loading with pagination for smoother scrolling",
+      "Enhanced home page data fetching Ffor quicker updates",
+      "Fixed recurring expenses not being calculated in pocket budgets",
+      "Improved CSV import reliability across devices including Android crash fixes",
+      "New last 3 months and last month filter options for quick comparisons",
+      "Fixed status bar text color visibility in dark mode",
+      "Fixed household member name display issues",
+      "Fixed invite URL issues",
+      "Performance optimizations for pockets page data fetching",
+      "Various stability and reliability improvements",
+    ],
+  },
+  {
     title: "Wallet & Apple Pay Integration Improvements",
     date: "2026-03-23",
     version: "1.5.0",

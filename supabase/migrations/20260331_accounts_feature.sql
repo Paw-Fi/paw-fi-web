@@ -326,6 +326,85 @@ set account_id = public.resolve_spending_account(e.user_id, e.household_id)
 where e.account_id is null
   and e.user_id is not null;
 
+update public.expenses e
+set account_id = public.resolve_spending_account(null, e.household_id)
+where e.account_id is null
+  and e.user_id is null
+  and e.household_id is not null;
+
+do $$
+begin
+  if to_regclass('public.user_contacts') is not null then
+    update public.expenses e
+    set account_id = public.resolve_spending_account(uc.user_id, null)
+    from public.user_contacts uc
+    where e.account_id is null
+      and e.user_id is null
+      and e.household_id is null
+      and e.contact_id = uc.id
+      and uc.user_id is not null;
+  end if;
+end;
+$$;
+
+update public.expenses e
+set account_id = public.resolve_spending_account(e.user_id, e.household_id)
+where e.user_id is not null
+  and e.account_id is not null
+  and not exists (
+    select 1
+    from public.accounts a
+    where a.id = e.account_id
+      and a.is_archived = false
+      and (
+        (
+          e.household_id is null
+          and a.household_id is null
+          and a.user_id = e.user_id
+        )
+        or (
+          e.household_id is not null
+          and a.household_id = e.household_id
+        )
+      )
+  );
+
+update public.expenses e
+set account_id = public.resolve_spending_account(null, e.household_id)
+where e.user_id is null
+  and e.household_id is not null
+  and e.account_id is not null
+  and not exists (
+    select 1
+    from public.accounts a
+    where a.id = e.account_id
+      and a.is_archived = false
+      and a.household_id = e.household_id
+  );
+
+do $$
+begin
+  if to_regclass('public.user_contacts') is not null then
+    update public.expenses e
+    set account_id = public.resolve_spending_account(uc.user_id, null)
+    from public.user_contacts uc
+    where e.user_id is null
+      and e.household_id is null
+      and e.contact_id = uc.id
+      and uc.user_id is not null
+      and e.account_id is not null
+      and not exists (
+        select 1
+        from public.accounts a
+        where a.id = e.account_id
+          and a.is_archived = false
+          and a.household_id is null
+          and a.user_id = uc.user_id
+      );
+  end if;
+end;
+$$;
+
 alter table public.expenses
   drop constraint if exists expenses_account_id_fkey;
 
@@ -342,6 +421,18 @@ drop trigger if exists accounts_prevent_system_mutation on public.accounts;
 create trigger accounts_prevent_system_mutation
 before update or delete on public.accounts
 for each row execute function public.prevent_system_account_mutation();
+
+do $$
+begin
+  if exists (
+    select 1
+    from public.expenses e
+    where e.account_id is null
+  ) then
+    raise exception 'Cannot enforce NOT NULL on public.expenses.account_id until all legacy rows can be mapped to a scope Spending wallet';
+  end if;
+end;
+$$;
 
 alter table public.expenses
   alter column account_id set not null;

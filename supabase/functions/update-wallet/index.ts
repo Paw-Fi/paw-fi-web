@@ -13,11 +13,36 @@ interface RequestBody {
   isDefault?: boolean;
 }
 
+interface DatabaseErrorPayload {
+  message: string;
+  code?: string;
+  status?: number;
+}
+
 function jsonResponse(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function extractDatabaseError(error: unknown): DatabaseErrorPayload {
+  if (error && typeof error === "object") {
+    const source = error as Record<string, unknown>;
+    const message = typeof source.message === "string"
+      ? source.message
+      : "Failed to update account";
+    const code = typeof source.code === "string" ? source.code : undefined;
+    const status = typeof source.status === "number"
+      ? source.status
+      : undefined;
+
+    return { message, code, status };
+  }
+
+  return {
+    message: "Failed to update account",
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -125,21 +150,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (
-      account.is_system &&
-      typeof body.name === "string" &&
-      body.name.trim() !== account.name
-    ) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "System account cannot be renamed",
-          code: "VALIDATION_ERROR",
-        },
-        400,
-      );
-    }
-
     if (body.isDefault === true) {
       let resetQuery = supabase
         .from("accounts")
@@ -196,14 +206,23 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (error || !data) {
-      console.error("[update-account]", error);
+      const databaseError = extractDatabaseError(error);
+      const status = databaseError.status != null &&
+          databaseError.status >= 400 &&
+          databaseError.status < 600
+        ? databaseError.status
+        : error == null
+        ? 500
+        : 400;
+      console.error("[update-account]", databaseError);
       return jsonResponse(
         {
           success: false,
-          error: "Failed to update account",
-          code: "SERVER_ERROR",
+          error: databaseError.message,
+          code: databaseError.code ?? "VALIDATION_ERROR",
+          status,
         },
-        500,
+        status,
       );
     }
 
