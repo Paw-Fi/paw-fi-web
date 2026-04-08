@@ -378,13 +378,28 @@ Deno.serve(async (req: Request) => {
         householdId: resolvedHouseholdId,
       });
       if (!isInScope) {
-        return errorResponse(
-          "Provided accountId does not belong to this scope",
-          400,
-          "VALIDATION_ERROR",
-        );
+        if (resolvedHouseholdId != null) {
+          console.warn(
+            "[save-income] Ignoring out-of-scope accountId and falling back to default scoped account",
+            {
+              requestedAccountId: body.accountId,
+              resolvedHouseholdId,
+            },
+          );
+          accountId = await resolveDefaultAccountId(supabase, {
+            userId,
+            householdId: resolvedHouseholdId,
+          });
+        } else {
+          return errorResponse(
+            "Provided accountId does not belong to this scope",
+            400,
+            "VALIDATION_ERROR",
+          );
+        }
+      } else {
+        accountId = body.accountId;
       }
-      accountId = body.accountId;
     } else {
       accountId = await resolveDefaultAccountId(supabase, {
         userId,

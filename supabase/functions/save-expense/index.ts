@@ -273,6 +273,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const isPortfolio = body.isPortfolio === true;
+    const requestedHouseholdId = sanitizeUuid(body.householdId ?? null);
+    if (body.householdId && !requestedHouseholdId) {
+      return errorResponse("Valid householdId is required", 400);
+    }
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
     if (!detection.isGpt && !sanitizedCategory) {
@@ -297,7 +301,7 @@ Deno.serve(async (req: Request) => {
       amount: body.amount,
       category: resolvedCategory,
       currency,
-      householdId: body.householdId,
+      householdId: requestedHouseholdId,
       isPortfolio,
     });
 
@@ -445,26 +449,72 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    let preliminaryAccountId: string | null = null;
-    if (!body.householdId || isPortfolio) {
-      try {
-        preliminaryAccountId = await resolveScopedAccountId(
-          isPortfolio ? (body.householdId ?? null) : null,
+    let resolvedSharedHouseholdId: string | null = null;
+    if (requestedHouseholdId && !isPortfolio) {
+      const { data: membership, error: membershipError } = await supabase
+        .from("household_members")
+        .select("id")
+        .eq("household_id", requestedHouseholdId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (membershipError) {
+        console.error(
+          "[save-expense] Failed to verify household membership:",
+          membershipError,
         );
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message === "ACCOUNT_SCOPE_MISMATCH"
-        ) {
+        return errorResponse("Failed to verify household membership", 500);
+      }
+
+      if (membership) {
+        resolvedSharedHouseholdId = requestedHouseholdId;
+      }
+    }
+
+    const insertScopeHouseholdId = isPortfolio
+      ? requestedHouseholdId
+      : resolvedSharedHouseholdId;
+
+    let preliminaryAccountId: string | null = null;
+    try {
+      preliminaryAccountId = await resolveScopedAccountId(
+        insertScopeHouseholdId,
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "ACCOUNT_SCOPE_MISMATCH"
+      ) {
+        if (insertScopeHouseholdId != null) {
+          console.warn(
+            "[save-expense] Ignoring out-of-scope accountId and falling back to default scoped account",
+            {
+              requestedAccountId: body.accountId,
+              insertScopeHouseholdId,
+            },
+          );
+          preliminaryAccountId = await resolveDefaultAccountId(supabase, {
+            userId: userId as string,
+            householdId: insertScopeHouseholdId,
+          });
+        } else {
           return errorResponse(
             "Provided accountId does not belong to this scope",
             400,
             "VALIDATION_ERROR",
           );
         }
+      } else {
         throw error;
       }
     }
+
+    console.log("[save-expense] Insert scope resolved:", {
+      requestedHouseholdId,
+      resolvedSharedHouseholdId,
+      insertScopeHouseholdId,
+      preliminaryAccountId,
+    });
 
     // Insert expense into expenses table
     const { data: expense, error: expenseError } = await supabase
@@ -482,7 +532,7 @@ Deno.serve(async (req: Request) => {
         created_at: body.clientCreatedAt || new Date().toISOString(),
         is_recurring: body.isRecurring || false,
         recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
-        household_id: isPortfolio ? body.householdId || null : null,
+        household_id: insertScopeHouseholdId,
         account_id: preliminaryAccountId,
       })
       .select()
@@ -494,20 +544,6 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log("[save-expense] Expense saved:", expense.id);
-
-    if (body.householdId && !isPortfolio && !preliminaryAccountId) {
-      const personalDefault = await resolveDefaultAccountId(supabase, {
-        userId,
-        householdId: null,
-      });
-      if (personalDefault) {
-        await supabase
-          .from("expenses")
-          .update({ account_id: personalDefault })
-          .eq("id", expense.id);
-        (expense as any).account_id = personalDefault;
-      }
-    }
 
     // Learn/ensure custom category + preference mapping for future AI categorization
     try {
