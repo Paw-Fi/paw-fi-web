@@ -126,6 +126,44 @@ Deno.serve(async (req: Request) => {
 
     const shouldSetDefault = body.isDefault === true;
 
+    if (linkedBankAccountId != null) {
+      let existingLinkedQuery = supabase
+        .from("accounts")
+        .select()
+        .eq("linked_bank_account_id", linkedBankAccountId)
+        .eq("is_archived", false)
+        .limit(1);
+
+      if (householdId) {
+        existingLinkedQuery = existingLinkedQuery.eq(
+          "household_id",
+          householdId,
+        );
+      } else {
+        existingLinkedQuery = existingLinkedQuery
+          .eq("user_id", userId)
+          .is("household_id", null);
+      }
+
+      const { data: existingLinkedWallet, error: existingLinkedError } =
+        await existingLinkedQuery.maybeSingle();
+
+      if (existingLinkedError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to load linked wallet",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      if (existingLinkedWallet != null) {
+        return jsonResponse({ success: true, data: existingLinkedWallet });
+      }
+    }
+
     if (shouldSetDefault) {
       let resetQuery = supabase
         .from("accounts")

@@ -126,12 +126,11 @@ export async function createPlaidLinkToken(
   params: CreateLinkTokenParams,
 ): Promise<CreateLinkTokenResponse> {
   const config = getPlaidConfig();
-  const countryCodes =
-    params.countryCodes && params.countryCodes.length > 0
-      ? params.countryCodes
-          .map((code) => code.trim().toUpperCase())
-          .filter(Boolean)
-      : config.countryCodes;
+  const countryCodes = params.countryCodes && params.countryCodes.length > 0
+    ? params.countryCodes
+      .map((code) => code.trim().toUpperCase())
+      .filter(Boolean)
+    : config.countryCodes;
 
   const platform = params.platform?.toLowerCase();
   const request: Record<string, unknown> = {
@@ -139,10 +138,9 @@ export async function createPlaidLinkToken(
     client_name: config.clientName,
     country_codes: countryCodes,
     language: params.language || "en",
-    products:
-      params.products && params.products.length > 0
-        ? params.products
-        : config.products,
+    products: params.products && params.products.length > 0
+      ? params.products
+      : config.products,
   };
 
   if (platform === "android") {
@@ -153,8 +151,9 @@ export async function createPlaidLinkToken(
 
   const webhookUrl = getDefaultPlaidWebhookUrl();
   if (webhookUrl) request.webhook = webhookUrl;
-  if (config.linkCustomizationName)
+  if (config.linkCustomizationName) {
     request.link_customization_name = config.linkCustomizationName;
+  }
   if (params.accessToken) request.access_token = params.accessToken;
   if (typeof params.transactionsDaysRequested === "number") {
     request.transactions = { days_requested: params.transactionsDaysRequested };
@@ -269,6 +268,7 @@ export interface ExpenseUpsertInput {
   is_recurring: boolean;
   recurrence_rule: Record<string, unknown> | null;
   household_id: string | null;
+  account_id?: string | null;
   contact_id: string | null;
   normalized_amount_cents: number;
   base_currency: string | null;
@@ -294,15 +294,13 @@ export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
 ): ExpenseUpsertInput {
   const txn = params.transaction;
-  const categoryName =
-    txn.personal_finance_category?.detailed ||
+  const categoryName = txn.personal_finance_category?.detailed ||
     txn.personal_finance_category?.primary ||
     null;
   const normalizedCategory = categoryName
     ? normalizeCategory(categoryName)
     : null;
-  const currency =
-    txn.iso_currency_code ||
+  const currency = txn.iso_currency_code ||
     txn.unofficial_currency_code ||
     params.defaultCurrency ||
     "USD";
@@ -322,8 +320,8 @@ export function mapPlaidTransactionToExpense(
     provider_transaction_id: txn.transaction_id,
     amount_cents: amountCents,
     currency,
-    date:
-      txn.date || txn.authorized_date || new Date().toISOString().slice(0, 10),
+    date: txn.date || txn.authorized_date ||
+      new Date().toISOString().slice(0, 10),
     type: transactionType,
     category: normalizedCategory,
     raw_text: description,
@@ -346,11 +344,12 @@ function detectRecurring(transaction: PlaidTransaction): {
   const detailed =
     transaction.personal_finance_category?.detailed?.toUpperCase() || "";
   const keywords = ["SUBSCRIPTION", "PAYROLL", "RENT", "MORTGAGE", "UTILITIES"];
-  const description =
-    `${transaction.name || ""} ${transaction.merchant_name || ""}`.toLowerCase();
+  const description = `${transaction.name || ""} ${
+    transaction.merchant_name || ""
+  }`.toLowerCase();
   const keywordMatch = keywords.some((keyword) => detailed.includes(keyword));
-  const nameMatch =
-    description.includes("subscription") || description.includes("monthly");
+  const nameMatch = description.includes("subscription") ||
+    description.includes("monthly");
   const isRecurring = Boolean(keywordMatch || nameMatch);
   if (!isRecurring) {
     return { isRecurring: false, recurrenceRule: null };

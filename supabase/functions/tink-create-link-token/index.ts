@@ -9,6 +9,7 @@ import {
   listTinkCredentials,
   TINK_PROVIDER,
 } from "../shared/tink-client.ts";
+import { sanitizeOptionalUuid } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -20,6 +21,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 interface CreateLinkRequest {
   countryCode?: string;
   locale?: string;
+  targetHouseholdId?: string;
   // Optional: force using an existing connection (reconnect flow)
   connectionId?: string;
   // add: always create new credential
@@ -78,6 +80,7 @@ Deno.serve(async (req) => {
     const market = body.countryCode || config.defaultMarket;
     const marketSuffix = market.toLowerCase();
     const externalUserId = `${authResult.userId}-${marketSuffix}`;
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
 
     const intent = body.intent || "auto";
 
@@ -317,6 +320,7 @@ Deno.serve(async (req) => {
         user_id: authResult.userId,
         external_user_id: externalUserId,
         market: market.toUpperCase(),
+        target_household_id: targetHouseholdId,
         expires_at: expiresAtState,
       });
 

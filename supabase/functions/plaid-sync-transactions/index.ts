@@ -9,9 +9,12 @@ import {
   syncPlaidTransactions,
 } from "../shared/plaid-client.ts";
 import {
-  persistPlaidTransactions,
-  stagePlaidTransactions,
   type ExpensePreview,
+  type LinkedWalletRecord,
+  loadLinkedWalletsForBankAccounts,
+  persistPlaidTransactions,
+  sanitizeOptionalUuid,
+  stagePlaidTransactions,
 } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -25,6 +28,7 @@ interface SyncRequest {
   connectionId?: string;
   bankAccountId?: string;
   cursorOverride?: string;
+  targetHouseholdId?: string;
 }
 
 interface SyncSummary {
@@ -191,6 +195,15 @@ Deno.serve(async (req) => {
       accountMap.set(key, account);
     });
 
+    const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
+      {
+        supabase: supabase as any,
+        userId: authResult.userId,
+        targetHouseholdId: sanitizeOptionalUuid(body.targetHouseholdId),
+        bankAccountIds: (bankAccounts || []).map((account) => account.id),
+      },
+    );
+
     const summaries: SyncSummary[] = [];
     let totalInserted = 0;
     let totalUpdated = 0;
@@ -202,10 +215,12 @@ Deno.serve(async (req) => {
       const summary = await syncConnection({
         connection,
         accountMap,
-        supabase,
+        supabase: supabase as any,
         userId: authResult.userId,
         accountFilter,
         cursorOverride: body.cursorOverride,
+        targetHouseholdId: sanitizeOptionalUuid(body.targetHouseholdId),
+        linkedWalletsByBankAccountId,
       });
       summaries.push(summary);
       totalInserted += summary.inserted;
@@ -251,10 +266,12 @@ Deno.serve(async (req) => {
 async function syncConnection(params: {
   connection: BankConnectionRow;
   accountMap: Map<string, BankAccountRow>;
-  supabase: ReturnType<typeof createClient>;
+  linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
+  supabase: any;
   userId: string;
   accountFilter: BankAccountRow | null;
   cursorOverride?: string;
+  targetHouseholdId?: string | null;
 }): Promise<SyncSummary> {
   const summary: SyncSummary = {
     connectionId: params.connection.id,
@@ -311,77 +328,19 @@ async function syncConnection(params: {
       .update({ last_sync_attempt_at: new Date().toISOString() })
       .eq("id", params.connection.id);
 
-    const encryptedToken =
-      params.connection.access_token_encrypted ||
+    const encryptedToken = params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
     if (!encryptedToken) {
       throw new Error("Missing Plaid access token");
     }
     const accessToken = await decryptSecret(encryptedToken);
 
-    let householdId = params.connection.household_id || null;
-    if (!householdId) {
-      const providerItemId = params.connection.provider_item_id;
-      if (!providerItemId) {
-        console.warn(
-          "[plaid-sync] Missing provider_item_id; skipping household ensure",
-        );
-      } else {
-        const rawMeta = params.connection.metadata;
-        const connectionMeta =
-          typeof rawMeta === "object" && rawMeta !== null
-            ? (rawMeta as Record<string, unknown>)
-            : {};
-        const institutionName =
-          (connectionMeta["institution_name"] as string | undefined) ||
-          "Bank Account";
-        const institutionLogo =
-          (connectionMeta["institution_logo"] as string | undefined) || null;
-        const ensureMeta = {
-          ...connectionMeta,
-          institution_name: institutionName,
-          institution_logo: institutionLogo,
-        };
-
-        const { data: ensureResult, error: ensureError } =
-          await params.supabase.rpc("upsert_bank_connection_with_household", {
-            p_user_id: params.userId,
-            p_provider: PLAID_PROVIDER,
-            p_provider_item_id: providerItemId,
-            p_access_token_encrypted: encryptedToken,
-            p_refresh_token_encrypted: null,
-            p_expires_at: null,
-            p_country_code: params.connection.country_code || null,
-            p_idempotency_key: null,
-            p_institution_name: institutionName,
-            p_institution_logo: institutionLogo,
-            p_metadata: ensureMeta,
-          });
-
-        if (ensureError) {
-          console.error("[plaid-sync] Failed to ensure household", ensureError);
-        } else if (ensureResult && ensureResult.length) {
-          householdId = ensureResult[0].household_id || null;
-          console.log(
-            "[plaid-sync] Ensured household for connection",
-            params.connection.id,
-            householdId,
-          );
-        }
-      }
-    }
-
-    if (!householdId) {
-      throw new Error("Missing household_id for bank connection");
-    }
-
-    let cursor: string | undefined =
-      params.cursorOverride === "reset"
-        ? undefined
-        : params.cursorOverride ||
-          params.connection.cursor ||
-          params.connection.plaid_cursor ||
-          undefined;
+    let cursor: string | undefined = params.cursorOverride === "reset"
+      ? undefined
+      : params.cursorOverride ||
+        params.connection.cursor ||
+        params.connection.plaid_cursor ||
+        undefined;
     const processedAccounts = new Set<string>();
     let hasMore = true;
 
@@ -396,16 +355,26 @@ async function syncConnection(params: {
       for (const [plaidAccountId, transactions] of grouped.entries()) {
         const account = params.accountMap.get(plaidAccountId);
         if (!account) continue;
-        if (params.accountFilter && account.id !== params.accountFilter.id)
+        if (params.accountFilter && account.id !== params.accountFilter.id) {
           continue;
+        }
+
+        const linkedWallet = params.linkedWalletsByBankAccountId.get(
+          account.id,
+        );
+        const resolvedHouseholdId = linkedWallet?.household_id ??
+          params.targetHouseholdId ?? null;
 
         await params.supabase
           .from("expenses")
-          .update({ household_id: householdId })
+          .update({
+            household_id: resolvedHouseholdId,
+            account_id: linkedWallet?.id ?? null,
+          })
           .eq("provider", PLAID_PROVIDER)
           .eq("user_id", params.userId)
           .eq("bank_account_id", account.id)
-          .is("household_id", null);
+          .is("deleted_at", null);
 
         await stagePlaidTransactions({
           supabase: params.supabase,
@@ -418,7 +387,8 @@ async function syncConnection(params: {
           supabase: params.supabase,
           userId: params.userId,
           bankAccountId: account.id,
-          householdId,
+          householdId: resolvedHouseholdId,
+          accountId: linkedWallet?.id ?? null,
           accountCurrency: account.currency,
           transactions,
         });

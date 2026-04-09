@@ -7,7 +7,12 @@ import {
   PLAID_PROVIDER,
 } from "../shared/plaid-client.ts";
 import { encryptSecret } from "../shared/token-encryption.ts";
-import { upsertPlaidAccounts } from "../shared/bank-sync.ts";
+import {
+  loadLinkedWalletsForBankAccounts,
+  sanitizeOptionalUuid,
+  upsertBankConnection,
+  upsertPlaidAccounts,
+} from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -23,6 +28,7 @@ interface ExchangeRequest {
   institutionLogo?: string;
   countryCode?: string;
   idempotencyKey?: string;
+  targetHouseholdId?: string;
 }
 
 Deno.serve(async (req) => {
@@ -87,7 +93,7 @@ Deno.serve(async (req) => {
     if (body.idempotencyKey) {
       const { data: existingConnection } = await supabase
         .from("bank_connections")
-        .select("id, household_id")
+        .select("id")
         .eq("user_id", authResult.userId)
         .eq("idempotency_key", body.idempotencyKey)
         .maybeSingle();
@@ -99,15 +105,30 @@ Deno.serve(async (req) => {
         // Fetch accounts for the existing connection
         const { data: existingAccounts } = await supabase
           .from("bank_accounts")
-          .select("id, name, mask, type, subtype, currency, balance_current")
+          .select(
+            "id, name, mask, type, subtype, currency, plaid_account_id, provider_account_id",
+          )
           .eq("bank_connection_id", existingConnection.id);
+
+        const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+        const linkedWallets = await loadLinkedWalletsForBankAccounts({
+          supabase,
+          userId: authResult.userId,
+          targetHouseholdId,
+          bankAccountIds: (existingAccounts || []).map((account: any) =>
+            String(account.id || "")
+          ),
+        });
 
         return new Response(
           JSON.stringify({
             success: true,
             connectionId: existingConnection.id,
-            householdId: existingConnection.household_id,
-            accounts: existingAccounts || [],
+            targetHouseholdId: targetHouseholdId,
+            accounts: (existingAccounts || []).map((account: any) => ({
+              ...account,
+              linkedWallet: linkedWallets.get(String(account.id || "")) || null,
+            })),
             idempotent: true,
           }),
           {
@@ -121,30 +142,25 @@ Deno.serve(async (req) => {
     const plaidResponse = await exchangePublicToken(body.publicToken);
     const encryptedToken = await encryptSecret(plaidResponse.access_token);
 
-    // Use atomic RPC to create/update connection with household
-    // This prevents race conditions where concurrent requests create duplicate households
-    const { data: upsertResult, error: upsertError } = await supabase.rpc(
-      "upsert_bank_connection_with_household",
-      {
-        p_user_id: authResult.userId,
-        p_provider: PLAID_PROVIDER,
-        p_provider_item_id: plaidResponse.item_id,
-        p_access_token_encrypted: encryptedToken,
-        p_refresh_token_encrypted: null,
-        p_expires_at: null,
-        p_country_code: body.countryCode?.toUpperCase() || "US",
-        p_idempotency_key: body.idempotencyKey || null,
-        p_institution_name: body.institutionName || "Bank Account",
-        p_institution_logo: body.institutionLogo || null,
-        p_metadata: {
+    let upsertResult;
+    try {
+      upsertResult = await upsertBankConnection({
+        supabase,
+        userId: authResult.userId,
+        provider: PLAID_PROVIDER,
+        providerItemId: plaidResponse.item_id,
+        accessTokenEncrypted: encryptedToken,
+        refreshTokenEncrypted: null,
+        expiresAt: null,
+        countryCode: body.countryCode?.toUpperCase() || "US",
+        idempotencyKey: body.idempotencyKey || null,
+        metadata: {
           institution_id: body.institutionId || null,
           institution_name: body.institutionName || null,
           institution_logo: body.institutionLogo || null,
         },
-      },
-    );
-
-    if (upsertError || !upsertResult || upsertResult.length === 0) {
+      });
+    } catch (upsertError) {
       console.error(
         "[plaid-exchange-public-token] Failed to upsert connection",
         upsertError,
@@ -158,19 +174,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const {
-      connection_id: connectionId,
-      household_id: householdId,
-      is_new_connection: isNewConnection,
-    } = upsertResult[0];
+    const { connectionId, isNewConnection } = upsertResult;
 
     if (isNewConnection) {
-      console.log(
-        `[plaid-exchange] Created new connection ${connectionId} with household ${householdId}`,
-      );
+      console.log(`[plaid-exchange] Created new connection ${connectionId}`);
     } else {
       console.log(
-        `[plaid-exchange] Updated existing connection ${connectionId}, reusing household ${householdId}`,
+        `[plaid-exchange] Updated existing connection ${connectionId}`,
       );
     }
 
@@ -194,12 +204,25 @@ Deno.serve(async (req) => {
       accounts,
     });
 
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    const linkedWallets = await loadLinkedWalletsForBankAccounts({
+      supabase,
+      userId: authResult.userId,
+      targetHouseholdId,
+      bankAccountIds: upsertAccountsResult.records.map((record) => record.id),
+    });
+
+    const responseAccounts = upsertAccountsResult.records.map((record) => ({
+      ...record,
+      linkedWallet: linkedWallets.get(record.id) || null,
+    }));
+
     return new Response(
       JSON.stringify({
         success: true,
         connectionId: connectionId,
-        householdId: householdId,
-        accounts: upsertAccountsResult.records,
+        targetHouseholdId,
+        accounts: responseAccounts,
       }),
       {
         status: 200,
