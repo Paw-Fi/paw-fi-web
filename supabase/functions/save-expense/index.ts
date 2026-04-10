@@ -320,9 +320,8 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt) {
       const authResult = await authenticateUserOrInternalSecret(req, supabase);
       if (!authResult.success) {
-        const internalHeaderPresent = !!(
-          req.headers.get("X-Internal-Service-Secret") ||
-          req.headers.get("X-Moneko-Internal-Key")
+        const internalHeaderPresent = !!req.headers.get(
+          "X-Moneko-Internal-Key",
         );
         const authHeaderPresent = !!req.headers.get("Authorization");
         console.error("[save-expense] Authentication rejected", {

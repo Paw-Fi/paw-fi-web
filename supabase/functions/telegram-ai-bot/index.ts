@@ -57,7 +57,10 @@ import {
   getReplyLanguagePromptLabel,
   resolvePreferredReplyLanguage,
 } from "../shared/detect-language.ts";
-import { resolveInternalFunctionKey } from "../shared/auth.ts";
+import {
+  buildInternalInvokeHeaders,
+  resolveInternalFunctionKey,
+} from "../shared/auth.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
@@ -1577,7 +1580,7 @@ async function invokeTransactionSave(
     type === "income" ? "save-income" : "save-expense",
     {
       body,
-      headers: { "X-Moneko-Internal-Key": internalKey },
+      headers: buildInternalInvokeHeaders(internalKey),
     },
   );
 }
@@ -3452,9 +3455,7 @@ Deno.serve(async (req: Request) => {
                       isPortfolio,
                       transactions: batchTransactions,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": internalFunctionKey,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
 
@@ -3510,9 +3511,7 @@ Deno.serve(async (req: Request) => {
                       householdId,
                       includeArchived: call.args.include_archived === true,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": internalFunctionKey,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
                 const success = !error && data?.success === true;
@@ -3568,9 +3567,7 @@ Deno.serve(async (req: Request) => {
                         : undefined,
                       isDefault: call.args.is_default === true,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": internalFunctionKey,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
                 const success = !error && data?.success === true;
@@ -3637,9 +3634,7 @@ Deno.serve(async (req: Request) => {
                             ? call.args.is_default
                             : undefined,
                       },
-                      headers: {
-                        "X-Moneko-Internal-Key": internalFunctionKey,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
                   const success = !error && data?.success === true;
@@ -3720,9 +3715,7 @@ Deno.serve(async (req: Request) => {
                           call.args.date || formatDateInTimeZone(userTimezone),
                         note: call.args.note,
                       },
-                      headers: {
-                        "X-Moneko-Internal-Key": internalFunctionKey,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
                   const success = !error && data?.success === true;
@@ -3841,9 +3834,7 @@ Deno.serve(async (req: Request) => {
                       userId,
                       language,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": internalFunctionKey,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
                 const resolvedLanguage =
@@ -4194,9 +4185,8 @@ Deno.serve(async (req: Request) => {
                               expenseId,
                               updates,
                             },
-                            headers: {
-                              "X-Moneko-Internal-Key": internalFunctionKey,
-                            },
+                            headers:
+                              buildInternalInvokeHeaders(internalFunctionKey),
                           },
                         );
 
@@ -4310,9 +4300,7 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: resolved.candidate.id },
-                      headers: {
-                        "X-Moneko-Internal-Key": internalFunctionKey,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
                   const success = !error && data?.success === true;
@@ -4749,9 +4737,8 @@ Deno.serve(async (req: Request) => {
                         "delete-expense",
                         {
                           body: { userId, expenseIds: expenseId },
-                          headers: {
-                            "X-Moneko-Internal-Key": internalFunctionKey,
-                          },
+                          headers:
+                            buildInternalInvokeHeaders(internalFunctionKey),
                         },
                       );
                       const success = !error && data?.success === true;
@@ -4851,9 +4838,8 @@ Deno.serve(async (req: Request) => {
                             expenseId,
                             updates,
                           },
-                          headers: {
-                            "X-Moneko-Internal-Key": internalFunctionKey,
-                          },
+                          headers:
+                            buildInternalInvokeHeaders(internalFunctionKey),
                         },
                       );
                       const success = !error && data?.success === true;

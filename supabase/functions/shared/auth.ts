@@ -21,56 +21,86 @@ function readEnvSecret(name: string): string {
   return (Deno.env.get(name) || "").trim();
 }
 
-function getInternalServiceSecret(): string {
-  return readEnvSecret("INTERNAL_SERVICE_SECRET");
+function normalizeJwtSecret(value: string): string {
+  let normalized = (value || "").trim();
+  if (!normalized) return "";
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  // Accept values accidentally saved as "Bearer <token>".
+  while (/^bearer\s+/i.test(normalized)) {
+    normalized = normalized.replace(/^bearer\s+/i, "").trim();
+  }
+
+  return normalized;
+}
+
+function isJwtLike(value: string): boolean {
+  const token = (value || "").trim();
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  return parts.every((part) => /^[A-Za-z0-9_-]+$/.test(part));
+}
+
+function resolveGatewayInvokeJwt(): string {
+  const candidates = [
+    normalizeJwtSecret(readEnvSecret("SECRET_SUPABASE_SERVICE_ROLE_API_KEY")),
+    normalizeJwtSecret(readEnvSecret("SUPABASE_SERVICE_ROLE_KEY")),
+    normalizeJwtSecret(readEnvSecret("SUPABASE_ANON_KEY")),
+  ];
+
+  for (const candidate of candidates) {
+    if (isJwtLike(candidate)) return candidate;
+  }
+
+  return "";
 }
 
 function getSecretApiKey(): string {
-  return readEnvSecret("SECRET_API_KEY");
-}
-
-function getEdgeFunctionKey(): string {
-  return readEnvSecret("EDGE_FUNCTION_KEY");
+  return readEnvSecret("SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
 }
 
 export function resolveInternalFunctionKey(): string {
-  return (
-    getInternalServiceSecret() || getSecretApiKey() || getEdgeFunctionKey()
-  );
+  return getSecretApiKey();
 }
 
 export function resolveInternalFunctionKeyWithSource(): {
   key: string;
-  source:
-    | "INTERNAL_SERVICE_SECRET"
-    | "SECRET_API_KEY"
-    | "EDGE_FUNCTION_KEY"
-    | "none";
+  source: "SECRET_SUPABASE_SERVICE_ROLE_API_KEY" | "none";
 } {
-  const internalServiceSecret = getInternalServiceSecret();
-  if (internalServiceSecret) {
-    return { key: internalServiceSecret, source: "INTERNAL_SERVICE_SECRET" };
-  }
-
   const secretApiKey = getSecretApiKey();
   if (secretApiKey) {
-    return { key: secretApiKey, source: "SECRET_API_KEY" };
-  }
-
-  const edgeFunctionKey = getEdgeFunctionKey();
-  if (edgeFunctionKey) {
-    return { key: edgeFunctionKey, source: "EDGE_FUNCTION_KEY" };
+    return {
+      key: secretApiKey,
+      source: "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+    };
   }
 
   return { key: "", source: "none" };
 }
 
+export function buildInternalInvokeHeaders(
+  internalKey: string,
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    "X-Moneko-Internal-Key": internalKey,
+  };
+  const functionsJwt = resolveGatewayInvokeJwt();
+  if (functionsJwt) {
+    headers.Authorization = `Bearer ${functionsJwt}`;
+    headers.apikey = functionsJwt;
+  }
+  return headers;
+}
+
 function getAcceptedInternalSecrets(): string[] {
-  return [
-    getInternalServiceSecret(),
-    getSecretApiKey(),
-    getEdgeFunctionKey(),
-  ].filter((value) => value.length > 0);
+  return [getSecretApiKey()].filter((value) => value.length > 0);
 }
 
 export interface AuthResult {
@@ -140,7 +170,7 @@ export async function authenticateUser(
 /**
  * Authenticate internal service calls (processor -> sync endpoints)
  *
- * Uses X-Internal-Service-Secret header for authentication.
+ * Uses X-Moneko-Internal-Key header for authentication.
  * Returns the user_id from the request body for the connection being processed.
  *
  * @param req - The incoming request
@@ -150,9 +180,9 @@ export async function authenticateUser(
 export async function authenticateInternalService(
   req: Request,
 ): Promise<AuthResult> {
-  const internalServiceSecret = getInternalServiceSecret();
+  const internalServiceSecret = getSecretApiKey();
   if (!internalServiceSecret) {
-    console.error("INTERNAL_SERVICE_SECRET not configured");
+    console.error("SECRET_SUPABASE_SERVICE_ROLE_API_KEY not configured");
     return {
       success: false,
       error: "Internal service authentication not configured",
@@ -160,8 +190,7 @@ export async function authenticateInternalService(
     };
   }
 
-  const internalSecret =
-    req.headers.get("X-Internal-Service-Secret")?.trim() || "";
+  const internalSecret = req.headers.get("X-Moneko-Internal-Key")?.trim() || "";
 
   if (!internalSecret) {
     return {
@@ -190,9 +219,7 @@ export async function authenticateInternalService(
 /**
  * Authenticate internal calls coming from other Edge Functions.
  *
- * Accepts either:
- * - X-Internal-Service-Secret (preferred, reused by other internal jobs)
- * - X-Moneko-Internal-Key (legacy/alternate, used by WhatsApp bot)
+ * Accepts X-Moneko-Internal-Key for internal calls.
  */
 export async function authenticateInternalSecret(
   req: Request,
@@ -201,7 +228,7 @@ export async function authenticateInternalSecret(
 
   if (acceptedSecrets.length === 0) {
     console.error(
-      "No internal auth secret configured (INTERNAL_SERVICE_SECRET/SECRET_API_KEY/EDGE_FUNCTION_KEY)",
+      "No internal auth secret configured (SECRET_SUPABASE_SERVICE_ROLE_API_KEY)",
     );
     return {
       success: false,
@@ -210,9 +237,7 @@ export async function authenticateInternalSecret(
     };
   }
 
-  const provided =
-    req.headers.get("X-Internal-Service-Secret") ||
-    req.headers.get("X-Moneko-Internal-Key");
+  const provided = req.headers.get("X-Moneko-Internal-Key");
   const normalizedProvided = provided?.trim() || "";
   if (!normalizedProvided) {
     return {

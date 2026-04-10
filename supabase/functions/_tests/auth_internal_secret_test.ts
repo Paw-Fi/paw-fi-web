@@ -11,14 +11,12 @@ function restoreEnv(key: string, value: string | undefined) {
 }
 
 Deno.test("authenticateInternalSecret re-reads env on each call", async () => {
-  const originalSecretApiKey = Deno.env.get("SECRET_API_KEY");
-  const originalEdgeFunctionKey = Deno.env.get("EDGE_FUNCTION_KEY");
-  const originalInternalServiceSecret = Deno.env.get("INTERNAL_SERVICE_SECRET");
+  const originalSecretApiKey = Deno.env.get(
+    "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+  );
 
   try {
-    Deno.env.delete("EDGE_FUNCTION_KEY");
-    Deno.env.delete("INTERNAL_SERVICE_SECRET");
-    Deno.env.set("SECRET_API_KEY", "first-secret");
+    Deno.env.set("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", "first-secret");
 
     const { authenticateInternalSecret } = await import(
       `../shared/auth.ts?test=${crypto.randomUUID()}`
@@ -31,7 +29,7 @@ Deno.test("authenticateInternalSecret re-reads env on each call", async () => {
     );
     assertEquals(first.success, true);
 
-    Deno.env.set("SECRET_API_KEY", "rotated-secret");
+    Deno.env.set("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", "rotated-secret");
 
     const second = await authenticateInternalSecret(
       new Request("http://localhost", {
@@ -40,41 +38,30 @@ Deno.test("authenticateInternalSecret re-reads env on each call", async () => {
     );
     assertEquals(second.success, true);
   } finally {
-    restoreEnv("SECRET_API_KEY", originalSecretApiKey);
-    restoreEnv("EDGE_FUNCTION_KEY", originalEdgeFunctionKey);
-    restoreEnv("INTERNAL_SERVICE_SECRET", originalInternalServiceSecret);
+    restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
   }
 });
 
 Deno.test(
-  "resolveInternalFunctionKey prefers INTERNAL_SERVICE_SECRET",
+  "resolveInternalFunctionKey prefers SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
   async () => {
-    const originalSecretApiKey = Deno.env.get("SECRET_API_KEY");
-    const originalEdgeFunctionKey = Deno.env.get("EDGE_FUNCTION_KEY");
-    const originalInternalServiceSecret = Deno.env.get(
-      "INTERNAL_SERVICE_SECRET",
+    const originalSecretApiKey = Deno.env.get(
+      "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
     );
 
     try {
-      Deno.env.set("INTERNAL_SERVICE_SECRET", "internal-secret");
-      Deno.env.set("SECRET_API_KEY", "secret-api-key");
-      Deno.env.set("EDGE_FUNCTION_KEY", "edge-function-key");
+      Deno.env.set("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", "secret-api-key");
 
       const { resolveInternalFunctionKey } = await import(
         `../shared/auth.ts?test=${crypto.randomUUID()}`
       );
 
-      assertEquals(resolveInternalFunctionKey(), "internal-secret");
-
-      Deno.env.delete("INTERNAL_SERVICE_SECRET");
       assertEquals(resolveInternalFunctionKey(), "secret-api-key");
 
-      Deno.env.delete("SECRET_API_KEY");
-      assertEquals(resolveInternalFunctionKey(), "edge-function-key");
+      Deno.env.delete("SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
+      assertEquals(resolveInternalFunctionKey(), "");
     } finally {
-      restoreEnv("SECRET_API_KEY", originalSecretApiKey);
-      restoreEnv("EDGE_FUNCTION_KEY", originalEdgeFunctionKey);
-      restoreEnv("INTERNAL_SERVICE_SECRET", originalInternalServiceSecret);
+      restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
     }
   },
 );
@@ -82,38 +69,27 @@ Deno.test(
 Deno.test(
   "resolveInternalFunctionKeyWithSource reports selected source",
   async () => {
-    const originalSecretApiKey = Deno.env.get("SECRET_API_KEY");
-    const originalEdgeFunctionKey = Deno.env.get("EDGE_FUNCTION_KEY");
-    const originalInternalServiceSecret = Deno.env.get(
-      "INTERNAL_SERVICE_SECRET",
+    const originalSecretApiKey = Deno.env.get(
+      "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
     );
 
     try {
-      Deno.env.set("INTERNAL_SERVICE_SECRET", "internal-secret");
-      Deno.env.set("SECRET_API_KEY", "secret-api-key");
-      Deno.env.set("EDGE_FUNCTION_KEY", "edge-function-key");
+      Deno.env.set("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", "secret-api-key");
 
       const { resolveInternalFunctionKeyWithSource } = await import(
         `../shared/auth.ts?test=${crypto.randomUUID()}`
       );
 
       const first = resolveInternalFunctionKeyWithSource();
-      assertEquals(first.source, "INTERNAL_SERVICE_SECRET");
-      assertEquals(first.key, "internal-secret");
+      assertEquals(first.source, "SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
+      assertEquals(first.key, "secret-api-key");
 
-      Deno.env.delete("INTERNAL_SERVICE_SECRET");
+      Deno.env.delete("SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
       const second = resolveInternalFunctionKeyWithSource();
-      assertEquals(second.source, "SECRET_API_KEY");
-      assertEquals(second.key, "secret-api-key");
-
-      Deno.env.delete("SECRET_API_KEY");
-      const third = resolveInternalFunctionKeyWithSource();
-      assertEquals(third.source, "EDGE_FUNCTION_KEY");
-      assertEquals(third.key, "edge-function-key");
+      assertEquals(second.source, "none");
+      assertEquals(second.key, "");
     } finally {
-      restoreEnv("SECRET_API_KEY", originalSecretApiKey);
-      restoreEnv("EDGE_FUNCTION_KEY", originalEdgeFunctionKey);
-      restoreEnv("INTERNAL_SERVICE_SECRET", originalInternalServiceSecret);
+      restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
     }
   },
 );

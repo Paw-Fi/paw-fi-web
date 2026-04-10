@@ -5,7 +5,9 @@ import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
+const INTERNAL_FUNCTION_KEY = Deno.env.get(
+  "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+);
 
 // Fixed batch size to prevent DoS attacks
 const BATCH_SIZE = 10;
@@ -47,9 +49,9 @@ Deno.serve(async (req) => {
 
   // CRITICAL: Authenticate internal service calls only
   // This endpoint should NOT be publicly accessible
-  if (!INTERNAL_SERVICE_SECRET) {
+  if (!INTERNAL_FUNCTION_KEY) {
     console.error(
-      "[bank-sync-processor] INTERNAL_SERVICE_SECRET not configured",
+      "[bank-sync-processor] SECRET_SUPABASE_SERVICE_ROLE_API_KEY not configured",
     );
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
@@ -60,10 +62,10 @@ Deno.serve(async (req) => {
     );
   }
 
-  const providedSecret = req.headers.get("X-Internal-Service-Secret");
+  const providedSecret = req.headers.get("X-Moneko-Internal-Key");
   if (
     !providedSecret ||
-    !constantTimeCompare(providedSecret, INTERNAL_SERVICE_SECRET)
+    !constantTimeCompare(providedSecret, INTERNAL_FUNCTION_KEY)
   ) {
     console.warn("[bank-sync-processor] Unauthorized access attempt");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -171,9 +173,17 @@ Deno.serve(async (req) => {
 
         // Process based on provider
         if (connection.provider === TINK_PROVIDER) {
-          await processTinkJob(supabase, job, connection as BankConnection);
+          await processTinkJob(
+            supabase as any,
+            job,
+            connection as BankConnection,
+          );
         } else if (connection.provider === PLAID_PROVIDER) {
-          await processPlaidJob(supabase, job, connection as BankConnection);
+          await processPlaidJob(
+            supabase as any,
+            job,
+            connection as BankConnection,
+          );
         } else {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
@@ -237,7 +247,7 @@ Deno.serve(async (req) => {
 });
 
 async function processTinkJob(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
@@ -280,7 +290,7 @@ async function processTinkJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET!,
+        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY!,
       },
       body: JSON.stringify({
         connectionId: connection.id,
@@ -295,7 +305,7 @@ async function processTinkJob(
 }
 
 async function processPlaidJob(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
@@ -307,7 +317,7 @@ async function processPlaidJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET!,
+        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY!,
       },
       body: JSON.stringify({
         connectionId: connection.id,

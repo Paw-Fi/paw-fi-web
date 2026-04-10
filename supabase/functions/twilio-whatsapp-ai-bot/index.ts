@@ -57,6 +57,7 @@ import {
   resolvePreferredReplyLanguage,
 } from "../shared/detect-language.ts";
 import {
+  buildInternalInvokeHeaders,
   resolveInternalFunctionKey,
   resolveInternalFunctionKeyWithSource,
 } from "../shared/auth.ts";
@@ -1497,7 +1498,7 @@ async function invokeTransactionSave(
     type === "income" ? "save-income" : "save-expense",
     {
       body,
-      headers: { "X-Moneko-Internal-Key": internalKey },
+      headers: buildInternalInvokeHeaders(internalKey),
     },
   );
 }
@@ -1567,6 +1568,43 @@ function fingerprintSecret(secret: string): string {
     hash = ((hash << 5) - hash + secret.charCodeAt(i)) | 0;
   }
   return Math.abs(hash).toString(16).slice(0, 8);
+}
+
+function decodeJwtPayloadMeta(token: string | null | undefined): {
+  role: string | null;
+  iss: string | null;
+  projectRef: string | null;
+} {
+  const raw = (token || "").trim();
+  if (!raw) return { role: null, iss: null, projectRef: null };
+  let jwt = raw;
+  if (
+    (jwt.startsWith('"') && jwt.endsWith('"')) ||
+    (jwt.startsWith("'") && jwt.endsWith("'"))
+  ) {
+    jwt = jwt.slice(1, -1).trim();
+  }
+  while (/^bearer\s+/i.test(jwt)) {
+    jwt = jwt.replace(/^bearer\s+/i, "").trim();
+  }
+  const parts = jwt.split(".");
+  if (parts.length < 2) return { role: null, iss: null, projectRef: null };
+  try {
+    const payloadSegment = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded =
+      payloadSegment + "=".repeat((4 - (payloadSegment.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const iss = typeof payload?.iss === "string" ? payload.iss : null;
+    const role = typeof payload?.role === "string" ? payload.role : null;
+    let projectRef: string | null = null;
+    if (iss) {
+      const match = iss.match(/^https:\/\/([a-z0-9-]+)\.supabase\.co/i);
+      projectRef = match?.[1] || null;
+    }
+    return { role, iss, projectRef };
+  } catch {
+    return { role: null, iss: null, projectRef: null };
+  }
 }
 
 function getTwilioMessageSid(formData: FormData): string | null {
@@ -2060,10 +2098,44 @@ Deno.serve(async (req: Request) => {
   }
 
   if (WHATSAPP_DEBUG) {
+    const secretSupabaseServiceRoleApiKey =
+      Deno.env.get("SECRET_SUPABASE_SERVICE_ROLE_API_KEY") || "";
+    const activeInvokeJwt =
+      secretSupabaseServiceRoleApiKey || SUPABASE_SERVICE_ROLE_KEY || "";
+    const serviceRoleMeta = decodeJwtPayloadMeta(activeInvokeJwt);
+    const serviceRoleRaw = (SUPABASE_SERVICE_ROLE_KEY || "").trim();
+    const anonRaw = (SUPABASE_ANON_KEY || "").trim();
+    const secretApiRaw = secretSupabaseServiceRoleApiKey.trim();
     console.log("[twilio-whatsapp-ai-bot] Internal invoke auth config", {
       source: internalKeyMeta.source,
       fingerprint: fingerprintSecret(internalKeyMeta.key),
       keyLength: internalKeyMeta.key.length,
+      hasSecretApiKey: !!secretSupabaseServiceRoleApiKey,
+      secretApiKeyFingerprint: fingerprintSecret(
+        secretSupabaseServiceRoleApiKey,
+      ),
+      secretApiKeyLooksJwt:
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(secretApiRaw),
+      secretApiKeyDotCount: secretApiRaw
+        ? secretApiRaw.split(".").length - 1
+        : 0,
+      hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      serviceRoleFingerprint: fingerprintSecret(
+        SUPABASE_SERVICE_ROLE_KEY || "",
+      ),
+      serviceRoleLooksJwt:
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(serviceRoleRaw),
+      serviceRoleDotCount: serviceRoleRaw
+        ? serviceRoleRaw.split(".").length - 1
+        : 0,
+      anonLooksJwt: /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+        anonRaw,
+      ),
+      anonDotCount: anonRaw ? anonRaw.split(".").length - 1 : 0,
+      activeInvokeJwtFingerprint: fingerprintSecret(activeInvokeJwt),
+      serviceRoleRole: serviceRoleMeta.role,
+      serviceRoleProjectRef: serviceRoleMeta.projectRef,
+      hasAnonKey: !!SUPABASE_ANON_KEY,
     });
   }
 
@@ -3036,9 +3108,9 @@ Deno.serve(async (req: Request) => {
                           expenseId: resolved.candidate.id,
                           updates,
                         },
-                        headers: {
-                          "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                        },
+                        headers: buildInternalInvokeHeaders(
+                          INTERNAL_FUNCTION_KEY,
+                        ),
                       },
                     );
                     const success = !error && data?.success === true;
@@ -3112,7 +3184,7 @@ Deno.serve(async (req: Request) => {
                 "delete-expense",
                 {
                   body: { userId, expenseIds: resolved.candidate.id },
-                  headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                 },
               );
               const success = !error && data?.success === true;
@@ -3328,7 +3400,7 @@ Deno.serve(async (req: Request) => {
                     transactions: batchTransactions,
                   },
                   headers: internalKey
-                    ? { "X-Moneko-Internal-Key": internalKey }
+                    ? buildInternalInvokeHeaders(internalKey)
                     : {},
                 },
               );
@@ -5196,6 +5268,41 @@ Deno.serve(async (req: Request) => {
                 : "expense";
 
             if (type === "income") {
+              const invokeHeaders = buildInternalInvokeHeaders(
+                INTERNAL_FUNCTION_KEY,
+              );
+              if (WHATSAPP_DEBUG) {
+                const invokeAuthMeta = decodeJwtPayloadMeta(
+                  invokeHeaders.Authorization,
+                );
+                console.log(
+                  "[twilio-whatsapp-ai-bot] save-income invoke auth debug",
+                  {
+                    hasInternalKeyHeader:
+                      typeof invokeHeaders["X-Moneko-Internal-Key"] ===
+                        "string" &&
+                      invokeHeaders["X-Moneko-Internal-Key"].length > 0,
+                    internalKeyFingerprint: fingerprintSecret(
+                      invokeHeaders["X-Moneko-Internal-Key"] || "",
+                    ),
+                    hasAuthorization:
+                      typeof invokeHeaders.Authorization === "string" &&
+                      invokeHeaders.Authorization.length > 0,
+                    authStartsWithBearer:
+                      typeof invokeHeaders.Authorization === "string" &&
+                      /^Bearer\s+/i.test(invokeHeaders.Authorization),
+                    authLooksJwt:
+                      typeof invokeHeaders.Authorization === "string" &&
+                      /^Bearer\s+[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+                        invokeHeaders.Authorization,
+                      ),
+                    authRole: invokeAuthMeta.role,
+                    authProjectRef: invokeAuthMeta.projectRef,
+                    expectedProjectRef: "qbuynyxyemigtnvdujts",
+                  },
+                );
+              }
+
               const payload = {
                 userId,
                 amount: call.args.amount,
@@ -5216,7 +5323,7 @@ Deno.serve(async (req: Request) => {
                 "save-income",
                 {
                   body: payload,
-                  headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                  headers: invokeHeaders,
                 },
               );
               const success = !error && data?.success === true;
@@ -5281,7 +5388,7 @@ Deno.serve(async (req: Request) => {
                 "save-expense",
                 {
                   body: payload,
-                  headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                 },
               );
               const success = !error && data?.success === true;
@@ -5447,7 +5554,7 @@ Deno.serve(async (req: Request) => {
               "save-transactions-batch",
               {
                 body: batchPayload,
-                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
 
@@ -5508,7 +5615,7 @@ Deno.serve(async (req: Request) => {
                   householdId,
                   includeArchived: call.args.include_archived === true,
                 },
-                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
             const success = !error && data?.success === true;
@@ -5560,7 +5667,7 @@ Deno.serve(async (req: Request) => {
                     : undefined,
                   isDefault: call.args.is_default === true,
                 },
-                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
             const success = !error && data?.success === true;
@@ -5625,7 +5732,7 @@ Deno.serve(async (req: Request) => {
                       ? call.args.is_default
                       : undefined,
                 },
-                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
             const success = !error && data?.success === true;
@@ -5706,7 +5813,7 @@ Deno.serve(async (req: Request) => {
                   ),
                   note: call.args.note,
                 },
-                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
             const success = !error && data?.success === true;
@@ -5893,9 +6000,9 @@ Deno.serve(async (req: Request) => {
                           "update-expense",
                           {
                             body: { userId, expenseId, updates },
-                            headers: {
-                              "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                            },
+                            headers: buildInternalInvokeHeaders(
+                              INTERNAL_FUNCTION_KEY,
+                            ),
                           },
                         );
                         const success = !error && data?.success === true;
@@ -6010,9 +6117,9 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: expenseId },
-                      headers: {
-                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(
+                        INTERNAL_FUNCTION_KEY,
+                      ),
                     },
                   );
                   const success = !error && data?.success === true;
@@ -6198,7 +6305,7 @@ Deno.serve(async (req: Request) => {
                   userId,
                   language,
                 },
-                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
             const resolvedLanguage =
@@ -6690,7 +6797,7 @@ Deno.serve(async (req: Request) => {
                   "save-income",
                   {
                     body: payload,
-                    headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                    headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                   },
                 );
                 const success = !error && data?.success === true;
@@ -6756,7 +6863,7 @@ Deno.serve(async (req: Request) => {
                   "save-expense",
                   {
                     body: payload,
-                    headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
+                    headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                   },
                 );
                 const success = !error && data?.success === true;
@@ -6978,9 +7085,9 @@ Deno.serve(async (req: Request) => {
                       "update-expense",
                       {
                         body: requestBody,
-                        headers: {
-                          "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                        },
+                        headers: buildInternalInvokeHeaders(
+                          INTERNAL_FUNCTION_KEY,
+                        ),
                       },
                     );
                     const success = !error && data?.success === true;
@@ -7049,9 +7156,9 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: expenseId },
-                      headers: {
-                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(
+                        INTERNAL_FUNCTION_KEY,
+                      ),
                     },
                   );
                   const success = !error && data?.success === true;
