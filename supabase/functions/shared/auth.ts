@@ -34,7 +34,35 @@ function getEdgeFunctionKey(): string {
 }
 
 export function resolveInternalFunctionKey(): string {
-  return getSecretApiKey() || getEdgeFunctionKey();
+  return (
+    getInternalServiceSecret() || getSecretApiKey() || getEdgeFunctionKey()
+  );
+}
+
+export function resolveInternalFunctionKeyWithSource(): {
+  key: string;
+  source:
+    | "INTERNAL_SERVICE_SECRET"
+    | "SECRET_API_KEY"
+    | "EDGE_FUNCTION_KEY"
+    | "none";
+} {
+  const internalServiceSecret = getInternalServiceSecret();
+  if (internalServiceSecret) {
+    return { key: internalServiceSecret, source: "INTERNAL_SERVICE_SECRET" };
+  }
+
+  const secretApiKey = getSecretApiKey();
+  if (secretApiKey) {
+    return { key: secretApiKey, source: "SECRET_API_KEY" };
+  }
+
+  const edgeFunctionKey = getEdgeFunctionKey();
+  if (edgeFunctionKey) {
+    return { key: edgeFunctionKey, source: "EDGE_FUNCTION_KEY" };
+  }
+
+  return { key: "", source: "none" };
 }
 
 function getAcceptedInternalSecrets(): string[] {
@@ -132,8 +160,8 @@ export async function authenticateInternalService(
     };
   }
 
-  const internalSecret = req.headers.get("X-Internal-Service-Secret")?.trim() ||
-    "";
+  const internalSecret =
+    req.headers.get("X-Internal-Service-Secret")?.trim() || "";
 
   if (!internalSecret) {
     return {
@@ -182,7 +210,8 @@ export async function authenticateInternalSecret(
     };
   }
 
-  const provided = req.headers.get("X-Internal-Service-Secret") ||
+  const provided =
+    req.headers.get("X-Internal-Service-Secret") ||
     req.headers.get("X-Moneko-Internal-Key");
   const normalizedProvided = provided?.trim() || "";
   if (!normalizedProvided) {
@@ -194,7 +223,7 @@ export async function authenticateInternalSecret(
   }
 
   const ok = acceptedSecrets.some((secret) =>
-    constantTimeCompare(normalizedProvided, secret)
+    constantTimeCompare(normalizedProvided, secret),
   );
   if (!ok) {
     console.warn("Invalid internal secret attempt");
