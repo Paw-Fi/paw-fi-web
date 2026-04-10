@@ -140,8 +140,6 @@ const GOOGLE_CLOUD_SERVICE_ACCOUNT =
 const DEBUG_LOGS = Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
 const GEMINI_FALLBACK_MODEL_NAMES = [
   "gemini-3.1-flash-lite-preview",
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash",
   "gemini-2.5-pro",
 ] as const;
 
