@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 // Supabase Edge Function: twilio-whatsapp-ai-bot
 // Handles WhatsApp messages via Twilio, using Gemini AI and MCP-style tools.
 
@@ -54,6 +56,7 @@ import {
   getReplyLanguagePromptLabel,
   resolvePreferredReplyLanguage,
 } from "../shared/detect-language.ts";
+import { resolveInternalFunctionKey } from "../shared/auth.ts";
 
 // --- Constants & Types ---
 
@@ -1499,6 +1502,64 @@ async function invokeTransactionSave(
   );
 }
 
+function getInvokeHttpStatus(error: unknown): number | undefined {
+  const candidate = error as Record<string, any> | null | undefined;
+  const contextStatus = candidate?.context?.status;
+  if (typeof contextStatus === "number") return contextStatus;
+  const status = candidate?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
+async function reportTwilioToolInvokeFailure(params: {
+  toolName: string;
+  targetFunction: string;
+  formatted: string;
+  error?: unknown;
+  context?: Record<string, unknown>;
+}) {
+  try {
+    await reportEdgeFunctionError({
+      functionName: "twilio-whatsapp-ai-bot",
+      error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
+      context: {
+        step: `tool:${params.toolName}`,
+        toolName: params.toolName,
+        targetFunction: params.targetFunction,
+        httpStatus: getInvokeHttpStatus(params.error),
+        ...params.context,
+      },
+    });
+  } catch (reportError) {
+    console.error("[twilio-whatsapp-ai-bot] reportEdgeFunctionError failed", {
+      toolName: params.toolName,
+      targetFunction: params.targetFunction,
+      error: String(reportError),
+    });
+  }
+}
+
+function buildMutationFailureText(
+  toolName: string | null,
+  toolResult: unknown,
+): string | null {
+  const error = typeof (toolResult as Record<string, any> | null)?.error ===
+      "string"
+    ? (toolResult as Record<string, string>).error.trim()
+    : "";
+  if (!error) return null;
+
+  if (toolName === "add_transaction") {
+    return `I couldn't save that transaction. ${error.slice(0, 180)}`;
+  }
+  if (toolName === "add_transactions_batch") {
+    return `I couldn't save those transactions. ${error.slice(0, 180)}`;
+  }
+  if (toolName === "manage_recurring") {
+    return `I couldn't save that recurring transaction. ${error.slice(0, 180)}`;
+  }
+  return null;
+}
+
 function getTwilioMessageSid(formData: FormData): string | null {
   const candidates = ["MessageSid", "SmsMessageSid", "SmsSid"];
   for (const key of candidates) {
@@ -1970,10 +2031,9 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
   const WHATSAPP_DEBUG =
     (Deno.env.get("WHATSAPP_DEBUG") || "").toUpperCase() === "TRUE";
-  const EDGE_FUNCTION_KEY = (SECRET_API_KEY || "").trim();
+  const INTERNAL_FUNCTION_KEY = resolveInternalFunctionKey();
   const TWILIO_SKIP_SIGNATURE =
     (Deno.env.get("TWILIO_SKIP_SIGNATURE") || "").toLowerCase() === "true";
 
@@ -1984,7 +2044,7 @@ Deno.serve(async (req: Request) => {
     !SUPABASE_URL ||
     !SUPABASE_SERVICE_ROLE_KEY ||
     !GEMINI_API_KEY ||
-    !EDGE_FUNCTION_KEY
+    !INTERNAL_FUNCTION_KEY
   ) {
     console.error("Missing environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
@@ -2942,7 +3002,7 @@ Deno.serve(async (req: Request) => {
                     .join(" | ")
                     .slice(0, 180);
 
-                  if (!EDGE_FUNCTION_KEY) {
+                  if (!INTERNAL_FUNCTION_KEY) {
                     console.error(
                       "[twilio-whatsapp-ai-bot] update-expense invoke skipped: missing internal key",
                       {
@@ -2961,7 +3021,7 @@ Deno.serve(async (req: Request) => {
                           updates,
                         },
                         headers: {
-                          "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
+                          "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
                         },
                       },
                     );
@@ -3036,7 +3096,7 @@ Deno.serve(async (req: Request) => {
                 "delete-expense",
                 {
                   body: { userId, expenseIds: resolved.candidate.id },
-                  headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                  headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
                 },
               );
               const success = !error && data?.success === true;
@@ -3113,7 +3173,7 @@ Deno.serve(async (req: Request) => {
             }
             const { data, error } = await invokeTransactionSave(
               supabase,
-              EDGE_FUNCTION_KEY,
+              INTERNAL_FUNCTION_KEY,
               userId,
               {
                 type: call.args.type || "expense",
@@ -3232,10 +3292,8 @@ Deno.serve(async (req: Request) => {
                 continue;
               }
 
-              // Call save-transactions-batch via direct function invoke
-              // Note: App mode doesn't have EDGE_FUNCTION_KEY context, use direct DB access
-              const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
-              const internalKey = (SECRET_API_KEY || "").trim();
+              // Call save-transactions-batch via direct function invoke.
+              const internalKey = INTERNAL_FUNCTION_KEY;
 
               const { data, error } = await supabase.functions.invoke(
                 "save-transactions-batch",
@@ -4820,6 +4878,12 @@ Deno.serve(async (req: Request) => {
         ? response.text()
         : buildProcessingFailureMessage(userLang);
     }
+    if (functionCalls && functionCalls.length > 0) {
+      // Ignore optimistic model text while tools are still pending. The durable
+      // source of truth for write actions is the tool result, not the first
+      // model draft.
+      finalResponseText = "";
+    }
     let persistedContent: string | undefined;
 
     // Tool-call loop (bounded) to support multi-round function calling.
@@ -5122,21 +5186,36 @@ Deno.serve(async (req: Request) => {
                 "save-income",
                 {
                   body: payload,
-                  headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                  headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
                 },
               );
               const success = !error && data?.success === true;
+              const formatted = success
+                ? ""
+                : formatInvokeError(error ?? data?.error) ||
+                  "Failed to save income";
               toolResult = success
                 ? { success: true, data: data?.data ?? data }
-                : { error: error ?? data?.error };
+                : { error: formatted };
               if (!success) {
-                const formatted = formatInvokeError(error ?? data?.error);
                 if (WHATSAPP_DEBUG) {
                   debugNotes.push(`add-income error: ${formatted}`);
                 }
                 console.error("[twilio-whatsapp-ai-bot] add-income error", {
                   error,
                   formatted,
+                });
+                await reportTwilioToolInvokeFailure({
+                  toolName: "add_transaction",
+                  targetFunction: "save-income",
+                  formatted,
+                  error: error ?? data?.error,
+                  context: {
+                    type,
+                    amount: call.args.amount,
+                    category: call.args.category,
+                    householdId,
+                  },
                 });
               }
             } else {
@@ -5172,21 +5251,36 @@ Deno.serve(async (req: Request) => {
                 "save-expense",
                 {
                   body: payload,
-                  headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                  headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
                 },
               );
               const success = !error && data?.success === true;
+              const formatted = success
+                ? ""
+                : formatInvokeError(error ?? data?.error) ||
+                  "Failed to save expense";
               toolResult = success
                 ? { success: true, data: data?.data ?? data }
-                : { error: error ?? data?.error };
+                : { error: formatted };
               if (!success) {
-                const formatted = formatInvokeError(error ?? data?.error);
                 if (WHATSAPP_DEBUG) {
                   debugNotes.push(`add-expense error: ${formatted}`);
                 }
                 console.error("[twilio-whatsapp-ai-bot] add-expense error", {
                   error,
                   formatted,
+                });
+                await reportTwilioToolInvokeFailure({
+                  toolName: "add_transaction",
+                  targetFunction: "save-expense",
+                  formatted,
+                  error: error ?? data?.error,
+                  context: {
+                    type,
+                    amount: call.args.amount,
+                    category: call.args.category,
+                    householdId,
+                  },
                 });
               }
             }
@@ -5315,7 +5409,7 @@ Deno.serve(async (req: Request) => {
               "save-transactions-batch",
               {
                 body: batchPayload,
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
               },
             );
 
@@ -5339,6 +5433,17 @@ Deno.serve(async (req: Request) => {
                 "[twilio-whatsapp-ai-bot] add_transactions_batch error",
                 { error, formatted },
               );
+              await reportTwilioToolInvokeFailure({
+                toolName: "add_transactions_batch",
+                targetFunction: "save-transactions-batch",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  count: batchTransactions.length,
+                  householdId,
+                  isPortfolio,
+                },
+              });
               toolResult = {
                 error: formatted || "Failed to save transactions",
               };
@@ -5365,13 +5470,24 @@ Deno.serve(async (req: Request) => {
                   householdId,
                   includeArchived: call.args.include_archived === true,
                 },
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
               },
             );
             const success = !error && data?.success === true;
-            toolResult = success
-              ? { success: true, data: data?.data ?? [] }
-              : { error: error ?? data?.error ?? "Failed to list wallets" };
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? [] };
+            } else {
+              const formatted = formatInvokeError(error ?? data?.error) ||
+                "Failed to list wallets";
+              await reportTwilioToolInvokeFailure({
+                toolName: "list_wallets",
+                targetFunction: "list-wallets",
+                formatted,
+                error: error ?? data?.error,
+                context: { householdId },
+              });
+              toolResult = { error: formatted };
+            }
           } else if (call.name === "create_wallet") {
             let householdId = call.args.household_id as string | null;
             const householdName = (
@@ -5405,13 +5521,24 @@ Deno.serve(async (req: Request) => {
                     : undefined,
                   isDefault: call.args.is_default === true,
                 },
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
               },
             );
             const success = !error && data?.success === true;
-            toolResult = success
-              ? { success: true, data: data?.data ?? data }
-              : { error: error ?? data?.error ?? "Failed to create wallet" };
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? data };
+            } else {
+              const formatted = formatInvokeError(error ?? data?.error) ||
+                "Failed to create wallet";
+              await reportTwilioToolInvokeFailure({
+                toolName: "create_wallet",
+                targetFunction: "save-wallet",
+                formatted,
+                error: error ?? data?.error,
+                context: { householdId, name: call.args.name },
+              });
+              toolResult = { error: formatted };
+            }
           } else if (call.name === "update_wallet") {
             let householdId = call.args.household_id as string | null;
             const householdName = (
@@ -5456,13 +5583,27 @@ Deno.serve(async (req: Request) => {
                     ? call.args.is_default
                     : undefined,
                 },
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
               },
             );
             const success = !error && data?.success === true;
-            toolResult = success
-              ? { success: true, data: data?.data ?? data }
-              : { error: error ?? data?.error ?? "Failed to update wallet" };
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? data };
+            } else {
+              const formatted = formatInvokeError(error ?? data?.error) ||
+                "Failed to update wallet";
+              await reportTwilioToolInvokeFailure({
+                toolName: "update_wallet",
+                targetFunction: "update-wallet",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  householdId,
+                  walletName: call.args.wallet_name,
+                },
+              });
+              toolResult = { error: formatted };
+            }
           } else if (call.name === "create_wallet_transfer") {
             let householdId = call.args.household_id as string | null;
             const householdName = (
@@ -5520,16 +5661,29 @@ Deno.serve(async (req: Request) => {
                   ),
                   note: call.args.note,
                 },
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
               },
             );
             const success = !error && data?.success === true;
-            toolResult = success
-              ? { success: true, data: data?.data ?? data }
-              : {
-                error: error ?? data?.error ??
-                  "Failed to create wallet transfer",
-              };
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? data };
+            } else {
+              const formatted = formatInvokeError(error ?? data?.error) ||
+                "Failed to create wallet transfer";
+              await reportTwilioToolInvokeFailure({
+                toolName: "create_wallet_transfer",
+                targetFunction: "create-wallet-transfer",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  householdId,
+                  fromWallet: call.args.from_wallet_name,
+                  toWallet: call.args.to_wallet_name,
+                  amount: call.args.amount,
+                },
+              });
+              toolResult = { error: formatted };
+            }
           } else if (call.name === "update_transaction") {
             const updatesArgs = call.args?.updates &&
                 typeof call.args.updates === "object" &&
@@ -5676,7 +5830,7 @@ Deno.serve(async (req: Request) => {
                         .join(" | ")
                         .slice(0, 180);
 
-                      if (!EDGE_FUNCTION_KEY) {
+                      if (!INTERNAL_FUNCTION_KEY) {
                         console.error(
                           "[twilio-whatsapp-ai-bot] update-expense invoke skipped: missing internal key",
                           {
@@ -5691,7 +5845,7 @@ Deno.serve(async (req: Request) => {
                           {
                             body: { userId, expenseId, updates },
                             headers: {
-                              "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
+                              "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
                             },
                           },
                         );
@@ -5808,7 +5962,7 @@ Deno.serve(async (req: Request) => {
                     {
                       body: { userId, expenseIds: expenseId },
                       headers: {
-                        "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
+                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
                       },
                     },
                   );
@@ -5993,7 +6147,7 @@ Deno.serve(async (req: Request) => {
                   userId,
                   language,
                 },
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
               },
             );
             const resolvedLanguage = data?.results?.preferredLanguage ||
@@ -6482,15 +6636,18 @@ Deno.serve(async (req: Request) => {
                   "save-income",
                   {
                     body: payload,
-                    headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                    headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
                   },
                 );
                 const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save recurring income";
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
-                  : { error: error ?? data?.error };
+                  : { error: formatted };
                 if (!success) {
-                  const formatted = formatInvokeError(error ?? data?.error);
                   if (WHATSAPP_DEBUG) {
                     debugNotes.push(
                       `save-income (recurring add) error: ${formatted}`,
@@ -6500,6 +6657,19 @@ Deno.serve(async (req: Request) => {
                     "[twilio-whatsapp-ai-bot] save-income recurring add error",
                     { error, formatted },
                   );
+                  await reportTwilioToolInvokeFailure({
+                    toolName: "manage_recurring",
+                    targetFunction: "save-income",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      action,
+                      type,
+                      amount: call.args.amount,
+                      category: call.args.category,
+                      householdId,
+                    },
+                  });
                 }
               } else {
                 const isHouseholdExpense = !!householdId;
@@ -6532,15 +6702,18 @@ Deno.serve(async (req: Request) => {
                   "save-expense",
                   {
                     body: payload,
-                    headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                    headers: { "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY },
                   },
                 );
                 const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save recurring expense";
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
-                  : { error: error ?? data?.error };
+                  : { error: formatted };
                 if (!success) {
-                  const formatted = formatInvokeError(error ?? data?.error);
                   if (WHATSAPP_DEBUG) {
                     debugNotes.push(
                       `save-expense (recurring add) error: ${formatted}`,
@@ -6550,6 +6723,19 @@ Deno.serve(async (req: Request) => {
                     "[twilio-whatsapp-ai-bot] save-expense recurring add error",
                     { error, formatted },
                   );
+                  await reportTwilioToolInvokeFailure({
+                    toolName: "manage_recurring",
+                    targetFunction: "save-expense",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      action,
+                      type,
+                      amount: call.args.amount,
+                      category: call.args.category,
+                      householdId,
+                    },
+                  });
                 }
               }
             } else if (action === "update") {
@@ -6724,15 +6910,20 @@ Deno.serve(async (req: Request) => {
                       "update-expense",
                       {
                         body: requestBody,
-                        headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                        headers: {
+                          "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
+                        },
                       },
                     );
                     const success = !error && data?.success === true;
+                    const formatted = success
+                      ? ""
+                      : formatInvokeError(error ?? data?.error) ||
+                        "Failed to update expense";
                     toolResult = success
                       ? { success: true }
-                      : { error: error ?? data?.error };
+                      : { error: formatted };
                     if (!success) {
-                      const formatted = formatInvokeError(error ?? data?.error);
                       if (WHATSAPP_DEBUG) {
                         debugNotes.push(`update-expense error: ${formatted}`);
                       }
@@ -6740,6 +6931,16 @@ Deno.serve(async (req: Request) => {
                         "[twilio-whatsapp-ai-bot] update-expense error",
                         { error, formatted },
                       );
+                      await reportTwilioToolInvokeFailure({
+                        toolName: "update_transaction",
+                        targetFunction: "update-expense",
+                        formatted,
+                        error: error ?? data?.error,
+                        context: {
+                          expenseId: resolvedExpenseId,
+                          updateKeys: Object.keys(updates),
+                        },
+                      });
                     }
                   }
                 }
@@ -6778,16 +6979,19 @@ Deno.serve(async (req: Request) => {
                     {
                       body: { userId, expenseIds: expenseId },
                       headers: {
-                        "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
+                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
                       },
                     },
                   );
                   const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to delete expense";
                   toolResult = success
                     ? { success: true }
-                    : { error: error ?? data?.error };
+                    : { error: formatted };
                   if (!success) {
-                    const formatted = formatInvokeError(error ?? data?.error);
                     if (WHATSAPP_DEBUG) {
                       debugNotes.push(`delete-expense error: ${formatted}`);
                     }
@@ -6798,6 +7002,13 @@ Deno.serve(async (req: Request) => {
                         formatted,
                       },
                     );
+                    await reportTwilioToolInvokeFailure({
+                      toolName: "delete_transaction",
+                      targetFunction: "delete-expense",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: { expenseId },
+                    });
                   }
                 }
               }
@@ -6942,6 +7153,15 @@ Deno.serve(async (req: Request) => {
       lastBudgetPockets
     ) {
       finalResponseText = buildBudgetDoneText(lastBudgetPockets);
+    }
+    if (
+      typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
+        "string"
+    ) {
+      finalResponseText = buildMutationFailureText(
+        lastToolCallName,
+        lastToolResult,
+      )!;
     }
     if (
       (!finalResponseText || !finalResponseText.trim()) &&

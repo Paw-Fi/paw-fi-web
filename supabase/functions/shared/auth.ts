@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 /**
  * Authentication utilities for Edge Functions
  *
@@ -15,12 +17,33 @@ type SupabaseAuthClient = {
   };
 };
 
-// Internal service authentication secret (for processor -> sync endpoint calls)
-const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
-// Used by twilio-whatsapp-ai-bot and other internal callers.
-const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
-// Used by telegram functions and deploy-telegram-functions.sh
-const EDGE_FUNCTION_KEY = Deno.env.get("EDGE_FUNCTION_KEY");
+function readEnvSecret(name: string): string {
+  return (Deno.env.get(name) || "").trim();
+}
+
+function getInternalServiceSecret(): string {
+  return readEnvSecret("INTERNAL_SERVICE_SECRET");
+}
+
+function getSecretApiKey(): string {
+  return readEnvSecret("SECRET_API_KEY");
+}
+
+function getEdgeFunctionKey(): string {
+  return readEnvSecret("EDGE_FUNCTION_KEY");
+}
+
+export function resolveInternalFunctionKey(): string {
+  return getSecretApiKey() || getEdgeFunctionKey();
+}
+
+function getAcceptedInternalSecrets(): string[] {
+  return [
+    getInternalServiceSecret(),
+    getSecretApiKey(),
+    getEdgeFunctionKey(),
+  ].filter((value) => value.length > 0);
+}
 
 export interface AuthResult {
   success: boolean;
@@ -99,7 +122,8 @@ export async function authenticateUser(
 export async function authenticateInternalService(
   req: Request,
 ): Promise<AuthResult> {
-  if (!INTERNAL_SERVICE_SECRET) {
+  const internalServiceSecret = getInternalServiceSecret();
+  if (!internalServiceSecret) {
     console.error("INTERNAL_SERVICE_SECRET not configured");
     return {
       success: false,
@@ -108,7 +132,8 @@ export async function authenticateInternalService(
     };
   }
 
-  const internalSecret = req.headers.get("X-Internal-Service-Secret");
+  const internalSecret = req.headers.get("X-Internal-Service-Secret")?.trim() ||
+    "";
 
   if (!internalSecret) {
     return {
@@ -119,7 +144,7 @@ export async function authenticateInternalService(
   }
 
   // Constant-time comparison to prevent timing attacks
-  if (!constantTimeCompare(internalSecret, INTERNAL_SERVICE_SECRET)) {
+  if (!constantTimeCompare(internalSecret, internalServiceSecret)) {
     console.warn("Invalid internal service secret attempt");
     return {
       success: false,
@@ -144,13 +169,7 @@ export async function authenticateInternalService(
 export async function authenticateInternalSecret(
   req: Request,
 ): Promise<AuthResult> {
-  const acceptedSecrets = [
-    INTERNAL_SERVICE_SECRET,
-    SECRET_API_KEY,
-    EDGE_FUNCTION_KEY,
-  ]
-    .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-    .map((v) => v.trim());
+  const acceptedSecrets = getAcceptedInternalSecrets();
 
   if (acceptedSecrets.length === 0) {
     console.error(
@@ -163,10 +182,10 @@ export async function authenticateInternalSecret(
     };
   }
 
-  const provided =
-    req.headers.get("X-Internal-Service-Secret") ||
+  const provided = req.headers.get("X-Internal-Service-Secret") ||
     req.headers.get("X-Moneko-Internal-Key");
-  if (!provided) {
+  const normalizedProvided = provided?.trim() || "";
+  if (!normalizedProvided) {
     return {
       success: false,
       error: "Missing internal authentication",
@@ -175,7 +194,7 @@ export async function authenticateInternalSecret(
   }
 
   const ok = acceptedSecrets.some((secret) =>
-    constantTimeCompare(provided, secret),
+    constantTimeCompare(normalizedProvided, secret)
   );
   if (!ok) {
     console.warn("Invalid internal secret attempt");
