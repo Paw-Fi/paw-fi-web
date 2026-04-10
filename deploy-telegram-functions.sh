@@ -16,7 +16,7 @@
 # ALLOWED_ORIGINS
 #   First origin is used to build verification links (e.g. https://moneko.io).
 #
-# EDGE_FUNCTION_KEY
+# SECRET_SUPABASE_SERVICE_ROLE_API_KEY
 #   Required for update/delete transaction actions called internally by telegram-ai-bot.
 #
 # Required migrations for Telegram parity
@@ -85,11 +85,6 @@ deploy_internal_function "telegram-ai-bot"
 
 # App verification function (JWT from mobile app)
 deploy_function "verify-telegram-binding"
-
-# Called by telegram-ai-bot for tool parity actions
-deploy_internal_function "update-expense"
-deploy_internal_function "delete-expense"
-deploy_internal_function "update-preferred-language"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ Telegram functions deployed successfully"

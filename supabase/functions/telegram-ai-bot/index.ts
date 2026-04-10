@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 // Supabase Edge Function: telegram-ai-bot
 // Handles Telegram messages, using Gemini AI and existing tools.
 
@@ -55,11 +57,14 @@ import {
   getReplyLanguagePromptLabel,
   resolvePreferredReplyLanguage,
 } from "../shared/detect-language.ts";
+import {
+  buildInternalInvokeHeaders,
+  resolveInternalFunctionKey,
+} from "../shared/auth.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
-const SYSTEM_INSTRUCTION =
-  `You are Moneko, a helpful and friendly financial assistant on Telegram.
+const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
 
@@ -154,18 +159,6 @@ const TYPING_ACTION_INTERVAL_MS = 4000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
 const GEMINI_MAX_RETRIES = 1;
 const GEMINI_REQUEST_TIMEOUT_MS = 30000;
-
-const INTERNAL_FUNCTION_KEY = (
-  Deno.env.get("SECRET_API_KEY") ||
-  Deno.env.get("EDGE_FUNCTION_KEY") ||
-  ""
-).trim();
-
-if (!INTERNAL_FUNCTION_KEY) {
-  console.warn(
-    "[telegram-ai-bot] INTERNAL_FUNCTION_KEY not configured; internal tool calls will fail",
-  );
-}
 
 type TelegramUpdate = {
   update_id?: number;
@@ -333,11 +326,9 @@ async function getTelegramFile(
   token: string,
   fileId: string,
 ): Promise<{ file_path?: string; file_size?: number } | null> {
-  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${
-    encodeURIComponent(
-      fileId,
-    )
-  }`;
+  const url = `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(
+    fileId,
+  )}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const payload = await res.json();
@@ -649,7 +640,8 @@ function sanitizeArgs(args: unknown): unknown {
 }
 
 function resolvePublicBaseUrl() {
-  const explicitBaseUrl = Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
+  const explicitBaseUrl =
+    Deno.env.get("TELEGRAM_VERIFICATION_BASE_URL") ||
     Deno.env.get("WEB_APP_URL") ||
     Deno.env.get("PUBLIC_APP_URL") ||
     Deno.env.get("NEXT_PUBLIC_APP_URL") ||
@@ -795,17 +787,17 @@ async function resolveWalletIdInScope(
 
   if (matches.length === 0) {
     return {
-      error: `Wallet '${
-        String(walletName).trim()
-      }' was not found in the selected scope.`,
+      error: `Wallet '${String(
+        walletName,
+      ).trim()}' was not found in the selected scope.`,
     };
   }
 
   if (matches.length > 1) {
     return {
-      error: `More than one wallet named '${
-        String(walletName).trim()
-      }' exists in the selected scope. Please rename one of them or be more specific.`,
+      error: `More than one wallet named '${String(
+        walletName,
+      ).trim()}' exists in the selected scope. Please rename one of them or be more specific.`,
     };
   }
 
@@ -862,9 +854,10 @@ function normalizeLastListedTransactionFromRow(
   if (!id) return null;
 
   const cents = (row as any).amount_cents;
-  const amountMajor = typeof cents === "number" && Number.isFinite(cents)
-    ? cents / 100
-    : Number((row as any).amount) || 0;
+  const amountMajor =
+    typeof cents === "number" && Number.isFinite(cents)
+      ? cents / 100
+      : Number((row as any).amount) || 0;
 
   const currency = String((row as any).currency || "").toUpperCase();
   const date = String((row as any).date || "").slice(0, 10);
@@ -875,9 +868,8 @@ function normalizeLastListedTransactionFromRow(
   const typeRaw = String((row as any).type || "expense").toLowerCase();
   const type = typeRaw === "income" ? "income" : "expense";
   const householdIdRaw = (row as any).household_id;
-  const household_id = householdIdRaw == null
-    ? null
-    : String(householdIdRaw || "") || null;
+  const household_id =
+    householdIdRaw == null ? null : String(householdIdRaw || "") || null;
 
   return {
     id,
@@ -977,9 +969,8 @@ function matchesTransaction(
     if (cur && item.currency.toUpperCase() !== cur) return false;
   }
   if (match.type) {
-    const t = String(match.type).toLowerCase() === "income"
-      ? "income"
-      : "expense";
+    const t =
+      String(match.type).toLowerCase() === "income" ? "income" : "expense";
     if ((item.type || "expense") !== t) return false;
   }
   if (match.category) {
@@ -1019,9 +1010,9 @@ function resolveLastListedSelection(
 ):
   | { candidate: LastListedTransaction }
   | {
-    needs_disambiguation: true;
-    choices: Array<{ index: number; summary: string }>;
-  }
+      needs_disambiguation: true;
+      choices: Array<{ index: number; summary: string }>;
+    }
   | { error: string } {
   const list = Array.isArray(items) ? items : [];
   if (list.length === 0) {
@@ -1038,8 +1029,7 @@ function resolveLastListedSelection(
       return { candidate: list[idx - 1] };
     }
     return {
-      error:
-        `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
+      error: `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
     };
   }
 
@@ -1091,8 +1081,8 @@ function detectListTypeFromText(
   text: string,
 ): "expense" | "income" | undefined {
   const normalized = normalizeMatchString(text);
-  const hasIncome = /\b(income|incomes|earning|earnings|salary|salaries)\b/
-    .test(normalized);
+  const hasIncome =
+    /\b(income|incomes|earning|earnings|salary|salaries)\b/.test(normalized);
   const hasExpense =
     /\b(expense|expenses|spending|spend|spent|purchase|purchases)\b/.test(
       normalized,
@@ -1178,10 +1168,9 @@ function detectSpaceScopeFromText(
     return "personal";
   }
   if (
-    /\b(portfolio|private space|private account|investment account|investing space)\b/
-      .test(
-        normalized,
-      )
+    /\b(portfolio|private space|private account|investment account|investing space)\b/.test(
+      normalized,
+    )
   ) {
     return "private";
   }
@@ -1200,10 +1189,9 @@ function shouldForceListExpensesCall(text: string): boolean {
   if (!normalized) return false;
 
   const hasTransactionNoun =
-    /\b(transaction|transactions|expense|expenses|income|incomes|spending|spend|spent|earning|earnings)\b/
-      .test(
-        normalized,
-      );
+    /\b(transaction|transactions|expense|expenses|income|incomes|spending|spend|spent|earning|earnings)\b/.test(
+      normalized,
+    );
   if (!hasTransactionNoun) return false;
 
   const hasListIntent =
@@ -1338,7 +1326,7 @@ async function consolidateDuplicateEnvelopesForBudget(
     const map = new Map<string, BudgetEnvelopeRowLite>();
     for (const [norm, rows] of byNorm.entries()) {
       const chosen = rows.reduce((acc, cur) =>
-        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc
+        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
       );
       map.set(norm, chosen);
     }
@@ -1355,11 +1343,9 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("envelope_id", ids);
     if (linksErr) {
       debugNotes.push(
-        `envelope_category_links load error (${norm}): ${
-          formatInvokeError(
-            linksErr,
-          )
-        }`,
+        `envelope_category_links load error (${norm}): ${formatInvokeError(
+          linksErr,
+        )}`,
       );
     }
     const links = (linksRaw || []) as Array<{
@@ -1438,11 +1424,9 @@ async function consolidateDuplicateEnvelopesForBudget(
       .in("id", dupIds);
     if (deleteEnvErr) {
       debugNotes.push(
-        `duplicate envelope delete error (${norm}): ${
-          formatInvokeError(
-            deleteEnvErr,
-          )
-        }`,
+        `duplicate envelope delete error (${norm}): ${formatInvokeError(
+          deleteEnvErr,
+        )}`,
       );
     }
   }
@@ -1495,9 +1479,10 @@ function buildRecurrenceRule(args: any, fallbackAnchor: string) {
     return provided as Record<string, unknown>;
   }
 
-  const frequency = typeof args?.frequency === "string" && args.frequency.trim()
-    ? args.frequency.trim().toLowerCase()
-    : null;
+  const frequency =
+    typeof args?.frequency === "string" && args.frequency.trim()
+      ? args.frequency.trim().toLowerCase()
+      : null;
   const interval = Number.isFinite(args?.interval)
     ? Math.trunc(args.interval)
     : null;
@@ -1505,9 +1490,10 @@ function buildRecurrenceRule(args: any, fallbackAnchor: string) {
     typeof args?.anchor_date === "string" && args.anchor_date.trim()
       ? args.anchor_date.trim().slice(0, 10)
       : fallbackAnchor;
-  const end_date = typeof args?.end_date === "string" && args.end_date.trim()
-    ? args.end_date.trim().slice(0, 10)
-    : "";
+  const end_date =
+    typeof args?.end_date === "string" && args.end_date.trim()
+      ? args.end_date.trim().slice(0, 10)
+      : "";
 
   if (!frequency) return null;
 
@@ -1543,56 +1529,124 @@ async function invokeTransactionSave(
     accountId?: string;
   },
 ) {
-  const type = (params.type || "expense").toLowerCase() === "income"
-    ? "income"
-    : "expense";
+  const type =
+    (params.type || "expense").toLowerCase() === "income"
+      ? "income"
+      : "expense";
 
-  const body = type === "income"
-    ? {
-      userId,
-      amount: params.amount,
-      category: params.category,
-      currency: params.currency,
-      date: params.date,
-      description: params.description,
-      source: params.source,
-      ownerType: params.ownerType || "me",
-      privacyScope: params.privacyScope || "full",
-      accountId: params.accountId,
-      householdId: params.householdId,
-      isPortfolio: params.isPortfolio === true,
-      isRecurring: params.isRecurring === true,
-      recurrence_rule: params.isRecurring === true
-        ? params.recurrence_rule || null
-        : undefined,
-      clientCreatedAt: new Date().toISOString(),
-    }
-    : {
-      userId,
-      amount: params.amount,
-      category: params.category,
-      currency: params.currency,
-      date: params.date,
-      description: params.description,
-      accountId: params.accountId,
-      householdId: params.householdId,
-      isPortfolio: params.isPortfolio === true,
-      payerUserId: params.payerUserId,
-      customSplits: params.customSplits,
-      isRecurring: params.isRecurring === true,
-      recurrence_rule: params.isRecurring === true
-        ? params.recurrence_rule || null
-        : undefined,
-      clientCreatedAt: new Date().toISOString(),
-    };
+  const body =
+    type === "income"
+      ? {
+          userId,
+          amount: params.amount,
+          category: params.category,
+          currency: params.currency,
+          date: params.date,
+          description: params.description,
+          source: params.source,
+          ownerType: params.ownerType || "me",
+          privacyScope: params.privacyScope || "full",
+          accountId: params.accountId,
+          householdId: params.householdId,
+          isPortfolio: params.isPortfolio === true,
+          isRecurring: params.isRecurring === true,
+          recurrence_rule:
+            params.isRecurring === true
+              ? params.recurrence_rule || null
+              : undefined,
+          clientCreatedAt: new Date().toISOString(),
+        }
+      : {
+          userId,
+          amount: params.amount,
+          category: params.category,
+          currency: params.currency,
+          date: params.date,
+          description: params.description,
+          accountId: params.accountId,
+          householdId: params.householdId,
+          isPortfolio: params.isPortfolio === true,
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
+          isRecurring: params.isRecurring === true,
+          recurrence_rule:
+            params.isRecurring === true
+              ? params.recurrence_rule || null
+              : undefined,
+          clientCreatedAt: new Date().toISOString(),
+        };
 
   return await supabase.functions.invoke(
     type === "income" ? "save-income" : "save-expense",
     {
       body,
-      headers: { "X-Moneko-Internal-Key": internalKey },
+      headers: buildInternalInvokeHeaders(internalKey),
     },
   );
+}
+
+function getInvokeHttpStatus(error: unknown): number | undefined {
+  const candidate = error as Record<string, any> | null | undefined;
+  const contextStatus = candidate?.context?.status;
+  if (typeof contextStatus === "number") return contextStatus;
+  const status = candidate?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
+async function reportTelegramToolInvokeFailure(params: {
+  traceId: string;
+  toolName: string;
+  targetFunction: string;
+  formatted: string;
+  error?: unknown;
+  context?: Record<string, unknown>;
+}) {
+  try {
+    await reportEdgeFunctionError({
+      functionName: "telegram-ai-bot",
+      error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
+      context: {
+        traceId: params.traceId,
+        step: `tool:${params.toolName}`,
+        toolName: params.toolName,
+        targetFunction: params.targetFunction,
+        httpStatus: getInvokeHttpStatus(params.error),
+        ...params.context,
+      },
+    });
+  } catch (reportError) {
+    console.error("[telegram-ai-bot] reportEdgeFunctionError failed", {
+      traceId: params.traceId,
+      toolName: params.toolName,
+      targetFunction: params.targetFunction,
+      error: String(reportError),
+    });
+  }
+}
+
+function buildMutationFailureText(
+  toolName: string | null,
+  toolResult: unknown,
+): string | null {
+  const error =
+    typeof (toolResult as Record<string, any> | null)?.error === "string"
+      ? (toolResult as Record<string, string>).error.trim()
+      : "";
+  if (!error) return null;
+
+  if (toolName === "add_transaction") {
+    return "I couldn't save that transaction right now. Please try again in a moment.";
+  }
+  if (toolName === "add_transactions_batch") {
+    return "I couldn't save those transactions right now. Please try again in a moment.";
+  }
+  if (toolName === "manage_recurring") {
+    return "I couldn't save that recurring transaction right now. Please try again in a moment.";
+  }
+  if (toolName === "delete_transaction") {
+    return "I couldn't delete that transaction right now. Please try again in a moment.";
+  }
+  return null;
 }
 
 async function ensureHouseholdMember(
@@ -1679,9 +1733,8 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount = typeof split?.amount === "number"
-        ? Math.max(0, split.amount)
-        : null;
+      const amount =
+        typeof split?.amount === "number" ? Math.max(0, split.amount) : null;
       if (amount == null) missing.push(id);
       else specifiedSum += amount;
     }
@@ -1690,9 +1743,10 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount = typeof split?.amount === "number"
-        ? Math.max(0, split.amount)
-        : perMissing;
+      const amount =
+        typeof split?.amount === "number"
+          ? Math.max(0, split.amount)
+          : perMissing;
       fullSplits.push({ userId: id, amount });
     }
   } else if (inferredType === "percentage") {
@@ -1700,9 +1754,10 @@ async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage = typeof split?.percentage === "number"
-        ? Math.max(0, Math.min(100, split.percentage))
-        : null;
+      const percentage =
+        typeof split?.percentage === "number"
+          ? Math.max(0, Math.min(100, split.percentage))
+          : null;
       if (percentage == null) missing.push(id);
       else specifiedSum += percentage;
     }
@@ -1711,17 +1766,19 @@ async function resolveHouseholdSplitConfig(
 
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage = typeof split?.percentage === "number"
-        ? Math.max(0, Math.min(100, split.percentage))
-        : perMissing;
+      const percentage =
+        typeof split?.percentage === "number"
+          ? Math.max(0, Math.min(100, split.percentage))
+          : perMissing;
       fullSplits.push({ userId: id, percentage });
     }
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const split = byId.get(id);
-      const shares = typeof split?.shares === "number"
-        ? Math.max(1, Math.trunc(split.shares))
-        : 1;
+      const shares =
+        typeof split?.shares === "number"
+          ? Math.max(1, Math.trunc(split.shares))
+          : 1;
       fullSplits.push({ userId: id, shares });
     }
   }
@@ -1748,6 +1805,7 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
+  const internalFunctionKey = resolveInternalFunctionKey();
 
   const missingEnv: string[] = [];
   if (!TELEGRAM_BOT_TOKEN) missingEnv.push("TELEGRAM_BOT_TOKEN");
@@ -1758,16 +1816,21 @@ Deno.serve(async (req: Request) => {
 
   if (missingEnv.length) {
     console.error(
-      `[telegram-ai-bot] Missing required environment variables: ${
-        missingEnv.join(
-          ", ",
-        )
-      }`,
+      `[telegram-ai-bot] Missing required environment variables: ${missingEnv.join(
+        ", ",
+      )}`,
     );
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
-  const secretHeader = req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
+  if (!internalFunctionKey) {
+    console.warn(
+      "[telegram-ai-bot] INTERNAL_FUNCTION_KEY not configured; internal tool calls will fail",
+    );
+  }
+
+  const secretHeader =
+    req.headers.get("X-Telegram-Bot-Api-Secret-Token") ||
     req.headers.get("x-telegram-bot-api-secret-token");
   if (secretHeader !== TELEGRAM_WEBHOOK_SECRET) {
     return jsonResponse({ ok: true });
@@ -1868,13 +1931,13 @@ Deno.serve(async (req: Request) => {
 
         const contact = contextData
           ? {
-            id: contextData.contact_id,
-            user_id: contextData.user_id,
-            verified: contextData.verified,
-            preferred_currency: contextData.preferred_currency,
-            preferred_language: contextData.preferred_language,
-            preferred_timezone: contextData.preferred_timezone,
-          }
+              id: contextData.contact_id,
+              user_id: contextData.user_id,
+              verified: contextData.verified,
+              preferred_currency: contextData.preferred_currency,
+              preferred_language: contextData.preferred_language,
+              preferred_timezone: contextData.preferred_timezone,
+            }
           : null;
 
         replyLanguage = resolvePreferredReplyLanguage(
@@ -1893,12 +1956,13 @@ Deno.serve(async (req: Request) => {
           callbackData,
           normalizeText(message?.text),
         );
-        const incomingText = callbackData === "start_verification"
-          ? "start verification"
-          : callbackChoiceText ||
-            (callbackData.startsWith("pick_option:")
-              ? callbackData.replace("pick_option:", "").trim()
-              : originalMessageText);
+        const incomingText =
+          callbackData === "start_verification"
+            ? "start verification"
+            : callbackChoiceText ||
+              (callbackData.startsWith("pick_option:")
+                ? callbackData.replace("pick_option:", "").trim()
+                : originalMessageText);
 
         console.log("[telegram-ai-bot] incoming", {
           traceId,
@@ -1972,9 +2036,9 @@ Deno.serve(async (req: Request) => {
 
         const subscription = contextData
           ? {
-            plan: contextData.subscription_plan,
-            status: contextData.subscription_status,
-          }
+              plan: contextData.subscription_plan,
+              status: contextData.subscription_status,
+            }
           : null;
         if (isFreeUser(subscription)) {
           const nonSubscriberMessage =
@@ -2111,22 +2175,19 @@ Deno.serve(async (req: Request) => {
           const captionNote = message?.caption
             ? ` Caption: "${message.caption}".`
             : "";
-          userMessageContent =
-            `[User sent an image receipt.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "image", file_id: "${photo.file_id}" } (or telegram_file_id: "${photo.file_id}").]`;
+          userMessageContent = `[User sent an image receipt.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "image", file_id: "${photo.file_id}" } (or telegram_file_id: "${photo.file_id}").]`;
         } else if (voice?.file_id) {
           const captionNote = message?.caption
             ? ` Caption: "${message.caption}".`
             : "";
-          userMessageContent =
-            `[User sent an audio message.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "audio", file_id: "${voice.file_id}" } (or telegram_file_id: "${voice.file_id}").]`;
+          userMessageContent = `[User sent an audio message.${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "audio", file_id: "${voice.file_id}" } (or telegram_file_id: "${voice.file_id}").]`;
         } else if (doc?.file_id) {
           const captionNote = message?.caption
             ? ` Caption: "${message.caption}".`
             : "";
           const nameNote = doc.file_name ? ` Name: "${doc.file_name}".` : "";
           const mimeNote = doc.mime_type ? ` Mime: "${doc.mime_type}".` : "";
-          userMessageContent =
-            `[User sent a file attachment.${nameNote}${mimeNote}${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "file", file_id: "${doc.file_id}" } (or telegram_file_id: "${doc.file_id}").]`;
+          userMessageContent = `[User sent a file attachment.${nameNote}${mimeNote}${captionNote} If you need to extract transactions, call analyze_expense with media { kind: "file", file_id: "${doc.file_id}" } (or telegram_file_id: "${doc.file_id}").]`;
         }
 
         const { data: history } = await supabase
@@ -2144,18 +2205,19 @@ Deno.serve(async (req: Request) => {
         }
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const telegramSystemInstruction = SYSTEM_INSTRUCTION.replace(
-          "{{DATE}}",
-          formatDateInTimeZone(userTimezone),
-        )
-          .replace("{{CURRENCY}}", userCurrency)
-          .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
-          .replace(
-            "{{WALLETS}}",
-            "Available on request for the selected space only",
+        const telegramSystemInstruction =
+          SYSTEM_INSTRUCTION.replace(
+            "{{DATE}}",
+            formatDateInTimeZone(userTimezone),
           )
-          .replace("{{CATEGORIES}}", categoryGuideForUser)
-          .replace("{{LANGUAGE}}", userLangLabel) +
+            .replace("{{CURRENCY}}", userCurrency)
+            .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
+            .replace(
+              "{{WALLETS}}",
+              "Available on request for the selected space only",
+            )
+            .replace("{{CATEGORIES}}", categoryGuideForUser)
+            .replace("{{LANGUAGE}}", userLangLabel) +
           buildLanguageOverride(userLang);
         const model = genAI.getGenerativeModel(
           {
@@ -2730,6 +2792,9 @@ Deno.serve(async (req: Request) => {
           response = await result.response;
           functionCalls = (response.functionCalls() as any[]) || [];
           finalResponseText = response.text();
+          if (functionCalls.length > 0) {
+            finalResponseText = "";
+          }
 
           console.log("[telegram-ai-bot] model response", {
             traceId,
@@ -2783,11 +2848,9 @@ Deno.serve(async (req: Request) => {
           const forcedArgs = inferListExpensesArgsFromText(incomingText);
           functionCalls = [{ name: "list_expenses", args: forcedArgs } as any];
           debugNotes.push(
-            `forced list_expenses call for list intent (args: ${
-              JSON.stringify(
-                forcedArgs,
-              )
-            })`,
+            `forced list_expenses call for list intent (args: ${JSON.stringify(
+              forcedArgs,
+            )})`,
           );
           console.log("[telegram-ai-bot] forced tool call", {
             traceId,
@@ -2801,12 +2864,10 @@ Deno.serve(async (req: Request) => {
         let lastToolResult: any = null;
         let lastToolCallName: string | null = null;
         let lastGeneratedChartUrl: string | null = null;
-        let lastBudgetPockets:
-          | Array<{
-            name: string;
-            percentage: number;
-          }>
-          | null = null;
+        let lastBudgetPockets: Array<{
+          name: string;
+          percentage: number;
+        }> | null = null;
         let toolIterations = 0;
 
         while (
@@ -2826,21 +2887,24 @@ Deno.serve(async (req: Request) => {
 
             try {
               if (call.name === "analyze_expense") {
-                const text = typeof call.args?.text === "string"
-                  ? call.args.text.trim()
-                  : "";
-                const fileId = (typeof call.args?.telegram_file_id === "string"
-                  ? call.args.telegram_file_id.trim()
-                  : "") ||
+                const text =
+                  typeof call.args?.text === "string"
+                    ? call.args.text.trim()
+                    : "";
+                const fileId =
+                  (typeof call.args?.telegram_file_id === "string"
+                    ? call.args.telegram_file_id.trim()
+                    : "") ||
                   (typeof call.args?.media?.file_id === "string"
                     ? call.args.media.file_id.trim()
                     : "");
-                const kindHintRaw = typeof call.args?.media?.kind === "string"
-                  ? call.args.media.kind
-                  : "";
+                const kindHintRaw =
+                  typeof call.args?.media?.kind === "string"
+                    ? call.args.media.kind
+                    : "";
                 const kindHint = ["image", "audio", "file"].includes(
-                    kindHintRaw,
-                  )
+                  kindHintRaw,
+                )
                   ? kindHintRaw
                   : "";
 
@@ -2969,8 +3033,8 @@ Deno.serve(async (req: Request) => {
                           "The attachment is too large to process. Ask the user to send a smaller file.",
                       };
                     } else {
-                      const kind = kindHint ||
-                        inferKindFromPath(fileMeta.file_path);
+                      const kind =
+                        kindHint || inferKindFromPath(fileMeta.file_path);
                       const base64Data = uint8ToBase64(buf);
                       const contentType = guessContentType(
                         fileMeta.file_path,
@@ -3073,11 +3137,12 @@ Deno.serve(async (req: Request) => {
                 const normalizedScope =
                   normalizeSpaceScope(call.args.space_scope) ||
                   normalizeSpaceScope(call.args.scope);
-                const wantsPersonalOnly = !householdId &&
-                  normalizedScope === "personal";
-                const wantsSharedOnly = !householdId &&
-                  normalizedScope === "shared";
-                const isPortfolioQuery = spaceMeta?.isPortfolio === true ||
+                const wantsPersonalOnly =
+                  !householdId && normalizedScope === "personal";
+                const wantsSharedOnly =
+                  !householdId && normalizedScope === "shared";
+                const isPortfolioQuery =
+                  spaceMeta?.isPortfolio === true ||
                   call.args.is_portfolio === true;
                 const { data, error } = await fetchExpensesDirect(
                   supabase,
@@ -3105,7 +3170,7 @@ Deno.serve(async (req: Request) => {
                 } else {
                   const memoryItems = (data || [])
                     .map((row: any) =>
-                      normalizeLastListedTransactionFromRow(row)
+                      normalizeLastListedTransactionFromRow(row),
                     )
                     .filter(Boolean) as LastListedTransaction[];
 
@@ -3149,11 +3214,12 @@ Deno.serve(async (req: Request) => {
                   };
                 }
               } else if (call.name === "create_custom_category") {
-                const transactionType = String(
+                const transactionType =
+                  String(
                     call.args?.transaction_type || "expense",
                   ).toLowerCase() === "income"
-                  ? "income"
-                  : "expense";
+                    ? "income"
+                    : "expense";
                 try {
                   const created = await upsertUserCustomCategory({
                     supabase,
@@ -3163,13 +3229,15 @@ Deno.serve(async (req: Request) => {
                     colorArgb: Number.isFinite(Number(call.args?.color_argb))
                       ? Number(call.args?.color_argb)
                       : null,
-                    iconKey: typeof call.args?.icon_key === "string"
-                      ? call.args.icon_key
-                      : null,
+                    iconKey:
+                      typeof call.args?.icon_key === "string"
+                        ? call.args.icon_key
+                        : null,
                   });
-                  const targetList = transactionType === "income"
-                    ? allowedIncomeCategories
-                    : allowedExpenseCategories;
+                  const targetList =
+                    transactionType === "income"
+                      ? allowedIncomeCategories
+                      : allowedExpenseCategories;
                   if (!targetList.includes(created.name)) {
                     targetList.push(created.name);
                     targetList.sort();
@@ -3212,17 +3280,17 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                const isHouseholdExpense = !!householdId &&
-                  (call.args.type || "expense") === "expense";
+                const isHouseholdExpense =
+                  !!householdId && (call.args.type || "expense") === "expense";
                 const splitConfig =
                   isHouseholdExpense && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId!,
-                      userId,
-                      amount,
-                      call.args,
-                    )
+                        supabase,
+                        householdId!,
+                        userId,
+                        amount,
+                        call.args,
+                      )
                     : {};
                 const requestedWallet = await resolveWalletIdInScope(
                   supabase,
@@ -3240,16 +3308,17 @@ Deno.serve(async (req: Request) => {
                 }
                 const { data, error } = await invokeTransactionSave(
                   supabase,
-                  INTERNAL_FUNCTION_KEY,
+                  internalFunctionKey,
                   userId,
                   {
-                    recurrence_rule: call.args.is_recurring === true
-                      ? buildRecurrenceRule(
-                        call.args,
-                        call.args.date ||
-                          formatDateInTimeZone(userTimezone),
-                      )
-                      : undefined,
+                    recurrence_rule:
+                      call.args.is_recurring === true
+                        ? buildRecurrenceRule(
+                            call.args,
+                            call.args.date ||
+                              formatDateInTimeZone(userTimezone),
+                          )
+                        : undefined,
                     amount: amount,
                     category: call.args.category,
                     description: call.args.description || "",
@@ -3257,8 +3326,8 @@ Deno.serve(async (req: Request) => {
                     currency: call.args.currency || userCurrency,
                     type: call.args.type || "expense",
                     householdId,
-                    isPortfolio: spaceMeta?.isPortfolio ??
-                      call.args.is_portfolio === true,
+                    isPortfolio:
+                      spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     accountId: requestedWallet.accountId ?? undefined,
                     isRecurring: call.args.is_recurring === true,
                     payerUserId: splitConfig.payerUserId,
@@ -3268,7 +3337,32 @@ Deno.serve(async (req: Request) => {
                     privacyScope: call.args.privacy_scope,
                   },
                 );
-                toolResult = { data, error };
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save transaction";
+                toolResult = success
+                  ? { success: true, data: data?.data ?? data }
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "add_transaction",
+                    targetFunction:
+                      String(call.args.type || "expense").toLowerCase() ===
+                      "income"
+                        ? "save-income"
+                        : "save-expense",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      amount,
+                      category: call.args.category,
+                      householdId,
+                    },
+                  });
+                }
               } else if (call.name === "add_transactions_batch") {
                 const rows = Array.isArray(call.args.transactions)
                   ? call.args.transactions
@@ -3301,8 +3395,8 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                const isPortfolio = spaceMeta?.isPortfolio ??
-                  call.args.is_portfolio === true;
+                const isPortfolio =
+                  spaceMeta?.isPortfolio ?? call.args.is_portfolio === true;
                 const batchTransactions: any[] = [];
 
                 for (const row of rows) {
@@ -3320,12 +3414,12 @@ Deno.serve(async (req: Request) => {
                   const splitConfig =
                     householdId && !isPortfolio && row.type !== "income"
                       ? await resolveHouseholdSplitConfig(
-                        supabase,
-                        householdId,
-                        userId,
-                        amount,
-                        row,
-                      )
+                          supabase,
+                          householdId,
+                          userId,
+                          amount,
+                          row,
+                        )
                       : {};
 
                   batchTransactions.push({
@@ -3342,12 +3436,13 @@ Deno.serve(async (req: Request) => {
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
                     isRecurring: row.is_recurring === true,
-                    recurrence_rule: row.is_recurring === true
-                      ? buildRecurrenceRule(
-                        row,
-                        row.date || formatDateInTimeZone(userTimezone),
-                      )
-                      : undefined,
+                    recurrence_rule:
+                      row.is_recurring === true
+                        ? buildRecurrenceRule(
+                            row,
+                            row.date || formatDateInTimeZone(userTimezone),
+                          )
+                        : undefined,
                   });
                 }
 
@@ -3360,22 +3455,38 @@ Deno.serve(async (req: Request) => {
                       isPortfolio,
                       transactions: batchTransactions,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
 
-                toolResult = !error && data?.success === true
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save transactions";
+                toolResult = success
                   ? {
-                    success: true,
-                    summary: data?.summary,
-                    results: data?.results,
-                  }
+                      success: true,
+                      summary: data?.summary,
+                      results: data?.results,
+                    }
                   : {
-                    error: formatInvokeError(error ?? data?.error) ||
-                      "Failed to save transactions",
-                  };
+                      error: formatted,
+                    };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "add_transactions_batch",
+                    targetFunction: "save-transactions-batch",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      count: batchTransactions.length,
+                      householdId,
+                      isPortfolio,
+                    },
+                  });
+                }
               } else if (call.name === "list_wallets") {
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
@@ -3400,17 +3511,27 @@ Deno.serve(async (req: Request) => {
                       householdId,
                       includeArchived: call.args.include_archived === true,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
-                toolResult = !error && data?.success === true
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to list wallets";
+                toolResult = success
                   ? { success: true, data: data?.data ?? [] }
-                  : {
-                    error: formatInvokeError(error ?? data?.error) ||
-                      "Failed to list wallets",
-                  };
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "list_wallets",
+                    targetFunction: "list-wallets",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: { householdId },
+                  });
+                }
               } else if (call.name === "create_wallet") {
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
@@ -3437,8 +3558,8 @@ Deno.serve(async (req: Request) => {
                       icon: call.args.icon,
                       color: call.args.color,
                       openingBalanceCents: Number.isFinite(
-                          call.args.opening_balance,
-                        )
+                        call.args.opening_balance,
+                      )
                         ? Math.round(Number(call.args.opening_balance) * 100)
                         : undefined,
                       goalAmountCents: Number.isFinite(call.args.goal_amount)
@@ -3446,17 +3567,27 @@ Deno.serve(async (req: Request) => {
                         : undefined,
                       isDefault: call.args.is_default === true,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
-                toolResult = !error && data?.success === true
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to create wallet";
+                toolResult = success
                   ? { success: true, data: data?.data ?? data }
-                  : {
-                    error: formatInvokeError(error ?? data?.error) ||
-                      "Failed to create wallet",
-                  };
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "create_wallet",
+                    targetFunction: "save-wallet",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: { householdId, name: call.args.name },
+                  });
+                }
               } else if (call.name === "update_wallet") {
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
@@ -3481,7 +3612,8 @@ Deno.serve(async (req: Request) => {
                 );
                 if (requestedWallet.error || !requestedWallet.accountId) {
                   toolResult = {
-                    error: requestedWallet.error ||
+                    error:
+                      requestedWallet.error ||
                       "Wallet was not found in the selected scope.",
                   };
                 } else {
@@ -3497,21 +3629,35 @@ Deno.serve(async (req: Request) => {
                         goalAmountCents: Number.isFinite(call.args.goal_amount)
                           ? Math.round(Number(call.args.goal_amount) * 100)
                           : undefined,
-                        isDefault: typeof call.args.is_default === "boolean"
-                          ? call.args.is_default
-                          : undefined,
+                        isDefault:
+                          typeof call.args.is_default === "boolean"
+                            ? call.args.is_default
+                            : undefined,
                       },
-                      headers: {
-                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
-                  toolResult = !error && data?.success === true
+                  const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to update wallet";
+                  toolResult = success
                     ? { success: true, data: data?.data ?? data }
-                    : {
-                      error: formatInvokeError(error ?? data?.error) ||
-                        "Failed to update wallet",
-                    };
+                    : { error: formatted };
+                  if (!success) {
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      toolName: "update_wallet",
+                      targetFunction: "update-wallet",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: {
+                        householdId,
+                        walletName: call.args.wallet_name,
+                      },
+                    });
+                  }
                 }
               } else if (call.name === "create_wallet_transfer") {
                 let householdId = call.args.household_id || null;
@@ -3543,12 +3689,14 @@ Deno.serve(async (req: Request) => {
                 );
                 if (fromWallet.error || !fromWallet.accountId) {
                   toolResult = {
-                    error: fromWallet.error ||
+                    error:
+                      fromWallet.error ||
                       "Source wallet was not found in the selected scope.",
                   };
                 } else if (toWallet.error || !toWallet.accountId) {
                   toolResult = {
-                    error: toWallet.error ||
+                    error:
+                      toWallet.error ||
                       "Destination wallet was not found in the selected scope.",
                   };
                 } else {
@@ -3563,21 +3711,36 @@ Deno.serve(async (req: Request) => {
                           Number(call.args.amount || 0) * 100,
                         ),
                         currency: call.args.currency || userCurrency,
-                        date: call.args.date ||
-                          formatDateInTimeZone(userTimezone),
+                        date:
+                          call.args.date || formatDateInTimeZone(userTimezone),
                         note: call.args.note,
                       },
-                      headers: {
-                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
-                  toolResult = !error && data?.success === true
+                  const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to create wallet transfer";
+                  toolResult = success
                     ? { success: true, data: data?.data ?? data }
-                    : {
-                      error: formatInvokeError(error ?? data?.error) ||
-                        "Failed to create wallet transfer",
-                    };
+                    : { error: formatted };
+                  if (!success) {
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      toolName: "create_wallet_transfer",
+                      targetFunction: "create-wallet-transfer",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: {
+                        householdId,
+                        fromWallet: call.args.from_wallet_name,
+                        toWallet: call.args.to_wallet_name,
+                        amount: call.args.amount,
+                      },
+                    });
+                  }
                 }
               } else if (call.name === "generate_chart_url") {
                 const chartConfig = {
@@ -3592,11 +3755,9 @@ Deno.serve(async (req: Request) => {
                     ],
                   },
                 };
-                const longUrl = `https://quickchart.io/chart?c=${
-                  encodeURIComponent(
-                    JSON.stringify(chartConfig),
-                  )
-                }`;
+                const longUrl = `https://quickchart.io/chart?c=${encodeURIComponent(
+                  JSON.stringify(chartConfig),
+                )}`;
                 const chartUrl =
                   (await createQuickChartShortUrl(chartConfig)) || longUrl;
                 toolResult = { url: chartUrl };
@@ -3640,12 +3801,14 @@ Deno.serve(async (req: Request) => {
                     spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
                     contact.id,
                   );
-                  toolResult = res.error ? { error: res.error } : {
-                    budget: res.budget,
-                    envelopes: res.envelopes,
-                    totals: res.totals,
-                    chart: res.chart,
-                  };
+                  toolResult = res.error
+                    ? { error: res.error }
+                    : {
+                        budget: res.budget,
+                        envelopes: res.envelopes,
+                        totals: res.totals,
+                        chart: res.chart,
+                      };
                 }
               } else if (call.name === "set_currency") {
                 const currency = (call.args.currency || "")
@@ -3656,10 +3819,12 @@ Deno.serve(async (req: Request) => {
                   contact.id,
                   currency,
                 );
-                toolResult = error ? { error } : {
-                  success: true,
-                  currency: data?.preferred_currency || currency,
-                };
+                toolResult = error
+                  ? { error }
+                  : {
+                      success: true,
+                      currency: data?.preferred_currency || currency,
+                    };
               } else if (call.name === "set_language") {
                 const language = (call.args.language || "").toString().trim();
                 const { data, error } = await supabase.functions.invoke(
@@ -3669,26 +3834,42 @@ Deno.serve(async (req: Request) => {
                       userId,
                       language,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
-                const resolvedLanguage = data?.results?.preferredLanguage ||
-                  language;
-                toolResult = error ? { error } : {
-                  success: true,
-                  language: resolvedLanguage,
-                  reply_language: resolvedLanguage,
-                  message:
-                    `Preferred language updated to ${resolvedLanguage}. Reply in this language for this confirmation and use it as the default language for future replies.`,
-                };
+                const resolvedLanguage =
+                  data?.results?.preferredLanguage || language;
+                const success =
+                  !error && (data?.ok === true || data?.success === true);
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to update preferred language";
+                toolResult = success
+                  ? {
+                      success: true,
+                      language: resolvedLanguage,
+                      reply_language: resolvedLanguage,
+                      message: `Preferred language updated to ${resolvedLanguage}. Reply in this language for this confirmation and use it as the default language for future replies.`,
+                    }
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "set_language",
+                    targetFunction: "update-preferred-language",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: { language },
+                  });
+                }
               } else if (call.name === "update_transaction") {
-                const updatesArgs = call.args?.updates &&
-                    typeof call.args.updates === "object" &&
-                    !Array.isArray(call.args.updates)
-                  ? call.args.updates
-                  : null;
+                const updatesArgs =
+                  call.args?.updates &&
+                  typeof call.args.updates === "object" &&
+                  !Array.isArray(call.args.updates)
+                    ? call.args.updates
+                    : null;
                 if (!updatesArgs) {
                   toolResult = { error: "updates is required" };
                 } else {
@@ -3718,11 +3899,12 @@ Deno.serve(async (req: Request) => {
                       typeof call.args?.match?.type === "string"
                         ? call.args.match.type.toLowerCase()
                         : "";
-                    const fallbackType = matchTypeRaw === "income"
-                      ? "income"
-                      : matchTypeRaw === "expense"
-                      ? "expense"
-                      : undefined;
+                    const fallbackType =
+                      matchTypeRaw === "income"
+                        ? "income"
+                        : matchTypeRaw === "expense"
+                          ? "expense"
+                          : undefined;
 
                     const { data: fallbackData, error: fallbackError } =
                       await fetchExpensesDirect(supabase, contact.id, {
@@ -3734,7 +3916,7 @@ Deno.serve(async (req: Request) => {
                     if (!fallbackError && Array.isArray(fallbackData)) {
                       const fallbackItems = fallbackData
                         .map((row: any) =>
-                          normalizeLastListedTransactionFromRow(row)
+                          normalizeLastListedTransactionFromRow(row),
                         )
                         .filter(Boolean) as LastListedTransaction[];
 
@@ -3796,12 +3978,10 @@ Deno.serve(async (req: Request) => {
                       choices_text: [
                         "I couldn't confirm your previous list context. Please pick from the latest transactions:",
                         ...choices.map((c) => `${c.index}. ${c.summary}`),
-                        `Reply with a number from 1..${
-                          Math.max(
-                            choices.length,
-                            1,
-                          )
-                        }.`,
+                        `Reply with a number from 1..${Math.max(
+                          choices.length,
+                          1,
+                        )}.`,
                       ].join("\n"),
                     };
                     lastToolResult = toolResult;
@@ -3912,14 +4092,15 @@ Deno.serve(async (req: Request) => {
                         typeof updates.date === "string"
                           ? updates.date
                           : resolved.candidate.date ||
-                            formatDateInTimeZone(userTimezone),
+                              formatDateInTimeZone(userTimezone),
                       ) || {
                         frequency: "monthly",
                         interval: 1,
-                        anchor_date: typeof updates.date === "string"
-                          ? updates.date
-                          : resolved.candidate.date ||
-                            formatDateInTimeZone(userTimezone),
+                        anchor_date:
+                          typeof updates.date === "string"
+                            ? updates.date
+                            : resolved.candidate.date ||
+                              formatDateInTimeZone(userTimezone),
                       };
                     } else if ((updatesArgs as any).is_recurring === false) {
                       updates.is_recurring = false;
@@ -3945,9 +4126,9 @@ Deno.serve(async (req: Request) => {
                         resolved.candidate.description,
                         resolved.candidate.household_id
                           ? `(${
-                            spaceMap.get(resolved.candidate.household_id)
-                              ?.name || ""
-                          })`
+                              spaceMap.get(resolved.candidate.household_id)
+                                ?.name || ""
+                            })`
                           : "",
                       ]
                         .filter((v) => String(v || "").trim().length > 0)
@@ -3956,7 +4137,7 @@ Deno.serve(async (req: Request) => {
 
                       const expenseId = resolved.candidate.id;
 
-                      if (!INTERNAL_FUNCTION_KEY) {
+                      if (!internalFunctionKey) {
                         console.error(
                           "[telegram-ai-bot] update-expense invoke skipped: missing internal key",
                           {
@@ -4004,9 +4185,8 @@ Deno.serve(async (req: Request) => {
                               expenseId,
                               updates,
                             },
-                            headers: {
-                              "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                            },
+                            headers:
+                              buildInternalInvokeHeaders(internalFunctionKey),
                           },
                         );
 
@@ -4019,13 +4199,13 @@ Deno.serve(async (req: Request) => {
                             typeof (error as any)?.context?.status === "number"
                               ? (error as any).context.status
                               : typeof status === "number"
-                              ? status
-                              : undefined;
+                                ? status
+                                : undefined;
                           const formattedBase = error
                             ? formatInvokeError(error)
                             : typeof (data as any)?.error === "string"
-                            ? (data as any).error
-                            : "Failed to update transaction";
+                              ? (data as any).error
+                              : "Failed to update transaction";
                           const code = (data as any)?.code;
                           const formatted = code
                             ? `${formattedBase} (code: ${code})`
@@ -4062,9 +4242,8 @@ Deno.serve(async (req: Request) => {
                                 step: "tool:update_transaction",
                                 traceId,
                                 tool: "update-expense",
-                                internalKeyConfigured: Boolean(
-                                  INTERNAL_FUNCTION_KEY,
-                                ),
+                                internalKeyConfigured:
+                                  Boolean(internalFunctionKey),
                                 httpStatus,
                                 status,
                                 code,
@@ -4121,16 +4300,27 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: resolved.candidate.id },
-                      headers: {
-                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
-                  toolResult = !error && data?.success ? { success: true } : {
-                    error: error ??
-                      data?.error ??
-                      "Failed to delete transaction",
-                  };
+                  const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to delete transaction";
+                  toolResult = success
+                    ? { success: true }
+                    : { error: formatted };
+                  if (!success) {
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      toolName: "delete_transaction",
+                      targetFunction: "delete-expense",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: { expenseId: resolved.candidate.id },
+                    });
+                  }
                 }
               } else if (
                 call.name === "draft_budget" ||
@@ -4360,8 +4550,8 @@ Deno.serve(async (req: Request) => {
                       normalizeEnvelopeName(name),
                     );
                     const nameToUse = canonical?.name || name;
-                    const hasPercentageArg = Object.prototype.hasOwnProperty
-                      .call(
+                    const hasPercentageArg =
+                      Object.prototype.hasOwnProperty.call(
                         call.args || {},
                         "percentage",
                       );
@@ -4377,8 +4567,8 @@ Deno.serve(async (req: Request) => {
                       resolvedPercentage.percentage == null
                     ) {
                       toolResult = {
-                        error: resolvedPercentage.error ||
-                          "percentage is required",
+                        error:
+                          resolvedPercentage.error || "percentage is required",
                       };
                       toolResponses.push({
                         functionResponse: {
@@ -4521,10 +4711,10 @@ Deno.serve(async (req: Request) => {
 
                   const resolved = !expenseIdDirect
                     ? resolveLastListedSelection(
-                      readLastListedTransactions(sessionState).items || [],
-                      call.args,
-                      spaceNameByHouseholdId,
-                    )
+                        readLastListedTransactions(sessionState).items || [],
+                        call.args,
+                        spaceNameByHouseholdId,
+                      )
                     : null;
 
                   if (resolved && "needs_disambiguation" in resolved) {
@@ -4532,7 +4722,8 @@ Deno.serve(async (req: Request) => {
                   } else if (resolved && "error" in resolved) {
                     toolResult = { error: resolved.error };
                   } else {
-                    const expenseId = expenseIdDirect ||
+                    const expenseId =
+                      expenseIdDirect ||
                       (resolved && "candidate" in resolved
                         ? resolved.candidate.id
                         : "");
@@ -4546,18 +4737,28 @@ Deno.serve(async (req: Request) => {
                         "delete-expense",
                         {
                           body: { userId, expenseIds: expenseId },
-                          headers: {
-                            "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                          },
+                          headers:
+                            buildInternalInvokeHeaders(internalFunctionKey),
                         },
                       );
-                      toolResult = !error && data?.success
+                      const success = !error && data?.success === true;
+                      const formatted = success
+                        ? ""
+                        : formatInvokeError(error ?? data?.error) ||
+                          "Failed to delete recurring transaction";
+                      toolResult = success
                         ? { success: true }
-                        : {
-                          error: error ??
-                            data?.error ??
-                            "Failed to delete recurring transaction",
-                        };
+                        : { error: formatted };
+                      if (!success) {
+                        await reportTelegramToolInvokeFailure({
+                          traceId,
+                          toolName: "manage_recurring",
+                          targetFunction: "delete-expense",
+                          formatted,
+                          error: error ?? data?.error,
+                          context: { action, expenseId },
+                        });
+                      }
                     }
                   }
                 } else if (action === "update") {
@@ -4573,10 +4774,10 @@ Deno.serve(async (req: Request) => {
                       : null;
                   const resolved = !expenseIdDirect
                     ? resolveLastListedSelection(
-                      readLastListedTransactions(sessionState).items || [],
-                      call.args,
-                      spaceNameByHouseholdId,
-                    )
+                        readLastListedTransactions(sessionState).items || [],
+                        call.args,
+                        spaceNameByHouseholdId,
+                      )
                     : null;
 
                   if (resolved && "needs_disambiguation" in resolved) {
@@ -4584,7 +4785,8 @@ Deno.serve(async (req: Request) => {
                   } else if (resolved && "error" in resolved) {
                     toolResult = { error: resolved.error };
                   } else {
-                    const expenseId = expenseIdDirect ||
+                    const expenseId =
+                      expenseIdDirect ||
                       (resolved && "candidate" in resolved
                         ? resolved.candidate.id
                         : "");
@@ -4594,8 +4796,8 @@ Deno.serve(async (req: Request) => {
                           "No matching transaction found. Ask user to list recent transactions first or provide more details.",
                       };
                     } else {
-                      const dateValue = call.args.date ||
-                        formatDateInTimeZone(userTimezone);
+                      const dateValue =
+                        call.args.date || formatDateInTimeZone(userTimezone);
                       const recurrenceRule = {
                         frequency: (call.args.frequency || "monthly")
                           .toString()
@@ -4636,23 +4838,37 @@ Deno.serve(async (req: Request) => {
                             expenseId,
                             updates,
                           },
-                          headers: {
-                            "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                          },
+                          headers:
+                            buildInternalInvokeHeaders(internalFunctionKey),
                         },
                       );
-                      toolResult = !error && data?.success
+                      const success = !error && data?.success === true;
+                      const formatted = success
+                        ? ""
+                        : formatInvokeError(error ?? data?.error) ||
+                          "Failed to update recurring transaction";
+                      toolResult = success
                         ? { success: true }
-                        : {
-                          error: error ??
-                            data?.error ??
-                            "Failed to update recurring transaction",
-                        };
+                        : { error: formatted };
+                      if (!success) {
+                        await reportTelegramToolInvokeFailure({
+                          traceId,
+                          toolName: "manage_recurring",
+                          targetFunction: "update-expense",
+                          formatted,
+                          error: error ?? data?.error,
+                          context: {
+                            action,
+                            expenseId,
+                            updateKeys: Object.keys(updates),
+                          },
+                        });
+                      }
                     }
                   }
                 } else {
-                  const dateValue = call.args.date ||
-                    formatDateInTimeZone(userTimezone);
+                  const dateValue =
+                    call.args.date || formatDateInTimeZone(userTimezone);
                   const recurrenceRule = {
                     frequency: (call.args.frequency || "monthly")
                       .toString()
@@ -4676,17 +4892,18 @@ Deno.serve(async (req: Request) => {
                     spaceMeta = spaceMap.get(householdName);
                     householdId = spaceMeta?.id ?? null;
                   }
-                  const splitConfig = householdId &&
-                      !spaceMeta?.isPortfolio &&
-                      call.args.type !== "income"
-                    ? await resolveHouseholdSplitConfig(
-                      supabase,
-                      householdId,
-                      userId,
-                      amount,
-                      call.args,
-                    )
-                    : {};
+                  const splitConfig =
+                    householdId &&
+                    !spaceMeta?.isPortfolio &&
+                    call.args.type !== "income"
+                      ? await resolveHouseholdSplitConfig(
+                          supabase,
+                          householdId,
+                          userId,
+                          amount,
+                          call.args,
+                        )
+                      : {};
                   const requestedWallet = await resolveWalletIdInScope(
                     supabase,
                     userId,
@@ -4698,7 +4915,7 @@ Deno.serve(async (req: Request) => {
                   } else {
                     const { data, error } = await invokeTransactionSave(
                       supabase,
-                      INTERNAL_FUNCTION_KEY,
+                      internalFunctionKey,
                       userId,
                       {
                         amount,
@@ -4708,7 +4925,8 @@ Deno.serve(async (req: Request) => {
                         currency: call.args.currency || userCurrency,
                         type: call.args.type || "expense",
                         householdId,
-                        isPortfolio: spaceMeta?.isPortfolio ??
+                        isPortfolio:
+                          spaceMeta?.isPortfolio ??
                           call.args.is_portfolio === true,
                         accountId: requestedWallet.accountId ?? undefined,
                         isRecurring: true,
@@ -4720,7 +4938,34 @@ Deno.serve(async (req: Request) => {
                         privacyScope: call.args.privacy_scope,
                       },
                     );
-                    toolResult = { data, error };
+                    const targetFunction =
+                      (call.args.type || "expense") === "income"
+                        ? "save-income"
+                        : "save-expense";
+                    const success = !error && data?.success === true;
+                    const formatted = success
+                      ? ""
+                      : formatInvokeError(error ?? data?.error) ||
+                        "Failed to save recurring transaction";
+                    toolResult = success
+                      ? { success: true, data: data?.data ?? data }
+                      : { error: formatted };
+                    if (!success) {
+                      await reportTelegramToolInvokeFailure({
+                        traceId,
+                        toolName: "manage_recurring",
+                        targetFunction,
+                        formatted,
+                        error: error ?? data?.error,
+                        context: {
+                          action,
+                          type: call.args.type || "expense",
+                          amount,
+                          category: call.args.category,
+                          householdId,
+                        },
+                      });
+                    }
                   }
                 }
               }
@@ -4733,17 +4978,18 @@ Deno.serve(async (req: Request) => {
               name: call.name,
               ok: toolResult?.success === true,
               hasError: typeof toolResult?.error === "string",
-              error: typeof toolResult?.error === "string"
-                ? toolResult.error.slice(0, 200)
-                : undefined,
+              error:
+                typeof toolResult?.error === "string"
+                  ? toolResult.error.slice(0, 200)
+                  : undefined,
             });
 
             lastToolResult = toolResult;
-            lastToolCallName = typeof call?.name === "string"
-              ? call.name
-              : null;
+            lastToolCallName =
+              typeof call?.name === "string" ? call.name : null;
 
-            const succeeded = toolResult?.success === true ||
+            const succeeded =
+              toolResult?.success === true ||
               (!!toolResult?.data && !toolResult?.error);
             if (succeeded) {
               toolSucceededAny = true;
@@ -4754,17 +5000,16 @@ Deno.serve(async (req: Request) => {
                 const pocketsRaw = Array.isArray(toolResult?.updated_pockets)
                   ? toolResult.updated_pockets
                   : Array.isArray(call.args?.pockets)
-                  ? call.args.pockets
-                  : [];
+                    ? call.args.pockets
+                    : [];
                 lastBudgetPockets = (pocketsRaw || []).map((p: any) => ({
                   name: String(p?.name || "").trim(),
                   percentage: Number(p?.percentage) || 0,
                 }));
               }
             }
-            const chartFromTool = extractChartMediaUrlFromToolResult(
-              toolResult,
-            );
+            const chartFromTool =
+              extractChartMediaUrlFromToolResult(toolResult);
             if (chartFromTool) {
               // Persist chart from tool payload even when the model doesn't print it.
               lastGeneratedChartUrl = chartFromTool;
@@ -4854,14 +5099,22 @@ Deno.serve(async (req: Request) => {
           finalResponseText = buildBudgetDoneText(lastBudgetPockets);
         }
         if (
+          typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
+          "string"
+        ) {
+          finalResponseText = buildMutationFailureText(
+            lastToolCallName,
+            lastToolResult,
+          )!;
+        }
+        if (
           (!finalResponseText || !finalResponseText.trim()) &&
           lastToolCallName === "update_transaction" &&
           typeof lastToolResult?.error === "string" &&
           lastToolResult.error.trim()
         ) {
           const errorSnippet = lastToolResult.error.trim().slice(0, 180);
-          finalResponseText =
-            `I couldn't update that transaction. ${errorSnippet}`;
+          finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
         }
         if (!finalResponseText || !finalResponseText.trim()) {
           finalResponseText =
@@ -4870,8 +5123,8 @@ Deno.serve(async (req: Request) => {
 
         // Persist the incoming user message AFTER Gemini/tool flow so history doesn't echo it.
         const chartFromText = extractQuickChartUrl(finalResponseText);
-        let mediaUrl: string | null = chartFromText.url ||
-          lastGeneratedChartUrl;
+        let mediaUrl: string | null =
+          chartFromText.url || lastGeneratedChartUrl;
         let cleanedText = chartFromText.cleanedText || finalResponseText;
 
         if (mediaUrl) {

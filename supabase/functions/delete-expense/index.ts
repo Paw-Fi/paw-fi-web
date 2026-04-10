@@ -360,9 +360,9 @@ Deno.serve(async (req: Request) => {
 
     const importedProviderExpenseIds = allowedExpenseIds.filter((id) => {
       const expense = expenseById.get(id) as Record<string, unknown> | undefined;
-      return typeof expense?["provider"] === "string" &&
-          typeof expense?["provider_transaction_id"] === "string" &&
-          String(expense?["provider_transaction_id"]).trim().length > 0;
+      return typeof expense?.["provider"] === "string" &&
+          typeof expense?.["provider_transaction_id"] === "string" &&
+          String(expense?.["provider_transaction_id"]).trim().length > 0;
     });
 
     const manualExpenseIds = allowedExpenseIds.filter(

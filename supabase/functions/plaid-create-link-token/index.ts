@@ -86,7 +86,8 @@ Deno.serve(async (req) => {
     let resolvedConnectionId = body.connectionId?.trim() || undefined;
     let modeUsed = body.mode ?? (resolvedConnectionId != null ? "update" : "new");
 
-    if (!resolvedConnectionId && (body.institutionId?.trim().length ?? 0) > 0) {
+    const requestedInstitutionId = body.institutionId?.trim();
+    if (!resolvedConnectionId && (requestedInstitutionId?.length ?? 0) > 0) {
       const { data: duplicateConnection, error: duplicateError } = await supabase
         .from("bank_connections")
         .select(
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
         )
         .eq("user_id", authResult.userId)
         .eq("provider", PLAID_PROVIDER)
-        .eq("metadata->>institution_id", body.institutionId.trim())
+        .eq("metadata->>institution_id", requestedInstitutionId!)
         .is("removed_at", null)
         .in("status", ["active", "needs_reauth"])
         .order("updated_at", { ascending: false })

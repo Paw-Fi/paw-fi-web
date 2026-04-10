@@ -247,7 +247,7 @@ Deno.serve(async (req) => {
         supabase,
         connectionId: connection.id,
         triggerSource: "webhook",
-        payload,
+        payload: payload as unknown as Record<string, unknown>,
         webhookEventId,
       });
 

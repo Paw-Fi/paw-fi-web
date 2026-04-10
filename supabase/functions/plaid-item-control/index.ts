@@ -1,22 +1,29 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
-import {
-  canRequestPlaidManualRefresh,
-} from "../shared/plaid-lifecycle.ts";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import { canRequestPlaidManualRefresh } from "../shared/plaid-lifecycle.ts";
 import {
   PLAID_PROVIDER,
   requestPlaidTransactionsRefresh,
 } from "../shared/plaid-client.ts";
+import { removePlaidConnection } from "../shared/plaid-remove.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-interface RequestRefreshBody {
+type PlaidItemAction = "request_refresh" | "remove_item";
+
+interface PlaidItemControlBody {
+  action?: PlaidItemAction;
   connectionId?: string;
+  reason?: string;
+}
+
+function isSupportedAction(value: unknown): value is PlaidItemAction {
+  return value === "request_refresh" || value === "remove_item";
 }
 
 Deno.serve(async (req) => {
@@ -44,7 +51,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = (await req.json().catch(() => ({}))) as RequestRefreshBody;
+    const body = (await req.json().catch(() => ({}))) as PlaidItemControlBody;
+
+    if (!isSupportedAction(body.action)) {
+      return new Response(
+        JSON.stringify({
+          error: "action must be one of: request_refresh, remove_item",
+        }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     if (!body.connectionId) {
       return new Response(JSON.stringify({ error: "connectionId is required" }), {
         status: 400,
@@ -53,8 +73,14 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-      global: { headers: { "X-Client-Info": "moneko-plaid-request-refresh" } },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: {
+        headers: { "X-Client-Info": "moneko-plaid-item-control" },
+      },
     });
 
     const authResult = await authenticateUserOrInternal(
@@ -92,9 +118,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (body.action === "remove_item") {
+      if (connection.removed_at) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            action: body.action,
+            alreadyRemoved: true,
+          }),
+          {
+            status: 200,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      await removePlaidConnection({
+        supabase,
+        connection,
+        removalReason: body.reason || "manual_remove",
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          action: body.action,
+        }),
+        {
+          status: 200,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const accessState = await loadPlaidUserAccessState(supabase, authResult.userId);
 
-    const { data: inFlightJobs, error: jobsError } = await supabase
+    const { count: inFlightJobCount, error: jobsError } = await supabase
       .from("bank_sync_jobs")
       .select("id", { count: "exact", head: true })
       .eq("bank_connection_id", connection.id)
@@ -109,7 +168,7 @@ Deno.serve(async (req) => {
       isTrialingUser: accessState.isTrialingUser,
       itemStatus: connection.item_status ?? connection.status,
       itemHealthState: connection.item_health_state,
-      syncInProgress: (inFlightJobs ?? 0) > 0,
+      syncInProgress: (inFlightJobCount ?? 0) > 0,
       lastSuccessfulSyncAt: connection.last_successful_sync_at,
       nextManualRefreshEligibleAt: connection.next_manual_refresh_eligible_at,
       now: new Date(),
@@ -129,7 +188,9 @@ Deno.serve(async (req) => {
     }
 
     const requestedAt = new Date();
-    const nextEligibleAt = new Date(requestedAt.getTime() + 24 * 60 * 60 * 1000);
+    const nextEligibleAt = new Date(
+      requestedAt.getTime() + 24 * 60 * 60 * 1000,
+    );
     const { data: claimed, error: claimError } = await supabase.rpc(
       "claim_plaid_manual_refresh",
       {
@@ -179,6 +240,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        action: body.action,
         status: "requested",
         nextRefreshEligibleAt: nextEligibleAt.toISOString(),
       }),
@@ -188,13 +250,13 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("[plaid-request-refresh] Unexpected error", error);
+    console.error("[plaid-item-control] Unexpected error", error);
     await reportEdgeFunctionError({
-      functionName: "plaid-request-refresh",
+      functionName: "plaid-item-control",
       error,
     });
     return new Response(
-      JSON.stringify({ error: "Failed to request Plaid refresh" }),
+      JSON.stringify({ error: "Failed to execute Plaid item action" }),
       {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },

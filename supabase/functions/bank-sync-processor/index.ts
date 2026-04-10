@@ -176,9 +176,17 @@ Deno.serve(async (req) => {
 
         // Process based on provider
         if (connection.provider === TINK_PROVIDER) {
-          await processTinkJob(supabase, job, connection as BankConnection);
+          await processTinkJob(
+            supabase as any,
+            job,
+            connection as BankConnection,
+          );
         } else if (connection.provider === PLAID_PROVIDER) {
-          await processPlaidJob(supabase, job, connection as BankConnection);
+          await processPlaidJob(
+            supabase as any,
+            job,
+            connection as BankConnection,
+          );
         } else {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
@@ -259,7 +267,7 @@ Deno.serve(async (req) => {
 });
 
 async function processTinkJob(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
@@ -317,7 +325,7 @@ async function processTinkJob(
 }
 
 async function processPlaidJob(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
@@ -361,7 +369,7 @@ async function processPlaidJob(
 }
 
 async function handleJobFailure(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   job: BankSyncJob,
   errorMessage: string,
 ): Promise<void> {
