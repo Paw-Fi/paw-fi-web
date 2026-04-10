@@ -25,6 +25,7 @@ interface PlaidConfig {
 }
 
 let cachedConfig: PlaidConfig | null = null;
+const MAX_TRANSACTIONS_DAYS_REQUESTED = 730;
 
 export function getPlaidConfig(): PlaidConfig {
   if (cachedConfig) return cachedConfig;
@@ -155,11 +156,29 @@ export async function createPlaidLinkToken(
     request.link_customization_name = config.linkCustomizationName;
   }
   if (params.accessToken) request.access_token = params.accessToken;
-  if (typeof params.transactionsDaysRequested === "number") {
-    request.transactions = { days_requested: params.transactionsDaysRequested };
+  const transactionsDaysRequested = normalizeTransactionsDaysRequested(
+    params.transactionsDaysRequested,
+  );
+  if (transactionsDaysRequested != null) {
+    request.transactions = { days_requested: transactionsDaysRequested };
   }
 
   return plaidRequest<CreateLinkTokenResponse>("/link/token/create", request);
+}
+
+function normalizeTransactionsDaysRequested(
+  value?: number,
+): number | undefined {
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+
+  const roundedValue = Math.round(value!);
+  if (roundedValue < 1) {
+    return undefined;
+  }
+
+  return Math.min(roundedValue, MAX_TRANSACTIONS_DAYS_REQUESTED);
 }
 
 export interface ExchangePublicTokenResponse {

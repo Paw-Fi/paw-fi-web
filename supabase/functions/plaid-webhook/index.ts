@@ -1,9 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
 import {
-  verifyPlaidWebhook,
   generateWebhookEventId,
+  verifyPlaidWebhook,
 } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -42,6 +43,8 @@ interface PlaidWebhookPayload {
   webhook_type?: string;
   webhook_code?: string;
   item_id?: string;
+  initial_update_complete?: boolean;
+  historical_update_complete?: boolean;
   error?: {
     error_code?: string;
     error_type?: string;
@@ -126,7 +129,7 @@ Deno.serve(async (req) => {
     // Look up the connection
     const { data: connection } = await supabase
       .from("bank_connections")
-      .select("id, status")
+      .select("id, status, metadata")
       .eq("provider", PLAID_PROVIDER)
       .eq("provider_item_id", payload.item_id)
       .maybeSingle();
@@ -140,6 +143,20 @@ Deno.serve(async (req) => {
       bank_connection_id: connection?.id || null,
       payload,
     });
+
+    if (connection?.id && payload.webhook_type === "TRANSACTIONS") {
+      await supabase
+        .from("bank_connections")
+        .update({
+          metadata: mergePlaidSyncStatusMetadata(connection.metadata, {
+            webhookCode: payload.webhook_code,
+            initialUpdateComplete: payload.initial_update_complete,
+            historicalUpdateComplete: payload.historical_update_complete,
+          }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id);
+    }
 
     // Handle ITEM webhook type (for reauth and error scenarios)
     if (payload.webhook_type === "ITEM") {
@@ -242,6 +259,13 @@ Deno.serve(async (req) => {
         console.error(
           "[plaid-webhook] Failed to create sync job:",
           insertError,
+        );
+        return new Response(
+          JSON.stringify({ error: "Failed to enqueue sync job" }),
+          {
+            status: 500,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
         );
       } else {
         console.log(

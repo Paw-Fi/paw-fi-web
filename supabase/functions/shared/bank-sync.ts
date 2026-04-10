@@ -1,4 +1,5 @@
 import { type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { resolvePlaidCountryCode } from "./plaid-country.ts";
 import {
   type ExpenseUpsertInput,
   mapPlaidTransactionToExpense,
@@ -117,13 +118,14 @@ export async function upsertBankConnection(params: {
   idempotencyKey?: string | null;
   metadata?: Record<string, unknown> | null;
 }): Promise<{ connectionId: string; isNewConnection: boolean }> {
-  const normalizedCountryCode = params.countryCode?.trim().toUpperCase() ||
-    null;
+  const normalizedCountryCode = resolvePlaidCountryCode({
+    requestedCountryCode: params.countryCode,
+  }) ?? null;
 
   const selectExisting = async () => {
     const { data, error } = await params.supabase
       .from("bank_connections")
-      .select("id, metadata")
+      .select("id, metadata, country_code")
       .eq("user_id", params.userId)
       .eq("provider", params.provider)
       .eq("provider_item_id", params.providerItemId)
@@ -135,6 +137,7 @@ export async function upsertBankConnection(params: {
 
     return data as {
       id: string;
+      country_code?: string | null;
       metadata?: Record<string, unknown> | null;
     } | null;
   };
@@ -157,7 +160,10 @@ export async function upsertBankConnection(params: {
         expires_at: params.expiresAt === undefined
           ? undefined
           : params.expiresAt,
-        country_code: normalizedCountryCode,
+        country_code: resolvePlaidCountryCode({
+          requestedCountryCode: normalizedCountryCode,
+          connectionCountryCode: existing.country_code,
+        }) ?? null,
         idempotency_key: params.idempotencyKey || undefined,
         status: "active",
         metadata: mergedMetadata,
@@ -222,7 +228,10 @@ export async function upsertBankConnection(params: {
         ? undefined
         : params.refreshTokenEncrypted,
       expires_at: params.expiresAt === undefined ? undefined : params.expiresAt,
-      country_code: normalizedCountryCode,
+      country_code: resolvePlaidCountryCode({
+        requestedCountryCode: normalizedCountryCode,
+        connectionCountryCode: retry.country_code,
+      }) ?? null,
       idempotency_key: params.idempotencyKey || undefined,
       status: "active",
       metadata: mergedMetadata,

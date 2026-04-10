@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import {
   exchangePublicToken,
   getPlaidAccounts,
@@ -89,6 +90,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    if (body.targetHouseholdId && !targetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      targetHouseholdId &&
+      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
     // Check idempotency - return existing connection if found
     if (body.idempotencyKey) {
       const { data: existingConnection } = await supabase
@@ -110,7 +132,6 @@ Deno.serve(async (req) => {
           )
           .eq("bank_connection_id", existingConnection.id);
 
-        const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
         const linkedWallets = await loadLinkedWalletsForBankAccounts({
           supabase,
           userId: authResult.userId,
@@ -204,7 +225,6 @@ Deno.serve(async (req) => {
       accounts,
     });
 
-    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
     const linkedWallets = await loadLinkedWalletsForBankAccounts({
       supabase,
       userId: authResult.userId,
@@ -234,7 +254,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Failed to exchange public token",
-        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,

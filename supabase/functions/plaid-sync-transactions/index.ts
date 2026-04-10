@@ -1,13 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import {
+  getPlaidAccounts,
   PLAID_PROVIDER,
   PlaidError,
   PlaidTransaction,
   syncPlaidTransactions,
 } from "../shared/plaid-client.ts";
+import { readPlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
 import {
   type ExpensePreview,
   type LinkedWalletRecord,
@@ -15,6 +18,7 @@ import {
   persistPlaidTransactions,
   sanitizeOptionalUuid,
   stagePlaidTransactions,
+  upsertPlaidAccounts,
 } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -42,6 +46,12 @@ interface SyncSummary {
   status: "succeeded" | "error";
   error?: string;
   addedTransactions: ExpensePreview[];
+  syncStatus?: {
+    initialUpdateComplete: boolean | null;
+    historicalUpdateComplete: boolean | null;
+    webhookCode: string | null;
+    updatedAt: string | null;
+  } | null;
 }
 
 Deno.serve(async (req) => {
@@ -94,6 +104,27 @@ Deno.serve(async (req) => {
           headers: { ...headers, "Content-Type": "application/json" },
         },
       );
+    }
+
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    if (body.targetHouseholdId && !targetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      targetHouseholdId &&
+      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
     }
 
     let accountFilter: BankAccountRow | null = null;
@@ -199,7 +230,7 @@ Deno.serve(async (req) => {
       {
         supabase: supabase as any,
         userId: authResult.userId,
-        targetHouseholdId: sanitizeOptionalUuid(body.targetHouseholdId),
+        targetHouseholdId,
         bankAccountIds: (bankAccounts || []).map((account) => account.id),
       },
     );
@@ -219,7 +250,7 @@ Deno.serve(async (req) => {
         userId: authResult.userId,
         accountFilter,
         cursorOverride: body.cursorOverride,
-        targetHouseholdId: sanitizeOptionalUuid(body.targetHouseholdId),
+        targetHouseholdId,
         linkedWalletsByBankAccountId,
       });
       summaries.push(summary);
@@ -242,6 +273,9 @@ Deno.serve(async (req) => {
         },
         connections: summaries,
         addedTransactions: allAdded,
+        syncStatus: body.connectionId && summaries.length == 1
+          ? (summaries[0].syncStatus ?? null)
+          : null,
       }),
       {
         status: 200,
@@ -253,7 +287,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Failed to sync transactions",
-        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
@@ -283,6 +316,7 @@ async function syncConnection(params: {
     accountsProcessed: 0,
     status: "succeeded",
     addedTransactions: [],
+    syncStatus: readPlaidSyncStatusMetadata(params.connection.metadata),
   };
 
   const auditInsert = await params.supabase
@@ -335,6 +369,38 @@ async function syncConnection(params: {
     }
     const accessToken = await decryptSecret(encryptedToken);
 
+    try {
+      const latestAccounts = await getPlaidAccounts(accessToken);
+      if (latestAccounts.length) {
+        const refreshedAccounts = await upsertPlaidAccounts({
+          supabase: params.supabase,
+          userId: params.userId,
+          bankConnectionId: params.connection.id,
+          accounts: latestAccounts,
+        });
+
+        for (const account of refreshedAccounts.records) {
+          const providerAccountId = account.provider_account_id ||
+            account.plaid_account_id;
+          if (providerAccountId) {
+            params.accountMap.set(providerAccountId, {
+              id: account.id,
+              bank_connection_id: params.connection.id,
+              plaid_account_id: account.plaid_account_id,
+              provider_account_id: account.provider_account_id,
+              currency: account.currency,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[plaid-sync] Failed to refresh accounts, continuing with cached mapping",
+        params.connection.id,
+        error,
+      );
+    }
+
     let cursor: string | undefined = params.cursorOverride === "reset"
       ? undefined
       : params.cursorOverride ||
@@ -342,6 +408,13 @@ async function syncConnection(params: {
         params.connection.plaid_cursor ||
         undefined;
     const processedAccounts = new Set<string>();
+    const processedAccountAssignments = new Map<
+      string,
+      {
+        householdId: string | null;
+        walletId: string | null;
+      }
+    >();
     let hasMore = true;
 
     while (hasMore) {
@@ -364,17 +437,6 @@ async function syncConnection(params: {
         );
         const resolvedHouseholdId = linkedWallet?.household_id ??
           params.targetHouseholdId ?? null;
-
-        await params.supabase
-          .from("expenses")
-          .update({
-            household_id: resolvedHouseholdId,
-            account_id: linkedWallet?.id ?? null,
-          })
-          .eq("provider", PLAID_PROVIDER)
-          .eq("user_id", params.userId)
-          .eq("bank_account_id", account.id)
-          .is("deleted_at", null);
 
         await stagePlaidTransactions({
           supabase: params.supabase,
@@ -399,6 +461,10 @@ async function syncConnection(params: {
         summary.currencyMismatches += result.currencyMismatches;
         summary.addedTransactions.push(...result.insertedRecords);
         processedAccounts.add(account.id);
+        processedAccountAssignments.set(account.id, {
+          householdId: resolvedHouseholdId,
+          walletId: linkedWallet?.id ?? null,
+        });
       }
 
       if (response.removed?.length) {
@@ -422,6 +488,19 @@ async function syncConnection(params: {
 
       cursor = response.next_cursor;
       hasMore = response.has_more;
+    }
+
+    for (const [bankAccountId, assignment] of processedAccountAssignments) {
+      await params.supabase
+        .from("expenses")
+        .update({
+          household_id: assignment.householdId,
+          account_id: assignment.walletId,
+        })
+        .eq("provider", PLAID_PROVIDER)
+        .eq("user_id", params.userId)
+        .eq("bank_account_id", bankAccountId)
+        .is("deleted_at", null);
     }
 
     await params.supabase

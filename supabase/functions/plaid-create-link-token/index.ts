@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { resolvePlaidCountryCode } from "../shared/plaid-country.ts";
 import {
   createPlaidLinkToken,
   PLAID_PROVIDER,
@@ -70,11 +71,12 @@ Deno.serve(async (req) => {
     }
 
     let accessToken: string | undefined;
+    let connectionCountryCode: string | undefined;
     if (body.connectionId) {
       const { data: connection, error: connectionError } = await supabase
         .from("bank_connections")
         .select(
-          "id, user_id, provider, access_token_encrypted, plaid_access_token_encrypted",
+          "id, user_id, provider, country_code, access_token_encrypted, plaid_access_token_encrypted",
         )
         .eq("id", body.connectionId)
         .eq("provider", PLAID_PROVIDER)
@@ -101,19 +103,26 @@ Deno.serve(async (req) => {
         });
       }
 
-      const encryptedToken =
-        connection.access_token_encrypted ||
+      const encryptedToken = connection.access_token_encrypted ||
         connection.plaid_access_token_encrypted;
       if (encryptedToken) {
         accessToken = await decryptSecret(encryptedToken);
       }
+
+      connectionCountryCode = connection.country_code?.trim().toUpperCase() ||
+        undefined;
     }
+
+    const countryCode = resolvePlaidCountryCode({
+      requestedCountryCode: body.countryCode,
+      connectionCountryCode,
+    });
 
     const response = await createPlaidLinkToken({
       userId: authResult.userId,
       accessToken,
       transactionsDaysRequested: body.transactionsDaysRequested,
-      countryCodes: body.countryCode ? [body.countryCode] : undefined,
+      countryCodes: countryCode ? [countryCode] : undefined,
       platform: body.platform,
     });
 
@@ -133,7 +142,6 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: "Failed to create link token",
-        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
