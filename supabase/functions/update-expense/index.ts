@@ -8,6 +8,7 @@ import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { computeBankExpenseUserOverrides } from "../shared/bank-expense-projection.ts";
 import {
   getAllCategories,
   normalizeCategoryForStorage,
@@ -237,6 +238,26 @@ function allocateCentsByWeights(
   }
 
   return floors;
+}
+
+function buildProviderFieldsFromExpenseRow(
+  expense: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    amount_cents: expense.amount_cents ?? null,
+    currency: expense.currency ?? null,
+    date: expense.date ?? null,
+    type: expense.type ?? null,
+    category: expense.category ?? null,
+    raw_text: expense.raw_text ?? null,
+    source: expense.source ?? null,
+    is_recurring: expense.is_recurring ?? false,
+    recurrence_rule: expense.recurrence_rule ?? null,
+    account_id: expense.account_id ?? null,
+    household_id: expense.household_id ?? null,
+    bank_account_id: expense.bank_account_id ?? null,
+    contact_id: expense.contact_id ?? null,
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -743,7 +764,7 @@ Deno.serve(async (req: Request) => {
     const { data: expense, error: fetchError } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, household_id, split_group_id, amount_cents, currency, raw_text, category, date, created_at, type",
+        "id, user_id, household_id, contact_id, split_group_id, amount_cents, currency, raw_text, category, date, created_at, type, source, is_recurring, recurrence_rule, bank_account_id, account_id, provider, provider_transaction_id, provider_fields, user_overrides",
       )
       .eq("id", normalizedExpenseId)
       .single();
@@ -1822,13 +1843,47 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const expenseRecord = expense as Record<string, unknown>;
+    const updatePayload: Record<string, unknown> = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    const isProviderManagedExpense =
+        typeof expenseRecord["provider"] === "string" &&
+        typeof expenseRecord["provider_transaction_id"] === "string" &&
+        String(expenseRecord["provider_transaction_id"]).trim().length > 0;
+
+    if (isProviderManagedExpense) {
+      const providerFields = expenseRecord["provider_fields"] &&
+          typeof expenseRecord["provider_fields"] === "object"
+        ? expenseRecord["provider_fields"] as Record<string, unknown>
+        : buildProviderFieldsFromExpenseRow(expenseRecord);
+
+      const visibleExpense = {
+        amount_cents: updates.amount_cents ?? expenseRecord["amount_cents"] ?? null,
+        currency: updates.currency ?? expenseRecord["currency"] ?? null,
+        date: updates.date ?? expenseRecord["date"] ?? null,
+        category: updates.category ?? expenseRecord["category"] ?? null,
+        raw_text: updates.raw_text ?? expenseRecord["raw_text"] ?? null,
+        source: updates.source ?? expenseRecord["source"] ?? null,
+        is_recurring: updates.is_recurring ?? expenseRecord["is_recurring"] ?? false,
+        recurrence_rule:
+          updates.recurrence_rule ?? expenseRecord["recurrence_rule"] ?? null,
+        account_id: (updates as any).account_id ?? expenseRecord["account_id"] ?? null,
+        household_id: targetHouseholdId ?? expenseRecord["household_id"] ?? null,
+      };
+
+      updatePayload["user_overrides"] = computeBankExpenseUserOverrides({
+        providerFields: providerFields as Record<string, unknown>,
+        visibleExpense,
+      });
+    }
+
     // Update expense
     const { data: updatedExpense, error: updateError } = await supabase
       .from("expenses")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", normalizedExpenseId)
       .select()
       .single();

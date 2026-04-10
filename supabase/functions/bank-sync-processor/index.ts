@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -19,7 +21,9 @@ interface BankSyncJob {
   bank_connection_id: string;
   provider: string;
   trigger_source: string;
+  job_type?: string;
   status: string;
+  attempt_count?: number;
   payload: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -29,6 +33,7 @@ interface BankConnection {
   id: string;
   user_id: string;
   provider: string;
+  needs_resync?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -159,7 +164,7 @@ Deno.serve(async (req) => {
         // Load bank connection
         const { data: connection, error: connectionError } = await supabase
           .from("bank_connections")
-          .select("id, user_id, provider")
+          .select("id, user_id, provider, needs_resync")
           .eq("id", job.bank_connection_id)
           .maybeSingle();
 
@@ -178,6 +183,25 @@ Deno.serve(async (req) => {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
 
+        if (
+          connection.provider === PLAID_PROVIDER &&
+          (connection as BankConnection).needs_resync === true
+        ) {
+          await supabase
+            .from("bank_connections")
+            .update({
+              needs_resync: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", connection.id);
+
+          await enqueuePlaidSyncJob({
+            supabase,
+            connectionId: connection.id,
+            triggerSource: "post_processing_resync",
+          });
+        }
+
         // Mark job as completed (clear processing_started_at)
         await supabase
           .from("bank_sync_jobs")
@@ -186,6 +210,8 @@ Deno.serve(async (req) => {
             processing_started_at: null,
             updated_at: new Date().toISOString(),
             processed_at: new Date().toISOString(),
+            last_error_code: null,
+            last_error_at: null,
           })
           .eq("id", job.id);
 
@@ -194,21 +220,17 @@ Deno.serve(async (req) => {
         console.error(`[bank-sync-processor] Job ${job.id} failed`, error);
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-
-        // Mark job as failed (clear processing_started_at)
-        await supabase
-          .from("bank_sync_jobs")
-          .update({
-            status: "failed",
-            processing_started_at: null,
-            updated_at: new Date().toISOString(),
-            processed_at: new Date().toISOString(),
-            payload: {
-              ...job.payload,
-              error: errorMessage,
-            },
-          })
-          .eq("id", job.id);
+        await handleJobFailure(supabase, job, errorMessage);
+        await reportEdgeFunctionError({
+          functionName: "bank-sync-processor",
+          error,
+          context: {
+            connection_id: job.bank_connection_id,
+            job_id: job.id,
+            job_type: job.job_type ?? "transactions_sync",
+            attempt_count: (job.attempt_count ?? 0) + 1,
+          },
+        });
 
         results.failed++;
         results.errors.push({ jobId: job.id, error: errorMessage });
@@ -319,6 +341,75 @@ async function processPlaidJob(
     const errorText = await response.text();
     throw new Error(`Plaid sync failed: ${response.status} ${errorText}`);
   }
+
+  const payload = await response.json().catch(() => null) as
+    | {
+      status?: string;
+      connections?: { connectionId: string; status: string; error?: string }[];
+    }
+    | null;
+
+  if (payload?.status === "partial_error" || payload?.connections?.some((item) => item.status !== "succeeded")) {
+    const failedConnection = payload?.connections?.find((item) =>
+      item.connectionId === connection.id && item.status !== "succeeded"
+    );
+    throw new Error(
+      failedConnection?.error ||
+        "Plaid sync completed with an error summary",
+    );
+  }
+}
+
+async function handleJobFailure(
+  supabase: ReturnType<typeof createClient>,
+  job: BankSyncJob,
+  errorMessage: string,
+): Promise<void> {
+  const nextAttemptCount = (job.attempt_count ?? 0) + 1;
+  const retryDelayMs = computeRetryDelayMs(nextAttemptCount);
+  const nowIso = new Date().toISOString();
+
+  if (nextAttemptCount < 5) {
+    await supabase
+      .from("bank_sync_jobs")
+      .update({
+        status: "pending",
+        attempt_count: nextAttemptCount,
+        next_attempt_at: new Date(Date.now() + retryDelayMs).toISOString(),
+        last_error_at: nowIso,
+        updated_at: nowIso,
+        processing_started_at: null,
+        payload: {
+          ...job.payload,
+          error: errorMessage,
+        },
+      })
+      .eq("id", job.id);
+    return;
+  }
+
+  await supabase
+    .from("bank_sync_jobs")
+    .update({
+      status: "failed",
+      attempt_count: nextAttemptCount,
+      last_error_at: nowIso,
+      updated_at: nowIso,
+      processing_started_at: null,
+      processed_at: nowIso,
+      payload: {
+        ...job.payload,
+        error: errorMessage,
+      },
+    })
+    .eq("id", job.id);
+}
+
+function computeRetryDelayMs(attemptCount: number): number {
+  if (attemptCount <= 1) return 15 * 60 * 1000;
+  if (attemptCount === 2) return 60 * 60 * 1000;
+  if (attemptCount === 3) return 6 * 60 * 60 * 1000;
+  return 24 * 60 * 60 * 1000;
 }
 
 /**

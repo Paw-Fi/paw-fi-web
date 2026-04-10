@@ -2,6 +2,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { assertScopeAccess } from "../shared/accounts.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import { computePlaidBillingWindow } from "../shared/plaid-lifecycle.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   exchangePublicToken,
   getPlaidAccounts,
@@ -90,6 +94,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    const accessState = await loadPlaidUserAccessState(
+      supabase,
+      authResult.userId,
+    );
+
     const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
     if (body.targetHouseholdId && !targetHouseholdId) {
       return new Response(
@@ -163,6 +172,48 @@ Deno.serve(async (req) => {
     const plaidResponse = await exchangePublicToken(body.publicToken);
     const encryptedToken = await encryptSecret(plaidResponse.access_token);
 
+    if (!accessState.isConvertedPaidUser) {
+      const { data: existingConnectionForItem, error: existingItemError } =
+        await supabase
+          .from("bank_connections")
+          .select("id")
+          .eq("user_id", authResult.userId)
+          .eq("provider", PLAID_PROVIDER)
+          .eq("provider_item_id", plaidResponse.item_id)
+          .maybeSingle();
+
+      if (existingItemError) {
+        throw existingItemError;
+      }
+
+      if (!existingConnectionForItem?.id) {
+        const { count, error: connectionCountError } = await supabase
+          .from("bank_connections")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", authResult.userId)
+          .eq("provider", PLAID_PROVIDER)
+          .is("removed_at", null)
+          .in("status", ["pending", "active", "needs_reauth", "error"]);
+
+        if (connectionCountError) {
+          throw connectionCountError;
+        }
+
+        if ((count ?? 0) >= 1) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
+            }),
+            {
+              status: 403,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+    }
+
     let upsertResult;
     try {
       upsertResult = await upsertBankConnection({
@@ -175,6 +226,7 @@ Deno.serve(async (req) => {
         expiresAt: null,
         countryCode: body.countryCode?.toUpperCase() || "US",
         idempotencyKey: body.idempotencyKey || null,
+        householdId: targetHouseholdId,
         metadata: {
           institution_id: body.institutionId || null,
           institution_name: body.institutionName || null,
@@ -217,6 +269,44 @@ Deno.serve(async (req) => {
       );
     }
 
+    const { data: connectionState, error: connectionStateError } = await supabase
+      .from("bank_connections")
+      .select(
+        "id, item_created_at, cursor_generation, removed_at, status, household_id",
+      )
+      .eq("id", connectionId)
+      .single();
+
+    if (connectionStateError) {
+      throw connectionStateError;
+    }
+
+    const billingWindow = computePlaidBillingWindow(
+      connectionState.item_created_at || new Date().toISOString(),
+    );
+
+    await supabase
+      .from("bank_connections")
+      .update({
+        household_id: targetHouseholdId ?? connectionState.household_id ?? null,
+        item_created_at:
+          connectionState.item_created_at || new Date().toISOString(),
+        first_billing_month_start: billingWindow.firstBillingMonthStart,
+        second_billing_month_start: billingWindow.secondBillingMonthStart,
+        third_billing_month_start: billingWindow.thirdBillingMonthStart,
+        scheduled_removal_at: billingWindow.scheduledRemovalAt,
+        removed_at: null,
+        status: "active",
+        item_status: isNewConnection ? "newly_connected" : "reconnected",
+        item_health_state: "healthy",
+        relink_state: null,
+        billing_keep_reason: accessState.isConvertedPaidUser
+          ? "active_paid_use"
+          : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", connectionId);
+
     const accounts = await getPlaidAccounts(plaidResponse.access_token);
     const upsertAccountsResult = await upsertPlaidAccounts({
       supabase,
@@ -237,12 +327,23 @@ Deno.serve(async (req) => {
       linkedWallet: linkedWallets.get(record.id) || null,
     }));
 
+    const enqueueResult = await enqueuePlaidSyncJob({
+      supabase,
+      connectionId,
+      triggerSource: isNewConnection ? "initial_sync" : "reconnect",
+      payload: {
+        initialSync: isNewConnection,
+        targetHouseholdId,
+      },
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
         connectionId: connectionId,
         targetHouseholdId,
         accounts: responseAccounts,
+        initialSyncQueued: enqueueResult.enqueued || enqueueResult.duplicate,
       }),
       {
         status: 200,
@@ -251,6 +352,10 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("[plaid-exchange-public-token] Unexpected error", error);
+    await reportEdgeFunctionError({
+      functionName: "plaid-exchange-public-token",
+      error,
+    });
     return new Response(
       JSON.stringify({
         error: "Failed to exchange public token",

@@ -1,6 +1,10 @@
 import { type SupabaseClient as SupabaseJsClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { resolvePlaidCountryCode } from "./plaid-country.ts";
 import {
+  buildBankExpenseMutationPlan,
+  type ExistingExpenseProjectionRow,
+} from "./bank-expense-projection.ts";
+import {
   type ExpenseUpsertInput,
   mapPlaidTransactionToExpense,
   PLAID_PROVIDER,
@@ -58,6 +62,7 @@ export interface PersistTransactionsParams {
   accountId?: string | null;
   accountCurrency: string;
   transactions: PlaidTransaction[];
+  cursorGeneration?: number;
 }
 export interface PersistTinkTransactionsParams {
   supabase: SupabaseClient;
@@ -116,6 +121,7 @@ export async function upsertBankConnection(params: {
   expiresAt?: string | null;
   countryCode?: string | null;
   idempotencyKey?: string | null;
+  householdId?: string | null;
   metadata?: Record<string, unknown> | null;
 }): Promise<{ connectionId: string; isNewConnection: boolean }> {
   const normalizedCountryCode = resolvePlaidCountryCode({
@@ -165,6 +171,9 @@ export async function upsertBankConnection(params: {
           connectionCountryCode: existing.country_code,
         }) ?? null,
         idempotency_key: params.idempotencyKey || undefined,
+        household_id: params.householdId === undefined
+          ? undefined
+          : params.householdId,
         status: "active",
         metadata: mergedMetadata,
         updated_at: new Date().toISOString(),
@@ -193,6 +202,7 @@ export async function upsertBankConnection(params: {
     status: "active",
     country_code: normalizedCountryCode,
     idempotency_key: params.idempotencyKey || null,
+    household_id: params.householdId || null,
     metadata: params.metadata || {},
   };
 
@@ -233,6 +243,9 @@ export async function upsertBankConnection(params: {
         connectionCountryCode: retry.country_code,
       }) ?? null,
       idempotency_key: params.idempotencyKey || undefined,
+      household_id: params.householdId === undefined
+        ? undefined
+        : params.householdId,
       status: "active",
       metadata: mergedMetadata,
       updated_at: new Date().toISOString(),
@@ -487,7 +500,9 @@ export async function persistPlaidTransactions(
 
   const { data: existingRows, error: selectError } = await params.supabase
     .from("expenses")
-    .select("id, provider_transaction_id")
+    .select(
+      "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides",
+    )
     .eq("user_id", params.userId)
     .eq("provider", PLAID_PROVIDER)
     .in("provider_transaction_id", lookupIds);
@@ -496,48 +511,30 @@ export async function persistPlaidTransactions(
     throw selectError;
   }
 
-  const existingByProviderId = new Map<string, string>();
-  (existingRows || []).forEach((row: ProviderRow) => {
-    if (row.provider_transaction_id) {
-      existingByProviderId.set(row.provider_transaction_id, row.id);
+  const providerPendingTransactionIds = new Map<string, string>();
+  for (const transaction of params.transactions) {
+    if (transaction.pending_transaction_id) {
+      providerPendingTransactionIds.set(
+        transaction.transaction_id,
+        transaction.pending_transaction_id,
+      );
     }
-  });
-
-  const updates: typeof normalizedRecords = [];
-  const inserts: typeof normalizedRecords = [];
-
-  for (const record of normalizedRecords) {
-    const transaction = params.transactions.find(
-      (t) => t.transaction_id === record.provider_transaction_id,
-    );
-    const pendingId = transaction?.pending_transaction_id;
-
-    // If this is the posted version of a pending transaction, merge into the pending row
-    if (pendingId && existingByProviderId.has(pendingId)) {
-      const targetId = existingByProviderId.get(pendingId)!;
-      existingByProviderId.set(record.provider_transaction_id, targetId);
-      updates.push({ ...record, id: targetId });
-      continue;
-    }
-
-    // If we already have this posted ID, update it
-    if (existingByProviderId.has(record.provider_transaction_id)) {
-      updates.push({
-        ...record,
-        id: existingByProviderId.get(record.provider_transaction_id)!,
-      });
-      continue;
-    }
-
-    inserts.push(record);
   }
+
+  const mutationPlan = buildBankExpenseMutationPlan({
+    records: normalizedRecords,
+    transactions: params.transactions,
+    existingRows: ((existingRows || []) as ExistingExpenseProjectionRow[]),
+    providerPendingTransactionIds,
+    cursorGeneration: params.cursorGeneration ?? 0,
+  });
 
   let insertedRecords: ExpensePreview[] = [];
 
-  if (inserts.length) {
+  if (mutationPlan.inserts.length) {
     const { data: insertedRows, error: insertError } = await params.supabase
       .from("expenses")
-      .insert(inserts)
+      .insert(mutationPlan.inserts)
       .select(
         "id, provider_transaction_id, amount_cents, currency, date, type, category, raw_text, is_recurring, recurrence_rule, created_at, updated_at, bank_account_id, account_id, user_id, household_id, contact_id",
       );
@@ -547,19 +544,19 @@ export async function persistPlaidTransactions(
     insertedRecords = (insertedRows || []) as ExpensePreview[];
   }
 
-  if (updates.length) {
+  if (mutationPlan.updates.length) {
     // Use onConflict to avoid races when sync runs twice
     const { error: updateError } = await params.supabase
       .from("expenses")
-      .upsert(updates, { onConflict: "id" });
+      .upsert(mutationPlan.updates, { onConflict: "id" });
     if (updateError) {
       throw updateError;
     }
   }
 
   return {
-    inserted: inserts.length,
-    updated: updates.length,
+    inserted: mutationPlan.inserts.length,
+    updated: mutationPlan.updates.length,
     skipped: params.transactions.length - normalizedRecords.length,
     currencyMismatches,
     insertedRecords,

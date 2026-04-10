@@ -1,7 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
   generateWebhookEventId,
   verifyPlaidWebhook,
@@ -129,7 +131,9 @@ Deno.serve(async (req) => {
     // Look up the connection
     const { data: connection } = await supabase
       .from("bank_connections")
-      .select("id, status, metadata")
+      .select(
+        "id, status, metadata, provider_item_id, cursor_generation, last_webhook_received_at",
+      )
       .eq("provider", PLAID_PROVIDER)
       .eq("provider_item_id", payload.item_id)
       .maybeSingle();
@@ -153,6 +157,8 @@ Deno.serve(async (req) => {
             initialUpdateComplete: payload.initial_update_complete,
             historicalUpdateComplete: payload.historical_update_complete,
           }),
+          last_webhook_received_at: new Date().toISOString(),
+          item_health_state: "healthy",
           updated_at: new Date().toISOString(),
         })
         .eq("id", connection.id);
@@ -170,6 +176,9 @@ Deno.serve(async (req) => {
             .from("bank_connections")
             .update({
               status: "needs_reauth",
+              item_status: "pending_relink",
+              item_health_state: "unhealthy",
+              relink_state: "required",
               updated_at: new Date().toISOString(),
             })
             .eq("id", connection.id);
@@ -187,6 +196,9 @@ Deno.serve(async (req) => {
             .from("bank_connections")
             .update({
               status: "needs_reauth",
+              item_status: "pending_relink",
+              item_health_state: "unhealthy",
+              relink_state: "required",
               updated_at: new Date().toISOString(),
             })
             .eq("id", connection.id);
@@ -231,45 +243,30 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Create sync job with webhook_event_id for idempotency
-      const { error: insertError } = await supabase
-        .from("bank_sync_jobs")
-        .insert({
-          bank_connection_id: connection.id,
-          provider: PLAID_PROVIDER,
-          trigger_source: "webhook",
-          webhook_event_id: webhookEventId,
-          payload,
-        });
+      const enqueueResult = await enqueuePlaidSyncJob({
+        supabase,
+        connectionId: connection.id,
+        triggerSource: "webhook",
+        payload,
+        webhookEventId,
+      });
 
-      if (insertError) {
-        // If it's a unique constraint violation, it's a duplicate
-        if (insertError.code === "23505") {
-          console.log(
-            `[plaid-webhook] Duplicate sync job detected via constraint: ${webhookEventId}`,
-          );
-          return new Response(
-            JSON.stringify({ received: true, duplicate: true }),
-            {
-              status: 200,
-              headers: { ...headers, "Content-Type": "application/json" },
-            },
-          );
-        }
-        console.error(
-          "[plaid-webhook] Failed to create sync job:",
-          insertError,
-        );
+      console.log(
+        `[plaid-webhook] Sync job result for connection ${connection.id}`,
+        enqueueResult,
+      );
+
+      if (!enqueueResult.enqueued && enqueueResult.duplicate) {
         return new Response(
-          JSON.stringify({ error: "Failed to enqueue sync job" }),
+          JSON.stringify({
+            received: true,
+            duplicate: true,
+            needsResyncQueued: enqueueResult.needsResyncQueued,
+          }),
           {
-            status: 500,
+            status: 200,
             headers: { ...headers, "Content-Type": "application/json" },
           },
-        );
-      } else {
-        console.log(
-          `[plaid-webhook] Created sync job for connection ${connection.id}, event: ${webhookEventId}`,
         );
       }
     }
@@ -280,6 +277,20 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("[plaid-webhook] Failed to handle webhook", error);
+    await reportEdgeFunctionError({
+      functionName: "plaid-webhook",
+      error,
+      context: {
+        provider_item_id: (() => {
+          try {
+            const parsed = JSON.parse(rawBody) as PlaidWebhookPayload;
+            return parsed.item_id ?? null;
+          } catch {
+            return null;
+          }
+        })(),
+      },
+    });
     return new Response(
       JSON.stringify({ error: "Failed to process webhook" }),
       {

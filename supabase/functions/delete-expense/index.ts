@@ -185,7 +185,7 @@ Deno.serve(async (req: Request) => {
     const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring",
+        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring, provider, provider_transaction_id",
       )
       .in("id", expenseIds);
 
@@ -358,13 +358,40 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Delete the expenses
-    const { error: delError } = await supabase
-      .from("expenses")
-      .delete()
-      .in("id", allowedExpenseIds);
+    const importedProviderExpenseIds = allowedExpenseIds.filter((id) => {
+      const expense = expenseById.get(id) as Record<string, unknown> | undefined;
+      return typeof expense?["provider"] === "string" &&
+          typeof expense?["provider_transaction_id"] === "string" &&
+          String(expense?["provider_transaction_id"]).trim().length > 0;
+    });
 
-    if (delError) return errorResponse("Failed to delete expense", 500);
+    const manualExpenseIds = allowedExpenseIds.filter(
+      (id) => !importedProviderExpenseIds.includes(id),
+    );
+
+    if (importedProviderExpenseIds.length > 0) {
+      const { error: softDeleteError } = await supabase
+        .from("expenses")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_reason: "user_deleted",
+          updated_at: new Date().toISOString(),
+        })
+        .in("id", importedProviderExpenseIds);
+
+      if (softDeleteError) {
+        return errorResponse("Failed to delete expense", 500);
+      }
+    }
+
+    if (manualExpenseIds.length > 0) {
+      const { error: delError } = await supabase
+        .from("expenses")
+        .delete()
+        .in("id", manualExpenseIds);
+
+      if (delError) return errorResponse("Failed to delete expense", 500);
+    }
 
     console.log("[delete-expense] Successfully deleted expenses", {
       expenseIds: allowedExpenseIds,

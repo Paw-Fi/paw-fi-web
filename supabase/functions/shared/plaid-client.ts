@@ -260,6 +260,15 @@ interface PlaidSyncResponse {
   next_cursor: string;
 }
 
+interface PlaidTransactionsRefreshResponse {
+  request_id: string;
+}
+
+interface PlaidItemRemoveResponse {
+  removed: boolean;
+  request_id: string;
+}
+
 export async function syncPlaidTransactions(
   accessToken: string,
   cursor?: string | null,
@@ -268,6 +277,25 @@ export async function syncPlaidTransactions(
     access_token: accessToken,
     cursor: cursor || undefined,
     options: { include_personal_finance_category: true },
+  });
+}
+
+export async function requestPlaidTransactionsRefresh(
+  accessToken: string,
+): Promise<PlaidTransactionsRefreshResponse> {
+  return plaidRequest<PlaidTransactionsRefreshResponse>(
+    "/transactions/refresh",
+    {
+      access_token: accessToken,
+    },
+  );
+}
+
+export async function removePlaidItem(
+  accessToken: string,
+): Promise<PlaidItemRemoveResponse> {
+  return plaidRequest<PlaidItemRemoveResponse>("/item/remove", {
+    access_token: accessToken,
   });
 }
 
