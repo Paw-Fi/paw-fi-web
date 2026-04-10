@@ -2,17 +2,12 @@ import * as React from "react";
 
 import { formatDate } from "@/lib/utils";
 import { Helmet } from "@dr.pogodin/react-helmet";
-// @ts-ignore
-import {
-  motion,
-  useMotionValue,
-  useReducedMotion,
-  useSpring,
-} from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HomeHeader } from "@/components/index/header";
+import { Timeline } from "@/components/ui/timeline";
 
 interface ChangelogEntry {
   title: string;
@@ -32,19 +27,19 @@ const changelogs: ChangelogEntry[] = [
     description:
       "This release introduces the new Wallets feature for managing multiple payment cards, enhances spending visualization with redesigned breakdowns, improves data import reliability, and includes numerous performance and bug fixes.",
     items: [
-  "New Wallets feature to manage multiple cards and bank accounts in one place",
-  "Improved spending charts with clearer and easier-to-read visuals",
-  "Faster transaction loading for smoother scrolling",
-  "Quicker home page updates so your data stays fresh",
-  "Fixed issue with recurring expenses not showing correctly in budgets",
-  "More reliable CSV import, including fixes for crashes on Android",
-  "New time filters (last month and last 3 months) for easy comparison",
-  "Better visibility in dark mode for status bar text",
-  "Fixed display issues with household member names",
-  "Resolved problems with invite links",
-  "Faster loading on the pockets page",
-  "General performance and stability improvements"
-],
+      "New Wallets feature to manage multiple cards and bank accounts in one place",
+      "Improved spending charts with clearer and easier-to-read visuals",
+      "Faster transaction loading for smoother scrolling",
+      "Quicker home page updates so your data stays fresh",
+      "Fixed issue with recurring expenses not showing correctly in budgets",
+      "More reliable CSV import, including fixes for crashes on Android",
+      "New time filters (last month and last 3 months) for easy comparison",
+      "Better visibility in dark mode for status bar text",
+      "Fixed display issues with household member names",
+      "Resolved problems with invite links",
+      "Faster loading on the pockets page",
+      "General performance and stability improvements"
+    ],
   },
   {
     title: "Wallet & Apple Pay Integration Improvements",
@@ -408,119 +403,9 @@ const changelogs: ChangelogEntry[] = [
   },
 ];
 
-function ChangelogItem({
-  entry,
-  index,
-  isLast,
-}: {
-  entry: ChangelogEntry;
-  index: number;
-  isLast: boolean;
-}) {
-  const date = new Date(entry.date);
-  const formattedDate = formatDate(date);
-  const anchorId = getChangelogAnchorId(entry);
-
-  return (
-    <article
-      id={anchorId}
-      className="group relative scroll-mt-28 pb-14 md:scroll-mt-32 md:pb-20"
-    >
-      <div className="grid gap-6 md:grid-cols-[220px_minmax(0,1fr)] md:gap-10">
-        <div className="relative">
-          <motion.a
-            href={`#${anchorId}`}
-            aria-label={`Jump to ${entry.version ? `v${entry.version}` : entry.title}`}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-            className="border-border/60 bg-background/85 supports-[backdrop-filter]:bg-background/70 hover:border-primary/35 sticky top-20 z-20 -mx-1 flex cursor-pointer items-center justify-between rounded-2xl border px-4 py-3 shadow-sm backdrop-blur-xl transition-colors md:top-24 md:mx-0 md:flex-col md:items-start md:justify-start md:gap-2"
-          >
-            <time className="text-muted-foreground text-xs font-semibold tracking-[0.2em] uppercase md:text-[11px]">
-              {formattedDate}
-            </time>
-            {entry.version && (
-              <span className="border-border bg-card text-foreground/90 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm">
-                v{entry.version}
-              </span>
-            )}
-          </motion.a>
-
-          <div className="pointer-events-none absolute top-5 left-3 z-10 md:left-[calc(100%+30px)]">
-            <div className="relative flex h-3.5 w-3.5 items-center justify-center">
-              <div className="bg-background ring-border/80 group-hover:ring-primary/50 absolute inset-0 rounded-full ring-2 transition-colors duration-300" />
-              <div className="bg-primary/70 group-hover:bg-primary h-1.5 w-1.5 rounded-full transition-colors duration-300" />
-            </div>
-          </div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.55, delay: index * 0.08 }}
-          className="relative"
-        >
-          <Card className="border-border/70 bg-card/80 group-hover:border-primary/20 relative overflow-hidden p-6 shadow-[0_10px_30px_-20px_hsl(var(--foreground)/0.35)] backdrop-blur-xl transition-all duration-300 group-hover:shadow-[0_20px_40px_-24px_hsl(var(--foreground)/0.45)] sm:p-8">
-            <div className="via-foreground/20 pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent" />
-            <div className="flex flex-col gap-6">
-              <header className="space-y-4">
-                <h2 className="text-foreground max-w-[26ch] text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {entry.title}
-                </h2>
-                {entry.tags && entry.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {entry.tags.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="border-border/70 bg-secondary/50 text-secondary-foreground rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.04em]"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </header>
-
-              <p className="text-muted-foreground max-w-[75ch] text-[15px] leading-7 sm:text-base">
-                {entry.description}
-              </p>
-
-              <Separator className="bg-border/70" />
-
-              <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
-                {entry.items.map((item, i) => (
-                  <li key={i} className="group/item flex items-start gap-3.5">
-                    <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
-                    <span className="text-foreground/85 leading-6">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-      {!isLast && (
-        <div className="via-border/70 pointer-events-none absolute right-0 bottom-0 left-0 h-px bg-gradient-to-r from-transparent to-transparent md:left-[240px]" />
-      )}
-    </article>
-  );
-}
-
-function getChangelogAnchorId(entry: ChangelogEntry) {
-  const base = entry.version
-    ? `v-${entry.version}`
-    : `${entry.date}-${entry.title}`;
-
-  return base
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export function ChangelogRouteComponent() {
+  const prefersReducedMotion = useReducedMotion();
+
   const sortedChangelogs = React.useMemo(
     () =>
       [...changelogs].sort((a, b) => {
@@ -531,111 +416,62 @@ export function ChangelogRouteComponent() {
     [],
   );
 
-  const changelogAnchorIds = React.useMemo(
-    () => sortedChangelogs.map((entry) => getChangelogAnchorId(entry)),
-    [sortedChangelogs],
-  );
+  const timelineData = React.useMemo(() => {
+    return sortedChangelogs.map((changelog) => ({
+      title: (
+        <div className="flex flex-col gap-2">
+          <time className="text-muted-foreground text-[10px] sm:text-xs font-semibold tracking-[0.2em] uppercase">
+            {formatDate(new Date(changelog.date))}
+          </time>
+          {changelog.version && (
+            <span className="w-fit border-border bg-card text-foreground/90 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm">
+              v{changelog.version}
+            </span>
+          )}
+        </div>
+      ),
+      content: (
+        <Card className="border-border/70 bg-card/80 group-hover:border-primary/20 relative overflow-hidden p-6 shadow-[0_10px_30px_-20px_hsl(var(--foreground)/0.35)] backdrop-blur-xl transition-all duration-300 sm:p-8">
+          <div className="via-foreground/20 pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent" />
+          <div className="flex flex-col gap-6">
+            <header className="space-y-4">
+              <h2 className="text-foreground max-w-[26ch] text-2xl font-semibold tracking-tight sm:text-3xl">
+                {changelog.title}
+              </h2>
+              {changelog.tags && changelog.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {changelog.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="border-border/70 bg-secondary/50 text-secondary-foreground rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-[0.04em]"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </header>
 
-  const scrollYProgress = useMotionValue(0);
-  const prefersReducedMotion = useReducedMotion();
-  const scaleY = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001,
-  });
+            <p className="text-muted-foreground max-w-[75ch] text-[15px] leading-7 sm:text-base">
+              {changelog.description}
+            </p>
 
-  React.useEffect(() => {
-    const updateScrollProgress = () => {
-      const { documentElement } = document;
-      const scrollTop = window.scrollY;
-      const scrollableHeight =
-        documentElement.scrollHeight - documentElement.clientHeight;
-      const progress = scrollableHeight > 0 ? scrollTop / scrollableHeight : 0;
+            <Separator className="bg-border/70" />
 
-      scrollYProgress.set(progress);
-    };
-
-    updateScrollProgress();
-
-    window.addEventListener("scroll", updateScrollProgress, { passive: true });
-    window.addEventListener("resize", updateScrollProgress);
-
-    return () => {
-      window.removeEventListener("scroll", updateScrollProgress);
-      window.removeEventListener("resize", updateScrollProgress);
-    };
-  }, [scrollYProgress]);
-
-  React.useEffect(() => {
-    const scrollToHash = () => {
-      const hash = window.location.hash.replace(/^#/, "");
-      if (!hash) return;
-
-      const target = document.getElementById(hash);
-      if (!target) return;
-
-      requestAnimationFrame(() => {
-        target.scrollIntoView({ block: "start", behavior: "auto" });
-      });
-    };
-
-    scrollToHash();
-    window.addEventListener("hashchange", scrollToHash);
-
-    return () => {
-      window.removeEventListener("hashchange", scrollToHash);
-    };
-  }, [changelogAnchorIds]);
-
-  React.useEffect(() => {
-    const sections = changelogAnchorIds
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section));
-
-    if (sections.length === 0) return;
-
-    let activeId = window.location.hash.replace(/^#/, "");
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleEntries = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort(
-            (a, b) =>
-              Math.abs(a.boundingClientRect.top) -
-              Math.abs(b.boundingClientRect.top),
-          );
-
-        const next = visibleEntries[0]?.target;
-        if (!next || !(next instanceof HTMLElement)) return;
-
-        const nextId = next.id;
-        if (!nextId || nextId === activeId) return;
-
-        activeId = nextId;
-        const nextHash = `#${nextId}`;
-
-        if (window.location.hash !== nextHash) {
-          window.history.replaceState(
-            null,
-            "",
-            `${window.location.pathname}${window.location.search}${nextHash}`,
-          );
-        }
-      },
-      {
-        root: null,
-        rootMargin: "-25% 0px -55% 0px",
-        threshold: [0.15, 0.35, 0.6],
-      },
-    );
-
-    sections.forEach((section) => observer.observe(section));
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [changelogAnchorIds]);
+            <ul className="text-foreground/90 list-none space-y-3.5 pl-0 text-sm sm:text-[15px]">
+              {changelog.items.map((item, i) => (
+                <li key={i} className="group/item flex items-start gap-3.5">
+                  <span className="border-primary/35 bg-primary/70 group-hover/item:bg-primary mt-[7px] h-2 w-2 shrink-0 rounded-sm border transition-colors" />
+                  <span className="text-foreground/85 leading-6">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Card>
+      ),
+    }));
+  }, [sortedChangelogs]);
 
   return (
     <>
@@ -650,13 +486,13 @@ export function ChangelogRouteComponent() {
 
       <HomeHeader />
 
-      <div className="bg-background selection:bg-primary/20 relative min-h-screen overflow-hidden">
+      <div className="bg-background selection:bg-primary/20 relative min-h-screen">
         <div className="pointer-events-none fixed inset-0 z-0">
           <div className="absolute top-[-220px] left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.14),transparent_62%)]" />
           <div className="absolute right-[-180px] bottom-[-240px] h-[460px] w-[460px] rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--foreground)/0.08),transparent_70%)] blur-2xl" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-6xl px-5 pt-20 pb-20 sm:px-8 md:pt-24 lg:px-10 lg:pt-28">
+        <div className="relative z-10 mx-auto max-w-6xl pt-20 pb-20 md:pt-24 lg:pt-28">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -664,7 +500,7 @@ export function ChangelogRouteComponent() {
               duration: prefersReducedMotion ? 0 : 0.75,
               ease: "easeOut",
             }}
-            className="mb-16 space-y-6 md:mb-20"
+            className="mb-8 px-5 sm:px-8 lg:px-10 space-y-6 md:mb-12"
           >
             <div className="mb-2 flex items-center gap-2.5">
               <span className="relative flex h-2 w-2">
@@ -684,32 +520,15 @@ export function ChangelogRouteComponent() {
             </p>
           </motion.div>
 
-          <div className="relative">
-            <div className="bg-border/70 absolute top-5 bottom-5 left-[15px] w-px md:left-[255px]" />
-
-            <motion.div
-              className="from-primary/95 via-primary/45 absolute top-5 bottom-5 left-[15px] w-px origin-top bg-gradient-to-b to-transparent md:left-[255px]"
-              style={{ scaleY: prefersReducedMotion ? 1 : scaleY }}
-            />
-
-            <div className="relative space-y-0">
-              {sortedChangelogs.map((changelog, index) => (
-                <ChangelogItem
-                  key={changelog.date + index}
-                  entry={changelog}
-                  index={index}
-                  isLast={index === sortedChangelogs.length - 1}
-                />
-              ))}
-            </div>
-          </div>
+          {/* New Clean Timeline Component */}
+          <Timeline data={timelineData} />
 
           {/* Footer Callout */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="mt-16 pb-8 text-center md:mt-20"
+            className="mt-16 pb-8 text-center md:mt-20 px-5 sm:px-8 lg:px-10"
           >
             <p className="text-muted-foreground text-sm leading-6">
               Have a feature request?{" "}

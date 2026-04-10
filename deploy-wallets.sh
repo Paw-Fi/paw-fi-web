@@ -54,6 +54,7 @@ if [[ "$ENV_NAME" == "PRODUCTION" ]]; then
 fi
 
 # Core wallet management endpoints
+deploy_function "wallets-overview"
 deploy_function "list-wallets"
 deploy_function "save-wallet"
 deploy_function "update-wallet"
