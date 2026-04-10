@@ -345,6 +345,10 @@ async function processPlaidJob(
     },
   );
 
+  console.log(
+    `[bank-sync-processor] Plaid sync response status for job ${job.id}: ${response.status}`,
+  );
+
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Plaid sync failed: ${response.status} ${errorText}`);
@@ -356,6 +360,15 @@ async function processPlaidJob(
       connections?: { connectionId: string; status: string; error?: string }[];
     }
     | null;
+
+  console.log(
+    "[bank-sync-processor] Plaid sync response payload",
+    JSON.stringify({
+      jobId: job.id,
+      connectionId: connection.id,
+      payload,
+    }),
+  );
 
   if (payload?.status === "partial_error" || payload?.connections?.some((item) => item.status !== "succeeded")) {
     const failedConnection = payload?.connections?.find((item) =>

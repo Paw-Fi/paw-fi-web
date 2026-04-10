@@ -4,6 +4,7 @@ import { authenticateUser } from "../shared/auth.ts";
 import { assertScopeAccess } from "../shared/accounts.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import { canReusePlaidExchangeSnapshot } from "../shared/plaid-exchange-idempotency.ts";
 import { computePlaidBillingWindow } from "../shared/plaid-lifecycle.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
@@ -21,6 +22,7 @@ import {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for plaid-exchange-public-token");
@@ -130,9 +132,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existingConnection) {
-        console.log(
-          `[plaid-exchange] Idempotent request detected, returning existing connection: ${existingConnection.id}`,
-        );
         // Fetch accounts for the existing connection
         const { data: existingAccounts } = await supabase
           .from("bank_accounts")
@@ -141,31 +140,41 @@ Deno.serve(async (req) => {
           )
           .eq("bank_connection_id", existingConnection.id);
 
-        const linkedWallets = await loadLinkedWalletsForBankAccounts({
-          supabase,
-          userId: authResult.userId,
-          targetHouseholdId,
-          bankAccountIds: (existingAccounts || []).map((account: any) =>
-            String(account.id || "")
-          ),
-        });
+        if (!canReusePlaidExchangeSnapshot((existingAccounts || []).length)) {
+          console.warn(
+            `[plaid-exchange] Idempotent connection ${existingConnection.id} has no stored accounts; continuing with fresh exchange attempt`,
+          );
+        } else {
+          console.log(
+            `[plaid-exchange] Idempotent request detected, returning existing connection: ${existingConnection.id}`,
+          );
 
-        return new Response(
-          JSON.stringify({
-            success: true,
-            connectionId: existingConnection.id,
-            targetHouseholdId: targetHouseholdId,
-            accounts: (existingAccounts || []).map((account: any) => ({
-              ...account,
-              linkedWallet: linkedWallets.get(String(account.id || "")) || null,
-            })),
-            idempotent: true,
-          }),
-          {
-            status: 200,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
+          const linkedWallets = await loadLinkedWalletsForBankAccounts({
+            supabase,
+            userId: authResult.userId,
+            targetHouseholdId,
+            bankAccountIds: (existingAccounts || []).map((account: any) =>
+              String(account.id || "")
+            ),
+          });
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              connectionId: existingConnection.id,
+              targetHouseholdId: targetHouseholdId,
+              accounts: (existingAccounts || []).map((account: any) => ({
+                ...account,
+                linkedWallet: linkedWallets.get(String(account.id || "")) || null,
+              })),
+              idempotent: true,
+            }),
+            {
+              status: 200,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
       }
     }
 
@@ -336,6 +345,54 @@ Deno.serve(async (req) => {
         targetHouseholdId,
       },
     });
+
+    const shouldKickProcessorNow = enqueueResult.enqueued ||
+      enqueueResult.duplicate;
+    if (shouldKickProcessorNow && SUPABASE_URL && INTERNAL_SERVICE_SECRET) {
+      try {
+        console.log(
+          `[plaid-exchange] Triggering immediate bank-sync-processor run for connection ${connectionId}`,
+        );
+        const processorResponse = await fetch(
+          `${SUPABASE_URL}/functions/v1/bank-sync-processor`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET,
+            },
+            body: JSON.stringify({}),
+          },
+        );
+
+        if (!processorResponse.ok) {
+          const processorError = await processorResponse.text();
+          console.error(
+            `[plaid-exchange] Immediate bank-sync-processor trigger failed for connection ${connectionId}: ${processorResponse.status} ${processorError}`,
+          );
+        } else {
+          const processorPayload = await processorResponse.json().catch(() =>
+            null
+          );
+          console.log(
+            "[plaid-exchange] Immediate bank-sync-processor response",
+            JSON.stringify({
+              connectionId,
+              payload: processorPayload,
+            }),
+          );
+        }
+      } catch (processorError) {
+        console.error(
+          `[plaid-exchange] Immediate bank-sync-processor trigger threw for connection ${connectionId}`,
+          processorError,
+        );
+      }
+    } else if (!INTERNAL_SERVICE_SECRET) {
+      console.warn(
+        `[plaid-exchange] INTERNAL_SERVICE_SECRET missing, initial sync will wait for cron for connection ${connectionId}`,
+      );
+    }
 
     return new Response(
       JSON.stringify({

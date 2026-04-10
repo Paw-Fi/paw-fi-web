@@ -181,20 +181,16 @@ fi
 deploy_function "plaid-create-link-token"
 deploy_function "plaid-exchange-public-token"
 deploy_function "plaid-item-control"
-deploy_function "tink-create-link-token"
-deploy_function "tink-exchange-auth-code"
 
 # Internal/dual-auth functions (called by pg_cron or other functions)
 # These use X-Moneko-Internal-Key header for internal calls
 # and can also accept user JWT for direct user-initiated syncs
 deploy_internal_function "plaid-sync-transactions"
 deploy_internal_function "plaid-maintenance"
-deploy_internal_function "tink-sync-transactions"
 deploy_internal_function "bank-sync-processor"
 
 # Webhook handlers (called by external providers, verify their own signatures)
 deploy_internal_function "plaid-webhook"
-deploy_internal_function "tink-webhook"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  ✅ Bank sync functions deployed successfully"
@@ -204,16 +200,12 @@ echo "     User-facing (JWT required):"
 echo "       - plaid-create-link-token"
 echo "       - plaid-exchange-public-token"
 echo "       - plaid-item-control"
-echo "       - tink-create-link-token"
-echo "       - tink-exchange-auth-code"
 echo ""
 echo "     Internal (--no-verify-jwt, uses internal secret):"
 echo "       - plaid-sync-transactions"
 echo "       - plaid-maintenance"
-echo "       - tink-sync-transactions"
 echo "       - bank-sync-processor"
 echo "       - plaid-webhook"
-echo "       - tink-webhook"
 echo ""
 echo "  📝 Post-deployment checklist:"
 echo "     1. Verify secrets are set: supabase secrets list --project-ref $PROJECT_REF"

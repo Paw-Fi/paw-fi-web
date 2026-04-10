@@ -295,6 +295,74 @@ END $$;
 UPDATE public.bank_sync_jobs
 SET job_type = COALESCE(job_type, 'transactions_sync');
 
+-- Resolve existing active duplicates before adding unique partial indexes.
+-- Keep one active job per (bank_connection_id, job_type), prefer processing jobs.
+WITH ranked_connection_type AS (
+  SELECT
+    id,
+    first_value(id) OVER (
+      PARTITION BY bank_connection_id, job_type
+      ORDER BY (status = 'processing') DESC, created_at ASC, id ASC
+    ) AS keeper_id,
+    row_number() OVER (
+      PARTITION BY bank_connection_id, job_type
+      ORDER BY (status = 'processing') DESC, created_at ASC, id ASC
+    ) AS row_num
+  FROM public.bank_sync_jobs
+  WHERE status IN ('pending', 'processing')
+), duplicate_connection_type AS (
+  SELECT id, keeper_id
+  FROM ranked_connection_type
+  WHERE row_num > 1
+)
+UPDATE public.bank_sync_jobs AS jobs
+SET
+  status = 'failed',
+  last_error_code = COALESCE(jobs.last_error_code, 'superseded_duplicate_active_job'),
+  last_error_at = COALESCE(jobs.last_error_at, NOW()),
+  superseded_by_job_id = duplicate_connection_type.keeper_id,
+  updated_at = NOW(),
+  payload = COALESCE(jobs.payload, '{}'::jsonb) || jsonb_build_object(
+    'superseded_reason',
+    'duplicate_active_connection_job_type'
+  )
+FROM duplicate_connection_type
+WHERE jobs.id = duplicate_connection_type.id;
+
+-- Keep one active job per dedupe_key for rows where dedupe_key is set.
+WITH ranked_dedupe_key AS (
+  SELECT
+    id,
+    first_value(id) OVER (
+      PARTITION BY dedupe_key
+      ORDER BY (status = 'processing') DESC, created_at ASC, id ASC
+    ) AS keeper_id,
+    row_number() OVER (
+      PARTITION BY dedupe_key
+      ORDER BY (status = 'processing') DESC, created_at ASC, id ASC
+    ) AS row_num
+  FROM public.bank_sync_jobs
+  WHERE dedupe_key IS NOT NULL
+    AND status IN ('pending', 'processing')
+), duplicate_dedupe_key AS (
+  SELECT id, keeper_id
+  FROM ranked_dedupe_key
+  WHERE row_num > 1
+)
+UPDATE public.bank_sync_jobs AS jobs
+SET
+  status = 'failed',
+  last_error_code = COALESCE(jobs.last_error_code, 'superseded_duplicate_active_dedupe_key'),
+  last_error_at = COALESCE(jobs.last_error_at, NOW()),
+  superseded_by_job_id = duplicate_dedupe_key.keeper_id,
+  updated_at = NOW(),
+  payload = COALESCE(jobs.payload, '{}'::jsonb) || jsonb_build_object(
+    'superseded_reason',
+    'duplicate_active_dedupe_key'
+  )
+FROM duplicate_dedupe_key
+WHERE jobs.id = duplicate_dedupe_key.id;
+
 CREATE INDEX IF NOT EXISTS idx_bank_sync_jobs_ready
   ON public.bank_sync_jobs(status, next_attempt_at, created_at);
 

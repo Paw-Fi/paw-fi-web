@@ -436,7 +436,22 @@ async function syncConnection(params: {
         ...response.added,
         ...response.modified,
       ];
+      logPlaidTransactionSample({
+        connectionId: params.connection.id,
+        cursor,
+        syncStatus: summary.syncStatus ?? null,
+        addedCount: response.added.length,
+        modifiedCount: response.modified.length,
+        removedCount: response.removed?.length ?? 0,
+        sample: combined.slice(0, 5),
+      });
       const grouped = groupByAccount(combined);
+      logPlaidAccountMappingDebug({
+        connectionId: params.connection.id,
+        grouped,
+        accountMap: params.accountMap,
+        accountFilterId: params.accountFilter?.id ?? null,
+      });
 
       for (const [plaidAccountId, transactions] of grouped.entries()) {
         const account = params.accountMap.get(plaidAccountId);
@@ -643,6 +658,88 @@ async function syncConnection(params: {
   }
 
   return summary;
+}
+
+function shouldLogPlaidTransactionSample(): boolean {
+  const explicitFlag =
+    Deno.env.get("PLAID_DEBUG_LOG_TRANSACTIONS")?.toLowerCase() === "true";
+  const plaidEnv = Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() || "sandbox";
+  return explicitFlag || plaidEnv === "sandbox";
+}
+
+function logPlaidTransactionSample(params: {
+  connectionId: string;
+  cursor?: string;
+  syncStatus?: SyncSummary["syncStatus"] | null;
+  addedCount: number;
+  modifiedCount: number;
+  removedCount: number;
+  sample: PlaidTransaction[];
+}) {
+  if (!shouldLogPlaidTransactionSample()) {
+    return;
+  }
+
+  const summarizedSample = params.sample.map((transaction) => ({
+    transactionId: transaction.transaction_id,
+    accountId: transaction.account_id,
+    name: transaction.name,
+    merchantName: transaction.merchant_name ?? null,
+    amount: transaction.amount,
+    currency:
+      transaction.iso_currency_code ?? transaction.unofficial_currency_code ??
+      null,
+    date: transaction.date,
+    pending: transaction.pending ?? false,
+    pendingTransactionId: transaction.pending_transaction_id ?? null,
+  }));
+
+  console.log(
+    "[plaid-sync] Plaid transaction sample",
+    JSON.stringify({
+      connectionId: params.connectionId,
+      fromCursor: params.cursor ?? null,
+      syncStatus: params.syncStatus ?? null,
+      addedCount: params.addedCount,
+      modifiedCount: params.modifiedCount,
+      removedCount: params.removedCount,
+      sampleCount: summarizedSample.length,
+      sample: summarizedSample,
+    }),
+  );
+}
+
+function logPlaidAccountMappingDebug(params: {
+  connectionId: string;
+  grouped: Map<string, PlaidTransaction[]>;
+  accountMap: Map<string, BankAccountRow>;
+  accountFilterId: string | null;
+}) {
+  if (!shouldLogPlaidTransactionSample()) {
+    return;
+  }
+
+  const unmatched = Array.from(params.grouped.entries())
+    .filter(([plaidAccountId]) => !params.accountMap.has(plaidAccountId))
+    .map(([plaidAccountId, transactions]) => ({
+      plaidAccountId,
+      transactionCount: transactions.length,
+      sampleTransactionId: transactions[0]?.transaction_id ?? null,
+      sampleName: transactions[0]?.name ?? null,
+    }))
+    .slice(0, 5);
+
+  console.log(
+    "[plaid-sync] Plaid account mapping debug",
+    JSON.stringify({
+      connectionId: params.connectionId,
+      groupedAccountCount: params.grouped.size,
+      knownAccountCount: params.accountMap.size,
+      accountFilterId: params.accountFilterId,
+      unmatchedAccountCount: unmatched.length,
+      unmatchedAccounts: unmatched,
+    }),
+  );
 }
 
 function groupByAccount(

@@ -66,6 +66,10 @@ function getSecretApiKey(): string {
   return readEnvSecret("SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
 }
 
+function getInternalServiceSecret(): string {
+  return readEnvSecret("INTERNAL_SERVICE_SECRET");
+}
+
 export function resolveInternalFunctionKey(): string {
   return getSecretApiKey();
 }
@@ -90,6 +94,7 @@ export function buildInternalInvokeHeaders(
 ): Record<string, string> {
   const headers: Record<string, string> = {
     "X-Moneko-Internal-Key": internalKey,
+    "X-Internal-Service-Secret": internalKey,
   };
   const functionsJwt = resolveGatewayInvokeJwt();
   if (functionsJwt) {
@@ -100,7 +105,13 @@ export function buildInternalInvokeHeaders(
 }
 
 function getAcceptedInternalSecrets(): string[] {
-  return [getSecretApiKey()].filter((value) => value.length > 0);
+  return Array.from(
+    new Set(
+      [getSecretApiKey(), getInternalServiceSecret()].filter((value) =>
+        value.length > 0
+      ),
+    ),
+  );
 }
 
 export interface AuthResult {
@@ -180,9 +191,11 @@ export async function authenticateUser(
 export async function authenticateInternalService(
   req: Request,
 ): Promise<AuthResult> {
-  const internalServiceSecret = getSecretApiKey();
-  if (!internalServiceSecret) {
-    console.error("SECRET_SUPABASE_SERVICE_ROLE_API_KEY not configured");
+  const acceptedSecrets = getAcceptedInternalSecrets();
+  if (acceptedSecrets.length === 0) {
+    console.error(
+      "No internal auth secret configured (SECRET_SUPABASE_SERVICE_ROLE_API_KEY or INTERNAL_SERVICE_SECRET)",
+    );
     return {
       success: false,
       error: "Internal service authentication not configured",
@@ -190,7 +203,9 @@ export async function authenticateInternalService(
     };
   }
 
-  const internalSecret = req.headers.get("X-Moneko-Internal-Key")?.trim() || "";
+  const internalSecret = req.headers.get("X-Moneko-Internal-Key")?.trim() ||
+    req.headers.get("X-Internal-Service-Secret")?.trim() ||
+    "";
 
   if (!internalSecret) {
     return {
@@ -201,7 +216,10 @@ export async function authenticateInternalService(
   }
 
   // Constant-time comparison to prevent timing attacks
-  if (!constantTimeCompare(internalSecret, internalServiceSecret)) {
+  const isValid = acceptedSecrets.some((secret) =>
+    constantTimeCompare(internalSecret, secret)
+  );
+  if (!isValid) {
     console.warn("Invalid internal service secret attempt");
     return {
       success: false,

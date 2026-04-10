@@ -13,13 +13,19 @@ export function mergePlaidSyncStatusMetadata(
     historicalUpdateComplete?: boolean | null;
   },
 ): Record<string, unknown> {
+  const updatedAt = new Date().toISOString();
   return {
     ...(metadata || {}),
+    // Legacy flat keys kept for compatibility with older readers.
+    initial_update_complete: payload.initialUpdateComplete ?? null,
+    historical_update_complete: payload.historicalUpdateComplete ?? null,
+    last_webhook_code: payload.webhookCode ?? null,
+    sync_status_updated_at: updatedAt,
     plaid_sync_status: {
       initial_update_complete: payload.initialUpdateComplete ?? null,
       historical_update_complete: payload.historicalUpdateComplete ?? null,
       webhook_code: payload.webhookCode ?? null,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAt,
     },
   };
 }
@@ -31,13 +37,12 @@ export function readPlaidSyncStatusMetadata(
     return null;
   }
 
-  const syncStatus = (metadata as Record<string, unknown>).plaid_sync_status;
-  if (!syncStatus || typeof syncStatus !== "object") {
-    return null;
-  }
-
-  const map = syncStatus as Record<string, unknown>;
-  return {
+  const root = metadata as Record<string, unknown>;
+  const nested = root.plaid_sync_status;
+  const map = nested && typeof nested === "object"
+    ? nested as Record<string, unknown>
+    : root;
+  const snapshot = {
     initialUpdateComplete: typeof map.initial_update_complete === "boolean"
       ? map.initial_update_complete
       : null,
@@ -45,7 +50,26 @@ export function readPlaidSyncStatusMetadata(
       typeof map.historical_update_complete === "boolean"
         ? map.historical_update_complete
         : null,
-    webhookCode: typeof map.webhook_code === "string" ? map.webhook_code : null,
-    updatedAt: typeof map.updated_at === "string" ? map.updated_at : null,
+    webhookCode: typeof map.webhook_code === "string"
+      ? map.webhook_code
+      : typeof root.last_webhook_code === "string"
+      ? root.last_webhook_code
+      : null,
+    updatedAt: typeof map.updated_at === "string"
+      ? map.updated_at
+      : typeof root.sync_status_updated_at === "string"
+      ? root.sync_status_updated_at
+      : null,
   };
+
+  if (
+    snapshot.initialUpdateComplete == null &&
+    snapshot.historicalUpdateComplete == null &&
+    snapshot.webhookCode == null &&
+    snapshot.updatedAt == null
+  ) {
+    return null;
+  }
+
+  return snapshot;
 }
