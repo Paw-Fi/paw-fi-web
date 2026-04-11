@@ -72,10 +72,10 @@ Deno.test(
     assertStringIncludes(source, 'url.searchParams.get("stream") === "true"');
     assertStringIncludes(source, '"Content-Type": "text/event-stream"');
     assertStringIncludes(source, 'formatSSEEvent("progress"');
-    assertStringIncludes(source, '"currentItem"');
-    assertStringIncludes(source, '"totalItems"');
+    assertStringIncludes(source, "currentItem:");
+    assertStringIncludes(source, "totalItems");
     assertStringIncludes(source, "progressOffset");
     assertStringIncludes(source, "progressTotal");
-    assertStringIncludes(source, ': keep-alive\\n\\n');
+    assertStringIncludes(source, ": keep-alive\\n\\n");
   },
 );
