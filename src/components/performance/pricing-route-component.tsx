@@ -156,17 +156,17 @@ export function PricingRouteComponent() {
 
   const mTier = safelyGetTier(monthlyTier, {
     title: "Monthly",
-    priceMonthly: "$2.99",
-    compareAtPriceMonthly: "$7.99",
+    priceMonthly: "$4.99",
+    compareAtPriceMonthly: "$9.99",
   });
   const yTier = safelyGetTier(yearlyTier, {
     title: "Yearly",
-    priceMonthly: "$9.99",
-    compareAtPriceMonthly: "$59.99",
+    priceMonthly: "$34.99",
+    compareAtPriceMonthly: "$119.88",
   });
   const lTier = safelyGetTier(lifetimeTier, {
     title: "Lifetime",
-    priceMonthly: "$29.99",
+    priceMonthly: "$69.99",
   });
 
   const faqData = [

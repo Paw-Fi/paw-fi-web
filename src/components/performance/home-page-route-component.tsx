@@ -68,20 +68,6 @@ const META_KEYWORDS =
 export function HomePageRouteComponent() {
   const pageUrl = getCanonicalUrl("/");
 
-  const promoBannerStorageKey = "moneko-home-promo-banner-dismissed-v1";
-  const [shouldShowPromoBanner, setShouldShowPromoBanner] = useState(false);
-
-  useEffect(() => {
-    const isDismissed =
-      window.localStorage.getItem(promoBannerStorageKey) === "1";
-    setShouldShowPromoBanner(!isDismissed);
-  }, []);
-
-  const handleDismissPromoBanner = () => {
-    window.localStorage.setItem(promoBannerStorageKey, "1");
-    setShouldShowPromoBanner(false);
-  };
-
   const featureLinks = {
     whatsapp: {
       href: "/features/whatsapp-assistant",
@@ -294,59 +280,8 @@ export function HomePageRouteComponent() {
   ];
 
   return (
-    <div
-      className="home-banner-aware bg-background selection:bg-primary/20 relative min-h-screen font-sans"
-      style={
-        {
-          "--home-banner-offset": shouldShowPromoBanner ? "44px" : "0px",
-        } as CSSProperties
-      }
-    >
-      <Helmet>
-        <style>
-          {`.home-banner-aware header.fixed.top-0{top:var(--home-banner-offset,0px);}`}
-        </style>
-      </Helmet>
-
+    <div className="bg-background selection:bg-primary/20 relative min-h-screen font-sans">
       <AmbientHalo />
-
-      {shouldShowPromoBanner && (
-        <div className="from-primary/18 via-background/80 to-background/80 md:via-background/70 md:to-background/70 md:supports-[backdrop-filter]:bg-background/60 fixed inset-x-0 top-0 z-[60] h-11 border-b border-white/10 bg-gradient-to-r md:backdrop-blur-md">
-          <div className="relative mx-auto flex h-11 max-w-7xl items-center px-4 sm:px-6 lg:px-8">
-            <div className="absolute top-1/2 left-1/2 flex w-full max-w-[min(640px,calc(100vw-96px))] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-2 text-sm">
-              <span className="border-primary/25 bg-primary/10 text-primary inline-flex flex-shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase">
-                Limited offer
-              </span>
-              <span className="text-muted-foreground min-w-0 truncate">
-                Get{" "}
-                <span className="text-foreground font-semibold">
-                  $0.99 for 1 year
-                </span>{" "}
-                of Moneko Premium.
-              </span>
-              <Link
-                to="/promo"
-                className="group text-primary hover:text-primary/80 inline-flex flex-shrink-0 items-center gap-1 font-semibold"
-              >
-                Claim now
-                <ArrowRight
-                  className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </Link>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDismissPromoBanner}
-              className="text-muted-foreground hover:bg-primary/10 hover:text-foreground focus-visible:ring-primary/40 ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-2 focus-visible:outline-none"
-              aria-label="Dismiss news banner"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      )}
 
       <HomeHeader />
 
