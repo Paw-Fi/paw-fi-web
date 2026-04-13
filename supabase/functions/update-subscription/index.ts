@@ -55,24 +55,16 @@ serve(async (req) => {
       typeof body.prorationDate === "number" ? body.prorationDate : null;
     const exitAtIso =
       typeof body.exitAtIso === "string" ? body.exitAtIso : null;
-    const returnTrialThresholdMinutesRaw = Number(
-      Deno.env.get("PAYWALL_RETURN_THRESHOLD_MINUTES") ?? "3",
-    );
-    const returnTrialThresholdMinutes =
-      Number.isFinite(returnTrialThresholdMinutesRaw) &&
-      returnTrialThresholdMinutesRaw > 0
-        ? Math.floor(returnTrialThresholdMinutesRaw)
-        : 3;
 
     const returnTrialDurationMinutesRaw = Number(
       Deno.env.get("PAYWALL_RETURN_TRIAL_DURATION_MINUTES") ??
-        String(14 * 24 * 60),
+        String(7 * 24 * 60),
     );
     const returnTrialDurationMinutes =
       Number.isFinite(returnTrialDurationMinutesRaw) &&
       returnTrialDurationMinutesRaw > 0
         ? Math.floor(returnTrialDurationMinutesRaw)
-        : 14 * 24 * 60;
+        : 7 * 24 * 60;
 
     if (!action) {
       return new Response(JSON.stringify({ error: "Action is required" }), {
@@ -664,7 +656,7 @@ serve(async (req) => {
       case "grant_paywall_return_trial": {
         const now = new Date();
         console.log(
-          `[PaywallReturnTrial] grant_attempt user=${userId} now=${now.toISOString()} threshold_min=${returnTrialThresholdMinutes} duration_min=${returnTrialDurationMinutes}`,
+          `[PaywallReturnTrial] grant_attempt user=${userId} now=${now.toISOString()} duration_min=${returnTrialDurationMinutes}`,
         );
         const trialEndAt = new Date(
           now.getTime() + returnTrialDurationMinutes * 60 * 1000,
