@@ -34,7 +34,6 @@ import { disableAnimationsOnMobile } from "../../utils/disable-framer-motion-mob
 import { MotionGlobalConfig } from "framer-motion";
 import { Helmet } from "@dr.pogodin/react-helmet";
 import { FaqSection } from "@/components/ui/faq-section";
-import { EarlyAccessSection } from "@/components/index/early-access-section";
 import faqData from "@/data/home/home-faq.json";
 
 // Lazy load Lottie animations for better performance
@@ -265,13 +264,13 @@ export default function ReusableHomePage({
 
           {/* CTA Button */}
           <motion.div
-            className="text-center mb-8 sm:mb-12 md:mb-16"
+            className="mb-8 text-center sm:mb-12 md:mb-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6, ease: "easeOut" }}
           >
             <Link to={variant.hero.ctaRoute}>
-              <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+              <button className="bg-primary hover:bg-primary/90 text-primary-foreground transform rounded-xl px-8 py-4 text-lg font-semibold shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-xl">
                 {variant.hero.ctaText}
                 <FontAwesomeIcon
                   icon={faArrowRight}
@@ -412,10 +411,6 @@ export default function ReusableHomePage({
         </div>
       </section>
 
-      <div className="relative z-10">
-        <EarlyAccessSection />
-      </div>
-
       {/* Features Section */}
       <section className="bg-muted/30 relative z-10 px-4 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8">
         <div className="mx-auto max-w-7xl">
@@ -468,10 +463,10 @@ export default function ReusableHomePage({
                     <CardTitle className="text-card-foreground mb-2 text-lg leading-tight font-semibold sm:mb-3 sm:text-xl">
                       24/7 Moneko AI Finance Coach
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base feature-summary">
+                    <CardDescription className="text-muted-foreground feature-summary text-sm leading-relaxed sm:text-base">
                       Get instant, personalized advice on budgeting, investing,
-                      goal tracking, and wealth building from Moneko's expert AI 
-                      trained by certified financial professionals.
+                      goal tracking, and wealth building from Moneko's expert AI
+                      built from vetted financial principles.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -503,10 +498,11 @@ export default function ReusableHomePage({
                     <CardTitle className="text-card-foreground mb-2 text-lg leading-tight font-semibold sm:mb-3 sm:text-xl">
                       Smart Goal Tracking & Gamified Learning
                     </CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base feature-summary">
-                      Stay motivated with Moneko's achievement system, visual goal tracking,
-                      and XP rewards as you build wealth and achieve financial milestones
-                      through personalized learning paths.
+                    <CardDescription className="text-muted-foreground feature-summary text-sm leading-relaxed sm:text-base">
+                      Stay motivated with Moneko's achievement system, visual
+                      goal tracking, and XP rewards as you build wealth and
+                      achieve financial milestones through personalized learning
+                      paths.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -530,14 +526,15 @@ export default function ReusableHomePage({
               Professional Financial Education Courses
             </motion.h2>
             <motion.p
-              className="text-muted-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl dark:text-moneko-foreground"
+              className="text-muted-foreground dark:text-moneko-foreground mx-auto max-w-3xl text-base leading-relaxed sm:text-lg md:text-xl"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              Master the essential concepts and strategies for building sustainable
-              passive income without complex trading or market timing.
+              Master the essential concepts and strategies for building
+              sustainable passive income without complex trading or market
+              timing.
             </motion.p>
           </div>
 
@@ -564,7 +561,7 @@ export default function ReusableHomePage({
               >
                 <Card className="group border-border bg-card hover:bg-accent/50 h-full touch-manipulation transition-all duration-200 active:scale-[0.98]">
                   <Link
-                    to="/dashboard/learning"
+                    to="/guides/how-to-calculate-net-worth"
                     className="flex h-full w-full flex-col items-center justify-center p-4 text-center sm:p-6 md:p-8"
                   >
                     <div className="bg-muted text-muted-foreground mb-4 flex h-12 w-12 items-center justify-center rounded-lg sm:mb-6 sm:h-14 sm:w-14 sm:rounded-xl">
@@ -577,8 +574,8 @@ export default function ReusableHomePage({
                       Explore All Lessons
                     </CardTitle>
                     <CardDescription className="text-muted-foreground text-sm leading-relaxed sm:text-base">
-                      View all {variant.lessons.length} foundational
-                      courses designed to build your financial expertise.
+                      Browse practical guides and lessons to build your
+                      financial fundamentals.
                     </CardDescription>
                   </Link>
                 </Card>
@@ -600,12 +597,12 @@ export default function ReusableHomePage({
           >
             Why Choose Our Approach?
           </motion.h2>
-          
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {variant.benefits.map((benefit, index) => (
               <motion.div
                 key={index}
-                className="bg-moneko-background p-6 rounded-lg border border-border"
+                className="bg-moneko-background border-border rounded-lg border p-6"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
@@ -644,8 +641,8 @@ export default function ReusableHomePage({
                 </span>
               </div>
               <p className="text-muted-foreground max-w-xs text-sm leading-relaxed sm:text-base">
-                <strong>Moneko</strong> - Your trusted AI personal finance coach for smart budgeting, 
-                goal tracking, investing education, and building lasting wealth.
+                <strong>Moneko</strong> helps you budget, track goals, and learn
+                personal finance with guided tools.
               </p>
             </div>
 
@@ -657,7 +654,7 @@ export default function ReusableHomePage({
               <ul className="space-y-2 sm:space-y-3">
                 <li>
                   <Link
-                    to="/dashboard/learning"
+                    to="/guides/how-to-calculate-net-worth"
                     className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                   >
                     AI Financial Education
@@ -665,7 +662,7 @@ export default function ReusableHomePage({
                 </li>
                 <li>
                   <Link
-                    to="/dashboard/learning"
+                    to="/guides/how-to-calculate-net-worth"
                     className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                   >
                     Financial Planning Courses
@@ -681,10 +678,10 @@ export default function ReusableHomePage({
                 </li>
                 <li>
                   <Link
-                    to="/dashboard"
+                    to="/questions"
                     className="text-muted-foreground hover:text-primary touch-manipulation text-sm transition-colors active:scale-95 sm:text-base"
                   >
-                    AI Finance Coach Chat
+                    Ask a question
                   </Link>
                 </li>
                 <li>

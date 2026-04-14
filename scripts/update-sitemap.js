@@ -19,6 +19,14 @@ const GEO_DATA_PATH = path.join(
   "landing-pages",
   "geo-pages.json",
 );
+const BUDGETING_APP_VARIANTS_PATH = path.join(
+  __dirname,
+  "..",
+  "src",
+  "data",
+  "home",
+  "passive-income-variants.json",
+);
 
 async function updateSitemap() {
   try {
@@ -28,9 +36,18 @@ async function updateSitemap() {
 
     const sitemapWithGeoPages = mergeGeoLandingPages(baseXml, loadGeoPages());
 
-    writeFileWithBackup(OUTPUT_PATH, sitemapWithGeoPages);
+    const sitemapWithBudgetingVariants = mergeBudgetingAppVariants(
+      sitemapWithGeoPages,
+      loadBudgetingAppVariants(),
+    );
 
-    const urlMatches = sitemapWithGeoPages.match(/<url>/g);
+    const cleanedSitemap = filterNonPublicUrls(sitemapWithBudgetingVariants);
+
+    const finalSitemap = mergeFixedPublicUrls(cleanedSitemap);
+
+    writeFileWithBackup(OUTPUT_PATH, finalSitemap);
+
+    const urlMatches = finalSitemap.match(/<url>/g);
     const urlCount = urlMatches ? urlMatches.length : 0;
 
     console.log(`🎉 Sitemap update completed successfully!`);
@@ -160,9 +177,23 @@ function loadGeoPages() {
     .filter((page) => page.slug && page.slug !== "main")
     .map((page) => ({
       slug: page.slug,
-      lastmod: page.sitemapLastmod ?? new Date().toISOString().slice(0, 10),
+      // Only emit <lastmod> when we have a specific, intentional value.
+      lastmod: page.sitemapLastmod ?? undefined,
       changefreq: page.sitemapChangefreq ?? "weekly",
       priority: page.sitemapPriority ?? "0.9",
+    }));
+}
+
+function loadBudgetingAppVariants() {
+  const raw = fs.readFileSync(BUDGETING_APP_VARIANTS_PATH, "utf8");
+  const parsed = JSON.parse(raw);
+
+  return Object.keys(parsed)
+    .filter((slug) => slug && slug !== "main")
+    .map((slug) => ({
+      slug,
+      changefreq: "weekly",
+      priority: "0.9",
     }));
 }
 
@@ -190,15 +221,141 @@ function mergeGeoLandingPages(xmlContent, geoPages) {
   return xmlContent.replace("</urlset>", `${geoEntries.join("\n")}</urlset>`);
 }
 
+function mergeBudgetingAppVariants(xmlContent, variants) {
+  const existingUrls = new Set(
+    [...xmlContent.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]),
+  );
+
+  const entries = variants
+    .map((page) => ({
+      page,
+      url: `https://moneko.io/budgeting-app/${page.slug}`,
+    }))
+    .filter((item) => !existingUrls.has(item.url))
+    .map((item) => buildUrlEntry(item.url, item.page));
+
+  if (entries.length === 0) {
+    console.log("ℹ️ No new budgeting-app variant URLs to append");
+    return xmlContent;
+  }
+
+  console.log(`➕ Adding ${entries.length} budgeting-app variant URLs`);
+  return xmlContent.replace("</urlset>", `${entries.join("\n")}</urlset>`);
+}
+
+function mergeFixedPublicUrls(xmlContent) {
+  const existingUrls = new Set(
+    [...xmlContent.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]),
+  );
+
+  const fixedPages = [
+    {
+      url: "https://moneko.io/guides",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+  ];
+
+  const entries = fixedPages
+    .filter((item) => !existingUrls.has(item.url))
+    .map((item) => buildUrlEntry(item.url, item.page));
+
+  if (entries.length === 0) return xmlContent;
+
+  console.log(`➕ Adding ${entries.length} fixed public URLs`);
+  return xmlContent.replace("</urlset>", `${entries.join("\n")}</urlset>`);
+}
+
 function buildUrlEntry(url, page) {
-  return [
-    "  <url>",
-    `    <loc>${url}</loc>`,
-    `    <lastmod>${page.lastmod}</lastmod>`,
+  const lines = ["  <url>", `    <loc>${url}</loc>`];
+
+  if (page.lastmod) {
+    lines.push(`    <lastmod>${page.lastmod}</lastmod>`);
+  }
+
+  lines.push(
     `    <changefreq>${page.changefreq}</changefreq>`,
     `    <priority>${page.priority}</priority>`,
     "  </url>",
-  ].join("\n");
+  );
+
+  return lines.join("\n");
+}
+
+function filterNonPublicUrls(xmlContent) {
+  const nonPublicPathPatterns = [
+    /^\/dashboard(?:\/|$)/,
+    /^\/auth(?:\/|$)/,
+    /^\/login(?:\/|$)/,
+    /^\/register(?:\/|$)/,
+    /^\/reset-password(?:\/|$)/,
+    /^\/forgot-password(?:\/|$)/,
+    /^\/checkout(?:\/|$)/,
+    /^\/payment-status(?:\/|$)/,
+    /^\/billing(?:\/|$)/,
+    /^\/unsubscribe(?:\/|$)/,
+    /^\/early-access(?:\/|$)/,
+    /^\/promo(?:\/|$)/,
+    /^\/onboarding(?:\/|$)/,
+    /^\/invites(?:\/|$)/,
+    /^\/referral(?:\/|$)/,
+    /^\/creator(?:\/|$)/,
+    /^\/plaid(?:\/|$)/,
+    /^\/oauth(?:\/|$)/,
+    /^\/verify-telegram(?:\/|$)/,
+    /^\/verify-whatsapp(?:\/|$)/,
+    /^\/avatar-customizer(?:\/|$)/,
+    /^\/health(?:\/|$)/,
+    /^\/test(?:\/|$)/,
+  ];
+
+  const urlBlocks = [...xmlContent.matchAll(/<url>[\s\S]*?<\/url>/g)].map(
+    (m) => m[0],
+  );
+
+  if (urlBlocks.length === 0) return xmlContent;
+
+  const kept = [];
+  let removed = 0;
+
+  for (const block of urlBlocks) {
+    const locMatch = block.match(/<loc>(.*?)<\/loc>/);
+
+    if (!locMatch) {
+      kept.push(block);
+      continue;
+    }
+
+    try {
+      const url = new URL(locMatch[1]);
+      const isNonPublic = nonPublicPathPatterns.some((re) =>
+        re.test(url.pathname),
+      );
+
+      if (isNonPublic) {
+        removed += 1;
+      } else {
+        kept.push(block);
+      }
+    } catch {
+      // If the URL is malformed, keep it rather than producing an invalid sitemap.
+      kept.push(block);
+    }
+  }
+
+  if (removed > 0) {
+    console.log(`🧹 Removed ${removed} non-public URLs from sitemap`);
+  }
+
+  // Preserve the original <urlset ...> opening tag to keep namespaces intact.
+  const openTagMatch = xmlContent.match(/<urlset[^>]*>/);
+  const openTag = openTagMatch
+    ? openTagMatch[0]
+    : '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+
+  return `${xmlContent.split(openTag)[0]}${openTag}\n${kept.join("\n")}\n</urlset>`;
 }
 
 function getUrlCount(xmlContent) {

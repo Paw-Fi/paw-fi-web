@@ -9,7 +9,10 @@ export const Route = createFileRoute("/blogs/")({
   loader: async () => {
     return { blogs: staticBlogs };
   },
-  component: lazyRouteComponent(() => import("@/components/performance/blogs-index-route-component"), "BlogsIndexRouteComponent"),
+  component: lazyRouteComponent(
+    () => import("@/components/performance/blogs-index-route-component"),
+    "BlogsIndexRouteComponent",
+  ),
   head: ({ loaderData }) => {
     const listingBlogs = loaderData?.blogs || staticBlogs;
     const title =
@@ -76,7 +79,7 @@ export const Route = createFileRoute("/blogs/")({
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData).replace(/</g, "\\u003c"),

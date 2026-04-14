@@ -207,14 +207,13 @@ export function WhatsAppAssistantRouteComponent() {
             <div className="flex flex-1 flex-col justify-center space-y-6 p-8 md:p-12">
               <div className="flex items-center gap-2 text-sm font-medium text-white/80">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Bank-Grade Security</span>
+                <span>Privacy-focused</span>
               </div>
               <h3 className="text-3xl font-semibold tracking-tight md:text-4xl">
                 Your Data is Private.
               </h3>
               <p className="max-w-md text-lg leading-relaxed text-gray-400">
-                256-bit encryption ensures your financial data stays yours. We
-                never sell your data to advertisers.
+                We use modern security practices to protect your financial data.
               </p>
               {/* <div className="pt-2 flex gap-12 border-t border-white/10 mt-4">
                         <div>

@@ -68,12 +68,6 @@ export const Route = createFileRoute("/")({
             price: "0",
             priceCurrency: "USD",
           },
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: "4.8",
-            ratingCount: "50",
-            bestRating: "5",
-          },
         },
         {
           "@type": "FAQPage",

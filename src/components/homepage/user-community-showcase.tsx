@@ -198,7 +198,7 @@ export function UserCommunityShowcase() {
             </h2>
 
             <div className="text-muted-foreground flex items-center justify-center gap-2 text-xl">
-              <span className="text-foreground font-medium">6,000+</span>
+              <span className="text-foreground font-medium">6,500+</span>
               <span>people have already joined</span>
             </div>
 

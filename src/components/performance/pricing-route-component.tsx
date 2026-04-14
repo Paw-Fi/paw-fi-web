@@ -391,9 +391,9 @@ export function PricingRouteComponent() {
                 variants={itemVariants}
                 className="text-muted-foreground mb-10 max-w-xl text-lg leading-relaxed"
               >
-                Join thousands who stopped manually tracking every penny on
-                spreadsheets. Moneko automates the heavy lifting with AI, giving
-                you the pure intentionality of zero-based budgeting.
+                Stop manually tracking every penny in spreadsheets. Moneko
+                automates the heavy lifting with AI, giving you the
+                intentionality of zero-based budgeting.
               </motion.p>
 
               {/* Note: The old core features map was removed here as we are replacing it with the Bento Grid below */}

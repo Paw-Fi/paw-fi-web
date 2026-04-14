@@ -311,7 +311,7 @@ export const Route = createFileRoute("/dashboard/_layout/")({
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData),

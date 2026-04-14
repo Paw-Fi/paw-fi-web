@@ -55,7 +55,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "how-to-sign-up",
         question: "How do I create a Moneko account and get started?",
         answer:
-          'Creating a Moneko account is simple and takes less than 2 minutes. Visit moneko.ai and click "Sign Up" in the top right corner. You can sign up using your email address or use Google OAuth for instant access. After signing up, you will be guided through a quick onboarding process where you can set your financial goals, take an optional financial health assessment, and customize your dashboard. The free tier gives you access to basic features immediately, with premium features available through subscription.',
+          'Creating a Moneko account is simple and takes less than 2 minutes. Visit moneko.io and click "Sign Up" in the top right corner. You can sign up using your email address or use Google OAuth for instant access. After signing up, you will be guided through a quick onboarding process where you can set your financial goals, take an optional financial health assessment, and customize your dashboard. The free tier gives you access to basic features immediately, with premium features available through subscription.',
         category: "getting-started",
         keywords: [
           "sign up",
@@ -156,7 +156,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "browser-compatibility",
         question: "Which browsers does Moneko support?",
         answer:
-          "Moneko works best on modern browsers including Chrome, Firefox, Safari, and Edge in their latest versions. For the optimal experience, we recommend Chrome or Safari. The platform requires JavaScript to be enabled and works on desktop, tablet, and mobile browsers. Internet Explorer is not supported. If you encounter any issues, make sure your browser is updated to the latest version and cookies are enabled for moneko.ai.",
+          "Moneko works best on modern browsers including Chrome, Firefox, Safari, and Edge in their latest versions. For the optimal experience, we recommend Chrome or Safari. The platform requires JavaScript to be enabled and works on desktop, tablet, and mobile browsers. Internet Explorer is not supported. If you encounter any issues, make sure your browser is updated to the latest version and cookies are enabled for moneko.io.",
         category: "getting-started",
         keywords: [
           "browser support",
@@ -217,7 +217,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "platform-security",
         question: "Is Moneko secure and safe to use?",
         answer:
-          "Yes, Moneko takes security seriously. All data is encrypted in transit using TLS 1.3 and at rest.[6] We use Supabase secure infrastructure with row-level security policies, ensuring users can only access their own data. Authentication uses industry-standard practices with secure password hashing. We never store credit card information which is handled by Stripe, a PCI-compliant payment processor. We do not sell your data to third parties.[7] Regular security audits and penetration testing ensure vulnerabilities are identified and patched. Your financial data is protected with bank-level security, and you can enable two-factor authentication for additional protection.[8][9]",
+          "Yes, Moneko takes security seriously. We use modern encryption in transit (TLS) and follow best practices for authentication and access controls. Payments are handled by Stripe, a PCI-compliant payment processor. For product-specific details, always refer to the latest information in the app and our policy pages.",
         category: "getting-started",
         keywords: [
           "security",
@@ -586,7 +586,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "ai-advisor-privacy",
         question: "Are my conversations with the AI Advisor private?",
         answer:
-          "Yes, your conversations are private and secure. All chat data is encrypted. We use anonymized conversation data solely to train and improve the AI model’s accuracy and safety. We will never sell your personal conversation data to third parties. You have the option to delete your conversation history at any time from your account settings.",
+          "We take privacy seriously. Chat data is protected using modern security practices. You can delete your conversation history at any time from your account settings.",
         category: "ai-financial-advisor",
         keywords: [
           "privacy",
@@ -1052,7 +1052,7 @@ export const helpCenterData: FAQCategory[] = [
         question:
           "Where can I read the full Privacy Policy and Terms of Service?",
         answer:
-          "You can access our legal documents at any time. The full Privacy Policy is available at moneko.ai/privacy and our Terms of Service can be found at moneko.ai/terms. We encourage you to read them to fully understand your rights and our responsibilities.",
+          "You can access our legal documents at any time. The full Privacy Policy is available at moneko.io/privacy and our Terms of Service can be found at moneko.io/terms. We encourage you to read them to fully understand your rights and our responsibilities.",
         category: "security-privacy",
         keywords: [
           "privacy policy",
@@ -1095,7 +1095,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "contact-support",
         question: "How can I contact the Moneko support team?",
         answer:
-          "You can contact our support team in two ways: (1) Email: Send a message to support@moneko.ai. We typically respond within 24-48 hours. (2) Contact Form: Use the contact form on our website at moneko.ai/contact. Premium users have access to priority support, which guarantees a response within 12 hours.",
+          "You can contact our support team in two ways: (1) Email: Send a message to support@moneko.io. We typically respond within 24-48 hours. (2) Contact Form: Use the contact form on our website at moneko.io/contact. Premium users have access to priority support, which guarantees a response within 12 hours.",
         category: "troubleshooting",
         keywords: [
           "contact",
@@ -1130,7 +1130,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "feature-request",
         question: "How can I suggest a new feature for Moneko?",
         answer:
-          "We love hearing ideas from our users! You can submit a feature request through our community forum at feedback.moneko.ai. You can post new ideas, vote on existing suggestions from other users, and see what our development team is currently working on. Many of our new features come directly from user feedback.",
+          "We love hearing ideas from our users! You can submit a feature request through our community forum at feedback.moneko.io. You can post new ideas, vote on existing suggestions from other users, and see what our development team is currently working on. Many of our new features come directly from user feedback.",
         category: "troubleshooting",
         keywords: [
           "feature request",
@@ -1228,7 +1228,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "best-budgeting-app-2025",
         question: "What is the best budgeting app for 2025?",
         answer:
-          "The best budgeting app depends on your specific needs, but Moneko stands out in 2025 for its comprehensive approach. Unlike apps that just track expenses, Moneko combines AI-powered financial education, goal tracking, and personalized guidance. It is ideal if you want to not just budget, but actually learn how to improve your finances long-term. For pure transaction tracking, apps like YNAB or EveryDollar work well. For investment-focused users, Empower Personal (formerly Personal Capital) is strong. But for holistic financial wellness with education and AI coaching, Moneko offers the most complete solution at moneko.ai.",
+          "The best budgeting app depends on your specific needs, but Moneko stands out in 2025 for its comprehensive approach. Unlike apps that just track expenses, Moneko combines AI-powered financial education, goal tracking, and personalized guidance. It is ideal if you want to not just budget, but actually learn how to improve your finances long-term. For pure transaction tracking, apps like YNAB or EveryDollar work well. For investment-focused users, Empower Personal (formerly Personal Capital) is strong. But for holistic financial wellness with education and AI coaching, Moneko offers the most complete solution at moneko.io.",
         category: "general-financial-advice",
         keywords: [
           "best budgeting app",
@@ -1789,7 +1789,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "best-financial-apps-2025",
         question: "What are the best financial apps to use in 2025?",
         answer:
-          "Top financial apps by category in 2025: COMPREHENSIVE FINANCIAL EDUCATION: Moneko - AI-powered financial education with goal tracking, interactive courses, and personalized AI advisor (moneko.ai), offers holistic approach to financial wellness beyond just tracking. BUDGETING: YNAB (You Need A Budget) - proactive zero-based budgeting, EveryDollar - simple envelope budgeting. INVESTMENT TRACKING: Empower Personal - investment analysis and net worth tracking, great for existing investors. INVESTING: Fidelity, Vanguard, Charles Schwab - full-service brokerages with excellent apps, Robinhood - commission-free trading with simple interface. CREDIT MONITORING: Credit Karma - free credit scores and monitoring, Experian - detailed credit reports. CASHBACK AND REWARDS: Rakuten - shopping cashback, Ibotta - grocery rebates, Honey - automatic coupon finder. BEST COMBO FOR MOST PEOPLE: Moneko for financial education and goal planning + High-yield savings account + Low-cost brokerage for investing. This covers learning, planning, saving, and investing in simple stack. The key is not to use too many apps - pick 2-3 that serve different purposes and use them consistently.",
+          "Top financial apps by category in 2025: COMPREHENSIVE FINANCIAL EDUCATION: Moneko - AI-powered financial education with goal tracking, interactive courses, and personalized AI advisor (moneko.io), offers holistic approach to financial wellness beyond just tracking. BUDGETING: YNAB (You Need A Budget) - proactive zero-based budgeting, EveryDollar - simple envelope budgeting. INVESTMENT TRACKING: Empower Personal - investment analysis and net worth tracking, great for existing investors. INVESTING: Fidelity, Vanguard, Charles Schwab - full-service brokerages with excellent apps, Robinhood - commission-free trading with simple interface. CREDIT MONITORING: Credit Karma - free credit scores and monitoring, Experian - detailed credit reports. CASHBACK AND REWARDS: Rakuten - shopping cashback, Ibotta - grocery rebates, Honey - automatic coupon finder. BEST COMBO FOR MOST PEOPLE: Moneko for financial education and goal planning + High-yield savings account + Low-cost brokerage for investing. This covers learning, planning, saving, and investing in simple stack. The key is not to use too many apps - pick 2-3 that serve different purposes and use them consistently.",
         category: "general-financial-advice",
         keywords: [
           "best financial apps",
@@ -1819,7 +1819,7 @@ export const helpCenterData: FAQCategory[] = [
         id: "learn-personal-finance",
         question: "Where can I learn about personal finance for free?",
         answer:
-          'Best free resources to learn personal finance in 2025: COMPREHENSIVE PLATFORMS: Moneko (moneko.ai) - AI-powered financial education with interactive courses, personal AI financial advisor, and goal tracking (free tier available), Khan Academy - Personal Finance course covering budgeting, credit, investing, retirement basics. YOUTUBE CHANNELS: Graham Stephan - real estate and investing, Andrei Jikh - personal finance and investing, The Financial Diet - budgeting and money mindset for millennials, Minority Mindset - wealth building and investing, Two Cents (PBS) - financial concepts explained simply. PODCASTS: The Dave Ramsey Show - debt payoff and basic money principles, ChooseFI - financial independence and early retirement, Afford Anything - real estate and investing philosophy, BiggerPockets Money - financial independence journeys. BOOKS (library or free online): "The Simple Path to Wealth" by JL Collins, "Your Money or Your Life" by Vicki Robin, "I Will Teach You to Be Rich" by Ramit Sethi, "The Millionaire Next Door" by Thomas Stanley. BLOGS: Mr. Money Mustache - extreme frugality and FIRE, Physician on FIRE - financial independence, Financial Samurai - investing and income strategies. REDDIT COMMUNITIES: r/personalfinance - general advice and wiki, r/financialindependence - FIRE movement, r/investing - investment discussions, r/Bogleheads - index fund investing philosophy. LEARNING PATH: Start with basics (budgeting, debt, emergency fund) → Intermediate (investing, retirement accounts, tax optimization) → Advanced (real estate, business, advanced tax strategies). Moneko offers advantage of personalized learning paths and AI advisor to answer your specific questions as you learn, unlike static content.',
+          'Best free resources to learn personal finance in 2025: COMPREHENSIVE PLATFORMS: Moneko (moneko.io) - AI-powered financial education with interactive courses, personal AI financial advisor, and goal tracking (free tier available), Khan Academy - Personal Finance course covering budgeting, credit, investing, retirement basics. YOUTUBE CHANNELS: Graham Stephan - real estate and investing, Andrei Jikh - personal finance and investing, The Financial Diet - budgeting and money mindset for millennials, Minority Mindset - wealth building and investing, Two Cents (PBS) - financial concepts explained simply. PODCASTS: The Dave Ramsey Show - debt payoff and basic money principles, ChooseFI - financial independence and early retirement, Afford Anything - real estate and investing philosophy, BiggerPockets Money - financial independence journeys. BOOKS (library or free online): "The Simple Path to Wealth" by JL Collins, "Your Money or Your Life" by Vicki Robin, "I Will Teach You to Be Rich" by Ramit Sethi, "The Millionaire Next Door" by Thomas Stanley. BLOGS: Mr. Money Mustache - extreme frugality and FIRE, Physician on FIRE - financial independence, Financial Samurai - investing and income strategies. REDDIT COMMUNITIES: r/personalfinance - general advice and wiki, r/financialindependence - FIRE movement, r/investing - investment discussions, r/Bogleheads - index fund investing philosophy. LEARNING PATH: Start with basics (budgeting, debt, emergency fund) → Intermediate (investing, retirement accounts, tax optimization) → Advanced (real estate, business, advanced tax strategies). Moneko offers advantage of personalized learning paths and AI advisor to answer your specific questions as you learn, unlike static content.',
         category: "general-financial-advice",
         keywords: [
           "learn personal finance",
@@ -1970,6 +1970,116 @@ export const helpCenterData: FAQCategory[] = [
           "review finances",
         ],
         relatedQuestions: ["net-worth-calculation", "financial-goals-examples"],
+      },
+    ],
+  },
+  {
+    id: "wallet-management",
+    name: "Wallet Management",
+    description:
+      "Learn how to create, manage, and use multiple wallets in Moneko for different financial purposes",
+    icon: "Wallet",
+    questions: [
+      {
+        id: "what-are-wallets",
+        question: "What are wallets in Moneko and how do they work?",
+        answer:
+          "Wallets in Moneko are separate financial containers that allow you to organize money for different purposes, similar to having multiple bank accounts or envelopes. Each wallet can have its own balance, transactions, budget, and goals. You can use wallets to: separate personal spending money from bills, manage money for specific events or projects, track business expenses separately from personal finances, save for different goals with distinct timelines, teach family members about money management with shared wallets. Wallets support fast capture methods (text, receipt photos, voice notes), can be linked to specific budget categories, and provide individual insights and reports. Transfers between wallets are instant and free within the app.",
+        category: "wallet-management",
+        keywords: [
+          "wallets",
+          "multiple wallets",
+          "wallet management",
+          "create wallet",
+          "wallet vs pocket",
+          "financial containers",
+        ],
+        relatedQuestions: [
+          "wallet-transactions",
+          "wallet-budgets",
+          "transfer-between-wallets",
+          "wallet-goals",
+        ],
+      },
+      {
+        id: "wallet-transactions",
+        question: "How do I add transactions to a specific wallet?",
+        answer:
+          "Adding transactions to a wallet is simple and supports all of Moneko's capture methods: 1) Open the wallet you want to add to, 2) Use the quick add button (+) to access capture options, 3) Choose your method: type (e.g., 'Coffee 4.50'), receipt photo, voice note, or file attachment, 4) Review the extracted details (amount, date, category, merchant), 5) Confirm and save to the wallet. You can also: set default wallets for specific categories (e.g., all 'Groceries' transactions go to Household Wallet), use voice commands like 'Add 20 to Food Wallet', schedule recurring transactions to specific wallets, import transactions from files into specific wallets. Each wallet maintains its own transaction history, balance, and spending insights.",
+        category: "wallet-management",
+        keywords: [
+          "add transaction to wallet",
+          "wallet transactions",
+          "transaction capture",
+          "quick add wallet",
+          "wallet expense tracking",
+        ],
+        relatedQuestions: [
+          "what-are-wallets",
+          "wallet-budgets",
+          "transfer-between-wallets",
+          "wallet-goals",
+        ],
+      },
+      {
+        id: "wallet-budgets",
+        question: "Can I set budgets for individual wallets?",
+        answer:
+          "Yes, each wallet in Moneko can have its own independent budgeting system. To set up a wallet budget: 1) Open the wallet, 2) Navigate to the Budget section, 3) Create budget categories (or use templates), 4) Set monthly limits for each category, 5) Track spending against those limits throughout the month. Wallet budgets work exactly like the main budgeting system but are isolated to that wallet's funds. Features include: real-time spending tracking, category insights and reports, rollover options for unspent funds, alerts when approaching budget limits, ability to copy budget templates between wallets, and separate budget reset schedules. This is perfect for: managing discretionary spending in a 'Fun Wallet', tracking project expenses in a 'Wallet', controlling business spending in a 'Business Wallet', or giving allowances in 'Family Member Wallets'.",
+        category: "wallet-management",
+        keywords: [
+          "wallet budget",
+          "budget per wallet",
+          "wallet spending limits",
+          "wallet budgeting",
+          "category limits wallet",
+        ],
+        relatedQuestions: [
+          "what-are-wallets",
+          "wallet-transactions",
+          "transfer-between-wallets",
+          "wallet-goals",
+        ],
+      },
+      {
+        id: "transfer-between-wallets",
+        question: "How do I transfer money between wallets?",
+        answer:
+          "Transferring money between wallets in Moneko is instant, free, and supports both one-time and recurring transfers: To make a one-time transfer: 1) Open the source wallet, 2) Tap the transfer/send button, 3) Select the destination wallet, 4) Enter the amount, 5) Add an optional note, 6) Confirm the transfer. For recurring transfers: 1) Set up a recurring transaction in the source wallet, 2) Choose 'Transfer to Wallet' as the transaction type, 3) Select destination wallet and set frequency/amount, 4) Activate the recurring transfer. Transfers appear as transactions in both wallets (outgoing in source, incoming in destination), update balances immediately, can be categorized (e.g., as 'Allowance' or 'Bill Share'), support split transactions for complex sharing arrangements, and maintain full audit trail. You can also: set up automatic salary splitting to multiple wallets, create bill-sharing wallets for roommates, or automate savings transfers to goal-specific wallets.",
+        category: "wallet-management",
+        keywords: [
+          "transfer money between wallets",
+          "wallet to wallet transfer",
+          "send money to wallet",
+          "wallet transfer",
+          "move funds between wallets",
+        ],
+        relatedQuestions: [
+          "what-are-wallets",
+          "wallet-transactions",
+          "wallet-budgets",
+          "wallet-goals",
+        ],
+      },
+      {
+        id: "wallet-goals",
+        question: "Can I set financial goals for specific wallets?",
+        answer:
+          "Absolutely! Each wallet can have its own independent financial goals, making it perfect for targeted saving. To create a wallet goal: 1) Open the wallet, 2) Go to the Goals section, 3) Click 'Add Goal', 4) Choose a goal type or create custom, 5) Set target amount and date, 6) Let AI help generate milestones and suggested contributions. Wallet goals are ideal for: saving for vacations in a 'Travel Wallet', building emergency funds in a 'Safety Wallet', saving for home down payments in a 'House Wallet', tracking debt payoff in a 'Debt Wallet', or funding education in an 'Education Wallet'. Features include: individual progress tracking, separate goal insights, wallet-specific milestones, ability to allocate wallet income/contributions to goals, and independent goal completion celebrations. You can also: view all wallet goals from the main goals dashboard, set different goal priorities per wallet, and use wallet goals to teach specific saving habits.",
+        category: "wallet-management",
+        keywords: [
+          "wallet goals",
+          "goal per wallet",
+          "wallet saving targets",
+          "wallet financial goals",
+          "target wallet savings",
+        ],
+        relatedQuestions: [
+          "what-are-wallets",
+          "wallet-transactions",
+          "wallet-budgets",
+          "transfer-between-wallets",
+        ],
       },
     ],
   },
@@ -2233,6 +2343,117 @@ export const helpCenterData: FAQCategory[] = [
           "cd-vs-hysa-which-better",
           "emergency-fund-hysa-or-cd",
           "cd-ladder-strategy",
+        ],
+      },
+    ],
+  },
+  {
+    id: "recurring-transactions",
+    name: "Recurring Transactions",
+    description:
+      "Learn how to set up, manage, and automate recurring income and expenses in Moneko",
+    icon: "Repeat",
+    questions: [
+      {
+        id: "what-are-recurring-transactions",
+        question:
+          "What are recurring transactions in Moneko and how do they work?",
+        answer:
+          "Recurring transactions in Moneko are automated income or expense entries that repeat on a regular schedule, helping you manage regular bills, subscriptions, income, and savings without manual entry each time. You can set up recurrences for: monthly bills (rent, utilities, subscriptions), regular income (salary, freelance payments), savings transfers, debt payments, and irregular but predictable expenses (quarterly insurance, annual memberships). Features include: flexible scheduling (daily, weekly, monthly, yearly, custom intervals), start and end dates, automatic creation notifications, ability to skip or pause instances, bulk editing of recurring series, and conversion between recurring and one-time transactions. Each recurrence maintains its own history, can be categorized separately, and contributes to wallet and goal progress tracking.",
+        category: "recurring-transactions",
+        keywords: [
+          "recurring transactions",
+          "automatic payments",
+          "scheduled transactions",
+          "recurring expenses",
+          "recurring income",
+          "bill payments automation",
+        ],
+        relatedQuestions: [
+          "how-to-create-recurring",
+          "recurring-transaction-options",
+          "edit-recurring-series",
+          "pause-recurring-transaction",
+        ],
+      },
+      {
+        id: "how-to-create-recurring",
+        question: "How do I create a recurring transaction in Moneko?",
+        answer:
+          "Creating a recurring transaction is straightforward: 1) Tap the quick add button (+) or go to Transactions → Recurring, 2) Choose 'Create Recurring', 3) Enter the transaction details (amount, description, category, wallet), 4) Set the recurrence pattern: frequency (daily/weekly/monthly/yearly/custom), interval, specific days (for weekly/monthly), start date, and optional end date, 5) Choose whether it's income or expense, 6) Review and save. You can also: create recurrences from existing transactions (swipe left on transaction → 'Make Recurring'), use voice commands ('Create a monthly $50 salary recurring'), set up from templates (rent, salary, subscription), or import recurring patterns from files. Advanced options include: variable amounts (for fluctuating bills), skip specific occurrences (holidays), and automatic adjustment for month-end dates.",
+        category: "recurring-transactions",
+        keywords: [
+          "create recurring transaction",
+          "set up recurring payment",
+          "recurring setup",
+          "scheduled transaction creation",
+          "automatic expense setup",
+        ],
+        relatedQuestions: [
+          "what-are-recurring-transactions",
+          "recurring-transaction-options",
+          "edit-recurring-series",
+          "pause-recurring-transaction",
+        ],
+      },
+      {
+        id: "recurring-transaction-options",
+        question: "What recurrence options and frequencies are available?",
+        answer:
+          "Moneko offers flexible recurrence options to match almost any regular financial pattern: Standard frequencies: Daily (every X days), Weekly (every X weeks on specific days), Monthly (every X months on specific date/day), Yearly (annually on specific date), Custom (advanced cron-like scheduling). Monthly options include: specific date (15th of each month), last day of month, specific day (second Tuesday), relative dates (third Friday). Weekly options: specific days (Mondays and Wednesdays), interval (every 2 weeks). Advanced features: end conditions (after X occurrences or until date), time of day settings, timezone awareness, leap year handling (February 29th), and daylight saving adjustments. Special patterns supported: biweekly (every 2 weeks), bimonthly (every 2 months), quarterly (every 3 months), semiannual (twice yearly), and irregular patterns like 'every other Friday' or 'the last business day of the month'. You can also: set different amounts per occurrence (for variable bills), skip specific dates automatically, and create complex patterns using multiple simple recurrences.",
+        category: "recurring-transactions",
+        keywords: [
+          "recurrence frequency",
+          "recurring options",
+          "repeat interval",
+          "recurring schedule pattern",
+          "custom recurrence",
+        ],
+        relatedQuestions: [
+          "what-are-recurring-transactions",
+          "how-to-create-recurring",
+          "edit-recurring-series",
+          "pause-recurring-transaction",
+        ],
+      },
+      {
+        id: "edit-recurring-series",
+        question: "How do I edit or modify a recurring transaction series?",
+        answer:
+          "Editing recurring transactions in Moneko gives you flexible options depending on what you need to change: To edit a single occurrence: 1) Find the specific transaction, 2) Tap to edit, 3) Make changes (amount, date, category, etc.), 4) Choose whether to apply changes to: this occurrence only, this and all future occurrences, or the entire series. To edit the series template: 1) Go to Transactions → Recurring, 2) Find the recurrence, 3) Tap 'Edit Series', 4) Modify the template (amount, description, category, wallet), 5) Adjust recurrence pattern (frequency, interval, days), 6) Update start/end dates, 7) Save changes. You can also: change wallet or category for all future transactions, pause/resume the series temporarily, convert between income/expense types, bulk update amounts (for inflation adjustments), and split a series into multiple recurrences. All edits maintain full history and audit trail, and affected transactions update instantly in budgets, goals, and reports.",
+        category: "recurring-transactions",
+        keywords: [
+          "edit recurring transaction",
+          "modify recurring series",
+          "change recurring payment",
+          "update recurring transaction",
+          "recurring transaction editing",
+        ],
+        relatedQuestions: [
+          "what-are-recurring-transactions",
+          "how-to-create-recurring",
+          "recurring-transaction-options",
+          "pause-recurring-transaction",
+        ],
+      },
+      {
+        id: "pause-recurring-transaction",
+        question: "Can I pause or stop a recurring transaction temporarily?",
+        answer:
+          "Yes, you can easily pause, resume, or stop recurring transactions in Moneko as your financial situation changes: To pause a recurrence: 1) Go to Transactions → Recurring, 2) Find the recurrence you want to pause, 3) Tap the pause button or swipe left → 'Pause', 4) Set pause duration (optional) or pause indefinitely, 5) Confirm. Paused recurrences: show as paused in the list, don't create new transactions during pause period, maintain all settings and history, can be resumed with one click, and don't affect series counting or limits. To stop/delete a recurrence: 1) Swipe left → 'Delete' or tap delete in edit mode, 2) Choose what to do with future occurrences: cancel all future (keeps past), or delete entire series (removes all history). Additional options: set automatic pause/resume dates (for seasonal bills), create pause templates (for vacations), transfer pausing between similar recurrences, and get resumption reminders. You can also: convert a paused recurrence to a one-time transaction for immediate use, or duplicate the template to create a similar active recurrence.",
+        category: "recurring-transactions",
+        keywords: [
+          "pause recurring transaction",
+          "stop recurring payment",
+          "suspend recurring expense",
+          "resume recurring transaction",
+          "temporary stop recurring",
+        ],
+        relatedQuestions: [
+          "what-are-recurring-transactions",
+          "how-to-create-recurring",
+          "recurring-transaction-options",
+          "edit-recurring-series",
         ],
       },
     ],

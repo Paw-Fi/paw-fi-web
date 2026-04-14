@@ -1,19 +1,22 @@
-import { Blog } from '@/components/blogs/blogs.typing';
+import { Blog } from "@/components/blogs/blogs.typing";
 
-import { authorsData } from './authors';
-import { tags } from './authors';
+import { authorsData } from "./authors";
+import { tags } from "./authors";
 
 const newBlog: Blog = {
-  id: 'whatsapp-budgeting-2026',
-  title: 'Budgeting on WhatsApp in 2026 — Does It Actually Work?',
-  slug: 'budgeting-on-whatsapp-2026',
-  excerpt: 'Discover how WhatsApp budgeting in 2026 offers a frictionless way to manage finances with tools like Moneko, combining chat-based logging with envelope-style budgeting.',
-  coverImage: 'https://placekitten.com/800/400',
+  id: "whatsapp-budgeting-2026",
+  title: "Budgeting on WhatsApp in 2026 — Does It Actually Work?",
+  slug: "budgeting-on-whatsapp-2026",
+  excerpt:
+    "Discover how WhatsApp budgeting in 2026 offers a frictionless way to manage finances with tools like Moneko, combining chat-based logging with envelope-style budgeting.",
+  coverImage: "https://placekitten.com/800/400",
   readTime: 8,
   seo: {
-    metaTitle: 'Budgeting on WhatsApp in 2026 — Does It Actually Work?',
-    metaDescription: 'Explore WhatsApp budgeting in 2026 and how tools like Moneko use envelope-style pockets for effortless financial control without app friction.',
-    keywords: 'WhatsApp budgeting 2026, envelope budgeting app, Moneko WhatsApp assistant, personal finance tools'
+    metaTitle: "Budgeting on WhatsApp in 2026 — Does It Actually Work?",
+    metaDescription:
+      "Explore WhatsApp budgeting in 2026 and how tools like Moneko use envelope-style pockets for effortless financial control without app friction.",
+    keywords:
+      "WhatsApp budgeting 2026, envelope budgeting app, Moneko WhatsApp assistant, personal finance tools",
   },
   content: `
 ## The Real Reason You Quit Your Last Budgeting App
@@ -42,9 +45,9 @@ The space has become surprisingly crowded. Here is an honest look at what is ava
 - **POQT (poqt.cloud)** — One of the most established players with 20,000+ active users and over USD 10 million managed. Supports text, voice, and document uploads. Strong on expense tracking but primarily category-based rather than envelope-style budgeting.
 - **Dora AI (doraai.money)** — Conversational and polished. Excellent at natural language queries like "what did I spend on Uber this week?" Great for insight-seekers but lighter on structured monthly budget control.
 - **Luccabot (luccabot.com)** — Simple and free. Good for basic income and expense tracking with daily reminders. Positioned more as a tracking tool than a full budgeting system.
-- **Whispend** — Strong receipt scanning, budget limit alerts, and voice support. Popular in India. Free beta currently available. Less focus on monthly budget structure.
+- **Whispend** — Strong receipt scanning, budget limit alerts, and voice support. Popular in India. Less focus on monthly budget structure.
 - **Gudmoney (gud.money)** — WhatsApp-first with clean reporting. Supports text, photo, PDF, and voice. More focused on expense organisation than proactive budget management.
-- **Oneup Tools** — Privacy-focused, no data tracking, free for beta users. Lightweight and simple — good for users who want bare-minimum tracking.
+- **Oneup Tools** — Privacy-focused, no data tracking. Lightweight and simple — good for users who want bare-minimum tracking.
 - **Budget Nest** — Full app with WhatsApp as an add-on channel. Broader feature set but requires app installation, which partially defeats the low-friction premise.
 - **Moneko** — The only WhatsApp budgeting assistant that combines chat-based logging with a full envelope-style pockets system. You log expenses via text, voice, or receipt on WhatsApp — and those expenses are automatically allocated against your monthly pockets (groceries, dining, rent, fun, etc.). At any moment you can ask what is left in any pocket. No bank sync required.
 
@@ -86,11 +89,11 @@ If you have quit three budgeting apps in the last two years, it is worth trying 
 **Try Moneko — the WhatsApp budgeting assistant with built-in envelope pockets.**
   
   `,
-  author: authorsData.find(author => author.id === 'alex-rivera')!,
+  author: authorsData.find((author) => author.id === "alex-rivera")!,
   tags: [
-    tags.find(tag => tag.id === 'tag-5')!, // Investment Strategy or similar relevant tag
+    tags.find((tag) => tag.id === "tag-5")!, // Investment Strategy or similar relevant tag
   ],
-  publishedAt: '2026-03-18T09:00:00Z',
+  publishedAt: "2026-03-18T09:00:00Z",
   featured: true,
 };
 

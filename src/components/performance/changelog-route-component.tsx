@@ -38,7 +38,7 @@ const changelogs: ChangelogEntry[] = [
       "Fixed display issues with household member names",
       "Resolved problems with invite links",
       "Faster loading on the pockets page",
-      "General performance and stability improvements"
+      "General performance and stability improvements",
     ],
   },
   {
@@ -313,10 +313,10 @@ const changelogs: ChangelogEntry[] = [
   {
     title: "Recurring Transactions, Savings Goals, Wallet Auth",
     date: "2025-11-17",
-    version: "1.2.0-beta",
+    version: "1.2.0",
     tags: ["Feature", "Recurring", "Goals", "Auth"],
     description:
-      "This beta introduced automation for recurring money flows, visual goals, wallet sign-in, and reminder tools.",
+      "This release introduced automation for recurring money flows, visual goals, wallet sign-in, and reminder tools.",
     items: [
       "Set recurring expenses and income with flexible schedules",
       "Edit, skip, or move recurring entries when plans change",
@@ -353,7 +353,7 @@ const changelogs: ChangelogEntry[] = [
     version: "1.0.5",
     tags: ["Feature", "i18n", "Beta"],
     description:
-      "This release prepared Moneko for broader global use with multi-currency support, language coverage, and beta hardening.",
+      "This release prepared Moneko for broader global use with multi-currency support, language coverage, and stability improvements.",
     items: [
       "Multi-currency support was expanded for global use",
       "Currency display and conversion became clearer",
@@ -373,7 +373,7 @@ const changelogs: ChangelogEntry[] = [
     description:
       "The first public release of Moneko, delivering essential expense tracking, account access, and budgeting basics.",
     items: [
-      "Public beta launched on mobile stores",
+      "Launched on the App Store and Google Play",
       "Core expense tracking released with category and date support",
       "Create, edit, and delete transaction management added",
       "Basic budgeting and spending limits introduced",
@@ -420,11 +420,11 @@ export function ChangelogRouteComponent() {
     return sortedChangelogs.map((changelog) => ({
       title: (
         <div className="flex flex-col gap-2">
-          <time className="text-muted-foreground text-[10px] sm:text-xs font-semibold tracking-[0.2em] uppercase">
+          <time className="text-muted-foreground text-[10px] font-semibold tracking-[0.2em] uppercase sm:text-xs">
             {formatDate(new Date(changelog.date))}
           </time>
           {changelog.version && (
-            <span className="w-fit border-border bg-card text-foreground/90 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm">
+            <span className="border-border bg-card text-foreground/90 inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide shadow-sm">
               v{changelog.version}
             </span>
           )}
@@ -500,7 +500,7 @@ export function ChangelogRouteComponent() {
               duration: prefersReducedMotion ? 0 : 0.75,
               ease: "easeOut",
             }}
-            className="mb-8 px-5 sm:px-8 lg:px-10 space-y-6 md:mb-12"
+            className="mb-8 space-y-6 px-5 sm:px-8 md:mb-12 lg:px-10"
           >
             <div className="mb-2 flex items-center gap-2.5">
               <span className="relative flex h-2 w-2">
@@ -528,7 +528,7 @@ export function ChangelogRouteComponent() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="mt-16 pb-8 text-center md:mt-20 px-5 sm:px-8 lg:px-10"
+            className="mt-16 px-5 pb-8 text-center sm:px-8 md:mt-20 lg:px-10"
           >
             <p className="text-muted-foreground text-sm leading-6">
               Have a feature request?{" "}

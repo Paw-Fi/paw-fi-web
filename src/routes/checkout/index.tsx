@@ -102,19 +102,7 @@ function CheckoutPage() {
   const selectedPlan = plan || "lifetime";
   const selectedBilling = billing || "monthly";
 
-  // Debug log to see what we're receiving
-  console.log("Checkout page search params:", {
-    ...searchParams,
-  });
-  console.log("Plan:", selectedPlan, "(explicit:", plan, ")");
-  console.log("Billing interval:", selectedBilling);
-
-  // SECURITY: Log potential issues
-  if (!plan && !status) {
-    console.warn(
-      "⚠️  Checkout accessed without plan parameter - defaulting to lifetime.",
-    );
-  }
+  // Intentionally no verbose client logging here: search params may include tokens.
 
   const { user, isLoading: authLoading } = useAuth();
   const [checkoutLoading, setCheckoutLoading] = useState(true);
@@ -166,18 +154,10 @@ function CheckoutPage() {
   // Validate userId parameter if provided (for mobile app checkout)
   useEffect(() => {
     if (authLoading || status) {
-      console.log("🔒 validateUserId blocked:", { authLoading, status });
       return;
     }
 
     const validateUserId = async () => {
-      console.log("🔍 validateUserId running:", {
-        hasUser: !!user?.id,
-        userId: user?.id,
-        isMobileCheckout,
-        hasLegacyMobileSessionParams,
-      });
-
       if (hasLegacyMobileSessionParams) {
         setIsValidatingUser(true);
 
@@ -187,7 +167,10 @@ function CheckoutPage() {
         });
 
         if (sessionError) {
-          console.error("❌ Legacy mobile session bootstrap failed:", sessionError);
+          console.error(
+            "❌ Legacy mobile session bootstrap failed:",
+            sessionError,
+          );
           setValidatedUserId(null);
           setIsValidatingUser(false);
           setCheckoutLoading(false);
@@ -220,10 +203,6 @@ function CheckoutPage() {
           return;
         }
 
-        console.log(
-          "✅ Legacy mobile session restored, setting validatedUserId:",
-          session.user.id,
-        );
         setValidatedUserId(session.user.id);
         setIsValidatingUser(false);
         setCheckoutLoading(false);
@@ -241,7 +220,6 @@ function CheckoutPage() {
       }
 
       if (user?.id) {
-        console.log("✅ User authenticated, setting validatedUserId:", user.id);
         setValidatedUserId(user.id);
         setCheckoutLoading(false);
         return;
@@ -321,16 +299,6 @@ function CheckoutPage() {
 
   // Initialize Stripe when loaded
   useEffect(() => {
-    console.log("💳 Stripe init effect triggered:", {
-      stripeLoaded,
-      status,
-      isValidatingUser,
-      authLoading,
-      hasUser: !!user,
-      validatedUserId,
-      isMobileCheckout,
-    });
-
     if (
       !stripeLoaded ||
       status ||
@@ -338,21 +306,16 @@ function CheckoutPage() {
       authLoading ||
       (isMobileCheckout && !hasLegacyMobileSessionParams)
     ) {
-      console.log("🔒 Stripe init blocked by initial guards");
       return;
     }
 
     // CRITICAL FIX: If auth has loaded and we have a user, wait for validateUserId to set validatedUserId
     // This prevents race condition where Stripe init runs before validateUserId completes
     if (!authLoading && user && !validatedUserId) {
-      console.log(
-        "⏳ Waiting for validatedUserId to be set by validateUserId effect...",
-      );
       return;
     }
 
     const initializeStripe = async () => {
-      console.log("🚀 Initializing Stripe checkout...");
       try {
         setCheckoutLoading(true);
         setPaymentStatus("processing");
@@ -362,7 +325,6 @@ function CheckoutPage() {
           ?.VITE_STRIPE_PUBLISHABLE_KEY as string;
         // @ts-ignore
         const stripe = window.Stripe(stripeKey);
-        console.log("Stripe loaded with key:", stripeKey ? "✓" : "✗");
 
         // Check if we have a validated user ID (either from auth or param)
         if (!validatedUserId) {
@@ -389,11 +351,6 @@ function CheckoutPage() {
           });
           throw new Error("User authentication required to make a purchase");
         }
-
-        console.log(
-          "✅ Proceeding with Stripe checkout for user:",
-          validatedUserId,
-        );
 
         // Get the current origin safely
         const origin =
@@ -439,17 +396,8 @@ function CheckoutPage() {
               })();
 
         // Create a payment session on the server
-        console.log("Creating Stripe session with billing interval:", billing);
-        console.log("Using validated userId:", validatedUserId);
-        console.log("Is mobile checkout:", isMobileCheckout);
-
         // CRITICAL: Verify we have an active session before calling Edge Function
         const activeSession = await supabase.auth.getSession();
-        console.log("Current session before Edge Function call:", {
-          hasSession: !!activeSession.data.session,
-          userId: activeSession.data.session?.user?.id,
-          expiresAt: activeSession.data.session?.expires_at,
-        });
 
         if (!activeSession.data.session) {
           console.error(
@@ -480,40 +428,36 @@ function CheckoutPage() {
 
         // Use raw fetch to have full control over error response handling
         // Get Supabase URL from the client's internal URL or use hardcoded fallback
-        const supabaseUrl = (supabase as any).supabaseUrl || 
-          (supabase as any).rest?.url?.replace('/rest/v1', '') ||
-          'https://qbuynyxyemigtnvdujts.supabase.co';
+        const supabaseUrl =
+          (supabase as any).supabaseUrl ||
+          (supabase as any).rest?.url?.replace("/rest/v1", "") ||
+          "https://qbuynyxyemigtnvdujts.supabase.co";
         const functionUrl = `${supabaseUrl}/functions/v1/create-checkout-session`;
-        
+
         const fetchResponse = await fetch(functionUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify(checkoutBody),
         });
 
         // Parse the response body
         const data = await fetchResponse.json();
-        
-        console.log("Stripe session response:", { 
-          ok: fetchResponse.ok, 
-          status: fetchResponse.status,
-          data 
-        });
 
         // Handle error responses
         if (!fetchResponse.ok) {
-          const errorMessage = data?.error || "Failed to create checkout session";
+          const errorMessage =
+            data?.error || "Failed to create checkout session";
           const errorDetails = data?.details || null;
           const code = data?.code;
 
-          console.error("Edge Function error:", { 
-            errorMessage, 
-            errorDetails, 
+          console.error("Edge Function error:", {
+            errorMessage,
+            errorDetails,
             code,
-            status: fetchResponse.status
+            status: fetchResponse.status,
           });
 
           if (code === "SUBSCRIPTION_MANAGED_IN_APP") {
@@ -536,7 +480,7 @@ function CheckoutPage() {
 
           setPaymentStatus("failed");
           // Use the detailed error message from the response body
-          const displayError = errorDetails 
+          const displayError = errorDetails
             ? `${errorMessage}: ${errorDetails}`
             : errorMessage;
           throw new Error(displayError);
@@ -549,11 +493,8 @@ function CheckoutPage() {
           throw new Error("No response from server");
         }
 
-        console.log("Response from server:", data);
-
         // For discount functionality, redirect to Stripe hosted checkout
         if (data.checkoutUrl) {
-          console.log("Redirecting to Stripe hosted checkout");
           // Redirect to Stripe hosted checkout (only in browser)
           if (typeof window !== "undefined") {
             window.location.href = data.checkoutUrl;
@@ -593,7 +534,6 @@ function CheckoutPage() {
               toast.success("Payment successful!");
             },
           };
-          console.log("Stripe options:", options);
 
           // Create and mount Express Checkout Element
           const elements = stripe.elements(options);
@@ -946,7 +886,7 @@ function CheckoutPage() {
               >
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4" />
-                  <span>256-bit SSL encryption</span>
+                  <span>Secure checkout</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4" />
