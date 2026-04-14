@@ -65,7 +65,7 @@ import {
 // --- Constants & Types ---
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview"; // Fast and capable
-const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
+const FALLBACK_MODEL_NAME = "gemini-2.5-flash";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
