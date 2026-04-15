@@ -213,8 +213,11 @@ async function handleInsert(
 
   const recipientName = resolveRecipientName(user.full_name, user.email);
   const planLabel = resolvePlanLabel(subscription);
-  const text = buildWelcomeEmailText(recipientName, planLabel);
-  const subject = buildWelcomeEmailSubject(user.full_name);
+const text = buildWelcomeEmailText(
+  recipientName,
+  planLabel,
+  subscription.status as "trialing" | "active",
+);  const subject = buildWelcomeEmailSubject(user.full_name);
   const dedupeKey = buildInsertDedupeKey(subscription);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -410,7 +413,34 @@ function resolvePlanLabel(subscription: SubscriptionRecord): string {
   return `${plan} plan`;
 }
 
-function buildWelcomeEmailText(name: string, planLabel: string): string {
+function buildWelcomeEmailText(
+  name: string,
+  planLabel: string,
+  status: "trialing" | "active",
+): string {
+  // Trialing → onboarding / friction discovery
+  if (status === "trialing") {
+    return [
+      `Hi ${name},`,
+      "",
+      "Yifan here, one of the co-founders at Moneko.",
+      "",
+      "I saw you just started your free trial — welcome.",
+      "",
+      "I wanted to check in early: is anything confusing, missing, or not working the way you expected?",
+      "",
+      "If you’ve hit any friction at all, just reply and tell me. I read every message myself.",
+      "",
+      "Also curious — what made you decide to try Moneko?",
+      "",
+      "Thanks for giving it a shot.",
+      "",
+      "Yifan",
+      "Co-Founder and CTO, Moneko",
+    ].join("\n");
+  }
+
+  // Active → paid confirmation (your original tone)
   return [
     `Hi ${name},`,
     "",
@@ -445,7 +475,7 @@ function buildCancellationEmailText(name: string): string {
     "",
     "Yifan here, one of the co-founders at Moneko.",
     "",
-    "I saw you canceled your plan and wanted to check in.",
+    "I saw your plan was canceled and wanted to reach out.",
     "",
     "If you don’t mind sharing, what made you decide to leave? Even a short reply helps us a lot.",
     "",
