@@ -114,6 +114,19 @@ function getAcceptedInternalSecrets(): string[] {
   );
 }
 
+const INTERNAL_SECRET_HEADERS = [
+  "X-Moneko-Internal-Key",
+  "X-Internal-Service-Secret", // Legacy header used by earlier cron migrations.
+] as const;
+
+function readProvidedInternalSecret(req: Request): string {
+  for (const header of INTERNAL_SECRET_HEADERS) {
+    const value = req.headers.get(header)?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
 export interface AuthResult {
   success: boolean;
   userId?: string;
@@ -182,6 +195,7 @@ export async function authenticateUser(
  * Authenticate internal service calls (processor -> sync endpoints)
  *
  * Uses X-Moneko-Internal-Key header for authentication.
+ * Also accepts X-Internal-Service-Secret for backwards compatibility.
  * Returns the user_id from the request body for the connection being processed.
  *
  * @param req - The incoming request
@@ -203,9 +217,7 @@ export async function authenticateInternalService(
     };
   }
 
-  const internalSecret = req.headers.get("X-Moneko-Internal-Key")?.trim() ||
-    req.headers.get("X-Internal-Service-Secret")?.trim() ||
-    "";
+  const internalSecret = readProvidedInternalSecret(req);
 
   if (!internalSecret) {
     return {
@@ -238,6 +250,7 @@ export async function authenticateInternalService(
  * Authenticate internal calls coming from other Edge Functions.
  *
  * Accepts X-Moneko-Internal-Key for internal calls.
+ * Also accepts X-Internal-Service-Secret for backwards compatibility.
  */
 export async function authenticateInternalSecret(
   req: Request,
@@ -255,8 +268,7 @@ export async function authenticateInternalSecret(
     };
   }
 
-  const provided = req.headers.get("X-Moneko-Internal-Key");
-  const normalizedProvided = provided?.trim() || "";
+  const normalizedProvided = readProvidedInternalSecret(req);
   if (!normalizedProvided) {
     return {
       success: false,
@@ -266,7 +278,7 @@ export async function authenticateInternalSecret(
   }
 
   const ok = acceptedSecrets.some((secret) =>
-    constantTimeCompare(normalizedProvided, secret),
+    constantTimeCompare(normalizedProvided, secret)
   );
   if (!ok) {
     console.warn("Invalid internal secret attempt");

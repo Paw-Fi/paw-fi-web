@@ -1,13 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
-import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  authenticateInternalSecret,
+  buildInternalInvokeHeaders,
+  resolveInternalFunctionKey,
+} from "../shared/auth.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
+const INTERNAL_FUNCTION_KEY = resolveInternalFunctionKey();
 
 // Fixed batch size to prevent DoS attacks
 const BATCH_SIZE = 10;
@@ -50,9 +54,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  // CRITICAL: Authenticate internal service calls only
-  // This endpoint should NOT be publicly accessible
-  if (!INTERNAL_SERVICE_SECRET) {
+  if (!INTERNAL_FUNCTION_KEY) {
     console.error(
       "[bank-sync-processor] INTERNAL_SERVICE_SECRET not configured",
     );
@@ -65,14 +67,11 @@ Deno.serve(async (req) => {
     );
   }
 
-  const providedSecret = req.headers.get("X-Internal-Service-Secret");
-  if (
-    !providedSecret ||
-    !constantTimeCompare(providedSecret, INTERNAL_SERVICE_SECRET)
-  ) {
+  const internalAuth = await authenticateInternalSecret(req);
+  if (!internalAuth.success) {
     console.warn("[bank-sync-processor] Unauthorized access attempt");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
+      status: internalAuth.statusCode || 401,
       headers: { ...headers, "Content-Type": "application/json" },
     });
   }
@@ -226,19 +225,9 @@ Deno.serve(async (req) => {
         results.succeeded++;
       } catch (error) {
         console.error(`[bank-sync-processor] Job ${job.id} failed`, error);
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        await handleJobFailure(supabase, job, errorMessage);
-        await reportEdgeFunctionError({
-          functionName: "bank-sync-processor",
-          error,
-          context: {
-            connection_id: job.bank_connection_id,
-            job_id: job.id,
-            job_type: job.job_type ?? "transactions_sync",
-            attempt_count: (job.attempt_count ?? 0) + 1,
-          },
-        });
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
 
         results.failed++;
         results.errors.push({ jobId: job.id, error: errorMessage });
@@ -271,6 +260,8 @@ async function processTinkJob(
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
+  const internalHeaders = buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY);
+
   const payload = job.payload as Record<string, unknown> | null;
   const event = payload?.event as string | undefined;
 
@@ -310,7 +301,7 @@ async function processTinkJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET!,
+        ...internalHeaders,
       },
       body: JSON.stringify({
         connectionId: connection.id,
@@ -329,6 +320,8 @@ async function processPlaidJob(
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
+  const internalHeaders = buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY);
+
   // Call plaid-sync-transactions
   console.log(`[bank-sync-processor] Triggering Plaid sync for job ${job.id}`);
   const response = await fetch(
@@ -337,7 +330,7 @@ async function processPlaidJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Internal-Service-Secret": INTERNAL_SERVICE_SECRET!,
+        ...internalHeaders,
       },
       body: JSON.stringify({
         connectionId: connection.id,
@@ -379,72 +372,4 @@ async function processPlaidJob(
         "Plaid sync completed with an error summary",
     );
   }
-}
-
-async function handleJobFailure(
-  supabase: any,
-  job: BankSyncJob,
-  errorMessage: string,
-): Promise<void> {
-  const nextAttemptCount = (job.attempt_count ?? 0) + 1;
-  const retryDelayMs = computeRetryDelayMs(nextAttemptCount);
-  const nowIso = new Date().toISOString();
-
-  if (nextAttemptCount < 5) {
-    await supabase
-      .from("bank_sync_jobs")
-      .update({
-        status: "pending",
-        attempt_count: nextAttemptCount,
-        next_attempt_at: new Date(Date.now() + retryDelayMs).toISOString(),
-        last_error_at: nowIso,
-        updated_at: nowIso,
-        processing_started_at: null,
-        payload: {
-          ...job.payload,
-          error: errorMessage,
-        },
-      })
-      .eq("id", job.id);
-    return;
-  }
-
-  await supabase
-    .from("bank_sync_jobs")
-    .update({
-      status: "failed",
-      attempt_count: nextAttemptCount,
-      last_error_at: nowIso,
-      updated_at: nowIso,
-      processing_started_at: null,
-      processed_at: nowIso,
-      payload: {
-        ...job.payload,
-        error: errorMessage,
-      },
-    })
-    .eq("id", job.id);
-}
-
-function computeRetryDelayMs(attemptCount: number): number {
-  if (attemptCount <= 1) return 15 * 60 * 1000;
-  if (attemptCount === 2) return 60 * 60 * 1000;
-  if (attemptCount === 3) return 6 * 60 * 60 * 1000;
-  return 24 * 60 * 60 * 1000;
-}
-
-/**
- * Constant-time string comparison to prevent timing attacks.
- */
-function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-
-  return result === 0;
 }

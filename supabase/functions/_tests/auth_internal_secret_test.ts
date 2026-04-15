@@ -43,6 +43,34 @@ Deno.test("authenticateInternalSecret re-reads env on each call", async () => {
 });
 
 Deno.test(
+  "authenticateInternalSecret accepts legacy X-Internal-Service-Secret header",
+  async () => {
+    const originalSecretApiKey = Deno.env.get(
+      "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+    );
+
+    try {
+      Deno.env.set("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", "legacy-secret");
+
+      const { authenticateInternalSecret } = await import(
+        `../shared/auth.ts?test=${crypto.randomUUID()}`
+      );
+
+      const result = await authenticateInternalSecret(
+        new Request("http://localhost", {
+          headers: { "X-Internal-Service-Secret": "legacy-secret" },
+        }),
+      );
+
+      assertEquals(result.success, true);
+      assertEquals(result.isInternalService, true);
+    } finally {
+      restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
+    }
+  },
+);
+
+Deno.test(
   "resolveInternalFunctionKey prefers SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
   async () => {
     const originalSecretApiKey = Deno.env.get(

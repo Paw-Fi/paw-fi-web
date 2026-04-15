@@ -27,13 +27,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for plaid-webhook");
 }
 
-const SYNC_EVENT_CODES = new Set([
-  "SYNC_UPDATES_AVAILABLE",
-  "DEFAULT_UPDATE",
-  "INITIAL_UPDATE",
-  "HISTORICAL_UPDATE",
-  "TRANSACTIONS_REMOVED",
-]);
+// Plaid's /transactions/sync integration should be triggered by SYNC_UPDATES_AVAILABLE.
+// INITIAL_UPDATE/HISTORICAL_UPDATE/DEFAULT_UPDATE are legacy compatibility webhooks.
+const SYNC_EVENT_CODES = new Set(["SYNC_UPDATES_AVAILABLE"]);
 
 // Event codes that indicate the user needs to re-authenticate
 const REAUTH_EVENT_CODES = new Set([
@@ -137,6 +133,12 @@ Deno.serve(async (req) => {
       .eq("provider", PLAID_PROVIDER)
       .eq("provider_item_id", payload.item_id)
       .maybeSingle();
+
+    if (!connection?.id && payload.webhook_type === "TRANSACTIONS") {
+      console.warn(
+        `[plaid-webhook] No bank connection mapping for item ${payload.item_id}. Webhook will be logged but no sync job will be enqueued.`,
+      );
+    }
 
     // Log the webhook event
     await supabase.from("bank_webhook_events").insert({
