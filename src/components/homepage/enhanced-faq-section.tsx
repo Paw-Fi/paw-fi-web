@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { 
+import {
   faChevronDown,
   faShieldAlt,
   faRobot,
@@ -12,7 +12,7 @@ import {
   faGraduationCap,
   faChartLine,
   faLock,
-  faHeadset
+  faHeadset,
 } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "@tanstack/react-router";
 
@@ -20,101 +20,141 @@ interface FAQItem {
   id: string;
   question: string;
   answer: string;
-  category: "security" | "ai" | "pricing" | "education" | "investing" | "support";
+  category:
+    | "security"
+    | "ai"
+    | "pricing"
+    | "education"
+    | "investing"
+    | "support";
   icon: any;
   popular: boolean;
 }
 
 const faqCategories = {
-  security: { name: "Security & Privacy", color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30" },
-  ai: { name: "AI Technology", color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
-  pricing: { name: "Pricing & Plans", color: "text-purple-600", bgColor: "bg-purple-100 dark:bg-purple-900/30" },
-  education: { name: "Learning & Education", color: "text-orange-600", bgColor: "bg-orange-100 dark:bg-orange-900/30" },
-  investing: { name: "Investing & Portfolio", color: "text-indigo-600", bgColor: "bg-indigo-100 dark:bg-indigo-900/30" },
-  support: { name: "Support & Help", color: "text-gray-600", bgColor: "bg-gray-100 dark:bg-gray-900/30" }
+  security: {
+    name: "Security & Privacy",
+    color: "text-green-600",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+  },
+  ai: {
+    name: "AI Technology",
+    color: "text-blue-600",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+  },
+  pricing: {
+    name: "Pricing & Plans",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+  },
+  education: {
+    name: "Learning & Education",
+    color: "text-orange-600",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+  },
+  investing: {
+    name: "Investing & Portfolio",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-100 dark:bg-indigo-900/30",
+  },
+  support: {
+    name: "Support & Help",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100 dark:bg-gray-900/30",
+  },
 };
 
 const faqItems: FAQItem[] = [
   {
     id: "security-data",
     question: "How secure is my financial data with Moneko?",
-    answer: "Your financial security is our top priority. We use bank-level 256-bit encryption, are SOC 2 Type II certified, and never store your banking credentials. All data is encrypted both in transit and at rest, and we partner only with FDIC-insured institutions. Our security infrastructure is regularly audited by third-party security firms.",
+    answer:
+      "Security is a priority. We use industry-standard encryption in transit and apply security best practices to protect your data. For specific questions about security controls or data handling, contact support.",
     category: "security",
     icon: faShieldAlt,
-    popular: true
+    popular: true,
   },
   {
     id: "ai-accuracy",
     question: "How accurate are Moneko's AI recommendations?",
-    answer: "Our AI is trained by certified financial professionals (CFA, CSC, MBA) and uses advanced machine learning algorithms. The system analyzes thousands of data points including your spending patterns, financial goals, and market conditions. Our recommendations have helped users save an average of $15,000+ and achieve 127% better portfolio performance compared to traditional savings accounts.",
+    answer:
+      "Moneko's AI helps you plan and stay organized by summarizing patterns in your activity and suggesting next steps. Recommendations are guidance for budgeting and planning, not a guarantee of outcomes.",
     category: "ai",
     icon: faRobot,
-    popular: true
+    popular: true,
   },
   {
     id: "pricing-free",
     question: "Is Moneko really free to use?",
-    answer: "Yes! Moneko offers a comprehensive free tier that includes AI financial coaching, basic budgeting tools, educational courses, and portfolio tracking. Our premium features include advanced AI insights, unlimited goal tracking, and priority support. We believe everyone deserves access to quality financial guidance regardless of their income level.",
+    answer:
+      "Moneko offers a free tier and optional paid plans. See the pricing page for current details on what's included.",
     category: "pricing",
     icon: faDollarSign,
-    popular: true
+    popular: true,
   },
   {
     id: "education-beginner",
     question: "I'm a complete beginner with finances. Can Moneko help me?",
-    answer: "Absolutely! Moneko is designed for all experience levels. Our AI adapts to your knowledge level and provides personalized learning paths. We offer beginner-friendly courses covering budgeting basics, investment fundamentals, and debt management. Over 95% of our users report improved financial literacy within their first month.",
+    answer:
+      "Yes. Moneko is designed for all experience levels. You'll find beginner-friendly lessons on budgeting basics, saving, and investing concepts, plus step-by-step workflows to apply what you learn.",
     category: "education",
     icon: faGraduationCap,
-    popular: true
+    popular: true,
   },
   {
     id: "investing-minimum",
     question: "What's the minimum amount needed to start investing?",
-    answer: "You can start investing with as little as $1! Our AI creates diversified portfolios using fractional shares, making investing accessible to everyone. We recommend starting with whatever amount you're comfortable with - even $25/month can grow significantly over time through compound interest and our AI optimization.",
+    answer:
+      "Minimums depend on the broker or platform you use. Some allow fractional shares. Moneko focuses on planning and tracking, not executing trades.",
     category: "investing",
     icon: faChartLine,
-    popular: false
+    popular: false,
   },
   {
     id: "ai-human-advisors",
     question: "How does AI coaching compare to human financial advisors?",
-    answer: "Our AI provides 24/7 availability, personalized insights, and costs significantly less than traditional advisors (who typically charge 1-2% annually). While human advisors are valuable for complex situations, our AI handles 90% of common financial questions and is trained by certified professionals. You get expert-level guidance at a fraction of the cost.",
+    answer:
+      "AI coaching can be useful for day-to-day budgeting, reminders, and organization. For complex personal situations, a licensed professional can be a better fit. Moneko is designed to help with planning and tracking, not to replace professional advice.",
     category: "ai",
     icon: faRobot,
-    popular: false
+    popular: false,
   },
   {
     id: "security-bank-connection",
     question: "Is it safe to connect my bank accounts?",
-    answer: "Yes, it's completely safe. We use Plaid, the same technology trusted by major financial institutions like Venmo, Robinhood, and American Express. We never store your banking credentials - connections are read-only and encrypted. You can disconnect your accounts at any time, and we're fully compliant with financial data protection regulations.",
+    answer:
+      "If you choose to connect accounts, you can disconnect at any time. We aim to minimize sensitive data handling and follow security best practices. If you'd like details about how connections work for your setup, contact support.",
     category: "security",
     icon: faLock,
-    popular: false
+    popular: false,
   },
   {
     id: "education-time-commitment",
     question: "How much time do I need to spend learning?",
-    answer: "Our courses are designed for busy lifestyles. Most lessons are 5-15 minutes long, and you can learn at your own pace. Many users spend just 10-20 minutes per week and see significant improvements in their financial knowledge. Our AI also provides bite-sized daily tips that take less than 2 minutes to read.",
+    answer:
+      "It depends on your goals. Many people start with a few minutes at a time and build consistency over weeks.",
     category: "education",
     icon: faGraduationCap,
-    popular: false
+    popular: false,
   },
   {
     id: "investing-risk-management",
     question: "How does Moneko manage investment risk?",
-    answer: "Our AI continuously monitors your portfolio and market conditions, automatically rebalancing to maintain your target risk level. We use modern portfolio theory, diversification across asset classes, and real-time risk assessment. You can adjust your risk tolerance anytime, and our AI will adapt your portfolio accordingly while maintaining optimal diversification.",
+    answer:
+      "Moneko can help you think through risk and diversification concepts, but it doesn't manage or rebalance investments on your behalf.",
     category: "investing",
     icon: faChartLine,
-    popular: false
+    popular: false,
   },
   {
     id: "support-help",
     question: "What if I need help or have questions?",
-    answer: "We offer multiple support channels: 24/7 AI chat support, email support with response times under 4 hours, and an extensive knowledge base. Premium users get priority support and access to live chat with our financial experts. Our community forum is also active with helpful users and expert moderators.",
+    answer:
+      "You can reach support by email and use in-app help resources. Premium plans may include additional support options.",
     category: "support",
     icon: faHeadset,
-    popular: false
-  }
+    popular: false,
+  },
 ];
 
 export function EnhancedFAQSection() {
@@ -131,14 +171,14 @@ export function EnhancedFAQSection() {
     setOpenItems(newOpenItems);
   };
 
-  const filteredFAQs = selectedCategory 
-    ? faqItems.filter(item => item.category === selectedCategory)
+  const filteredFAQs = selectedCategory
+    ? faqItems.filter((item) => item.category === selectedCategory)
     : faqItems;
 
-  const popularFAQs = faqItems.filter(item => item.popular);
+  const popularFAQs = faqItems.filter((item) => item.popular);
 
   return (
-    <section className="relative z-10 px-4 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8 bg-gradient-to-br from-slate-50/30 to-gray-50/20 dark:from-slate-900/30 dark:to-gray-900/20">
+    <section className="relative z-10 bg-gradient-to-br from-slate-50/30 to-gray-50/20 px-4 py-12 sm:px-6 sm:py-16 md:py-20 lg:px-8 dark:from-slate-900/30 dark:to-gray-900/20">
       <div className="mx-auto max-w-6xl">
         {/* Section Header */}
         <div className="mb-12 text-center sm:mb-16">
@@ -149,14 +189,14 @@ export function EnhancedFAQSection() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <Badge 
-              variant="secondary" 
-              className="mb-4 bg-primary/10 text-primary border-primary/20 px-4 py-2 text-sm font-medium"
+            <Badge
+              variant="secondary"
+              className="bg-primary/10 text-primary border-primary/20 mb-4 px-4 py-2 text-sm font-medium"
             >
               Frequently Asked Questions
             </Badge>
           </motion.div>
-          
+
           <motion.h2
             className="text-foreground mb-4 text-3xl leading-tight font-bold sm:mb-6 sm:text-4xl md:text-5xl"
             initial={{ opacity: 0, y: 20 }}
@@ -166,7 +206,7 @@ export function EnhancedFAQSection() {
           >
             Got Questions? We've Got Answers
           </motion.h2>
-          
+
           <motion.p
             className="text-muted-foreground mx-auto max-w-3xl text-lg leading-relaxed sm:text-xl"
             initial={{ opacity: 0, y: 20 }}
@@ -174,7 +214,8 @@ export function EnhancedFAQSection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            Everything you need to know about Moneko's AI-powered financial coaching platform
+            Everything you need to know about Moneko's AI-powered financial
+            coaching platform
           </motion.p>
         </div>
 
@@ -186,37 +227,39 @@ export function EnhancedFAQSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <h3 className="text-xl font-bold text-foreground mb-6 flex items-center">
+          <h3 className="text-foreground mb-6 flex items-center text-xl font-bold">
             <span className="mr-3">🔥</span>
             Most Popular Questions
           </h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {popularFAQs.map((item, index) => (
-              <Card 
+              <Card
                 key={item.id}
-                className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-white/20 dark:border-slate-700/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                className="cursor-pointer border-white/20 bg-white/60 shadow-lg backdrop-blur-xl transition-all duration-300 hover:shadow-xl dark:border-slate-700/50 dark:bg-slate-900/60"
                 onClick={() => toggleItem(item.id)}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 shadow-md flex-shrink-0 ${faqCategories[item.category].color}`}>
+                    <div
+                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-white to-slate-50 shadow-md dark:from-slate-800 dark:to-slate-700 ${faqCategories[item.category].color}`}
+                    >
                       <FontAwesomeIcon icon={item.icon} className="h-5 w-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-foreground text-base leading-tight">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex items-center justify-between">
+                        <h4 className="text-foreground text-base leading-tight font-semibold">
                           {item.question}
                         </h4>
-                        <FontAwesomeIcon 
-                          icon={faChevronDown} 
-                          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 flex-shrink-0 ml-2 ${
-                            openItems.has(item.id) ? 'rotate-180' : ''
+                        <FontAwesomeIcon
+                          icon={faChevronDown}
+                          className={`text-muted-foreground ml-2 h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
+                            openItems.has(item.id) ? "rotate-180" : ""
                           }`}
                         />
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${faqCategories[item.category].bgColor} ${faqCategories[item.category].color} border-0 mb-3`}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${faqCategories[item.category].bgColor} ${faqCategories[item.category].color} mb-3 border-0`}
                       >
                         {faqCategories[item.category].name}
                       </Badge>
@@ -282,25 +325,27 @@ export function EnhancedFAQSection() {
           viewport={{ once: true }}
         >
           {filteredFAQs.map((item, index) => (
-            <Card 
+            <Card
               key={item.id}
-              className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm border-white/20 dark:border-slate-700/50 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="cursor-pointer border-white/20 bg-white/40 shadow-md backdrop-blur-sm transition-all duration-300 hover:shadow-lg dark:border-slate-700/50 dark:bg-slate-900/40"
               onClick={() => toggleItem(item.id)}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4 flex-1 min-w-0">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-700 shadow-sm flex-shrink-0 ${faqCategories[item.category].color}`}>
+                  <div className="flex min-w-0 flex-1 items-center space-x-4">
+                    <div
+                      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-white to-slate-50 shadow-sm dark:from-slate-800 dark:to-slate-700 ${faqCategories[item.category].color}`}
+                    >
                       <FontAwesomeIcon icon={item.icon} className="h-4 w-4" />
                     </div>
-                    <h4 className="font-semibold text-foreground text-base leading-tight">
+                    <h4 className="text-foreground text-base leading-tight font-semibold">
                       {item.question}
                     </h4>
                   </div>
-                  <FontAwesomeIcon 
-                    icon={faChevronDown} 
-                    className={`h-4 w-4 text-muted-foreground transition-transform duration-200 flex-shrink-0 ml-4 ${
-                      openItems.has(item.id) ? 'rotate-180' : ''
+                  <FontAwesomeIcon
+                    icon={faChevronDown}
+                    className={`text-muted-foreground ml-4 h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
+                      openItems.has(item.id) ? "rotate-180" : ""
                     }`}
                   />
                 </div>
@@ -332,32 +377,29 @@ export function EnhancedFAQSection() {
           transition={{ duration: 0.6, delay: 0.6 }}
           viewport={{ once: true }}
         >
-          <div className="bg-gradient-to-r from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 rounded-2xl p-8 sm:p-12">
-            <h3 className="text-2xl font-bold text-foreground mb-4 sm:text-3xl">
+          <div className="from-primary/5 to-secondary/5 dark:from-primary/10 dark:to-secondary/10 rounded-2xl bg-gradient-to-r p-8 sm:p-12">
+            <h3 className="text-foreground mb-4 text-2xl font-bold sm:text-3xl">
               Still Have Questions?
             </h3>
-            <p className="text-muted-foreground mb-8 text-lg max-w-2xl mx-auto">
-              Our support team is here to help you succeed on your financial journey
+            <p className="text-muted-foreground mx-auto mb-8 max-w-2xl text-lg">
+              Our support team is here to help you succeed on your financial
+              journey
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
+              <Button
                 asChild
-                size="lg" 
+                size="lg"
                 className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 text-lg font-semibold"
               >
-                <Link to="/dashboard">
-                  Start Free Trial
-                </Link>
+                <Link to="/pricing">See Pricing</Link>
               </Button>
-              <Button 
+              <Button
                 asChild
-                variant="outline" 
+                variant="outline"
                 size="lg"
                 className="px-8 py-3 text-lg font-semibold"
               >
-                <a href="mailto:support@moneko.io">
-                  Contact Support
-                </a>
+                <a href="mailto:support@moneko.io">Contact Support</a>
               </Button>
             </div>
           </div>

@@ -23,6 +23,10 @@ import {
   assertAccountInScope,
   resolveDefaultAccountId,
 } from "../shared/accounts.ts";
+import {
+  buildImportRequestKey,
+  buildImportSemanticKey,
+} from "../shared/import-dedupe.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -151,10 +155,12 @@ interface TransactionItem {
 interface RequestBody {
   userId?: string;
   debugTraceId?: string;
+  manualImportMode?: boolean;
   householdId?: string;
   isPortfolio?: boolean;
   progressOffset?: number;
   progressTotal?: number;
+  skipSemanticDuplicates?: boolean;
   transactions: TransactionItem[];
 }
 
@@ -163,8 +169,20 @@ interface SavedTransaction {
   index: number;
   type: "expense" | "income";
   success: boolean;
+  duplicate?: boolean;
+  duplicateKind?: "request" | "semantic";
   error?: string;
   data?: any;
+}
+
+interface PreparedTransactionRecord {
+  index: number;
+  type: "expense" | "income";
+  record: any;
+  customSplits?: CustomSplits | null;
+  payerUserId?: string | null;
+  importRequestKey: string | null;
+  importSemanticKey: string;
 }
 
 interface SaveTransactionsBatchSuccess {
@@ -260,22 +278,19 @@ function createProgressEmitter(
   const progressOffset = resolveProgressOffset(body, totalItems);
   let lastCurrentItem = progressOffset;
 
-  return (
-    stage: string,
-    message: string,
-    currentLocalItem?: number,
-  ) => {
+  return (stage: string, message: string, currentLocalItem?: number) => {
     if (!onProgress) return;
 
-    const normalizedCurrent = currentLocalItem == null
-      ? undefined
-      : Math.max(
-          lastCurrentItem,
-          Math.min(
-            totalItems,
-            progressOffset + Math.max(0, Math.trunc(currentLocalItem)),
-          ),
-        );
+    const normalizedCurrent =
+      currentLocalItem == null
+        ? undefined
+        : Math.max(
+            lastCurrentItem,
+            Math.min(
+              totalItems,
+              progressOffset + Math.max(0, Math.trunc(currentLocalItem)),
+            ),
+          );
 
     if (normalizedCurrent != null) {
       lastCurrentItem = normalizedCurrent;
@@ -322,17 +337,17 @@ async function saveTransactionsBatchInternal(
   emitProgress("started", "Preparing import...", 0);
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-      global: {
-        headers: { "X-Client-Info": "moneko-save-transactions-batch" },
-      },
-    });
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: { "X-Client-Info": "moneko-save-transactions-batch" },
+    },
+  });
 
-    // Authenticate
+  // Authenticate
   const authResult = await authenticateUserOrInternalSecret(req, supabase);
   if (!authResult.success) {
     throw new SaveTransactionsBatchError(
@@ -348,13 +363,14 @@ async function saveTransactionsBatchInternal(
   if (!userId) {
     throw new SaveTransactionsBatchError("userId is required", 400);
   }
+  const resolvedUserId = userId;
 
   let actorName = "Someone";
   try {
     const { data: appUser } = await supabase
       .from("users")
       .select("full_name")
-      .eq("id", userId)
+      .eq("id", resolvedUserId)
       .maybeSingle();
     if (appUser?.full_name && String(appUser.full_name).trim().length > 0) {
       actorName = appUser.full_name as string;
@@ -366,7 +382,7 @@ async function saveTransactionsBatchInternal(
   const { data: contact } = await supabase
     .from("user_contacts")
     .select("id, preferred_currency")
-    .eq("user_id", userId)
+    .eq("user_id", resolvedUserId)
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -387,7 +403,7 @@ async function saveTransactionsBatchInternal(
       .from("household_members")
       .select("id")
       .eq("household_id", requestedHouseholdId)
-      .eq("user_id", userId)
+      .eq("user_id", resolvedUserId)
       .maybeSingle();
 
     if (membership) {
@@ -404,8 +420,9 @@ async function saveTransactionsBatchInternal(
     }
   }
 
-  const scopeHouseholdId = resolvedHouseholdId ||
-    (isPortfolio ? requestedHouseholdId : null);
+  const scopeHouseholdId: string | null =
+    resolvedHouseholdId ??
+    (isPortfolio ? (requestedHouseholdId ?? null) : null);
   const invalidAccountSentinel = "__invalid__";
   const accountResolutionCache = new Map<string, string | null>();
   const uniqueRequestedAccountIds = new Set<string>();
@@ -414,12 +431,15 @@ async function saveTransactionsBatchInternal(
     requestedAccountId: string | null,
     index: number,
   ): Promise<string | null | typeof invalidAccountSentinel> {
+    const householdScopeId = scopeHouseholdId ?? null;
+
     if (requestedAccountId) {
       uniqueRequestedAccountIds.add(requestedAccountId);
     }
 
-    const cacheKey =
-      `${scopeHouseholdId ?? "personal"}:${requestedAccountId ?? "__default__"}`;
+    const cacheKey = `${scopeHouseholdId ?? "personal"}:${
+      requestedAccountId ?? "__default__"
+    }`;
     if (accountResolutionCache.has(cacheKey)) {
       return accountResolutionCache.get(cacheKey) ?? null;
     }
@@ -430,8 +450,8 @@ async function saveTransactionsBatchInternal(
         supabase,
         requestedAccountId,
         {
-          userId,
-          householdId: scopeHouseholdId,
+          userId: resolvedUserId,
+          householdId: householdScopeId,
         },
       );
       if (!accountInScope) {
@@ -446,8 +466,8 @@ async function saveTransactionsBatchInternal(
             },
           );
           resolvedAccountId = await resolveDefaultAccountId(supabase, {
-            userId,
-            householdId: scopeHouseholdId,
+            userId: resolvedUserId,
+            householdId: householdScopeId,
           });
         } else {
           resolvedAccountId = invalidAccountSentinel;
@@ -457,8 +477,8 @@ async function saveTransactionsBatchInternal(
       }
     } else {
       resolvedAccountId = await resolveDefaultAccountId(supabase, {
-        userId,
-        householdId: scopeHouseholdId,
+        userId: resolvedUserId,
+        householdId: householdScopeId,
       });
     }
 
@@ -469,11 +489,171 @@ async function saveTransactionsBatchInternal(
     return resolvedAccountId;
   }
 
+  async function ensureExpenseSplitForReplay(
+    expense: Record<string, unknown>,
+    meta: { customSplits?: CustomSplits | null; payerUserId?: string | null },
+  ): Promise<Record<string, unknown>> {
+    if (resolvedHouseholdId == null || householdMembers.length == 0) {
+      return expense;
+    }
+    if (expense["split_group_id"] != null) {
+      return expense;
+    }
+
+    const amountCents = Number(expense["amount_cents"] ?? 0);
+    const rawSplitType =
+      typeof meta.customSplits?.splitType === "string"
+        ? meta.customSplits.splitType.trim().toLowerCase()
+        : "equal";
+    const normalizedSplitType = [
+      "equal",
+      "amount",
+      "percentage",
+      "shares",
+    ].includes(rawSplitType)
+      ? rawSplitType
+      : "equal";
+    const hasMemberSplits =
+      Array.isArray(meta.customSplits?.memberSplits) &&
+      meta.customSplits!.memberSplits.length > 0;
+    const customSplits =
+      hasMemberSplits && normalizedSplitType !== "equal"
+        ? meta.customSplits
+        : null;
+    const splitType = customSplits ? normalizedSplitType : "equal";
+
+    let payerUserId = sanitizeUuid(meta.payerUserId ?? null) || resolvedUserId;
+    const isValidPayer = householdMembers.some(
+      (member) => member.user_id === payerUserId,
+    );
+    if (!isValidPayer) payerUserId = resolvedUserId;
+
+    const expenseId = typeof expense["id"] === "string" ? expense["id"] : "";
+    if (expenseId.length === 0) {
+      return expense;
+    }
+
+    const splitGroupId = crypto.randomUUID();
+    const splitGroup = {
+      id: splitGroupId,
+      household_id: resolvedHouseholdId,
+      expense_id: expenseId,
+      payer_user_id: payerUserId,
+      split_type: splitType,
+      currency:
+        typeof expense["currency"] === "string" ? expense["currency"] : null,
+      total_amount_cents: amountCents,
+      description:
+        typeof expense["raw_text"] === "string" ? expense["raw_text"] : null,
+      created_at: new Date().toISOString(),
+    };
+
+    let lines: Array<{
+      user_id: string;
+      amount_cents: number;
+      percentage?: number;
+      shares?: number;
+    }>;
+
+    if (splitType === "equal") {
+      const amountPerMember = Math.floor(amountCents / householdMembers.length);
+      const remainder = amountCents - amountPerMember * householdMembers.length;
+      lines = householdMembers.map((member, idx) => ({
+        user_id: member.user_id,
+        amount_cents: amountPerMember + (idx == 0 ? remainder : 0),
+      }));
+    } else if (splitType === "amount" && customSplits) {
+      const memberSplits = customSplits.memberSplits as MemberSplit[];
+      const cents = memberSplits.map((split) =>
+        Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100)),
+      );
+      const sumCents = cents.reduce((sum, value) => sum + value, 0);
+      const diff = amountCents - sumCents;
+      if (diff !== 0 && cents.length > 0) {
+        cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
+      }
+      lines = memberSplits.map((split, idx) => ({
+        user_id: split.userId,
+        amount_cents: cents[idx] ?? 0,
+      }));
+    } else if (splitType === "percentage" && customSplits) {
+      const memberSplits = customSplits.memberSplits as MemberSplit[];
+      const weights = memberSplits.map(
+        (split) => normalizePercentage(split.percentage) || 0,
+      );
+      const allocatedCents = allocateCentsByWeights(amountCents, weights);
+      lines = memberSplits.map((split, idx) => ({
+        user_id: split.userId,
+        amount_cents: allocatedCents[idx] ?? 0,
+        percentage: normalizePercentage(split.percentage),
+      }));
+    } else if (splitType === "shares" && customSplits) {
+      const memberSplits = customSplits.memberSplits as MemberSplit[];
+      const weights = memberSplits.map(
+        (split) => normalizeShares(split.shares) || 0,
+      );
+      const allocatedCents = allocateCentsByWeights(amountCents, weights);
+      lines = memberSplits.map((split, idx) => ({
+        user_id: split.userId,
+        amount_cents: allocatedCents[idx] ?? 0,
+        shares: normalizeShares(split.shares),
+      }));
+    } else {
+      const amountPerMember = Math.floor(amountCents / householdMembers.length);
+      const remainder = amountCents - amountPerMember * householdMembers.length;
+      lines = householdMembers.map((member, idx) => ({
+        user_id: member.user_id,
+        amount_cents: amountPerMember + (idx == 0 ? remainder : 0),
+      }));
+    }
+
+    const { error: splitGroupError } = await supabase
+      .from("expense_split_groups")
+      .insert([splitGroup]);
+    if (splitGroupError) {
+      throw splitGroupError;
+    }
+
+    const splitLines = lines.map((line) => ({
+      split_group_id: splitGroupId,
+      user_id: line.user_id,
+      amount_cents: line.amount_cents,
+      percentage: line.percentage ?? null,
+      shares: line.shares ?? null,
+      is_settled: false,
+      settled_at: null,
+      created_at: new Date().toISOString(),
+    }));
+
+    if (splitLines.length > 0) {
+      const { error: splitLinesError } = await supabase
+        .from("expense_split_lines")
+        .insert(splitLines);
+      if (splitLinesError) {
+        throw splitLinesError;
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from("expenses")
+      .update({
+        split_group_id: splitGroupId,
+        household_id: resolvedHouseholdId,
+      })
+      .eq("id", expenseId);
+    if (updateError) {
+      throw updateError;
+    }
+
+    return {
+      ...expense,
+      split_group_id: splitGroupId,
+      household_id: resolvedHouseholdId,
+    };
+  }
+
   // Prepare batch inserts
-  const expenseRecords: any[] = [];
-  const expenseIndices: number[] = [];
-  const incomeRecords: any[] = [];
-  const incomeIndices: number[] = [];
+  const preparedRecords: PreparedTransactionRecord[] = [];
   const validationErrors: { index: number; error: string }[] = [];
 
   let categoryRemaps: Awaited<ReturnType<typeof fetchUserCategoryRemaps>> = [];
@@ -495,156 +675,182 @@ async function saveTransactionsBatchInternal(
   for (let i = 0; i < body.transactions.length; i++) {
     const tx = body.transactions[i];
 
-      // Basic validation
-      if (!tx.type || !["expense", "income"].includes(tx.type)) {
-        validationErrors.push({ index: i, error: "Invalid or missing type" });
-        continue;
-      }
+    // Basic validation
+    if (!tx.type || !["expense", "income"].includes(tx.type)) {
+      validationErrors.push({ index: i, error: "Invalid or missing type" });
+      continue;
+    }
 
-      if (!tx.amount || tx.amount <= 0) {
-        validationErrors.push({ index: i, error: "Invalid amount" });
-        continue;
-      }
+    if (!tx.amount || tx.amount <= 0) {
+      validationErrors.push({ index: i, error: "Invalid amount" });
+      continue;
+    }
 
-      if (!tx.category) {
-        validationErrors.push({ index: i, error: "Missing category" });
-        continue;
-      }
+    if (!tx.category) {
+      validationErrors.push({ index: i, error: "Missing category" });
+      continue;
+    }
 
-      if (!tx.date) {
-        validationErrors.push({ index: i, error: "Missing date" });
-        continue;
-      }
+    if (!tx.date) {
+      validationErrors.push({ index: i, error: "Missing date" });
+      continue;
+    }
 
-      const normalizedDate = normalizeCalendarDateString(tx.date);
-      if (!normalizedDate) {
+    const normalizedDate = normalizeCalendarDateString(tx.date);
+    if (!normalizedDate) {
+      validationErrors.push({
+        index: i,
+        error: "date must be a valid calendar date",
+      });
+      continue;
+    }
+    tx.date = normalizedDate;
+
+    if (tx.recurrence_rule) {
+      const normalizedAnchorDate = normalizeCalendarDateString(
+        tx.recurrence_rule.anchor_date,
+      );
+      if (!normalizedAnchorDate) {
         validationErrors.push({
           index: i,
-          error: "date must be a valid calendar date",
+          error: "recurrence_rule.anchor_date must be a valid calendar date",
         });
         continue;
       }
-      tx.date = normalizedDate;
 
-      if (tx.recurrence_rule) {
-        const normalizedAnchorDate = normalizeCalendarDateString(
-          tx.recurrence_rule.anchor_date,
-        );
-        if (!normalizedAnchorDate) {
-          validationErrors.push({
-            index: i,
-            error: "recurrence_rule.anchor_date must be a valid calendar date",
-          });
-          continue;
-        }
-
-        const normalizedEndDate = tx.recurrence_rule.end_date == null
+      const normalizedEndDate =
+        tx.recurrence_rule.end_date == null
           ? undefined
           : normalizeCalendarDateString(tx.recurrence_rule.end_date);
 
-        if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
-          validationErrors.push({
-            index: i,
-            error: "recurrence_rule.end_date must be a valid calendar date",
-          });
-          continue;
-        }
-
-        tx.recurrence_rule = {
-          ...tx.recurrence_rule,
-          anchor_date: normalizedAnchorDate,
-          ...(normalizedEndDate ? { end_date: normalizedEndDate } : {}),
-        };
-      }
-
-      const currency = validateCurrency(tx.currency || "USD");
-      const amountCents = Math.round(tx.amount * 100);
-      const rawCategory = String(tx.category ?? "");
-      const sanitizedCategory = sanitizeCategoryName(rawCategory);
-      if (!authResult.isInternalService && !sanitizedCategory) {
+      if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
         validationErrors.push({
           index: i,
-          error: "Invalid category",
-        });
-        continue;
-      }
-      const resolvedCategory = sanitizedCategory ??
-        normalizeCategoryForStorage(tx.category);
-      const effectiveCategory = applyCategoryRemap({
-        categoryName: resolvedCategory,
-        transactionType: tx.type === "income" ? "income" : "expense",
-        remaps: categoryRemaps,
-      });
-      if (!sanitizedCategory && rawCategory.trim().length > 0) {
-        void reportEdgeFunctionError({
-          functionName: "save-transactions-batch",
-          error: new Error("CATEGORY_SANITIZE_FALLBACK"),
-          context: {
-            index: i,
-            transactionType: tx.type || "expense",
-            rawCategory,
-            finalCategory: effectiveCategory,
-          },
-        }).catch((error) => {
-          console.error(
-            "[save-transactions-batch] Failed to report category sanitize fallback:",
-            error,
-          );
-        });
-      }
-
-      const requestedAccountId = sanitizeUuid(tx.accountId ?? null);
-      const resolvedAccountId = await resolveAccountForImportRow(
-        requestedAccountId,
-        i,
-      );
-      if (resolvedAccountId === invalidAccountSentinel) {
-        validationErrors.push({
-          index: i,
-          error: "Provided accountId does not belong to this scope",
+          error: "recurrence_rule.end_date must be a valid calendar date",
         });
         continue;
       }
 
-      const baseRecord = {
-        contact_id: contactId,
-        user_id: userId,
-        account_id: resolvedAccountId,
-        amount_cents: amountCents,
-        category: effectiveCategory,
-        date: tx.date,
-        raw_text: tx.description || "",
-        currency: currency,
-        breakdown: tx.breakdown ?? null,
-        receipt_image_url: tx.receiptImageUrl || null,
-        created_at: tx.clientCreatedAt || new Date().toISOString(),
-        household_id: scopeHouseholdId,
-        is_recurring: tx.isRecurring === true,
-        recurrence_rule: tx.isRecurring === true
-          ? tx.recurrence_rule || null
-          : null,
+      tx.recurrence_rule = {
+        ...tx.recurrence_rule,
+        anchor_date: normalizedAnchorDate,
+        ...(normalizedEndDate ? { end_date: normalizedEndDate } : {}),
       };
+    }
+
+    const currency = validateCurrency(tx.currency || "USD");
+    const amountCents = Math.round(tx.amount * 100);
+    const rawCategory = String(tx.category ?? "");
+    const sanitizedCategory = sanitizeCategoryName(rawCategory);
+    if (!authResult.isInternalService && !sanitizedCategory) {
+      validationErrors.push({
+        index: i,
+        error: "Invalid category",
+      });
+      continue;
+    }
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
+    const effectiveCategory = applyCategoryRemap({
+      categoryName: resolvedCategory,
+      transactionType: tx.type === "income" ? "income" : "expense",
+      remaps: categoryRemaps,
+    });
+    if (!sanitizedCategory && rawCategory.trim().length > 0) {
+      void reportEdgeFunctionError({
+        functionName: "save-transactions-batch",
+        error: new Error("CATEGORY_SANITIZE_FALLBACK"),
+        context: {
+          index: i,
+          transactionType: tx.type || "expense",
+          rawCategory,
+          finalCategory: effectiveCategory,
+        },
+      }).catch((error) => {
+        console.error(
+          "[save-transactions-batch] Failed to report category sanitize fallback:",
+          error,
+        );
+      });
+    }
+
+    const requestedAccountId = sanitizeUuid(tx.accountId ?? null);
+    const resolvedAccountId = await resolveAccountForImportRow(
+      requestedAccountId,
+      i,
+    );
+    if (resolvedAccountId === invalidAccountSentinel) {
+      validationErrors.push({
+        index: i,
+        error: "Provided accountId does not belong to this scope",
+      });
+      continue;
+    }
+
+    const accountIdForRecord = resolvedAccountId || null;
+    const householdIdForRecord = scopeHouseholdId;
+    const importRequestKey = buildImportRequestKey(body.debugTraceId, i);
+    const importSemanticKey = buildImportSemanticKey({
+      userId,
+      householdId: householdIdForRecord,
+      accountId: accountIdForRecord,
+      type: tx.type,
+      amountCents,
+      currency,
+      date: tx.date,
+      category: effectiveCategory,
+      description: tx.description || "",
+    });
+
+    const baseRecord = {
+      contact_id: contactId,
+      user_id: userId,
+      account_id: accountIdForRecord,
+      amount_cents: amountCents,
+      category: effectiveCategory,
+      date: tx.date,
+      raw_text: tx.description || "",
+      currency: currency,
+      breakdown: tx.breakdown ?? null,
+      receipt_image_url: tx.receiptImageUrl || null,
+      created_at: tx.clientCreatedAt || new Date().toISOString(),
+      household_id: householdIdForRecord,
+      is_recurring: tx.isRecurring === true,
+      recurrence_rule:
+        tx.isRecurring === true ? tx.recurrence_rule || null : null,
+      import_request_key: importRequestKey,
+      import_semantic_key: importSemanticKey,
+    };
 
     if (tx.type === "income") {
-      const incomeRecord = {
-        ...baseRecord,
+      preparedRecords.push({
+        index: i,
         type: "income",
-        source: tx.source || null,
-        owner_type: tx.ownerType || "me",
-        privacy_scope: tx.privacyScope || "full",
-        household_id: resolvedHouseholdId ||
-          (isPortfolio ? requestedHouseholdId : null),
-      };
-      incomeRecords.push(incomeRecord);
-      incomeIndices.push(i);
-    } else {
-      expenseRecords.push({
-        ...baseRecord,
-        _index: i,
-        _customSplits: tx.customSplits,
-        _payerUserId: tx.payerUserId,
+        record: {
+          ...baseRecord,
+          type: "income",
+          source: tx.source || null,
+          owner_type: tx.ownerType || "me",
+          privacy_scope: tx.privacyScope || "full",
+          household_id:
+            resolvedHouseholdId || (isPortfolio ? requestedHouseholdId : null),
+        },
+        importRequestKey,
+        importSemanticKey,
       });
-      expenseIndices.push(i);
+    } else {
+      preparedRecords.push({
+        index: i,
+        type: "expense",
+        record: {
+          ...baseRecord,
+          type: "expense",
+        },
+        customSplits: tx.customSplits,
+        payerUserId: tx.payerUserId,
+        importRequestKey,
+        importSemanticKey,
+      });
     }
 
     if (shouldEmitValidationProgress(i, body.transactions.length)) {
@@ -674,6 +880,143 @@ async function saveTransactionsBatchInternal(
       type: body.transactions[err.index]?.type || "expense",
       success: false,
       error: err.error,
+    });
+  }
+
+  const duplicateRequestKeys = new Map<string, Record<string, unknown>>();
+  const duplicateSemanticKeys = new Set<string>();
+  const requestKeys = preparedRecords
+    .map((record) => record.importRequestKey)
+    .filter((key): key is string => !!key);
+  const semanticKeys =
+    body.skipSemanticDuplicates === true
+      ? preparedRecords.map((record) => record.importSemanticKey)
+      : [];
+
+  if (requestKeys.length > 0 || semanticKeys.length > 0) {
+    const [existingRequestRows, existingSemanticRows] = await Promise.all([
+      requestKeys.length > 0
+        ? supabase
+            .from("expenses")
+            .select(
+              "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
+            )
+            .in("import_request_key", requestKeys)
+        : Promise.resolve({ data: [], error: null }),
+      semanticKeys.length > 0
+        ? supabase
+            .from("expenses")
+            .select("import_semantic_key")
+            .in("import_semantic_key", semanticKeys)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (existingRequestRows.error) {
+      console.error(
+        "[save-transactions-batch] Failed to load import request keys:",
+        existingRequestRows.error,
+      );
+    } else if (Array.isArray(existingRequestRows.data)) {
+      for (const existingRow of existingRequestRows.data) {
+        const existingId =
+          typeof existingRow.id === "string" ? existingRow.id : "";
+        const requestKey =
+          typeof existingRow.import_request_key === "string"
+            ? existingRow.import_request_key
+            : null;
+        if (requestKey) {
+          duplicateRequestKeys.set(requestKey, {
+            ...existingRow,
+            id: existingId,
+          });
+        }
+      }
+    }
+
+    if (existingSemanticRows.error) {
+      console.error(
+        "[save-transactions-batch] Failed to load import semantic keys:",
+        existingSemanticRows.error,
+      );
+    } else if (Array.isArray(existingSemanticRows.data)) {
+      for (const existingRow of existingSemanticRows.data) {
+        const semanticKey =
+          typeof existingRow.import_semantic_key === "string"
+            ? existingRow.import_semantic_key
+            : null;
+        if (semanticKey) {
+          duplicateSemanticKeys.add(semanticKey);
+        }
+      }
+    }
+  }
+
+  const expenseRecords: any[] = [];
+  const expenseMeta: Array<{
+    index: number;
+    customSplits?: CustomSplits | null;
+    payerUserId?: string | null;
+  }> = [];
+  const incomeRecords: any[] = [];
+  const incomeIndices: number[] = [];
+  const seenSemanticKeys = new Set<string>();
+
+  for (const prepared of preparedRecords) {
+    const requestKey = prepared.importRequestKey;
+    if (requestKey && duplicateRequestKeys.has(requestKey)) {
+      let existingRow = duplicateRequestKeys.get(requestKey)!;
+      if (prepared.type === "expense") {
+        existingRow = await ensureExpenseSplitForReplay(existingRow, {
+          customSplits: prepared.customSplits,
+          payerUserId: prepared.payerUserId,
+        });
+      }
+      results.push({
+        id: typeof existingRow["id"] === "string" ? existingRow["id"] : "",
+        index: prepared.index,
+        type: prepared.type,
+        success: false,
+        duplicate: true,
+        duplicateKind: "request",
+        error:
+          "This import chunk was already saved. Skipping duplicate replay.",
+      });
+      processedCount += 1;
+      continue;
+    }
+
+    if (
+      body.skipSemanticDuplicates === true &&
+      (duplicateSemanticKeys.has(prepared.importSemanticKey) ||
+        seenSemanticKeys.has(prepared.importSemanticKey))
+    ) {
+      results.push({
+        id: "",
+        index: prepared.index,
+        type: prepared.type,
+        success: false,
+        duplicate: true,
+        duplicateKind: "semantic",
+        error:
+          "Matching transaction already exists. Skipping duplicate import.",
+      });
+      processedCount += 1;
+      continue;
+    }
+
+    seenSemanticKeys.add(prepared.importSemanticKey);
+
+    if (prepared.type === "income") {
+      incomeRecords.push(prepared.record);
+      incomeIndices.push(prepared.index);
+      continue;
+    }
+
+    expenseRecords.push(prepared.record);
+    expenseMeta.push({
+      index: prepared.index,
+      customSplits: prepared.customSplits,
+      payerUserId: prepared.payerUserId,
     });
   }
 
@@ -788,334 +1131,352 @@ async function saveTransactionsBatchInternal(
 
   // Batch insert expenses (more complex due to potential splits)
   if (expenseRecords.length > 0) {
-    emitProgress("saving_expense", "Saving transactions...", processedCount);
-    console.log(
-      `[save-transactions-batch] Inserting ${expenseRecords.length} expense records`,
-    );
+    let insertedExpenses: any[] = [];
 
-    // Extract metadata before insert
-    const expenseMeta = expenseRecords.map((r) => ({
-      index: r._index,
-      customSplits: r._customSplits,
-      payerUserId: r._payerUserId,
-    }));
-
-    // Clean records for insert
-    const cleanExpenseRecords = expenseRecords.map((r) => {
-      const { _index, _customSplits, _payerUserId, ...clean } = r;
-      return clean;
-    });
-
-    const { data: insertedExpenses, error: expenseError } = await supabase
-      .from("expenses")
-      .insert(cleanExpenseRecords)
-      .select();
-
-    if (expenseError) {
-      console.error(
-        "[save-transactions-batch] Expense batch insert error:",
-        expenseError,
+    if (expenseRecords.length > 0) {
+      emitProgress("saving_expense", "Saving transactions...", processedCount);
+      console.log(
+        `[save-transactions-batch] Inserting ${expenseRecords.length} expense records`,
       );
-      for (let i = 0; i < expenseRecords.length; i++) {
-        results.push({
-          id: "",
-          index: expenseMeta[i].index,
-          type: "expense",
-          success: false,
-          error: expenseError.message,
-        });
-      }
-      processedCount += expenseRecords.length;
-      emitProgress("saving_expense", "Saving transactions...", processedCount);
-    } else if (insertedExpenses) {
-      processedCount += insertedExpenses.length;
-      emitProgress("saving_expense", "Saving transactions...", processedCount);
 
-      const expenseUpdates: {
-        id: string;
-        split_group_id: string;
-        household_id: string;
-      }[] = [];
+      const { data: insertedExpenseRows, error: expenseError } = await supabase
+        .from("expenses")
+        .insert(expenseRecords)
+        .select();
 
-      // Handle household splits if applicable
-      if (resolvedHouseholdId && householdMembers.length > 0) {
+      if (expenseError) {
+        console.error(
+          "[save-transactions-batch] Expense batch insert error:",
+          expenseError,
+        );
+        for (let i = 0; i < expenseRecords.length; i++) {
+          results.push({
+            id: "",
+            index: expenseMeta[i].index,
+            type: "expense",
+            success: false,
+            error: expenseError.message,
+          });
+        }
+        processedCount += expenseRecords.length;
         emitProgress(
-          "creating_splits",
-          "Creating household splits...",
+          "saving_expense",
+          "Saving transactions...",
           processedCount,
         );
-        console.log(
-          `[save-transactions-batch] Creating splits for ${insertedExpenses.length} expenses`,
+      } else if (insertedExpenseRows) {
+        insertedExpenses = insertedExpenseRows;
+        processedCount += insertedExpenses.length;
+        emitProgress(
+          "saving_expense",
+          "Saving transactions...",
+          processedCount,
         );
 
-        const splitGroups: any[] = [];
-        const splitLines: any[] = [];
+        const expenseUpdates: {
+          id: string;
+          split_group_id: string;
+          household_id: string;
+        }[] = [];
 
-        for (let i = 0; i < insertedExpenses.length; i++) {
-          const expense = insertedExpenses[i];
-          const meta = expenseMeta[i];
-          const amountCents = expense.amount_cents;
+        const expensesNeedingSplitRepair = insertedExpenses.map(
+          (expense, index) => ({
+            expense,
+            meta: expenseMeta[index],
+          }),
+        );
 
-          const rawSplitType =
-            typeof meta.customSplits?.splitType === "string"
-              ? meta.customSplits.splitType.trim().toLowerCase()
-              : "equal";
-          const normalizedSplitType = [
-            "equal",
-            "amount",
-            "percentage",
-            "shares",
-          ].includes(rawSplitType)
-            ? rawSplitType
-            : "equal";
-          const hasMemberSplits =
-            Array.isArray(meta.customSplits?.memberSplits) &&
-            meta.customSplits!.memberSplits.length > 0;
-          const customSplits =
-            hasMemberSplits && normalizedSplitType !== "equal"
-              ? meta.customSplits
-              : null;
-          const splitType = customSplits ? normalizedSplitType : "equal";
-
-          let payerUserId = sanitizeUuid(meta.payerUserId ?? null) || userId;
-          const isValidPayer = householdMembers.some(
-            (member) => member.user_id === payerUserId,
+        // Handle household splits if applicable
+        if (
+          resolvedHouseholdId &&
+          householdMembers.length > 0 &&
+          expensesNeedingSplitRepair.length > 0
+        ) {
+          emitProgress(
+            "creating_splits",
+            "Creating household splits...",
+            processedCount,
           );
-          if (!isValidPayer) payerUserId = userId;
+          console.log(
+            `[save-transactions-batch] Creating splits for ${expensesNeedingSplitRepair.length} expenses`,
+          );
 
-          const splitGroupId = crypto.randomUUID();
-          splitGroups.push({
-            id: splitGroupId,
-            household_id: resolvedHouseholdId,
-            expense_id: expense.id,
-            payer_user_id: payerUserId,
-            split_type: splitType,
-            currency: expense.currency,
-            total_amount_cents: amountCents,
-            description: expense.raw_text || null,
-            created_at: new Date().toISOString(),
-          });
+          const splitGroups: any[] = [];
+          const splitLines: any[] = [];
 
-          expenseUpdates.push({
-            id: expense.id,
-            split_group_id: splitGroupId,
-            household_id: resolvedHouseholdId,
-          });
-
-          let lines: {
-            user_id: string;
-            amount_cents: number;
-            percentage?: number;
-            shares?: number;
-          }[];
-
-          if (splitType === "equal") {
-            const amountPerMember = Math.floor(
-              amountCents / householdMembers.length,
-            );
-            const remainder = amountCents -
-              amountPerMember * householdMembers.length;
-            lines = householdMembers.map((member, idx) => ({
-              user_id: member.user_id,
-              amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
-            }));
-          } else if (splitType === "amount" && customSplits) {
-            const memberSplits = customSplits.memberSplits as MemberSplit[];
-            const cents = memberSplits.map((split) =>
-              Math.max(
-                0,
-                Math.round((normalizeAmount(split.amount) || 0) * 100),
-              )
-            );
-            const sumCents = cents.reduce(
-              (sum: number, value: number) => sum + value,
-              0,
-            );
-            const diff = amountCents - sumCents;
-            if (diff !== 0 && cents.length > 0) {
-              cents[cents.length - 1] = Math.max(
-                0,
-                cents[cents.length - 1] + diff,
-              );
+          for (let i = 0; i < expensesNeedingSplitRepair.length; i++) {
+            const expense = expensesNeedingSplitRepair[i].expense;
+            const meta = expensesNeedingSplitRepair[i].meta;
+            if (expense.split_group_id != null) {
+              continue;
             }
-            lines = memberSplits.map((split, idx) => ({
-              user_id: split.userId,
-              amount_cents: cents[idx] ?? 0,
-            }));
-          } else if (splitType === "percentage" && customSplits) {
-            const memberSplits = customSplits.memberSplits as MemberSplit[];
-            const weights = memberSplits.map(
-              (split) => normalizePercentage(split.percentage) || 0,
-            );
-            const allocatedCents = allocateCentsByWeights(
-              amountCents,
-              weights,
-            );
-            lines = memberSplits.map((split, idx) => ({
-              user_id: split.userId,
-              amount_cents: allocatedCents[idx] ?? 0,
-              percentage: normalizePercentage(split.percentage),
-            }));
-          } else if (splitType === "shares" && customSplits) {
-            const memberSplits = customSplits.memberSplits as MemberSplit[];
-            const weights = memberSplits.map(
-              (split) => normalizeShares(split.shares) || 0,
-            );
-            const allocatedCents = allocateCentsByWeights(
-              amountCents,
-              weights,
-            );
-            lines = memberSplits.map((split, idx) => ({
-              user_id: split.userId,
-              amount_cents: allocatedCents[idx] ?? 0,
-              shares: normalizeShares(split.shares),
-            }));
-          } else {
-            const amountPerMember = Math.floor(
-              amountCents / householdMembers.length,
-            );
-            const remainder = amountCents -
-              amountPerMember * householdMembers.length;
-            lines = householdMembers.map((member, idx) => ({
-              user_id: member.user_id,
-              amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
-            }));
-          }
+            const amountCents = expense.amount_cents;
 
-          for (const line of lines) {
-            splitLines.push({
-              split_group_id: splitGroupId,
-              user_id: line.user_id,
-              amount_cents: line.amount_cents,
-              percentage: (line as any).percentage ?? null,
-              shares: (line as any).shares ?? null,
-              is_settled: false,
-              settled_at: null,
+            const rawSplitType =
+              typeof meta.customSplits?.splitType === "string"
+                ? meta.customSplits.splitType.trim().toLowerCase()
+                : "equal";
+            const normalizedSplitType = [
+              "equal",
+              "amount",
+              "percentage",
+              "shares",
+            ].includes(rawSplitType)
+              ? rawSplitType
+              : "equal";
+            const hasMemberSplits =
+              Array.isArray(meta.customSplits?.memberSplits) &&
+              meta.customSplits!.memberSplits.length > 0;
+            const customSplits =
+              hasMemberSplits && normalizedSplitType !== "equal"
+                ? meta.customSplits
+                : null;
+            const splitType = customSplits ? normalizedSplitType : "equal";
+
+            let payerUserId = sanitizeUuid(meta.payerUserId ?? null) || userId;
+            const isValidPayer = householdMembers.some(
+              (member) => member.user_id === payerUserId,
+            );
+            if (!isValidPayer) payerUserId = userId;
+
+            const splitGroupId = crypto.randomUUID();
+            splitGroups.push({
+              id: splitGroupId,
+              household_id: resolvedHouseholdId,
+              expense_id: expense.id,
+              payer_user_id: payerUserId,
+              split_type: splitType,
+              currency: expense.currency,
+              total_amount_cents: amountCents,
+              description: expense.raw_text || null,
               created_at: new Date().toISOString(),
             });
-          }
-        }
 
-        if (splitGroups.length > 0) {
-          const { error: splitGroupError } = await supabase
-            .from("expense_split_groups")
-            .insert(splitGroups);
+            expenseUpdates.push({
+              id: expense.id,
+              split_group_id: splitGroupId,
+              household_id: resolvedHouseholdId,
+            });
 
-          if (splitGroupError) {
-            console.error(
-              "[save-transactions-batch] Split groups insert error:",
-              splitGroupError,
-            );
-          } else {
-            if (splitLines.length > 0) {
-              const { error: splitLinesError } = await supabase
-                .from("expense_split_lines")
-                .insert(splitLines);
+            let lines: {
+              user_id: string;
+              amount_cents: number;
+              percentage?: number;
+              shares?: number;
+            }[];
 
-              if (splitLinesError) {
-                console.error(
-                  "[save-transactions-batch] Split lines insert error:",
-                  splitLinesError,
+            if (splitType === "equal") {
+              const amountPerMember = Math.floor(
+                amountCents / householdMembers.length,
+              );
+              const remainder =
+                amountCents - amountPerMember * householdMembers.length;
+              lines = householdMembers.map((member, idx) => ({
+                user_id: member.user_id,
+                amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
+              }));
+            } else if (splitType === "amount" && customSplits) {
+              const memberSplits = customSplits.memberSplits as MemberSplit[];
+              const cents = memberSplits.map((split) =>
+                Math.max(
+                  0,
+                  Math.round((normalizeAmount(split.amount) || 0) * 100),
+                ),
+              );
+              const sumCents = cents.reduce(
+                (sum: number, value: number) => sum + value,
+                0,
+              );
+              const diff = amountCents - sumCents;
+              if (diff !== 0 && cents.length > 0) {
+                cents[cents.length - 1] = Math.max(
+                  0,
+                  cents[cents.length - 1] + diff,
                 );
               }
+              lines = memberSplits.map((split, idx) => ({
+                user_id: split.userId,
+                amount_cents: cents[idx] ?? 0,
+              }));
+            } else if (splitType === "percentage" && customSplits) {
+              const memberSplits = customSplits.memberSplits as MemberSplit[];
+              const weights = memberSplits.map(
+                (split) => normalizePercentage(split.percentage) || 0,
+              );
+              const allocatedCents = allocateCentsByWeights(
+                amountCents,
+                weights,
+              );
+              lines = memberSplits.map((split, idx) => ({
+                user_id: split.userId,
+                amount_cents: allocatedCents[idx] ?? 0,
+                percentage: normalizePercentage(split.percentage),
+              }));
+            } else if (splitType === "shares" && customSplits) {
+              const memberSplits = customSplits.memberSplits as MemberSplit[];
+              const weights = memberSplits.map(
+                (split) => normalizeShares(split.shares) || 0,
+              );
+              const allocatedCents = allocateCentsByWeights(
+                amountCents,
+                weights,
+              );
+              lines = memberSplits.map((split, idx) => ({
+                user_id: split.userId,
+                amount_cents: allocatedCents[idx] ?? 0,
+                shares: normalizeShares(split.shares),
+              }));
+            } else {
+              const amountPerMember = Math.floor(
+                amountCents / householdMembers.length,
+              );
+              const remainder =
+                amountCents - amountPerMember * householdMembers.length;
+              lines = householdMembers.map((member, idx) => ({
+                user_id: member.user_id,
+                amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
+              }));
             }
 
-            await runWithConcurrencyLimit(expenseUpdates, 25, async (update) => {
-              await supabase
-                .from("expenses")
-                .update({
-                  split_group_id: update.split_group_id,
-                  household_id: update.household_id,
-                })
-                .eq("id", update.id);
-            });
+            for (const line of lines) {
+              splitLines.push({
+                split_group_id: splitGroupId,
+                user_id: line.user_id,
+                amount_cents: line.amount_cents,
+                percentage: (line as any).percentage ?? null,
+                shares: (line as any).shares ?? null,
+                is_settled: false,
+                settled_at: null,
+                created_at: new Date().toISOString(),
+              });
+            }
+          }
+
+          if (splitGroups.length > 0) {
+            const { error: splitGroupError } = await supabase
+              .from("expense_split_groups")
+              .insert(splitGroups);
+
+            if (splitGroupError) {
+              console.error(
+                "[save-transactions-batch] Split groups insert error:",
+                splitGroupError,
+              );
+            } else {
+              if (splitLines.length > 0) {
+                const { error: splitLinesError } = await supabase
+                  .from("expense_split_lines")
+                  .insert(splitLines);
+
+                if (splitLinesError) {
+                  console.error(
+                    "[save-transactions-batch] Split lines insert error:",
+                    splitLinesError,
+                  );
+                }
+              }
+
+              await runWithConcurrencyLimit(
+                expenseUpdates,
+                25,
+                async (update) => {
+                  await supabase
+                    .from("expenses")
+                    .update({
+                      split_group_id: update.split_group_id,
+                      household_id: update.household_id,
+                    })
+                    .eq("id", update.id);
+                },
+              );
+            }
           }
         }
-      }
 
-      const expenseUpdatesById = new Map(
-        expenseUpdates.map((update) => [update.id, update]),
-      );
-      const enrichedExpenses = insertedExpenses.map((expense) => {
-        const update = expenseUpdatesById.get(expense.id);
-        if (!update) return expense;
-        return {
-          ...expense,
-          split_group_id: update.split_group_id,
-          household_id: update.household_id,
-        };
-      });
-
-      for (let i = 0; i < enrichedExpenses.length; i++) {
-        const expense = enrichedExpenses[i];
-        results.push({
-          id: expense.id,
-          index: expenseMeta[i].index,
-          type: "expense",
-          success: true,
-          data: expense,
+        const expenseUpdatesById = new Map(
+          expenseUpdates.map((update) => [update.id, update]),
+        );
+        const enrichedExpenses = insertedExpenses.map((expense) => {
+          const update = expenseUpdatesById.get(expense.id);
+          if (!update) return expense;
+          return {
+            ...expense,
+            split_group_id: update.split_group_id,
+            household_id: update.household_id,
+          };
         });
-      }
 
-      if (resolvedHouseholdId && !isPortfolio) {
-        if (enrichedExpenses.length === 1) {
-          const expense = enrichedExpenses[0];
-          const { error: notifyError } = await supabase.rpc(
-            "notify_household_members_expense",
-            {
-              p_household_id: resolvedHouseholdId,
-              p_expense_id: expense.id,
-              p_actor_user_id: userId,
-              p_event_type: "expense_added",
-              p_expense_data: {
-                actor_name: actorName,
-                amount_cents: expense.amount_cents,
-                currency: expense.currency,
-                category: expense.category,
-                note: expense.raw_text || "",
-                is_recurring: expense.is_recurring === true,
+        for (let i = 0; i < enrichedExpenses.length; i++) {
+          const expense = enrichedExpenses[i];
+          results.push({
+            id: expense.id,
+            index: expenseMeta[i].index,
+            type: "expense",
+            success: true,
+            data: expense,
+          });
+        }
+
+        if (resolvedHouseholdId && !isPortfolio) {
+          if (enrichedExpenses.length === 1) {
+            const expense = enrichedExpenses[0];
+            const { error: notifyError } = await supabase.rpc(
+              "notify_household_members_expense",
+              {
+                p_household_id: resolvedHouseholdId,
+                p_expense_id: expense.id,
+                p_actor_user_id: userId,
+                p_event_type: "expense_added",
+                p_expense_data: {
+                  actor_name: actorName,
+                  amount_cents: expense.amount_cents,
+                  currency: expense.currency,
+                  category: expense.category,
+                  note: expense.raw_text || "",
+                  is_recurring: expense.is_recurring === true,
+                },
               },
-            },
-          );
-
-          if (notifyError) {
-            console.error(
-              "[save-transactions-batch] Error creating expense notifications:",
-              notifyError,
             );
-          }
-        } else if (enrichedExpenses.length > 1) {
-          const recipients = householdMembers
-            .map((member) => member.user_id)
-            .filter((memberId) => memberId !== userId);
-          if (recipients.length > 0) {
-            const now = new Date().toISOString();
-            const payload = {
-              actor_name: actorName,
-              actor_user_id: userId,
-              batch_count: enrichedExpenses.length,
-              recurring_count: enrichedExpenses.filter(
-                (expense) => expense.is_recurring === true,
-              ).length,
-              household_id: resolvedHouseholdId,
-            };
-            const notifications = recipients.map((recipientId) => ({
-              household_id: resolvedHouseholdId,
-              user_id: recipientId,
-              event_type: "expense_added",
-              payload,
-              created_at: now,
-            }));
-
-            const { error: notifyError } = await supabase
-              .from("notification_events")
-              .insert(notifications);
 
             if (notifyError) {
               console.error(
-                "[save-transactions-batch] Error creating bulk expense notifications:",
+                "[save-transactions-batch] Error creating expense notifications:",
                 notifyError,
               );
+            }
+          } else if (enrichedExpenses.length > 1) {
+            const recipients = householdMembers
+              .map((member) => member.user_id)
+              .filter((memberId) => memberId !== userId);
+            if (recipients.length > 0) {
+              const now = new Date().toISOString();
+              const payload = {
+                actor_name: actorName,
+                actor_user_id: userId,
+                batch_count: enrichedExpenses.length,
+                recurring_count: enrichedExpenses.filter(
+                  (expense) => expense.is_recurring === true,
+                ).length,
+                household_id: resolvedHouseholdId,
+              };
+              const notifications = recipients.map((recipientId) => ({
+                household_id: resolvedHouseholdId,
+                user_id: recipientId,
+                event_type: "expense_added",
+                payload,
+                created_at: now,
+              }));
+
+              const { error: notifyError } = await supabase
+                .from("notification_events")
+                .insert(notifications);
+
+              if (notifyError) {
+                console.error(
+                  "[save-transactions-batch] Error creating bulk expense notifications:",
+                  notifyError,
+                );
+              }
             }
           }
         }
@@ -1125,92 +1486,112 @@ async function saveTransactionsBatchInternal(
 
   emitProgress("finalizing", "Finishing import...", processedCount);
 
-  // Ensure any user-defined categories exist so future AI calls can use them
-  // and learn basic per-user preferences for future categorization.
-  try {
-    emitProgress("finalizing_categories", "Syncing categories...", processedCount);
+  // Manual imports can be large. Skip non-critical category post-processing so
+  // completion is reported right after the database work is done.
+  if (body.manualImportMode !== true) {
+    try {
+      emitProgress(
+        "finalizing_categories",
+        "Syncing categories...",
+        processedCount,
+      );
 
-    const uniqueExpense = [
-      ...new Set<string>(expenseRecords.map((r: any) => r.category).filter(Boolean)),
-    ];
-    const uniqueIncome = [
-      ...new Set<string>(incomeRecords.map((r: any) => r.category).filter(Boolean)),
-    ];
+      const uniqueExpense = [
+        ...new Set<string>(
+          expenseRecords.map((r: any) => r.category).filter(Boolean),
+        ),
+      ];
+      const uniqueIncome = [
+        ...new Set<string>(
+          incomeRecords.map((r: any) => r.category).filter(Boolean),
+        ),
+      ];
 
-    await Promise.all([
-      runWithConcurrencyLimit(uniqueExpense, 12, async (categoryName) => {
-        await ensureUserCategory({
-          supabase,
-          userId,
-          categoryName,
-          transactionType: "expense",
-        });
-      }),
-      runWithConcurrencyLimit(uniqueIncome, 12, async (categoryName) => {
-        await ensureUserCategory({
-          supabase,
-          userId,
-          categoryName,
+      await Promise.all([
+        runWithConcurrencyLimit(uniqueExpense, 12, async (categoryName) => {
+          await ensureUserCategory({
+            supabase,
+            userId: resolvedUserId,
+            categoryName,
+            transactionType: "expense",
+          });
+        }),
+        runWithConcurrencyLimit(uniqueIncome, 12, async (categoryName) => {
+          await ensureUserCategory({
+            supabase,
+            userId: resolvedUserId,
+            categoryName,
+            transactionType: "income",
+          });
+        }),
+      ]);
+
+      const MAX_PREF_LEARN = 120;
+      const learningItems: Array<{
+        transactionType: "income" | "expense";
+        categoryName: string;
+        sourceText?: string | null;
+        descriptionText?: string | null;
+      }> = [];
+      let learned = 0;
+
+      for (const r of incomeRecords) {
+        if (learned >= MAX_PREF_LEARN) break;
+        const categoryName = typeof r.category === "string" ? r.category : "";
+        const sourceText = typeof r.source === "string" ? r.source : null;
+        const descriptionText =
+          typeof r.raw_text === "string" ? r.raw_text : null;
+        learningItems.push({
           transactionType: "income",
+          categoryName,
+          sourceText,
+          descriptionText,
         });
-      }),
-    ]);
+        learned += 1;
+      }
 
-    const MAX_PREF_LEARN = 120;
-    const learningItems: Array<{
-      transactionType: "income" | "expense";
-      categoryName: string;
-      sourceText?: string | null;
-      descriptionText?: string | null;
-    }> = [];
-    let learned = 0;
+      for (const r of expenseRecords) {
+        if (learned >= MAX_PREF_LEARN) break;
+        const categoryName = typeof r.category === "string" ? r.category : "";
+        const descriptionText =
+          typeof r.raw_text === "string" ? r.raw_text : null;
+        learningItems.push({
+          transactionType: "expense",
+          categoryName,
+          descriptionText,
+        });
+        learned += 1;
+      }
 
-    for (const r of incomeRecords) {
-      if (learned >= MAX_PREF_LEARN) break;
-      learningItems.push({
-        transactionType: "income",
-        categoryName: r.category,
-        sourceText: r.source ?? null,
-        descriptionText: r.raw_text ?? null,
+      await runWithConcurrencyLimit(learningItems, 20, async (item) => {
+        await learnUserCategoryPreference({
+          supabase,
+          userId: resolvedUserId,
+          transactionType: item.transactionType,
+          categoryName: item.categoryName,
+          sourceText: item.sourceText ?? null,
+          descriptionText: item.descriptionText ?? null,
+        });
       });
-      learned += 1;
+    } catch (e) {
+      console.error(
+        "[save-transactions-batch] Failed to ensure/learn categories (non-blocking):",
+        e,
+      );
     }
-
-    for (const r of expenseRecords) {
-      if (learned >= MAX_PREF_LEARN) break;
-      learningItems.push({
-        transactionType: "expense",
-        categoryName: r.category,
-        descriptionText: r.raw_text ?? null,
-      });
-      learned += 1;
-    }
-
-    await runWithConcurrencyLimit(learningItems, 20, async (item) => {
-      await learnUserCategoryPreference({
-        supabase,
-        userId,
-        transactionType: item.transactionType,
-        categoryName: item.categoryName,
-        sourceText: item.sourceText ?? null,
-        descriptionText: item.descriptionText ?? null,
-      });
-    });
-  } catch (e) {
-    console.error(
-      "[save-transactions-batch] Failed to ensure/learn categories (non-blocking):",
-      e,
-    );
   }
 
   // Sort results by original index
   results.sort((a, b) => a.index - b.index);
 
   const successCount = results.filter((r) => r.success).length;
-  const failureCount = results.filter((r) => !r.success).length;
+  const failureCount = results.filter(
+    (r) => !r.success && r.duplicate !== true,
+  ).length;
+  const duplicateCount = results.filter((r) => r.duplicate === true).length;
 
   console.log(
-    `[save-transactions-batch] Complete: ${successCount} succeeded, ${failureCount} failed`,
+    `[save-transactions-batch] Complete: ${successCount} succeeded, ${failureCount} failed, ${duplicateCount} duplicates`,
   );
 
   return {
@@ -1252,23 +1633,28 @@ function createSSEStream(
           enqueue(": keep-alive\n\n");
         }, STREAM_KEEPALIVE_INTERVAL_MS);
 
-        const result = await saveTransactionsBatchInternal(req, body, (event) => {
-          enqueue(formatSSEEvent("progress", event));
-        });
+        const result = await saveTransactionsBatchInternal(
+          req,
+          body,
+          (event) => {
+            enqueue(formatSSEEvent("progress", event));
+          },
+        );
 
         enqueue(formatSSEEvent("complete", result));
         streamClosed = true;
         controller.close();
       } catch (error) {
-        const status = error instanceof SaveTransactionsBatchError
-          ? error.status
-          : 500;
-        const code = error instanceof SaveTransactionsBatchError
-          ? error.code
-          : "SERVER_ERROR";
-        const message = error instanceof Error
-          ? error.message
-          : "Failed to save transactions batch";
+        const status =
+          error instanceof SaveTransactionsBatchError ? error.status : 500;
+        const code =
+          error instanceof SaveTransactionsBatchError
+            ? error.code
+            : "SERVER_ERROR";
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to save transactions batch";
 
         if (!(error instanceof SaveTransactionsBatchError)) {
           await reportEdgeFunctionError({
@@ -1363,13 +1749,10 @@ Deno.serve(async (req: Request) => {
 
   try {
     const result = await saveTransactionsBatchInternal(req, body);
-    return new Response(
-      JSON.stringify(result),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify(result), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     if (error instanceof SaveTransactionsBatchError) {
       return errorResponse(error.message, error.status, error.code);

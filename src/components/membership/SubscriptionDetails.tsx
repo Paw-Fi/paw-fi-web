@@ -4,7 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Calendar, Clock, CreditCard, AlertCircle, Crown, Shield, User, Loader2 } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  Clock,
+  CreditCard,
+  AlertCircle,
+  Crown,
+  Shield,
+  User,
+  Loader2,
+} from "lucide-react";
 import { toast } from "react-toastify";
 import {
   AlertDialog,
@@ -51,31 +62,35 @@ export function SubscriptionDetails({
 }: SubscriptionDetailsProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  // Debug logging
-  console.log('SubscriptionDetails Debug:', {
-    status: subscription?.status,
-    cancel_at_period_end: subscription?.cancel_at_period_end,
-    onCancelSubscription: !!onCancelSubscription,
-    shouldShowButton: (subscription?.status === "active" || subscription?.status === "trialing") && !subscription?.cancel_at_period_end && !!onCancelSubscription
-  });
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active": return "text-green-600 dark:text-green-400";
-      case "trialing": return "text-blue-600 dark:text-blue-400";
+      case "active":
+        return "text-green-600 dark:text-green-400";
+      case "trialing":
+        return "text-blue-600 dark:text-blue-400";
       case "canceled":
-      case "none": return "text-muted-foreground";
-      default: return "text-amber-600 dark:text-amber-400";
+      case "none":
+        return "text-muted-foreground";
+      default:
+        return "text-amber-600 dark:text-amber-400";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "active": return <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />;
-      case "trialing": return <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
+      case "active":
+        return (
+          <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
+        );
+      case "trialing":
+        return <Clock className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
       case "canceled":
-      case "none": return <XCircle className="h-4 w-4 text-muted-foreground" />;
-      default: return <AlertCircle className="h-4 w-4 text-amber-500 dark:text-amber-400" />;
+      case "none":
+        return <XCircle className="text-muted-foreground h-4 w-4" />;
+      default:
+        return (
+          <AlertCircle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+        );
     }
   };
 
@@ -89,8 +104,8 @@ export function SubscriptionDetails({
       >
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center text-xl text-foreground">
-              <CreditCard className="mr-3 h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-foreground flex items-center text-xl">
+              <CreditCard className="text-muted-foreground mr-3 h-5 w-5" />
               Subscription Overview
             </CardTitle>
           </CardHeader>
@@ -98,14 +113,16 @@ export function SubscriptionDetails({
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {/* Current Plan */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Current Plan</p>
+                <p className="text-muted-foreground text-sm font-medium">
+                  Current Plan
+                </p>
                 <div className="flex items-center space-x-2">
                   {subscription?.plan && subscription.plan !== "free" ? (
-                    <Crown className="h-4 w-4 text-primary" />
+                    <Crown className="text-primary h-4 w-4" />
                   ) : (
-                    <User className="h-4 w-4 text-muted-foreground" />
+                    <User className="text-muted-foreground h-4 w-4" />
                   )}
-                  <span className="text-lg font-semibold capitalize text-foreground">
+                  <span className="text-foreground text-lg font-semibold capitalize">
                     {subscription?.plan || "Free"}
                   </span>
                 </div>
@@ -113,58 +130,74 @@ export function SubscriptionDetails({
 
               {/* Status */}
               <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Status</p>
+                <p className="text-muted-foreground text-sm font-medium">
+                  Status
+                </p>
                 <div className="flex items-center space-x-2">
                   {getStatusIcon(subscription?.status || "none")}
-                  <span className={`font-medium capitalize ${getStatusColor(subscription?.status || "none")}`}>
+                  <span
+                    className={`font-medium capitalize ${getStatusColor(subscription?.status || "none")}`}
+                  >
                     {subscription?.status || "None"}
                   </span>
                 </div>
               </div>
 
               {/* Auto Renewal - Only for recurring plans (not lifetime) */}
-              {subscription?.status !== "none" && subscription?.status && subscription?.plan !== "lifetime" && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Auto-Renew</p>
-                  <div className="flex items-center space-x-2">
-                    {subscription?.cancel_at_period_end ? (
-                      <>
-                        <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
-                        <span className="text-sm text-red-600 dark:text-red-400">Disabled</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
-                        <span className="text-sm text-green-600 dark:text-green-400">Enabled</span>
-                      </>
-                    )}
+              {subscription?.status !== "none" &&
+                subscription?.status &&
+                subscription?.plan !== "lifetime" && (
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-sm font-medium">
+                      Auto-Renew
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      {subscription?.cancel_at_period_end ? (
+                        <>
+                          <XCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                          <span className="text-sm text-red-600 dark:text-red-400">
+                            Disabled
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
+                          <span className="text-sm text-green-600 dark:text-green-400">
+                            Enabled
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
 
             {subscription?.status !== "none" && subscription?.status && (
               <>
                 <Separator className="my-6" />
-                
+
                 {/* Lifetime Plan: Show special message */}
                 {subscription?.plan === "lifetime" ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/20">
                     <div className="flex items-start space-x-3">
-                      <Crown className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <Crown className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
                       <div>
                         <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-400">
                           Lifetime Access
                         </h4>
                         <p className="mt-1 text-sm text-amber-700 dark:text-amber-500">
-                          You have permanent access to all features with no recurring billing. Your one-time payment was made on{" "}
+                          You have permanent access to all features with no
+                          recurring billing. Your one-time payment was made on{" "}
                           {subscription?.created_at
-                            ? new Date(subscription.created_at).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
+                            ? new Date(
+                                subscription.created_at,
+                              ).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
                               })
-                            : "N/A"}.
+                            : "N/A"}
+                          .
                         </p>
                       </div>
                     </div>
@@ -174,15 +207,19 @@ export function SubscriptionDetails({
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     {/* Current Period End */}
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Current Period Ends</p>
+                      <p className="text-muted-foreground text-sm font-medium">
+                        Current Period Ends
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">
+                        <Calendar className="text-muted-foreground h-4 w-4" />
+                        <span className="text-foreground text-sm">
                           {subscription?.current_period_end
-                            ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
+                            ? new Date(
+                                subscription.current_period_end,
+                              ).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
                               })
                             : "N/A"}
                         </span>
@@ -192,48 +229,58 @@ export function SubscriptionDetails({
                     {/* Next Payment */}
                     {subscription?.days_until_next_payment !== null && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">Next Payment</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          Next Payment
+                        </p>
                         <div className="flex items-center space-x-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-foreground">
+                          <Clock className="text-muted-foreground h-4 w-4" />
+                          <span className="text-foreground text-sm">
                             {subscription.days_until_next_payment === 0
                               ? "Today"
                               : subscription.days_until_next_payment === 1
-                              ? "Tomorrow"
-                              : `In ${subscription.days_until_next_payment} days`}
+                                ? "Tomorrow"
+                                : `In ${subscription.days_until_next_payment} days`}
                           </span>
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Next Payment Date */}
                     {subscription?.next_payment_date && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">Next Payment Date</p>
+                        <p className="text-muted-foreground text-sm font-medium">
+                          Next Payment Date
+                        </p>
                         <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-foreground">
-                            {new Date(subscription.next_payment_date).toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
+                          <Calendar className="text-muted-foreground h-4 w-4" />
+                          <span className="text-foreground text-sm">
+                            {new Date(
+                              subscription.next_payment_date,
+                            ).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
                             })}
                           </span>
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Subscription Created */}
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Subscription Created</p>
+                      <p className="text-muted-foreground text-sm font-medium">
+                        Subscription Created
+                      </p>
                       <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">
+                        <Calendar className="text-muted-foreground h-4 w-4" />
+                        <span className="text-foreground text-sm">
                           {subscription?.created_at
-                            ? new Date(subscription.created_at).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
+                            ? new Date(
+                                subscription.created_at,
+                              ).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
                               })
                             : "N/A"}
                         </span>
@@ -252,7 +299,8 @@ export function SubscriptionDetails({
                           Cancel Subscription
                         </h4>
                         <p className="mt-1 text-xs text-red-700 dark:text-red-500">
-                          Your subscription will remain active until the end of the current billing period
+                          Your subscription will remain active until the end of
+                          the current billing period
                         </p>
                       </div>
                       <Button
@@ -286,13 +334,16 @@ export function SubscriptionDetails({
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel your subscription? You'll continue to have access to premium features until{" "}
+              Are you sure you want to cancel your subscription? You'll continue
+              to have access to premium features until{" "}
               <strong>
                 {subscription?.current_period_end
-                  ? new Date(subscription.current_period_end).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
+                  ? new Date(
+                      subscription.current_period_end,
+                    ).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
                     })
                   : "the end of your billing period"}
               </strong>
@@ -305,7 +356,9 @@ export function SubscriptionDetails({
               onClick={() => {
                 setShowCancelDialog(false);
                 onCancelSubscription?.();
-                toast.success("Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.");
+                toast.success(
+                  "Your subscription has been scheduled for cancellation. You'll retain access until the end of your billing period.",
+                );
               }}
               className="bg-red-600 hover:bg-red-700"
             >
@@ -324,8 +377,8 @@ export function SubscriptionDetails({
         >
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center text-xl text-foreground">
-                <Shield className="mr-3 h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-foreground flex items-center text-xl">
+                <Shield className="text-muted-foreground mr-3 h-5 w-5" />
                 Plan Features
               </CardTitle>
             </CardHeader>
@@ -337,19 +390,23 @@ export function SubscriptionDetails({
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + index * 0.05 }}
-                    className="flex items-center space-x-3 rounded-lg bg-muted/30 p-3"
+                    className="bg-muted/30 flex items-center space-x-3 rounded-lg p-3"
                   >
                     {feature.included ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500 dark:text-green-400" />
                     ) : (
-                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                      <XCircle className="text-muted-foreground h-4 w-4" />
                     )}
-                    <span className={`text-sm ${
-                      feature.included ? "text-foreground" : "text-muted-foreground"
-                    }`}>
+                    <span
+                      className={`text-sm ${
+                        feature.included
+                          ? "text-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    >
                       {feature.feature}
                       {feature.limit_value !== null && feature.included && (
-                        <span className="ml-1 text-xs text-muted-foreground">
+                        <span className="text-muted-foreground ml-1 text-xs">
                           (up to {feature.limit_value})
                         </span>
                       )}

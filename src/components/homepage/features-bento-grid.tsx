@@ -392,7 +392,7 @@ const features = [
     name: "AI Financial Coaching",
     description:
       "Chat with our intelligent AI advisor for personalized financial guidance",
-    href: "/dashboard",
+    href: "/questions",
     cta: "Chat with AI",
     component: <AIChat />,
     className: "lg:col-span-1 lg:row-span-1 h-[420px]",
@@ -401,7 +401,7 @@ const features = [
     Icon: Zap,
     name: "Ask Moneko AI Anything",
     description: "Get instant, helpful answers to beginner finance questions",
-    href: "/dashboard",
+    href: "/questions",
     cta: "Explore Platform",
     component: <TechStack />,
     className: "lg:col-span-1 lg:row-span-1 h-[420px]",
@@ -411,7 +411,7 @@ const features = [
     name: "Portfolio Growth",
     description:
       "Track your investment portfolio with professional analytics and insights",
-    href: "/dashboard/portfolio",
+    href: "/calculators/investment-calculator",
     cta: "View Analytics",
     component: <FinancialGrowth />,
     className: "lg:col-span-1 lg:row-span-1 h-[420px]",
@@ -421,7 +421,7 @@ const features = [
     name: "Financial Health",
     description:
       "Monitor your overall financial wellness across multiple categories",
-    href: "/dashboard/portfolio",
+    href: "/guides/how-to-calculate-net-worth",
     cta: "View Health",
     component: <FinancialHealth />,
     className: "lg:col-span-1 lg:row-span-1 h-[420px]",
@@ -458,7 +458,7 @@ export function FeaturesBentoGrid() {
         {/* Call to Action */}
         <div className="mt-16 text-center">
           <Button asChild size="lg" className="px-8 py-3 text-lg font-semibold">
-            <Link to="/dashboard">Start Your Financial Journey</Link>
+            <Link to="/pricing">Get Started</Link>
           </Button>
           <p className="text-muted-foreground mt-4 text-sm">
             Free forever • No credit card required • Start in 30 seconds

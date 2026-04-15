@@ -41,12 +41,6 @@ export const Route = createFileRoute("/register/")({
         name: "Moneko",
         url: "https://moneko.io",
         logo: "https://moneko.io/logo192.png",
-        founder: {
-          "@type": "Person",
-          name: "Sabina Shao",
-          jobTitle: "CEO & Financial Education Expert",
-          hasCredential: "CFA Charterholder",
-        },
       },
       serviceType: "Financial Education Technology",
       areaServed: "United States",
@@ -72,14 +66,20 @@ export const Route = createFileRoute("/register/")({
     };
 
     return {
-      meta,
+      meta: [
+        ...meta,
+        {
+          name: "robots",
+          content: "noindex, nofollow",
+        },
+      ],
       links: [
         {
           rel: "canonical",
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(serviceSchema),
@@ -112,12 +112,7 @@ export function Register() {
           {
             question: "Is my personal information secure during registration?",
             answer:
-              "Yes, Moneko uses bank-level 256-bit SSL encryption and follows SOC 2 compliance standards. We never share your personal information and use industry-leading security practices to protect your data.",
-          },
-          {
-            question: "Who created the financial education content on Moneko?",
-            answer:
-              "All content is created and reviewed by CFA charterholder Sabina Shao and a team of financial education experts with over 50 years of combined experience in personal finance, investment strategy, and wealth building.",
+              "We use encryption in transit and follow industry-standard security practices to protect your account and personal information.",
           },
         ]}
       />
@@ -240,7 +235,7 @@ export function Register() {
                   ✓ Expert Courses
                 </p>
                 <p className="dark:text-moneko-foreground text-xs text-white opacity-90">
-                  CFA-designed curriculum
+                  Practical lessons
                 </p>
               </div>
               <div>
@@ -261,7 +256,7 @@ export function Register() {
               </div>
             </div>
             <p className="dark:text-moneko-foreground mt-3 text-xs text-white opacity-75">
-              Join 50,000+ users building financial confidence
+              Create an account to get started
             </p>
           </div>
         </div>

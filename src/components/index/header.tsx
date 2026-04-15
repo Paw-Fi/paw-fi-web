@@ -81,9 +81,9 @@ const resources = [
     icon: Calculator,
   },
   {
-    title: "Learning Center",
-    href: "/dashboard/essentials",
-    description: "Master personal finance with our guides.",
+    title: "Guides",
+    href: "/guides/how-to-calculate-net-worth",
+    description: "Practical, step-by-step personal finance guides.",
     icon: BookOpen,
   },
   {
@@ -431,12 +431,12 @@ export const HomeHeader = () => {
                   <Button
                     onClick={() => {
                       setIsOpen(false);
-                      navigate({ to: "/referral" });
+                      navigate({ to: "/download" });
                     }}
                     className="w-full rounded-xl dark:text-white"
                     size="lg"
                   >
-                    Join Early Access
+                    Download
                   </Button>
                 )}
               </div>
@@ -483,10 +483,10 @@ export const HomeHeader = () => {
                 Log in
               </Button>
               <Button
-                onClick={() => navigate({ to: "/referral" })}
+                onClick={() => navigate({ to: "/download" })}
                 className="rounded-full px-5 font-medium dark:text-white"
               >
-                Join Early Access
+                Download
               </Button>
             </div>
           )}

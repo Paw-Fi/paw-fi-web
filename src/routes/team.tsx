@@ -4,19 +4,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { motion, Variants } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLinkedin, faTwitter } from "@fortawesome/free-brands-svg-icons";
-import Sabina from "@assets/images/team/sabina.jpeg"
-import Yifan from "@assets/images/team/yifan.jpg"
+import Sabina from "@assets/images/team/sabina.jpeg";
+import Yifan from "@assets/images/team/yifan.jpg";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
-
 
 export const Route = createFileRoute("/team")({
   component: TeamPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/team");
-    const title = "Meet Our Financial Expert Team | Moneko";
-    const description = "Meet the certified financial professionals and AI experts behind Moneko's personal finance coaching platform. Our team combines decades of financial expertise with cutting-edge AI technology.";
-    const keywords = "Moneko team, AI personal finance experts, certified financial professionals, financial education team, fintech founders, CFA professionals, financial coaching experts";
+    const title = "Meet the Team | Moneko";
+    const description =
+      "Meet the team behind Moneko. Learn about the people building tools for budgeting, goal tracking, and financial education.";
+    const keywords =
+      "Moneko team, fintech founders, product and engineering team, personal finance app team";
     const imageUrl = "https://moneko.io/og-img.png"; // Generic OG image
 
     const meta = seo({
@@ -32,49 +33,48 @@ export const Route = createFileRoute("/team")({
       "@graph": [
         {
           "@type": "Organization",
-          "name": "Moneko",
-          "url": "https://moneko.io",
-          "logo": "https://moneko.io/icon.svg",
-          "sameAs": [
+          name: "Moneko",
+          url: "https://moneko.io",
+          logo: "https://moneko.io/icon.svg",
+          sameAs: [
             "https://www.facebook.com/monekoai/",
             "https://x.com/moneko_ai",
-            "https://www.instagram.com/moneko_ai"
-          ]
+            "https://www.instagram.com/moneko_ai",
+          ],
         },
         {
           "@type": "WebPage",
-          "name": title,
-          "description": description,
-          "url": pageUrl,
-          "breadcrumb": {
+          name: title,
+          description: description,
+          url: pageUrl,
+          breadcrumb: {
             "@type": "BreadcrumbList",
-            "itemListElement": [
+            itemListElement: [
               {
                 "@type": "ListItem",
-                "position": 1,
-                "name": "Home",
-                "item": "https://moneko.io"
+                position: 1,
+                name: "Home",
+                item: "https://moneko.io",
               },
               {
                 "@type": "ListItem",
-                "position": 2,
-                "name": "Our Team",
-                "item": pageUrl
-              }
-            ]
-          }
+                position: 2,
+                name: "Our Team",
+                item: pageUrl,
+              },
+            ],
+          },
         },
-        ...teamMembers.map(member => ({
+        ...teamMembers.map((member) => ({
           "@type": "Person",
-          "name": member.name.split(' – ')[0], // Extract name only
-          "jobTitle": member.role,
-          "image": `https://moneko.io${member.imageUrl}`, // Assuming image URLs are relative
-          "sameAs": [
-            member.social.linkedin,
-            member.social.twitter
-          ].filter(Boolean) // Filter out empty strings
-        }))
-      ]
+          name: member.name.split(" – ")[0], // Extract name only
+          jobTitle: member.role,
+          image: `https://moneko.io${member.imageUrl}`, // Assuming image URLs are relative
+          sameAs: [member.social.linkedin, member.social.twitter].filter(
+            Boolean,
+          ), // Filter out empty strings
+        })),
+      ],
     };
 
     return {
@@ -85,7 +85,7 @@ export const Route = createFileRoute("/team")({
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData),
@@ -106,7 +106,7 @@ const teamMembers = [
     },
     bio: "Product designer and founder with 8+ years building fintech and marketing tools. Led UX and design of consumer-first tools across fintech and marketing. Combines creative execution with business clarity to build products that resonate and scale.",
   },
-  { 
+  {
     name: "Yifan Lim –CTO",
     role: "Full-stack Engineer",
     imageUrl: Yifan,
@@ -157,7 +157,7 @@ function TeamPage() {
     <AmbientHaloLayout>
       <HomeHeader />
 
-      <section className="mx-auto max-w-7xl px-4 pb-16 pt-2">
+      <section className="mx-auto max-w-7xl px-4 pt-2 pb-16">
         <motion.div
           className="mb-16 text-center"
           initial="hidden"
@@ -168,13 +168,13 @@ function TeamPage() {
             Meet Our Team
           </h1>
           <p className="mx-auto max-w-3xl text-lg text-slate-600 md:text-xl dark:text-slate-300">
-            The passionate experts behind Moneko dedicated to improving financial
-            literacy for everyone.
+            The team behind Moneko, building tools for budgeting, goal tracking,
+            and financial education.
           </p>
         </motion.div>
 
         <motion.div
-          className="mx-auto flex justify-center gap-6 flex-wrap max-w-5xl flex-col lg:flex-row"
+          className="mx-auto flex max-w-5xl flex-col flex-wrap justify-center gap-6 lg:flex-row"
           variants={pageVariants}
           initial="hidden"
           animate="visible"
@@ -201,7 +201,10 @@ function TeamPage() {
                         className="rounded-full bg-white/20 p-2 backdrop-blur-md transition-colors duration-300 hover:bg-purple-600"
                         aria-label={`${member.name}'s LinkedIn profile`}
                       >
-                        <FontAwesomeIcon icon={faLinkedin} className="text-lg text-white" />
+                        <FontAwesomeIcon
+                          icon={faLinkedin}
+                          className="text-lg text-white"
+                        />
                       </a>
                     )}
                     {member.social.twitter && (
@@ -212,7 +215,10 @@ function TeamPage() {
                         className="rounded-full bg-white/20 p-2 backdrop-blur-md transition-colors duration-300 hover:bg-purple-600"
                         aria-label={`${member.name}'s Twitter profile`}
                       >
-                        <FontAwesomeIcon icon={faTwitter} className="text-lg text-white" />
+                        <FontAwesomeIcon
+                          icon={faTwitter}
+                          className="text-lg text-white"
+                        />
                       </a>
                     )}
                   </div>

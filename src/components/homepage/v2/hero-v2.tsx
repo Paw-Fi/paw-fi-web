@@ -47,12 +47,10 @@ export function HeroV2() {
                   <div
                     key={i}
                     className={`border-background bg-muted flex h-8 w-8 items-center justify-center rounded-full border-2 text-[10px] font-bold ${i === 4 ? "bg-primary/20 text-primary" : "bg-gray-200"}`}
-                  >
-                    {i === 4 ? "+6k" : ""}
-                  </div>
+                  />
                 ))}
               </div>
-              <p>Join 6,000+ early users</p>
+              <p>Built for everyday money tracking</p>
             </div>
           </div>
 

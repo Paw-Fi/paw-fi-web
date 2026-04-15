@@ -44,13 +44,6 @@ export const Route = createFileRoute("/login/")({
         "https://x.com/moneko_ai",
         "https://facebook.com/moneko-ai",
       ],
-      founder: {
-        "@type": "Person",
-        name: "Sabina Shao",
-        jobTitle: "CEO & Financial Education Expert",
-        description:
-          "CFA charterholder and financial education expert with over 10 years of experience in personal finance and investment strategy",
-      },
       serviceType: "Financial Education Technology",
       areaServed: "United States",
       knowsAbout: [
@@ -64,14 +57,20 @@ export const Route = createFileRoute("/login/")({
     };
 
     return {
-      meta,
+      meta: [
+        ...meta,
+        {
+          name: "robots",
+          content: "noindex, nofollow",
+        },
+      ],
       links: [
         {
           rel: "canonical",
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(organizationSchema),
@@ -93,7 +92,7 @@ export function Login() {
           {
             question: "How do I securely access my Moneko financial dashboard?",
             answer:
-              "Sign in with your registered email and password to access your personalized financial dashboard, AI coaching sessions, investment tracking, and educational content. We use bank-level security to protect your account.",
+              "Sign in with your registered email and password to access your dashboard and account features.",
           },
           {
             question: "What features are available after logging into Moneko?",
@@ -103,7 +102,7 @@ export function Login() {
           {
             question: "Is my login information secure with Moneko?",
             answer:
-              "Yes, Moneko uses bank-level 256-bit SSL encryption and SOC 2 compliance to protect your login credentials. We follow industry-standard security practices to keep your financial information safe.",
+              "We use encryption in transit and follow industry-standard security practices to protect your account.",
           },
         ]}
       />
@@ -192,13 +191,13 @@ export function Login() {
           {/* GEO-Enhanced Value Proposition Overlay */}
           <div className="bg-overlay/80 dark:text-moneko-foreground absolute right-6 bottom-6 left-6 rounded-lg p-4 text-white backdrop-blur-sm">
             <h3 className="dark:text-moneko-foreground mb-2 font-semibold text-white">
-              Join 50,000+ Users Building Wealth
+              Sign in to continue
             </h3>
             <ul className="dark:text-moneko-foreground space-y-1 text-sm text-white opacity-90">
               <li>• AI-powered personalized financial coaching</li>
               <li>• Expert-designed investment education courses</li>
               <li>• Real-time portfolio tracking and analysis</li>
-              <li>• Created by CFA charterholder financial experts</li>
+              <li>• Tools to help you stay organized</li>
             </ul>
           </div>
         </div>

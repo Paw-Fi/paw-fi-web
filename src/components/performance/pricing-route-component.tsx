@@ -156,17 +156,17 @@ export function PricingRouteComponent() {
 
   const mTier = safelyGetTier(monthlyTier, {
     title: "Monthly",
-    priceMonthly: "$2.99",
-    compareAtPriceMonthly: "$7.99",
+    priceMonthly: "$4.99",
+    compareAtPriceMonthly: "$9.99",
   });
   const yTier = safelyGetTier(yearlyTier, {
     title: "Yearly",
-    priceMonthly: "$9.99",
-    compareAtPriceMonthly: "$59.99",
+    priceMonthly: "$34.99",
+    compareAtPriceMonthly: "$119.88",
   });
   const lTier = safelyGetTier(lifetimeTier, {
     title: "Lifetime",
-    priceMonthly: "$29.99",
+    priceMonthly: "$69.99",
   });
 
   const faqData = [
@@ -391,9 +391,9 @@ export function PricingRouteComponent() {
                 variants={itemVariants}
                 className="text-muted-foreground mb-10 max-w-xl text-lg leading-relaxed"
               >
-                Join thousands who stopped manually tracking every penny on
-                spreadsheets. Moneko automates the heavy lifting with AI, giving
-                you the pure intentionality of zero-based budgeting.
+                Stop manually tracking every penny in spreadsheets. Moneko
+                automates the heavy lifting with AI, giving you the
+                intentionality of zero-based budgeting.
               </motion.p>
 
               {/* Note: The old core features map was removed here as we are replacing it with the Bento Grid below */}

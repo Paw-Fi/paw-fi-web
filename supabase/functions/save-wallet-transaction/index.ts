@@ -24,6 +24,7 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { isRetryableGeminiError } from "../shared/gemini-retry.ts";
+import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import { formatMoney } from "../shared/currency-symbols.ts";
 import {
   ensureUserCategory,
@@ -43,7 +44,10 @@ import {
   resolveWalletTransactionDate,
   resolveWalletTransactionPackageName,
 } from "../shared/wallet-capture.ts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  createVertexGenerativeAI,
+  getVertexAiConfigFromEnv,
+} from "../shared/vertex-ai-chat.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -68,6 +72,8 @@ const GEMINI_CATEGORIZATION_MODELS = [
   "gemini-2.5-flash",
   "gemini-2.5-pro",
 ] as const;
+
+type GenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
 const GEMINI_RETRY_DELAYS_MS = [300] as const;
 const readRuntimeEnv = (name: string): string | null => {
   const env = (
@@ -165,10 +171,9 @@ function buildWalletCaptureRequestLogContext(
   req: Request,
   body: RequestBody,
 ): Record<string, unknown> {
-  const tx =
-    body?.transaction && typeof body.transaction === "object"
-      ? body.transaction
-      : null;
+  const tx = body?.transaction && typeof body.transaction === "object"
+    ? body.transaction
+    : null;
 
   const safeHeaders = Object.fromEntries(
     [
@@ -193,20 +198,20 @@ function buildWalletCaptureRequestLogContext(
     headers: safeHeaders,
     transaction: tx
       ? {
-          type: truncateForLog(tx.type ?? null, 16),
-          amount: typeof tx.amount === "number" ? tx.amount : null,
-          currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
-          date: truncateForLog(resolveWalletTransactionDate(tx), 32),
-          merchantName: truncateForLog(tx.merchantName ?? null, 120),
-          rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
-          note: truncateForLog(tx.note ?? null, 200),
-          cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
-          packageName: truncateForLog(
-            resolveWalletTransactionPackageName(tx),
-            160,
-          ),
-          externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
-        }
+        type: truncateForLog(tx.type ?? null, 16),
+        amount: typeof tx.amount === "number" ? tx.amount : null,
+        currency: truncateForLog(resolveWalletTransactionCurrency(tx), 12),
+        date: truncateForLog(resolveWalletTransactionDate(tx), 32),
+        merchantName: truncateForLog(tx.merchantName ?? null, 120),
+        rawMerchant: truncateForLog(tx.rawMerchant ?? null, 120),
+        note: truncateForLog(tx.note ?? null, 200),
+        cardLabel: truncateForLog(tx.cardLabel ?? null, 80),
+        packageName: truncateForLog(
+          resolveWalletTransactionPackageName(tx),
+          160,
+        ),
+        externalSourceId: truncateForLog(tx.externalSourceId ?? null, 120),
+      }
       : null,
   };
 }
@@ -488,8 +493,7 @@ async function sendFcmV1Notification(params: {
 
   try {
     const deepLink = data.deep_link || "";
-    const isWeb =
-      typeof platform === "string" &&
+    const isWeb = typeof platform === "string" &&
       /^(web|webpush|web_push|browser)$/i.test(platform);
     const message = {
       message: {
@@ -526,16 +530,16 @@ async function sendFcmV1Notification(params: {
         },
         ...(isWeb
           ? {
-              webpush: {
-                data: {
-                  ...data,
-                  deep_link: deepLink,
-                },
-                fcm_options: {
-                  link: "https://moneko.io/dashboard",
-                },
+            webpush: {
+              data: {
+                ...data,
+                deep_link: deepLink,
               },
-            }
+              fcm_options: {
+                link: "https://moneko.io/dashboard",
+              },
+            },
+          }
           : {}),
       },
     };
@@ -633,8 +637,9 @@ async function buildWalletPocketInsight(params: {
   } = params;
   const scope = resolveWalletBudgetScope(householdId, isPortfolio);
   const normalizedCategory = normalizePocketCategory(category);
-  const { periodMonth, monthStart, monthEndExclusive } =
-    getMonthWindowFromDate(dateYmd);
+  const { periodMonth, monthStart, monthEndExclusive } = getMonthWindowFromDate(
+    dateYmd,
+  );
 
   let budgetQuery = supabase
     .from("budgets")
@@ -648,8 +653,8 @@ async function buildWalletPocketInsight(params: {
     householdId,
   });
 
-  const { data: matchedBudget, error: matchedBudgetError } =
-    await budgetQuery.maybeSingle();
+  const { data: matchedBudget, error: matchedBudgetError } = await budgetQuery
+    .maybeSingle();
   if (matchedBudgetError) {
     console.error(
       "[save-wallet-transaction] Failed to load scoped budget by currency:",
@@ -726,8 +731,9 @@ async function buildWalletPocketInsight(params: {
   ) as Array<any>;
   const allocationByEnvelopeId = new Map<string, number>();
   for (const row of allocationRows) {
-    const envelopeId =
-      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const envelopeId = typeof row?.envelope_id === "string"
+      ? row.envelope_id
+      : "";
     if (!envelopeId) continue;
     const amountCents = Number(row?.amount_cents ?? 0);
     if (Number.isFinite(amountCents) && amountCents > 0) {
@@ -750,8 +756,9 @@ async function buildWalletPocketInsight(params: {
   ) as Array<any>;
   const categoriesByEnvelopeId = new Map<string, string[]>();
   for (const row of categoryLinks) {
-    const envelopeId =
-      typeof row?.envelope_id === "string" ? row.envelope_id : "";
+    const envelopeId = typeof row?.envelope_id === "string"
+      ? row.envelope_id
+      : "";
     const linkedCategory = normalizePocketCategory(row?.category);
     if (!envelopeId || !linkedCategory) continue;
     const current = categoriesByEnvelopeId.get(envelopeId) ?? [];
@@ -809,15 +816,13 @@ async function buildWalletPocketInsight(params: {
       0,
     );
     const baseLimit = Number(row?.budget_amount_cents ?? 0);
-    const limitCents =
-      allocationByEnvelopeId.get(id) ??
+    const limitCents = allocationByEnvelopeId.get(id) ??
       (Number.isFinite(baseLimit) ? Math.trunc(baseLimit) : 0);
     return {
       id,
-      name:
-        typeof row?.name === "string" && row.name.trim().length > 0
-          ? row.name.trim()
-          : "Pocket",
+      name: typeof row?.name === "string" && row.name.trim().length > 0
+        ? row.name.trim()
+        : "Pocket",
       limitCents,
       spentCents,
       remainingCents: limitCents - spentCents,
@@ -871,10 +876,9 @@ async function resolveWalletNotificationSpaceLabel(params: {
     if (!error && typeof household?.name === "string") {
       const trimmedName = household.name.replace(/\s+/g, " ").trim();
       if (trimmedName.length > 0) {
-        const displayName =
-          trimmedName.length <= 40
-            ? trimmedName
-            : `${trimmedName.slice(0, 37)}...`;
+        const displayName = trimmedName.length <= 40
+          ? trimmedName
+          : `${trimmedName.slice(0, 37)}...`;
         return displayName;
       }
     }
@@ -1058,7 +1062,7 @@ async function sendWalletPocketNotificationBestEffort(params: {
           data: payloadData,
           accessToken,
           platform: device.platform ?? undefined,
-        }),
+        })
       ),
     );
   } catch (error) {
@@ -1110,10 +1114,9 @@ function buildDuplicateWalletCaptureResponse(
   cached: Record<string, unknown>,
   captureSource: string,
 ): Record<string, unknown> {
-  const cachedMeta =
-    cached["meta"] && typeof cached["meta"] === "object"
-      ? (cached["meta"] as Record<string, unknown>)
-      : {};
+  const cachedMeta = cached["meta"] && typeof cached["meta"] === "object"
+    ? (cached["meta"] as Record<string, unknown>)
+    : {};
 
   return {
     ...cached,
@@ -1306,7 +1309,7 @@ function getFunctionCalls(response: any): any[] {
  * @returns The AI-suggested category (normalized for storage), or "other" on failure.
  */
 async function categorizeWithAI(params: {
-  genAI?: GoogleGenerativeAI | null;
+  genAI?: GenerativeAIClient | null;
   merchantName: string;
   transactionType: "expense" | "income";
   amount: number;
@@ -1408,7 +1411,9 @@ Transactions:
             }
             const waitMs = GEMINI_RETRY_DELAYS_MS[attempt];
             console.warn(
-              `[save-wallet-transaction] ${modelName} transient categorization failure (attempt ${attempt + 1}/${GEMINI_RETRY_DELAYS_MS.length + 1}), retrying in ${waitMs}ms`,
+              `[save-wallet-transaction] ${modelName} transient categorization failure (attempt ${
+                attempt + 1
+              }/${GEMINI_RETRY_DELAYS_MS.length + 1}), retrying in ${waitMs}ms`,
             );
             await sleepMs(waitMs);
           }
@@ -1441,7 +1446,9 @@ Transactions:
         const hasNextModel = index < GEMINI_CATEGORIZATION_MODELS.length - 1;
         if (retryable && hasNextModel) {
           console.warn(
-            `[save-wallet-transaction] ${modelName} transient categorization failure, switching to ${GEMINI_CATEGORIZATION_MODELS[index + 1]}`,
+            `[save-wallet-transaction] ${modelName} transient categorization failure, switching to ${
+              GEMINI_CATEGORIZATION_MODELS[index + 1]
+            }`,
             error,
           );
           continue;
@@ -1454,13 +1461,12 @@ Transactions:
   } catch (error) {
     console.error("[save-wallet-transaction] AI categorization failed:", error);
 
-    // Report Gemini error for instant notification
-    await reportEdgeFunctionError({
+    await reportVertexAiFailure({
       functionName: "save-wallet-transaction",
       error,
+      phase: "ai_categorization",
+      modelName: GEMINI_CATEGORIZATION_MODELS[0],
       context: {
-        phase: "ai_categorization",
-        modelName: GEMINI_CATEGORIZATION_MODELS[0],
         fallbackModelName: GEMINI_CATEGORIZATION_MODELS.slice(1).join(","),
         merchantName: params.merchantName,
         transactionType: params.transactionType,
@@ -1527,9 +1533,11 @@ Deno.serve(async (req: Request) => {
         },
       );
       return errorResponse(
-        `captureSource must be one of: ${Array.from(VALID_CAPTURE_SOURCES).join(
-          ", ",
-        )}`,
+        `captureSource must be one of: ${
+          Array.from(VALID_CAPTURE_SOURCES).join(
+            ", ",
+          )
+        }`,
         400,
       );
     }
@@ -1574,10 +1582,10 @@ Deno.serve(async (req: Request) => {
     // Merchant — allow note/package fallback for notification-based captures.
     const merchantDisplay = (
       tx.merchantName ??
-      tx.rawMerchant ??
-      tx.note ??
-      resolveWalletTransactionPackageName(tx) ??
-      ""
+        tx.rawMerchant ??
+        tx.note ??
+        resolveWalletTransactionPackageName(tx) ??
+        ""
     ).trim();
     if (!merchantDisplay) {
       logWalletCaptureValidationFailure(
@@ -1593,7 +1601,6 @@ Deno.serve(async (req: Request) => {
     // ── Environment ───────────────────────────────────────────────────
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return errorResponse("Server configuration error", 500, "SERVER_ERROR");
     }
@@ -1609,12 +1616,13 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const genAI = GEMINI_API_KEY
-      ? new GoogleGenerativeAI(GEMINI_API_KEY)
-      : null;
-    if (!GEMINI_API_KEY) {
+    let genAI: GenerativeAIClient | null = null;
+    try {
+      genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
+    } catch (error) {
       console.warn(
-        "[save-wallet-transaction] GEMINI_API_KEY not configured; using fallback category 'other'",
+        "[save-wallet-transaction] Vertex AI not configured; using fallback category 'other'",
+        error,
       );
     }
 
@@ -1696,8 +1704,9 @@ Deno.serve(async (req: Request) => {
           .select("user_id")
           .eq("household_id", householdId);
 
-        householdMembers =
-          membersError || !Array.isArray(members) ? [] : members;
+        householdMembers = membersError || !Array.isArray(members)
+          ? []
+          : members;
       }
 
       try {
@@ -1765,14 +1774,12 @@ Deno.serve(async (req: Request) => {
 
       if (contact) {
         contactId = contact.id;
-        preferredCurrency =
-          typeof contact.preferred_currency === "string"
-            ? contact.preferred_currency.trim().toUpperCase() || null
-            : null;
-        preferredTimezone =
-          typeof contact.preferred_timezone === "string"
-            ? contact.preferred_timezone.trim() || null
-            : null;
+        preferredCurrency = typeof contact.preferred_currency === "string"
+          ? contact.preferred_currency.trim().toUpperCase() || null
+          : null;
+        preferredTimezone = typeof contact.preferred_timezone === "string"
+          ? contact.preferred_timezone.trim() || null
+          : null;
       } else {
         console.log(
           "[save-wallet-transaction] No user_contact row found; proceeding with null contact_id.",
@@ -1820,13 +1827,11 @@ Deno.serve(async (req: Request) => {
     const fallbackDate = Number.isNaN(fallbackDateBase.getTime())
       ? new Date()
       : fallbackDateBase;
-    const normalizedClientCreatedDate =
-      clientCreatedAtPrefix ??
+    const normalizedClientCreatedDate = clientCreatedAtPrefix ??
       (body.clientCreatedAt && !Number.isNaN(fallbackDateBase.getTime())
         ? getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDateBase)
         : null);
-    const normalizedDate =
-      normalizedProvidedDate ??
+    const normalizedDate = normalizedProvidedDate ??
       normalizedClientCreatedDate ??
       getLocalYyyyMmDdInTimeZone(preferredTimezone, fallbackDate);
 
@@ -1858,8 +1863,8 @@ Deno.serve(async (req: Request) => {
       isPortfolio,
       preferredTimezone,
       usedProvidedDate: Boolean(normalizedProvidedDate),
-      usedClientCreatedAtDate:
-        !normalizedProvidedDate && Boolean(normalizedClientCreatedDate),
+      usedClientCreatedAtDate: !normalizedProvidedDate &&
+        Boolean(normalizedClientCreatedDate),
     });
 
     const requestIdempotencyKey = buildWalletCaptureIdempotencyKey({

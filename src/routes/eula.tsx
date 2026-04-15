@@ -38,7 +38,7 @@ export const Route = createFileRoute("/eula")({
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData),
@@ -203,7 +203,9 @@ function EULA() {
             .
           </p>
 
-          <h2 className="mt-8 text-2xl font-semibold">9. Termination and Data Rights</h2>
+          <h2 className="mt-8 text-2xl font-semibold">
+            9. Termination and Data Rights
+          </h2>
           <p>
             We may terminate or suspend your access to the application
             immediately, without prior notice or liability, for any reason,
@@ -211,7 +213,10 @@ function EULA() {
             use the application will immediately cease.
           </p>
           <p className="mt-4">
-            You retain the right to export all your data at any time and can permanently delete your account and all associated data with one click. We do not keep backup copies of deleted user data, ensuring complete privacy even after you stop using our service.
+            You retain the right to export all your data at any time and can
+            permanently delete your account and all associated data with one
+            click. We do not keep backup copies of deleted user data, ensuring
+            complete privacy even after you stop using our service.
           </p>
 
           <h2 className="mt-8 text-2xl font-semibold">

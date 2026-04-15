@@ -31,6 +31,10 @@ export interface Review {
 // App Store rating to display in header
 export const APP_STORE_RATING = 4.8;
 
+// Store review counts used in public marketing copy
+export const APP_STORE_REVIEW_COUNT = 61;
+export const PLAY_STORE_REVIEW_COUNT = 11;
+
 // Hardcoded 5-star reviews - REAL REVIEWS FROM APP STORE
 export const appStoreReviews: Review[] = [
   {
@@ -186,10 +190,38 @@ export const appStoreReviews: Review[] = [
     createdDate: "2026-02-03T16:45:00-08:00",
     territory: "VNM",
   },
+   {
+    id: "review-018",
+    rating: 5,
+    title: "Fantastic application for everyone",
+    body: "I think Moneko is a great app for every person. The features and thinking behind it by the developers is great. I have been using it from a long time and I vouch my friends and family to also use it. 100% recommended.",
+    reviewerNickname: "DeeNewyork",
+    createdDate: "2026-03-26T16:45:00-08:00",
+    territory: "IND",
+  },
+  {
+    id: "review-019",
+    rating: 5,
+    title: "Actively Developed",
+    body: "This app actively receives updates, and the developer is extremely responsive over on Reddit. It's also a lot more budget friendly than other apps which charge exorbitant fees for anyone who doesn't have a lot of disposable income. There's even a lifetime plan for a fair price. My personal favorite thing though is that while it's not quite on par with other apps in terms of features like automation and syncing, it's moving very fast in that direction, and I have hope that it'll be a top option soon.",
+    reviewerNickname: "Maple382",
+    createdDate: "2026-03-14T16:45:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-020",
+    rating: 5,
+    title: "Lifesaver",
+    body: "Fast and easy to track my expenses I know where my money goes now",
+    reviewerNickname: "JPTohhhh",
+    createdDate: "2026-04-07T16:45:00-08:00",
+    territory: "MYS",
+  },
 ];
 
 // Total review count for display (update this as you get more reviews)
-export const TOTAL_REVIEW_COUNT = 17;
+export const TOTAL_REVIEW_COUNT =
+  APP_STORE_REVIEW_COUNT + PLAY_STORE_REVIEW_COUNT;
 
 // Helper to get all 5-star reviews (already filtered in the array above)
 export const getFiveStarReviews = (): Review[] => {

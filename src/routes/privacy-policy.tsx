@@ -1,47 +1,50 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { seo } from '@/utils/seo';
-import { getCanonicalUrl } from '@/utils/canonical';
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 
-export const Route = createFileRoute('/privacy-policy')({
+export const Route = createFileRoute("/privacy-policy")({
   component: PrivacyPolicy,
   head: () => {
-    const pageUrl = getCanonicalUrl('/privacy-policy');
+    const pageUrl = getCanonicalUrl("/privacy-policy");
     const meta = seo({
-      title: 'Privacy Policy | Moneko',
-      description: 'Learn how Moneko collects, uses, and protects your personal information when you use our financial education services.',
-      keywords: 'privacy policy, data protection, personal information, Moneko privacy',
-      image: 'https://moneko.io/og-img.png',
+      title: "Privacy Policy | Moneko",
+      description:
+        "Learn how Moneko collects, uses, and protects your personal information when you use our financial education services.",
+      keywords:
+        "privacy policy, data protection, personal information, Moneko privacy",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
-    
+
     // Add structured data for privacy policy page
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      "name": "Privacy Policy",
-      "description": "Moneko's privacy policy explaining how we collect, use, and protect your personal information",
-      "url": pageUrl,
-      "publisher": {
+      name: "Privacy Policy",
+      description:
+        "Moneko's privacy policy explaining how we collect, use, and protect your personal information",
+      url: pageUrl,
+      publisher: {
         "@type": "Organization",
-        "name": "Moneko",
-        "url": "https://moneko.io/"
-      }
+        name: "Moneko",
+        url: "https://moneko.io/",
+      },
     };
-    
+
     return {
       meta,
       links: [
         {
-          rel: 'canonical',
-          href: pageUrl
-        }
+          rel: "canonical",
+          href: pageUrl,
+        },
       ],
-      script: [
+      scripts: [
         {
-          type: 'application/ld+json',
-          children: JSON.stringify(structuredData)
-        }
-      ]
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
+        },
+      ],
     };
   },
 });
@@ -50,101 +53,134 @@ function PrivacyPolicy() {
   return (
     <div className="flex-1 bg-white px-6 py-12 md:px-12 lg:px-24">
       <div className="mx-auto max-w-4xl">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="mb-8 inline-flex items-center text-purple-600 hover:text-purple-800"
         >
           &larr; Back to Home
         </Link>
-        
+
         <h1 className="mb-8 text-4xl font-bold">Privacy Policy</h1>
-        
+
         <div className="prose max-w-none">
-          <p className="text-lg text-gray-700">Last updated: {new Date().toLocaleDateString()}</p>
-          
+          <p className="text-lg text-gray-700">Last updated: 2026-04-14</p>
+
           <h2 className="mt-8 text-2xl font-semibold">1. Introduction</h2>
           <p>
-            Welcome to Moneko's Privacy Policy. This policy explains how we collect, use, and protect your personal information when you use our services.
+            Welcome to Moneko's Privacy Policy. This policy explains how we
+            collect, use, and protect your personal information when you use our
+            services.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">2. Information We Collect</h2>
-          <p>
-            We may collect the following types of information:
-          </p>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            2. Information We Collect
+          </h2>
+          <p>We may collect the following types of information:</p>
           <ul className="list-disc pl-8">
             <li>Contact information (such as name and email address)</li>
             <li>Usage data (how you interact with our services)</li>
             <li>Device information (browser type, IP address)</li>
           </ul>
-          
-          <h2 className="mt-8 text-2xl font-semibold">3. How We Use Your Information</h2>
-          <p>
-            We use your information to:
-          </p>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            3. How We Use Your Information
+          </h2>
+          <p>We use your information to:</p>
           <ul className="list-disc pl-8">
             <li>Provide and improve our services</li>
             <li>Communicate with you about updates or changes</li>
             <li>Personalize your experience</li>
             <li>Analyze usage patterns to improve functionality</li>
           </ul>
-          
+
           <h2 className="mt-8 text-2xl font-semibold">4. Data Security</h2>
           <p>
-            We implement appropriate security measures to protect your personal information. However, no method of transmission over the Internet is 100% secure, and we cannot guarantee absolute security.
+            We implement appropriate security measures to protect your personal
+            information. However, no method of transmission over the Internet is
+            100% secure, and we cannot guarantee absolute security.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">6. Data Export and Deletion</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            6. Data Export and Deletion
+          </h2>
           <p>
-            We believe your financial data is yours alone. You have complete control over your data with the following rights:
+            We believe your financial data is yours alone. You have complete
+            control over your data with the following rights:
           </p>
-          
+
           <h3 className="mt-6 text-xl font-semibold">Data Export</h3>
           <p>
-            You can export all your data from Moneko at any time, free of charge. We provide:
+            You can export all your data from Moneko at any time, free of
+            charge. We provide:
           </p>
           <ul className="list-disc pl-8">
-            <li>Excel (.xlsx) format downloads of your complete transaction history</li>
-            <li>CSV format exports for compatibility with other financial tools</li>
+            <li>
+              Excel (.xlsx) format downloads of your complete transaction
+              history
+            </li>
+            <li>
+              CSV format exports for compatibility with other financial tools
+            </li>
             <li>Instant download access from your account settings</li>
             <li>No restrictions on how you use your exported data</li>
           </ul>
           <p className="mt-3">
-            This allows you to maintain your own backups, perform custom analysis, or migrate to other services seamlessly.
+            This allows you to maintain your own backups, perform custom
+            analysis, or migrate to other services seamlessly.
           </p>
-          
+
           <h3 className="mt-6 text-xl font-semibold">Complete Data Deletion</h3>
           <p>
-            If you decide to stop using Moneko, you can permanently delete your account and all associated data with a single click:
+            If you decide to stop using Moneko, you can permanently delete your
+            account and all associated data with a single click:
           </p>
           <ul className="list-disc pl-8">
             <li>One-click account deletion from your settings</li>
-            <li>Immediate removal of all personal information and financial data</li>
+            <li>
+              Immediate removal of all personal information and financial data
+            </li>
             <li>No backup copies retained by Moneko</li>
-            <li>Irreversible deletion - once deleted, data cannot be recovered</li>
+            <li>
+              Irreversible deletion - once deleted, data cannot be recovered
+            </li>
           </ul>
           <p className="mt-3">
-            We implement true deletion, not just deactivation. When you delete your account, we permanently remove all your data from our systems. We do not keep backups of deleted user data, ensuring your privacy is maintained even after you leave our service.
+            We implement true deletion, not just deactivation. When you delete
+            your account, we permanently remove all your data from our systems.
+            We do not keep backups of deleted user data, ensuring your privacy
+            is maintained even after you leave our service.
           </p>
-          
+
           <h3 className="mt-6 text-xl font-semibold">Our Commitment</h3>
           <p>
-            These features reflect our commitment to data ownership and user privacy:
+            These features reflect our commitment to data ownership and user
+            privacy:
           </p>
           <ul className="list-disc pl-8">
-            <li>We never sell your personal or financial data to third parties</li>
+            <li>
+              We never sell your personal or financial data to third parties
+            </li>
             <li>We make it easy for you to take your data with you</li>
             <li>We respect your right to complete data removal</li>
-            <li>We believe in zero lock-in - you should always control your financial information</li>
+            <li>
+              We believe in zero lock-in - you should always control your
+              financial information
+            </li>
           </ul>
-          
-          <h2 className="mt-8 text-2xl font-semibold">7. Third-Party Services</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            7. Third-Party Services
+          </h2>
           <p>
-            Our service may contain links to third-party websites. We are not responsible for the privacy practices of these external sites and encourage you to read their privacy policies.
+            Our service may contain links to third-party websites. We are not
+            responsible for the privacy practices of these external sites and
+            encourage you to read their privacy policies.
           </p>
-          
+
           <h2 className="mt-8 text-2xl font-semibold">8. Your Rights</h2>
           <p>
-            Depending on your location, you may have certain rights regarding your personal information, including:
+            Depending on your location, you may have certain rights regarding
+            your personal information, including:
           </p>
           <ul className="list-disc pl-8">
             <li>The right to access your data</li>
@@ -152,27 +188,37 @@ function PrivacyPolicy() {
             <li>The right to delete your data</li>
             <li>The right to restrict processing</li>
           </ul>
-          
-          <h2 className="mt-8 text-2xl font-semibold">9. Changes to This Policy</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            9. Changes to This Policy
+          </h2>
           <p>
-            We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page.
+            We may update this privacy policy from time to time. We will notify
+            you of any changes by posting the new policy on this page.
           </p>
-          
+
           <h2 className="mt-8 text-2xl font-semibold">10. Contact Us</h2>
           <p>
-            If you have questions about this Privacy Policy, please contact us at:
+            If you have questions about this Privacy Policy, please contact us
+            at:
           </p>
           <p className="mt-2">
             <strong>Email:</strong> hello@moneko.io
           </p>
         </div>
-        
+
         <div className="mt-12 border-t border-gray-200 pt-8">
           <div className="flex gap-4">
-            <Link to="/terms-of-service" className="text-purple-600 hover:text-purple-800">
+            <Link
+              to="/terms-of-service"
+              className="text-purple-600 hover:text-purple-800"
+            >
               Terms of Service
             </Link>
-            <Link to="/cookie-policy" className="text-purple-600 hover:text-purple-800">
+            <Link
+              to="/cookie-policy"
+              className="text-purple-600 hover:text-purple-800"
+            >
               Cookie Policy
             </Link>
           </div>

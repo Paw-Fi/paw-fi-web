@@ -15,8 +15,8 @@
  * - Rate limiting to avoid API throttling
  * 
  * Usage:
- *   Test mode:     node scripts/send-bulk-emails.js --test test@example.com
- *   Production:    node scripts/send-bulk-emails.js --query-file ./path/to/query.sql --template ./path/to/template.html
+ *   Test mode:     node scripts/send-bulk-emails.js --test yflim7020@gmail.com  --template ./scripts/email-templates/1.5.5-wallets.html
+ *   Production:    node scripts/send-bulk-emails.js  --template ./scripts/email-templates/1.5.5-wallets.html
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -27,7 +27,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-const DEFAULT_EMAIL_SUBJECT='Thanks for choosing Moneko'
+const DEFAULT_EMAIL_SUBJECT='Meet Wallets, now on Moneko'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,8 +44,8 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://qbuynyxyemigtnvdujts.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@pawfi.app'; // Update with your verified sender email
-const FROM_NAME = process.env.FROM_NAME || 'Paw-Fi Team';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'yifan.lim@moneko.io'; // Update with your verified sender email
+const FROM_NAME = process.env.FROM_NAME || 'Moneko Team';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'yifan.lim@moneko.io'; // Admin email for summary reports
 
 // Rate limiting: delay between emails (in milliseconds)
