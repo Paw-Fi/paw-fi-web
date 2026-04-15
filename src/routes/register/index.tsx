@@ -16,6 +16,7 @@ export const Route = createFileRoute("/register/")({
     return {
       redirect: (search.redirect as string) || undefined,
       code: (search.code as string) || undefined,
+      trial: search.trial === true || search.trial === "true",
     };
   },
   head: () => {
@@ -90,7 +91,7 @@ export const Route = createFileRoute("/register/")({
 });
 
 export function Register() {
-  const { redirect, code } = Route.useSearch();
+  const { redirect, code, trial } = Route.useSearch();
 
   return (
     <>
@@ -174,6 +175,7 @@ export function Register() {
                 hideBottomLink
                 variant="plain"
                 hideHeader
+                trial={trial}
               />
 
               {/* Additional Information */}

@@ -1,8 +1,7 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-
 import { CreatorAccessBoundary } from "@/components/creator/creator-access-boundary";
 
-export const Route = createFileRoute("/creator" as never)({
+export const Route = createFileRoute("/creator")({
   component: CreatorRouteGuard,
 });
 

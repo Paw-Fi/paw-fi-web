@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/table";
 import { CreatorHeader } from "@/components/creator/creator-header";
 
-export const Route = createFileRoute("/creator/analytics" as never)({
+export const Route = createFileRoute("/creator/analytics")({
   component: CreatorAnalyticsPage,
 });
 

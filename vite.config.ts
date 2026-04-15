@@ -8,7 +8,6 @@ import { fileURLToPath } from "url";
 import { VitePluginRadar } from "vite-plugin-radar";
 import compression from "vite-plugin-compression";
 import tailwindcss from "@tailwindcss/vite";
-import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,9 +56,6 @@ export default defineConfig({
     ],
   },
   plugins: [
-    TanStackRouterVite({
-      autoCodeSplitting: true,
-    }),
     tsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
@@ -97,6 +93,9 @@ export default defineConfig({
           console.log(`✅ Prerendered: ${page.path}`);
         },
       },
+       router: {
+      autoCodeSplitting: true,
+    },
     }),
     nitro({
       config: {
