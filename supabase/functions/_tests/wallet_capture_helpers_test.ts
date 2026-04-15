@@ -4,6 +4,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   buildWalletCaptureIdempotencyKey,
+  getLocalYyyyMmDdInTimeZone,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
   resolveWalletCaptureScope,
@@ -184,3 +185,16 @@ Deno.test(
     );
   },
 );
+
+Deno.test("wallet capture local date supports UTC offset strings", () => {
+  const baseDate = new Date("2026-04-15T18:30:00.000Z");
+
+  assertEquals(
+    getLocalYyyyMmDdInTimeZone("UTC+08:00", baseDate),
+    "2026-04-16",
+  );
+  assertEquals(
+    getLocalYyyyMmDdInTimeZone("UTC-05:30", baseDate),
+    "2026-04-15",
+  );
+});

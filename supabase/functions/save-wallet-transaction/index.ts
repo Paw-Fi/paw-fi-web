@@ -37,6 +37,7 @@ import {
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
 import {
   buildWalletCaptureIdempotencyKey,
+  getLocalYyyyMmDdInTimeZone,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
   resolveWalletCaptureScope,
@@ -331,36 +332,6 @@ function formatWalletNotificationCategory(value: string): string {
     .split(" ")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
-}
-
-function getLocalYyyyMmDdInTimeZone(
-  timeZone: string | null | undefined,
-  date = new Date(),
-): string {
-  const normalizedTimeZone = (timeZone || "UTC").trim();
-  try {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: normalizedTimeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(date);
-    const map = new Map(parts.map((part) => [part.type, part.value]));
-    const year = map.get("year");
-    const month = map.get("month");
-    const day = map.get("day");
-    if (year && month && day) {
-      return `${year}-${month}-${day}`;
-    }
-  } catch (error) {
-    console.warn(
-      "[save-wallet-transaction] Failed to derive local date from timezone:",
-      normalizedTimeZone,
-      error,
-    );
-  }
-
-  return date.toISOString().slice(0, 10);
 }
 
 function extractCalendarDatePrefix(value: unknown): string | null {
