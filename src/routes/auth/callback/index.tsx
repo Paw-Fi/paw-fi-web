@@ -144,5 +144,3 @@ async function waitForAuthSession(): Promise<Session | null> {
     );
   });
 }
-
-export default AuthCallback;

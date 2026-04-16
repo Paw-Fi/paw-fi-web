@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,17 +10,22 @@ import {
   faFacebook,
   faLinkedin,
 } from "@fortawesome/free-brands-svg-icons";
-import { blogs as staticBlogs } from "@/data/blogs/blogs";
 import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { StructuredData } from "@/components/seo/structured-data";
-import { Markdown } from "@/components/ui/markdown";
+import { findStaticBlogBySlug, loadStaticBlogs } from "@/lib/static-blogs";
 import {
   fetchSubredditBlogBySlug,
   fetchSubredditBlogs,
 } from "@/services/reddit-blog-service";
+
+const Markdown = lazy(() =>
+  import("@/components/ui/markdown").then((module) => ({
+    default: module.Markdown,
+  })),
+);
 
 export const Route = createFileRoute("/blogs/$blogId")({
   component: BlogDetailPage,
@@ -42,7 +47,10 @@ export const Route = createFileRoute("/blogs/$blogId")({
       // Fall through to static content if Reddit API is unavailable.
     }
 
-    const staticBlog = staticBlogs.find((blog) => blog.slug === params.blogId);
+    const [staticBlogs, staticBlog] = await Promise.all([
+      loadStaticBlogs(),
+      findStaticBlogBySlug(params.blogId),
+    ]);
     if (!staticBlog) {
       throw new Response("Not Found", { status: 404 });
     }
@@ -526,7 +534,13 @@ function BlogDetailPage() {
           </div>
 
           <article className="mx-auto max-w-none">
-            <Markdown content={blog.content} className="prose-lg" />
+            <Suspense
+              fallback={
+                <div className="bg-muted/40 h-64 animate-pulse rounded-2xl" />
+              }
+            >
+              <Markdown content={blog.content} className="prose-lg" />
+            </Suspense>
           </article>
 
           <div className="border-border mt-12 flex flex-wrap items-center justify-between gap-4 border-t pt-6">

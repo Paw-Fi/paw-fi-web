@@ -34,194 +34,6 @@ export const Route = createFileRoute("/dashboard/user-settings/")({
       url: canonicalUrl,
     });
 
-    // Comprehensive structured data for user settings page
-    const structuredData = {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebApplication",
-          "@id": `${canonicalUrl}#webapp`,
-          name: "Moneko Account Settings",
-          description:
-            "Secure account management interface for personal finance platform users",
-          url: canonicalUrl,
-          applicationCategory: "BusinessApplication",
-          applicationSubCategory: "Account Management",
-          operatingSystem: "Web Browser",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-            availability: "https://schema.org/InStock",
-            validFrom: "2024-01-01",
-          },
-          featureList: [
-            "Profile Information Management",
-            "Avatar Customization",
-            "Account Security Settings",
-            "Password Reset",
-            "Email Preferences",
-            "Privacy Controls",
-            "Data Management",
-            "Account Deletion Options",
-          ],
-          screenshot: "https://moneko.io/og-img.png",
-          softwareVersion: "2.0",
-          audience: {
-            "@type": "Audience",
-            audienceType: [
-              "Registered Users",
-              "Account Holders",
-              "Financial Platform Users",
-            ],
-          },
-        },
-        {
-          "@type": "Service",
-          "@id": `${canonicalUrl}#service`,
-          name: "Personal Account Management",
-          description:
-            "Comprehensive account management service for financial platform users",
-          provider: {
-            "@type": "Organization",
-            "@id": "https://moneko.io#organization",
-            name: "Moneko",
-            description:
-              "AI-powered personal finance platform providing secure account management and financial tools",
-            url: "https://moneko.io",
-            logo: "https://moneko.io/og-img.png",
-          },
-          serviceType: "Account Management",
-          areaServed: [
-            "United States",
-            "Canada",
-            "United Kingdom",
-            "Australia",
-          ],
-          audience: {
-            "@type": "Audience",
-            audienceType: ["Platform Users", "Financial Service Subscribers"],
-          },
-        },
-        {
-          "@type": "Organization",
-          "@id": "https://moneko.io#organization",
-          name: "Moneko",
-          alternateName: "Moneko Financial Platform",
-          description:
-            "Leading AI-powered personal finance platform providing comprehensive financial education, portfolio tracking, and secure account management",
-          url: "https://moneko.io",
-          logo: {
-            "@type": "ImageObject",
-            url: "https://moneko.io/og-img.png",
-            width: "1200",
-            height: "630",
-          },
-          image: "https://moneko.io/og-img.png",
-          foundingDate: "2024",
-          areaServed: [
-            "United States",
-            "Canada",
-            "United Kingdom",
-            "Australia",
-          ],
-          contactPoint: {
-            "@type": "ContactPoint",
-            contactType: "customer support",
-            email: "support@moneko.io",
-            availableLanguage: "English",
-          },
-          sameAs: [
-            "https://x.com/moneko_ai",
-            "https://linkedin.com/company/moneko-ai",
-          ],
-        },
-        {
-          "@type": "ItemList",
-          "@id": `${canonicalUrl}#features`,
-          name: "Account Settings Features",
-          description:
-            "Comprehensive account management features available in Moneko's settings panel",
-          itemListElement: [
-            {
-              "@type": "ListItem",
-              position: 1,
-              item: {
-                "@type": "Service",
-                name: "Profile Management",
-                description:
-                  "Update personal information, contact details, and profile preferences",
-              },
-            },
-            {
-              "@type": "ListItem",
-              position: 2,
-              item: {
-                "@type": "Service",
-                name: "Avatar Customization",
-                description:
-                  "Personalize your profile with custom avatars and premium appearance options",
-              },
-            },
-            {
-              "@type": "ListItem",
-              position: 3,
-              item: {
-                "@type": "Service",
-                name: "Security Settings",
-                description:
-                  "Manage password, authentication, and account security preferences",
-              },
-            },
-            {
-              "@type": "ListItem",
-              position: 4,
-              item: {
-                "@type": "Service",
-                name: "Privacy Controls",
-                description:
-                  "Control data sharing, visibility, and privacy settings for your financial information",
-              },
-            },
-            {
-              "@type": "ListItem",
-              position: 5,
-              item: {
-                "@type": "Service",
-                name: "Account Management",
-                description:
-                  "Complete account lifecycle management including data export and account deletion",
-              },
-            },
-          ],
-        },
-        {
-          "@type": "BreadcrumbList",
-          "@id": `${canonicalUrl}#breadcrumb`,
-          itemListElement: [
-            {
-              "@type": "ListItem",
-              position: 1,
-              name: "Dashboard",
-              item: {
-                "@type": "WebPage",
-                "@id": "https://moneko.io/dashboard",
-              },
-            },
-            {
-              "@type": "ListItem",
-              position: 2,
-              name: "Settings",
-              item: {
-                "@type": "WebPage",
-                "@id": canonicalUrl,
-              },
-            },
-          ],
-        },
-      ],
-    };
-
     return {
       meta,
       links: [
@@ -230,17 +42,11 @@ export const Route = createFileRoute("/dashboard/user-settings/")({
           href: canonicalUrl,
         },
       ],
-      scripts: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify(structuredData),
-        },
-      ],
     };
   },
 });
 
-export function UserSettings() {
+function UserSettings() {
   const { user, resetPassword, deleteAccount, signOut } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState(
@@ -509,5 +315,3 @@ export function UserSettings() {
     </div>
   );
 }
-
-export default UserSettings;

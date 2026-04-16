@@ -3,7 +3,7 @@ import { seo } from "@/utils/seo";
 
 // Added new pro-max components
 
-export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 export const Route = createFileRoute("/pricing")({
   component: lazyRouteComponent(

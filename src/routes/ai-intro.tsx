@@ -38,5 +38,3 @@ function AIIntroPage() {
     </div>
   );
 }
-
-export default AIIntroPage;

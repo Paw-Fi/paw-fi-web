@@ -98,5 +98,3 @@ function AuthConfirm() {
     </div>
   );
 }
-
-export default AuthConfirm;

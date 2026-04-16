@@ -85,6 +85,7 @@ interface ShadcnSignUpFormProps {
   submitLabel?: string;
   submitClassName?: string;
   children?: ReactNode;
+  trial?: boolean;
 }
 
 // Helper function to parse redirect URLs with query parameters
@@ -117,6 +118,7 @@ export function ShadcnSignUpForm({
   submitLabel = "Create Account",
   submitClassName,
   children,
+  trial = false,
 }: ShadcnSignUpFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +131,63 @@ export function ShadcnSignUpForm({
   const { signUp, isLoading } = useAuth();
   const { checkUserHasAvatar } = useAvatar();
   const navigate = useNavigate();
+
+  // Helper function to grant onboarding trial
+  const grantOnboardingTrial = async (): Promise<boolean> => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("[TrialGrant] No session available");
+        return false;
+      }
+
+      const response = await supabase.functions.invoke("update-subscription", {
+        body: { action: "grant_paywall_return_trial" },
+      });
+
+      if (response.error) {
+        // Check if error is due to existing subscription (not a real error)
+        const errorMsg = response.error.message?.toLowerCase() || "";
+        if (
+          errorMsg.includes("already has active subscription") ||
+          errorMsg.includes("already granted")
+        ) {
+          console.log("[TrialGrant] User already has subscription or trial");
+          return true; // Not a failure, just already has access
+        }
+        console.error("[TrialGrant] Failed to grant trial:", response.error);
+        return false;
+      }
+
+      console.log("[TrialGrant] Trial granted successfully:", response.data);
+      return true;
+    } catch (error) {
+      console.error("[TrialGrant] Error granting trial:", error);
+      return false;
+    }
+  };
+
+  // Helper function to handle post-registration navigation with trial support
+  const handlePostRegistrationNavigation = async () => {
+    if (trial) {
+      // Grant trial and redirect to download app page
+      await grantOnboardingTrial();
+      window.location.href = "/get-started";
+      return;
+    }
+
+    // Standard flow
+    const hasAvatar = await checkUserHasAvatar();
+    if (!hasAvatar) {
+      navigate({
+        to: "/avatar-customizer",
+        search: { redirect: redirectUrl },
+      });
+    } else {
+      const redirectParams = parseRedirectUrl(redirectUrl);
+      navigate(redirectParams);
+    }
+  };
 
   const signUpForm = useForm<SignUpForm>({
     resolver: zodResolver(signUpSchema),
@@ -164,20 +223,8 @@ export function ShadcnSignUpForm({
           setRegisteredEmail(data.email);
           setVerificationSent(true);
         } else {
-          // If no confirmation needed, check avatar and navigate accordingly
-          const hasAvatar = await checkUserHasAvatar();
-
-          if (!hasAvatar) {
-            // CRITICAL FIX: Preserve redirect URL when going to avatar customizer
-            // This ensures users registering to purchase (e.g., lifetime) get back to checkout
-            navigate({
-              to: "/avatar-customizer",
-              search: redirectUrl ? { redirect: redirectUrl } : undefined,
-            });
-          } else {
-            const redirectParams = parseRedirectUrl(redirectUrl);
-            navigate(redirectParams);
-          }
+          // If no confirmation needed, handle post-registration flow
+          await handlePostRegistrationNavigation();
         }
       }
     } catch (error: any) {
@@ -223,19 +270,7 @@ export function ShadcnSignUpForm({
 
       if (authData.session) {
         // Successfully verified and logged in
-        const hasAvatar = await checkUserHasAvatar();
-
-        if (!hasAvatar) {
-          // CRITICAL FIX: Preserve redirect URL when going to avatar customizer
-          // This ensures users registering to purchase (e.g., lifetime) get back to checkout
-          navigate({
-            to: "/avatar-customizer",
-            search: redirectUrl ? { redirect: redirectUrl } : undefined,
-          });
-        } else {
-          const redirectParams = parseRedirectUrl(redirectUrl);
-          navigate(redirectParams);
-        }
+        await handlePostRegistrationNavigation();
       }
     } catch (error: any) {
       console.error("OTP verification error:", error);

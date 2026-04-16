@@ -270,7 +270,7 @@ const mobilePreview = [
   },
 ];
 
-export default function CoupleBudgetingPage() {
+function CoupleBudgetingPage() {
   const navigate = useNavigate();
 
   return (

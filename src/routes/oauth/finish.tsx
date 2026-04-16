@@ -21,7 +21,7 @@ export const Route = createFileRoute('/oauth/finish')({
   },
 });
 
-export function OAuthFinish() {
+function OAuthFinish() {
   const { request_id, mcp_base_url } = Route.useSearch();
   const { session, isAuthenticated, isLoading } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

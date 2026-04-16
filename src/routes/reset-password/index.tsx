@@ -32,7 +32,7 @@ export const Route = createFileRoute("/reset-password/")({
   },
 });
 
-export function ResetPassword() {
+function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

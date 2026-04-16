@@ -6,7 +6,7 @@ import { getMainGeoLandingPage } from "@/lib/geo-landing-pages";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
-export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 const mainLandingPage = getMainGeoLandingPage();
 

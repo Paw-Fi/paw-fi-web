@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faRocket } from "@fortawesome/free-solid-svg-icons";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { useRemainingSpots } from "@/hooks/use-early-access";
-import { DISCORD_URL } from "@/routes";
+import { DISCORD_URL } from "@/lib/external-links";
 import { Button } from "@/components/ui/button";
 
 const benefits = [

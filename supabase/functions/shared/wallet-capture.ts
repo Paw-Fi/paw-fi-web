@@ -61,6 +61,71 @@ export function resolveWalletTransactionPackageName(
   return value || null;
 }
 
+function parseUtcOffsetMinutes(
+  timeZone: string,
+): number | null {
+  const normalized = timeZone.trim().toUpperCase();
+  if (normalized === "UTC" || normalized === "GMT") {
+    return 0;
+  }
+
+  const match =
+    /^(?:UTC|GMT)([+-])(\d{1,2})(?::?(\d{2}))?$/.exec(normalized);
+  if (!match) return null;
+
+  const [, sign, hoursRaw, minutesRaw] = match;
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw ?? "0");
+  if (
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes) ||
+    hours > 23 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  const direction = sign === "-" ? -1 : 1;
+  return direction * ((hours * 60) + minutes);
+}
+
+export function getLocalYyyyMmDdInTimeZone(
+  timeZone: string | null | undefined,
+  date = new Date(),
+): string {
+  const normalizedTimeZone = (timeZone || "UTC").trim();
+  const offsetMinutes = parseUtcOffsetMinutes(normalizedTimeZone);
+  if (offsetMinutes !== null) {
+    return new Date(date.getTime() + (offsetMinutes * 60_000))
+      .toISOString()
+      .slice(0, 10);
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: normalizedTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(date);
+    const map = new Map(parts.map((part) => [part.type, part.value]));
+    const year = map.get("year");
+    const month = map.get("month");
+    const day = map.get("day");
+    if (year && month && day) {
+      return `${year}-${month}-${day}`;
+    }
+  } catch (error) {
+    console.warn(
+      "[save-wallet-transaction] Failed to derive local date from timezone:",
+      normalizedTimeZone,
+      error,
+    );
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
 export function buildWalletCaptureIdempotencyKey(params: {
   explicitKey?: string | null;
   captureSource: string;
