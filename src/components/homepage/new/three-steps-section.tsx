@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {  faDiscord } from "@fortawesome/free-brands-svg-icons";
-import { DISCORD_URL } from "@/routes";
+import { DISCORD_URL } from "@/lib/external-links";
 import { motion, Variants } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 

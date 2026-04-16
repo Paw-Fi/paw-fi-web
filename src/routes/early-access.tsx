@@ -375,7 +375,7 @@ function CommunityGrowth({ userCount }: { userCount: number }) {
   );
 }
 
-export default function EarlyAccessPage() {
+function EarlyAccessPage() {
   const navigate = useNavigate();
 
   const questions = {

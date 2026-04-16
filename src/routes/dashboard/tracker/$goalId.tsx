@@ -86,41 +86,12 @@ export const Route = createFileRoute("/dashboard/tracker/$goalId")({
       url: pageUrl,
     });
 
-    const structuredData = {
-      "@context": "https://schema.org",
-      "@type": "Thing", // Or more specific type if applicable, e.g., "FinancialProduct"
-      name: goal.title,
-      description: description,
-      url: pageUrl,
-      mainEntityOfPage: {
-        "@type": "WebPage",
-        "@id": pageUrl,
-      },
-      hasPart:
-        goal.milestones?.map((m) => ({
-          "@type": "Action", // Or a more specific type for milestones
-          name: m.title,
-          description: m.description,
-          startTime: m.due_date,
-          actionStatus:
-            m.status === "completed"
-              ? "CompletedActionStatus"
-              : "ActiveActionStatus",
-        })) || [],
-    };
-
     return {
       meta,
       links: [
         {
           rel: "canonical",
           href: pageUrl,
-        },
-      ],
-      scripts: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify(structuredData),
         },
       ],
     };

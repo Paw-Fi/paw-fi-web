@@ -44,7 +44,7 @@ import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { DISCORD_URL } from "..";
+import { DISCORD_URL } from "@/lib/external-links";
 import { HomeHeader } from "@/components/index/header";
 
 // Route search params type

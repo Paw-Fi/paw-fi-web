@@ -41,18 +41,6 @@ export const Route = createFileRoute("/dashboard/tracker/create/")({
           href: pageUrl,
         },
       ],
-      scripts: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebPage",
-            name: title,
-            description: description,
-            url: pageUrl,
-          }),
-        },
-      ],
     };
   },
 });

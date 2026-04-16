@@ -117,6 +117,7 @@ import Star5 from '@/assets/images/avatar/11.stars/Star5.svg?raw'
 import Star6 from '@/assets/images/avatar/11.stars/Star6.svg?raw'
 
 export const Route = createFileRoute('/avatar-customizer')({
+  ssr: false,
   component: AvatarCustomizer,
   validateSearch: (search: Record<string, unknown>) => {
     return {

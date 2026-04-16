@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { motion } from "framer-motion";
-import { blogs as staticBlogs } from "@/data/blogs/blogs";
 import { BlogTag } from "@/components/blogs/blogs.typing";
 import { BlogFilters } from "@/components/blogs/blog-filters";
 import { BlogMasonryGrid } from "@/components/blogs/blog-masonry-grid";
@@ -29,20 +28,20 @@ export function BlogsIndexRouteComponent() {
           return;
         }
 
-        setBlogs([...redditBlogs, ...staticBlogs]);
+        setBlogs([...redditBlogs, ...initialBlogs]);
       })
       .catch(() => {
         if (!isMounted) {
           return;
         }
 
-        setBlogs(staticBlogs);
+        setBlogs(initialBlogs);
       });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialBlogs]);
 
   const availableTags = useMemo(() => getUniqueTagsFromBlogs(blogs), [blogs]);
 

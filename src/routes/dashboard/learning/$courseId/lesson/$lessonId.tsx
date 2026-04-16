@@ -101,38 +101,12 @@ export const Route = createFileRoute(
       url: pageUrl,
     });
 
-    const structuredData = {
-      "@context": "https://schema.org",
-      "@type": "LearningResource",
-      name: lesson?.title || "Lesson",
-      description: description,
-      url: pageUrl,
-      isPartOf: {
-        "@type": "Course",
-        name: course?.title || "Course",
-        url: getCanonicalUrl(
-          `/dashboard/learning/${course?.course_id || params.courseId}`,
-        ),
-      },
-      provider: {
-        "@type": "Organization",
-        name: "Moneko",
-        url: "https://moneko.io",
-      },
-    };
-
     return {
       meta,
       links: [
         {
           rel: "canonical",
           href: pageUrl,
-        },
-      ],
-      scripts: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify(structuredData),
         },
       ],
     };

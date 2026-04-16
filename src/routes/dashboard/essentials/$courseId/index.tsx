@@ -29,40 +29,12 @@ export const Route = createFileRoute("/dashboard/essentials/$courseId/")({
       url: pageUrl,
     });
 
-    const structuredData = {
-      "@context": "https://schema.org",
-      "@type": "Course",
-      name: course.title,
-      description: course.description,
-      provider: {
-        "@type": "Organization",
-        name: "Moneko",
-        url: "https://moneko.io",
-      },
-      url: pageUrl,
-      hasCourseInstance: {
-        "@type": "CourseInstance",
-        courseMode: "online",
-        courseWorkload: `PT${course.lessons.length}H`, // Assuming 1 hour per lesson for simplicity
-        instructor: {
-          "@type": "Person",
-          name: "Moneko Experts",
-        },
-      },
-    };
-
     return {
       meta,
       links: [
         {
           rel: "canonical",
           href: pageUrl,
-        },
-      ],
-      scripts: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify(structuredData),
         },
       ],
     };

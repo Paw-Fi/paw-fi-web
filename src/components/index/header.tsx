@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Button } from "../ui/button";
-import { DISCORD_URL } from "@/routes";
+import { DISCORD_URL } from "@/lib/external-links";
 import { useAuth } from "@/contexts/auth-context";
 import { UserAvatar } from "../ui/user-avatar";
 import { MonekoIcon } from "../shared/moneko-icon";

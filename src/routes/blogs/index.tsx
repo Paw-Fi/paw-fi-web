@@ -1,20 +1,20 @@
 "use client";
 
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
-import { blogs as staticBlogs } from "@/data/blogs/blogs";
+import { loadStaticBlogs } from "@/lib/static-blogs";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 
 export const Route = createFileRoute("/blogs/")({
   loader: async () => {
-    return { blogs: staticBlogs };
+    return { blogs: await loadStaticBlogs() };
   },
   component: lazyRouteComponent(
     () => import("@/components/performance/blogs-index-route-component"),
     "BlogsIndexRouteComponent",
   ),
   head: ({ loaderData }) => {
-    const listingBlogs = loaderData?.blogs || staticBlogs;
+    const listingBlogs = loaderData?.blogs || [];
     const title =
       "Moneko Financial Education Blog | Expert Personal Finance Insights";
     const description =

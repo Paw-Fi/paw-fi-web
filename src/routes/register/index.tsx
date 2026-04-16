@@ -90,7 +90,7 @@ export const Route = createFileRoute("/register/")({
   },
 });
 
-export function Register() {
+function Register() {
   const { redirect, code, trial } = Route.useSearch();
 
   return (

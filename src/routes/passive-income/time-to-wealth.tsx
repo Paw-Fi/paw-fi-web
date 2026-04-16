@@ -9,11 +9,9 @@ import AmbientHalo from "@/components/ui/ambient-halo";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { useDeviceType } from "@/hooks/use-device-type";
+import { getPassiveIncomePageOrFallback } from "@/lib/passive-income-pages";
 import { disableAnimationsOnMobile } from "../../utils/disable-framer-motion-mobile";
 import { useEffect } from "react";
-
-// Dynamic content system
-import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
 // Direct imports to avoid lazy loading issues
 import HeroSection from "@/components/homepage/new/hero-section";
@@ -26,16 +24,14 @@ import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 
 // Discord URL for community link
-export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
-
-// Use time to wealth variant
-const contentVariant = "time-to-wealth";
-const pageData = passiveIncomeVariants[contentVariant];
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 export const Route = createFileRoute("/passive-income/time-to-wealth")({
+  loader: async () => getPassiveIncomePageOrFallback("time-to-wealth"),
   component: TimeToWealthPage,
   staticData: () => ({}),
-  head: () => {
+  head: ({ loaderData }) => {
+    const pageData = loaderData as any;
     const pageUrl = getCanonicalUrl("/passive-income/time-to-wealth");
     const meta = seo({
       title: pageData.meta.title,
@@ -57,7 +53,8 @@ export const Route = createFileRoute("/passive-income/time-to-wealth")({
   },
 });
 
-export default function TimeToWealthPage() {
+function TimeToWealthPage() {
+  const pageData = Route.useLoaderData() as any;
   const { isMobile } = useDeviceType();
   
   useEffect(() => {

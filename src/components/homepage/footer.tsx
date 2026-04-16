@@ -2,7 +2,6 @@ import { faFacebook, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { faX } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { OptimizedImage } from "../seo/optimized-image";
-import basicLessonsData from "@/data/basic-lessons.json";
 import catCoin from "@/assets/images/icon.svg";
 import { Link } from "@tanstack/react-router";
 

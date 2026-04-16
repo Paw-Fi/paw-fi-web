@@ -2654,5 +2654,3 @@ function FinancialProfileSettings() {
     </div>
   );
 }
-
-export default FinancialProfileSettings;

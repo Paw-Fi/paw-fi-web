@@ -80,7 +80,7 @@ export const Route = createFileRoute("/login/")({
   },
 });
 
-export function Login() {
+function Login() {
   const { redirect } = Route.useSearch();
 
   return (
