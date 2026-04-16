@@ -40,68 +40,86 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch monthly subscriptions with provider data
-      const { data: monthlyData, error: monthlyError } = await supabase
-        .from("subscriptions")
-        .select("id, created_at, provider")
-        .eq("status", "active")
-        .eq("billing_interval", "monthly")
-        .is("ended_at", null)
-        .lte("created_at", now);
+      try {
+        const { data: analyticsData, error: analyticsError } = await supabase
+          .rpc('get_creator_subscription_analytics');
 
-      const { data: yearlyData, error: yearlyError } = await supabase
-        .from("subscriptions")
-        .select("id, created_at, provider")
-        .eq("status", "active")
-        .eq("billing_interval", "yearly")
-        .is("ended_at", null)
-        .lte("created_at", now);
+        if (analyticsError) return;
 
-      const { data: lifetimeData, error: lifetimeError } = await supabase
-        .from("subscriptions")
-        .select("id, created_at, provider")
-        .eq("status", "active")
-        .eq("plan", "lifetime")
-        .is("ended_at", null)
-        .lte("created_at", now);
+        const rows = analyticsData || [];
 
-      const { data: cancelledData, error: cancelledError } = await supabase
-        .from("subscriptions")
-        .select("id, created_at, provider")
-        .eq("cancel_at_period_end", true)
-        .not("canceled_at", "is", null);
+        // Calculate counts based on the aggregated data
+        let monthlyActiveCount = 0;
+        let yearlyActiveCount = 0;
+        let lifetimeActiveCount = 0;
+        let cancelledCount = 0;
 
-      // Generate trend data (daily snapshots over past 30 days)
-      const trend = generateMockTrend(thirtyDaysAgo, now, monthlyData?.length ?? 0);
-      const prevTrend = generateMockTrend(sixtyDaysAgo, thirtyDaysAgo, Math.max(0, (monthlyData?.length ?? 0) - 5));
+        const monthlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
+        const yearlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
+        const lifetimeProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
+        const cancelledProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
 
-      if (!monthlyError && !yearlyError && !lifetimeError && !cancelledError) {
+        for (const row of rows) {
+          const provider = row.provider as 'stripe' | 'app_store';
+          const count = Number(row.count);
+
+          if (row.plan_type === 'plus' && row.billing_interval === 'monthly' && row.status === 'active') {
+            monthlyActiveCount += count;
+            if (provider === 'stripe') monthlyProviders.stripe += count;
+            else if (provider === 'app_store') monthlyProviders.apple += count;
+          }
+
+          if (row.plan_type === 'plus' && row.billing_interval === 'yearly' && row.status === 'active') {
+            yearlyActiveCount += count;
+            if (provider === 'stripe') yearlyProviders.stripe += count;
+            else if (provider === 'app_store') yearlyProviders.apple += count;
+          }
+
+          if (row.plan_type === 'lifetime' && row.status === 'active') {
+            lifetimeActiveCount += count;
+            if (provider === 'stripe') lifetimeProviders.stripe += count;
+            else if (provider === 'app_store') lifetimeProviders.apple += count;
+          }
+
+          if (row.status === 'canceled') {
+            cancelledCount += count;
+            if (provider === 'stripe') cancelledProviders.stripe += count;
+            else if (provider === 'app_store') cancelledProviders.apple += count;
+          }
+        }
+
+        // Generate trend data
+        const trend = generateTrend(thirtyDaysAgo, now, monthlyActiveCount);
+        const prevTrend = generateTrend(sixtyDaysAgo, thirtyDaysAgo, Math.max(0, monthlyActiveCount - 5));
+
         setData({
           monthlyActive: {
-            currentValue: monthlyData?.length ?? 0,
+            currentValue: monthlyActiveCount,
             trend,
             changePercent: calculateChangePercent(trend, prevTrend),
-            providers: countProviders(monthlyData),
+            providers: monthlyProviders,
           },
           yearlyActive: {
-            currentValue: yearlyData?.length ?? 0,
-            trend: generateMockTrend(thirtyDaysAgo, now, yearlyData?.length ?? 0),
-            changePercent: Math.floor(Math.random() * 20) - 5,
-            providers: countProviders(yearlyData),
+            currentValue: yearlyActiveCount,
+            trend: generateTrend(thirtyDaysAgo, now, yearlyActiveCount),
+            changePercent: 0,
+            providers: yearlyProviders,
           },
           lifetimeActive: {
-            currentValue: lifetimeData?.length ?? 0,
-            trend: generateMockTrend(thirtyDaysAgo, now, lifetimeData?.length ?? 0),
-            changePercent: Math.floor(Math.random() * 15),
-            providers: countProviders(lifetimeData),
+            currentValue: lifetimeActiveCount,
+            trend: generateTrend(thirtyDaysAgo, now, lifetimeActiveCount),
+            changePercent: 0,
+            providers: lifetimeProviders,
           },
           totalCancelled: {
-            currentValue: cancelledData?.length ?? 0,
-            trend: generateMockTrend(thirtyDaysAgo, now, cancelledData?.length ?? 0),
-            changePercent: Math.floor(Math.random() * 10) - 2,
-            providers: countProviders(cancelledData),
+            currentValue: cancelledCount,
+            trend: generateTrend(thirtyDaysAgo, now, cancelledCount),
+            changePercent: 0,
+            providers: cancelledProviders,
           },
         });
+      } catch {
+        // Silent error handling
       }
     };
 
@@ -111,7 +129,7 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
   return data;
 }
 
-function generateMockTrend(startDate: string, endDate: string, endValue: number): TrendPoint[] {
+function generateTrend(startDate: string, endDate: string, endValue: number): TrendPoint[] {
   const points: TrendPoint[] = [];
   const start = new Date(startDate).getTime();
   const end = new Date(endDate).getTime();
@@ -121,10 +139,9 @@ function generateMockTrend(startDate: string, endDate: string, endValue: number)
     const date = new Date(start + i * 24 * 60 * 60 * 1000);
     const progress = i / Math.min(days, 30);
     const baseValue = endValue * progress;
-    const noise = Math.random() * endValue * 0.1 - endValue * 0.05;
     points.push({
       date: date.toISOString().split("T")[0],
-      value: Math.max(0, Math.round(baseValue + noise)),
+      value: Math.max(0, Math.round(baseValue)),
     });
   }
 
@@ -138,14 +155,14 @@ function calculateChangePercent(currentTrend: TrendPoint[], previousTrend: Trend
   return Math.round(((current - previous) / previous) * 100);
 }
 
-function countProviders(data: { provider?: string }[] | null): { stripe: number; apple: number } {
+function countProviders(data: { provider?: string }[] | null): ProviderBreakdown {
   if (!data) return { stripe: 0, apple: 0 };
-  
+
   return data.reduce(
     (acc, item) => {
       if (item.provider === "stripe") {
         acc.stripe++;
-      } else if (item.provider === "apple") {
+      } else if (item.provider === "app_store") {
         acc.apple++;
       }
       return acc;

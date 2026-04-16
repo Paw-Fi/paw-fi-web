@@ -18,32 +18,26 @@ export function useTrialingUsers(refreshKey = 0): TrialingUser[] {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: rows, error } = await supabase
-        .from("subscriptions")
-        .select(`
-          id,
-          user_id,
-          plan,
-          provider,
-          trial_start,
-          trial_end,
-          users:user_id (email, full_name)
-        `)
-        .eq("status", "trialing")
-        .order("trial_end", { ascending: true });
+      try {
+        const { data: rows, error } = await supabase
+          .rpc('get_creator_trialing_users');
 
-      if (!error && rows) {
-        const formatted = rows.map((row) => ({
-          id: row.id,
+        if (error) return;
+
+        const formatted = (rows || []).map((row) => ({
+          id: row.subscription_id,
           userId: row.user_id,
           plan: row.plan,
           provider: row.provider,
           trialStart: row.trial_start,
           trialEnd: row.trial_end,
-          email: row.users?.email,
-          fullName: row.users?.full_name,
+          email: row.email,
+          fullName: row.full_name,
         }));
+
         setUsers(formatted);
+      } catch {
+        // Silent error handling
       }
     };
 

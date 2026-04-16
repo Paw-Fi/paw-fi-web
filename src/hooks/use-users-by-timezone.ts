@@ -12,16 +12,18 @@ export function useUsersByTimezone(refreshKey = 0): UsersByTimezone[] {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: rows, error } = await supabase
-        .from("users")
-        .select("preferred_timezone")
-        .not("preferred_timezone", "is", null);
+      try {
+        const { data: rows, error } = await supabase
+          .from("user_contacts")
+          .select("preferred_timezone")
+          .not("preferred_timezone", "is", null);
 
-      if (!error && rows) {
+        if (error) return;
+
         // Aggregate by timezone
         const timezoneCounts = new Map<string, number>();
-        
-        for (const row of rows) {
+
+        for (const row of rows || []) {
           const timezone = row.preferred_timezone || "Unknown";
           timezoneCounts.set(timezone, (timezoneCounts.get(timezone) || 0) + 1);
         }
@@ -35,6 +37,8 @@ export function useUsersByTimezone(refreshKey = 0): UsersByTimezone[] {
           .sort((a, b) => b.userCount - a.userCount);
 
         setData(result);
+      } catch {
+        // Silent error handling
       }
     };
 

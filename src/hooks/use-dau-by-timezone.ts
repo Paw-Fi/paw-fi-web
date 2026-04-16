@@ -12,43 +12,20 @@ export function useDAUByTimezone(refreshKey = 0): DAUByTimezone[] {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Get today's date boundaries in UTC
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+      try {
+        const { data: rows, error } = await supabase
+          .rpc('get_creator_dau_by_timezone');
 
-      // Fetch today's expenses with contact timezone info
-      const { data: rows, error } = await supabase
-        .from("expenses")
-        .select(`
-          id,
-          created_at,
-          contacts:contact_id (preferred_timezone)
-        `)
-        .gte("created_at", todayStart)
-        .lt("created_at", todayEnd);
+        if (error) return;
 
-      if (!error && rows) {
-        // Aggregate by timezone
-        const timezoneCounts = new Map<string, Set<string>>();
-        
-        for (const row of rows) {
-          const timezone = row.contacts?.preferred_timezone || "Unknown";
-          if (!timezoneCounts.has(timezone)) {
-            timezoneCounts.set(timezone, new Set());
-          }
-          timezoneCounts.get(timezone)!.add(row.id);
-        }
-
-        // Convert to array format
-        const result: DAUByTimezone[] = Array.from(timezoneCounts.entries())
-          .map(([timezone, userIds]) => ({
-            timezone,
-            activeUsers: userIds.size,
-          }))
-          .sort((a, b) => b.activeUsers - a.activeUsers);
+        const result: DAUByTimezone[] = (rows || []).map((row) => ({
+          timezone: row.timezone,
+          activeUsers: Number(row.active_users),
+        }));
 
         setData(result);
+      } catch {
+        // Silent error handling
       }
     };
 

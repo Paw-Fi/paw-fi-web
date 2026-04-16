@@ -26,19 +26,61 @@ export function useUserCount(refreshKey = 0): UserCountMetric {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
-      const { count, error } = await supabase
-        .from("users")
-        .select("*", { count: "exact", head: true });
+      try {
+        // Query 1: Total user count
+        const { count, error: countError } = await supabase
+          .from("users")
+          .select("*", { count: "exact", head: true });
 
-      if (!error && count !== null) {
-        const trend = generateMockTrend(thirtyDaysAgo, now, count);
-        const prevTrend = generateMockTrend(sixtyDaysAgo, thirtyDaysAgo, Math.max(0, count - 50));
+        if (countError) return;
+
+        // Query 2: Daily signups for trend (last 30 days)
+        const { data: recentRows, error: recentError } = await supabase
+          .from("users")
+          .select("created_at")
+          .gte("created_at", thirtyDaysAgo)
+          .order("created_at", { ascending: true });
+
+        if (recentError) return;
+
+        // Query 3: Previous 30 days for comparison
+        const { data: prevRows, error: prevError } = await supabase
+          .from("users")
+          .select("created_at")
+          .gte("created_at", sixtyDaysAgo)
+          .lt("created_at", thirtyDaysAgo);
+
+        if (prevError) return;
+
+        // Aggregate daily data for trend
+        const dateCounts = new Map<string, number>();
+        for (const row of recentRows || []) {
+          const date = new Date(row.created_at).toISOString().split("T")[0];
+          dateCounts.set(date, (dateCounts.get(date) || 0) + 1);
+        }
+
+        // Fill in missing dates with 0
+        const trend: TrendPoint[] = [];
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+          const countValue = dateCounts.get(date) || 0;
+          trend.push({ date, value: countValue });
+        }
+
+        // Calculate change percent
+        const currentPeriodCount = recentRows?.length ?? 0;
+        const previousPeriodCount = prevRows?.length ?? 0;
+        const changePercent = previousPeriodCount > 0
+          ? Math.round(((currentPeriodCount - previousPeriodCount) / previousPeriodCount) * 100)
+          : 0;
 
         setData({
-          currentValue: count,
+          currentValue: count ?? 0,
           trend,
-          changePercent: calculateChangePercent(trend, prevTrend),
+          changePercent,
         });
+      } catch {
+        // Silent error handling
       }
     };
 
@@ -46,31 +88,4 @@ export function useUserCount(refreshKey = 0): UserCountMetric {
   }, [refreshKey]);
 
   return data;
-}
-
-function generateMockTrend(startDate: string, endDate: string, endValue: number): TrendPoint[] {
-  const points: TrendPoint[] = [];
-  const start = new Date(startDate).getTime();
-  const end = new Date(endDate).getTime();
-  const days = Math.floor((end - start) / (24 * 60 * 60 * 1000));
-
-  for (let i = 0; i <= Math.min(days, 30); i++) {
-    const date = new Date(start + i * 24 * 60 * 60 * 1000);
-    const progress = i / Math.min(days, 30);
-    const baseValue = endValue * progress;
-    const noise = Math.random() * endValue * 0.05 - endValue * 0.025;
-    points.push({
-      date: date.toISOString().split("T")[0],
-      value: Math.max(0, Math.round(baseValue + noise)),
-    });
-  }
-
-  return points;
-}
-
-function calculateChangePercent(currentTrend: TrendPoint[], previousTrend: TrendPoint[]): number {
-  if (previousTrend.length === 0 || currentTrend.length === 0) return 0;
-  const current = currentTrend[currentTrend.length - 1]?.value ?? 0;
-  const previous = previousTrend[previousTrend.length - 1]?.value ?? 1;
-  return Math.round(((current - previous) / previous) * 100);
 }

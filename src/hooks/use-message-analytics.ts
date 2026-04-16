@@ -24,32 +24,35 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Fetch last 30 days of messages
-      const { data: recentRows, error: recentError } = await supabase
-        .from("messages")
-        .select("created_at, channel")
-        .gte("created_at", thirtyDaysAgo);
+      try {
+        const { data: recentRows, error: recentError } = await supabase
+          .from("chat_messages")
+          .select("timestamp, chat_sessions!inner(channel)")
+          .gte("timestamp", thirtyDaysAgo);
 
-      // Fetch previous 30 days for comparison
-      const { data: prevRows, error: prevError } = await supabase
-        .from("messages")
-        .select("created_at, channel")
-        .gte("created_at", sixtyDaysAgo)
-        .lt("created_at", thirtyDaysAgo);
+        if (recentError) return;
 
-      if (!recentError && !prevError && recentRows && prevRows) {
+        const { data: prevRows, error: prevError } = await supabase
+          .from("chat_messages")
+          .select("timestamp, chat_sessions!inner(channel)")
+          .gte("timestamp", sixtyDaysAgo)
+          .lt("timestamp", thirtyDaysAgo);
+
+        if (prevError) return;
+
         // Aggregate by date and channel
         const dateCounts = new Map<string, { whatsapp: number; telegram: number }>();
-        
-        for (const row of recentRows) {
-          const date = new Date(row.created_at).toISOString().split("T")[0];
+
+        for (const row of recentRows || []) {
+          const date = new Date(row.timestamp).toISOString().split("T")[0];
           if (!dateCounts.has(date)) {
             dateCounts.set(date, { whatsapp: 0, telegram: 0 });
           }
           const counts = dateCounts.get(date)!;
-          if (row.channel === "whatsapp") {
+          const channel = (row.chat_sessions as { channel?: string })?.channel;
+          if (channel === "whatsapp") {
             counts.whatsapp++;
-          } else if (row.channel === "telegram") {
+          } else if (channel === "telegram") {
             counts.telegram++;
           }
         }
@@ -62,11 +65,24 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
           dailyData.push({ date, ...counts });
         }
 
-        const totalWhatsApp = recentRows.filter(r => r.channel === "whatsapp").length;
-        const totalTelegram = recentRows.filter(r => r.channel === "telegram").length;
-        
-        const prevWhatsApp = prevRows.filter(r => r.channel === "whatsapp").length;
-        const prevTelegram = prevRows.filter(r => r.channel === "telegram").length;
+        // Calculate totals
+        let totalWhatsApp = 0;
+        let totalTelegram = 0;
+        for (const counts of dateCounts.values()) {
+          totalWhatsApp += counts.whatsapp;
+          totalTelegram += counts.telegram;
+        }
+
+        let prevWhatsApp = 0;
+        let prevTelegram = 0;
+        for (const row of prevRows || []) {
+          const channel = (row.chat_sessions as { channel?: string })?.channel;
+          if (channel === "whatsapp") {
+            prevWhatsApp++;
+          } else if (channel === "telegram") {
+            prevTelegram++;
+          }
+        }
 
         const whatsAppChangePercent = prevWhatsApp > 0
           ? Math.round(((totalWhatsApp - prevWhatsApp) / prevWhatsApp) * 100)
@@ -75,6 +91,7 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
           ? Math.round(((totalTelegram - prevTelegram) / prevTelegram) * 100)
           : 0;
 
+        console.log("[DEBUG] useMessageAnalytics: Setting data - WhatsApp:", totalWhatsApp, "Telegram:", totalTelegram);
         setData({
           totalWhatsApp,
           totalTelegram,
@@ -82,6 +99,8 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
           whatsAppChangePercent,
           telegramChangePercent,
         });
+      } catch (err) {
+        console.error("[DEBUG] useMessageAnalytics: Unexpected error:", err);
       }
     };
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle } from "lucide-react";
+import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle } from "lucide-react";
 
 import { useUserCount } from "@/hooks/use-user-count";
 import { useUsersByTimezone } from "@/hooks/use-users-by-timezone";
@@ -45,13 +45,11 @@ function PerformancePage() {
         <div className="mx-auto w-full max-w-7xl space-y-8 px-4">
           <CreatorHeader />
           <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-white">
-                Performance
-              </h1>
-              <p className="mt-1 text-white/60">
-                Track your app metrics and user analytics
+            <div className="space-y-1">
+              <p className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                Creator Dashboard
               </p>
+              <h1 className="text-3xl font-bold text-white">Performance</h1>
             </div>
             <Button
               variant="outline"
@@ -62,6 +60,7 @@ function PerformancePage() {
               Refresh
             </Button>
           </header>
+
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Total Users</h2>
@@ -152,8 +151,8 @@ function PerformancePage() {
             </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-3">
-            <Card className="border-white/10 bg-slate-900/50 lg:col-span-2">
+          <section className="space-y-4">
+            <Card className="border-white/10 bg-slate-900/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
                   <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
@@ -170,40 +169,73 @@ function PerformancePage() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-slate-900/50">
-              <CardHeader className="pb-4">
-                <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                  Top Regions
-                </CardDescription>
-                <CardTitle className="mt-1 text-xl text-white">
-                  Users by Timezone
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="max-h-[300px] overflow-y-auto">
-                <div className="space-y-2">
-                  {usersByTimezone.slice(0, 10).map((item) => (
-                    <div
-                      key={item.timezone}
-                      className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/5"
-                    >
-                      <span className="text-sm text-white/80">
-                        {item.timezone.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-sm font-medium text-emerald-400">
-                        {item.userCount.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                  {usersByTimezone.length === 0 && (
-                    <p className="text-sm text-white/50">No timezone data available</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-white/10 bg-slate-900/50">
+                <CardHeader className="pb-4">
+                  <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                    Top Regions
+                  </CardDescription>
+                  <CardTitle className="mt-1 text-xl text-white">
+                    Users by Timezone
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2">
+                    {usersByTimezone.slice(0, 10).map((item) => (
+                      <div
+                        key={item.timezone}
+                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/5"
+                      >
+                        <span className="text-sm text-white/80">
+                          {item.timezone.replace(/_/g, " ")}
+                        </span>
+                        <span className="text-sm font-medium text-emerald-400">
+                          {item.userCount.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                    {usersByTimezone.length === 0 && (
+                      <p className="text-sm text-white/50">No timezone data available</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/10 bg-slate-900/50">
+                <CardHeader className="pb-4">
+                  <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                    Top Active Regions
+                  </CardDescription>
+                  <CardTitle className="mt-1 text-xl text-white">
+                    Today's DAU by Timezone
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="max-h-[300px] overflow-y-auto">
+                  <div className="space-y-2">
+                    {dauByTimezone.slice(0, 10).map((item) => (
+                      <div
+                        key={item.timezone}
+                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/5"
+                      >
+                        <span className="text-sm text-white/80">
+                          {item.timezone.replace(/_/g, " ")}
+                        </span>
+                        <span className="text-sm font-medium text-blue-400">
+                          {item.activeUsers.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                    {dauByTimezone.length === 0 && (
+                      <p className="text-sm text-white/50">No DAU data available</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-3">
-            <Card className="border-white/10 bg-slate-900/50 lg:col-span-2">
+          <section className="space-y-4">
+            <Card className="border-white/10 bg-slate-900/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <div>
                   <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
@@ -217,37 +249,6 @@ function PerformancePage() {
               </CardHeader>
               <CardContent>
                 <DAUGeoMap data={dauByTimezone} />
-              </CardContent>
-            </Card>
-
-            <Card className="border-white/10 bg-slate-900/50">
-              <CardHeader className="pb-4">
-                <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-                  Top Active Regions
-                </CardDescription>
-                <CardTitle className="mt-1 text-xl text-white">
-                  Today's DAU by Timezone
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="max-h-[400px] overflow-y-auto">
-                <div className="space-y-2">
-                  {dauByTimezone.slice(0, 10).map((item) => (
-                    <div
-                      key={item.timezone}
-                      className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/5"
-                    >
-                      <span className="text-sm text-white/80">
-                        {item.timezone.replace(/_/g, " ")}
-                      </span>
-                      <span className="text-sm font-medium text-blue-400">
-                        {item.activeUsers.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                  {dauByTimezone.length === 0 && (
-                    <p className="text-sm text-white/50">No DAU data available</p>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </section>

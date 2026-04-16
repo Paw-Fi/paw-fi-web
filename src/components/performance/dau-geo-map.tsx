@@ -1,173 +1,161 @@
-import { useMemo } from "react";
-// @ts-expect-error - svg-dotted-map is CommonJS without proper types
-import { createMap } from "svg-dotted-map";
+import * as React from "react";
 
+import { DottedMap, Marker } from "@/components/ui/dotted-map";
 import { DAUByTimezone } from "@/hooks/use-dau-by-timezone";
 import {
   getCountryCodeFromTimezone,
-  getFlagUrl,
-  getTimezoneCoordinates,
+  getTimezoneLatLon,
 } from "@/lib/timezone-to-country";
 
 interface DAUGeoMapProps {
   data: DAUByTimezone[];
 }
 
-interface MapPoint {
-  x: number;
-  y: number;
-}
+type DAUMarker = Marker & {
+  overlay: {
+    timezone: string;
+    countryCode: string | null;
+    activeUsers: number;
+  };
+};
 
 export function DAUGeoMap({ data }: DAUGeoMapProps) {
-  // Generate the base map points
-  const mapPoints = useMemo(() => {
-    const map = createMap({
-      height: 60,
-      grid: "diagonal" as const,
-    });
-    return map.points as MapPoint[];
-  }, []);
+  const id = React.useId();
 
-  // Calculate marker data with coordinates
-  const markers = useMemo(() => {
+  // Build markers with lat/lng for DottedMap
+  const markers = React.useMemo(() => {
     return data
-      .map((item) => {
-        const coords = getTimezoneCoordinates(item.timezone);
+      .map((item): DAUMarker | null => {
+        const coords = getTimezoneLatLon(item.timezone);
         const countryCode = getCountryCodeFromTimezone(item.timezone);
-        const flagUrl = countryCode ? getFlagUrl(countryCode, 24) : null;
-
         if (!coords) return null;
 
+        // Calculate marker size based on active users (logarithmic scale)
+        const minSize = 1.5;
+        const maxSize = 4;
+        const logMin = Math.log(1);
+        const logMax = Math.log(Math.max(...data.map((d) => d.activeUsers), 10));
+        const logCount = Math.log(item.activeUsers);
+        const normalized = (logCount - logMin) / (logMax - logMin);
+        const size = minSize + normalized * (maxSize - minSize);
+
         return {
-          ...item,
-          x: coords.x,
-          y: coords.y,
-          flagUrl,
-          countryCode,
+          lat: coords.lat,
+          lng: coords.lon,
+          size,
+          pulse: item.activeUsers > 10,
+          overlay: {
+            timezone: item.timezone,
+            countryCode,
+            activeUsers: item.activeUsers,
+          },
         };
       })
-      .filter((m): m is NonNullable<typeof m> => m !== null && m.x !== null && m.y !== null)
-      .sort((a, b) => b.activeUsers - a.activeUsers);
+      .filter((m): m is DAUMarker => m !== null)
+      .sort((a, b) => b.overlay.activeUsers - a.overlay.activeUsers);
   }, [data]);
 
   // Calculate total DAU for coverage percentage
-  const totalDAU = useMemo(() => {
+  const totalDAU = React.useMemo(() => {
     return data.reduce((sum, item) => sum + item.activeUsers, 0);
   }, [data]);
 
-  const mappedDAU = useMemo(() => {
-    return markers.reduce((sum, m) => sum + m.activeUsers, 0);
+  const mappedDAU = React.useMemo(() => {
+    return markers.reduce((sum, m) => sum + m.overlay.activeUsers, 0);
   }, [markers]);
 
-  const coveragePercent = totalDAU > 0 ? Math.round((mappedDAU / totalDAU) * 100) : 0;
-
-  // Calculate marker size based on user count (logarithmic scale)
-  const getMarkerSize = (count: number) => {
-    const minSize = 20;
-    const maxSize = 50;
-    const logMin = Math.log(1);
-    const logMax = Math.log(Math.max(...data.map((d) => d.activeUsers), 10));
-    const logCount = Math.log(count);
-    const normalized = (logCount - logMin) / (logMax - logMin);
-    return minSize + normalized * (maxSize - minSize);
-  };
+  const coveragePercent =
+    totalDAU > 0 ? Math.round((mappedDAU / totalDAU) * 100) : 0;
 
   return (
     <div className="relative w-full">
       <div
-        className="relative w-full overflow-hidden rounded-lg"
+        className="relative w-full overflow-hidden rounded-lg border"
         style={{ aspectRatio: "2/1" }}
       >
-        {/* Render dots manually */}
-        <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-          {mapPoints.map((point, index) => (
-            <circle
-              key={index}
-              cx={point.x}
-              cy={point.y}
-              r={0.35}
-              fill="rgba(255, 255, 255, 0.15)"
-            />
-          ))}
-        </svg>
-      </div>
+        <div className="to-background absolute inset-0 bg-radial from-transparent to-200%" />
 
-      {/* Overlay markers */}
-      <div className="pointer-events-none absolute inset-0">
-        <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-          <defs>
-            {markers.map(
-              (marker, index) =>
-                marker.flagUrl && (
-                  <pattern
-                    key={`flag-${index}`}
-                    id={`flag-pattern-dau-${index}`}
-                    x="0"
-                    y="0"
-                    width="1"
-                    height="1"
-                    patternUnits="objectBoundingBox"
-                  >
-                    <image href={marker.flagUrl} width="1" height="1" preserveAspectRatio="xMidYMid slice" />
-                  </pattern>
-                )
-            )}
-          </defs>
+        <DottedMap<DAUMarker>
+          width={150}
+          height={75}
+          markers={markers}
+          dotColor="rgba(255, 255, 255, 0.15)"
+          markerColor="#3B82F6"
+          dotRadius={0.35}
+          stagger
+          pulse
+          renderMarkerOverlay={({ marker, x, y, r, index }) => {
+            const { countryCode, activeUsers } = marker.overlay;
+            const clipId = `${id}-flag-clip-${index}`.replace(/:/g, "-");
+            const imgR = r * 0.75;
 
-          {markers.map((marker, index) => {
-            const size = getMarkerSize(marker.activeUsers);
-            const pulseClass = marker.activeUsers > 10 ? "animate-pulse" : "";
+            const flagUrl = countryCode
+              ? `https://flagcdn.com/w80/${countryCode.toLowerCase()}.webp`
+              : null;
+
+            const fontSize = r * 0.9;
+            const pillH = r * 1.5;
+            const countStr = String(activeUsers);
+            const pillW = countStr.length * (fontSize * 0.62) + r * 1.4;
+            const pillX = x + r + r * 0.6;
+            const pillY = y - pillH / 2;
 
             return (
-              <g key={marker.timezone} className={pulseClass}>
-                {/* Flag circle */}
-                <circle
-                  cx={marker.x}
-                  cy={marker.y}
-                  r={size / 2 / 10}
-                  fill={`url(#flag-pattern-dau-${index})`}
-                  stroke="rgba(255,255,255,0.3)"
-                  strokeWidth="0.2"
-                />
+              <g style={{ pointerEvents: "none" }}>
+                {flagUrl && (
+                  <>
+                    <clipPath id={clipId}>
+                      <circle cx={x} cy={y} r={imgR} />
+                    </clipPath>
+                    <image
+                      href={flagUrl}
+                      x={x - imgR}
+                      y={y - imgR}
+                      width={imgR * 2}
+                      height={imgR * 2}
+                      preserveAspectRatio="xMidYMid slice"
+                      clipPath={`url(#${clipId})`}
+                    />
+                  </>
+                )}
 
-                {/* Count badge */}
-                <g transform={`translate(${marker.x + size / 20}, ${marker.y - size / 20})`}>
-                  <rect
-                    x="0"
-                    y="0"
-                    width={Math.max(12, String(marker.activeUsers).length * 3.5) / 10}
-                    height="4"
-                    rx="2"
-                    fill="rgba(15, 23, 42, 0.9)"
-                    stroke="rgba(59, 130, 246, 0.5)"
-                    strokeWidth="0.2"
-                  />
-                  <text
-                    x={Math.max(12, String(marker.activeUsers).length * 3.5) / 20}
-                    y="2.8"
-                    textAnchor="middle"
-                    fontSize="2.5"
-                    fill="#60A5FA"
-                    fontWeight="600"
-                  >
-                    {marker.activeUsers}
-                  </text>
-                </g>
+                <rect
+                  x={pillX}
+                  y={pillY}
+                  width={pillW}
+                  height={pillH}
+                  rx={pillH / 2}
+                  fill="rgba(15, 23, 42, 0.9)"
+                  stroke="rgba(59, 130, 246, 0.5)"
+                  strokeWidth={0.15}
+                />
+                <text
+                  x={pillX + r * 0.7}
+                  y={y + fontSize * 0.35}
+                  fontSize={fontSize}
+                  fill="#60A5FA"
+                  fontWeight="600"
+                >
+                  {activeUsers}
+                </text>
               </g>
             );
-          })}
-        </svg>
+          }}
+        />
       </div>
 
       {/* Legend */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-sm">
         <div className="text-white/60">
-          <span className="font-medium text-white">{markers.length}</span> timezones with active users
+          <span className="font-medium text-white">{markers.length}</span>{" "}
+          timezones with active users
         </div>
         <div className="text-white/60">
-          Coverage: <span className="font-medium text-blue-400">{coveragePercent}%</span>
+          Coverage:{" "}
+          <span className="font-medium text-blue-400">{coveragePercent}%</span>
           <span className="ml-2 text-white/40">
-            ({mappedDAU.toLocaleString()} / {totalDAU.toLocaleString()} DAU mapped)
+            ({mappedDAU.toLocaleString()} / {totalDAU.toLocaleString()} DAU
+            mapped)
           </span>
         </div>
       </div>
