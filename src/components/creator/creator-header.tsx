@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { BarChart3, Ticket } from "lucide-react";
+import { BarChart3, Ticket,Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function CreatorHeader() {
@@ -10,13 +10,16 @@ export function CreatorHeader() {
       href: "/creator/analytics" as const,
       label: "Analytics",
       icon: <BarChart3 className="h-4 w-4" />,
-      active: location.pathname === "/creator/analytics",
     },
     {
       href: "/creator/tickets" as const,
       label: "Tickets",
       icon: <Ticket className="h-4 w-4" />,
-      active: location.pathname === "/creator/tickets",
+    },
+    {
+      href: "/creator/performance" as const,
+      label: "Performance",
+      icon: <Activity className="h-4 w-4" />,
     },
   ];
 
@@ -33,7 +36,7 @@ export function CreatorHeader() {
                 to={link.href}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors",
-                  link.active
+                  location.pathname ===link.href
                     ? "bg-white/10 text-white"
                     : "text-white/60 hover:bg-white/5 hover:text-white"
                 )}
