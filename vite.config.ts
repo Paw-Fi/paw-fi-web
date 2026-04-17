@@ -72,6 +72,10 @@ export default defineConfig(({ command, isSsrBuild }) => {
                   return "vendor-animation";
                 }
 
+                if (id.includes("svg-dotted-map")) {
+                  return "vendor-map";
+                }
+
                 if (id.includes("/@radix-ui/")) {
                   return "vendor-ui";
                 }
@@ -103,6 +107,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
         "chart.js",
         "recharts",
         "react-chartjs-2",
+        "svg-dotted-map",
       ],
     },
     plugins: [
@@ -165,6 +170,7 @@ export default defineConfig(({ command, isSsrBuild }) => {
               /^@react-three\/fiber$/,
               /^lottie-react$/,
               /^lottie-web$/,
+              /^svg-dotted-map$/,
             ],
           },
         },

@@ -61,7 +61,7 @@ interface RequestBody {
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
-  source?: string; // Optional income source (employer, refund origin, etc.)
+  merchant?: string; // Optional merchant/payee (used for both expense and income)
   ownerType?: "me" | "partner" | "household"; // Owner attribution (default: 'me')
   privacyScope?: "private" | "balances_only" | "full"; // Visibility scope (default: 'full')
   householdId?: string; // If provided, share with this household
@@ -133,8 +133,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule = body.recurrence_rule ??
-      (body as any).recurrenceRule;
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -144,8 +144,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -240,6 +240,20 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Date is required", 400);
     }
 
+    if (body.merchant !== undefined && body.merchant !== null) {
+      if (typeof body.merchant !== "string") {
+        return errorResponse("merchant must be a string", 400);
+      }
+      if (body.merchant.trim().length > 255) {
+        return errorResponse("merchant must be less than 256 characters", 400);
+      }
+    }
+
+    const normalizedMerchant =
+      typeof body.merchant === "string" && body.merchant.trim().length > 0
+        ? body.merchant.trim()
+        : null;
+
     const normalizedDate = normalizeCalendarDateString(body.date);
     if (!normalizedDate) {
       return errorResponse("date must be a valid calendar date", 400);
@@ -257,9 +271,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -416,8 +431,8 @@ Deno.serve(async (req: Request) => {
       category: effectiveCategory,
       date: body.date,
       raw_text: body.description || "",
+      merchant: normalizedMerchant,
       currency: currency,
-      source: body.source || null,
       owner_type: ownerType,
       privacy_scope: privacyScope,
       created_at: body.clientCreatedAt || new Date().toISOString(),
@@ -506,7 +521,7 @@ Deno.serve(async (req: Request) => {
         userId,
         transactionType: "income",
         categoryName: income.category ?? body.category,
-        sourceText: body.source || null,
+        sourceText: normalizedMerchant,
         descriptionText: body.description || income.raw_text || null,
       });
     } catch (e) {
@@ -548,7 +563,7 @@ Deno.serve(async (req: Request) => {
             amount_cents: amountCents,
             currency: currency,
             category: income.category ?? effectiveCategory,
-            source: body.source || "",
+            source: normalizedMerchant || "",
             note: body.description || "",
             privacy_scope: privacyScope,
             owner_type: ownerType,

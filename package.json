@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "start": "node scripts/start-server.js",
     "build:sitemap": "node scripts/update-sitemap.js",
     "typecheck": "tsc --noEmit",
@@ -107,6 +107,7 @@
     "sass": "^1.93.2",
     "sharp": "^0.34.5",
     "stripe": "^20.0.0",
+    "svg-dotted-map": "^2.1.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.12",
     "three": "^0.180.0",

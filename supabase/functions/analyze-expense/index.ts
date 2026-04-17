@@ -113,8 +113,8 @@ function mapProgressEvent(
 
 function shouldCollapseReceipt(body: AnalyzeRequestBody): boolean {
   const hasImage = Boolean(body.image);
-  const hasAttachments = Array.isArray(body.attachments) &&
-    body.attachments.length > 0;
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
   return hasImage && !hasAttachments;
 }
 
@@ -122,10 +122,11 @@ function formatBreakdownAmount(item: any): string {
   const amount = Number(item?.amount);
   if (!Number.isFinite(amount)) return "";
   const formatted = amount.toFixed(2);
-  const symbol = typeof item?.currencySymbol === "string" &&
-      item.currencySymbol.trim().length > 0
-    ? item.currencySymbol.trim()
-    : "";
+  const symbol =
+    typeof item?.currencySymbol === "string" &&
+    item.currencySymbol.trim().length > 0
+      ? item.currencySymbol.trim()
+      : "";
   const currency =
     typeof item?.currency === "string" && item.currency.trim().length > 0
       ? item.currency.trim()
@@ -138,9 +139,8 @@ function formatBreakdownAmount(item: any): string {
 function buildReceiptBreakdown(items: any[]): string[] {
   return items
     .map((item) => {
-      const desc = typeof item?.description === "string"
-        ? item.description.trim()
-        : "";
+      const desc =
+        typeof item?.description === "string" ? item.description.trim() : "";
       const amountText = formatBreakdownAmount(item);
       if (!amountText && !desc) return "";
       if (!amountText) return desc;
@@ -153,7 +153,7 @@ function buildReceiptBreakdown(items: any[]): string[] {
 function pickReceiptDescription(items: any[]): string {
   const candidates = items
     .map((item) =>
-      typeof item?.description === "string" ? item.description.trim() : ""
+      typeof item?.description === "string" ? item.description.trim() : "",
     )
     .filter((value) => value.length > 0);
   if (candidates.length === 0) return "Receipt";
@@ -234,9 +234,10 @@ function collapseReceiptItems(
   // into a single expense instead of returning one item per transaction row.
   if (!hasExplicitReceiptSignals(items)) return items;
 
-  const filteredItems = items.length > 1
-    ? items.filter((item) => !isTotalLike(item?.description))
-    : items;
+  const filteredItems =
+    items.length > 1
+      ? items.filter((item) => !isTotalLike(item?.description))
+      : items;
   const workingItems = filteredItems.length > 0 ? filteredItems : items;
 
   const totalAmount = workingItems.reduce((sum, item) => {
@@ -248,9 +249,13 @@ function collapseReceiptItems(
 
   const primary = workingItems[0] ?? {};
   const breakdown = buildReceiptBreakdown(workingItems);
-  const category = resolveReceiptCategory(workingItems) || primary.category ||
-    "other";
+  const category =
+    resolveReceiptCategory(workingItems) || primary.category || "other";
   const description = pickReceiptDescription(workingItems);
+  const merchant =
+    typeof primary?.merchant === "string" && primary.merchant.trim().length > 0
+      ? primary.merchant.trim()
+      : undefined;
   const type = workingItems.some((item) => item?.type === "expense")
     ? "expense"
     : "income";
@@ -267,6 +272,7 @@ function collapseReceiptItems(
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
       description,
+      ...(merchant ? { merchant } : {}),
       breakdown,
       ...(splitSource?.payerUserId
         ? { payerUserId: splitSource.payerUserId }
@@ -329,9 +335,9 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${
-      getElapsedMs(startedAt)
-    }`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
+      startedAt,
+    )}`,
   );
 }
 
@@ -339,8 +345,8 @@ function isQuickTextRequest(body: AnalyzeRequestBody): boolean {
   const hasText = typeof body.text === "string" && body.text.trim().length > 0;
   const hasImage = Boolean(body.image);
   const hasAudio = Boolean(body.audio);
-  const hasAttachments = Array.isArray(body.attachments) &&
-    body.attachments.length > 0;
+  const hasAttachments =
+    Array.isArray(body.attachments) && body.attachments.length > 0;
   if (!hasText || hasImage || hasAudio || hasAttachments) return false;
 
   const text = body.text!.trim();
@@ -531,18 +537,23 @@ function applyCategoryPersonalization(params: {
   debugPrefLog(
     "applyCategoryPersonalization:match_evaluation",
     baseItems.slice(0, 10).map((item, idx) => {
-      const keySource = descriptionForPreference(item?.description) ??
+      const keySource =
+        descriptionForPreference(item?.description) ??
         (typeof item?.description === "string" ? item.description : null);
-      const matchKey = keySource
-        ?.toLowerCase()
-        .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-        .replace(/\s+/g, " ")
-        .trim() || null;
-      const expected = item?.type === "income"
-        ? matchKey ? incomePrefMap.get(matchKey) : undefined
-        : matchKey
-        ? expensePrefMap.get(matchKey)
-        : undefined;
+      const matchKey =
+        keySource
+          ?.toLowerCase()
+          .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+          .replace(/\s+/g, " ")
+          .trim() || null;
+      const expected =
+        item?.type === "income"
+          ? matchKey
+            ? incomePrefMap.get(matchKey)
+            : undefined
+          : matchKey
+            ? expensePrefMap.get(matchKey)
+            : undefined;
       return {
         idx,
         type: item?.type,
@@ -557,9 +568,8 @@ function applyCategoryPersonalization(params: {
 
   const resolved = preferredItems.map((it, idx) => {
     const base = baseItems[idx];
-    const preferredCategory = typeof it.category === "string"
-      ? it.category.trim()
-      : "";
+    const preferredCategory =
+      typeof it.category === "string" ? it.category.trim() : "";
     if (!preferredCategory || preferredCategory === base.category) {
       return base;
     }
@@ -649,10 +659,10 @@ function createSSEStream(
             stream: true,
             hasImage: !!body.image,
             hasAudio: !!body.audio,
-            hasAttachments: Array.isArray(body.attachments) &&
-              body.attachments.length > 0,
-            hasText: typeof body.text === "string" &&
-              body.text.trim().length > 0,
+            hasAttachments:
+              Array.isArray(body.attachments) && body.attachments.length > 0,
+            hasText:
+              typeof body.text === "string" && body.text.trim().length > 0,
           },
         });
         const message = error instanceof Error ? error.message : String(error);
@@ -719,8 +729,8 @@ Deno.serve(async (req: Request) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: userErr } = await supabaseAuthed.auth
-      .getUser();
+    const { data: userData, error: userErr } =
+      await supabaseAuthed.auth.getUser();
     logStage("auth_get_user", requestStartedAt);
     const callerId = userData?.user?.id;
     if (userErr || !callerId) {
@@ -776,15 +786,15 @@ Deno.serve(async (req: Request) => {
         const canAdminRead = !!SUPABASE_SERVICE_ROLE_KEY;
         const reader = canAdminRead
           ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!, {
-            auth: {
-              autoRefreshToken: false,
-              persistSession: false,
-              detectSessionInUrl: false,
-            },
-            global: {
-              headers: { "X-Client-Info": "moneko-analyze-expense" },
-            },
-          })
+              auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+                detectSessionInUrl: false,
+              },
+              global: {
+                headers: { "X-Client-Info": "moneko-analyze-expense" },
+              },
+            })
           : supabaseAuthed;
 
         const { data: members, error: membersError } = await reader
@@ -820,15 +830,15 @@ Deno.serve(async (req: Request) => {
     let result: any;
     const quickPreferencesPromise = isQuickTextMode
       ? getCategoryPreferencesCached({
-        supabase: supabaseAuthed,
-        userId: callerId,
-      }).catch((error) => {
-        console.warn(
-          "[analyze-expense] Background preference fetch failed, skipping personalization",
-          error,
-        );
-        return [] as UserCategoryPreferenceRow[];
-      })
+          supabase: supabaseAuthed,
+          userId: callerId,
+        }).catch((error) => {
+          console.warn(
+            "[analyze-expense] Background preference fetch failed, skipping personalization",
+            error,
+          );
+          return [] as UserCategoryPreferenceRow[];
+        })
       : null;
     try {
       result = await awaitWithHardTimeout(
@@ -880,8 +890,8 @@ Deno.serve(async (req: Request) => {
           stream: false,
           hasImage: !!body.image,
           hasAudio: !!body.audio,
-          hasAttachments: Array.isArray(body.attachments) &&
-            body.attachments.length > 0,
+          hasAttachments:
+            Array.isArray(body.attachments) && body.attachments.length > 0,
           hasText: typeof body.text === "string" && body.text.trim().length > 0,
         },
       });

@@ -6,6 +6,8 @@
  * actionable messages instead of generic failures.
  */
 
+import { normalizeCurrencyCode } from "../currency-normalize.ts";
+
 // ---------------------------------------------------------------------------
 // Error codes
 // ---------------------------------------------------------------------------
@@ -100,6 +102,8 @@ export interface ParsedTransaction {
   date: string;
   /** Human-readable description / merchant / memo */
   description: string;
+  /** Optional merchant/store/payee */
+  merchant?: string;
   /** Category (may be raw from file, will be normalized downstream) */
   category?: string;
   /** Original row index in the source file (for error reporting) */
@@ -288,7 +292,7 @@ export function parseDateFromText(
   }
 
   const numericMatch = line.match(
-    /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/,
+    /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/,
   );
   if (numericMatch) {
     const first = Number(numericMatch[1]);
@@ -313,7 +317,8 @@ export function parseDateFromText(
  * Returns the absolute value or null if unparseable.
  */
 export function normalizeAmountString(value: string): number | null {
-  const cleaned = value.replace(/[^0-9,.\-]/g, "");
+  const normalizedDashes = value.replace(/[−–—]/g, "-");
+  const cleaned = normalizedDashes.replace(/[^0-9,.\-]/g, "");
   if (!cleaned || cleaned === "-" || cleaned === ".") return null;
   const lastComma = cleaned.lastIndexOf(",");
   const lastDot = cleaned.lastIndexOf(".");
@@ -361,13 +366,18 @@ export function detectCurrencyFromText(
   line: string,
   callerCurrency: string,
 ): string {
+  if (/₽|(?:\bRUR\b)|(?:\bRUB\b)|(?:\bРУБ\b)|(?:руб\.?)/iu.test(line)) {
+    return "RUB";
+  }
   if (/€/.test(line)) return "EUR";
   if (/£/.test(line)) return "GBP";
   if (/\$/.test(line)) return "USD";
   if (/¥/.test(line)) return "JPY";
   if (/₹/.test(line)) return "INR";
   const isoMatch = line.match(/\b([A-Z]{3})\b/);
-  if (isoMatch) return isoMatch[1];
+  if (isoMatch) {
+    return normalizeCurrencyCode(isoMatch[1]) || isoMatch[1];
+  }
   return callerCurrency;
 }
 
@@ -377,14 +387,14 @@ export function detectCurrencyFromText(
 export function inferTypeFromText(line: string): "expense" | "income" {
   const normalized = line.toLowerCase();
   if (
-    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from)/.test(
+    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from|поступлен|зачислен|возврат|перевод от)/.test(
       normalized,
     )
   ) {
     return "income";
   }
   if (
-    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to)/.test(
+    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to|расход|списан|оплат|покупк|снятие|комисси|перевод на)/.test(
       normalized,
     )
   ) {
@@ -399,7 +409,7 @@ export function inferTypeFromText(line: string): "expense" | "income" {
 export function stripAmountsAndDates(text: string): string {
   let cleaned = text
     .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
-    .replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, " ")
+    .replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/g, " ")
     .replace(
       /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{2,4})?\b/gi,
       " ",

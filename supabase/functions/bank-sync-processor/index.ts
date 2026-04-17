@@ -11,7 +11,11 @@ import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const INTERNAL_FUNCTION_KEY = resolveInternalFunctionKey();
+const INTERNAL_FUNCTION_KEY = Deno.env.get(
+  "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+);
+const AUTO_BANK_SYNC_ENABLED =
+  Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() === "true";
 
 // Fixed batch size to prevent DoS attacks
 const BATCH_SIZE = 10;
@@ -87,6 +91,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (!AUTO_BANK_SYNC_ENABLED) {
+      console.log(
+        "[bank-sync-processor] Auto bank sync disabled; skipping job processing",
+      );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          processed: 0,
+          message: "Auto bank sync is disabled",
+        }),
+        {
+          status: 200,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,

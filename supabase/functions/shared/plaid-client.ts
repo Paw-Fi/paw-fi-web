@@ -310,6 +310,7 @@ export interface ExpenseUpsertInput {
   type: "expense" | "income";
   category: string | null;
   raw_text: string | null;
+  merchant: string | null;
   source: string | null;
   raw_provider_payload: unknown;
   is_recurring: boolean;
@@ -357,7 +358,8 @@ export function mapPlaidTransactionToExpense(
   const personalPrimary = txn.personal_finance_category?.primary || "";
   const isIncome = amount < 0 || personalPrimary.toUpperCase() === "INCOME";
   const transactionType = isIncome ? "income" : "expense";
-  const description = txn.merchant_name || txn.name;
+  const merchantLabel = txn.merchant_name || txn.payment_meta?.payee || null;
+  const description = txn.name || txn.merchant_name || null;
   const { isRecurring, recurrenceRule } = detectRecurring(txn);
 
   return {
@@ -372,7 +374,8 @@ export function mapPlaidTransactionToExpense(
     type: transactionType,
     category: normalizedCategory,
     raw_text: description,
-    source: txn.merchant_name || txn.payment_meta?.payee || null,
+    merchant: merchantLabel || txn.name || null,
+    source: merchantLabel || txn.name || null,
     raw_provider_payload: txn,
     is_recurring: isRecurring,
     recurrence_rule: recurrenceRule,

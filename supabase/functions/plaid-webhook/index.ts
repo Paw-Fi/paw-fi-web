@@ -2,12 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
-import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
-import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
-import {
-  generateWebhookEventId,
-  verifyPlaidWebhook,
-} from "../shared/webhook-verification.ts";
+import { verifyPlaidWebhook } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -26,10 +21,6 @@ if (SKIP_WEBHOOK_VERIFICATION) {
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for plaid-webhook");
 }
-
-// Plaid's /transactions/sync integration should be triggered by SYNC_UPDATES_AVAILABLE.
-// INITIAL_UPDATE/HISTORICAL_UPDATE/DEFAULT_UPDATE are legacy compatibility webhooks.
-const SYNC_EVENT_CODES = new Set(["SYNC_UPDATES_AVAILABLE"]);
 
 // Event codes that indicate the user needs to re-authenticate
 const REAUTH_EVENT_CODES = new Set([
@@ -211,66 +202,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Handle TRANSACTIONS webhook type - create sync job
-    if (
-      connection?.id &&
-      payload.webhook_type === "TRANSACTIONS" &&
-      payload.webhook_code &&
-      SYNC_EVENT_CODES.has(payload.webhook_code)
-    ) {
-      // Generate idempotency key for webhook (async - uses content hash)
-      const webhookEventId = await generateWebhookEventId(
-        "plaid",
-        payload as Record<string, unknown>,
-      );
-
-      // Check idempotency using database function
-      const { data: isDuplicate } = await supabase.rpc(
-        "check_webhook_idempotency",
-        {
-          p_webhook_event_id: webhookEventId,
-        },
-      );
-
-      if (isDuplicate) {
-        console.log(
-          `[plaid-webhook] Duplicate webhook detected, skipping: ${webhookEventId}`,
-        );
-        return new Response(
-          JSON.stringify({ received: true, duplicate: true }),
-          {
-            status: 200,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      const enqueueResult = await enqueuePlaidSyncJob({
-        supabase,
-        connectionId: connection.id,
-        triggerSource: "webhook",
-        payload: payload as unknown as Record<string, unknown>,
-        webhookEventId,
+    // Auto sync is intentionally disabled; keep recording webhooks for audit.
+    if (payload.webhook_type === "TRANSACTIONS") {
+      console.log("[plaid-webhook] Auto sync disabled; webhook recorded", {
+        connectionId: connection?.id || null,
+        webhookCode: payload.webhook_code || null,
+        itemId: payload.item_id || null,
       });
-
-      console.log(
-        `[plaid-webhook] Sync job result for connection ${connection.id}`,
-        enqueueResult,
-      );
-
-      if (!enqueueResult.enqueued && enqueueResult.duplicate) {
-        return new Response(
-          JSON.stringify({
-            received: true,
-            duplicate: true,
-            needsResyncQueued: enqueueResult.needsResyncQueued,
-          }),
-          {
-            status: 200,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
-      }
     }
 
     return new Response(JSON.stringify({ received: true }), {
