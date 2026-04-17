@@ -61,6 +61,7 @@ interface RequestBody {
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
+  merchant?: string; // Optional merchant/payee
   source?: string; // Optional income source (employer, refund origin, etc.)
   ownerType?: "me" | "partner" | "household"; // Owner attribution (default: 'me')
   privacyScope?: "private" | "balances_only" | "full"; // Visibility scope (default: 'full')
@@ -133,8 +134,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule = body.recurrence_rule ??
-      (body as any).recurrenceRule;
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -144,8 +145,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -240,6 +241,20 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Date is required", 400);
     }
 
+    if (body.merchant !== undefined && body.merchant !== null) {
+      if (typeof body.merchant !== "string") {
+        return errorResponse("merchant must be a string", 400);
+      }
+      if (body.merchant.trim().length > 255) {
+        return errorResponse("merchant must be less than 256 characters", 400);
+      }
+    }
+
+    const normalizedMerchant =
+      typeof body.merchant === "string" && body.merchant.trim().length > 0
+        ? body.merchant.trim()
+        : null;
+
     const normalizedDate = normalizeCalendarDateString(body.date);
     if (!normalizedDate) {
       return errorResponse("date must be a valid calendar date", 400);
@@ -257,9 +272,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -416,6 +432,7 @@ Deno.serve(async (req: Request) => {
       category: effectiveCategory,
       date: body.date,
       raw_text: body.description || "",
+      merchant: normalizedMerchant,
       currency: currency,
       source: body.source || null,
       owner_type: ownerType,

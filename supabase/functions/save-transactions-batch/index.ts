@@ -128,6 +128,7 @@ interface TransactionItem {
   date: string;
   clientCreatedAt?: string;
   description?: string;
+  merchant?: string;
   breakdown?: string[];
   receiptImageUrl?: string;
   customSplits?: CustomSplits;
@@ -691,6 +692,20 @@ async function saveTransactionsBatchInternal(
       continue;
     }
 
+    if (tx.merchant !== undefined && tx.merchant !== null) {
+      if (typeof tx.merchant !== "string") {
+        validationErrors.push({ index: i, error: "merchant must be a string" });
+        continue;
+      }
+      if (tx.merchant.trim().length > 255) {
+        validationErrors.push({
+          index: i,
+          error: "merchant must be less than 256 characters",
+        });
+        continue;
+      }
+    }
+
     if (!tx.date) {
       validationErrors.push({ index: i, error: "Missing date" });
       continue;
@@ -810,6 +825,10 @@ async function saveTransactionsBatchInternal(
       category: effectiveCategory,
       date: tx.date,
       raw_text: tx.description || "",
+      merchant:
+        typeof tx.merchant === "string" && tx.merchant.trim().length > 0
+          ? tx.merchant.trim()
+          : null,
       currency: currency,
       breakdown: tx.breakdown ?? null,
       receipt_image_url: tx.receiptImageUrl || null,
