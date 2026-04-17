@@ -102,6 +102,8 @@ export interface ParsedTransaction {
   date: string;
   /** Human-readable description / merchant / memo */
   description: string;
+  /** Optional merchant/store/payee */
+  merchant?: string;
   /** Category (may be raw from file, will be normalized downstream) */
   category?: string;
   /** Original row index in the source file (for error reporting) */
@@ -248,8 +250,8 @@ export function parseDateFromText(
     "i",
   );
 
-  const yearFromCaller = Number(callerDate.slice(0, 4)) ||
-    new Date().getFullYear();
+  const yearFromCaller =
+    Number(callerDate.slice(0, 4)) || new Date().getFullYear();
 
   const monthFirstMatch = line.match(monthFirstRegex);
   if (monthFirstMatch) {
@@ -385,18 +387,16 @@ export function detectCurrencyFromText(
 export function inferTypeFromText(line: string): "expense" | "income" {
   const normalized = line.toLowerCase();
   if (
-    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from|поступлен|зачислен|возврат|перевод от)/
-      .test(
-        normalized,
-      )
+    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from|поступлен|зачислен|возврат|перевод от)/.test(
+      normalized,
+    )
   ) {
     return "income";
   }
   if (
-    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to|расход|списан|оплат|покупк|снятие|комисси|перевод на)/
-      .test(
-        normalized,
-      )
+    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to|расход|списан|оплат|покупк|снятие|комисси|перевод на)/.test(
+      normalized,
+    )
   ) {
     return "expense";
   }
@@ -432,10 +432,9 @@ export function stripAmountsAndDates(text: string): string {
  * that should be excluded from transaction items.
  */
 export function isTotalLike(description: string): boolean {
-  return /\b(total|subtotal|balance|opening|closing|brought forward|carried forward)\b/i
-    .test(
-      description,
-    );
+  return /\b(total|subtotal|balance|opening|closing|brought forward|carried forward)\b/i.test(
+    description,
+  );
 }
 
 /**

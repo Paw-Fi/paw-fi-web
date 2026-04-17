@@ -146,6 +146,7 @@ interface RequestBody {
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
+  merchant?: string; // Optional merchant/payee
   breakdown?: string[]; // Optional receipt line items
   receiptImageUrl?: string; // Optional receipt image URL
   householdId?: string; // If provided, share with this household
@@ -218,6 +219,20 @@ Deno.serve(async (req: Request) => {
     if (!body.date) {
       return errorResponse("Date is required", 400);
     }
+
+    if (body.merchant !== undefined && body.merchant !== null) {
+      if (typeof body.merchant !== "string") {
+        return errorResponse("merchant must be a string", 400);
+      }
+      if (body.merchant.trim().length > 255) {
+        return errorResponse("merchant must be less than 256 characters", 400);
+      }
+    }
+
+    const normalizedMerchant =
+      typeof body.merchant === "string" && body.merchant.trim().length > 0
+        ? body.merchant.trim()
+        : null;
 
     const normalizedDate = normalizeCalendarDateString(body.date);
     if (!normalizedDate) {
@@ -542,6 +557,7 @@ Deno.serve(async (req: Request) => {
         category: effectiveCategory,
         date: body.date,
         raw_text: body.description || "",
+        merchant: normalizedMerchant,
         currency: currency,
         breakdown: body.breakdown ?? null,
         receipt_image_url: body.receiptImageUrl || null,
