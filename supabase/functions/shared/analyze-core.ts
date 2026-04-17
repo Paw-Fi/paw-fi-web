@@ -53,6 +53,7 @@ console.warn = (...args: any[]) => {
 import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 import { validateCurrency } from "./currency-validator.ts";
+import { normalizeCurrencyCode } from "./currency-normalize.ts";
 import {
   coerceCategoryToAllowed,
   getExpenseCategories,
@@ -441,7 +442,7 @@ function parseDateFromText(line: string, callerDate: string): string | null {
   }
 
   const numericMatch = line.match(
-    /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/,
+    /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/,
   );
   if (numericMatch) {
     const first = Number(numericMatch[1]);
@@ -527,7 +528,8 @@ export function normalizeTransactionDateAndDescription(
 }
 
 function normalizeAmountString(value: string): number | null {
-  const cleaned = value.replace(/[^0-9,.-]/g, "");
+  const normalizedDashes = value.replace(/[−–—]/g, "-");
+  const cleaned = normalizedDashes.replace(/[^0-9,.-]/g, "");
   if (!cleaned || cleaned === "-" || cleaned === ".") return null;
   const lastComma = cleaned.lastIndexOf(",");
   const lastDot = cleaned.lastIndexOf(".");
@@ -560,20 +562,23 @@ function extractAmountTokens(line: string): { raw: string; value: number }[] {
 }
 
 function detectCurrencyFromText(line: string, callerCurrency: string): string {
+  if (/₽|(?:\bRUR\b)|(?:\bRUB\b)|(?:\bРУБ\b)|(?:руб\.?)/iu.test(line)) {
+    return "RUB";
+  }
   if (/€/.test(line)) return "EUR";
   if (/£/.test(line)) return "GBP";
   if (/\$/.test(line)) return "USD";
   if (/¥/.test(line)) return "JPY";
   if (/₹/.test(line)) return "INR";
   const isoMatch = line.match(/\b([A-Z]{3})\b/);
-  if (isoMatch) return isoMatch[1];
+  if (isoMatch) return normalizeCurrencyCode(isoMatch[1]) || isoMatch[1];
   return callerCurrency;
 }
 
 function inferTypeFromText(line: string): "expense" | "income" {
   const normalized = line.toLowerCase();
   if (
-    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from)/
+    /(money in|credit|credited|deposit|salary|refund|top\s*up|received|transfer from|поступлен|зачислен|возврат|перевод от)/
       .test(
         normalized,
       )
@@ -581,9 +586,10 @@ function inferTypeFromText(line: string): "expense" | "income" {
     return "income";
   }
   if (
-    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to)/.test(
-      normalized,
-    )
+    /(money out|debit|purchase|paid|payment|withdrawal|card|transfer to|расход|списан|оплат|покупк|снятие|комисси|перевод на)/
+      .test(
+        normalized,
+      )
   ) {
     return "expense";
   }
@@ -593,7 +599,7 @@ function inferTypeFromText(line: string): "expense" | "income" {
 function stripAmountsAndDates(text: string): string {
   let cleaned = text
     .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
-    .replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, " ")
+    .replace(/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/g, " ")
     .replace(
       /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{2,4})?\b/gi,
       " ",
@@ -614,7 +620,7 @@ function stripAmountsAndDates(text: string): string {
 function splitLineByDateSegments(line: string, callerDate: string): string[] {
   const segments: string[] = [];
   const dateRegex =
-    /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b[^\n]{0,20}\d{1,2}(?:,\s*\d{2,4})?|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b/g;
+    /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b[^\n]{0,20}\d{1,2}(?:,\s*\d{2,4})?|\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b/g;
 
   let match: RegExpExecArray | null;
   const indices: number[] = [];
@@ -993,7 +999,7 @@ function extractStatementItemsFromLines(
 
   if (candidates.length === 0) {
     const dateRegex = new RegExp(
-      "\\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[^\n]{0,12}\\d{1,2}(?:,\\s*\\d{2,4})?|\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b",
+      "\\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t|tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[^\n]{0,12}\\d{1,2}(?:,\\s*\\d{2,4})?|\\b\\d{1,2}[\\/.-]\\d{1,2}[\\/.-]\\d{2,4}\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b",
       "g",
     );
     const sourceText = rawTextForDebug ?? lines.join("\n");
@@ -1036,7 +1042,7 @@ function extractStatementItemsFromLines(
   return deduplicateAndCleanItems(items);
 }
 
-function extractDeterministicItemsFromTableRows(
+export function extractDeterministicItemsFromTableRows(
   rows: string[],
   callerDate: string,
   callerCurrency: string,
@@ -5385,7 +5391,7 @@ function parseSignedAmountFromCell(
 
   const text = extractCellText(value);
   if (!text) return null;
-  const hasNegative = /^\s*-/.test(text) || /\(.*\)/.test(text);
+  const hasNegative = /^\s*[\-−–—]/.test(text) || /\(.*\)/.test(text);
   const normalized = normalizeAmountString(text);
   if (normalized === null) return null;
   return { amount: normalized, isNegative: hasNegative };
@@ -5395,22 +5401,34 @@ function parseSignedAmountFromCell(
 function detectHeaderMap(row: string[]) {
   const header = row.map((cell: string) => cell.toLowerCase());
   const hasDate = header.some((cell) =>
-    /date|posted|transaction date/.test(cell)
+    /date|posted|transaction date|value date|booking date|дата|дата проводки|дата операции|дата транзакции|дата платежа/
+      .test(cell)
   );
-  const hasAmount = header.some((cell) => /amount|amt|value/.test(cell));
+  const hasAmount = header.some((cell) =>
+    /amount|amt|value|sum|total|debit|credit|money out|money in|сумма|расход|поступлен|зачислен|дебет|кредит/
+      .test(cell)
+  );
   if (!hasDate || !hasAmount) return null;
 
   const indexOf = (regex: RegExp) =>
     header.findIndex((cell) => regex.test(cell));
   return {
-    date: indexOf(/date|posted|transaction date/),
-    description: indexOf(
-      /description|details|merchant|memo|narration|reference/,
+    date: indexOf(
+      /date|posted|transaction date|value date|booking date|дата|дата проводки|дата операции|дата транзакции|дата платежа/,
     ),
-    amount: indexOf(/amount|amt|value/),
-    moneyOut: indexOf(/debit|money out|withdrawal|paid/),
-    moneyIn: indexOf(/credit|money in|deposit|received/),
-    currency: indexOf(/currency|ccy/),
+    description: indexOf(
+      /description|details|merchant|memo|narration|reference|narrative|payee|particulars|remark|описание|назначение|детали|комментарий|контрагент|получатель|плательщик/,
+    ),
+    amount: indexOf(
+      /^(amount|amt|value|sum|total|net|сумма|сумма операции|сумма в валюте счета|сумма в валюте операции)$/i,
+    ),
+    moneyOut: indexOf(
+      /debit|money out|withdrawal|paid|paid out|outflow|dr|debit amount|расход|расходы|списание|дебет/,
+    ),
+    moneyIn: indexOf(
+      /credit|money in|deposit|received|inflow|cr|credit amount|приход|поступление|поступления|зачисление|кредит/,
+    ),
+    currency: indexOf(/currency|ccy|cur|валюта|валюта счета|валюта операции/),
   };
 }
 

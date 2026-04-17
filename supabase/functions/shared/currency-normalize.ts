@@ -9,64 +9,65 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
 
   const upper = raw.toUpperCase();
 
-  // Already a plausible 3-letter code
-  if (/^[A-Z]{3}$/.test(upper)) {
-    return upper;
-  }
-
   // Symbol/alias map (common OCR results and regional notations)
   const map: Record<string, string> = {
     // Dollar variants
-    '$': 'USD',
-    'US$': 'USD',
-    'U$': 'USD',
+    "$": "USD",
+    "US$": "USD",
+    "U$": "USD",
 
     // Rand (South Africa)
-    'R': 'ZAR',
-    'RJ': 'ZAR', // observed misread
+    "R": "ZAR",
+    "RJ": "ZAR", // observed misread
 
     // Ringgit (Malaysia)
-    'RM': 'MYR',
+    "RM": "MYR",
 
     // Riyal (Saudi Arabia)
-    'ر.س': 'SAR',
+    "ر.س": "SAR",
 
     // Dirham (UAE)
-    'د.إ': 'AED',
+    "د.إ": "AED",
 
     // Pound, Euro, Yen signs
-    '£': 'GBP',
-    '€': 'EUR',
-    '₪': 'ILS',
+    "£": "GBP",
+    "€": "EUR",
+    "₽": "RUB",
+    "₪": "ILS",
     // Ambiguous: '¥' = JPY or CNY → treat as null, caller should fallback to preferred
-    '¥': '',
+    "¥": "",
+
+    // Ruble aliases
+    "RUR": "RUB",
+    "РУБ": "RUB",
+    "РУБ.": "RUB",
 
     // Dollar with country letters
-    'A$': 'AUD',
-    'AU$': 'AUD',
-    'C$': 'CAD',
-    'CA$': 'CAD',
-    'S$': 'SGD',
-    'HK$': 'HKD',
-    'NZ$': 'NZD',
-    'MX$': 'MXN',
-    'R$': 'BRL',
+    "A$": "AUD",
+    "AU$": "AUD",
+    "C$": "CAD",
+    "CA$": "CAD",
+    "S$": "SGD",
+    "HK$": "HKD",
+    "NZ$": "NZD",
+    "MX$": "MXN",
+    "R$": "BRL",
 
     // Jamaica Dollar
-    'J$': 'JMD',
+    "J$": "JMD",
 
     // Malawi Kwacha
-    'MK': 'MWK',
+    "MK": "MWK",
 
     // Syrian Pound
-    '£S': 'SYP',
+    "£S": "SYP",
 
     // Zambian Kwacha
-    'ZK': 'ZMW',
+    "ZK": "ZMW",
 
     // Kenya Shilling
-    'KSH': 'KES',
-    'KSHS': 'KES',
+    "KSH": "KES",
+    "KSHS": "KES",
   };
 
   if (Object.prototype.hasOwnProperty.call(map, upper)) {
@@ -74,6 +75,10 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     return code && code.length === 3 ? code : null;
   }
 
+  // Already a plausible 3-letter code
+  if (/^[A-Z]{3}$/.test(upper)) {
+    return upper;
+  }
+
   return null;
 }
-

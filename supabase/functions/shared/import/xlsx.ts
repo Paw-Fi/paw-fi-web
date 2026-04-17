@@ -14,19 +14,19 @@
 import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 
 import {
-  type ParseDiagnostics,
-  type ParseResult,
-  type ParsedTransaction,
-  type XlsxParseConfig,
   DEFAULT_XLSX_CONFIG,
-  HEADER_NOISE_PATTERN,
-  parseDateFromText,
-  normalizeAmountString,
-  extractAmountTokens,
   detectCurrencyFromText,
+  extractAmountTokens,
+  HEADER_NOISE_PATTERN,
   inferTypeFromText,
-  stripAmountsAndDates,
   isTotalLike,
+  normalizeAmountString,
+  parseDateFromText,
+  type ParseDiagnostics,
+  type ParsedTransaction,
+  type ParseResult,
+  stripAmountsAndDates,
+  type XlsxParseConfig,
 } from "./types.ts";
 
 // ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ export function parseSignedAmountFromCell(
 
   const text = extractCellText(value);
   if (!text) return null;
-  const hasNegative = /^\s*-/.test(text) || /\(.*\)/.test(text);
+  const hasNegative = /^\s*[\-−–—]/.test(text) || /\(.*\)/.test(text);
   const normalized = normalizeAmountString(text);
   if (normalized === null) return null;
   return { amount: normalized, isNegative: hasNegative };
@@ -87,12 +87,14 @@ export function detectHeaderMap(row: string[]): XlsxColumnMap | null {
   const header = row.map((cell) => cell.toLowerCase().trim());
 
   const hasDate = header.some((cell) =>
-    /date|posted|transaction date|value date|booking date/.test(cell),
+    /date|posted|transaction date|value date|booking date|дата|дата проводки|дата операции|дата транзакции|дата платежа/
+      .test(cell)
   );
   const hasAmount = header.some((cell) =>
-    /amount|amt|value|debit|credit|money out|money in|withdrawal|deposit/.test(
-      cell,
-    ),
+    /amount|amt|value|debit|credit|money out|money in|withdrawal|deposit|сумма|расход|поступлен|зачислен|дебет|кредит/
+      .test(
+        cell,
+      )
   );
 
   if (!hasDate && !hasAmount) return null;
@@ -101,18 +103,22 @@ export function detectHeaderMap(row: string[]): XlsxColumnMap | null {
     header.findIndex((cell) => regex.test(cell));
 
   return {
-    date: indexOf(/date|posted|transaction date|value date|booking date/),
-    description: indexOf(
-      /description|details|merchant|memo|narration|reference|narrative|payee|particulars|remark/,
+    date: indexOf(
+      /date|posted|transaction date|value date|booking date|дата|дата проводки|дата операции|дата транзакции|дата платежа/,
     ),
-    amount: indexOf(/^(amount|amt|value|sum|total|net)$/i),
+    description: indexOf(
+      /description|details|merchant|memo|narration|reference|narrative|payee|particulars|remark|описание|назначение|детали|комментарий|контрагент|получатель|плательщик/,
+    ),
+    amount: indexOf(
+      /^(amount|amt|value|sum|total|net|сумма|сумма операции|сумма в валюте счета|сумма в валюте операции)$/i,
+    ),
     moneyOut: indexOf(
-      /debit|money out|withdrawal|paid|paid out|outflow|dr|debit amount/,
+      /debit|money out|withdrawal|paid|paid out|outflow|dr|debit amount|расход|расходы|списание|дебет/,
     ),
     moneyIn: indexOf(
-      /credit|money in|deposit|received|inflow|cr|credit amount/,
+      /credit|money in|deposit|received|inflow|cr|credit amount|приход|поступление|поступления|зачисление|кредит/,
     ),
-    currency: indexOf(/currency|ccy|cur/),
+    currency: indexOf(/currency|ccy|cur|валюта|валюта счета|валюта операции/),
   };
 }
 
@@ -162,7 +168,9 @@ export function buildXlsxPreview(buf: Uint8Array): string | null {
       // deno-lint-ignore no-explicit-any
       const previewLines = limited.map((r: any) => JSON.stringify(r));
       sheetBlocks.push(
-        `Sheet "${sheetName}" data (${limited.length} of ${rows.length} rows):\n${previewLines.join("\n")}`,
+        `Sheet "${sheetName}" data (${limited.length} of ${rows.length} rows):\n${
+          previewLines.join("\n")
+        }`,
       );
     }
 
@@ -216,8 +224,7 @@ export function parseXlsxFromBytes(
 
   // --- Check for legacy XLS format ---
   // XLS files start with the OLE2 Compound Document header: D0 CF 11 E0
-  const isLegacyXls =
-    bytes.length >= 4 &&
+  const isLegacyXls = bytes.length >= 4 &&
     bytes[0] === 0xd0 &&
     bytes[1] === 0xcf &&
     bytes[2] === 0x11 &&
@@ -250,7 +257,9 @@ export function parseXlsxFromBytes(
         warnings,
       },
       errorCode: "XLSX_PARSE_FAILED",
-      errorMessage: `Failed to parse workbook: ${e instanceof Error ? e.message : String(e)}`,
+      errorMessage: `Failed to parse workbook: ${
+        e instanceof Error ? e.message : String(e)
+      }`,
     };
   }
 
@@ -330,7 +339,9 @@ export function parseXlsxFromBytes(
     const limit = Math.min(rows.length, startRow + config.maxRowsPerSheet);
     if (rows.length > startRow + config.maxRowsPerSheet) {
       warnings.push(
-        `Sheet "${sheetName}" has ${rows.length - startRow} data rows; only first ${config.maxRowsPerSheet} processed`,
+        `Sheet "${sheetName}" has ${
+          rows.length - startRow
+        } data rows; only first ${config.maxRowsPerSheet} processed`,
       );
     }
 
@@ -352,8 +363,9 @@ export function parseXlsxFromBytes(
       }
 
       // --- Date ---
-      const dateText =
-        columnMap && columnMap.date >= 0 ? cells[columnMap.date] : joined;
+      const dateText = columnMap && columnMap.date >= 0
+        ? cells[columnMap.date]
+        : joined;
       const rowDate = parseDateFromText(dateText, callerDate);
       if (!columnMap && !rowDate) {
         totalRowsSkipped++;
@@ -361,10 +373,9 @@ export function parseXlsxFromBytes(
       }
 
       // --- Description ---
-      const descriptionText =
-        columnMap && columnMap.description >= 0
-          ? cells[columnMap.description]
-          : stripAmountsAndDates(joined) || joined;
+      const descriptionText = columnMap && columnMap.description >= 0
+        ? cells[columnMap.description]
+        : stripAmountsAndDates(joined) || joined;
 
       if (isTotalLike(descriptionText)) {
         totalRowsSkipped++;
@@ -372,10 +383,9 @@ export function parseXlsxFromBytes(
       }
 
       // --- Currency ---
-      const currencyText =
-        columnMap && columnMap.currency >= 0
-          ? cells[columnMap.currency]
-          : joined;
+      const currencyText = columnMap && columnMap.currency >= 0
+        ? cells[columnMap.currency]
+        : joined;
 
       // --- Amount & Type ---
       let amountValue: number | null = null;
@@ -442,8 +452,8 @@ export function parseXlsxFromBytes(
         continue;
       }
 
-      const currency =
-        detectCurrencyFromText(currencyText, callerCurrency) || callerCurrency;
+      const currency = detectCurrencyFromText(currencyText, callerCurrency) ||
+        callerCurrency;
 
       if (HEADER_NOISE_PATTERN.test(descriptionText)) {
         totalRowsSkipped++;
@@ -476,9 +486,8 @@ export function parseXlsxFromBytes(
       warnings,
     },
     errorCode: allItems.length === 0 ? "NO_TRANSACTIONS_FOUND" : undefined,
-    errorMessage:
-      allItems.length === 0
-        ? "No transactions could be extracted from the spreadsheet"
-        : undefined,
+    errorMessage: allItems.length === 0
+      ? "No transactions could be extracted from the spreadsheet"
+      : undefined,
   };
 }
