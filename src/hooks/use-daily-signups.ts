@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 export interface DailySignupData {
   dailyData: { date: string; count: number }[];
   totalNewUsers: number;
+  todayCount: number;
   averagePerDay: number;
   changePercent: number;
 }
@@ -13,6 +14,7 @@ export function useDailySignups(refreshKey = 0): DailySignupData {
   const [data, setData] = useState<DailySignupData>({
     dailyData: [],
     totalNewUsers: 0,
+    todayCount: 0,
     averagePerDay: 0,
     changePercent: 0,
   });
@@ -56,6 +58,10 @@ export function useDailySignups(refreshKey = 0): DailySignupData {
         const totalNewUsers = recentRows?.length ?? 0;
         const averagePerDay = Math.round(totalNewUsers / 30);
 
+        // Calculate today's count
+        const todayStr = new Date().toISOString().split("T")[0];
+        const todayCount = dateCounts.get(todayStr) || 0;
+
         const currentPeriodCount = recentRows?.length ?? 0;
         const previousPeriodCount = prevRows?.length ?? 0;
         const changePercent = previousPeriodCount > 0
@@ -65,6 +71,7 @@ export function useDailySignups(refreshKey = 0): DailySignupData {
         setData({
           dailyData,
           totalNewUsers,
+          todayCount,
           averagePerDay,
           changePercent,
         });

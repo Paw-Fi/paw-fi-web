@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle } from "lucide-react";
+import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity } from "lucide-react";
 
 import { useUserCount } from "@/hooks/use-user-count";
 import { useUsersByTimezone } from "@/hooks/use-users-by-timezone";
@@ -9,6 +9,7 @@ import { useTrialingUsers } from "@/hooks/use-trialing-users";
 import { useMessageAnalytics } from "@/hooks/use-message-analytics";
 import { useDailySignups } from "@/hooks/use-daily-signups";
 import { useDAUByTimezone } from "@/hooks/use-dau-by-timezone";
+import { useTotalDAU } from "@/hooks/use-total-dau";
 import { UserGeoMap } from "@/components/performance/user-geo-map";
 import { DAUGeoMap } from "@/components/performance/dau-geo-map";
 import { SubscriptionMetricCard } from "@/components/performance/subscription-metric-card";
@@ -38,6 +39,7 @@ function PerformancePage() {
   const messageAnalytics = useMessageAnalytics(refreshKey);
   const dailySignups = useDailySignups(refreshKey);
   const dauByTimezone = useDAUByTimezone(refreshKey);
+  const totalDAU = useTotalDAU(refreshKey);
 
   return (
     <>
@@ -64,14 +66,24 @@ function PerformancePage() {
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Total Users</h2>
-            <SubscriptionMetricCard
-              title="All Registered Users"
-              value={totalUsers.currentValue}
-              trend={totalUsers.trend}
-              changePercent={totalUsers.changePercent}
-              color="#10B981"
-              icon={<Users className="h-4 w-4" />}
-            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SubscriptionMetricCard
+                title="All Registered Users"
+                value={totalUsers.currentValue}
+                trend={totalUsers.trend}
+                changePercent={totalUsers.changePercent}
+                color="#10B981"
+                icon={<Users className="h-4 w-4" />}
+              />
+              <SubscriptionMetricCard
+                title="Today's DAU"
+                value={totalDAU.currentValue}
+                trend={[]}
+                changePercent={totalDAU.changePercent}
+                color="#F59E0B"
+                icon={<Activity className="h-4 w-4" />}
+              />
+            </div>
           </section>
 
           <section className="space-y-4">
@@ -122,7 +134,7 @@ function PerformancePage() {
               <TrialingUsersTable users={trialingUsers} />
               <DailySignupsCard
                 dailyData={dailySignups.dailyData}
-                totalNewUsers={dailySignups.totalNewUsers}
+                todayCount={dailySignups.todayCount}
                 averagePerDay={dailySignups.averagePerDay}
                 changePercent={dailySignups.changePercent}
               />
@@ -133,16 +145,16 @@ function PerformancePage() {
             <h2 className="text-lg font-semibold text-white">Message Analytics</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <MessageAnalyticsCard
-                title="WhatsApp Messages"
-                totalValue={messageAnalytics.totalWhatsApp}
+                title="Today's WhatsApp"
+                totalValue={messageAnalytics.todayWhatsApp}
                 dailyData={messageAnalytics.dailyData}
                 changePercent={messageAnalytics.whatsAppChangePercent}
                 channel="whatsapp"
                 icon={<MessageCircle className="h-4 w-4" />}
               />
               <MessageAnalyticsCard
-                title="Telegram Messages"
-                totalValue={messageAnalytics.totalTelegram}
+                title="Today's Telegram"
+                totalValue={messageAnalytics.todayTelegram}
                 dailyData={messageAnalytics.dailyData}
                 changePercent={messageAnalytics.telegramChangePercent}
                 channel="telegram"

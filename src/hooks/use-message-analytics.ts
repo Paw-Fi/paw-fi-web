@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 export interface MessageAnalytics {
   totalWhatsApp: number;
   totalTelegram: number;
+  todayWhatsApp: number;
+  todayTelegram: number;
   dailyData: { date: string; whatsapp: number; telegram: number }[];
   whatsAppChangePercent: number;
   telegramChangePercent: number;
@@ -14,6 +16,8 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
   const [data, setData] = useState<MessageAnalytics>({
     totalWhatsApp: 0,
     totalTelegram: 0,
+    todayWhatsApp: 0,
+    todayTelegram: 0,
     dailyData: [],
     whatsAppChangePercent: 0,
     telegramChangePercent: 0,
@@ -73,6 +77,12 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
           totalTelegram += counts.telegram;
         }
 
+        // Calculate today's counts
+        const todayStr = new Date().toISOString().split("T")[0];
+        const todayCounts = dateCounts.get(todayStr) || { whatsapp: 0, telegram: 0 };
+        const todayWhatsApp = todayCounts.whatsapp;
+        const todayTelegram = todayCounts.telegram;
+
         let prevWhatsApp = 0;
         let prevTelegram = 0;
         for (const row of prevRows || []) {
@@ -91,16 +101,17 @@ export function useMessageAnalytics(refreshKey = 0): MessageAnalytics {
           ? Math.round(((totalTelegram - prevTelegram) / prevTelegram) * 100)
           : 0;
 
-        console.log("[DEBUG] useMessageAnalytics: Setting data - WhatsApp:", totalWhatsApp, "Telegram:", totalTelegram);
         setData({
           totalWhatsApp,
           totalTelegram,
+          todayWhatsApp,
+          todayTelegram,
           dailyData,
           whatsAppChangePercent,
           telegramChangePercent,
         });
-      } catch (err) {
-        console.error("[DEBUG] useMessageAnalytics: Unexpected error:", err);
+      } catch {
+        // Silent error handling
       }
     };
 

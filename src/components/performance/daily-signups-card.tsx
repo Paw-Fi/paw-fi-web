@@ -13,14 +13,14 @@ import { cn } from "@/lib/utils";
 
 interface DailySignupsCardProps {
   dailyData: { date: string; count: number }[];
-  totalNewUsers: number;
+  todayCount: number;
   averagePerDay: number;
   changePercent: number;
 }
 
 export function DailySignupsCard({
   dailyData,
-  totalNewUsers,
+  todayCount,
   averagePerDay,
   changePercent,
 }: DailySignupsCardProps) {
@@ -44,7 +44,7 @@ export function DailySignupsCard({
             Daily Signups
           </p>
           <CardTitle className="text-2xl font-bold text-white">
-            {totalNewUsers.toLocaleString()}
+            {todayCount.toLocaleString()}
           </CardTitle>
           <p className="text-xs text-white/50">
             {averagePerDay} avg/day (30d)
