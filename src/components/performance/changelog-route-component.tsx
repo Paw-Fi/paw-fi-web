@@ -20,6 +20,49 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Merchant field, CSV Import Upgrades & Performance",
+    date: "2026-04-17",
+    version: "1.5.7",
+    tags: ["Feature", "Import", "Settlement", "Performance"],
+    description:
+      "This release introduces merchant transaction tracking, enhances CSV import reliability, reworks settlement features, and includes several performance improvements and bug fixes.",
+    items: [
+      "Track merchant details on your transactions",
+      "Improved CSV import with better column detection and error handling",
+      "Settlement feature rework for clearer shared expense tracking",
+      "Fixed Apple Wallet synchronization issues",
+      "Unified component styling across the app",
+      "General stability and performance improvements",
+    ],
+  },
+  {
+    title: "CSV Import Fixes & Settlement Updates",
+    date: "2026-04-12",
+    version: "1.5.6",
+    tags: ["Fix", "Import", "Settlement"],
+    description:
+      "This release fixes CSV import issues, improves recurring transaction handling in shared spaces, and includes several bug fixes.",
+    items: [
+      "Fixed recurring transactions not showing correctly in shared spaces",
+      "Fixed crashlytics issue reporting",
+      "Better currency synchronization in background",
+    ],
+  },
+  {
+    title: "Settlement Rework & Performance",
+    date: "2026-04-10",
+    version: "1.5.5",
+    tags: ["Feature", "Settlement", "Performance"],
+    description:
+      "This release reworks the settlement feature for better shared expense tracking, improves app performance across key screens, and includes bug fixes.",
+    items: [
+      "Home page performance optimizations",
+      "Pocket page loading improvements",
+      "Wallet page performance enhancements",
+      "Better Android bottom sheet display",
+    ],
+  },
+  {
     title: "Wallets Feature, Faster Transactions & Better Pocket Budgeting",
     date: "2026-04-07",
     version: "1.5.4",
