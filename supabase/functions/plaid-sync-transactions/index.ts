@@ -15,6 +15,7 @@ import {
 import { readPlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
 import {
   type ExpensePreview,
+  loadLinkedWalletsForBankAccounts,
   persistPlaidTransactions,
   sanitizeOptionalUuid,
   stagePlaidTransactions,
@@ -145,7 +146,7 @@ Deno.serve(async (req) => {
     let connectionsQuery = supabase
       .from("bank_connections")
       .select(
-        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, status, last_successful_sync_at",
+        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, cursor_generation, status, last_successful_sync_at",
       )
       .eq("user_id", authResult.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -224,6 +225,7 @@ Deno.serve(async (req) => {
         userId: authResult.userId,
         accountFilter,
         cursorOverride: body.cursorOverride,
+        targetHouseholdId: sanitizeOptionalUuid(body.targetHouseholdId),
         enforceManualCooldown,
       });
       summaries.push(summary);
@@ -262,8 +264,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         status: summaries.every((item) => item.status === "succeeded")
-            ? "succeeded"
-            : "partial_error",
+          ? "succeeded"
+          : "partial_error",
         summary: {
           connections: summaries.length,
           inserted: totalInserted,
@@ -307,6 +309,7 @@ async function syncConnection(params: {
   userId: string;
   accountFilter: BankAccountRow | null;
   cursorOverride?: string;
+  targetHouseholdId?: string | null;
   enforceManualCooldown: boolean;
 }): Promise<SyncSummary> {
   const summary: SyncSummary = {
@@ -384,8 +387,8 @@ async function syncConnection(params: {
       .update({
         last_sync_attempt_at: new Date().toISOString(),
         item_status: params.connection.last_successful_sync_at
-            ? "active"
-            : "initial_sync_in_progress",
+          ? "active"
+          : "initial_sync_in_progress",
         item_health_state: "healthy",
       })
       .eq("id", params.connection.id);
@@ -419,44 +422,48 @@ async function syncConnection(params: {
           institution_name: institutionName,
           institution_logo: institutionLogo,
         };
+        try {
+          const { data: ensureResult, error: ensureError } = await params
+            .supabase.rpc("upsert_bank_connection_with_household", {
+              p_user_id: params.userId,
+              p_provider: PLAID_PROVIDER,
+              p_provider_item_id: providerItemId,
+              p_access_token_encrypted: encryptedToken,
+              p_refresh_token_encrypted: null,
+              p_expires_at: null,
+              p_country_code: params.connection.country_code || null,
+              p_idempotency_key: null,
+              p_institution_name: institutionName,
+              p_institution_logo: institutionLogo,
+              p_metadata: ensureMeta,
+            });
 
-        const { data: ensureResult, error: ensureError } = await params.supabase
-          .rpc("upsert_bank_connection_with_household", {
-            p_user_id: params.userId,
-            p_provider: PLAID_PROVIDER,
-            p_provider_item_id: providerItemId,
-            p_access_token_encrypted: encryptedToken,
-            p_refresh_token_encrypted: null,
-            p_expires_at: null,
-            p_country_code: params.connection.country_code || null,
-            p_idempotency_key: null,
-            p_institution_name: institutionName,
-            p_institution_logo: institutionLogo,
-            p_metadata: ensureMeta,
-          });
-
-        if (ensureError) {
-          console.error("[plaid-sync] Failed to ensure household", ensureError);
-        } else {
-          const ensureRows = Array.isArray(ensureResult)
-            ? (ensureResult as Array<{ household_id?: string | null }>)
-            : [];
-          if (ensureRows.length > 0) {
-            householdId = ensureRows[0].household_id || null;
-            console.log(
-              "[plaid-sync] Ensured household for connection",
-              params.connection.id,
-              householdId,
+          if (ensureError) {
+            console.error(
+              "[plaid-sync] Failed to ensure household",
+              ensureError,
             );
+          } else {
+            const ensureRows = Array.isArray(ensureResult)
+              ? (ensureResult as Array<{ household_id?: string | null }>)
+              : [];
+            if (ensureRows.length > 0) {
+              householdId = ensureRows[0].household_id || null;
+              console.log(
+                "[plaid-sync] Ensured household for connection",
+                params.connection.id,
+                householdId,
+              );
+            }
           }
+        } catch (error) {
+          console.error(
+            "[plaid-sync] Failed to refresh accounts, continuing with cached mapping",
+            params.connection.id,
+            error,
+          );
         }
       }
-    } catch (error) {
-      console.error(
-        "[plaid-sync] Failed to refresh accounts, continuing with cached mapping",
-        params.connection.id,
-        error,
-      );
     }
 
     if (!householdId) {
@@ -471,14 +478,14 @@ async function syncConnection(params: {
         undefined;
     const processedAccounts = new Set<string>();
     const connectionBankAccountIds = Array.from(params.accountMap.values())
-      .filter((account) =>
-        account.bank_connection_id === params.connection.id &&
-        (!params.accountFilter || params.accountFilter.id === account.id)
+      .filter(
+        (account) =>
+          account.bank_connection_id === params.connection.id &&
+          (!params.accountFilter || params.accountFilter.id === account.id),
       )
       .map((account) => account.id);
     const effectiveTargetHouseholdId = params.targetHouseholdId ??
-      params.connection.household_id ??
-      null;
+      params.connection.household_id ?? null;
     const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
       {
         supabase: params.supabase,
@@ -580,7 +587,6 @@ async function syncConnection(params: {
         plaid_cursor: cursor || null,
         last_successful_sync_at: new Date().toISOString(),
         last_synced_at: new Date().toISOString(),
-        last_successful_sync_at: new Date().toISOString(),
         status: "active",
         item_status: "active",
         item_health_state: "healthy",
@@ -723,7 +729,8 @@ async function syncConnection(params: {
 function shouldLogPlaidTransactionSample(): boolean {
   const explicitFlag =
     Deno.env.get("PLAID_DEBUG_LOG_TRANSACTIONS")?.toLowerCase() === "true";
-  const plaidEnv = Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() || "sandbox";
+  const plaidEnv = Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() ||
+    "sandbox";
   return explicitFlag || plaidEnv === "sandbox";
 }
 
@@ -746,8 +753,8 @@ function logPlaidTransactionSample(params: {
     name: transaction.name,
     merchantName: transaction.merchant_name ?? null,
     amount: transaction.amount,
-    currency:
-      transaction.iso_currency_code ?? transaction.unofficial_currency_code ??
+    currency: transaction.iso_currency_code ??
+      transaction.unofficial_currency_code ??
       null,
     date: transaction.date,
     pending: transaction.pending ?? false,
@@ -835,6 +842,7 @@ interface BankConnectionRow {
   plaid_access_token_encrypted?: string | null;
   cursor?: string | null;
   plaid_cursor?: string | null;
+  cursor_generation?: number | null;
   last_successful_sync_at?: string | null;
   status: string;
 }
