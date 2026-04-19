@@ -161,10 +161,10 @@ export function MobileAppPreviewCarousel({
           items={slides.map((slide, index) => (
             <motion.div
               key={`${slide.title}-${index}`}
-              className="relative flex w-[280px] flex-col items-start px-4 text-left sm:w-[340px]"
+              className="relative flex w-[280px] flex-col items-center px-4 text-left sm:w-[340px]"
               variants={itemVariants}
             >
-              <h3 className="text-foreground pt-4 pb-0 text-xl font-medium tracking-tight sm:text-2xl">
+              <h3 className="text-foreground pt-4 pb-6 text-xl font-medium tracking-tight sm:text-2xl">
                 {slide.title}
               </h3>
             </motion.div>

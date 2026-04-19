@@ -1,12 +1,20 @@
 import type { HTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
-const PHONE_WIDTH = 533;
-const PHONE_HEIGHT = 862;
+const PHONE_WIDTH = 433;
+const PHONE_HEIGHT = 882;
 const SCREEN_X = 22.85;
 const SCREEN_Y = 19.25;
 const SCREEN_WIDTH = 387.29;
 const SCREEN_HEIGHT = 843.5;
 const SCREEN_RADIUS = 55.4;
+
+const LEFT_PCT = (SCREEN_X / PHONE_WIDTH) * 100;
+const TOP_PCT = (SCREEN_Y / PHONE_HEIGHT) * 100;
+const WIDTH_PCT = (SCREEN_WIDTH / PHONE_WIDTH) * 100;
+const HEIGHT_PCT = (SCREEN_HEIGHT / PHONE_HEIGHT) * 100;
+const RADIUS_H = (SCREEN_RADIUS / SCREEN_WIDTH) * 100;
+const RADIUS_V = (SCREEN_RADIUS / SCREEN_HEIGHT) * 100;
 
 export interface IphoneProps extends HTMLAttributes<HTMLDivElement> {
   src?: string;
@@ -27,57 +35,69 @@ export function Iphone({
   const hasVideo = !!videoSrc;
   const hasMedia = hasVideo || !!src || !!children;
 
+  const screenContainerStyle: React.CSSProperties = {
+    position: "absolute",
+    left: `${LEFT_PCT}%`,
+    top: `${TOP_PCT}%`,
+    width: `${WIDTH_PCT}%`,
+    height: `${HEIGHT_PCT}%`,
+    borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
+    // Fix iOS Safari border-radius clipping bug
+    transform: "translateZ(0)",
+    WebkitTransform: "translateZ(0)",
+    WebkitMaskImage: "-webkit-radial-gradient(white, black)",
+  };
+
   return (
     <div
-      className={`relative inline-block w-full align-middle leading-none ${className}`}
+      className={cn(
+        "relative inline-block w-full align-middle leading-none",
+        className,
+      )}
       style={{
         aspectRatio: `${PHONE_WIDTH}/${PHONE_HEIGHT}`,
         ...style,
       }}
       {...props}
     >
+      {hasMedia && (
+        <div
+          className="z-0 overflow-hidden bg-background"
+          style={screenContainerStyle}
+        >
+          {children && <div className="absolute inset-0 z-10">{children}</div>}
+
+          {hasVideo && (
+            <video
+              className="absolute inset-0 z-0 h-full w-full object-cover object-center pointer-events-none"
+              src={videoSrc}
+              poster={src}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+            />
+          )}
+
+          {!hasVideo && src && (
+            <img
+              src={src}
+              alt=""
+              className="absolute inset-0 z-0 block h-full w-full object-cover object-center pointer-events-none"
+              decoding="async"
+            />
+          )}
+        </div>
+      )}
+
       <svg
         viewBox={`0 0 ${PHONE_WIDTH} ${PHONE_HEIGHT}`}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="absolute inset-0 size-full"
+        className="pointer-events-none absolute inset-0 z-10 size-full"
         style={{ transform: "translateZ(0)" }}
       >
-        {hasMedia && (
-          <foreignObject
-            x={SCREEN_X}
-            y={SCREEN_Y}
-            width={SCREEN_WIDTH}
-            height={SCREEN_HEIGHT}
-            clipPath="url(#roundedCorners)"
-          >
-            <div className="relative size-full overflow-hidden bg-background">
-              {children && <div className="absolute inset-0 z-10">{children}</div>}
-
-              {hasVideo && (
-                <video
-                  className="absolute inset-0 z-0 h-full w-full object-fill object-center"
-                  src={videoSrc}
-                  poster={src}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
-              )}
-
-              {!hasVideo && src && (
-                <img
-                  src={src}
-                  alt=""
-                  className="absolute inset-0 z-0 block h-full w-full object-fill object-center"
-                  decoding="async"
-                />
-              )}
-            </div>
-          </foreignObject>
-        )}
         <g mask={hasMedia ? "url(#screenPunch)" : undefined}>
           <path
             d="M2 73C2 32.6832 34.6832 0 75 0H357C397.317 0 430 32.6832 430 73V809C430 849.317 397.317 882 357 882H75C34.6832 882 2 849.317 2 809V73Z"
