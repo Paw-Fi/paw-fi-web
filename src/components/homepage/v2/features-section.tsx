@@ -459,7 +459,7 @@ export function FeaturesSection() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="mb-12 text-center">
           <h2 className="text-foreground mb-4 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-            AI budgeting tools for daily spending, pockets, and shared money
+            Budget daily spending and shared money with AI
           </h2>
           <p className="text-muted-foreground mx-auto max-w-[800px] text-lg">
             Moneko combines chat-based expense capture, envelope budgeting, and

@@ -77,8 +77,16 @@ export function HomePageRouteComponent() {
         {/* Hero Section */}
         <HeroV2 />
 
-        {/* Social Proof / Trust (Optional separator or keep it clean) */}
-
+ <Suspense
+          fallback={
+            <div className={`${deferredSectionFallback} min-h-[32rem]`} />
+          }
+        >
+          <MobileAppPreviewCarousel
+            title="Why people keep Moneko on their phone"
+            description="Preview the mobile flows for voice logging, WhatsApp capture, shared budgets, and AI-reviewed spending before you download."
+          />
+        </Suspense>
         {/* Core Features Bento Grid (Pockets, Households, Insights) */}
         <Suspense
           fallback={
@@ -96,16 +104,7 @@ export function HomePageRouteComponent() {
           <ProductOverviewSection />
         </Suspense>
 
-        <Suspense
-          fallback={
-            <div className={`${deferredSectionFallback} min-h-[32rem]`} />
-          }
-        >
-          <MobileAppPreviewCarousel
-            title="See why people keep Moneko on their phone"
-            description="Preview the mobile flows for voice logging, WhatsApp capture, shared budgets, and AI-reviewed spending before you download."
-          />
-        </Suspense>
+       
 
         {/* Social Proof: User Reviews & Ratings */}
         <Suspense

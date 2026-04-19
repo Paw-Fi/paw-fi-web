@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, type Variants } from "framer-motion";
 
 import { Carousel } from "@/components/ui/apple-cards-carousel";
@@ -47,44 +47,44 @@ export const defaultMobileAppPreviewSlides: MobileAppPreviewSlide[] = [
   {
     src: mockupPoster1,
     videoSrc: mockupVideo1,
-    title: "Track Expenses by Text"
+    title: "Track Expenses by Text",
   },
   {
     src: mockupPoster7,
     videoSrc: mockupVideo7,
-    title: "Apple Pay Automation"
+    title: "Apple Pay Automation",
   },
   {
     src: mockupPoster8,
     videoSrc: mockupVideo8,
-    title: "WhatsApp & Telegram Integration"
+    title: "WhatsApp Integration",
   },
   {
     src: mockupPoster2,
     videoSrc: mockupVideo2,
-    title: "Import Data from Other Budgeting Apps"
+    title: "Import Data in Seconds",
   },
   {
     src: mockupPoster3,
     videoSrc: mockupVideo3,
-    title: "Split Expenses by Text"
+    title: "Split Expenses by Text",
   },
   {
     src: mockupPoster3,
     videoSrc: mockupVideo4,
-    title: "Multi-Currency Support"
+    title: "Multi-Currency Support",
   },
   {
     src: mockupPoster5,
     videoSrc: mockupVideo5,
-    title: "Envelope Budgeting"
+    title: "Envelope Budgeting",
   },
   {
     src: mockupPoster6,
     videoSrc: mockupVideo6,
-    title: "Bank Sync for Transactions"
-  }
-]
+    title: "Bank Sync for Transactions",
+  },
+];
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -121,6 +121,30 @@ export function MobileAppPreviewCarousel({
   headerSlot,
   footerSlot,
 }: MobileAppPreviewCarouselProps) {
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const activeIndices =
+    slides.length === 0
+      ? []
+      : isDesktop
+        ? [Math.max(0, carouselIndex - 1), carouselIndex]
+        : [carouselIndex];
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+
+    const updateIsDesktop = () => {
+      setIsDesktop(mediaQuery.matches);
+    };
+
+    updateIsDesktop();
+    mediaQuery.addEventListener("change", updateIsDesktop);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsDesktop);
+    };
+  }, []);
+
   return (
     <section
       className={cn(
@@ -140,10 +164,10 @@ export function MobileAppPreviewCarousel({
       >
         <motion.div className="mb-16 text-left" variants={itemVariants}>
           {headerSlot}
-          <h2 className="text-foreground mb-6 text-4xl font-bold tracking-tight sm:text-5xl">
+          <h2 className="text-foreground text-4xl font-bold tracking-tight sm:text-5xl">
             {title}
           </h2>
-       
+
           {showDownloadButtons && (
             <div className="mt-6 mb-4 flex flex-col justify-center gap-3 sm:flex-row">
               <AppleDownloadButton />
@@ -158,13 +182,14 @@ export function MobileAppPreviewCarousel({
             "h-[540px] md:h-[620px] lg:h-[600px] xl:h-[600px] 2xl:h-[700px]",
             carouselClassName,
           )}
+          onCurrentIndexChange={setCarouselIndex}
           items={slides.map((slide, index) => (
             <motion.div
               key={`${slide.title}-${index}`}
               className="relative flex w-[280px] flex-col items-center px-4 text-left sm:w-[340px]"
               variants={itemVariants}
             >
-              <h3 className="text-foreground pt-4 pb-6 text-xl font-medium tracking-tight sm:text-2xl">
+              <h3 className="text-foreground pt-4 pb-6 text-lg font-medium tracking-tight sm:text-2xl">
                 {slide.title}
               </h3>
             </motion.div>
@@ -178,16 +203,81 @@ export function MobileAppPreviewCarousel({
               <Iphone
                 src={slide.src}
                 showDynamicIsland={false}
-                videoSrc={slide.videoSrc}
                 aria-label={
                   slide.alt ?? `${slide.title} in the Moneko mobile app`
                 }
                 className="h-full w-auto"
-              />
+              >
+                {slide.videoSrc ? (
+                  <PreviewPhoneVideo
+                    posterSrc={slide.src}
+                    videoSrc={slide.videoSrc}
+                    isActive={activeIndices.includes(index)}
+                  />
+                ) : null}
+              </Iphone>
             </motion.div>
           ))}
         />
       </motion.div>
     </section>
   );
+}
+
+function PreviewPhoneVideo({
+  posterSrc,
+  videoSrc,
+  isActive,
+}: PreviewPhoneVideoProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const playVideo = () => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    const playPromise = video.play();
+
+    if (playPromise !== undefined) {
+      void playPromise.catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) {
+      return;
+    }
+
+    if (!isActive) {
+      video.pause();
+      return;
+    }
+
+    playVideo();
+  }, [isActive]);
+
+  return (
+    <video
+      ref={videoRef}
+      className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-center"
+      src={videoSrc}
+      poster={posterSrc}
+      loop
+      muted
+      playsInline
+      preload="auto"
+      aria-hidden="true"
+      onCanPlay={isActive ? playVideo : undefined}
+    />
+  );
+}
+
+interface PreviewPhoneVideoProps {
+  posterSrc: string;
+  videoSrc: string;
+  isActive: boolean;
 }

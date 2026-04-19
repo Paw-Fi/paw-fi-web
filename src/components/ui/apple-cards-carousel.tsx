@@ -26,6 +26,10 @@ export interface CarouselProps {
    * Optional className for the outermost container.
    */
   className?: string;
+  /**
+   * Optional callback fired when the centered item changes.
+   */
+  onCurrentIndexChange?: (index: number) => void;
 }
 
 export function Carousel({
@@ -34,8 +38,10 @@ export function Carousel({
   initialScroll = 0,
   showArrows = true,
   className,
+  onCurrentIndexChange,
 }: CarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastReportedIndexRef = useRef<number | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [sideSpacer, setSideSpacer] = useState(0);
@@ -60,6 +66,12 @@ export function Carousel({
     if (!el) return;
     // Determine nearest centered item and enable/disable arrows accordingly
     const idx = getCurrentIndex();
+
+    if (lastReportedIndexRef.current !== idx) {
+      lastReportedIndexRef.current = idx;
+      onCurrentIndexChange?.(idx);
+    }
+
     setCanScrollLeft(idx > 0);
     setCanScrollRight(idx < items.length - 1);
   }
@@ -77,7 +89,9 @@ export function Carousel({
   function computeSideSpacers() {
     const el = scrollRef.current;
     if (!el) return;
-    const firstItem = el.querySelector('[data-carousel-item="true"]') as HTMLElement | null;
+    const firstItem = el.querySelector(
+      '[data-carousel-item="true"]',
+    ) as HTMLElement | null;
     if (!firstItem) return;
     const containerWidth = el.clientWidth;
     const itemWidth = firstItem.offsetWidth;
@@ -88,7 +102,9 @@ export function Carousel({
   function getItemElements() {
     const el = scrollRef.current;
     if (!el) return [] as HTMLElement[];
-    return Array.from(el.querySelectorAll('[data-carousel-item="true"]')) as HTMLElement[];
+    return Array.from(
+      el.querySelectorAll('[data-carousel-item="true"]'),
+    ) as HTMLElement[];
   }
 
   function getCurrentIndex() {
@@ -119,7 +135,8 @@ export function Carousel({
     const target = itemsEls[idx];
     if (!target) return;
     // Compute left so that the target item is centered in the container
-    const targetLeft = target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2;
+    const targetLeft =
+      target.offsetLeft - (el.clientWidth - target.offsetWidth) / 2;
     el.scrollTo({ left: targetLeft, behavior: "smooth" });
   }
 
@@ -134,42 +151,50 @@ export function Carousel({
   }
 
   return (
-    <div className={cn("relative w-full h-full overflow-hidden", className)}>
+    <div className={cn("relative h-full w-full overflow-hidden", className)}>
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         className={cn(
           // Keep container minimal to avoid affecting child item styles
-          "flex w-full h-full items-stretch overflow-x-auto overflow-y-hidden scroll-smooth snap-x snap-mandatory",
+          "flex h-full w-full snap-x snap-mandatory items-stretch overflow-x-auto overflow-y-hidden scroll-smooth",
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" as any }}
       >
         {/* Dynamic leading/trailing spacers to center the first/last item */}
         {sideSpacer > 0 && (
-          <div className="flex-none snap-start" aria-hidden style={{ width: sideSpacer }} />
+          <div
+            className="flex-none snap-start"
+            aria-hidden
+            style={{ width: sideSpacer }}
+          />
         )}
         {items.map((item, index) => (
           <div
             key={index}
-            className="flex-none snap-center h-full overflow-hidden"
+            className="h-full flex-none snap-center overflow-hidden"
             data-carousel-item="true"
           >
             <div className="flex h-full flex-col items-center justify-start">
-              {/* Render the item exactly as provided */}
-              {item}
               {/* Render optional iPhone mockup after the item if provided */}
               {iphoneMockups?.[index]}
+              {/* Render the item exactly as provided */}
+              {item}
             </div>
           </div>
         ))}
         {sideSpacer > 0 && (
-          <div className="flex-none snap-end" aria-hidden style={{ width: sideSpacer }} />
+          <div
+            className="flex-none snap-end"
+            aria-hidden
+            style={{ width: sideSpacer }}
+          />
         )}
       </div>
 
       {showArrows && (
-        <div className="absolute bottom-2 right-3 lg:right-20 z-30 flex gap-2">
+        <div className="absolute right-3 bottom-2 z-30 flex gap-2 lg:right-20">
           <button
             type="button"
             aria-label="Scroll left"

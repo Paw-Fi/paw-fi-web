@@ -34,7 +34,7 @@ export function HowItWorksSection() {
             viewport={{ once: true }}
             className="from-foreground to-muted-foreground bg-gradient-to-br bg-clip-text text-3xl font-bold tracking-tight text-transparent md:text-5xl"
           >
-            How Moneko turns chats into a working budget
+            How Moneko turns messages into a working budget
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}

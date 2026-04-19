@@ -105,7 +105,7 @@ export function ComparisonTable() {
       <div className="relative z-10 container mx-auto max-w-6xl px-4 md:px-6">
         <div className="mb-16 space-y-4 text-center">
           <h2 className="text-foreground text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-            Compare Moneko with traditional budgeting apps
+            Moneko vs traditional budgeting apps
           </h2>
           <p className="text-muted-foreground mx-auto max-w-[700px] md:text-xl">
             Moneko is built around chat-based capture, Pockets, and household

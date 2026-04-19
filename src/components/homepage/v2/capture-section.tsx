@@ -38,8 +38,8 @@ export function CaptureSection() {
           <div className="space-y-8 lg:col-span-5">
             <div>
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
-                Capture spending from chat. <br />
-                <span className="text-primary">Review it before saving.</span>
+                Capture expenses in chat. <br />
+                <span className="text-primary">Review before saving.</span>
               </h2>
               <p className="text-muted-foreground text-lg leading-relaxed">
                 Moneko lives where you already talk about money. Send a message,

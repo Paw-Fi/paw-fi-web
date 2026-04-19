@@ -36,6 +36,12 @@ export function BudgetingAppSlugRouteComponent() {
       <section className="relative">
         <HeroSection data={pageData} />
       </section>
+      
+            <MobileAppPreviewCarousel
+        className="bg-section-bg-light"
+        title="See the mobile app in action"
+        description="Preview how Moneko captures spending, reviews AI entries, and keeps everyday budgets moving on iPhone and Android."
+      />
 
       <section className="bg-section-bg-light relative">
         <VideoSection data={pageData} />
@@ -53,11 +59,7 @@ export function BudgetingAppSlugRouteComponent() {
         <ThreeStepsSection data={pageData} />
       </section>
 
-      <MobileAppPreviewCarousel
-        className="bg-section-bg-light"
-        title="See the mobile app in action"
-        description="Preview how Moneko captures spending, reviews AI entries, and keeps everyday budgets moving on iPhone and Android."
-      />
+
 
       <section className="bg-section-bg-light relative">
         <ExpertLessonsSection data={pageData} />

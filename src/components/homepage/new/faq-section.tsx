@@ -22,8 +22,8 @@ export interface FAQSectionProps {
 export default function FAQSection({
   items,
   eyebrowText = "Frequently Asked Questions",
-  title = "Common Questions",
-  subtitle = "Everything you need to know about getting started with Moneko",
+  title = "Budgeting app questions, answered",
+  subtitle = "Quick answers about tracking expenses, shared budgets, and getting started with Moneko.",
   sectionClassName,
 }: FAQSectionProps) {
   const [openItems, setOpenItems] = useState<Set<string>>(new Set());
@@ -62,25 +62,25 @@ export default function FAQSection({
   };
 
   return (
-    <motion.section 
-      className={`relative z-10 min-h-screen flex items-center justify-center px-4 py-16 sm:px-6 lg:px-8${sectionClassName ? ` ${sectionClassName}` : ""}`}
+    <motion.section
+      className={`relative z-10 flex min-h-screen items-center justify-center px-4 py-16 sm:px-6 lg:px-8${sectionClassName ? ` ${sectionClassName}` : ""}`}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-100px" }}
       variants={containerVariants}
     >
-      <div className="mx-auto max-w-4xl w-full">
+      <div className="mx-auto w-full max-w-4xl">
         {/* Section Header */}
         <motion.div className="mb-12 text-center" variants={itemVariants}>
-          <div className="mb-4 text-sm font-medium text-primary">
+          <div className="text-primary mb-4 text-sm font-medium">
             {eyebrowText}
           </div>
-          
-          <h2 className="text-foreground mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl font-lato">
+
+          <h2 className="text-foreground font-lato mb-4 text-3xl leading-tight font-bold sm:text-4xl md:text-5xl">
             {title}
           </h2>
-          
-          <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto font-lato">
+
+          <p className="text-muted-foreground font-lato mx-auto max-w-2xl text-lg leading-relaxed">
             {subtitle}
           </p>
         </motion.div>
@@ -88,28 +88,40 @@ export default function FAQSection({
         {/* FAQ Items */}
         <div className="space-y-4">
           {(items ?? faqItems).map((item, index) => (
-            <motion.div 
+            <motion.div
               key={item.id}
-              className="backdrop-blur-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer p-6 border border-white/20"
+              className="cursor-pointer rounded-2xl border border-white/20 p-6 shadow-lg backdrop-blur-xl transition-all duration-300 hover:shadow-xl"
               onClick={() => toggleItem(item.id)}
               variants={itemVariants}
             >
               <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-foreground text-lg leading-tight flex-1 font-lato">
+                <h4 className="text-foreground font-lato flex-1 text-lg leading-tight font-semibold">
                   {item.question}
                 </h4>
-                <div className={`ml-4 transition-transform duration-200 ${
-                  openItems.has(item.id) ? 'rotate-180' : ''
-                }`}>
-                  <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <div
+                  className={`ml-4 transition-transform duration-200 ${
+                    openItems.has(item.id) ? "rotate-180" : ""
+                  }`}
+                >
+                  <svg
+                    className="text-muted-foreground h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
               <>
                 {openItems.has(item.id) && (
                   <div className="mt-4">
-                    <p className="text-muted-foreground leading-relaxed font-lato">
+                    <p className="text-muted-foreground font-lato leading-relaxed">
                       {item.answer}
                     </p>
                   </div>

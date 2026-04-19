@@ -129,6 +129,11 @@ function GeoLandingPageView({ page }: GeoLandingPageViewProps) {
       <main className="flex-1">
         <HeroV2 />
 
+ <MobileAppPreviewCarousel
+          title="Try the app behind these budgeting workflows"
+          description="See how Moneko turns mobile spending, WhatsApp messages, receipt scans, and shared budgets into a clearer plan."
+        />
+        
         <Suspense
           fallback={
             <div className={`${deferredSectionFallback} min-h-[28rem]`} />
@@ -160,10 +165,7 @@ function GeoLandingPageView({ page }: GeoLandingPageViewProps) {
           showIntro={false}
         />
 
-        <MobileAppPreviewCarousel
-          title="Try the app behind these budgeting workflows"
-          description="See how Moneko turns mobile spending, WhatsApp messages, receipt scans, and shared budgets into a clearer plan."
-        />
+       
       </main>
 
       <Footer />
