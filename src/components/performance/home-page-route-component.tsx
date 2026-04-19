@@ -31,6 +31,13 @@ const FeaturesSection = lazy(() =>
     default: module.FeaturesSection,
   })),
 );
+const ProductOverviewSection = lazy(() =>
+  import("@/components/homepage/v2/product-overview-section").then(
+    (module) => ({
+      default: module.ProductOverviewSection,
+    }),
+  ),
+);
 const HowItWorksSection = lazy(() =>
   import("@/components/homepage/v2/how-it-works-section").then((module) => ({
     default: module.HowItWorksSection,
@@ -83,6 +90,14 @@ export function HomePageRouteComponent() {
 
         <Suspense
           fallback={
+            <div className={`${deferredSectionFallback} min-h-[42rem]`} />
+          }
+        >
+          <ProductOverviewSection />
+        </Suspense>
+
+        <Suspense
+          fallback={
             <div className={`${deferredSectionFallback} min-h-[32rem]`} />
           }
         >
@@ -100,8 +115,6 @@ export function HomePageRouteComponent() {
         >
           <UserCommunityShowcase />
         </Suspense>
-
-        
 
         {/* Deep Dive 2: Capture (The Magic) */}
         <Suspense

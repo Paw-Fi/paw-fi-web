@@ -2,7 +2,12 @@
   {
     "id": "what-is-moneko",
     "question": "What is Moneko?",
-    "answer": "Moneko is an AI budgeting app and expense tracker that helps people manage money through iPhone, Android, WhatsApp, Telegram, and the web. It combines automatic expense capture, envelope-style pockets, and AI planning in one workflow."
+    "answer": "Moneko is an AI budgeting app and expense tracker that helps people manage money through iPhone, Android, WhatsApp, Telegram, and the web. It combines fast expense capture, recurring bills, envelope-style Pockets, Wallets, AI Insights, and shared household budgeting in one workflow."
+  },
+  {
+    "id": "main-sections",
+    "question": "What are the main sections in Moneko?",
+    "answer": "Moneko is organized around Overview, Recurring, Pockets, Wallets, and Insights. Overview is the daily dashboard, Recurring handles repeat bills and income, Pockets manages the monthly budget, Wallets tracks accounts and net worth, and Insights answers what is happening or what could happen next."
   },
   {
     "id": "best-budgeting-app",
@@ -13,6 +18,26 @@
     "id": "automatic-expense-tracking",
     "question": "Can Moneko automatically track expenses?",
     "answer": "Yes. Moneko is designed to turn everyday signals into budget updates. You can log spending from chat, voice notes, receipt scans, Apple Wallet activity on iPhone, and Android transaction notifications, then review the result before saving."
+  },
+  {
+    "id": "pockets-system",
+    "question": "What are Moneko Pockets?",
+    "answer": "Moneko Pockets are envelope-style budget containers for categories such as groceries, eating out, transport, fun, and bills. Each pocket can show what was allocated, what was spent, and what is left for the month."
+  },
+  {
+    "id": "wallets-net-worth",
+    "question": "What does Moneko Wallets track?",
+    "answer": "Moneko Wallets tracks accounts, balances, goals, transfers, income, spending, and net worth history. You can manually create wallets, set goals, move money between wallets, and connect supported banks through Plaid where available."
+  },
+  {
+    "id": "recurring-bills-income",
+    "question": "How does Moneko handle recurring bills and income?",
+    "answer": "Moneko lets you add, edit, view, and delete recurring expenses and recurring income such as rent, subscriptions, utilities, salary, or stipends. Recurring items support predictable monthly planning and forecasting."
+  },
+  {
+    "id": "insights-scenario-planning",
+    "question": "What can Moneko Insights answer?",
+    "answer": "Moneko Insights can show running balance views, budget versus spending trends, and AI scenario planning. You can ask a plain-language what-if question with a target date and save scenarios for later review."
   },
   {
     "id": "apple-wallet-sync",

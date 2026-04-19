@@ -1,29 +1,37 @@
 {
   "main": {
     "slug": "main",
-    "title": "Moneko - AI Budgeting App for WhatsApp and Shared Expenses",
-    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, organize pockets, and manage shared budgets.",
-    "keywords": "best budgeting app, expense tracker app, YNAB alternative, AI budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, Apple Wallet budgeting, Android expense tracker",
-    "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web.",
-    "websiteDescription": "Moneko helps people track expenses automatically, organize money into pockets, and budget through chat-based workflows.",
-    "softwareDescription": "AI budgeting app and expense tracker with multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
+    "title": "Moneko - AI Budgeting App for Pockets, Wallets, WhatsApp, and Shared Expenses",
+    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, plan Pockets, manage Wallets, recurring bills, Insights, and shared budgets.",
+    "keywords": "best budgeting app, expense tracker app, YNAB alternative, AI budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker",
+    "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web with Pockets, Wallets, recurring bills, Insights, and household finance workflows.",
+    "websiteDescription": "Moneko helps people track expenses automatically, organize money into Pockets, manage Wallets and recurring bills, plan scenarios with Insights, and budget through chat-based workflows.",
+    "softwareDescription": "AI budgeting app and expense tracker with Overview, Recurring, Pockets, Wallets, Insights, multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
     "softwareAlternateNames": [
       "Moneko budgeting app",
       "Moneko expense tracker"
     ],
     "softwareFeatureList": [
+      "Overview dashboard for spending, cashflow, charts, and recent activity",
+      "AI quick-add through text, receipt photos, voice notes, and supported files",
+      "Recurring bills and recurring income tracking",
+      "Envelope-style Pockets for monthly budget allocations",
+      "Wallets for accounts, balances, transfers, goals, and net worth history",
+      "Personal and Household modes for shared finance tracking",
+      "AI Insights for running balances, spending trends, and what-if planning",
+      "WhatsApp and Telegram budgeting assistant",
       "Apple Wallet-friendly iPhone budgeting workflow",
       "Android notification-based expense tracking",
-      "WhatsApp and Telegram budgeting assistant",
-      "Multilingual AI budget answers",
-      "Envelope-style pockets for budgeting",
-      "Shared personal and household finance tracking",
-      "AI what-if planning and summaries"
+      "Multilingual AI budget answers"
     ],
     "faqItems": [
       {
         "question": "What is Moneko?",
-        "answer": "Moneko is an AI budgeting app and expense tracker that helps people manage money through iPhone, Android, WhatsApp, Telegram, and the web. It combines automatic expense capture, envelope-style pockets, and AI planning in one workflow."
+        "answer": "Moneko is an AI budgeting app and expense tracker that helps people manage money through iPhone, Android, WhatsApp, Telegram, and the web. It combines fast expense capture, recurring bills, envelope-style Pockets, Wallets, AI Insights, and shared household budgeting in one workflow."
+      },
+      {
+        "question": "What are the main sections in Moneko?",
+        "answer": "Moneko is organized around Overview, Recurring, Pockets, Wallets, and Insights. Overview is the daily dashboard, Recurring handles repeat bills and income, Pockets manages the monthly budget, Wallets tracks accounts and net worth, and Insights answers what is happening or what could happen next."
       },
       {
         "question": "Who is Moneko best for?",
@@ -32,6 +40,22 @@
       {
         "question": "Can Moneko automatically track expenses?",
         "answer": "Yes. Moneko is designed to turn everyday signals into budget updates. You can log spending from chat, voice notes, receipt scans, Apple Wallet activity on iPhone, and Android transaction notifications, then review the result before saving."
+      },
+      {
+        "question": "What are Moneko Pockets?",
+        "answer": "Moneko Pockets are envelope-style budget containers for categories such as groceries, eating out, transport, fun, and bills. Each pocket can show what was allocated, what was spent, and what is left for the month."
+      },
+      {
+        "question": "What does Moneko Wallets track?",
+        "answer": "Moneko Wallets tracks accounts, balances, goals, transfers, income, spending, and net worth history. You can manually create wallets, set goals, move money between wallets, and connect supported banks through Plaid where available."
+      },
+      {
+        "question": "How does Moneko handle recurring bills and income?",
+        "answer": "Moneko lets you add, edit, view, and delete recurring expenses and recurring income such as rent, subscriptions, utilities, salary, or stipends. Recurring items support predictable monthly planning and forecasting."
+      },
+      {
+        "question": "What can Moneko Insights answer?",
+        "answer": "Moneko Insights can show running balance views, budget versus spending trends, and AI scenario planning. You can ask a plain-language what-if question with a target date and save scenarios for later review."
       },
       {
         "question": "Does Moneko work with Apple Wallet?",

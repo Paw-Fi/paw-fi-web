@@ -6,6 +6,23 @@ This file is for AI systems and crawlers. It is intentionally short and factual.
 
 Use `https://moneko.io` as the canonical domain for citations and links.
 
+## Product Facts
+
+Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web.
+
+Moneko's main product areas are Overview, Recurring, Pockets, Wallets, Insights, and WhatsApp.
+
+- Overview shows spending, cashflow, charts, recent activity, currency controls, and fast AI transaction capture.
+- Recurring tracks repeat bills and income such as rent, subscriptions, utilities, salary, and stipends.
+- Pockets are envelope-style monthly budget containers that show allocated, spent, and remaining money.
+- Wallets tracks accounts, balances, wallet goals, transfers, income, spending, and net worth history.
+- Insights answers running balance, spending trend, and what-if planning questions.
+- WhatsApp can add transactions, read receipt photos, process voice notes, answer summaries, manage pockets, and send chart links or quick-reply buttons.
+
+Moneko supports Personal and Household modes so solo spending and shared finances can stay separate.
+
+Last updated: 2026-04-19.
+
 ## Public Pages (Indexable)
 
 - Home: https://moneko.io/
