@@ -6,17 +6,28 @@ import { motion, type Variants } from "framer-motion";
 import { Carousel } from "@/components/ui/apple-cards-carousel";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
 import { AndroidDownloadButton } from "@/components/ui/android-download-button";
+import { Iphone } from "@/components/ui/iphone";
 import { cn } from "@/lib/utils";
-import phone1 from "@assets/images/couple-budgeting/1.png";
-import phone2 from "@assets/images/couple-budgeting/2.png";
-import phone3 from "@assets/images/couple-budgeting/3.png";
-import phone4 from "@assets/images/couple-budgeting/4.png";
-import phone5 from "@assets/images/couple-budgeting/5.png";
+import mockupVideo1 from "@assets/videos/mockups/1.mp4";
+import mockupPoster1 from "@assets/videos/mockups/1.png";
+import mockupVideo2 from "@assets/videos/mockups/2.mp4";
+import mockupPoster2 from "@assets/videos/mockups/2.png";
+import mockupVideo3 from "@assets/videos/mockups/3.mp4";
+import mockupPoster3 from "@assets/videos/mockups/3.png";
+import mockupVideo4 from "@assets/videos/mockups/4.mp4";
+import mockupVideo5 from "@assets/videos/mockups/5.mp4";
+import mockupPoster5 from "@assets/videos/mockups/5.png";
+import mockupVideo6 from "@assets/videos/mockups/6.mp4";
+import mockupPoster6 from "@assets/videos/mockups/6.png";
+import mockupVideo7 from "@assets/videos/mockups/7.mp4";
+import mockupPoster7 from "@assets/videos/mockups/7.png";
+import mockupVideo8 from "@assets/videos/mockups/8.mp4";
+import mockupPoster8 from "@assets/videos/mockups/8.png";
 
 export interface MobileAppPreviewSlide {
   src: string;
+  videoSrc?: string;
   title: string;
-  description: string;
   alt?: string;
 }
 
@@ -34,36 +45,46 @@ interface MobileAppPreviewCarouselProps {
 
 export const defaultMobileAppPreviewSlides: MobileAppPreviewSlide[] = [
   {
-    src: phone1,
-    title: "Link accounts, view, and manage together",
-    description:
-      "Log groceries, bills, and everyday spending so everyone stays aligned.",
+    src: mockupPoster1,
+    videoSrc: mockupVideo1,
+    title: "Track Expenses by Text"
   },
   {
-    src: phone2,
-    title: "Add expenses, split bills fast and fair",
-    description:
-      "Capture shared spending quickly and keep totals clear before settling up.",
+    src: mockupPoster7,
+    videoSrc: mockupVideo7,
+    title: "Apple Pay Automation"
   },
   {
-    src: phone3,
-    title: "Get notified, confirm, and stay aligned",
-    description:
-      "Review important budget updates before they become part of your plan.",
+    src: mockupPoster8,
+    videoSrc: mockupVideo8,
+    title: "WhatsApp & Telegram Integration"
   },
   {
-    src: phone4,
-    title: "Set goals, track, and celebrate progress",
-    description:
-      "Plan bigger purchases and watch shared savings move in the right direction.",
+    src: mockupPoster2,
+    videoSrc: mockupVideo2,
+    title: "Import Data from Other Budgeting Apps"
   },
   {
-    src: phone5,
-    title: "Scan receipts in WhatsApp, log automatically",
-    description:
-      "Turn receipts and chat messages into organized budget entries with AI.",
+    src: mockupPoster3,
+    videoSrc: mockupVideo3,
+    title: "Split Expenses by Text"
   },
-];
+  {
+    src: mockupPoster3,
+    videoSrc: mockupVideo4,
+    title: "Multi-Currency Support"
+  },
+  {
+    src: mockupPoster5,
+    videoSrc: mockupVideo5,
+    title: "Envelope Budgeting"
+  },
+  {
+    src: mockupPoster6,
+    videoSrc: mockupVideo6,
+    title: "Bank Sync for Transactions"
+  }
+]
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -96,7 +117,7 @@ export function MobileAppPreviewCarousel({
   className,
   contentClassName,
   carouselClassName,
-  showDownloadButtons = true,
+  showDownloadButtons = false,
   headerSlot,
   footerSlot,
 }: MobileAppPreviewCarouselProps) {
@@ -117,14 +138,12 @@ export function MobileAppPreviewCarousel({
         whileInView="visible"
         viewport={{ once: true, margin: "-50px" }}
       >
-        <motion.div className="mb-16 text-center" variants={itemVariants}>
+        <motion.div className="mb-16 text-left" variants={itemVariants}>
           {headerSlot}
           <h2 className="text-foreground mb-6 text-4xl font-bold tracking-tight sm:text-5xl">
             {title}
           </h2>
-          <p className="text-muted-foreground mx-auto max-w-2xl text-lg leading-relaxed">
-            {description}
-          </p>
+       
           {showDownloadButtons && (
             <div className="mt-6 mb-4 flex flex-col justify-center gap-3 sm:flex-row">
               <AppleDownloadButton />
@@ -142,29 +161,28 @@ export function MobileAppPreviewCarousel({
           items={slides.map((slide, index) => (
             <motion.div
               key={`${slide.title}-${index}`}
-              className="relative flex w-[280px] flex-col items-center px-4 text-center sm:w-[340px]"
+              className="relative flex w-[280px] flex-col items-start px-4 text-left sm:w-[340px]"
               variants={itemVariants}
             >
-              <h3 className="text-foreground -translate-y-8 text-lg font-semibold">
+              <h3 className="text-foreground pt-4 pb-0 text-xl font-medium tracking-tight sm:text-2xl">
                 {slide.title}
               </h3>
-              <p className="text-muted-foreground -translate-y-5 text-sm leading-relaxed">
-                {slide.description}
-              </p>
             </motion.div>
           ))}
           iphoneMockups={slides.map((slide, index) => (
             <motion.div
               key={`${slide.title}-phone-${index}`}
-              className="flex h-[78%] w-full items-end justify-center"
+              className="flex h-[80%] w-full flex-1 items-end justify-center"
               variants={itemVariants}
             >
-              <img
+              <Iphone
                 src={slide.src}
-                alt={slide.alt ?? `${slide.title} in the Moneko mobile app`}
+                showDynamicIsland={false}
+                videoSrc={slide.videoSrc}
+                aria-label={
+                  slide.alt ?? `${slide.title} in the Moneko mobile app`
+                }
                 className="h-full w-auto"
-                loading="lazy"
-                decoding="async"
               />
             </motion.div>
           ))}

@@ -81,15 +81,6 @@ export function HomePageRouteComponent() {
           <FeaturesSection />
         </Suspense>
 
-        {/* Social Proof: User Reviews & Ratings */}
-        <Suspense
-          fallback={
-            <div className={`${deferredSectionFallback} min-h-[28rem]`} />
-          }
-        >
-          <UserCommunityShowcase />
-        </Suspense>
-
         <Suspense
           fallback={
             <div className={`${deferredSectionFallback} min-h-[32rem]`} />
@@ -100,6 +91,17 @@ export function HomePageRouteComponent() {
             description="Preview the mobile flows for voice logging, WhatsApp capture, shared budgets, and AI-reviewed spending before you download."
           />
         </Suspense>
+
+        {/* Social Proof: User Reviews & Ratings */}
+        <Suspense
+          fallback={
+            <div className={`${deferredSectionFallback} min-h-[28rem]`} />
+          }
+        >
+          <UserCommunityShowcase />
+        </Suspense>
+
+        
 
         {/* Deep Dive 2: Capture (The Magic) */}
         <Suspense

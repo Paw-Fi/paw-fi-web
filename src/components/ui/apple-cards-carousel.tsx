@@ -156,10 +156,10 @@ export function Carousel({
             data-carousel-item="true"
           >
             <div className="flex h-full flex-col items-center justify-start">
-              {/* Render optional iPhone mockup before the item if provided */}
-              {iphoneMockups?.[index]}
               {/* Render the item exactly as provided */}
               {item}
+              {/* Render optional iPhone mockup after the item if provided */}
+              {iphoneMockups?.[index]}
             </div>
           </div>
         ))}

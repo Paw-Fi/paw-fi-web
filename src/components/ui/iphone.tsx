@@ -1,25 +1,18 @@
-import type { HTMLAttributes } from "react"
+import type { HTMLAttributes } from "react";
 
-const PHONE_WIDTH = 433
-const PHONE_HEIGHT = 882
-const SCREEN_X = 21.25
-const SCREEN_Y = 19.25
-const SCREEN_WIDTH = 389.5
-const SCREEN_HEIGHT = 843.5
-const SCREEN_RADIUS = 55.75
-
-// Calculated percentages
-const LEFT_PCT = (SCREEN_X / PHONE_WIDTH) * 100
-const TOP_PCT = (SCREEN_Y / PHONE_HEIGHT) * 100
-const WIDTH_PCT = (SCREEN_WIDTH / PHONE_WIDTH) * 100
-const HEIGHT_PCT = (SCREEN_HEIGHT / PHONE_HEIGHT) * 100
-const RADIUS_H = (SCREEN_RADIUS / SCREEN_WIDTH) * 100
-const RADIUS_V = (SCREEN_RADIUS / SCREEN_HEIGHT) * 100
+const PHONE_WIDTH = 533;
+const PHONE_HEIGHT = 862;
+const SCREEN_X = 22.85;
+const SCREEN_Y = 19.25;
+const SCREEN_WIDTH = 387.29;
+const SCREEN_HEIGHT = 843.5;
+const SCREEN_RADIUS = 55.4;
 
 export interface IphoneProps extends HTMLAttributes<HTMLDivElement> {
-  src?: string
-  videoSrc?: string
-  children?: React.ReactNode
+  src?: string;
+  videoSrc?: string;
+  children?: React.ReactNode;
+  showDynamicIsland?: boolean;
 }
 
 export function Iphone({
@@ -28,10 +21,11 @@ export function Iphone({
   children,
   className,
   style,
+  showDynamicIsland = true,
   ...props
 }: IphoneProps) {
-  const hasVideo = !!videoSrc
-  const hasMedia = hasVideo || !!src || !!children
+  const hasVideo = !!videoSrc;
+  const hasMedia = hasVideo || !!src || !!children;
 
   return (
     <div
@@ -42,66 +36,6 @@ export function Iphone({
       }}
       {...props}
     >
-      {children && (
-        <div
-          className="absolute z-10 overflow-hidden bg-background"
-          style={{
-            left: `${LEFT_PCT}%`,
-            top: `${TOP_PCT}%`,
-            width: `${WIDTH_PCT}%`,
-            height: `${HEIGHT_PCT}%`,
-            borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
-          }}
-        >
-          {children}
-        </div>
-      )}
-
-      {hasVideo && (
-        <div
-          className="pointer-events-none absolute z-0 overflow-hidden"
-          style={{
-            left: `${LEFT_PCT}%`,
-            top: `${TOP_PCT}%`,
-            width: `${WIDTH_PCT}%`,
-            height: `${HEIGHT_PCT}%`,
-            borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
-          }}
-        >
-          <video
-            className="block size-full object-cover"
-            src={videoSrc}
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-          />
-        </div>
-      )}
-
-      {!hasVideo && src && (
-        <div
-          className="pointer-events-none absolute z-0 overflow-hidden"
-          style={{
-            left: `${LEFT_PCT}%`,
-            top: `${TOP_PCT}%`,
-            width: `${WIDTH_PCT}%`,
-            height: `${HEIGHT_PCT}%`,
-            borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
-          }}
-        >
-          <img
-            src={src}
-            alt=""
-            className="block size-full object-cover object-top"
-            width={Math.round(SCREEN_WIDTH)}
-            height={Math.round(SCREEN_HEIGHT)}
-            decoding="async"
-          />
-        </div>
-      )}
-
       <svg
         viewBox={`0 0 ${PHONE_WIDTH} ${PHONE_HEIGHT}`}
         fill="none"
@@ -109,6 +43,41 @@ export function Iphone({
         className="absolute inset-0 size-full"
         style={{ transform: "translateZ(0)" }}
       >
+        {hasMedia && (
+          <foreignObject
+            x={SCREEN_X}
+            y={SCREEN_Y}
+            width={SCREEN_WIDTH}
+            height={SCREEN_HEIGHT}
+            clipPath="url(#roundedCorners)"
+          >
+            <div className="relative size-full overflow-hidden bg-background">
+              {children && <div className="absolute inset-0 z-10">{children}</div>}
+
+              {hasVideo && (
+                <video
+                  className="absolute inset-0 z-0 h-full w-full object-fill object-center"
+                  src={videoSrc}
+                  poster={src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+              )}
+
+              {!hasVideo && src && (
+                <img
+                  src={src}
+                  alt=""
+                  className="absolute inset-0 z-0 block h-full w-full object-fill object-center"
+                  decoding="async"
+                />
+              )}
+            </div>
+          </foreignObject>
+        )}
         <g mask={hasMedia ? "url(#screenPunch)" : undefined}>
           <path
             d="M2 73C2 32.6832 34.6832 0 75 0H357C397.317 0 430 32.6832 430 73V809C430 849.317 397.317 882 357 882H75C34.6832 882 2 849.317 2 809V73Z"
@@ -148,18 +117,20 @@ export function Iphone({
           mask={hasMedia ? "url(#screenPunch)" : undefined}
         />
 
+      {showDynamicIsland &&  <>
         <path
           d="M154 48.5C154 38.2827 162.283 30 172.5 30H259.5C269.717 30 278 38.2827 278 48.5C278 58.7173 269.717 67 259.5 67H172.5C162.283 67 154 58.7173 154 48.5Z"
-          className="fill-[#F5F5F5] dark:fill-[#262626]"
+          className="fill-[#000000] dark:fill-[#000000]"
         />
         <path
           d="M249 48.5C249 42.701 253.701 38 259.5 38C265.299 38 270 42.701 270 48.5C270 54.299 265.299 59 259.5 59C253.701 59 249 54.299 249 48.5Z"
-          className="fill-[#F5F5F5] dark:fill-[#262626]"
+          className="fill-[#000000] dark:fill-[#000000]"
         />
         <path
           d="M254 48.5C254 45.4624 256.462 43 259.5 43C262.538 43 265 45.4624 265 48.5C265 51.5376 262.538 54 259.5 54C256.462 54 254 51.5376 254 48.5Z"
-          className="fill-[#E5E5E5] dark:fill-[#404040]"
+          className="fill-[#000000] dark:fill-[#000000]"
         />
+        </>}
 
         <defs>
           <mask id="screenPunch" maskUnits="userSpaceOnUse">
@@ -193,5 +164,5 @@ export function Iphone({
         </defs>
       </svg>
     </div>
-  )
+  );
 }
