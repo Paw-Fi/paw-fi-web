@@ -3,6 +3,12 @@
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 
 import { getMainGeoLandingPage } from "@/lib/geo-landing-pages";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
@@ -62,12 +68,11 @@ export const Route = createFileRoute("/")({
           applicationSubCategory: "BudgetingApplication",
           description: mainLandingPage.softwareDescription,
           url: "https://moneko.io",
+          availableLanguage: monekoAvailableLanguages,
           featureList: mainLandingPage.softwareFeatureList,
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
         },
         {
           "@type": "FAQPage",

@@ -16,7 +16,7 @@ import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { DotPattern } from "@/components/ui/dot-pattern";
 import { BackgroundBeamsWithCollision } from "@/components/ui/background-beams-with-collision";
-import { Carousel } from "@/components/ui/apple-cards-carousel";
+import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import {
   Accordion,
   AccordionItem,
@@ -35,13 +35,6 @@ import { ReferralAuthPrompt } from "@/components/auth/referral-auth-prompt";
 import { supabase } from "@/lib/supabase";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useSubscription } from "@/hooks/use-subscription";
-import phone1 from "@assets/images/couple-budgeting/1.png";
-import phone2 from "@assets/images/couple-budgeting/2.png";
-import phone3 from "@assets/images/couple-budgeting/3.png";
-import phone4 from "@assets/images/couple-budgeting/4.png";
-import phone5 from "@assets/images/couple-budgeting/5.png";
-import { AppleDownloadButton } from "@/components/ui/apple-download-button";
-import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 import { faDiscord } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DISCORD_URL } from "@/lib/external-links";
@@ -121,36 +114,6 @@ const referralFaq = [
     question: "Can I track who joined with my link?",
     answer:
       "Yes. This page shows who accepted your invite and who completed checkout, so you can track referral activity in one place.",
-  },
-];
-
-// Mobile preview cards data (reuse couple-budgeting mockups)
-const mobilePreview = [
-  {
-    src: phone1,
-    title: "Link accounts and manage money together",
-    description:
-      "Log groceries, bills, and date nights. See who paid—instantly.",
-  },
-  {
-    src: phone2,
-    title: "Add expenses and split fairly",
-    description: "Watch shared savings grow toward your next trip or big goal.",
-  },
-  {
-    src: phone3,
-    title: "Stay aligned with real‑time alerts",
-    description: "Create shared budgets and keep personal spending separate.",
-  },
-  {
-    src: phone4,
-    title: "Set goals and celebrate progress",
-    description: "Smart insights spot trends and help couples save more.",
-  },
-  {
-    src: phone5,
-    title: "Scan receipts in WhatsApp",
-    description: "Auto‑log spending from chats for fast, accurate tracking.",
   },
 ];
 
@@ -327,76 +290,30 @@ function ReferralPage() {
             </div>
           )}
         </section>
-        {/* Full-bleed Mobile App Preview Section (wider) */}
-        {
-          <section className="relative z-10 flex flex-col items-center overflow-hidden px-4 py-20 sm:px-8 lg:px-8">
-            <motion.div
-              className="mx-auto"
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.6 }}
+        <MobileAppPreviewCarousel
+          className="z-10 px-4 sm:px-8 lg:px-8"
+          contentClassName="max-w-none"
+          carouselClassName="h-[560px] w-screen md:h-[640px] lg:h-[640px] xl:h-[680px] 2xl:h-[720px]"
+          title="Try the Moneko App Today"
+          description="Explore Moneko while your friend joins. They can redeem 50% off the lifetime plan right from your referral flow."
+          footerSlot={
+            <motion.a
+              href={DISCORD_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              aria-label="Connect on Discord"
+              className="text-dark-foreground inline-flex items-center justify-center gap-1.5 sm:gap-2"
             >
-              <motion.div
-                className="mb-16 flex flex-col items-center text-center"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-              >
-                <h2 className="text-foreground mb-6 text-4xl font-bold tracking-tight sm:text-5xl">
-                  Try the Moneko App Today
-                </h2>
-                <p className="text-muted-foreground mx-auto max-w-2xl text-lg leading-relaxed">
-                  Explore Moneko while your friend joins. They can redeem 50%
-                  off the lifetime plan right from your referral flow.
-                </p>
-
-                <div className="mt-6 mb-4 flex flex-col gap-3 lg:flex-row">
-                  <AppleDownloadButton />
-                  <AndroidDownloadButton />
-                </div>
-                <motion.a
-                  href={DISCORD_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  aria-label="Connect on Discord"
-                  className="text-dark-foreground inline-flex items-center justify-center gap-1.5 sm:gap-2"
-                >
-                  <FontAwesomeIcon
-                    icon={faDiscord}
-                    className="h-3 w-3 sm:h-4 sm:w-4"
-                  />
-                  Join Discord for instant support
-                </motion.a>
-              </motion.div>
-
-              <Carousel
-                className="h-[560px] w-screen md:h-[640px] lg:h-[640px] xl:h-[680px] 2xl:h-[720px]"
-                items={mobilePreview.map((mockup, index) => (
-                  <motion.div
-                    key={index}
-                    className="relative flex flex-col items-center"
-                  >
-                    <h3 className="text-foreground w-[70%] -translate-y-8 text-lg font-medium">
-                      {mockup.title}
-                    </h3>
-                  </motion.div>
-                ))}
-                iphoneMockups={mobilePreview.map((mockup) => (
-                  <motion.div
-                    key={(mockup as any).title}
-                    className="flex h-[80%] w-full items-end justify-center"
-                  >
-                    <img src={mockup.src} className="h-full w-auto" />
-                  </motion.div>
-                ))}
+              <FontAwesomeIcon
+                icon={faDiscord}
+                className="h-3 w-3 sm:h-4 sm:w-4"
               />
-            </motion.div>
-          </section>
-        }
+              Join Discord for instant support
+            </motion.a>
+          }
+        />
 
         {/* How It Works Section (moved from modal) */}
         {

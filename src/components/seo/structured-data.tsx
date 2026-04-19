@@ -1,5 +1,12 @@
 import React from "react";
 
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
+
 interface OrganizationData {
   name: string;
   url: string;
@@ -234,18 +241,21 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           url: softwareData.url,
           applicationCategory: softwareData.applicationCategory,
           operatingSystem: softwareData.operatingSystem,
+          availableLanguage: monekoAvailableLanguages,
           requirements: softwareData.requirements,
           screenshot: softwareData.screenshot,
           softwareVersion: softwareData.softwareVersion,
           dateModified: softwareData.dateModified,
           publisher: softwareData.publisher,
+          offers: createMonekoFreeOffer(softwareData.url),
           aggregateRating: softwareData.aggregateRating
             ? {
                 "@type": "AggregateRating",
                 ratingValue: softwareData.aggregateRating.ratingValue,
                 ratingCount: softwareData.aggregateRating.ratingCount,
               }
-            : undefined,
+            : monekoAggregateRating,
+          review: monekoFeaturedReview,
         };
 
       case "person":

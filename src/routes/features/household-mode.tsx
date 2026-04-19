@@ -6,12 +6,18 @@ import { seo } from "@/utils/seo";
 
 // SEO & Meta Imports
 
-const META_TITLE = "Joint Expense Tracker & Budgeting for Couples | Moneko Household";
-const META_DESCRIPTION = "The best joint expense tracker for couples. Manage shared household bills, split expenses fairly, and track joint savings without losing your personal privacy.";
-const META_KEYWORDS = "joint expense tracker, couples budgeting app, shared household finances, bill splitter for partners, joint budget planner, finance app for couples, split rent and utilities";
+const META_TITLE =
+  "Joint Expense Tracker & Budgeting for Couples | Moneko Household";
+const META_DESCRIPTION =
+  "Use Moneko Household Mode to track shared bills, split expenses fairly, manage joint savings, and keep personal spending separate from shared budgets.";
+const META_KEYWORDS =
+  "joint expense tracker, couples budgeting app, shared household finances, bill splitter for partners, joint budget planner, finance app for couples, split rent and utilities";
 
 export const Route = createFileRoute("/features/household-mode")({
-  component: lazyRouteComponent(() => import("@/components/performance/household-mode-route-component"), "HouseholdModeRouteComponent"),
+  component: lazyRouteComponent(
+    () => import("@/components/performance/household-mode-route-component"),
+    "HouseholdModeRouteComponent",
+  ),
   head: () => {
     const pageUrl = getCanonicalUrl("/features/household-mode");
     const meta = seo({

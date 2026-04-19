@@ -24,7 +24,7 @@ import {
   type ArcTimelineItem,
 } from "@/components/ui/arc-timeline";
 import { FaqSection } from "@/components/ui/faq-section";
-import { Carousel } from "@/components/ui/apple-cards-carousel";
+import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import { cn } from "@/lib/utils";
 import phone1 from "@assets/images/early-access/Mobile-Screen1.png";
 import phone2 from "@assets/images/early-access/Mobile-Screen2.png";
@@ -32,6 +32,12 @@ import phone3 from "@assets/images/early-access/Mobile-Screen3.png";
 import phone4 from "@assets/images/early-access/Mobile-Screen4.png";
 import { MonekoIcon } from "@/components/shared/moneko-icon";
 import { APP_STORE_RATING, TOTAL_REVIEW_COUNT } from "@/data/app-store-reviews";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 
 import {
   claimEarlyAccessSpot,
@@ -115,11 +121,10 @@ export const Route = createFileRoute("/early-access")({
           name: "Moneko Mobile App",
           applicationCategory: "FinanceApplication",
           operatingSystem: "iOS, Android",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
+          availableLanguage: monekoAvailableLanguages,
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
           description:
             "Moneko's AI-powered mobile budgeting and personal finance app",
         },
@@ -517,51 +522,13 @@ function EarlyAccessPage() {
           </motion.div>
         </section>
 
-        {/* Mobile App Preview Section */}
-        <section className="relative overflow-hidden px-6 py-20">
-          <motion.div
-            className="mx-auto max-w-7xl"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-          >
-            <motion.div className="mb-16 text-center" variants={itemVariants}>
-              <h2 className="mb-6 text-4xl font-bold tracking-tight text-slate-800 sm:text-5xl dark:text-slate-200">
-                What You Can Do with Moneko Mobile
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-                Experience seamless budgeting on your phone with AI-powered
-                features designed for your financial success.
-              </p>
-            </motion.div>
-
-            {/* Carousel rendering: preserve exact item styles; phone mockup is injected via prop */}
-            <Carousel
-              className="h-[540px] md:h-[620px] lg:h-[600px] xl:h-[600px] 2xl:h-[700px]"
-              items={mobilePreview.map((mockup, index) => (
-                <motion.div
-                  key={index}
-                  className="relative flex flex-col items-center"
-                  variants={itemVariants}
-                >
-                  {/* Content */}
-                  <h3 className="w-[70%] -translate-y-8 text-lg font-semibold text-slate-800 dark:text-slate-200">
-                    {mockup.title}
-                  </h3>
-                </motion.div>
-              ))}
-              iphoneMockups={mobilePreview.map((mockup) => (
-                <motion.div
-                  key={(mockup as any).title}
-                  className="flex h-[80%] w-full items-end justify-center"
-                >
-                  <img src={mockup.src} className="h-full w-auto" />
-                </motion.div>
-              ))}
-            />
-          </motion.div>
-        </section>
+        <MobileAppPreviewCarousel
+          className="px-6"
+          title="What You Can Do with Moneko Mobile"
+          description="Experience seamless budgeting on your phone with AI-powered features designed for your financial success."
+          slides={mobilePreview}
+          showDownloadButtons={false}
+        />
 
         {/* Features Section - Exact Uninbox style */}
         <section className="px-6 py-20">

@@ -2,12 +2,18 @@
 
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 import type { FAQItem } from "@/components/homepage/new/faq-section";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
 const META_TITLE = "Download Moneko - iOS & Android";
 const META_DESCRIPTION =
-  "Download Moneko on your iPhone or Android device. Experience the future of AI budgeting with seamless sync across all your devices.";
+  "Download Moneko for iPhone or Android to track expenses, scan receipts, organize Pockets, and manage shared budgets with AI-assisted workflows.";
 const META_KEYWORDS =
   "download moneko, moneko app, budgeting app ios, budgeting app android, expense tracker app, digital envelope budgeting app, couples budgeting app, whatsapp expense tracker";
 
@@ -74,14 +80,14 @@ export const Route = createFileRoute("/download")({
           name: "Moneko",
           applicationCategory: "FinanceApplication",
           operatingSystem: "iOS, Android",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
+          availableLanguage: monekoAvailableLanguages,
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
         },
         {
           "@type": "FAQPage",
+          "@id": `${pageUrl}#faq`,
           mainEntity: [
             {
               "@type": "Question",

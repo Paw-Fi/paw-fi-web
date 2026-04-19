@@ -10,6 +10,7 @@ import HeroSection from "@/components/homepage/new/hero-section";
 import ThreeStepsSection from "@/components/homepage/new/three-steps-section";
 import VideoSection from "@/components/homepage/new/video-section";
 import FAQSection from "@/components/homepage/new/faq-section";
+import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import { Route } from "@/routes/budgeting-app/$slug";
 
@@ -51,6 +52,12 @@ export function BudgetingAppSlugRouteComponent() {
       <section className="bg-section-bg-light relative">
         <ThreeStepsSection data={pageData} />
       </section>
+
+      <MobileAppPreviewCarousel
+        className="bg-section-bg-light"
+        title="See the mobile app in action"
+        description="Preview how Moneko captures spending, reviews AI entries, and keeps everyday budgets moving on iPhone and Android."
+      />
 
       <section className="bg-section-bg-light relative">
         <ExpertLessonsSection data={pageData} />

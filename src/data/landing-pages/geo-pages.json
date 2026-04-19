@@ -1,12 +1,12 @@
 {
   "main": {
     "slug": "main",
-    "title": "Moneko - AI Budgeting App, Expense Tracker, and YNAB Alternative",
-    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, and Telegram. Track expenses automatically, manage shared budgets, and organize spending into pockets.",
+    "title": "Moneko - AI Budgeting App for WhatsApp and Shared Expenses",
+    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, organize pockets, and manage shared budgets.",
     "keywords": "best budgeting app, expense tracker app, YNAB alternative, AI budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, Apple Wallet budgeting, Android expense tracker",
     "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web.",
     "websiteDescription": "Moneko helps people track expenses automatically, organize money into pockets, and budget through chat-based workflows.",
-    "softwareDescription": "AI budgeting app and expense tracker with Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
+    "softwareDescription": "AI budgeting app and expense tracker with multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
     "softwareAlternateNames": [
       "Moneko budgeting app",
       "Moneko expense tracker"
@@ -15,6 +15,7 @@
       "Apple Wallet-friendly iPhone budgeting workflow",
       "Android notification-based expense tracking",
       "WhatsApp and Telegram budgeting assistant",
+      "Multilingual AI budget answers",
       "Envelope-style pockets for budgeting",
       "Shared personal and household finance tracking",
       "AI what-if planning and summaries"
@@ -42,7 +43,7 @@
       },
       {
         "question": "Can I manage my budget via WhatsApp or Telegram?",
-        "answer": "Yes. Moneko lets you log expenses, ask for summaries, review pockets, and manage shared budgets directly through WhatsApp or Telegram. It is designed for people who want chat-based finance management instead of app-only workflows."
+        "answer": "Yes. Moneko lets you log expenses, ask for summaries in your preferred language, review pockets, and manage shared budgets directly through WhatsApp or Telegram. It is designed for people who want chat-based finance management instead of app-only workflows."
       },
       {
         "question": "What makes Moneko different from YNAB?",
@@ -175,7 +176,7 @@
       },
       {
         "question": "Does Moneko work through WhatsApp and Telegram?",
-        "answer": "Yes. Moneko supports chat-based budgeting through WhatsApp and Telegram so users can log expenses, ask for summaries, and manage their budgets conversationally."
+        "answer": "Yes. Moneko supports chat-based budgeting through WhatsApp and Telegram so users can log expenses, ask for summaries in their preferred language, and manage their budgets conversationally."
       },
       {
         "question": "Is Moneko useful for couples and households?",
@@ -863,14 +864,14 @@
     "sitemapChangefreq": "weekly",
     "sitemapPriority": "0.9",
     "title": "Budgeting via WhatsApp | Moneko",
-    "description": "Moneko helps users budget via WhatsApp by letting them log expenses, review pockets, and ask for summaries in a messaging workflow that reduces the friction of traditional budgeting apps.",
+    "description": "Moneko helps users budget via WhatsApp by letting them log expenses, review pockets, and ask for summaries in their preferred language through a messaging workflow that reduces the friction of traditional budgeting apps.",
     "keywords": "budgeting via WhatsApp, WhatsApp budgeting app, WhatsApp expense tracker, chat-based budgeting, budget through WhatsApp",
     "eyebrow": "Budgeting via WhatsApp",
     "pageTitle": "Can you really budget via WhatsApp? Moneko is built for that workflow.",
     "pageDescription": "Budgeting via WhatsApp works when the chat flow does more than store messages. Moneko uses WhatsApp as a real budgeting interface for expense capture, pocket checks, summaries, and shared money coordination.",
     "keyTakeaways": [
       "Moneko treats WhatsApp as a budgeting workflow, not just a support channel.",
-      "Users can log expenses, ask for summaries, and manage pockets in chat.",
+      "Users can log expenses, ask for summaries in their preferred language, and manage pockets in chat.",
       "The WhatsApp flow reduces the need to open a separate finance app.",
       "The same workflow supports shared and household budgeting."
     ],
@@ -1489,7 +1490,7 @@
       {
         "title": "How does Moneko work as a Telegram budgeting app?",
         "paragraphs": [
-          "Moneko lets users log expenses, ask for summaries, and review budget pockets through Telegram. That makes it easier to keep a budget active throughout the week without relying on a separate finance-app routine.",
+          "Moneko lets users log expenses, ask for summaries in their preferred language, and review budget pockets through Telegram. That makes it easier to keep a budget active throughout the week without relying on a separate finance-app routine.",
           "The Telegram flow is then connected to Moneko's broader budgeting system, including pockets, shared views, and AI planning."
         ]
       },

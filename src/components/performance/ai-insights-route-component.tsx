@@ -29,6 +29,12 @@ import { BentoCard } from "@/components/ui/bento-card";
 
 // SEO & Meta Imports
 import { Helmet } from "@dr.pogodin/react-helmet";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { HomeHeader } from "@/components/index/header";
@@ -36,7 +42,7 @@ import { HomeHeader } from "@/components/index/header";
 const META_TITLE =
   "AI Financial Assistant & Expense Forecasting | Moneko Insights";
 const META_DESCRIPTION =
-  "Get instant answers to your financial questions. Use Moneko's AI assistant for scenario simulations, expense forecasting, and real-time smart alerts to master your money.";
+  "Ask Moneko budget questions in plain language. Use AI insights for spending summaries, scenario planning, category trends, and goal-aware money decisions.";
 const META_KEYWORDS =
   "AI financial assistant, personal finance AI, expense forecasting tool, AI budget insights, smart financial alerts, financial scenario planning, automated spending analysis";
 
@@ -78,7 +84,11 @@ export function AIInsightsRouteComponent() {
         applicationCategory: "FinanceApplication",
         operatingSystem: "iOS, Android, Web",
         description:
-          "An AI-powered financial clarity engine that provides natural language insights and predictive forecasting for personal finance.",
+          "An AI-powered financial clarity engine that provides multilingual natural language insights and predictive forecasting for personal finance.",
+        availableLanguage: monekoAvailableLanguages,
+        offers: createMonekoFreeOffer(pageUrl),
+        aggregateRating: monekoAggregateRating,
+        review: monekoFeaturedReview,
         softwareHelp: {
           "@type": "CreativeWork",
           url: "https://moneko.io/docs/ai-assistant",
@@ -86,13 +96,14 @@ export function AIInsightsRouteComponent() {
       },
       {
         "@type": "FAQPage",
+        "@id": `${pageUrl}#faq`,
         mainEntity: [
           {
             "@type": "Question",
             name: "How does the AI analyze my spending?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Moneko uses proprietary machine learning models to categorize transactions and identify patterns, allowing you to ask natural language questions about your budget.",
+              text: "Moneko analyzes your saved budget entries, categories, pockets, and goals so you can ask natural language questions about your money.",
             },
           },
           {
@@ -100,7 +111,7 @@ export function AIInsightsRouteComponent() {
             name: "Is my financial data safe with the AI?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Yes. Your data is encrypted using AES-256 and is never sold to third parties. The AI operates on anonymized data sets for your security.",
+              text: "Moneko is built with privacy controls for personal finance workflows. Review the privacy policy for details on how account and budget data are handled.",
             },
           },
         ],
@@ -145,8 +156,8 @@ export function AIInsightsRouteComponent() {
               <p className="mx-auto max-w-2xl text-xl leading-relaxed text-slate-600 dark:text-slate-400">
                 Stop deciphering complex spreadsheets. Moneko's{" "}
                 <strong>AI Financial Assistant</strong> translates your spending
-                patterns into plain English advice. Run scenarios, simulate
-                major life purchases, and get data-backed answers in seconds.
+                patterns into plain language guidance. Run scenarios, compare
+                major purchases, and get budget-aware answers in seconds.
               </p>
             </motion.div>
 
@@ -228,8 +239,8 @@ export function AIInsightsRouteComponent() {
                 How Moneko AI Works
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                Advanced machine learning designed for personal financial
-                sovereignty.
+                Practical analysis designed to make your budget easier to
+                question, review, and adjust.
               </p>
             </div>
             <div className="grid gap-8 md:grid-cols-2">
@@ -240,8 +251,8 @@ export function AIInsightsRouteComponent() {
                     Trend Extraction
                   </h3>
                   <p className="text-sm text-slate-500">
-                    Moneko identifies cyclical spending habits to predict future
-                    cash flow shortages before they happen.
+                    Moneko looks for recurring categories and spending patterns
+                    so upcoming cash-flow pressure is easier to spot.
                   </p>
                 </div>
               </div>
@@ -252,8 +263,8 @@ export function AIInsightsRouteComponent() {
                     NLP Intelligence
                   </h3>
                   <p className="text-sm text-slate-500">
-                    Natural Language Processing allows for human-like
-                    interaction with your financial data.
+                    Natural-language questions make your budget easier to query
+                    without digging through every category manually.
                   </p>
                 </div>
               </div>
@@ -267,8 +278,8 @@ export function AIInsightsRouteComponent() {
             Ready for total financial clarity?
           </h2>
           <p className="mx-auto mb-10 max-w-xl text-lg text-slate-600 dark:text-slate-400">
-            Harness the power of AI to stop tracking the past and start planning
-            your future.
+            Use AI summaries and scenario planning to turn budget history into
+            clearer next steps.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <AppleDownloadButton />
@@ -293,7 +304,7 @@ export function AIInsightsRouteComponent() {
           </p>
           <div className="mt-12 flex items-center justify-center gap-8 text-sm font-medium text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> AES-256 Encryption
+              <ShieldCheck className="h-4 w-4" /> Privacy Controls
             </span>
             <span className="flex items-center gap-2">
               <Zap className="h-4 w-4" /> Real-Time Analysis

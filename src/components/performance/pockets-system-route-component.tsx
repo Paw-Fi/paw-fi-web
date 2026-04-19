@@ -33,7 +33,7 @@ import { HomeHeader } from "@/components/index/header";
 
 const META_TITLE = "Digital Envelope Budgeting App | The Moneko Pockets System";
 const META_DESCRIPTION =
-  "Master zero-based budgeting with Moneko Pockets. Our digital envelope system helps you allocate every dollar, track goals, and visualize your spending in real-time.";
+  "Use Moneko Pockets for digital envelope budgeting. Allocate income, track spending categories, move money between pockets, and plan goals from one app.";
 const META_KEYWORDS =
   "envelope budgeting app, zero based budgeting system, digital envelope system, money allocation tool, visual budget tracker, financial goal setting app";
 
@@ -128,9 +128,9 @@ export function PocketsSystemRouteComponent() {
               </h1>
               <p className="mx-auto max-w-2xl text-xl leading-relaxed text-slate-600 dark:text-slate-400">
                 Moneko Pockets bring the classic envelope budgeting method into
-                the modern era. Experience a visual, high-engagement way to{" "}
+                the modern era. Use a visual, low-friction way to{" "}
                 <strong>give every dollar a job</strong> and ensure you never
-                overspend again.
+                lose sight of category limits.
               </p>
             </motion.div>
 
@@ -212,8 +212,8 @@ export function PocketsSystemRouteComponent() {
                 Why Zero-Based Budgeting?
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                The science behind why Pockets help you save 20% more on
-                average.
+                A practical way to reduce category creep before it becomes
+                month-end cleanup.
               </p>
             </div>
             <div className="grid gap-8 md:grid-cols-2">

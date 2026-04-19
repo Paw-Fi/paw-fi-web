@@ -28,9 +28,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DataOwnershipSection } from "@/components/sections/data-ownership-section";
 import { FaqSection } from "@/components/ui/faq-section";
 
-const META_TITLE = "How Moneko Works - AI Budgeting Simplified";
+const META_TITLE = "How Moneko Works - AI Budgeting from Chat to Pockets";
 const META_DESCRIPTION =
-  "See how Moneko uses AI to simplify personal and household finance. From voice capture to envelope budgeting and WhatsApp integration.";
+  "See how Moneko turns WhatsApp messages, receipts, voice notes, and mobile spending signals into reviewed budget entries, Pockets, and shared household views.";
 
 export function HowItWorksRouteComponent() {
   const currencySymbol = getCurrencySymbolBasedOnTimeZone();
@@ -50,7 +50,7 @@ export function HowItWorksRouteComponent() {
     {
       question: "What’s the difference between Personal and Household mode?",
       answer:
-        "Personal mode tracks just your finances. Household mode is for shared budgets and spending with other members, so you can manage joint expenses and see group-aware dashboards.",
+        "Personal mode tracks just your finances. Household mode is for shared budgets and spending with other members, so you can manage joint expenses and see shared dashboards.",
     },
     {
       question: "Can I plan for recurring bills and income?",
@@ -109,18 +109,18 @@ export function HowItWorksRouteComponent() {
       },
       {
         "@type": "HowTo",
-        name: "How to Use Moneko for Simple Budgeting",
+        name: "How to Use Moneko for AI Budgeting",
         description: META_DESCRIPTION,
         step: [
           {
             "@type": "HowToStep",
-            name: "Setup & Context",
+            name: "Choose a budget mode",
             text: "Choose between Personal or Household mode to manage private or shared finances.",
           },
           {
             "@type": "HowToStep",
-            name: "Fast Capture",
-            text: "Log expenses effortlessly using voice notes, text messages, or receipt photos.",
+            name: "Capture spending",
+            text: "Log expenses using voice notes, text messages, receipt photos, or supported files.",
           },
           {
             "@type": "HowToStep",
@@ -129,8 +129,8 @@ export function HowItWorksRouteComponent() {
           },
           {
             "@type": "HowToStep",
-            name: "Insights & Planning",
-            text: "Use AI scenario planning to ask 'What if?' questions and forecast your future balance.",
+            name: "Review insights and scenarios",
+            text: "Use AI scenario planning to ask what-if questions and review possible budget outcomes.",
           },
         ],
       },

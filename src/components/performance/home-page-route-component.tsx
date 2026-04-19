@@ -16,6 +16,11 @@ const UserCommunityShowcase = lazy(() =>
     default: module.UserCommunityShowcase,
   })),
 );
+const MobileAppPreviewCarousel = lazy(() =>
+  import("@/components/shared/mobile-app-preview-carousel").then((module) => ({
+    default: module.MobileAppPreviewCarousel,
+  })),
+);
 const CaptureSection = lazy(() =>
   import("@/components/homepage/v2/capture-section").then((module) => ({
     default: module.CaptureSection,
@@ -83,6 +88,17 @@ export function HomePageRouteComponent() {
           }
         >
           <UserCommunityShowcase />
+        </Suspense>
+
+        <Suspense
+          fallback={
+            <div className={`${deferredSectionFallback} min-h-[32rem]`} />
+          }
+        >
+          <MobileAppPreviewCarousel
+            title="See why people keep Moneko on their phone"
+            description="Preview the mobile flows for voice logging, WhatsApp capture, shared budgets, and AI-reviewed spending before you download."
+          />
         </Suspense>
 
         {/* Deep Dive 2: Capture (The Magic) */}
