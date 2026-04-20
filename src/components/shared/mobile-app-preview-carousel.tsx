@@ -45,9 +45,14 @@ interface MobileAppPreviewCarouselProps {
 
 export const defaultMobileAppPreviewSlides: MobileAppPreviewSlide[] = [
   {
+    src: mockupPoster8,
+    videoSrc: mockupVideo8,
+    title: "WhatsApp Integration",
+  },
+  {
     src: mockupPoster1,
     videoSrc: mockupVideo1,
-    title: "Track Expenses by Text",
+    title: "Log via Voice or Text",
   },
   {
     src: mockupPoster7,
@@ -55,34 +60,29 @@ export const defaultMobileAppPreviewSlides: MobileAppPreviewSlide[] = [
     title: "Apple Pay Automation",
   },
   {
-    src: mockupPoster8,
-    videoSrc: mockupVideo8,
-    title: "WhatsApp Integration",
-  },
-  {
-    src: mockupPoster2,
-    videoSrc: mockupVideo2,
-    title: "Import Data in Seconds",
-  },
-  {
     src: mockupPoster3,
     videoSrc: mockupVideo3,
-    title: "Split Expenses by Text",
-  },
-  {
-    src: mockupPoster3,
-    videoSrc: mockupVideo4,
-    title: "Multi-Currency Support",
+    title: "Split Expenses Instantly",
   },
   {
     src: mockupPoster5,
     videoSrc: mockupVideo5,
     title: "Envelope Budgeting",
   },
-  {
+    {
     src: mockupPoster6,
     videoSrc: mockupVideo6,
-    title: "Bank Sync for Transactions",
+    title: "Bank Transactions Sync",
+  },
+    {
+    src: mockupPoster2,
+    videoSrc: mockupVideo2,
+    title: "Import Data in Seconds",
+  },
+    {
+    src: mockupPoster3,
+    videoSrc: mockupVideo4,
+    title: "Multi-Currency Support",
   },
 ];
 

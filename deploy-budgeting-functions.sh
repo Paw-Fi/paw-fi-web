@@ -10,24 +10,13 @@ set -euo pipefail  # Exit on error, unset vars, and pipe fails
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-DEFAULT_PROJECT_REF="pbopcsmrcykdzbilpilf"
+DEFAULT_PROJECT_REF="qbuynyxyemigtnvdujts"
 PROJECT_REF="${1:-${PROJECT_REF:-$DEFAULT_PROJECT_REF}}"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Budgeting Functions to Supabase"
 echo "  Project: $PROJECT_REF"
 echo "════════════════════════════════════════════════════════════"
-echo ""
-
-# Step 1: Deploy Twilio WhatsApp entrypoints (CRITICAL)
-echo "📦 [1/24] Deploying twilio-whatsapp-ai-bot function..."
-supabase functions deploy twilio-whatsapp-ai-bot --project-ref "$PROJECT_REF" --no-verify-jwt
-echo "✅ twilio-whatsapp-ai-bot deployed"
-echo ""
-
-echo "📦 [2/24] Deploying twilio-whatsapp-fallback function..."
-supabase functions deploy twilio-whatsapp-fallback --project-ref "$PROJECT_REF" --no-verify-jwt
-echo "✅ twilio-whatsapp-fallback deployed"
 echo ""
 
 # Step 2: Deploy finance-update
@@ -108,11 +97,6 @@ echo ""
 echo "📦 [17/24] Deploying create-wallet-transfer function..."
 supabase functions deploy create-wallet-transfer --project-ref "$PROJECT_REF"
 echo "✅ create-wallet-transfer deployed"
-echo ""
-
-echo "📦 [18/24] Deploying telegram-ai-bot function..."
-supabase functions deploy telegram-ai-bot --project-ref "$PROJECT_REF" --no-verify-jwt
-echo "✅ telegram-ai-bot deployed"
 echo ""
 
 echo "📦 [19/24] Deploying analyze-expense function..."

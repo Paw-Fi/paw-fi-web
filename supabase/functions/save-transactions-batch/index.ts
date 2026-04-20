@@ -27,6 +27,14 @@ import {
   buildImportRequestKey,
   buildImportSemanticKey,
 } from "../shared/import-dedupe.ts";
+import {
+  buildHouseholdSplitRecords,
+  createHouseholdAutoSplitForTransaction,
+  type CustomSplits,
+  fetchHouseholdAutoSplitSettings,
+  type HouseholdAutoSplitSettings,
+  resolveEffectiveSplit,
+} from "../shared/household-auto-split.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -39,85 +47,6 @@ function sanitizeUuid(value?: string | null): string | null {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
-}
-
-function normalizePercentage(value: unknown): number {
-  if (!isFiniteNumber(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 100) return 100;
-  return value;
-}
-
-function normalizeShares(value: unknown): number | undefined {
-  if (!isFiniteNumber(value)) return undefined;
-  const shares = Math.trunc(value);
-  return shares > 0 ? shares : undefined;
-}
-
-function normalizeAmount(value: unknown): number {
-  if (!isFiniteNumber(value)) return 0;
-  return value < 0 ? 0 : value;
-}
-
-function allocateCentsByWeights(
-  totalCents: number,
-  weights: number[],
-): number[] {
-  const safeTotal = Number.isFinite(totalCents)
-    ? Math.max(0, Math.trunc(totalCents))
-    : 0;
-  const safeWeights = weights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0));
-  const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0);
-
-  if (safeTotal === 0 || totalWeight <= 0 || safeWeights.length === 0) {
-    return safeWeights.map(() => 0);
-  }
-
-  const floors: number[] = [];
-  const fracs: { idx: number; frac: number }[] = [];
-  let sumFloors = 0;
-
-  for (let i = 0; i < safeWeights.length; i++) {
-    const weight = safeWeights[i];
-    if (weight <= 0) {
-      floors.push(0);
-      continue;
-    }
-    const raw = safeTotal * (weight / totalWeight);
-    const floored = Math.floor(raw);
-    const frac = raw - floored;
-    floors.push(floored);
-    sumFloors += floored;
-    fracs.push({ idx: i, frac });
-  }
-
-  let remainder = safeTotal - sumFloors;
-  if (remainder <= 0) return floors;
-
-  fracs.sort((a, b) => b.frac - a.frac);
-  if (fracs.length === 0) return floors;
-
-  let cursor = 0;
-  while (remainder > 0) {
-    const target = fracs[cursor % fracs.length].idx;
-    floors[target] += 1;
-    remainder -= 1;
-    cursor += 1;
-  }
-
-  return floors;
-}
-
-interface MemberSplit {
-  userId: string;
-  amount?: number;
-  percentage?: number;
-  shares?: number;
-}
-
-interface CustomSplits {
-  splitType: "equal" | "amount" | "percentage" | "shares";
-  memberSplits: MemberSplit[];
 }
 
 interface TransactionItem {
@@ -281,16 +210,13 @@ function createProgressEmitter(
   return (stage: string, message: string, currentLocalItem?: number) => {
     if (!onProgress) return;
 
-    const normalizedCurrent =
-      currentLocalItem == null
-        ? undefined
-        : Math.max(
-            lastCurrentItem,
-            Math.min(
-              totalItems,
-              progressOffset + Math.max(0, Math.trunc(currentLocalItem)),
-            ),
-          );
+    const normalizedCurrent = currentLocalItem == null ? undefined : Math.max(
+      lastCurrentItem,
+      Math.min(
+        totalItems,
+        progressOffset + Math.max(0, Math.trunc(currentLocalItem)),
+      ),
+    );
 
     if (normalizedCurrent != null) {
       lastCurrentItem = normalizedCurrent;
@@ -398,6 +324,11 @@ async function saveTransactionsBatchInternal(
   let resolvedHouseholdId: string | null = null;
   let householdMembers: { user_id: string }[] = [];
 
+  let householdAutoSplitSettings: HouseholdAutoSplitSettings = {
+    autoSplitEnabled: true,
+    defaultConfig: null,
+  };
+
   if (requestedHouseholdId && !isPortfolio) {
     const { data: membership } = await supabase
       .from("household_members")
@@ -416,12 +347,15 @@ async function saveTransactionsBatchInternal(
 
       if (members && members.length > 0) {
         householdMembers = members;
+        householdAutoSplitSettings = await fetchHouseholdAutoSplitSettings(
+          supabase,
+          requestedHouseholdId,
+        );
       }
     }
   }
 
-  const scopeHouseholdId: string | null =
-    resolvedHouseholdId ??
+  const scopeHouseholdId: string | null = resolvedHouseholdId ??
     (isPortfolio ? (requestedHouseholdId ?? null) : null);
   const invalidAccountSentinel = "__invalid__";
   const accountResolutionCache = new Map<string, string | null>();
@@ -500,135 +434,56 @@ async function saveTransactionsBatchInternal(
       return expense;
     }
 
-    const amountCents = Number(expense["amount_cents"] ?? 0);
-    const rawSplitType =
-      typeof meta.customSplits?.splitType === "string"
-        ? meta.customSplits.splitType.trim().toLowerCase()
-        : "equal";
-    const normalizedSplitType = [
-      "equal",
-      "amount",
-      "percentage",
-      "shares",
-    ].includes(rawSplitType)
-      ? rawSplitType
-      : "equal";
-    const hasMemberSplits =
-      Array.isArray(meta.customSplits?.memberSplits) &&
-      meta.customSplits!.memberSplits.length > 0;
-    const customSplits =
-      hasMemberSplits && normalizedSplitType !== "equal"
-        ? meta.customSplits
-        : null;
-    const splitType = customSplits ? normalizedSplitType : "equal";
-
-    let payerUserId = sanitizeUuid(meta.payerUserId ?? null) || resolvedUserId;
-    const isValidPayer = householdMembers.some(
-      (member) => member.user_id === payerUserId,
+    const effective = resolveEffectiveSplit(
+      meta.customSplits,
+      householdAutoSplitSettings,
     );
-    if (!isValidPayer) payerUserId = resolvedUserId;
+    console.log("[save-transactions-batch] Replay split decision:", {
+      householdId: resolvedHouseholdId,
+      expenseId: expense["id"],
+      autoSplitEnabled: householdAutoSplitSettings.autoSplitEnabled,
+      hasDefaultConfig: householdAutoSplitSettings.defaultConfig != null,
+      hasRequestCustomSplits: meta.customSplits != null,
+      decision: effective.kind,
+    });
+    if (effective.kind === "skip") {
+      return expense;
+    }
 
     const expenseId = typeof expense["id"] === "string" ? expense["id"] : "";
     if (expenseId.length === 0) {
       return expense;
     }
 
-    const splitGroupId = crypto.randomUUID();
-    const splitGroup = {
-      id: splitGroupId,
-      household_id: resolvedHouseholdId,
-      expense_id: expenseId,
-      payer_user_id: payerUserId,
-      split_type: splitType,
-      currency:
-        typeof expense["currency"] === "string" ? expense["currency"] : null,
-      total_amount_cents: amountCents,
-      description:
-        typeof expense["raw_text"] === "string" ? expense["raw_text"] : null,
-      created_at: new Date().toISOString(),
-    };
-
-    let lines: Array<{
-      user_id: string;
-      amount_cents: number;
-      percentage?: number;
-      shares?: number;
-    }>;
-
-    if (splitType === "equal") {
-      const amountPerMember = Math.floor(amountCents / householdMembers.length);
-      const remainder = amountCents - amountPerMember * householdMembers.length;
-      lines = householdMembers.map((member, idx) => ({
-        user_id: member.user_id,
-        amount_cents: amountPerMember + (idx == 0 ? remainder : 0),
-      }));
-    } else if (splitType === "amount" && customSplits) {
-      const memberSplits = customSplits.memberSplits as MemberSplit[];
-      const cents = memberSplits.map((split) =>
-        Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100)),
-      );
-      const sumCents = cents.reduce((sum, value) => sum + value, 0);
-      const diff = amountCents - sumCents;
-      if (diff !== 0 && cents.length > 0) {
-        cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
-      }
-      lines = memberSplits.map((split, idx) => ({
-        user_id: split.userId,
-        amount_cents: cents[idx] ?? 0,
-      }));
-    } else if (splitType === "percentage" && customSplits) {
-      const memberSplits = customSplits.memberSplits as MemberSplit[];
-      const weights = memberSplits.map(
-        (split) => normalizePercentage(split.percentage) || 0,
-      );
-      const allocatedCents = allocateCentsByWeights(amountCents, weights);
-      lines = memberSplits.map((split, idx) => ({
-        user_id: split.userId,
-        amount_cents: allocatedCents[idx] ?? 0,
-        percentage: normalizePercentage(split.percentage),
-      }));
-    } else if (splitType === "shares" && customSplits) {
-      const memberSplits = customSplits.memberSplits as MemberSplit[];
-      const weights = memberSplits.map(
-        (split) => normalizeShares(split.shares) || 0,
-      );
-      const allocatedCents = allocateCentsByWeights(amountCents, weights);
-      lines = memberSplits.map((split, idx) => ({
-        user_id: split.userId,
-        amount_cents: allocatedCents[idx] ?? 0,
-        shares: normalizeShares(split.shares),
-      }));
-    } else {
-      const amountPerMember = Math.floor(amountCents / householdMembers.length);
-      const remainder = amountCents - amountPerMember * householdMembers.length;
-      lines = householdMembers.map((member, idx) => ({
-        user_id: member.user_id,
-        amount_cents: amountPerMember + (idx == 0 ? remainder : 0),
-      }));
+    const buildResult = buildHouseholdSplitRecords({
+      householdId: resolvedHouseholdId,
+      transactionId: expenseId,
+      payerUserId: sanitizeUuid(meta.payerUserId ?? null) || resolvedUserId,
+      amountCents: Number(expense["amount_cents"] ?? 0),
+      currency: typeof expense["currency"] === "string"
+        ? expense["currency"]
+        : "",
+      description: typeof expense["raw_text"] === "string"
+        ? expense["raw_text"]
+        : null,
+      members: householdMembers,
+      customSplits: effective.customSplits,
+    });
+    if (!buildResult.ok) {
+      throw new SaveTransactionsBatchError(buildResult.error, 400);
     }
 
     const { error: splitGroupError } = await supabase
       .from("expense_split_groups")
-      .insert([splitGroup]);
+      .insert([buildResult.group]);
     if (splitGroupError) {
       throw splitGroupError;
     }
 
-    const splitLines = lines.map((line) => ({
-      split_group_id: splitGroupId,
-      user_id: line.user_id,
-      amount_cents: line.amount_cents,
-      percentage: line.percentage ?? null,
-      shares: line.shares ?? null,
-      is_settled: false,
-      settled_at: null,
-      created_at: new Date().toISOString(),
-    }));
-
-    if (splitLines.length > 0) {
+    if (buildResult.lines.length > 0) {
       const { error: splitLinesError } = await supabase
         .from("expense_split_lines")
-        .insert(splitLines);
+        .insert(buildResult.lines);
       if (splitLinesError) {
         throw splitLinesError;
       }
@@ -637,7 +492,7 @@ async function saveTransactionsBatchInternal(
     const { error: updateError } = await supabase
       .from("expenses")
       .update({
-        split_group_id: splitGroupId,
+        split_group_id: buildResult.group.id,
         household_id: resolvedHouseholdId,
       })
       .eq("id", expenseId);
@@ -647,7 +502,7 @@ async function saveTransactionsBatchInternal(
 
     return {
       ...expense,
-      split_group_id: splitGroupId,
+      split_group_id: buildResult.group.id,
       household_id: resolvedHouseholdId,
     };
   }
@@ -732,10 +587,9 @@ async function saveTransactionsBatchInternal(
         continue;
       }
 
-      const normalizedEndDate =
-        tx.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(tx.recurrence_rule.end_date);
+      const normalizedEndDate = tx.recurrence_rule.end_date == null
+        ? undefined
+        : normalizeCalendarDateString(tx.recurrence_rule.end_date);
 
       if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
         validationErrors.push({
@@ -763,8 +617,8 @@ async function saveTransactionsBatchInternal(
       });
       continue;
     }
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
+    const resolvedCategory = sanitizedCategory ??
+      normalizeCategoryForStorage(tx.category);
     const effectiveCategory = applyCategoryRemap({
       categoryName: resolvedCategory,
       transactionType: tx.type === "income" ? "income" : "expense",
@@ -824,18 +678,18 @@ async function saveTransactionsBatchInternal(
       category: effectiveCategory,
       date: tx.date,
       raw_text: tx.description || "",
-      merchant:
-        typeof tx.merchant === "string" && tx.merchant.trim().length > 0
-          ? tx.merchant.trim()
-          : null,
+      merchant: typeof tx.merchant === "string" && tx.merchant.trim().length > 0
+        ? tx.merchant.trim()
+        : null,
       currency: currency,
       breakdown: tx.breakdown ?? null,
       receipt_image_url: tx.receiptImageUrl || null,
       created_at: tx.clientCreatedAt || new Date().toISOString(),
       household_id: householdIdForRecord,
       is_recurring: tx.isRecurring === true,
-      recurrence_rule:
-        tx.isRecurring === true ? tx.recurrence_rule || null : null,
+      recurrence_rule: tx.isRecurring === true
+        ? tx.recurrence_rule || null
+        : null,
       import_request_key: importRequestKey,
       import_semantic_key: importSemanticKey,
     };
@@ -849,9 +703,11 @@ async function saveTransactionsBatchInternal(
           type: "income",
           owner_type: tx.ownerType || "me",
           privacy_scope: tx.privacyScope || "full",
-          household_id:
-            resolvedHouseholdId || (isPortfolio ? requestedHouseholdId : null),
+          household_id: resolvedHouseholdId ||
+            (isPortfolio ? requestedHouseholdId : null),
         },
+        customSplits: tx.customSplits,
+        payerUserId: tx.payerUserId,
         importRequestKey,
         importSemanticKey,
       });
@@ -905,26 +761,25 @@ async function saveTransactionsBatchInternal(
   const requestKeys = preparedRecords
     .map((record) => record.importRequestKey)
     .filter((key): key is string => !!key);
-  const semanticKeys =
-    body.skipSemanticDuplicates === true
-      ? preparedRecords.map((record) => record.importSemanticKey)
-      : [];
+  const semanticKeys = body.skipSemanticDuplicates === true
+    ? preparedRecords.map((record) => record.importSemanticKey)
+    : [];
 
   if (requestKeys.length > 0 || semanticKeys.length > 0) {
     const [existingRequestRows, existingSemanticRows] = await Promise.all([
       requestKeys.length > 0
         ? supabase
-            .from("expenses")
-            .select(
-              "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
-            )
-            .in("import_request_key", requestKeys)
+          .from("expenses")
+          .select(
+            "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
+          )
+          .in("import_request_key", requestKeys)
         : Promise.resolve({ data: [], error: null }),
       semanticKeys.length > 0
         ? supabase
-            .from("expenses")
-            .select("import_semantic_key")
-            .in("import_semantic_key", semanticKeys)
+          .from("expenses")
+          .select("import_semantic_key")
+          .in("import_semantic_key", semanticKeys)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -935,12 +790,12 @@ async function saveTransactionsBatchInternal(
       );
     } else if (Array.isArray(existingRequestRows.data)) {
       for (const existingRow of existingRequestRows.data) {
-        const existingId =
-          typeof existingRow.id === "string" ? existingRow.id : "";
-        const requestKey =
-          typeof existingRow.import_request_key === "string"
-            ? existingRow.import_request_key
-            : null;
+        const existingId = typeof existingRow.id === "string"
+          ? existingRow.id
+          : "";
+        const requestKey = typeof existingRow.import_request_key === "string"
+          ? existingRow.import_request_key
+          : null;
         if (requestKey) {
           duplicateRequestKeys.set(requestKey, {
             ...existingRow,
@@ -957,10 +812,9 @@ async function saveTransactionsBatchInternal(
       );
     } else if (Array.isArray(existingSemanticRows.data)) {
       for (const existingRow of existingSemanticRows.data) {
-        const semanticKey =
-          typeof existingRow.import_semantic_key === "string"
-            ? existingRow.import_semantic_key
-            : null;
+        const semanticKey = typeof existingRow.import_semantic_key === "string"
+          ? existingRow.import_semantic_key
+          : null;
         if (semanticKey) {
           duplicateSemanticKeys.add(semanticKey);
         }
@@ -976,13 +830,18 @@ async function saveTransactionsBatchInternal(
   }> = [];
   const incomeRecords: any[] = [];
   const incomeIndices: number[] = [];
+  const incomeMeta: Array<{
+    index: number;
+    customSplits?: CustomSplits | null;
+    payerUserId?: string | null;
+  }> = [];
   const seenSemanticKeys = new Set<string>();
 
   for (const prepared of preparedRecords) {
     const requestKey = prepared.importRequestKey;
     if (requestKey && duplicateRequestKeys.has(requestKey)) {
       let existingRow = duplicateRequestKeys.get(requestKey)!;
-      if (prepared.type === "expense") {
+      if (prepared.type === "expense" || prepared.type === "income") {
         existingRow = await ensureExpenseSplitForReplay(existingRow, {
           customSplits: prepared.customSplits,
           payerUserId: prepared.payerUserId,
@@ -1026,6 +885,11 @@ async function saveTransactionsBatchInternal(
     if (prepared.type === "income") {
       incomeRecords.push(prepared.record);
       incomeIndices.push(prepared.index);
+      incomeMeta.push({
+        index: prepared.index,
+        customSplits: prepared.customSplits,
+        payerUserId: prepared.payerUserId,
+      });
       continue;
     }
 
@@ -1037,7 +901,7 @@ async function saveTransactionsBatchInternal(
     });
   }
 
-  // Batch insert income (simple - no splits)
+  // Batch insert income
   if (incomeRecords.length > 0) {
     emitProgress("saving_income", "Saving transactions...", processedCount);
     console.log(
@@ -1064,19 +928,53 @@ async function saveTransactionsBatchInternal(
         });
       }
     } else if (insertedIncome) {
+      const enrichedIncome: any[] = [];
       for (let i = 0; i < insertedIncome.length; i++) {
+        let income = insertedIncome[i];
+        if (
+          resolvedHouseholdId && !isPortfolio && householdMembers.length > 0
+        ) {
+          const splitResult = await createHouseholdAutoSplitForTransaction({
+            supabase,
+            householdId: resolvedHouseholdId,
+            transaction: income,
+            actorUserId: userId,
+            members: householdMembers,
+            settings: householdAutoSplitSettings,
+            explicitCustomSplits: incomeMeta[i]?.customSplits,
+            payerUserId: incomeMeta[i]?.payerUserId ?? null,
+          });
+          if (splitResult.kind === "created") {
+            income = splitResult.transaction;
+          } else if (splitResult.kind === "invalid") {
+            console.warn("[save-transactions-batch] Invalid income split:", {
+              index: incomeMeta[i]?.index,
+              code: splitResult.code,
+              error: splitResult.error,
+            });
+          } else if (splitResult.kind === "failed") {
+            console.error(
+              "[save-transactions-batch] Failed to create income split:",
+              splitResult.error,
+            );
+          }
+        }
+        enrichedIncome.push(income);
+      }
+
+      for (let i = 0; i < enrichedIncome.length; i++) {
         results.push({
-          id: insertedIncome[i].id,
+          id: enrichedIncome[i].id,
           index: incomeIndices[i],
           type: "income",
           success: true,
-          data: insertedIncome[i],
+          data: enrichedIncome[i],
         });
       }
 
       if (resolvedHouseholdId && !isPortfolio) {
-        if (insertedIncome.length === 1) {
-          const income = insertedIncome[0];
+        if (enrichedIncome.length === 1) {
+          const income = enrichedIncome[0];
           const { error: notifyError } = await supabase.rpc(
             "notify_household_members_expense",
             {
@@ -1104,7 +1002,7 @@ async function saveTransactionsBatchInternal(
               notifyError,
             );
           }
-        } else if (insertedIncome.length > 1) {
+        } else if (enrichedIncome.length > 1) {
           const recipients = householdMembers
             .map((member) => member.user_id)
             .filter((memberId) => memberId !== userId);
@@ -1113,8 +1011,8 @@ async function saveTransactionsBatchInternal(
             const payload = {
               actor_name: actorName,
               actor_user_id: userId,
-              batch_count: insertedIncome.length,
-              recurring_count: insertedIncome.filter(
+              batch_count: enrichedIncome.length,
+              recurring_count: enrichedIncome.filter(
                 (income) => income.is_recurring === true,
               ).length,
               household_id: resolvedHouseholdId,
@@ -1227,146 +1125,56 @@ async function saveTransactionsBatchInternal(
             if (expense.split_group_id != null) {
               continue;
             }
-            const amountCents = expense.amount_cents;
 
-            const rawSplitType =
-              typeof meta.customSplits?.splitType === "string"
-                ? meta.customSplits.splitType.trim().toLowerCase()
-                : "equal";
-            const normalizedSplitType = [
-              "equal",
-              "amount",
-              "percentage",
-              "shares",
-            ].includes(rawSplitType)
-              ? rawSplitType
-              : "equal";
-            const hasMemberSplits =
-              Array.isArray(meta.customSplits?.memberSplits) &&
-              meta.customSplits!.memberSplits.length > 0;
-            const customSplits =
-              hasMemberSplits && normalizedSplitType !== "equal"
-                ? meta.customSplits
-                : null;
-            const splitType = customSplits ? normalizedSplitType : "equal";
-
-            let payerUserId = sanitizeUuid(meta.payerUserId ?? null) || userId;
-            const isValidPayer = householdMembers.some(
-              (member) => member.user_id === payerUserId,
+            const effective = resolveEffectiveSplit(
+              meta.customSplits,
+              householdAutoSplitSettings,
             );
-            if (!isValidPayer) payerUserId = userId;
-
-            const splitGroupId = crypto.randomUUID();
-            splitGroups.push({
-              id: splitGroupId,
-              household_id: resolvedHouseholdId,
-              expense_id: expense.id,
-              payer_user_id: payerUserId,
-              split_type: splitType,
-              currency: expense.currency,
-              total_amount_cents: amountCents,
-              description: expense.raw_text || null,
-              created_at: new Date().toISOString(),
+            console.log("[save-transactions-batch] Expense split decision:", {
+              householdId: resolvedHouseholdId,
+              expenseId: expense.id,
+              autoSplitEnabled: householdAutoSplitSettings.autoSplitEnabled,
+              hasDefaultConfig: householdAutoSplitSettings.defaultConfig !=
+                null,
+              hasRequestCustomSplits: meta.customSplits != null,
+              decision: effective.kind,
             });
+            if (effective.kind === "skip") {
+              // Household opted out of auto-split: log expense against the
+              // household but do not create split group/lines.
+              continue;
+            }
+
+            const buildResult = buildHouseholdSplitRecords({
+              householdId: resolvedHouseholdId,
+              transactionId: expense.id,
+              payerUserId: sanitizeUuid(meta.payerUserId ?? null) || userId,
+              amountCents: expense.amount_cents,
+              currency: expense.currency,
+              description: expense.raw_text || null,
+              members: householdMembers,
+              customSplits: effective.customSplits,
+            });
+            if (!buildResult.ok) {
+              console.warn(
+                "[save-transactions-batch] Invalid expense split payload:",
+                {
+                  index: meta.index,
+                  code: buildResult.code,
+                  error: buildResult.error,
+                },
+              );
+              continue;
+            }
+            splitGroups.push(buildResult.group);
 
             expenseUpdates.push({
               id: expense.id,
-              split_group_id: splitGroupId,
+              split_group_id: buildResult.group.id,
               household_id: resolvedHouseholdId,
             });
 
-            let lines: {
-              user_id: string;
-              amount_cents: number;
-              percentage?: number;
-              shares?: number;
-            }[];
-
-            if (splitType === "equal") {
-              const amountPerMember = Math.floor(
-                amountCents / householdMembers.length,
-              );
-              const remainder =
-                amountCents - amountPerMember * householdMembers.length;
-              lines = householdMembers.map((member, idx) => ({
-                user_id: member.user_id,
-                amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
-              }));
-            } else if (splitType === "amount" && customSplits) {
-              const memberSplits = customSplits.memberSplits as MemberSplit[];
-              const cents = memberSplits.map((split) =>
-                Math.max(
-                  0,
-                  Math.round((normalizeAmount(split.amount) || 0) * 100),
-                ),
-              );
-              const sumCents = cents.reduce(
-                (sum: number, value: number) => sum + value,
-                0,
-              );
-              const diff = amountCents - sumCents;
-              if (diff !== 0 && cents.length > 0) {
-                cents[cents.length - 1] = Math.max(
-                  0,
-                  cents[cents.length - 1] + diff,
-                );
-              }
-              lines = memberSplits.map((split, idx) => ({
-                user_id: split.userId,
-                amount_cents: cents[idx] ?? 0,
-              }));
-            } else if (splitType === "percentage" && customSplits) {
-              const memberSplits = customSplits.memberSplits as MemberSplit[];
-              const weights = memberSplits.map(
-                (split) => normalizePercentage(split.percentage) || 0,
-              );
-              const allocatedCents = allocateCentsByWeights(
-                amountCents,
-                weights,
-              );
-              lines = memberSplits.map((split, idx) => ({
-                user_id: split.userId,
-                amount_cents: allocatedCents[idx] ?? 0,
-                percentage: normalizePercentage(split.percentage),
-              }));
-            } else if (splitType === "shares" && customSplits) {
-              const memberSplits = customSplits.memberSplits as MemberSplit[];
-              const weights = memberSplits.map(
-                (split) => normalizeShares(split.shares) || 0,
-              );
-              const allocatedCents = allocateCentsByWeights(
-                amountCents,
-                weights,
-              );
-              lines = memberSplits.map((split, idx) => ({
-                user_id: split.userId,
-                amount_cents: allocatedCents[idx] ?? 0,
-                shares: normalizeShares(split.shares),
-              }));
-            } else {
-              const amountPerMember = Math.floor(
-                amountCents / householdMembers.length,
-              );
-              const remainder =
-                amountCents - amountPerMember * householdMembers.length;
-              lines = householdMembers.map((member, idx) => ({
-                user_id: member.user_id,
-                amount_cents: amountPerMember + (idx === 0 ? remainder : 0),
-              }));
-            }
-
-            for (const line of lines) {
-              splitLines.push({
-                split_group_id: splitGroupId,
-                user_id: line.user_id,
-                amount_cents: line.amount_cents,
-                percentage: (line as any).percentage ?? null,
-                shares: (line as any).shares ?? null,
-                is_settled: false,
-                settled_at: null,
-                created_at: new Date().toISOString(),
-              });
-            }
+            splitLines.push(...buildResult.lines);
           }
 
           if (splitGroups.length > 0) {
@@ -1556,8 +1364,9 @@ async function saveTransactionsBatchInternal(
         if (learned >= MAX_PREF_LEARN) break;
         const categoryName = typeof r.category === "string" ? r.category : "";
         const sourceText = typeof r.merchant === "string" ? r.merchant : null;
-        const descriptionText =
-          typeof r.raw_text === "string" ? r.raw_text : null;
+        const descriptionText = typeof r.raw_text === "string"
+          ? r.raw_text
+          : null;
         learningItems.push({
           transactionType: "income",
           categoryName,
@@ -1570,8 +1379,9 @@ async function saveTransactionsBatchInternal(
       for (const r of expenseRecords) {
         if (learned >= MAX_PREF_LEARN) break;
         const categoryName = typeof r.category === "string" ? r.category : "";
-        const descriptionText =
-          typeof r.raw_text === "string" ? r.raw_text : null;
+        const descriptionText = typeof r.raw_text === "string"
+          ? r.raw_text
+          : null;
         learningItems.push({
           transactionType: "expense",
           categoryName,
@@ -1662,16 +1472,15 @@ function createSSEStream(
         streamClosed = true;
         controller.close();
       } catch (error) {
-        const status =
-          error instanceof SaveTransactionsBatchError ? error.status : 500;
-        const code =
-          error instanceof SaveTransactionsBatchError
-            ? error.code
-            : "SERVER_ERROR";
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to save transactions batch";
+        const status = error instanceof SaveTransactionsBatchError
+          ? error.status
+          : 500;
+        const code = error instanceof SaveTransactionsBatchError
+          ? error.code
+          : "SERVER_ERROR";
+        const message = error instanceof Error
+          ? error.message
+          : "Failed to save transactions batch";
 
         if (!(error instanceof SaveTransactionsBatchError)) {
           await reportEdgeFunctionError({
