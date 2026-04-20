@@ -7,6 +7,16 @@ as $$
 begin
   if tg_op = 'DELETE' then
     if old.is_system then
+      if old.household_id is not null
+        and old.household_id::text = any(
+          string_to_array(
+            coalesce(current_setting('moneko.deleting_household_ids', true), ''),
+            ','
+          )
+        ) then
+        return old;
+      end if;
+
       raise exception 'System account cannot be deleted';
     end if;
 
