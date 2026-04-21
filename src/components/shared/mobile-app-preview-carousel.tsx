@@ -47,17 +47,17 @@ export const defaultMobileAppPreviewSlides: MobileAppPreviewSlide[] = [
   {
     src: mockupPoster8,
     videoSrc: mockupVideo8,
-    title: "WhatsApp Integration",
+    title: "Log Expenses on WhatsApp",
   },
   {
     src: mockupPoster1,
     videoSrc: mockupVideo1,
-    title: "Log via Voice or Text",
+    title: "Track Spending in Chat",
   },
   {
     src: mockupPoster7,
     videoSrc: mockupVideo7,
-    title: "Apple Pay Automation",
+    title: "Auto-Track Apple Pay",
   },
   {
     src: mockupPoster3,
@@ -72,7 +72,7 @@ export const defaultMobileAppPreviewSlides: MobileAppPreviewSlide[] = [
     {
     src: mockupPoster6,
     videoSrc: mockupVideo6,
-    title: "Bank Transactions Sync",
+    title: "Sync Bank Transactions",
   },
     {
     src: mockupPoster2,
@@ -111,8 +111,8 @@ const itemVariants: Variants = {
 };
 
 export function MobileAppPreviewCarousel({
-  title = "See Moneko working on your phone",
-  description = "Preview the mobile workflows that help you capture spending, review AI entries, and keep your budget current.",
+  title = "A smarter way to track every expense",
+  description = "Add expenses by chat, follow your spending in real time, and get a clearer view of where your money goes—without the friction of traditional budgeting apps.",
   slides = defaultMobileAppPreviewSlides,
   className,
   contentClassName,
@@ -162,11 +162,16 @@ export function MobileAppPreviewCarousel({
         whileInView="visible"
         viewport={{ once: true, margin: "-50px" }}
       >
-        <motion.div className="mb-16 text-left" variants={itemVariants}>
+        <motion.div className="text-left" variants={itemVariants}>
           {headerSlot}
-          <h2 className="text-foreground text-4xl font-bold tracking-tight sm:text-5xl">
+        <div className="mb-12 text-center">
+          <h2 className="text-foreground mb-4 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
             {title}
           </h2>
+          <p className="text-muted-foreground mx-auto max-w-[800px] text-lg">
+           {description}
+          </p>
+        </div>
 
           {showDownloadButtons && (
             <div className="mt-6 mb-4 flex flex-col justify-center gap-3 sm:flex-row">
@@ -189,7 +194,7 @@ export function MobileAppPreviewCarousel({
               className="relative flex w-[280px] flex-col items-center px-4 text-left sm:w-[340px]"
               variants={itemVariants}
             >
-              <h3 className="text-foreground pt-4 pb-6 text-lg font-medium tracking-tight sm:text-2xl">
+              <h3 className="text-foreground pt-2 pb-6 text-md font-medium tracking-tight sm:text-xl">
                 {slide.title}
               </h3>
             </motion.div>

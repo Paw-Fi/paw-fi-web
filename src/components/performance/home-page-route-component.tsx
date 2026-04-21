@@ -83,8 +83,8 @@ export function HomePageRouteComponent() {
           }
         >
           <MobileAppPreviewCarousel
-            title="Why people keep Moneko on their phone"
-            description="Preview the mobile flows for voice logging, WhatsApp capture, shared budgets, and AI-reviewed spending before you download."
+            title="A smarter way to track every expense"
+            description="Add expenses by chat, follow your spending in real time, and get a clearer view of where your money goes—without the friction of traditional budgeting apps."
           />
         </Suspense>
         {/* Core Features Bento Grid (Pockets, Households, Insights) */}
