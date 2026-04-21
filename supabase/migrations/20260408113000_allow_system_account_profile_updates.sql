@@ -7,6 +7,15 @@ as $$
 begin
   if tg_op = 'DELETE' then
     if old.is_system then
+      if old.user_id::text = any(
+        string_to_array(
+          coalesce(current_setting('moneko.deleting_user_ids', true), ''),
+          ','
+        )
+      ) then
+        return old;
+      end if;
+
       if old.household_id is not null
         and old.household_id::text = any(
           string_to_array(

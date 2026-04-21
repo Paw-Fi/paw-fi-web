@@ -38,6 +38,7 @@ AS $$
 DECLARE
   current_user_id uuid;
   deleted_contacts_count int := 0;
+  v_existing_deleting_user_ids text;
 BEGIN
   -- Get the ID of the currently authenticated user
   current_user_id := auth.uid();
@@ -48,6 +49,50 @@ BEGIN
       'success', false,
       'message', 'Not authenticated'
     );
+  END IF;
+
+  v_existing_deleting_user_ids := current_setting(
+    'moneko.deleting_user_ids',
+    true
+  );
+
+  PERFORM set_config(
+    'moneko.deleting_user_ids',
+    CASE
+      WHEN nullif(v_existing_deleting_user_ids, '') IS NULL THEN current_user_id::text
+      ELSE v_existing_deleting_user_ids || ',' || current_user_id::text
+    END,
+    true
+  );
+
+  IF to_regclass('public.account_transfers') IS NOT NULL
+    AND to_regclass('public.accounts') IS NOT NULL THEN
+    EXECUTE
+      'DELETE FROM public.account_transfers t '
+      || 'WHERE t.created_by_user_id = $1 '
+      || 'OR EXISTS ('
+      || '  SELECT 1 FROM public.accounts a '
+      || '  WHERE a.user_id = $1 '
+      || '    AND (a.id = t.from_account_id OR a.id = t.to_account_id)'
+      || ')'
+      USING current_user_id;
+  END IF;
+
+  IF to_regclass('public.expenses') IS NOT NULL THEN
+    EXECUTE 'DELETE FROM public.expenses WHERE user_id = $1'
+      USING current_user_id;
+  END IF;
+
+  IF to_regclass('public.expenses') IS NOT NULL
+    AND to_regclass('public.accounts') IS NOT NULL THEN
+    EXECUTE
+      'UPDATE public.expenses e '
+      || 'SET account_id = NULL, updated_at = now() '
+      || 'WHERE EXISTS ('
+      || '  SELECT 1 FROM public.accounts a '
+      || '  WHERE a.user_id = $1 AND a.id = e.account_id'
+      || ')'
+      USING current_user_id;
   END IF;
 
   -- Best-effort explicit contact deletion for schemas where user_contacts
@@ -96,4 +141,4 @@ COMMENT ON FUNCTION public.handle_delete_auth_user() IS
   'Automatically deletes the corresponding record from public.users when a user is deleted from auth.users.';
 
 COMMENT ON FUNCTION public.delete_user_account() IS 
-  'Allows authenticated users to delete their own accounts. Includes explicit user_contacts cleanup when that table exists, then deletes auth.users.';
+  'Allows authenticated users to delete their own accounts. Marks the user deletion transaction so protected system accounts can be removed only during full account erasure.';
