@@ -2136,6 +2136,16 @@ Deno.serve(async (req: Request) => {
             TELEGRAM_BOT_TOKEN,
             chatId,
             nonSubscriberMessage,
+               {
+              inline_keyboard: [
+                [
+                  {
+                    text: "View Pricing",
+                    url: "https://moneko.io/pricing",
+                  },
+                ],
+              ],
+            },
           );
           telegramResponseSent = true;
           await updateIdempotency(supabase, idempotencyKey, {
