@@ -1,256 +1,3 @@
-create table if not exists public.onboarding_flow_events (
-  id uuid primary key default gen_random_uuid(),
-  session_id text not null,
-  anonymous_id text,
-  user_id uuid,
-  flow_name text not null,
-  page_id text not null,
-  event_name text not null,
-  step_index integer,
-  dwell_ms integer,
-  transition_to text,
-  platform text not null default 'mobile',
-  app_version text,
-  properties jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default timezone('utc'::text, now())
-);
-
-create index if not exists idx_onboarding_flow_events_created_at
-  on public.onboarding_flow_events (created_at desc);
-
-create index if not exists idx_onboarding_flow_events_session_id
-  on public.onboarding_flow_events (session_id);
-
-create index if not exists idx_onboarding_flow_events_user_id
-  on public.onboarding_flow_events (user_id)
-  where user_id is not null;
-
-create index if not exists idx_onboarding_flow_events_event_name
-  on public.onboarding_flow_events (event_name);
-
-create index if not exists idx_onboarding_flow_events_page_id
-  on public.onboarding_flow_events (page_id);
-
-alter table public.onboarding_flow_events enable row level security;
-
-create table if not exists public.onboarding_flow_sessions (
-  session_id text primary key,
-  anonymous_id text,
-  user_id uuid,
-  flow_name text not null,
-  current_page_id text,
-  current_step_index integer,
-  classification text not null default 'in_app_new_user',
-  excluded_from_metrics boolean not null default false,
-  acquisition_source text not null default 'app_onboarding',
-  platform text not null default 'mobile',
-  app_version text,
-  first_seen_at timestamptz not null default timezone('utc'::text, now()),
-  last_seen_at timestamptz not null default timezone('utc'::text, now()),
-  completed_at timestamptz,
-  last_event_name text,
-  last_transition_to text,
-  max_stage_rank integer not null default 0,
-  properties jsonb not null default '{}'::jsonb
-);
-
-create index if not exists idx_onboarding_flow_sessions_last_seen_at
-  on public.onboarding_flow_sessions (last_seen_at desc);
-
-create index if not exists idx_onboarding_flow_sessions_user_id
-  on public.onboarding_flow_sessions (user_id)
-  where user_id is not null;
-
-create index if not exists idx_onboarding_flow_sessions_classification
-  on public.onboarding_flow_sessions (classification, excluded_from_metrics);
-
-alter table public.onboarding_flow_sessions enable row level security;
-
-drop policy if exists onboarding_flow_events_insert_anon on public.onboarding_flow_events;
-create policy onboarding_flow_events_insert_anon
-  on public.onboarding_flow_events
-  for insert
-  to anon
-  with check (
-    user_id is null
-    and anonymous_id is not null
-    and length(trim(session_id)) > 0
-  );
-
-drop policy if exists onboarding_flow_events_insert_authenticated on public.onboarding_flow_events;
-create policy onboarding_flow_events_insert_authenticated
-  on public.onboarding_flow_events
-  for insert
-  to authenticated
-  with check (
-    (user_id is null or user_id = auth.uid())
-    and length(trim(session_id)) > 0
-  );
-
-drop policy if exists onboarding_flow_events_select_own on public.onboarding_flow_events;
-create policy onboarding_flow_events_select_own
-  on public.onboarding_flow_events
-  for select
-  to authenticated
-  using (user_id = auth.uid());
-
-drop policy if exists onboarding_flow_sessions_insert_anon on public.onboarding_flow_sessions;
-create policy onboarding_flow_sessions_insert_anon
-  on public.onboarding_flow_sessions
-  for insert
-  to anon
-  with check (
-    user_id is null
-    and anonymous_id is not null
-    and length(trim(session_id)) > 0
-  );
-
-drop policy if exists onboarding_flow_sessions_update_anon on public.onboarding_flow_sessions;
-create policy onboarding_flow_sessions_update_anon
-  on public.onboarding_flow_sessions
-  for update
-  to anon
-  using (
-    user_id is null
-    and anonymous_id is not null
-    and length(trim(session_id)) > 0
-  )
-  with check (
-    user_id is null
-    and anonymous_id is not null
-    and length(trim(session_id)) > 0
-  );
-
-drop policy if exists onboarding_flow_sessions_insert_authenticated on public.onboarding_flow_sessions;
-create policy onboarding_flow_sessions_insert_authenticated
-  on public.onboarding_flow_sessions
-  for insert
-  to authenticated
-  with check (
-    (user_id is null or user_id = auth.uid())
-    and length(trim(session_id)) > 0
-  );
-
-drop policy if exists onboarding_flow_sessions_update_authenticated on public.onboarding_flow_sessions;
-create policy onboarding_flow_sessions_update_authenticated
-  on public.onboarding_flow_sessions
-  for update
-  to authenticated
-  using (
-    (user_id is null or user_id = auth.uid())
-    and length(trim(session_id)) > 0
-  )
-  with check (
-    (user_id is null or user_id = auth.uid())
-    and length(trim(session_id)) > 0
-  );
-
-drop policy if exists onboarding_flow_sessions_select_own on public.onboarding_flow_sessions;
-create policy onboarding_flow_sessions_select_own
-  on public.onboarding_flow_sessions
-  for select
-  to authenticated
-  using (user_id = auth.uid());
-
-create or replace function public.upsert_onboarding_flow_session_checkpoint(
-  p_session_id text,
-  p_anonymous_id text default null,
-  p_user_id uuid default null,
-  p_flow_name text default 'onboarding_funnel',
-  p_current_page_id text default null,
-  p_current_step_index integer default null,
-  p_classification text default 'in_app_new_user',
-  p_excluded_from_metrics boolean default false,
-  p_acquisition_source text default 'app_onboarding',
-  p_platform text default 'mobile',
-  p_app_version text default null,
-  p_last_seen_at timestamptz default timezone('utc'::text, now()),
-  p_completed_at timestamptz default null,
-  p_last_event_name text default null,
-  p_last_transition_to text default null,
-  p_max_stage_rank integer default 0,
-  p_properties jsonb default '{}'::jsonb
-)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_auth_user_id uuid := auth.uid();
-begin
-  if p_session_id is null or length(trim(p_session_id)) = 0 then
-    return;
-  end if;
-
-  if v_auth_user_id is not null and p_user_id is not null and p_user_id <> v_auth_user_id then
-    raise exception 'invalid_user_id';
-  end if;
-
-  insert into public.onboarding_flow_sessions (
-    session_id,
-    anonymous_id,
-    user_id,
-    flow_name,
-    current_page_id,
-    current_step_index,
-    classification,
-    excluded_from_metrics,
-    acquisition_source,
-    platform,
-    app_version,
-    first_seen_at,
-    last_seen_at,
-    completed_at,
-    last_event_name,
-    last_transition_to,
-    max_stage_rank,
-    properties
-  ) values (
-    p_session_id,
-    p_anonymous_id,
-    coalesce(p_user_id, v_auth_user_id),
-    p_flow_name,
-    p_current_page_id,
-    p_current_step_index,
-    p_classification,
-    coalesce(p_excluded_from_metrics, false),
-    p_acquisition_source,
-    p_platform,
-    p_app_version,
-    coalesce(p_last_seen_at, timezone('utc'::text, now())),
-    coalesce(p_last_seen_at, timezone('utc'::text, now())),
-    p_completed_at,
-    p_last_event_name,
-    p_last_transition_to,
-    coalesce(p_max_stage_rank, 0),
-    coalesce(p_properties, '{}'::jsonb)
-  )
-  on conflict (session_id) do update
-  set
-    anonymous_id = coalesce(excluded.anonymous_id, public.onboarding_flow_sessions.anonymous_id),
-    user_id = coalesce(excluded.user_id, public.onboarding_flow_sessions.user_id),
-    flow_name = excluded.flow_name,
-    current_page_id = excluded.current_page_id,
-    current_step_index = excluded.current_step_index,
-    classification = excluded.classification,
-    excluded_from_metrics = excluded.excluded_from_metrics,
-    acquisition_source = excluded.acquisition_source,
-    platform = excluded.platform,
-    app_version = excluded.app_version,
-    last_seen_at = greatest(public.onboarding_flow_sessions.last_seen_at, excluded.last_seen_at),
-    completed_at = coalesce(excluded.completed_at, public.onboarding_flow_sessions.completed_at),
-    last_event_name = excluded.last_event_name,
-    last_transition_to = excluded.last_transition_to,
-    max_stage_rank = greatest(public.onboarding_flow_sessions.max_stage_rank, excluded.max_stage_rank),
-    properties = coalesce(public.onboarding_flow_sessions.properties, '{}'::jsonb) || coalesce(excluded.properties, '{}'::jsonb);
-end;
-$$;
-
-revoke all on function public.upsert_onboarding_flow_session_checkpoint(text, text, uuid, text, text, integer, text, boolean, text, text, text, timestamptz, timestamptz, text, text, integer, jsonb) from public;
-grant execute on function public.upsert_onboarding_flow_session_checkpoint(text, text, uuid, text, text, integer, text, boolean, text, text, text, timestamptz, timestamptz, text, text, integer, jsonb) to anon;
-grant execute on function public.upsert_onboarding_flow_session_checkpoint(text, text, uuid, text, text, integer, text, boolean, text, text, text, timestamptz, timestamptz, text, text, integer, jsonb) to authenticated;
-
 create or replace function public.get_creator_onboarding_paywall_metrics(
   p_start_at timestamptz default timezone('utc'::text, now()) - interval '30 days',
   p_end_at timestamptz default timezone('utc'::text, now()),
@@ -340,10 +87,10 @@ begin
       greatest(
         coalesce(er.max_event_page_rank, 0),
         case
-          when s.current_page_id = 'paywall' then 6
-          when s.current_page_id like 'post_auth_%' or s.current_page_id like 'onboarding_setup_%' then 5
+          when s.current_page_id like 'post_auth_%' or s.current_page_id like 'onboarding_setup_%' then 6
+          when s.current_page_id = 'paywall' then 5
           when s.current_page_id = 'onboarding_account_preparing' then 4
-          when s.current_page_id like 'preauth_%' then 3
+          when s.current_page_id like 'preauth_%' or s.current_page_id = 'onboarding_save_budget' then 3
           when s.current_page_id = 'onboarding_intro' then 2
           when s.current_page_id = 'onboarding_preview' then 1
           else 0
@@ -356,17 +103,17 @@ begin
         greatest(
           coalesce(er.max_event_page_rank, 0),
           case
-            when s.current_page_id = 'paywall' then 6
-            when s.current_page_id like 'post_auth_%' or s.current_page_id like 'onboarding_setup_%' then 5
+            when s.current_page_id like 'post_auth_%' or s.current_page_id like 'onboarding_setup_%' then 6
+            when s.current_page_id = 'paywall' then 5
             when s.current_page_id = 'onboarding_account_preparing' then 4
-            when s.current_page_id like 'preauth_%' then 3
+            when s.current_page_id like 'preauth_%' or s.current_page_id = 'onboarding_save_budget' then 3
             when s.current_page_id = 'onboarding_intro' then 2
             when s.current_page_id = 'onboarding_preview' then 1
             else 0
           end
         ),
         case when coalesce(er.has_checkout_started, false) then 7 else 0 end,
-        case when coalesce(er.has_purchase_succeeded, false) then 8 else 0 end
+        case when coalesce(er.has_purchase_succeeded, false) or coalesce(er.has_flow_completed, false) then 8 else 0 end
       ) as effective_stage_rank,
       (s.completed_at is not null or coalesce(er.has_flow_completed, false)) as completed_flow,
       coalesce(er.has_purchase_succeeded, false) as completed_purchase
@@ -376,10 +123,10 @@ begin
         e.session_id,
         max(
           case
-            when e.page_id = 'paywall' then 6
-            when e.page_id like 'post_auth_%' or e.page_id like 'onboarding_setup_%' then 5
+            when e.page_id like 'post_auth_%' or e.page_id like 'onboarding_setup_%' then 6
+            when e.page_id = 'paywall' then 5
             when e.page_id = 'onboarding_account_preparing' then 4
-            when e.page_id like 'preauth_%' then 3
+            when e.page_id like 'preauth_%' or e.page_id = 'onboarding_save_budget' then 3
             when e.page_id = 'onboarding_intro' then 2
             when e.page_id = 'onboarding_preview' then 1
             else 0
@@ -398,18 +145,57 @@ begin
   latest_selected_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'action_taken'
       and e.properties ->> 'action_id' = 'plan_selected'
     order by e.session_id, e.created_at desc
   ),
+  latest_presented_plan as (
+    select distinct on (e.session_id)
+      e.session_id,
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
+    from filtered_events e
+    where e.event_name = 'paywall_plan_presented'
+    order by e.session_id, e.created_at desc
+  ),
   latest_checkout_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'paywall_checkout_started'
     order by e.session_id, e.created_at desc
@@ -417,8 +203,18 @@ begin
   latest_purchase_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'paywall_purchase_succeeded'
     order by e.session_id, e.created_at desc
@@ -426,8 +222,18 @@ begin
   latest_paywall_completion_plan as (
     select distinct on (e.session_id)
       e.session_id,
-      nullif(e.properties ->> 'selected_plan', '') as selected_plan,
-      nullif(e.properties ->> 'billing_interval', '') as billing_interval
+      case
+        when nullif(e.properties ->> 'selected_plan', '') in ('plus_monthly', 'plus_yearly') then 'plus'
+        else nullif(e.properties ->> 'selected_plan', '')
+      end as selected_plan,
+      coalesce(
+        nullif(e.properties ->> 'billing_interval', ''),
+        case
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_monthly' then 'monthly'
+          when nullif(e.properties ->> 'selected_plan', '') = 'plus_yearly' then 'yearly'
+          else null
+        end
+      ) as billing_interval
     from filtered_events e
     where e.event_name = 'flow_completed'
       and e.page_id = 'paywall'
@@ -436,10 +242,11 @@ begin
   attributed_plan as (
     select
       s.session_id,
-      coalesce(sp.selected_plan, cp.selected_plan, pp.selected_plan, fp.selected_plan, 'unknown') as selected_plan,
-      coalesce(sp.billing_interval, cp.billing_interval, pp.billing_interval, fp.billing_interval) as billing_interval
+      coalesce(sp.selected_plan, ppv.selected_plan, cp.selected_plan, pp.selected_plan, fp.selected_plan, 'unknown') as selected_plan,
+      coalesce(sp.billing_interval, ppv.billing_interval, cp.billing_interval, pp.billing_interval, fp.billing_interval) as billing_interval
     from sessions_enriched s
     left join latest_selected_plan sp on sp.session_id = s.session_id
+    left join latest_presented_plan ppv on ppv.session_id = s.session_id
     left join latest_checkout_plan cp on cp.session_id = s.session_id
     left join latest_purchase_plan pp on pp.session_id = s.session_id
     left join latest_paywall_completion_plan fp on fp.session_id = s.session_id
@@ -448,7 +255,7 @@ begin
     select
       ap.selected_plan,
       ap.billing_interval,
-      count(*) filter (where s.effective_stage_rank >= 6) as paywall_views,
+      count(*) filter (where exists(select 1 from filtered_events e where e.session_id = s.session_id and e.page_id = 'paywall')) as paywall_views,
       count(*) filter (where s.effective_stage_rank >= 7) as checkout_starts,
       count(*) filter (where s.completed_purchase) as purchase_successes,
       count(*) filter (where exists(select 1 from filtered_events e where e.session_id = s.session_id and e.event_name = 'paywall_purchase_cancelled')) as purchase_cancellations,
@@ -459,8 +266,8 @@ begin
         else round((count(*) filter (where s.completed_purchase))::numeric / (count(*) filter (where s.effective_stage_rank >= 7))::numeric * 100, 2)
       end as conversion_rate,
       case
-        when count(*) filter (where s.effective_stage_rank >= 6) = 0 then 0
-        else round((count(*) filter (where s.is_abandoned and s.current_page_id = 'paywall'))::numeric / (count(*) filter (where s.effective_stage_rank >= 6))::numeric * 100, 2)
+        when count(*) filter (where exists(select 1 from filtered_events e where e.session_id = s.session_id and e.page_id = 'paywall')) = 0 then 0
+        else round((count(*) filter (where s.is_abandoned and s.current_page_id = 'paywall'))::numeric / (count(*) filter (where exists(select 1 from filtered_events e where e.session_id = s.session_id and e.page_id = 'paywall')))::numeric * 100, 2)
       end as abandonment_rate
     from sessions_enriched s
     left join attributed_plan ap on ap.session_id = s.session_id
@@ -476,15 +283,26 @@ begin
       and e.properties ->> 'step_group' = 'post_auth'
     group by e.properties ->> 'step_key'
   ),
+  session_stage_flags as (
+    select
+      s.session_id,
+      exists(select 1 from filtered_events e where e.session_id = s.session_id and e.page_id = 'onboarding_intro') as saw_intro,
+      exists(select 1 from filtered_events e where e.session_id = s.session_id and (e.page_id like 'preauth_%' or e.page_id = 'onboarding_save_budget')) as saw_preauth,
+      exists(select 1 from filtered_events e where e.session_id = s.session_id and e.page_id = 'onboarding_account_preparing') as saw_account_preparing,
+      exists(select 1 from filtered_events e where e.session_id = s.session_id and e.page_id = 'paywall') as saw_paywall,
+      exists(select 1 from filtered_events e where e.session_id = s.session_id and (e.page_id like 'post_auth_%' or e.page_id like 'onboarding_setup_%')) as saw_post_auth,
+      s.completed_flow as reached_main_app
+    from sessions_enriched s
+  ),
   funnel_rows as (
     select * from (
       values
-        (1, 'preview_seen', (select count(*) from sessions_enriched where effective_stage_rank >= 1)),
-        (2, 'intro_seen', (select count(*) from sessions_enriched where effective_stage_rank >= 2)),
-        (3, 'preauth_started', (select count(*) from sessions_enriched where effective_stage_rank >= 3)),
-        (4, 'account_preparing_seen', (select count(*) from sessions_enriched where effective_stage_rank >= 4)),
-        (5, 'postauth_seen', (select count(*) from sessions_enriched where effective_stage_rank >= 5)),
-        (6, 'paywall_seen', (select count(*) from sessions_enriched where effective_stage_rank >= 6)),
+        (1, 'preview_seen', (select count(*) from sessions_enriched where exists(select 1 from filtered_events e where e.session_id = sessions_enriched.session_id and e.page_id = 'onboarding_preview'))),
+        (2, 'intro_seen', (select count(*) from session_stage_flags where saw_intro)),
+        (3, 'preauth_started', (select count(*) from session_stage_flags where saw_preauth)),
+        (4, 'account_preparing_seen', (select count(*) from session_stage_flags where saw_account_preparing)),
+        (5, 'postauth_seen', (select count(*) from session_stage_flags where saw_post_auth)),
+        (6, 'paywall_seen', (select count(*) from session_stage_flags where saw_paywall)),
         (7, 'subscribe_tapped', (select count(*) from sessions_enriched where effective_stage_rank >= 7)),
         (8, 'purchase_succeeded', (select count(*) from sessions_enriched where completed_purchase))
     ) as t(step_rank, step_key, session_count)
@@ -494,17 +312,33 @@ begin
       fr.step_rank,
       fr.step_key,
       fr.session_count,
-      case
-        when lag(fr.session_count) over (order by fr.step_rank) is null then null
-        when lag(fr.session_count) over (order by fr.step_rank) = 0 then null
-        else round((fr.session_count::numeric / lag(fr.session_count) over (order by fr.step_rank)::numeric) * 100, 2)
-      end as conversion_rate_from_previous,
-      case
-        when lag(fr.session_count) over (order by fr.step_rank) is null then null
-        when lag(fr.session_count) over (order by fr.step_rank) = 0 then null
-        else round((1 - (fr.session_count::numeric / lag(fr.session_count) over (order by fr.step_rank)::numeric)) * 100, 2)
-      end as dropoff_rate_from_previous
+      null::numeric as conversion_rate_from_previous,
+      null::numeric as dropoff_rate_from_previous
     from funnel_rows fr
+  ),
+  preview_entry_point_rows as (
+    select
+      preview_entry_point,
+      count(*) as taps
+    from (
+      select
+        case
+          when nullif(e.properties ->> 'preview_entry_point', '') is not null then e.properties ->> 'preview_entry_point'
+          when e.properties ->> 'action_id' = 'intro_preview_app' then 'get_started'
+          when e.properties ->> 'action_id' = 'try_demo' and e.page_id = 'onboarding_save_budget' then 'save_budget'
+          when e.properties ->> 'action_id' = 'preview_app_tapped' and e.page_id = 'paywall' then 'paywall'
+          else null
+        end as preview_entry_point
+      from filtered_events e
+      where e.event_name = 'action_taken'
+        and (
+          e.properties ->> 'action_id' = 'preview_app_tapped'
+          or e.properties ->> 'action_id' = 'intro_preview_app'
+          or e.properties ->> 'action_id' = 'try_demo'
+        )
+    ) preview_events
+    where preview_entry_point is not null
+    group by preview_entry_point
   ),
   timeseries_rows as (
     select
@@ -537,9 +371,10 @@ begin
       'external_prepaid_users', (select external_prepaid_users from cohort_counts),
       'excluded_existing_users', (select excluded_existing_users from cohort_counts),
       'completed_flow_sessions', (select count(*) from sessions_enriched where completed_flow),
-      'paywall_views', (select count(*) from sessions_enriched where effective_stage_rank >= 6),
+      'paywall_views', (select count(*) from sessions_enriched where exists(select 1 from filtered_events e where e.session_id = sessions_enriched.session_id and e.page_id = 'paywall')),
       'checkout_starts', (select count(*) from sessions_enriched where effective_stage_rank >= 7),
       'purchase_successes', (select count(*) from sessions_enriched where completed_purchase),
+      'paywall_return_trial_grants', (select count(*) from filtered_events where event_name = 'paywall_return_trial_granted'),
       'purchase_cancellations', (select count(*) from filtered_events where event_name = 'paywall_purchase_cancelled'),
       'purchase_failures', (select count(*) from filtered_events where event_name = 'paywall_purchase_failed'),
       'abandoned_sessions', (select count(*) from sessions_enriched where is_abandoned),
@@ -548,6 +383,7 @@ begin
     'funnel', coalesce((select jsonb_agg(jsonb_build_object('step_rank', fr.step_rank, 'step_key', fr.step_key, 'session_count', fr.session_count, 'conversion_rate_from_previous', fr.conversion_rate_from_previous, 'dropoff_rate_from_previous', fr.dropoff_rate_from_previous) order by fr.step_rank) from funnel_rows_with_rates fr), '[]'::jsonb),
     'post_auth_usage', coalesce((select jsonb_agg(jsonb_build_object('step_key', p.step_key, 'used_count', p.used_count, 'skipped_count', p.skipped_count, 'use_rate', case when (p.used_count + p.skipped_count) = 0 then 0 else round((p.used_count::numeric / (p.used_count + p.skipped_count)::numeric) * 100, 2) end, 'skip_rate', case when (p.used_count + p.skipped_count) = 0 then 0 else round((p.skipped_count::numeric / (p.used_count + p.skipped_count)::numeric) * 100, 2) end) order by p.step_key) from post_auth_usage_rows p), '[]'::jsonb),
     'paywall_breakdown', coalesce((select jsonb_agg(jsonb_build_object('selected_plan', pb.selected_plan, 'billing_interval', pb.billing_interval, 'paywall_views', pb.paywall_views, 'checkout_starts', pb.checkout_starts, 'purchase_successes', pb.purchase_successes, 'purchase_cancellations', pb.purchase_cancellations, 'purchase_failures', pb.purchase_failures, 'abandonments', pb.abandonments, 'conversion_rate', pb.conversion_rate, 'abandonment_rate', pb.abandonment_rate) order by pb.selected_plan, pb.billing_interval) from paywall_breakdown_rows pb), '[]'::jsonb),
+    'preview_entry_points', coalesce((select jsonb_agg(jsonb_build_object('preview_entry_point', p.preview_entry_point, 'taps', p.taps) order by p.preview_entry_point) from preview_entry_point_rows p), '[]'::jsonb),
     'exit_pages', coalesce((select jsonb_agg(jsonb_build_object('page_id', page_id, 'exits', exits, 'exit_rate', case when total_abandoned = 0 then 0 else round((exits::numeric / total_abandoned::numeric) * 100, 2) end) order by exits desc, page_id) from (select s.current_page_id as page_id, count(*) as exits, sum(count(*)) over () as total_abandoned from filtered_sessions s where s.is_abandoned group by s.current_page_id) exit_rows), '[]'::jsonb),
     'recent_exit_pages', coalesce((select jsonb_agg(jsonb_build_object('page_id', page_id, 'exits', exits, 'exit_rate', case when total_recent = 0 then 0 else round((exits::numeric / total_recent::numeric) * 100, 2) end) order by exits desc, page_id) from (select s.current_page_id as page_id, count(*) as exits, sum(count(*)) over () as total_recent from filtered_sessions s where s.completed_at is null and s.last_seen_at > timezone('utc'::text, now()) - interval '30 minutes' group by s.current_page_id) recent_exit_rows), '[]'::jsonb),
     'timeseries', coalesce((select jsonb_agg(jsonb_build_object('bucket', t.bucket, 'session_starts', t.session_starts, 'flow_completions', t.flow_completions, 'purchase_successes', t.purchase_successes, 'abandonments', t.abandonments) order by t.bucket) from timeseries_rows t), '[]'::jsonb)
@@ -562,4 +398,4 @@ revoke all on function public.get_creator_onboarding_paywall_metrics(timestamptz
 grant execute on function public.get_creator_onboarding_paywall_metrics(timestamptz, timestamptz, text, text, text) to authenticated;
 
 comment on function public.get_creator_onboarding_paywall_metrics(timestamptz, timestamptz, text, text, text) is
-  'Returns creator-only onboarding and paywall analytics, using server-side session checkpoints for drop-off visibility even when the user never reopens the app.';
+  'Returns creator-only onboarding and paywall analytics with manager-friendly funnel milestones, preview entry taps, and paywall attribution fallback.';

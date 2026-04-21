@@ -1594,7 +1594,7 @@
     },
     "hero": {
       "title": "A Modern AI Alternative to YNAB",
-      "subtitle": "YNAB is powerful for zero-based budgeting. Moneko keeps the intention of “giving every dollar a job” but adds AI coaching, interactive tools, and a friendlier learning curve.",
+      "subtitle": "YNAB is powerful for zero-based budgeting. Moneko keeps the intention of giving every dollar a job, and adds AI coaching, interactive tools, and faster capture (including WhatsApp and Apple Wallet/Apple Pay auto-capture on iOS via Shortcuts).",
       "ctaText": "Start with Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
@@ -1768,7 +1768,7 @@
     },
     "hero": {
       "title": "A Monarch Money Alternative Built Around AI Coaching",
-      "subtitle": "Monarch Money shines at flexible, collaborative budgeting. Moneko adds AI coaching, rich calculators, and education so your household can plan, learn, and grow together.",
+      "subtitle": "Monarch Money shines at flexible, collaborative budgeting. Moneko adds AI coaching, rich calculators, and low-friction capture (including WhatsApp and Apple Wallet/Apple Pay auto-capture on iOS via Shortcuts) so your household can plan, learn, and grow together.",
       "ctaText": "Discover Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
@@ -2377,7 +2377,7 @@
     },
     "hero": {
       "title": "A Modern Mint Alternative Built for 2025 and Beyond",
-      "subtitle": "Mint (legacy) helped a generation start tracking money. Moneko takes the next step with AI budgeting, deeper calculators, and a design built for learning and long-term planning.",
+      "subtitle": "Mint (legacy) helped a generation start tracking money. Moneko takes the next step with AI budgeting, deeper calculators, shared-expense support, and faster capture (including WhatsApp and Apple Wallet/Apple Pay auto-capture on iOS via Shortcuts).",
       "ctaText": "Move from Mint to Moneko",
       "ctaRoute": "/dashboard/",
       "chatSuggestions": [
@@ -2889,6 +2889,488 @@
         "modern budget planner"
       ],
       "body": "“Budget planner” can mean anything from a paper worksheet to a basic app with a few templates. These tools are useful, but they rarely help you understand why a plan works or how to adapt it to your specific situation. They also seldom connect your monthly budget to debt payoff, emergency funds, investing, or retirement in a meaningful way.\n\nMoneko is built to be the next generation of budget planner: AI-first, calculator-rich, and education-driven. You can start with familiar templates, then let AI adjust them based on your income, debts, and goals. From there, calculators show you how fast you can reach your targets, and lessons explain each concept so you can eventually budget confidently on your own.\n\nCompared with generic budget planners and specific apps like PocketGuard, YNAB, Goodbudget, Monarch Money, Plum, EveryDollar, Snoop, Fudget, NerdWallet, Mobills, Mint (legacy), Expense IQ, Bluecoins, AndroMoney, and Bills Reminder, Moneko is focused on transformation, not just tracking. It’s built for people who want their budget to be a learning tool as much as a ledger."
+    }
+  },
+  "apple-pay-expense-tracker": {
+    "meta": {
+      "title": "Apple Pay Expense Tracker (2026) – Auto Log Purchases to Your Budget | Moneko",
+      "description": "Automatically log Apple Pay purchases into your budget on iPhone using iOS Shortcuts automation. Categorize with AI, track pockets, and keep shared expenses organized.",
+      "keywords": "apple pay expense tracker, apple pay budgeting, log apple pay purchases, apple pay spending tracker, ios shortcuts expense tracker, ai expense tracker"
+    },
+    "hero": {
+      "title": "Track Apple Pay Spending Automatically",
+      "subtitle": "Use iOS Shortcuts automation to capture Apple Pay purchases into Moneko. Get AI categorization, clear budgets, and shared-expense support without manual typing.",
+      "ctaText": "Download for iOS",
+      "ctaRoute": "/download",
+      "chatSuggestions": [
+        "How do I auto log Apple Pay purchases?",
+        "Can Moneko categorize Apple Pay transactions automatically?",
+        "How do I track Apple Pay spending in a budget?",
+        "Can I split Apple Pay expenses with a partner?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Enable the Apple Pay Shortcut",
+          "description": "Turn on the iOS Shortcuts automation that captures Apple Pay / Apple Wallet transactions into Moneko."
+        },
+        {
+          "title": "Review & Categorize with AI",
+          "description": "Moneko suggests categories and lets you adjust quickly so your budget stays accurate."
+        },
+        {
+          "title": "Budget, Track, and Split",
+          "description": "See spending against pockets and goals, and split shared purchases when needed."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "See Apple Pay Auto-Capture in Action",
+      "subtitle": "Watch how Apple Pay purchases can flow into a clear budget with AI categorization and simple review."
+    },
+    "features": [
+      {
+        "title": "Apple Pay Auto-Capture (iOS)",
+        "description": "Automatically capture transactions on iPhone via iOS Shortcuts + App Intents.",
+        "icon": "🍎",
+        "route": "/download"
+      },
+      {
+        "title": "AI Categorization",
+        "description": "Get smart category suggestions so your Apple Pay spending lands in the right place.",
+        "icon": "🧠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Shared Expenses",
+        "description": "Track household spending and splits alongside personal budgets.",
+        "icon": "👥",
+        "route": "/dashboard/"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Apple Pay Budgeting Basics",
+        "description": "Learn a simple workflow for keeping Apple Pay purchases categorized and budgeted without friction.",
+        "icon": "📘"
+      },
+      {
+        "title": "Making Auto-Capture Trustworthy",
+        "description": "Use a quick review routine so automation stays accurate over time.",
+        "icon": "✅"
+      }
+    ],
+    "benefits": [
+      "Less manual logging",
+      "Faster, more consistent categorization",
+      "Better visibility into real spending",
+      "Easy shared-expense handling"
+    ]
+  },
+  "apple-wallet-expense-tracker": {
+    "meta": {
+      "title": "Apple Wallet Expense Tracker (2026) – Auto Capture Transactions on iPhone | Moneko",
+      "description": "Track Apple Wallet spending with iOS Shortcuts automation. Capture transactions into Moneko, categorize with AI, and keep budgets and shared expenses up to date.",
+      "keywords": "apple wallet expense tracker, apple wallet spending tracker, apple wallet budgeting, track apple wallet transactions, ios shortcuts automation budgeting"
+    },
+    "hero": {
+      "title": "An Apple Wallet Expense Tracker That Fits Your Budget",
+      "subtitle": "Capture Apple Wallet transactions into Moneko via iOS Shortcuts automation, then keep everything organized with AI categorization and budget pockets.",
+      "ctaText": "Set Up on iPhone",
+      "ctaRoute": "/download",
+      "chatSuggestions": [
+        "How do I track Apple Wallet transactions in a budget?",
+        "Can Moneko auto-capture Apple Wallet spending on iPhone?",
+        "How do I categorize Apple Wallet purchases automatically?",
+        "Can I track shared expenses from Apple Wallet purchases?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Connect Capture on iOS",
+          "description": "Use the iOS Shortcuts automation workflow to capture Apple Wallet transactions into Moneko."
+        },
+        {
+          "title": "Keep Categories Clean",
+          "description": "AI suggestions speed up categorization while you stay in control of final labels."
+        },
+        {
+          "title": "Track Progress Over Time",
+          "description": "See spending trends, pocket balances, and shared expenses in one place."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Apple Wallet Capture, Budgeted",
+      "subtitle": "See how Apple Wallet spending can become a clear, consistent monthly plan with minimal effort."
+    },
+    "features": [
+      {
+        "title": "Wallet Transaction Capture (iOS)",
+        "description": "Capture transactions via iOS Shortcuts + App Intents.",
+        "icon": "📲",
+        "route": "/download"
+      },
+      {
+        "title": "Budget Pockets",
+        "description": "Envelope-style pockets help you see what is left at any moment.",
+        "icon": "🧾",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Household Mode",
+        "description": "Separate personal and shared finances and split expenses when applicable.",
+        "icon": "🏠",
+        "route": "/dashboard/"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Reducing Category Drift",
+        "description": "Learn how to keep categories stable even when merchant names vary.",
+        "icon": "🧭"
+      },
+      {
+        "title": "Budget Reviews That Take 5 Minutes",
+        "description": "A lightweight routine for staying on track without spreadsheet energy.",
+        "icon": "⏱️"
+      }
+    ],
+    "benefits": [
+      "Faster capture on iPhone",
+      "Cleaner budget data",
+      "Easy household separation",
+      "Less time spent categorizing"
+    ]
+  },
+  "shared-expenses-tracker": {
+    "meta": {
+      "title": "Shared Expenses Tracker (2026) – Track Household Spending & Splits | Moneko",
+      "description": "Track shared expenses with a partner, roommate, or family. Log transactions quickly, split purchases, and keep a transparent household budget with Moneko.",
+      "keywords": "shared expenses tracker, shared expense app, household budget app, split expenses with partner, roommate expense tracker, couples shared expenses"
+    },
+    "hero": {
+      "title": "Track Shared Expenses Without the Stress",
+      "subtitle": "Keep household spending transparent. Log shared purchases fast, split when needed, and track budgets and goals together.",
+      "ctaText": "Start Tracking Together",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How do we track shared expenses as a couple?",
+        "Can we split bills and see who paid what?",
+        "What is the easiest way to track household spending?",
+        "Can Moneko keep personal and shared budgets separate?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Create a Household",
+          "description": "Invite your partner, roommate, or family members to a shared dashboard."
+        },
+        {
+          "title": "Log Shared Purchases Fast",
+          "description": "Capture spending via quick entry, receipts, WhatsApp, or iOS wallet automations where applicable."
+        },
+        {
+          "title": "Split & Review",
+          "description": "Split purchases, track budgets, and review categories so everyone stays aligned."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Shared Spending, Finally Organized",
+      "subtitle": "See how a shared expense tracker can reduce money friction and keep everyone on the same page."
+    },
+    "features": [
+      {
+        "title": "Household Budgets",
+        "description": "Track shared budgets alongside personal pockets with clear separation.",
+        "icon": "🏠",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Splits & Shared Purchases",
+        "description": "Handle shared expenses when applicable and keep a clear history of what happened.",
+        "icon": "⚖️",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Low-Friction Capture",
+        "description": "Log spending via text, receipts, and WhatsApp so you do not rely on perfect memory.",
+        "icon": "💬",
+        "route": "/features/whatsapp-assistant"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "A Simple Shared Expense System",
+        "description": "Learn a lightweight rule set for what is shared vs personal and how to handle edge cases.",
+        "icon": "📘"
+      },
+      {
+        "title": "Avoiding Money Arguments",
+        "description": "Use transparency, not micromanagement, to reduce stress.",
+        "icon": "🕊️"
+      }
+    ],
+    "benefits": [
+      "Clear shared vs personal separation",
+      "Simple splits",
+      "Faster capture",
+      "More trust and less confusion"
+    ]
+  },
+  "split-expenses-app": {
+    "meta": {
+      "title": "Split Expenses App (2026) – Split Bills and Track Spending Together | Moneko",
+      "description": "Split expenses with roommates, partners, or friends. Track who paid, settle up fairly, and keep a shared budget that stays up to date.",
+      "keywords": "split expenses app, split bills app, roommate expense splitter, splitwise alternative budgeting, shared bills tracker, split purchases"
+    },
+    "hero": {
+      "title": "Split Expenses and Stay Aligned",
+      "subtitle": "Track shared spending, split purchases, and keep a household budget in one place. Designed for real-life shared finances, not just math.",
+      "ctaText": "Try Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "How do we split expenses fairly?",
+        "Can we split bills and track a budget at the same time?",
+        "Is there a split expense app that also tracks net worth?",
+        "How do we settle up at the end of the month?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Log Spending",
+          "description": "Capture purchases as they happen so you do not forget shared costs."
+        },
+        {
+          "title": "Split When Needed",
+          "description": "Split shared purchases and keep clear notes about what the expense was for."
+        },
+        {
+          "title": "Budget Together",
+          "description": "Use pockets and goals so splitting is connected to a real plan, not just a ledger."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Splitting Meets Budgeting",
+      "subtitle": "See why a split expenses app works best when it is connected to a shared budget."
+    },
+    "features": [
+      {
+        "title": "Shared Pockets",
+        "description": "Create shared categories for groceries, utilities, dining, and travel.",
+        "icon": "🧾",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Who Paid What",
+        "description": "Keep shared spending transparent without spreadsheets.",
+        "icon": "👀",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "WhatsApp Logging",
+        "description": "Log shared expenses from chat via text, voice, or receipt photos.",
+        "icon": "💬",
+        "route": "/features/whatsapp-assistant"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Proportional vs 50/50 Splits",
+        "description": "Pick a system that matches your relationship and income realities.",
+        "icon": "⚖️"
+      },
+      {
+        "title": "Shared Budgeting for Real Life",
+        "description": "Handle groceries, rent, subscriptions, and irregular costs with less drama.",
+        "icon": "🏠"
+      }
+    ],
+    "benefits": [
+      "Split bills without messy notes",
+      "Stay aligned on a shared budget",
+      "Fast logging from chat",
+      "Less end-of-month stress"
+    ]
+  },
+  "best-budgeting-app-2026": {
+    "meta": {
+      "title": "Best Budgeting App in 2026: What to Look For (and What to Avoid) | Moneko",
+      "description": "Searching for the best budgeting app in 2026? Learn what features matter most (capture, categories, shared budgets, projections) and see how Moneko fits.",
+      "keywords": "best budgeting app 2026, best budget app, budgeting app comparison 2026, ai budgeting app, couples budgeting app, shared budget app"
+    },
+    "hero": {
+      "title": "Best Budgeting App in 2026: A Practical Checklist",
+      "subtitle": "A good budget app is not just tracking. It is capture, clarity, and a plan you can keep. Use this checklist to choose the right tool for you.",
+      "ctaText": "Start with Moneko",
+      "ctaRoute": "/dashboard/",
+      "chatSuggestions": [
+        "What makes a budgeting app worth using in 2026?",
+        "Should I use zero-based budgeting or envelopes?",
+        "What is the best budgeting app for shared expenses?",
+        "How do I pick a budget app that I will stick with?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Start with Capture",
+          "description": "If logging is hard, the app fails. Look for fast capture (text, receipts, chat, automation)."
+        },
+        {
+          "title": "Choose Clarity Over Complexity",
+          "description": "Pick a system that helps you decide what to do next: pockets, goals, and projections."
+        },
+        {
+          "title": "Make It Shared (When Needed)",
+          "description": "If you share money, the app should handle household views and splits without hacks."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "What Good Budgeting Looks Like",
+      "subtitle": "See how a budget becomes easier when capture and planning live in the same workflow."
+    },
+    "features": [
+      {
+        "title": "Fast Capture",
+        "description": "Log expenses via chat (WhatsApp), receipts, and automations so the habit sticks.",
+        "icon": "⚡",
+        "route": "/features/whatsapp-assistant"
+      },
+      {
+        "title": "Budget Pockets",
+        "description": "Envelope-style pockets show what is left without mental math.",
+        "icon": "🧾",
+        "route": "/dashboard/"
+      },
+      {
+        "title": "Calculators & Projections",
+        "description": "Connect your monthly plan to debt payoff, savings goals, retirement, and net worth.",
+        "icon": "📈",
+        "route": "/calculators"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The Budgeting Methods That Actually Work",
+        "description": "Learn the core methods (zero-based, envelopes, 50/30/20) and when each is a good fit.",
+        "icon": "📘"
+      },
+      {
+        "title": "How to Keep a Budget Without Burnout",
+        "description": "A monthly review workflow that is realistic for busy people.",
+        "icon": "🧘"
+      }
+    ],
+    "benefits": [
+      "Less friction, more consistency",
+      "Clear pocket balances",
+      "Better long-term planning",
+      "Works for personal and shared budgets"
+    ],
+    "article": {
+      "title": "Best Budgeting App in 2026: A Checklist You Can Use",
+      "tags": [
+        "best budgeting app 2026",
+        "budget app comparison",
+        "shared budgeting",
+        "AI budgeting"
+      ],
+      "body": "The best budgeting app in 2026 is the one you will actually use. That sounds obvious, but most people quit because logging is annoying, categories drift, or the system is too complex for real life.\n\nWhen you compare budget apps, start with capture: can you log spending quickly via text, receipts, or automation? Next look for clarity: pockets or envelopes that show what is left, plus goals that connect day-to-day decisions to progress. Finally, if you share money, make sure the app supports shared budgets and splits without awkward workarounds.\n\nMoneko is built around those principles: low-friction capture (including WhatsApp and iOS wallet automations), pocket-style budgeting, and calculators that connect your month to bigger outcomes like net worth and retirement. Use the checklist above to pick the right tool, then stick with a system you can maintain."
+    }
+  },
+  "best-net-worth-tracker-2026": {
+    "meta": {
+      "title": "Best Net Worth Tracker in 2026: How to Choose the Right Tool | Moneko",
+      "description": "Looking for the best net worth tracker in 2026? Learn what to track, how to avoid common mistakes, and how Moneko helps you monitor assets, liabilities, and progress.",
+      "keywords": "best net worth tracker 2026, net worth tracker app, net worth tracking, assets and liabilities tracker, personal capital alternative, empower alternative"
+    },
+    "hero": {
+      "title": "Best Net Worth Tracker in 2026: What Matters",
+      "subtitle": "Net worth is the clearest scorecard for your financial health. Choose a tracker that makes it easy to stay consistent and see progress over time.",
+      "ctaText": "Track Net Worth",
+      "ctaRoute": "/dashboard/net-worth-tracker",
+      "chatSuggestions": [
+        "What should I include in my net worth?",
+        "How often should I track net worth?",
+        "What is a good net worth tracker app in 2026?",
+        "How can I grow my net worth faster?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Track Assets and Liabilities",
+          "description": "List or connect accounts so you can see both sides of the equation clearly."
+        },
+        {
+          "title": "Review Monthly Trends",
+          "description": "A net worth tracker is only useful if you look at it regularly and understand the drivers."
+        },
+        {
+          "title": "Tie It to a Plan",
+          "description": "Use goals and calculators so net worth growth becomes a strategy, not just a number."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Net Worth Tracking, Made Understandable",
+      "subtitle": "See how net worth tracking becomes more actionable when it is paired with budgeting and planning tools."
+    },
+    "features": [
+      {
+        "title": "Net Worth Dashboard",
+        "description": "Track assets, liabilities, and progress over time in one view.",
+        "icon": "📊",
+        "route": "/dashboard/net-worth-tracker"
+      },
+      {
+        "title": "Calculator Suite",
+        "description": "Run scenarios for debt payoff, savings goals, retirement, and compounding.",
+        "icon": "🧮",
+        "route": "/calculators"
+      },
+      {
+        "title": "Shared Net Worth (Optional)",
+        "description": "If you manage money together, track household totals with clear separation.",
+        "icon": "👥",
+        "route": "/dashboard/net-worth-tracker"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "The Net Worth Equation",
+        "description": "Understand what to include and what to ignore so the number stays meaningful.",
+        "icon": "➗"
+      },
+      {
+        "title": "Net Worth Growth Levers",
+        "description": "Learn which actions move net worth most: savings rate, debt reduction, and investing over time.",
+        "icon": "📈"
+      }
+    ],
+    "benefits": [
+      "Clear financial scorecard",
+      "Actionable scenarios",
+      "Works alongside budgeting",
+      "Optional household view"
+    ],
+    "article": {
+      "title": "Best Net Worth Tracker in 2026: Choose a Tool You Will Use",
+      "tags": [
+        "best net worth tracker 2026",
+        "net worth tracking",
+        "empower alternative",
+        "personal capital alternative"
+      ],
+      "body": "The best net worth tracker is the one that helps you stay consistent. Net worth is simple: assets minus liabilities. The hard part is keeping the data updated and turning the number into a plan.\n\nWhen you evaluate net worth tracking tools, look for: clarity (can you see assets and debts separately?), consistency (is it easy to update monthly?), and actionability (does it help you decide what to do next?).\n\nMoneko pairs net worth tracking with budgeting pockets and calculators so you can connect daily decisions to long-term progress. If you want a tracker that is more than a snapshot, choose a tool that supports both measurement and planning."
     }
   }
 }

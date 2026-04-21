@@ -10,12 +10,13 @@ import {
   ProgressEvent,
   runAnalyzeExpense,
 } from "../shared/analyze-core.ts";
+import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
   applyPreferencesToItems,
+  fetchUserCategoryPreferences,
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
-  fetchUserCategoryPreferences,
   mergeAllowedCategories,
   normalizeStoredUserCategory,
   UserCategoryPreferenceRow,
@@ -42,6 +43,8 @@ const categoryPreferencesCache = new Map<
 >();
 
 const ENABLE_ANALYZE_PREF_DEBUG = Deno.env.get("ANALYZE_PREF_DEBUG") === "true";
+const ANALYZE_PRIMARY_MODEL_NAME = "gemini-3.1-flash-lite-preview";
+const ANALYZE_FALLBACK_MODEL_NAME = "gemini-2.5-flash";
 
 function debugPrefLog(message: string, payload?: unknown) {
   if (!ENABLE_ANALYZE_PREF_DEBUG) return;
@@ -177,6 +180,25 @@ function isTotalLike(description: unknown): boolean {
   return /(sub\s*total|subtotal|grand\s*total|total)/i.test(description);
 }
 
+/**
+ * Identifies receipt-style output from OCR/LLM parsing.
+ *
+ * Why this exists:
+ * - We only want to merge multiple parsed rows into one transaction for
+ *   "single receipt" scenarios.
+ * - Bank/payment app screenshots often contain many independent transactions,
+ *   and those must remain separate rows for downstream logging.
+ *
+ * Current signal:
+ * - Presence of explicit receipt summary rows like total/subtotal.
+ *
+ * If you expand this heuristic in the future, keep it conservative.
+ * A false positive here will collapse legitimate multi-transaction lists.
+ */
+function hasExplicitReceiptSignals(items: any[]): boolean {
+  return items.some((item) => isTotalLike(item?.description));
+}
+
 function resolveReceiptCategory(items: any[]): string | undefined {
   const counts = new Map<string, number>();
   for (const item of items) {
@@ -201,7 +223,16 @@ function collapseReceiptItems(
   body: AnalyzeRequestBody,
 ): any[] | undefined {
   if (!Array.isArray(items) || items.length <= 1) return items;
+
+  // Collapse is only considered for plain image uploads (no attachments).
+  // Text/audio/files should keep the parser's original granularity.
   if (!shouldCollapseReceipt(body)) return items;
+
+  // Critical safety guard:
+  // Do NOT collapse image results unless we have explicit receipt evidence.
+  // This prevents regressions where bank/app history screenshots get merged
+  // into a single expense instead of returning one item per transaction row.
+  if (!hasExplicitReceiptSignals(items)) return items;
 
   const filteredItems =
     items.length > 1
@@ -221,6 +252,10 @@ function collapseReceiptItems(
   const category =
     resolveReceiptCategory(workingItems) || primary.category || "other";
   const description = pickReceiptDescription(workingItems);
+  const merchant =
+    typeof primary?.merchant === "string" && primary.merchant.trim().length > 0
+      ? primary.merchant.trim()
+      : undefined;
   const type = workingItems.some((item) => item?.type === "expense")
     ? "expense"
     : "income";
@@ -237,6 +272,7 @@ function collapseReceiptItems(
       currencySymbol: primary.currencySymbol || "$",
       date: primary.date || body.date || new Date().toISOString().split("T")[0],
       description,
+      ...(merchant ? { merchant } : {}),
       breakdown,
       ...(splitSource?.payerUserId
         ? { payerUserId: splitSource.payerUserId }
@@ -251,6 +287,7 @@ function collapseReceiptItems(
 function resolveErrorCode(status: number): string {
   if (status === 401 || status === 403) return "UNAUTHORIZED";
   if (status === 404) return "NOT_FOUND";
+  if (status === 503) return "AI_TEMPORARILY_UNAVAILABLE";
   if (status >= 500) return "SERVER_ERROR";
   return "VALIDATION_ERROR";
 }
@@ -276,6 +313,8 @@ function statusForErrorCode(code?: string): number {
       return 401;
     case "NOT_FOUND":
       return 404;
+    case "AI_TEMPORARILY_UNAVAILABLE":
+      return 503;
     case "SERVER_ERROR":
       return 500;
     default:
@@ -296,7 +335,9 @@ function getElapsedMs(startedAt: number): number {
 
 function logStage(stage: string, startedAt: number) {
   console.log(
-    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(startedAt)}`,
+    `[analyze-expense][timing] stage=${stage} elapsed_ms=${getElapsedMs(
+      startedAt,
+    )}`,
   );
 }
 
@@ -608,6 +649,22 @@ function createSSEStream(
 
         controller.close();
       } catch (error) {
+        await reportVertexAiFailure({
+          functionName: "analyze-expense",
+          error,
+          phase: "streaming_analysis",
+          modelName: ANALYZE_PRIMARY_MODEL_NAME,
+          context: {
+            fallbackModelName: ANALYZE_FALLBACK_MODEL_NAME,
+            stream: true,
+            hasImage: !!body.image,
+            hasAudio: !!body.audio,
+            hasAttachments:
+              Array.isArray(body.attachments) && body.attachments.length > 0,
+            hasText:
+              typeof body.text === "string" && body.text.trim().length > 0,
+          },
+        });
         const message = error instanceof Error ? error.message : String(error);
         const code = resolveErrorCode(500);
         controller.enqueue(
@@ -823,6 +880,21 @@ Deno.serve(async (req: Request) => {
         }
       }
     } catch (error) {
+      await reportVertexAiFailure({
+        functionName: "analyze-expense",
+        error,
+        phase: "analysis_response",
+        modelName: ANALYZE_PRIMARY_MODEL_NAME,
+        context: {
+          fallbackModelName: ANALYZE_FALLBACK_MODEL_NAME,
+          stream: false,
+          hasImage: !!body.image,
+          hasAudio: !!body.audio,
+          hasAttachments:
+            Array.isArray(body.attachments) && body.attachments.length > 0,
+          hasText: typeof body.text === "string" && body.text.trim().length > 0,
+        },
+      });
       const message = error instanceof Error ? error.message : String(error);
       const status = message.includes("timed out") ? 504 : 500;
       return errorResponse(message, status);

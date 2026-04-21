@@ -1,47 +1,49 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { seo } from '@/utils/seo';
-import { getCanonicalUrl } from '@/utils/canonical';
+import { seo } from "@/utils/seo";
+import { getCanonicalUrl } from "@/utils/canonical";
 
-export const Route = createFileRoute('/terms-of-service')({
+export const Route = createFileRoute("/terms-of-service")({
   component: TermsOfService,
   head: () => {
-    const pageUrl = getCanonicalUrl('/terms-of-service');
+    const pageUrl = getCanonicalUrl("/terms-of-service");
     const meta = seo({
-      title: 'Terms of Service | Moneko',
-      description: 'Read Moneko\'s terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.',
-      keywords: 'terms of service, user agreement, legal terms, Moneko terms',
-      image: 'https://moneko.io/og-img.png',
+      title: "Terms of Service | Moneko",
+      description:
+        "Read Moneko's terms of service agreement. Learn about the rules, guidelines, and policies for using our financial education platform.",
+      keywords: "terms of service, user agreement, legal terms, Moneko terms",
+      image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
-    
+
     // Add structured data for terms of service page
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      "name": "Terms of Service",
-      "description": "Moneko's terms of service agreement outlining the rules and policies for using our platform",
-      "url": pageUrl,
-      "publisher": {
+      name: "Terms of Service",
+      description:
+        "Moneko's terms of service agreement outlining the rules and policies for using our platform",
+      url: pageUrl,
+      publisher: {
         "@type": "Organization",
-        "name": "Moneko",
-        "url": "https://moneko.io/"
-      }
+        name: "Moneko",
+        url: "https://moneko.io/",
+      },
     };
-    
+
     return {
       meta,
       links: [
         {
-          rel: 'canonical',
-          href: pageUrl
-        }
+          rel: "canonical",
+          href: pageUrl,
+        },
       ],
-      script: [
+      scripts: [
         {
-          type: 'application/ld+json',
-          children: JSON.stringify(structuredData)
-        }
-      ]
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
+        },
+      ],
     };
   },
 });
@@ -50,115 +52,174 @@ function TermsOfService() {
   return (
     <div className="flex-1 bg-white px-6 py-12 md:px-12 lg:px-24">
       <div className="mx-auto max-w-4xl">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="mb-8 inline-flex items-center text-purple-600 hover:text-purple-800"
         >
           &larr; Back to Home
         </Link>
-        
+
         <h1 className="mb-8 text-4xl font-bold">Terms of Service</h1>
-        
+
         <div className="prose max-w-none">
-          <p className="text-lg text-gray-700">Last updated: {new Date().toLocaleDateString()}</p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">1. Acceptance of Terms</h2>
+          <p className="text-lg text-gray-700">Last updated: 2026-04-14</p>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            1. Acceptance of Terms
+          </h2>
           <p>
-            By accessing or using Moneko's services, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.
+            By accessing or using Moneko's services, you agree to be bound by
+            these Terms of Service. If you do not agree to these terms, please
+            do not use our services.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">2. Description of Service</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            2. Description of Service
+          </h2>
           <p>
-            Moneko provides an educational platform designed to help users learn financial concepts in an engaging way. Our services may include interactive lessons, quizzes, and personalized learning paths.
+            Moneko provides an educational platform designed to help users learn
+            financial concepts in an engaging way. Our services may include
+            interactive lessons, quizzes, and personalized learning paths.
           </p>
-          
+
           <h2 className="mt-8 text-2xl font-semibold">3. User Accounts</h2>
           <p>
-            When you create an account with us, you agree to provide accurate, current, and complete information. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.
+            When you create an account with us, you agree to provide accurate,
+            current, and complete information. You are responsible for
+            maintaining the confidentiality of your account credentials and for
+            all activities that occur under your account.
           </p>
-          
+
           <h2 className="mt-8 text-2xl font-semibold">4. Acceptable Use</h2>
-          <p>
-            You agree not to:
-          </p>
+          <p>You agree not to:</p>
           <ul className="list-disc pl-8">
             <li>Use our services for any illegal purpose</li>
-            <li>Attempt to gain unauthorized access to any portion of our services</li>
-            <li>Interfere with or disrupt the integrity or performance of the services</li>
+            <li>
+              Attempt to gain unauthorized access to any portion of our services
+            </li>
+            <li>
+              Interfere with or disrupt the integrity or performance of the
+              services
+            </li>
             <li>Harass, abuse, or harm other users</li>
             <li>Infringe the intellectual property rights of others</li>
           </ul>
-          
-          <h2 className="mt-8 text-2xl font-semibold">6. Data Ownership and Control</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            6. Data Ownership and Control
+          </h2>
           <p>
-            At Moneko, we believe your data belongs to you. You maintain complete ownership and control over your personal and financial information.
+            At Moneko, we believe your data belongs to you. You maintain
+            complete ownership and control over your personal and financial
+            information.
           </p>
-          
+
           <h3 className="mt-6 text-xl font-semibold">Your Data Rights</h3>
           <ul className="list-disc pl-8">
-            <li>You can export all your data at any time in Excel or CSV format</li>
-            <li>You can delete your account and all associated data with one click</li>
+            <li>
+              You can export all your data at any time in Excel or CSV format
+            </li>
+            <li>
+              You can delete your account and all associated data with one click
+            </li>
             <li>We do not keep backup copies of deleted user data</li>
-            <li>We never sell your personal or financial data to third parties</li>
+            <li>
+              We never sell your personal or financial data to third parties
+            </li>
             <li>You maintain full ownership of your financial information</li>
           </ul>
-          
+
           <h3 className="mt-6 text-xl font-semibold">No Lock-in Policy</h3>
           <p>
-            We are committed to ensuring you can easily use your data however you choose. This means:
+            We are committed to ensuring you can easily use your data however
+            you choose. This means:
           </p>
           <ul className="list-disc pl-8">
             <li>No restrictions on using exported data with other services</li>
             <li>No barriers to migrating away from Moneko</li>
             <li>Complete data portability and portability rights</li>
-            <li>True deletion - not just deactivation - when you choose to leave</li>
+            <li>
+              True deletion - not just deactivation - when you choose to leave
+            </li>
           </ul>
-          
-          <h2 className="mt-8 text-2xl font-semibold">7. Intellectual Property</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            7. Intellectual Property
+          </h2>
           <p>
-            All content on Moneko, including text, graphics, logos, and software, is the property of Moneko or its content suppliers and is protected by copyright and other intellectual property laws.
+            All content on Moneko, including text, graphics, logos, and
+            software, is the property of Moneko or its content suppliers and is
+            protected by copyright and other intellectual property laws.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">8. Disclaimer of Warranties</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            8. Disclaimer of Warranties
+          </h2>
           <p>
-            Our services are provided "as is" without warranties of any kind, either express or implied. We do not guarantee that our services will be uninterrupted, secure, or error-free.
+            Our services are provided "as is" without warranties of any kind,
+            either express or implied. We do not guarantee that our services
+            will be uninterrupted, secure, or error-free.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">9. Limitation of Liability</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            9. Limitation of Liability
+          </h2>
           <p>
-            Moneko shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or relating to your use of our services.
+            Moneko shall not be liable for any indirect, incidental, special,
+            consequential, or punitive damages arising out of or relating to
+            your use of our services.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">10. Educational Content Disclaimer</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            10. Educational Content Disclaimer
+          </h2>
           <p>
-            The educational content provided by Moneko is for informational purposes only and does not constitute financial advice. Users should consult with qualified financial professionals before making investment decisions.
+            The educational content provided by Moneko is for informational
+            purposes only and does not constitute financial advice. Users should
+            consult with qualified financial professionals before making
+            investment decisions.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">11. Modification of Terms</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            11. Modification of Terms
+          </h2>
           <p>
-            We reserve the right to modify these Terms of Service at any time. We will notify users of any material changes through our website or by email.
+            We reserve the right to modify these Terms of Service at any time.
+            We will notify users of any material changes through our website or
+            by email.
           </p>
-          
+
           <h2 className="mt-8 text-2xl font-semibold">12. Governing Law</h2>
           <p>
-            These Terms of Service shall be governed by and construed in accordance with the laws of the jurisdiction in which Moneko operates, without regard to its conflict of law provisions.
+            These Terms of Service shall be governed by and construed in
+            accordance with the laws of the jurisdiction in which Moneko
+            operates, without regard to its conflict of law provisions.
           </p>
-          
-          <h2 className="mt-8 text-2xl font-semibold">13. Contact Information</h2>
+
+          <h2 className="mt-8 text-2xl font-semibold">
+            13. Contact Information
+          </h2>
           <p>
-            If you have any questions about these Terms of Service, please contact us at:
+            If you have any questions about these Terms of Service, please
+            contact us at:
           </p>
           <p className="mt-2">
             <strong>Email:</strong> hello@moneko.io
           </p>
         </div>
-        
+
         <div className="mt-12 border-t border-gray-200 pt-8">
           <div className="flex gap-4">
-            <Link to="/privacy-policy" className="text-purple-600 hover:text-purple-800">
+            <Link
+              to="/privacy-policy"
+              className="text-purple-600 hover:text-purple-800"
+            >
               Privacy Policy
             </Link>
-            <Link to="/cookie-policy" className="text-purple-600 hover:text-purple-800">
+            <Link
+              to="/cookie-policy"
+              className="text-purple-600 hover:text-purple-800"
+            >
               Cookie Policy
             </Link>
           </div>

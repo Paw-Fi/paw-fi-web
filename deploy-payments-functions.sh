@@ -64,18 +64,28 @@ echo ""
 # IAP (iOS) functions
 # ---------------------------------------------------------------------------
 
-echo "[8/9] Deploying get-subscription-products function..."
+echo "[8/12] Deploying get-subscription-products function..."
 supabase functions deploy get-subscription-products --project-ref $PROJECT_REF
 echo "OK: get-subscription-products deployed"
 echo ""
 
-echo "[9/10] Deploying verify-iap-purchase function..."
+echo "[9/12] Deploying verify-iap-purchase function..."
 supabase functions deploy verify-iap-purchase --project-ref $PROJECT_REF
 echo "OK: verify-iap-purchase deployed"
 
-echo "[10/10] Deploying app-store-notifications function..."
+echo "[10/12] Deploying app-store-notifications function..."
 supabase functions deploy app-store-notifications --project-ref $PROJECT_REF --no-verify-jwt
 echo "OK: app-store-notifications deployed"
+echo ""
+
+echo "[11/12] Deploying subscription-founder-followup function..."
+supabase functions deploy subscription-founder-followup --project-ref $PROJECT_REF --no-verify-jwt
+echo "OK: subscription-founder-followup deployed"
+echo ""
+
+echo "[12/12] Deploying process-subscription-followup-emails function..."
+supabase functions deploy process-subscription-followup-emails --project-ref $PROJECT_REF --no-verify-jwt
+echo "OK: process-subscription-followup-emails deployed"
 echo ""
 
 echo "════════════════════════════════════════════════════════════"
@@ -88,6 +98,7 @@ echo ""
 echo "1) Apply DB migrations (if not already applied):"
 echo "   - moneko-web/supabase/migrations/20260122_iap_subscription_catalog.sql"
 echo "   - moneko-web/supabase/migrations/20260122_seed_ios_subscription_products.sql"
+echo "   - moneko-web/supabase/migrations/20260329_subscription_followup_email_queue.sql"
 echo ""
 echo "2) Verify Environment Variables in Supabase Dashboard (Project -> Settings -> Secrets):"
 echo "   Required (Stripe / web checkout):"

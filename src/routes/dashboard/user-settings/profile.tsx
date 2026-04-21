@@ -364,11 +364,6 @@ function FinancialProfileSettings() {
 
     try {
       // Call the financial-health-profile edge function to update profile and regenerate calculations
-      console.log(
-        "Calling financial-health-profile edge function for profile update...",
-      );
-      console.log("Profile data:", profileData);
-
       const { data, error: edgeFunctionError } =
         await supabase.functions.invoke("financial-health-profile", {
           body: {
@@ -387,10 +382,6 @@ function FinancialProfileSettings() {
       }
 
       if (data?.success) {
-        console.log(
-          "✅ Financial profile updated and calculations regenerated",
-        );
-
         // Now run the quiz calculations to update widgets
         const { calculateResults, generateDashboardWidgets } = await import(
           "@/components/financial-health/quiz-calculations"
@@ -410,10 +401,6 @@ function FinancialProfileSettings() {
 
           if (storedDashboardId) {
             // Try to update the existing dashboard
-            console.log(
-              "Updating existing financial health dashboard:",
-              storedDashboardId,
-            );
             try {
               await updateDashboardViewWithWidgets(user.id, {
                 viewId: storedDashboardId,
@@ -422,7 +409,6 @@ function FinancialProfileSettings() {
                   "Updated financial health dashboard based on your profile",
                 widgets: widgets,
               });
-              console.log("✅ Dashboard widgets updated successfully");
             } catch (updateError) {
               // Dashboard might have been deleted, create a new one
               console.warn(
@@ -433,10 +419,6 @@ function FinancialProfileSettings() {
             }
           } else {
             // No stored dashboard ID, check for existing dashboard using string matching
-            console.log(
-              "No stored dashboard ID found, checking for existing financial health dashboard",
-            );
-
             // Get all dashboard views to search for financial health dashboard
             const dashboardViews = await getAllDashboardViews(user.id);
 
@@ -450,11 +432,6 @@ function FinancialProfileSettings() {
             );
 
             if (existingFinancialDashboard) {
-              console.log(
-                "Found existing financial health dashboard:",
-                existingFinancialDashboard.id,
-              );
-
               try {
                 // Update the existing dashboard
                 await updateDashboardViewWithWidgets(user.id, {
@@ -475,10 +452,6 @@ function FinancialProfileSettings() {
                     },
                   })
                   .eq("id", profile.id);
-
-                console.log(
-                  "✅ Updated existing dashboard and stored ID in profile",
-                );
               } catch (updateError) {
                 console.warn(
                   "Failed to update existing dashboard, creating new one:",
@@ -488,9 +461,6 @@ function FinancialProfileSettings() {
               }
             } else {
               // No existing dashboard found, create a new one
-              console.log(
-                "No existing financial health dashboard found, creating new one",
-              );
               await createNewFinancialDashboard();
             }
           }
@@ -507,7 +477,6 @@ function FinancialProfileSettings() {
 
             // Store the new dashboard ID back to the profile for future updates
             if (result?.view?.id) {
-              console.log("Storing dashboard ID in profile:", result.view.id);
               // Update the profile_data to include dashboard_view_id
               await supabase
                 .from("financial_health_profiles")
@@ -2685,5 +2654,3 @@ function FinancialProfileSettings() {
     </div>
   );
 }
-
-export default FinancialProfileSettings;

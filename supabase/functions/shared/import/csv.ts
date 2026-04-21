@@ -11,21 +11,21 @@
  */
 
 import {
+  CSV_DELIMITERS,
   type CsvDelimiter,
   type CsvParseConfig,
-  CSV_DELIMITERS,
   DEFAULT_CSV_CONFIG,
-  type ParseDiagnostics,
-  type ParseResult,
-  type ParsedTransaction,
-  HEADER_NOISE_PATTERN,
-  parseDateFromText,
-  normalizeAmountString,
-  extractAmountTokens,
   detectCurrencyFromText,
+  extractAmountTokens,
+  HEADER_NOISE_PATTERN,
   inferTypeFromText,
-  stripAmountsAndDates,
   isTotalLike,
+  normalizeAmountString,
+  parseDateFromText,
+  type ParseDiagnostics,
+  type ParsedTransaction,
+  type ParseResult,
+  stripAmountsAndDates,
 } from "./types.ts";
 
 // ---------------------------------------------------------------------------
@@ -121,8 +121,8 @@ export function detectDelimiter(
 
     // Score = consistency (how many lines have the same count) × column count
     const mode = findMode(nonZero);
-    const consistency =
-      nonZero.filter((c) => c === mode).length / sample.length;
+    const consistency = nonZero.filter((c) => c === mode).length /
+      sample.length;
     const score = consistency * (mode + 1); // +1 because 0 delimiters = 1 column
 
     if (score > bestScore) {
@@ -337,18 +337,21 @@ interface CsvColumnMap {
  * patterns that match common bank export column names.
  */
 const HEADER_SYNONYMS: Record<keyof CsvColumnMap, RegExp> = {
-  date: /^(date|posted|posting date|transaction date|value date|booked|booking date|trade date|settlement date|effective date)$/i,
+  date:
+    /^(date|posted|posting date|transaction date|value date|booked|booking date|trade date|settlement date|effective date|дата|дата проводки|дата операции|дата транзакции|дата платежа)$/i,
   description:
-    /^(description|details|merchant|memo|narration|reference|narrative|payee|beneficiary|name|transaction description|particulars|remark|remarks)$/i,
+    /^(description|details|merchant|memo|narration|reference|narrative|payee|beneficiary|name|transaction description|particulars|remark|remarks|описание|назначение|детали|комментарий|контрагент|получатель|плательщик)$/i,
   amount:
-    /^(amount|amt|value|sum|total|transaction amount|debit\/credit|net amount)$/i,
+    /^(amount|amt|value|sum|total|transaction amount|debit\/credit|net amount|сумма|сумма операции|сумма в валюте счета|сумма в валюте операции)$/i,
   moneyOut:
-    /^(debit|money out|withdrawal|paid|paid out|outflow|expense|dr|debit amount|debit amt|withdrawals)$/i,
+    /^(debit|money out|withdrawal|paid|paid out|outflow|expense|dr|debit amount|debit amt|withdrawals|расход|расходы|списание|дебет)$/i,
   moneyIn:
-    /^(credit|money in|deposit|received|inflow|income|cr|credit amount|credit amt|deposits)$/i,
-  currency: /^(currency|ccy|cur|currency code)$/i,
-  category: /^(category|type|transaction type|trans type|category\/type)$/i,
-  type: /^(type|transaction type|trans type|txn type)$/i,
+    /^(credit|money in|deposit|received|inflow|income|cr|credit amount|credit amt|deposits|приход|поступление|поступления|зачисление|кредит)$/i,
+  currency:
+    /^(currency|ccy|cur|currency code|валюта|валюта счета|валюта операции)$/i,
+  category:
+    /^(category|type|transaction type|trans type|category\/type|категория|тип операции)$/i,
+  type: /^(type|transaction type|trans type|txn type|тип|вид операции)$/i,
 };
 
 /**
@@ -413,24 +416,25 @@ function extractTransactionFromRow(
   if (HEADER_NOISE_PATTERN.test(joined)) return null;
 
   // --- Date ---
-  const dateSource =
-    columnMap && columnMap.date >= 0 ? cells[columnMap.date] : joined;
+  const dateSource = columnMap && columnMap.date >= 0
+    ? cells[columnMap.date]
+    : joined;
   const date = parseDateFromText(dateSource, callerDate);
   // Without a column map, require a date to distinguish data from noise
   if (!columnMap && !date) return null;
 
   // --- Description ---
-  const description =
-    columnMap && columnMap.description >= 0
-      ? cells[columnMap.description]
-      : stripAmountsAndDates(joined) || joined;
+  const description = columnMap && columnMap.description >= 0
+    ? cells[columnMap.description]
+    : stripAmountsAndDates(joined) || joined;
 
   // Skip total-like rows
   if (isTotalLike(description)) return null;
 
   // --- Currency ---
-  const currencySource =
-    columnMap && columnMap.currency >= 0 ? cells[columnMap.currency] : joined;
+  const currencySource = columnMap && columnMap.currency >= 0
+    ? cells[columnMap.currency]
+    : joined;
   const currency = detectCurrencyFromText(currencySource, callerCurrency);
 
   // --- Amount & Type ---
@@ -458,8 +462,8 @@ function extractTransactionFromRow(
   // Try single amount column with sign detection
   if (amount === null && columnMap && columnMap.amount >= 0) {
     const raw = cells[columnMap.amount] || "";
-    const cleaned = raw.replace(/[^0-9,.\-()]/g, "");
-    const isNegative = /^\s*-/.test(cleaned) || /\(.*\)/.test(cleaned);
+    const cleaned = raw.replace(/[−–—]/g, "-").replace(/[^0-9,.\-()]/g, "");
+    const isNegative = /^\s*[\-−–—]/.test(cleaned) || /\(.*\)/.test(cleaned);
     const val = normalizeAmountString(raw);
     if (val !== null && val > 0) {
       amount = val;
@@ -484,10 +488,9 @@ function extractTransactionFromRow(
   }
 
   // --- Category ---
-  const category =
-    columnMap && columnMap.category >= 0
-      ? cells[columnMap.category]
-      : undefined;
+  const category = columnMap && columnMap.category >= 0
+    ? cells[columnMap.category]
+    : undefined;
 
   return {
     type,
@@ -541,7 +544,9 @@ export function parseCsvFromBytes(
         warnings: [],
       },
       errorCode: "FILE_TOO_LARGE",
-      errorMessage: `File size ${(bytes.length / 1024 / 1024).toFixed(1)} MB exceeds ${(config.maxFileBytes / 1024 / 1024).toFixed(0)} MB limit`,
+      errorMessage: `File size ${
+        (bytes.length / 1024 / 1024).toFixed(1)
+      } MB exceeds ${(config.maxFileBytes / 1024 / 1024).toFixed(0)} MB limit`,
     };
   }
 
@@ -586,7 +591,9 @@ export function parseCsvFromBytes(
   const { delimiter, confidence: delimConfidence } = detectDelimiter(text);
   if (delimConfidence < 0.1) {
     warnings.push(
-      `Low delimiter confidence (${delimConfidence.toFixed(2)}) for '${delimiter}'; parsing may be unreliable`,
+      `Low delimiter confidence (${
+        delimConfidence.toFixed(2)
+      }) for '${delimiter}'; parsing may be unreliable`,
     );
   }
 
@@ -701,15 +708,15 @@ export function parseCsvFromBytes(
       encoding,
       hasBom,
       headerRowIndex: headerRowIndex >= 0 ? headerRowIndex : undefined,
-      detectedHeaders:
-        Object.keys(detectedHeaders).length > 0 ? detectedHeaders : undefined,
+      detectedHeaders: Object.keys(detectedHeaders).length > 0
+        ? detectedHeaders
+        : undefined,
       warnings,
     },
     errorCode: items.length === 0 ? "NO_TRANSACTIONS_FOUND" : undefined,
-    errorMessage:
-      items.length === 0
-        ? "No transactions could be extracted from the file"
-        : undefined,
+    errorMessage: items.length === 0
+      ? "No transactions could be extracted from the file"
+      : undefined,
   };
 }
 

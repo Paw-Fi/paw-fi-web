@@ -6,24 +6,32 @@ import { getCurrencySymbol } from "./currency-symbols.ts";
 
 export type SupabaseClient = SupabaseJsClient;
 
+export type ResolvePocketPercentageResult = {
+  percentage: number | null;
+  usedExistingPercentage: boolean;
+  error: string | null;
+};
+
 function parseMonthRangeUtc(periodMonth: string | undefined | null): {
   monthStartStr: string;
   nextMonthStr: string;
 } {
   const now = new Date();
-  const fallback = `${now.getUTCFullYear()}-${(now.getUTCMonth() + 1).toString().padStart(2, "0")}`;
+  const fallback = `${now.getUTCFullYear()}-${
+    (now.getUTCMonth() + 1)
+      .toString()
+      .padStart(2, "0")
+  }`;
   const raw = (periodMonth || fallback).slice(0, 7);
   const parts = raw.split("-");
   const year = Number(parts[0] || "0");
   const month = Number(parts[1] || "1");
-  const safeYear =
-    Number.isInteger(year) && year >= 1970 && year <= 9999
-      ? year
-      : now.getUTCFullYear();
-  const safeMonth =
-    Number.isInteger(month) && month >= 1 && month <= 12
-      ? month
-      : now.getUTCMonth() + 1;
+  const safeYear = Number.isInteger(year) && year >= 1970 && year <= 9999
+    ? year
+    : now.getUTCFullYear();
+  const safeMonth = Number.isInteger(month) && month >= 1 && month <= 12
+    ? month
+    : now.getUTCMonth() + 1;
 
   const start = new Date(Date.UTC(safeYear, safeMonth - 1, 1));
   const next = new Date(Date.UTC(safeYear, safeMonth, 1));
@@ -31,6 +39,54 @@ function parseMonthRangeUtc(periodMonth: string | undefined | null): {
   return {
     monthStartStr: start.toISOString().slice(0, 10),
     nextMonthStr: next.toISOString().slice(0, 10),
+  };
+}
+
+function clampPercentage(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
+export function resolvePocketPercentageForUpsert({
+  hasPercentageArg,
+  providedPercentage,
+  existingPercentage,
+}: {
+  hasPercentageArg: boolean;
+  providedPercentage: unknown;
+  existingPercentage: unknown;
+}): ResolvePocketPercentageResult {
+  if (hasPercentageArg) {
+    const parsed = Number(providedPercentage);
+    if (!Number.isFinite(parsed)) {
+      return {
+        percentage: null,
+        usedExistingPercentage: false,
+        error: "Pocket percentage must be a valid number",
+      };
+    }
+    return {
+      percentage: clampPercentage(parsed),
+      usedExistingPercentage: false,
+      error: null,
+    };
+  }
+
+  if (
+    typeof existingPercentage === "number" &&
+    Number.isFinite(existingPercentage)
+  ) {
+    return {
+      percentage: clampPercentage(existingPercentage),
+      usedExistingPercentage: true,
+      error: null,
+    };
+  }
+
+  return {
+    percentage: null,
+    usedExistingPercentage: false,
+    error: "percentage is required",
   };
 }
 
@@ -72,8 +128,8 @@ export async function createOrUpdateBudget(
     return query;
   };
 
-  const { data: existing, error: existingErr } =
-    await buildExistingQuery().maybeSingle();
+  const { data: existing, error: existingErr } = await buildExistingQuery()
+    .maybeSingle();
   if (existingErr) {
     return { data: null, error: existingErr } as const;
   }
@@ -98,8 +154,8 @@ export async function createOrUpdateBudget(
   }
 
   // Concurrent insert won the race. Re-read and update target row.
-  const { data: winner, error: winnerErr } =
-    await buildExistingQuery().maybeSingle();
+  const { data: winner, error: winnerErr } = await buildExistingQuery()
+    .maybeSingle();
   if (winnerErr || !winner?.id) {
     return { data: null, error: winnerErr ?? insertRes.error } as const;
   }
@@ -231,20 +287,20 @@ export async function getBudgetStatusDirect(
 
   const { data: allocs, error: allocErr } = envIds.length
     ? await supabase
-        .from("envelope_allocations")
-        .select("envelope_id, amount_cents, period_month")
-        .in("envelope_id", envIds)
-        .gte("period_month", monthStartStr)
-        .lt("period_month", nextMonthStr)
+      .from("envelope_allocations")
+      .select("envelope_id, amount_cents, period_month")
+      .in("envelope_id", envIds)
+      .gte("period_month", monthStartStr)
+      .lt("period_month", nextMonthStr)
     : { data: [], error: null };
   if (allocErr) return { error: allocErr };
 
   // Fetch category links for envelopes to calculate spend per pocket
   const { data: links, error: linksErr } = envIds.length
     ? await supabase
-        .from("envelope_category_links")
-        .select("envelope_id, category")
-        .in("envelope_id", envIds)
+      .from("envelope_category_links")
+      .select("envelope_id, category")
+      .in("envelope_id", envIds)
     : { data: [], error: null };
   if (linksErr) return { error: linksErr };
   const categoryToEnvelope: Record<string, string[]> = {};
@@ -307,15 +363,14 @@ export async function getBudgetStatusDirect(
 
   const envelopeStatus = (envelopes || []).map((e: any) => {
     // Read precedence: allocation(period_month) → budget_amount_cents → derived from percentage
-    const alloc =
-      allocMap[e.id] != null
-        ? allocMap[e.id]
-        : e.budget_amount_cents != null
-          ? Number(e.budget_amount_cents)
-          : Math.round(
-              ((e.budget_percentage || 0) / 100) *
-                (budget.total_budget_cents || 0),
-            );
+    const alloc = allocMap[e.id] != null
+      ? allocMap[e.id]
+      : e.budget_amount_cents != null
+      ? Number(e.budget_amount_cents)
+      : Math.round(
+        ((e.budget_percentage || 0) / 100) *
+          (budget.total_budget_cents || 0),
+      );
     const spent = spentMap[e.id] != null ? spentMap[e.id] : 0;
     return {
       id: e.id,

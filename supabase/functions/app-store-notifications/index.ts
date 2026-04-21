@@ -3,10 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import {
   Environment,
-  GetTransactionHistoryVersion,
   type JWSTransactionDecodedPayload,
-  Order,
-  ProductType,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getCorsHeaders } from "../shared/cors.ts";
 import {
@@ -15,6 +12,12 @@ import {
   hasAppStoreOwnershipConflict,
 } from "../shared/iap-ownership.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import {
+  findAppStoreTransactionWithEnvironmentFallback,
+  getValidatedAppStorePrivateKey as getValidatedSharedAppStorePrivateKey,
+  isAppStoreServerApiConfigured as isSharedAppStoreServerApiConfigured,
+  matchesVerifiedAppStoreTransaction,
+} from "../shared/app-store-api.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
 
@@ -65,6 +68,13 @@ const iapOwnershipLegacyFallbackEnabled = readBooleanEnv(
   "IAP_OWNERSHIP_LEGACY_FALLBACK_ENABLED",
   true,
 );
+
+const appStoreApiConfig = {
+  issuerId: appStoreIssuerId,
+  keyId: appStoreKeyId,
+  bundleId: appStoreBundleId,
+  privateKey: appStorePrivateKeyRaw,
+};
 
 function normalizePrivateKey(value: string): string {
   if (!value) return "";
@@ -164,31 +174,13 @@ function getAppStoreDiagnosticsContext(
 }
 
 function getValidatedApplePrivateKey(): string {
-  const normalized = normalizePrivateKey(appStorePrivateKeyRaw);
-  if (!normalized) {
-    throw new Error("APPLE_APP_STORE_PRIVATE_KEY is empty after normalization");
-  }
-
-  const hasBegin =
-    normalized.includes("-----BEGIN") &&
-    normalized.includes("PRIVATE KEY-----");
-  const hasEnd =
-    normalized.includes("-----END") && normalized.includes("PRIVATE KEY-----");
-
-  if (!hasBegin || !hasEnd) {
-    throw new Error("APPLE_APP_STORE_PRIVATE_KEY is missing PEM markers");
-  }
-
-  return normalized;
+  return getValidatedSharedAppStorePrivateKey(appStorePrivateKeyRaw);
 }
 
 function isAppleServerApiConfigured(): boolean {
-  return Boolean(
-    appStoreIssuerId &&
-      appStoreKeyId &&
-      appStorePrivateKeyRaw &&
-      appStoreBundleId &&
-      appStoreAppId,
+  return (
+    Boolean(appStoreAppId) &&
+    isSharedAppStoreServerApiConfigured(appStoreApiConfig)
   );
 }
 
@@ -221,183 +213,6 @@ function toAppleEnvironment(value: string | null): Environment {
     : Environment.PRODUCTION;
 }
 
-function getAppStoreApiBaseUrl(environment: Environment): string {
-  return environment === Environment.SANDBOX
-    ? "https://api.storekit-sandbox.itunes.apple.com"
-    : "https://api.storekit.itunes.apple.com";
-}
-
-function utf8Encode(value: string): Uint8Array {
-  return new TextEncoder().encode(value);
-}
-
-function base64UrlEncode(bytes: Uint8Array): string {
-  const base64 = btoa(String.fromCharCode(...bytes));
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function getPkcs8BodyFromPem(privateKey: string): Uint8Array {
-  const match = privateKey.match(
-    /-----BEGIN PRIVATE KEY-----([\s\S]*?)-----END PRIVATE KEY-----/,
-  );
-
-  if (!match?.[1]) {
-    throw new Error(
-      "APPLE_APP_STORE_PRIVATE_KEY must be an unencrypted PKCS#8 PEM (.p8)",
-    );
-  }
-
-  const body = match[1].replace(/\s+/g, "");
-  return Uint8Array.from(atob(body), (char) => char.charCodeAt(0));
-}
-
-async function importApplePrivateKey(privateKey: string): Promise<CryptoKey> {
-  try {
-    return await crypto.subtle.importKey(
-      "pkcs8",
-      getPkcs8BodyFromPem(privateKey),
-      { name: "ECDSA", namedCurve: "P-256" },
-      false,
-      ["sign"],
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `APPLE_APP_STORE_PRIVATE_KEY could not be imported as ES256 key: ${message}`,
-    );
-  }
-}
-
-async function createAppStoreBearerToken(privateKey: string): Promise<string> {
-  const cryptoKey = await importApplePrivateKey(privateKey);
-  const issuedAt = Math.floor(Date.now() / 1000);
-  const header = {
-    alg: "ES256",
-    kid: appStoreKeyId,
-    typ: "JWT",
-  };
-  const payload = {
-    bid: appStoreBundleId,
-    iss: appStoreIssuerId,
-    aud: "appstoreconnect-v1",
-    iat: issuedAt,
-    exp: issuedAt + 300,
-  };
-
-  const unsignedToken = `${base64UrlEncode(utf8Encode(JSON.stringify(header)))}.${base64UrlEncode(
-    utf8Encode(JSON.stringify(payload)),
-  )}`;
-
-  const signature = new Uint8Array(
-    await crypto.subtle.sign(
-      { name: "ECDSA", hash: "SHA-256" },
-      cryptoKey,
-      utf8Encode(unsignedToken),
-    ),
-  );
-
-  return `${unsignedToken}.${base64UrlEncode(signature)}`;
-}
-
-async function makeAppStoreApiRequest<T>(params: {
-  privateKey: string;
-  path: string;
-  environment: Environment;
-  query?: Record<string, string | string[] | undefined | null>;
-}): Promise<T> {
-  const bearerToken = await createAppStoreBearerToken(params.privateKey);
-  const url = new URL(
-    `${getAppStoreApiBaseUrl(params.environment)}${params.path}`,
-  );
-
-  for (const [key, rawValue] of Object.entries(params.query ?? {})) {
-    if (rawValue == null) continue;
-    if (Array.isArray(rawValue)) {
-      for (const item of rawValue) {
-        url.searchParams.append(key, item);
-      }
-      continue;
-    }
-    url.searchParams.set(key, rawValue);
-  }
-
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${bearerToken}`,
-      Accept: "application/json",
-      "User-Agent": "moneko-app-store-notifications",
-    },
-  });
-
-  if (!response.ok) {
-    const responseText = await response.text().catch(() => "");
-    const error = new Error(
-      `App Store API request failed (${response.status}) for ${params.path}: ${responseText}`,
-    ) as Error & {
-      appStoreContext?: Record<string, unknown>;
-    };
-    error.appStoreContext = getAppStoreDiagnosticsContext({
-      requestPath: params.path,
-      requestUrl: url.toString(),
-      environment:
-        params.environment === Environment.SANDBOX ? "sandbox" : "production",
-      responseStatus: response.status,
-      responseBodyPreview: responseText.slice(0, 1000),
-    });
-    throw error;
-  }
-
-  return (await response.json()) as T;
-}
-
-async function fetchAppStoreTransactionByTransactionId(params: {
-  privateKey: string;
-  transactionId: string;
-  environment: Environment;
-}): Promise<JWSTransactionDecodedPayload | null> {
-  const response = await makeAppStoreApiRequest<{
-    signedTransactionInfo?: string;
-  }>({
-    privateKey: params.privateKey,
-    path: `/inApps/v1/transactions/${params.transactionId}`,
-    environment: params.environment,
-  });
-  const signedTransaction = asString(response?.signedTransactionInfo);
-  if (!signedTransaction) return null;
-
-  return decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
-}
-
-async function fetchLatestAppStoreTransactionByOriginalId(params: {
-  privateKey: string;
-  originalTransactionId: string;
-  environment: Environment;
-}): Promise<JWSTransactionDecodedPayload | null> {
-  const historyRequest = {
-    sort: Order.DESCENDING,
-    revoked: true,
-    productTypes: [ProductType.AUTO_RENEWABLE, ProductType.NON_CONSUMABLE],
-  };
-
-  const response = await makeAppStoreApiRequest<{
-    signedTransactions?: string[];
-  }>({
-    privateKey: params.privateKey,
-    path: `/inApps/${GetTransactionHistoryVersion.V2}/history/${params.originalTransactionId}`,
-    environment: params.environment,
-    query: {
-      sort: historyRequest.sort,
-      revoked: String(historyRequest.revoked),
-      productType: historyRequest.productTypes,
-    },
-  });
-
-  const signedTransaction = response?.signedTransactions?.[0];
-  if (!signedTransaction) return null;
-  return decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
-}
-
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -409,6 +224,19 @@ function asIsoMillis(value: string | null): string | null {
   const date = new Date(n);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
+}
+
+function asIsoMillisUnknown(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  if (typeof value === "string") {
+    return asIsoMillis(value);
+  }
+  return null;
 }
 
 function isUuid(value: string): boolean {
@@ -430,24 +258,68 @@ function deriveStatus(transaction: JWSTransactionDecodedPayload): string {
   return "active";
 }
 
+function deriveLifecycleStatus(
+  transaction: JWSTransactionDecodedPayload,
+): "active" | "trialing" | "canceled" {
+  const baseStatus = deriveStatus(transaction);
+  if (baseStatus === "canceled") return "canceled";
+
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
+  const offerIdentifier =
+    asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
+  const offerType = Number(transaction.offerType);
+  const isTrialLike =
+    offerDiscountType === "FREE_TRIAL" ||
+    (offerType === 1 && offerIdentifier.includes("trial"));
+
+  return isTrialLike ? "trialing" : "active";
+}
+
+function isFreeTrialTransaction(
+  transaction: Pick<
+    JWSTransactionDecodedPayload,
+    "offerDiscountType" | "offerType" | "offerIdentifier"
+  >,
+): boolean {
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
+  const offerIdentifier =
+    asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
+  const offerType = Number(transaction.offerType);
+
+  return (
+    offerDiscountType === "FREE_TRIAL" ||
+    (offerType === 1 && offerIdentifier.includes("trial"))
+  );
+}
+
+function toStoredAppStoreEnvironment(value: AppStoreEnvironment): string {
+  return value === "sandbox" ? "Sandbox" : "Production";
+}
+
 function looksLikeStripeSubscriptionId(value: unknown): value is string {
   return typeof value === "string" && value.startsWith("sub_");
 }
 
 async function authUserExists(userId: string): Promise<boolean> {
-  const { data, error } = await supabase.auth.admin.getUserById(userId);
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
 
   if (error) {
-    if (error.status === 404) {
-      return false;
-    }
-
     throw new Error(
       `Failed to verify auth user existence: ${error.message ?? String(error)}`,
     );
   }
 
-  return Boolean(data?.user?.id);
+  return Boolean(data?.id);
 }
 
 async function resolveVerifiedUserId(params: {
@@ -561,6 +433,201 @@ async function cancelStripeSubscriptionIfPresent(
   }
 }
 
+interface ResolvedNotificationUser {
+  userId: string | null;
+  userIdSource:
+    | "ownership_binding"
+    | "app_account_token"
+    | "legacy_subscription"
+    | null;
+  hasLegacyOwnershipConflict: boolean;
+}
+
+async function enqueuePendingNotification(params: {
+  originalTransactionId: string;
+  transactionId: string | null;
+  storeProductId: string | null;
+  environment: AppStoreEnvironment;
+  appAccountToken: string | null;
+  userIdSource:
+    | "ownership_binding"
+    | "app_account_token"
+    | "legacy_subscription"
+    | null;
+  lastError: string;
+}): Promise<void> {
+  const payload = {
+    provider: "app_store",
+    original_transaction_id: params.originalTransactionId,
+    transaction_id: params.transactionId,
+    store_product_id: params.storeProductId,
+    notification_environment: toStoredAppStoreEnvironment(params.environment),
+    candidate_app_account_token: params.appAccountToken,
+    user_id_source: params.userIdSource,
+    pending_attempts: 1,
+    first_seen_at: new Date().toISOString(),
+    last_seen_at: new Date().toISOString(),
+    last_error: params.lastError,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("app_store_notification_backlog")
+    .upsert(payload, {
+      onConflict: "provider,original_transaction_id,transaction_key",
+    });
+
+  if (error) {
+    throw new Error(
+      `Failed to queue pending App Store notification: ${error.message ?? error.code ?? String(error)}`,
+    );
+  }
+}
+
+async function resolveNotificationUser(params: {
+  originalTransactionId: string;
+  transactionId: string | null;
+  appAccountToken: string | null;
+  environment: AppStoreEnvironment;
+}): Promise<ResolvedNotificationUser> {
+  let userId: string | null = null;
+  let userIdSource:
+    | "ownership_binding"
+    | "app_account_token"
+    | "legacy_subscription"
+    | null = null;
+  let hasLegacyOwnershipConflict = false;
+
+  if (iapOwnershipBindingEnabled) {
+    const existingBinding = await getAppStoreOwnershipBinding({
+      supabase,
+      originalTransactionId: params.originalTransactionId,
+    });
+    const verifiedBindingUserId = await resolveVerifiedUserId({
+      candidateUserId: existingBinding?.user_id ?? null,
+      candidateSource: "ownership_binding",
+      originalTransactionId: params.originalTransactionId,
+      transactionId: params.transactionId,
+      environment: params.environment,
+    });
+    userId = verifiedBindingUserId;
+    if (verifiedBindingUserId) {
+      userIdSource = "ownership_binding";
+    }
+
+    if (userId == null) {
+      hasLegacyOwnershipConflict = await hasAppStoreOwnershipConflict({
+        supabase,
+        originalTransactionId: params.originalTransactionId,
+      });
+    }
+  }
+
+  if (!userId && params.appAccountToken && isUuid(params.appAccountToken)) {
+    userId = await resolveVerifiedUserId({
+      candidateUserId: params.appAccountToken,
+      candidateSource: "app_account_token",
+      originalTransactionId: params.originalTransactionId,
+      transactionId: params.transactionId,
+      environment: params.environment,
+    });
+    if (userId) {
+      userIdSource = "app_account_token";
+    }
+  }
+
+  if (!userId && iapOwnershipLegacyFallbackEnabled) {
+    const orFilters = [
+      `app_store_original_transaction_id.eq.${params.originalTransactionId}`,
+    ];
+    if (params.transactionId) {
+      orFilters.push(`app_store_transaction_id.eq.${params.transactionId}`);
+    }
+
+    const { data: existingSub, error: existingSubError } = await supabase
+      .from("subscriptions")
+      .select("user_id")
+      .or(orFilters.join(","))
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingSubError) {
+      throw Object.assign(existingSubError, {
+        phase: "load_legacy_subscription_mapping",
+      });
+    }
+
+    userId = await resolveVerifiedUserId({
+      candidateUserId: asString(existingSub?.user_id),
+      candidateSource: "legacy_subscription",
+      originalTransactionId: params.originalTransactionId,
+      transactionId: params.transactionId,
+      environment: params.environment,
+    });
+    if (userId) {
+      userIdSource = "legacy_subscription";
+    }
+  }
+
+  return {
+    userId,
+    userIdSource,
+    hasLegacyOwnershipConflict,
+  };
+}
+
+async function resolveNotificationUserWithRetry(params: {
+  originalTransactionId: string;
+  transactionId: string | null;
+  appAccountToken: string | null;
+  environment: AppStoreEnvironment;
+}): Promise<ResolvedNotificationUser> {
+  const retryDelaysMs = [1500, 3000, 5000];
+
+  for (let attempt = 0; attempt <= retryDelaysMs.length; attempt++) {
+    const result = await resolveNotificationUser(params);
+
+    if (result.userId || result.hasLegacyOwnershipConflict) {
+      if (attempt > 0) {
+        console.log(
+          "[app-store-notifications] resolved user mapping after retry",
+          {
+            originalTransactionId: params.originalTransactionId,
+            transactionId: params.transactionId,
+            attempt: attempt + 1,
+            userId: result.userId,
+            userIdSource: result.userIdSource,
+          },
+        );
+      }
+      return result;
+    }
+
+    if (attempt === retryDelaysMs.length) {
+      return result;
+    }
+
+    const delayMs = retryDelaysMs[attempt];
+    console.log(
+      "[app-store-notifications] user mapping not found yet, retrying",
+      {
+        originalTransactionId: params.originalTransactionId,
+        transactionId: params.transactionId,
+        attempt: attempt + 1,
+        nextDelayMs: delayMs,
+      },
+    );
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  return {
+    userId: null,
+    userIdSource: null,
+    hasLegacyOwnershipConflict: false,
+  };
+}
+
 async function decodeNotification(signedPayload: string): Promise<
   | {
       kind: "test";
@@ -633,69 +700,87 @@ async function decodeNotification(signedPayload: string): Promise<
   const originalTransactionId = asString(transactionHint.originalTransactionId);
   let verifiedTransaction: JWSTransactionDecodedPayload | null = null;
 
-  if (transactionId) {
-    try {
-      verifiedTransaction = await fetchAppStoreTransactionByTransactionId({
-        privateKey,
+  try {
+    const transactionLookup =
+      await findAppStoreTransactionWithEnvironmentFallback({
+        config: {
+          ...appStoreApiConfig,
+          privateKey,
+        },
+        environmentHint: envHint,
         transactionId,
-        environment: envHint,
-      });
-    } catch (error) {
-      void reportEdgeFunctionError({
-        functionName: "app-store-notifications",
-        error,
-        context: {
-          ...getAppStoreDiagnosticsContext(
-            (error as { appStoreContext?: Record<string, unknown> })
-              ?.appStoreContext,
-          ),
-          phase: "fetch_transaction_info",
-          environment:
-            envHint === Environment.SANDBOX ? "sandbox" : "production",
-          transactionId,
-          keyDiagnostics: summarizePrivateKeyMaterial(
-            appStorePrivateKeyRaw,
-            privateKey,
-          ),
-        },
-      });
-    }
-  }
-
-  if (!verifiedTransaction && originalTransactionId) {
-    try {
-      verifiedTransaction = await fetchLatestAppStoreTransactionByOriginalId({
-        privateKey,
         originalTransactionId,
-        environment: envHint,
       });
-    } catch (error) {
-      void reportEdgeFunctionError({
-        functionName: "app-store-notifications",
-        error,
-        context: {
-          ...getAppStoreDiagnosticsContext(
-            (error as { appStoreContext?: Record<string, unknown> })
-              ?.appStoreContext,
-          ),
-          phase: "fetch_transaction_history",
-          environment:
-            envHint === Environment.SANDBOX ? "sandbox" : "production",
-          originalTransactionId,
-          keyDiagnostics: summarizePrivateKeyMaterial(
-            appStorePrivateKeyRaw,
-            privateKey,
-          ),
-        },
-      });
-    }
+    verifiedTransaction = transactionLookup.transaction;
+  } catch (error) {
+    void reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error,
+      context: {
+        ...getAppStoreDiagnosticsContext(),
+        phase: "lookup_notification_transaction",
+        environment: envHint === Environment.SANDBOX ? "sandbox" : "production",
+        transactionId,
+        originalTransactionId,
+        keyDiagnostics: summarizePrivateKeyMaterial(
+          appStorePrivateKeyRaw,
+          privateKey,
+        ),
+      },
+    });
   }
 
   if (!verifiedTransaction) {
     throw new Error("Unable to validate App Store transaction via server API");
   }
 
+  if (
+    transactionId &&
+    !matchesVerifiedAppStoreTransaction({
+      hint: {
+        transactionId,
+        originalTransactionId: originalTransactionId ?? undefined,
+        bundleId: transactionHint.bundleId,
+      },
+      verified: {
+        transactionId: verifiedTransaction.transactionId,
+        originalTransactionId:
+          verifiedTransaction.originalTransactionId ?? undefined,
+        bundleId: verifiedTransaction.bundleId,
+      },
+    })
+  ) {
+    await reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error: new Error(
+        "Notification transaction does not match verified App Store transaction",
+      ),
+      context: getAppStoreDiagnosticsContext({
+        phase: "notification_transaction_mismatch",
+        transactionId,
+        originalTransactionId,
+        verifiedTransactionId: verifiedTransaction.transactionId ?? null,
+        verifiedOriginalTransactionId:
+          verifiedTransaction.originalTransactionId ?? null,
+      }),
+    });
+    throw new Error(
+      "Notification transaction does not match verified App Store transaction",
+    );
+  }
+
   if (verifiedTransaction.bundleId !== appStoreBundleId) {
+    await reportEdgeFunctionError({
+      functionName: "app-store-notifications",
+      error: new Error("App Store bundleId mismatch"),
+      context: getAppStoreDiagnosticsContext({
+        phase: "notification_bundle_id_mismatch",
+        transactionId,
+        originalTransactionId,
+        expectedBundleId: appStoreBundleId,
+        receivedBundleId: verifiedTransaction.bundleId ?? null,
+      }),
+    });
     throw new Error("App Store bundleId mismatch");
   }
 
@@ -711,6 +796,12 @@ async function decodeNotification(signedPayload: string): Promise<
 serve(async (req: Request): Promise<Response> => {
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
+  let notificationLogContext: Record<string, unknown> =
+    getAppStoreDiagnosticsContext({
+      phase: "request_start",
+      method: req.method,
+      path: new URL(req.url).pathname,
+    });
 
   try {
     if (req.method === "OPTIONS") {
@@ -755,6 +846,11 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
+    console.log("[app-store-notifications] request received", {
+      signedPayloadLength: signedPayload.length,
+      signedPayloadPrefix: signedPayload.slice(0, 12),
+    });
+
     const decodedNotification = await decodeNotification(signedPayload);
 
     if (decodedNotification.kind === "test") {
@@ -776,6 +872,25 @@ serve(async (req: Request): Promise<Response> => {
     const storeProductId = asString(transaction.productId);
     const originalTransactionId = asString(transaction.originalTransactionId);
     const transactionId = asString(transaction.transactionId);
+    notificationLogContext = getAppStoreDiagnosticsContext({
+      phase: "decoded_notification",
+      environment,
+      storeProductId,
+      originalTransactionId,
+      transactionId,
+    });
+
+    console.log("[app-store-notifications] decoded notification", {
+      storeProductId,
+      originalTransactionId,
+      transactionId,
+      environment,
+      offerType: transaction.offerType ?? null,
+      offerDiscountType: transaction.offerDiscountType ?? null,
+      offerIdentifier: transaction.offerIdentifier ?? null,
+      expiresDate: transaction.expiresDate ?? null,
+      revocationDate: transaction.revocationDate ?? null,
+    });
 
     if (!storeProductId || !originalTransactionId) {
       return new Response(
@@ -820,6 +935,17 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     if (!catalogProduct) {
+      await reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: new Error("Unknown App Store product in notification"),
+        context: getAppStoreDiagnosticsContext({
+          phase: "unknown_product",
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          environment,
+        }),
+      });
       console.error("Unknown App Store product:", storeProductId);
       return new Response(
         JSON.stringify({ status: "ignored", reason: "Unknown product" }),
@@ -830,54 +956,31 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    let userId: string | null = null;
-    let userIdSource:
-      | "ownership_binding"
-      | "app_account_token"
-      | "legacy_subscription"
-      | null = null;
-    let hasLegacyOwnershipConflict = false;
-
-    if (iapOwnershipBindingEnabled) {
-      const existingBinding = await getAppStoreOwnershipBinding({
-        supabase,
-        originalTransactionId,
-      });
-      const verifiedBindingUserId = await resolveVerifiedUserId({
-        candidateUserId: existingBinding?.user_id ?? null,
-        candidateSource: "ownership_binding",
-        originalTransactionId,
-        transactionId,
-        environment,
-      });
-      userId = verifiedBindingUserId;
-      if (verifiedBindingUserId) {
-        userIdSource = "ownership_binding";
-      }
-
-      if (userId == null) {
-        hasLegacyOwnershipConflict = await hasAppStoreOwnershipConflict({
-          supabase,
-          originalTransactionId,
-        });
-      }
-    }
-
     const appAccountToken = asString(transaction.appAccountToken);
-    if (!userId && appAccountToken && isUuid(appAccountToken)) {
-      userId = await resolveVerifiedUserId({
-        candidateUserId: appAccountToken,
-        candidateSource: "app_account_token",
-        originalTransactionId,
-        transactionId,
-        environment,
-      });
-      if (userId) {
-        userIdSource = "app_account_token";
-      }
-    }
+    const resolvedNotificationUser = await resolveNotificationUserWithRetry({
+      originalTransactionId,
+      transactionId,
+      appAccountToken,
+      environment,
+    });
+    const userId = resolvedNotificationUser.userId;
+    const userIdSource = resolvedNotificationUser.userIdSource;
+    const hasLegacyOwnershipConflict =
+      resolvedNotificationUser.hasLegacyOwnershipConflict;
 
     if (hasLegacyOwnershipConflict && !userId) {
+      await reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: new Error(
+          "App Store notification blocked by ownership conflict",
+        ),
+        context: getAppStoreDiagnosticsContext({
+          phase: "ownership_conflict",
+          originalTransactionId,
+          transactionId,
+          environment,
+        }),
+      });
       console.warn(
         "Ignoring App Store notification for unresolved legacy ownership conflict",
         {
@@ -897,64 +1000,25 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!userId && iapOwnershipLegacyFallbackEnabled) {
-      const orFilters = [
-        `app_store_original_transaction_id.eq.${originalTransactionId}`,
-      ];
-      if (transactionId) {
-        orFilters.push(`app_store_transaction_id.eq.${transactionId}`);
-      }
-
-      const { data: existingSub, error: existingSubError } = await supabase
-        .from("subscriptions")
-        .select("user_id")
-        .or(orFilters.join(","))
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (existingSubError) {
-        await reportEdgeFunctionError({
-          functionName: "app-store-notifications",
-          error: existingSubError,
-          context: getAppStoreDiagnosticsContext({
-            phase: "load_legacy_subscription_mapping",
-            originalTransactionId,
-            transactionId,
-            environment,
-          }),
-        });
-        return new Response(
-          JSON.stringify({ error: "Failed to load subscription mapping" }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      userId = await resolveVerifiedUserId({
-        candidateUserId: asString(existingSub?.user_id),
-        candidateSource: "legacy_subscription",
+    if (!userId) {
+      await enqueuePendingNotification({
         originalTransactionId,
         transactionId,
+        storeProductId,
         environment,
+        appAccountToken:
+          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
+        userIdSource,
+        lastError: "unknown_user_mapping",
       });
-      if (userId) {
-        userIdSource = "legacy_subscription";
-      }
-    }
-
-    if (!userId) {
-      console.warn("App Store notification without user mapping", {
+      console.warn("App Store notification queued for later reconciliation", {
         originalTransactionId,
         transactionId,
         userIdSource,
-        appAccountToken:
-          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
+        environment,
       });
       return new Response(
-        JSON.stringify({ status: "ignored", reason: "Unknown user" }),
+        JSON.stringify({ status: "queued", reason: "Pending user mapping" }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -988,8 +1052,226 @@ serve(async (req: Request): Promise<Response> => {
 
     await cancelStripeSubscriptionIfPresent(resolvedUserId);
 
-    const status = deriveStatus(transaction);
-    const expiresIso = asIsoMillis(asString(transaction.expiresDate));
+    const { data: existingSubscription, error: existingSubscriptionError } =
+      await supabase
+        .from("subscriptions")
+        .select(
+          "provider, current_period_end, status, billing_interval, store_product_id, app_store_original_transaction_id, trial_start, trial_end",
+        )
+        .eq("user_id", resolvedUserId)
+        .maybeSingle();
+
+    if (existingSubscriptionError) {
+      await reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: existingSubscriptionError,
+        context: getAppStoreDiagnosticsContext({
+          phase: "load_existing_subscription",
+          userId: resolvedUserId,
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          environment,
+        }),
+      });
+      return new Response(
+        JSON.stringify({ error: "Failed to load existing subscription" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    let effectiveTransaction = transaction;
+    let periodEndSource = "notification_transaction";
+    let resolvedEnvironment = environment;
+    let resolvedExpiresIso = asIsoMillisUnknown(
+      effectiveTransaction.expiresDate,
+    );
+
+    if (catalogProduct.plan !== "lifetime" && !resolvedExpiresIso) {
+      try {
+        const reconciledTransactionLookup =
+          await findAppStoreTransactionWithEnvironmentFallback({
+            config: {
+              ...appStoreApiConfig,
+              privateKey: getValidatedApplePrivateKey(),
+            },
+            environmentHint: toAppleEnvironment(environment),
+            transactionId,
+            originalTransactionId,
+          });
+
+        if (
+          reconciledTransactionLookup.transaction &&
+          (!transactionId ||
+            matchesVerifiedAppStoreTransaction({
+              hint: {
+                transactionId,
+                originalTransactionId,
+                bundleId: transaction.bundleId,
+              },
+              verified: {
+                transactionId:
+                  reconciledTransactionLookup.transaction.transactionId,
+                originalTransactionId:
+                  reconciledTransactionLookup.transaction.originalTransactionId,
+                bundleId: reconciledTransactionLookup.transaction.bundleId,
+              },
+            }))
+        ) {
+          effectiveTransaction = reconciledTransactionLookup.transaction;
+          resolvedEnvironment =
+            reconciledTransactionLookup.environment === Environment.SANDBOX
+              ? "sandbox"
+              : "production";
+          resolvedExpiresIso = asIsoMillisUnknown(
+            reconciledTransactionLookup.transaction.expiresDate,
+          );
+          if (resolvedExpiresIso) {
+            periodEndSource = "matched_notification_transaction";
+          }
+        }
+      } catch (error) {
+        await reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error,
+          context: getAppStoreDiagnosticsContext({
+            phase: "resolve_notification_period_end",
+            userId: resolvedUserId,
+            storeProductId,
+            originalTransactionId,
+            transactionId,
+            environment,
+          }),
+        });
+      }
+    }
+
+    if (catalogProduct.plan !== "lifetime" && !resolvedExpiresIso) {
+      const existingPeriodEnd = asString(
+        existingSubscription?.current_period_end,
+      );
+      const existingPeriodEndMs = existingPeriodEnd
+        ? Date.parse(existingPeriodEnd)
+        : Number.NaN;
+      if (
+        existingSubscription?.provider === "app_store" &&
+        existingPeriodEnd &&
+        existingSubscription?.store_product_id === storeProductId &&
+        existingSubscription?.billing_interval ===
+          catalogProduct.billing_interval &&
+        existingSubscription?.app_store_original_transaction_id ===
+          originalTransactionId &&
+        Number.isFinite(existingPeriodEndMs) &&
+        existingPeriodEndMs > Date.now()
+      ) {
+        resolvedExpiresIso = existingPeriodEnd;
+        periodEndSource = "existing_subscription";
+      } else {
+        await reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error: new Error(
+            "Non-lifetime App Store notification missing resolvable expiry",
+          ),
+          context: getAppStoreDiagnosticsContext({
+            phase: "missing_notification_expiry",
+            userId: resolvedUserId,
+            storeProductId,
+            originalTransactionId,
+            transactionId,
+            environment: resolvedEnvironment,
+            existingCurrentPeriodEnd:
+              existingSubscription?.current_period_end ?? null,
+            existingStatus: existingSubscription?.status ?? null,
+          }),
+        });
+        return new Response(
+          JSON.stringify({ error: "Failed to resolve subscription expiry" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
+    const status = deriveLifecycleStatus(effectiveTransaction);
+    const existingTrialStart = asString(existingSubscription?.trial_start);
+    const existingTrialEnd = asString(existingSubscription?.trial_end);
+    let trialStartIso =
+      status === "trialing"
+        ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
+        : existingTrialStart;
+    let trialEndIso =
+      status === "trialing" ? resolvedExpiresIso : existingTrialEnd;
+
+    if (
+      status !== "trialing" &&
+      originalTransactionId &&
+      !trialStartIso &&
+      !trialEndIso
+    ) {
+      try {
+        const originalTransactionLookup =
+          await findAppStoreTransactionWithEnvironmentFallback({
+            config: {
+              ...appStoreApiConfig,
+              privateKey: getValidatedApplePrivateKey(),
+            },
+            environmentHint: toAppleEnvironment(resolvedEnvironment),
+            transactionId: originalTransactionId,
+            originalTransactionId,
+          });
+        const originalTransaction = originalTransactionLookup.transaction;
+        if (
+          originalTransaction &&
+          isFreeTrialTransaction(originalTransaction)
+        ) {
+          trialStartIso = asIsoMillisUnknown(originalTransaction.purchaseDate);
+          trialEndIso = asIsoMillisUnknown(originalTransaction.expiresDate);
+          console.log(
+            "[app-store-notifications] recovered original trial history",
+            {
+              userId: resolvedUserId,
+              originalTransactionId,
+              recoveredTrialStart: trialStartIso,
+              recoveredTrialEnd: trialEndIso,
+            },
+          );
+        }
+      } catch (error) {
+        await reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error,
+          context: getAppStoreDiagnosticsContext({
+            phase: "recover_original_trial_history",
+            userId: resolvedUserId,
+            originalTransactionId,
+            transactionId,
+            environment: resolvedEnvironment,
+          }),
+        });
+      }
+    }
+
+    console.log("[app-store-notifications] resolved subscription payload", {
+      userId: resolvedUserId,
+      storeProductId,
+      originalTransactionId,
+      transactionId,
+      status,
+      resolvedEnvironment,
+      resolvedExpiresIso,
+      periodEndSource,
+      transactionExpiresDate: effectiveTransaction.expiresDate ?? null,
+      offerType: effectiveTransaction.offerType ?? null,
+      offerDiscountType: effectiveTransaction.offerDiscountType ?? null,
+      offerIdentifier: effectiveTransaction.offerIdentifier ?? null,
+      trialStartIso,
+      trialEndIso,
+    });
 
     const subscriptionUpdate: Record<string, unknown> = {
       user_id: resolvedUserId,
@@ -999,7 +1281,9 @@ serve(async (req: Request): Promise<Response> => {
       status,
       billing_interval: catalogProduct.billing_interval,
       current_period_end:
-        catalogProduct.plan === "lifetime" ? null : expiresIso,
+        catalogProduct.plan === "lifetime" ? null : resolvedExpiresIso,
+      trial_start: trialStartIso,
+      trial_end: trialEndIso,
       cancel_at_period_end: false,
       stripe_customer_id: null,
       stripe_subscription_id: null,
@@ -1008,7 +1292,7 @@ serve(async (req: Request): Promise<Response> => {
       play_package_name: null,
       app_store_transaction_id: transactionId,
       app_store_original_transaction_id: originalTransactionId,
-      app_store_environment: environment,
+      app_store_environment: toStoredAppStoreEnvironment(resolvedEnvironment),
       updated_at: new Date().toISOString(),
     };
 
@@ -1050,9 +1334,10 @@ serve(async (req: Request): Promise<Response> => {
     await reportEdgeFunctionError({
       functionName: "app-store-notifications",
       error,
-      context: getAppStoreDiagnosticsContext({
+      context: {
+        ...notificationLogContext,
         phase: "serve_handler",
-      }),
+      },
     });
     console.error("app-store-notifications error:", error);
     return new Response(JSON.stringify({ error: "Internal server error" }), {

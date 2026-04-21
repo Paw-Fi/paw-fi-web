@@ -1,17 +1,21 @@
-import React, { useState, useRef } from 'react';
-import { useAnimation } from 'framer-motion';
-import { useNavigate } from '@tanstack/react-router';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLightbulb, faPaperPlane, faLock } from '@fortawesome/free-solid-svg-icons';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import React, { useState, useRef } from "react";
+import { useAnimation } from "framer-motion";
+import { useNavigate } from "@tanstack/react-router";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faLightbulb,
+  faPaperPlane,
+  faLock,
+} from "@fortawesome/free-solid-svg-icons";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface AISearchInputProps {
   placeholder?: string;
   suggestions?: string[];
   className?: string;
   showSuggestions?: boolean;
-  variant?: 'default' | 'compact';
+  variant?: "default" | "compact";
 }
 
 export function AISearchInput({
@@ -26,13 +30,14 @@ export function AISearchInput({
   ],
   className = "",
   showSuggestions = true,
-  variant = 'default'
+  variant = "default",
 }: AISearchInputProps) {
   const navigate = useNavigate();
   const [chatQuery, setChatQuery] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
-  const [showSuggestionPills, setShowSuggestionPills] = useState(showSuggestions);
+  const [showSuggestionPills, setShowSuggestionPills] =
+    useState(showSuggestions);
   const inputRef = useRef<HTMLInputElement>(null);
   const sendButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -121,19 +126,17 @@ export function AISearchInput({
     }, 150);
 
     setTimeout(() => {
-      navigate({ to: "/onboarding", search: { q: query } });
+      navigate({ to: "/download", search: { q: query } });
     }, 500);
   };
 
   return (
-    <div
-      className={`${className}`}
-    >
+    <div className={`${className}`}>
       <div
-        className={`relative mx-auto flex w-full items-center rounded-xl sm:rounded-2xl transition-all duration-500 ${
-          isAnimating 
-            ? "bg-muted" 
-            : "bg-moneko-background shadow-sm hover:shadow-md dark:bg-card/80 dark:border"
+        className={`relative mx-auto flex w-full items-center rounded-xl transition-all duration-500 sm:rounded-2xl ${
+          isAnimating
+            ? "bg-muted"
+            : "bg-moneko-background dark:bg-card/80 shadow-sm hover:shadow-md dark:border"
         }`}
         style={{
           opacity: animationComplete ? 0 : 1,
@@ -147,7 +150,7 @@ export function AISearchInput({
             onChange={(e) => setChatQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full h-16 border-0 !border-none bg-transparent px-4 sm:px-6 py-6 sm:py-4 text-foreground placeholder:text-muted-foreground text-sm sm:text-base focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:outline-none !shadow-none touch-manipulation"
+            className="text-foreground placeholder:text-muted-foreground h-16 w-full touch-manipulation border-0 !border-none bg-transparent px-4 py-6 text-sm !shadow-none focus:ring-0 focus:outline-none focus-visible:ring-0 focus-visible:outline-none sm:px-6 sm:py-4 sm:text-base"
             aria-label="Ask a financial question"
             ref={inputRef}
             disabled={isTransitioning}
@@ -155,14 +158,12 @@ export function AISearchInput({
 
           {/* Loading indicator during transition */}
           {isAnimating && (
-            <div
-              className="pointer-events-none absolute inset-0 flex items-center px-4 sm:px-6"
-            >
-              <div className="flex items-center text-primary">
-                <span className="mr-1.5 sm:mr-2 font-medium text-sm sm:text-base">Creating your plan</span>
-                <div
-                
-                >
+            <div className="pointer-events-none absolute inset-0 flex items-center px-4 sm:px-6">
+              <div className="text-primary flex items-center">
+                <span className="mr-1.5 text-sm font-medium sm:mr-2 sm:text-base">
+                  Creating your plan
+                </span>
+                <div>
                   <FontAwesomeIcon
                     icon={faLightbulb}
                     className="h-3 w-3 sm:h-4 sm:w-4"
@@ -174,15 +175,13 @@ export function AISearchInput({
         </div>
 
         {/* Private indicator */}
-        <div
-          className="z-10 mr-2 sm:mr-3 flex-shrink-0"
-        >
-          <div className="flex items-center px-2 sm:px-3 py-1 bg-muted rounded-md sm:rounded-lg">
+        <div className="z-10 mr-2 flex-shrink-0 sm:mr-3">
+          <div className="bg-muted flex items-center rounded-md px-2 py-1 sm:rounded-lg sm:px-3">
             <FontAwesomeIcon
               icon={faLock}
-              className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 sm:mr-2 text-muted-foreground"
+              className="text-muted-foreground mr-1 h-2.5 w-2.5 sm:mr-2 sm:h-3 sm:w-3"
             />
-            <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+            <span className="text-muted-foreground hidden text-xs font-medium sm:inline">
               Private
             </span>
           </div>
@@ -198,28 +197,29 @@ export function AISearchInput({
               } as React.KeyboardEvent);
             }
           }}
-          className="mr-1.5 sm:mr-2 h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 rounded-lg sm:rounded-xl touch-manipulation active:scale-95"
+          className="mr-1.5 h-9 w-9 flex-shrink-0 touch-manipulation rounded-lg active:scale-95 sm:mr-2 sm:h-10 sm:w-10 sm:rounded-xl"
           aria-label="Send message"
           ref={sendButtonRef}
           asChild
         >
           <button>
-            <FontAwesomeIcon icon={faPaperPlane} className="h-3 w-3 sm:h-4 sm:w-4" />
+            <FontAwesomeIcon
+              icon={faPaperPlane}
+              className="h-3 w-3 sm:h-4 sm:w-4"
+            />
           </button>
         </Button>
       </div>
 
       {/* Suggestion chips */}
       {showSuggestionPills && showSuggestions && (
-        <div
-          className="mx-auto mt-4 sm:mt-6"
-        >
-          <div className="mb-3 sm:mb-4 flex items-center gap-1.5 sm:gap-2">
+        <div className="mx-auto mt-4 sm:mt-6">
+          <div className="mb-3 flex items-center gap-1.5 sm:mb-4 sm:gap-2">
             <FontAwesomeIcon
               icon={faLightbulb}
               className="text-warning h-3 w-3 sm:h-4 sm:w-4"
             />
-            <span className="text-xs sm:text-sm font-medium text-muted-foreground dark:text-moneko-foreground">
+            <span className="text-muted-foreground dark:text-moneko-foreground text-xs font-medium sm:text-sm">
               Popular questions to get started
             </span>
           </div>
@@ -230,15 +230,11 @@ export function AISearchInput({
                 variant="outline"
                 size="sm"
                 onClick={() => handleSuggestionClick(suggestion)}
-                className="rounded-full text-xs sm:text-sm hover:border-primary/30 hover:bg-primary/5 transition-colors duration-200 touch-manipulation active:scale-95"
+                className="hover:border-primary/30 hover:bg-primary/5 touch-manipulation rounded-full text-xs transition-colors duration-200 active:scale-95 sm:text-sm"
                 disabled={isTransitioning}
                 asChild
               >
-                <button
-                 
-                >
-                  {suggestion}
-                </button>
+                <button>{suggestion}</button>
               </Button>
             ))}
           </div>

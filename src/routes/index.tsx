@@ -2,11 +2,23 @@
 
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 
+import {
+  monekoComparisonRows,
+  monekoContentByline,
+  monekoContentDates,
+  monekoProductAreas,
+} from "@/data/home/moneko-product-summary";
 import { getMainGeoLandingPage } from "@/lib/geo-landing-pages";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
-export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 const mainLandingPage = getMainGeoLandingPage();
 
@@ -50,6 +62,16 @@ export const Route = createFileRoute("/")({
           name: mainLandingPage.title,
           description: mainLandingPage.description,
           isPartOf: { "@id": "https://moneko.io/#website" },
+          about: { "@id": "https://moneko.io/#software" },
+          primaryImageOfPage: "https://moneko.io/og-img.png",
+          datePublished: monekoContentDates.published,
+          dateModified: monekoContentDates.updated,
+          author: {
+            "@type": "Organization",
+            name: monekoContentByline.name,
+            description: monekoContentByline.credential,
+            url: "https://moneko.io",
+          },
           inLanguage: "en-US",
         },
         {
@@ -62,18 +84,37 @@ export const Route = createFileRoute("/")({
           applicationSubCategory: "BudgetingApplication",
           description: mainLandingPage.softwareDescription,
           url: "https://moneko.io",
+          availableLanguage: monekoAvailableLanguages,
           featureList: mainLandingPage.softwareFeatureList,
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: "4.8",
-            ratingCount: "50",
-            bestRating: "5",
-          },
+          screenshot: ["https://moneko.io/og-img.png"],
+          dateModified: monekoContentDates.updated,
+          publisher: { "@id": "https://moneko.io/#organization" },
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
+        },
+        {
+          "@type": "ItemList",
+          "@id": `${pageUrl}#product-areas`,
+          name: "Moneko product areas",
+          itemListElement: monekoProductAreas.map((area, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: area.question,
+            description: area.directAnswer,
+          })),
+        },
+        {
+          "@type": "Table",
+          "@id": `${pageUrl}#budgeting-app-comparison`,
+          about: "Moneko compared with traditional budgeting apps",
+          name: "Moneko budgeting app comparison",
+          description: monekoComparisonRows
+            .map(
+              (row) =>
+                `${row.label}: Moneko - ${row.moneko} Traditional apps - ${row.traditionalApps}`,
+            )
+            .join(" "),
         },
         {
           "@type": "FAQPage",

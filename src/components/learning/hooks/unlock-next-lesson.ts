@@ -10,30 +10,35 @@ import { QueryClient } from "@tanstack/react-query";
 export function useUnlockNextLesson() {
   // This hook is meant to be used within React components
   // It provides access to the unlockNextLesson function with the queryClient already set up
-  
-  return async (lessonId: string, courseId: string, userId: string, queryClient: QueryClient): Promise<boolean> => {
+
+  return async (
+    lessonId: string,
+    courseId: string,
+    userId: string,
+    queryClient: QueryClient,
+  ): Promise<boolean> => {
     try {
       if (!userId) {
-        console.warn('No user ID provided, cannot unlock lesson');
+        console.warn("No user ID provided, cannot unlock lesson");
         return false;
       }
-      
-      
+
       // Call the service to unlock the next lesson
       const result = await unlockNextLessonService(userId, courseId, lessonId);
-      
+
       if (result.success) {
-        
         // Invalidate queries to force a refetch of user courses
-        await queryClient.invalidateQueries({ queryKey: ['user-courses', userId] });
-        
+        await queryClient.invalidateQueries({
+          queryKey: ["user-courses", userId],
+        });
+
         return true;
       } else {
         console.warn(`Failed to unlock next lesson: ${result.message}`);
         return false;
       }
     } catch (error) {
-      console.error('Error unlocking next lesson:', error);
+      console.error("Error unlocking next lesson:", error);
       return false;
     }
   };
@@ -48,42 +53,40 @@ export function useUnlockNextLesson() {
  * @returns Promise resolving to boolean indicating whether a lesson was successfully unlocked
  */
 export async function unlockNextLesson(
-  lessonId: string, 
-  courseId: string, 
+  lessonId: string,
+  courseId: string,
   userId: string,
-  queryClient?: QueryClient
+  queryClient?: QueryClient,
 ): Promise<boolean> {
-  
   try {
     if (!userId) {
-      console.warn('No user ID provided, cannot unlock lesson');
+      console.warn("No user ID provided, cannot unlock lesson");
       return false;
     }
-    
+
     if (!courseId) {
-      console.warn('No course ID provided, cannot unlock lesson');
+      console.warn("No course ID provided, cannot unlock lesson");
       return false;
     }
-    
-    
+
     // Call the service to unlock the next lesson
     const result = await unlockNextLessonService(userId, courseId, lessonId);
-    
+
     if (result.success) {
-      console.log(`Successfully unlocked next lesson: ${result.message}`);
-      
       // Invalidate queries to force a refetch of user courses if queryClient is provided
       if (queryClient) {
-        await queryClient.invalidateQueries({ queryKey: ['user-courses', userId] });
+        await queryClient.invalidateQueries({
+          queryKey: ["user-courses", userId],
+        });
       }
-      
+
       return true;
     } else {
       console.warn(`Failed to unlock next lesson: ${result.message}`);
       return false;
     }
   } catch (error) {
-    console.error('Error unlocking next lesson:', error);
+    console.error("Error unlocking next lesson:", error);
     return false;
   }
 }

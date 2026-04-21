@@ -92,10 +92,10 @@
 #   Where to get: Tink webhook signing secret from Tink console (used to verify X-Tink-Signature).
 #
 # --- Internal auth ---
-# INTERNAL_SERVICE_SECRET
+# SECRET_SUPABASE_SERVICE_ROLE_API_KEY
 #   Example: long random string
 #   How to generate: `openssl rand -hex 32`
-#   Where to use: Supabase secrets + database setting app.settings.internal_service_secret
+#   Where to use: Supabase secrets
 #   Used by: bank-sync-processor and internal calls to sync endpoints.
 
 # Required database migrations (fresh bank-sync deploy)
@@ -184,7 +184,7 @@ deploy_function "tink-create-link-token"
 deploy_function "tink-exchange-auth-code"
 
 # Internal/dual-auth functions (called by pg_cron or other functions)
-# These use X-Internal-Service-Secret header for internal calls
+# These use X-Moneko-Internal-Key header for internal calls
 # and can also accept user JWT for direct user-initiated syncs
 deploy_internal_function "plaid-sync-transactions"
 deploy_internal_function "tink-sync-transactions"

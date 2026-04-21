@@ -6,12 +6,18 @@ import { seo } from "@/utils/seo";
 
 // SEO & Meta Imports
 
-const META_TITLE = "AI Financial Assistant & Expense Forecasting | Moneko Insights";
-const META_DESCRIPTION = "Get instant answers to your financial questions. Use Moneko's AI assistant for scenario simulations, expense forecasting, and real-time smart alerts to master your money.";
-const META_KEYWORDS = "AI financial assistant, personal finance AI, expense forecasting tool, AI budget insights, smart financial alerts, financial scenario planning, automated spending analysis";
+const META_TITLE =
+  "AI Financial Assistant & Expense Forecasting | Moneko Insights";
+const META_DESCRIPTION =
+  "Ask Moneko budget questions in plain language. Use AI insights for spending summaries, scenario planning, category trends, and goal-aware money decisions.";
+const META_KEYWORDS =
+  "AI financial assistant, personal finance AI, expense forecasting tool, AI budget insights, smart financial alerts, financial scenario planning, automated spending analysis";
 
 export const Route = createFileRoute("/features/ai-insights")({
-  component: lazyRouteComponent(() => import("@/components/performance/ai-insights-route-component"), "AIInsightsRouteComponent"),
+  component: lazyRouteComponent(
+    () => import("@/components/performance/ai-insights-route-component"),
+    "AIInsightsRouteComponent",
+  ),
   head: () => {
     const pageUrl = getCanonicalUrl("/features/ai-insights");
     const meta = seo({

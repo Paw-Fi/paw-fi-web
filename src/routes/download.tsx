@@ -2,11 +2,18 @@
 
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 import type { FAQItem } from "@/components/homepage/new/faq-section";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
 const META_TITLE = "Download Moneko - iOS & Android";
-const META_DESCRIPTION = "Download Moneko on your iPhone or Android device. Experience the future of AI budgeting with seamless sync across all your devices.";
+const META_DESCRIPTION =
+  "Download Moneko for iPhone or Android to track expenses, scan receipts, organize Pockets, and manage shared budgets with AI-assisted workflows.";
 const META_KEYWORDS =
   "download moneko, moneko app, budgeting app ios, budgeting app android, expense tracker app, digital envelope budgeting app, couples budgeting app, whatsapp expense tracker";
 
@@ -14,22 +21,28 @@ const downloadFaqItems: FAQItem[] = [
   {
     id: "download-platforms",
     question: "Is Moneko available on iPhone and Android?",
-    answer: "Yes. You can download Moneko for iOS or Android from the links on this page.",
+    answer:
+      "Yes. You can download Moneko for iOS or Android from the links on this page.",
   },
   {
     id: "download-what-next",
     question: "What can I do after I download Moneko?",
-    answer: "You can track expenses, organize budgets with the Pockets system, and manage shared spending with Household Mode.",
+    answer:
+      "You can track expenses, organize budgets with the Pockets system, and manage shared spending with Household Mode.",
   },
   {
     id: "download-household",
     question: "Does Moneko support shared budgets for couples or households?",
-    answer: "Yes. Moneko includes Household Mode for shared bills and joint expense tracking.",
+    answer:
+      "Yes. Moneko includes Household Mode for shared bills and joint expense tracking.",
   },
 ];
 
 export const Route = createFileRoute("/download")({
-  component: lazyRouteComponent(() => import("@/components/performance/download-route-component"), "DownloadRouteComponent"),
+  component: lazyRouteComponent(
+    () => import("@/components/performance/download-route-component"),
+    "DownloadRouteComponent",
+  ),
   head: () => {
     const pageUrl = getCanonicalUrl("/download");
     const meta = seo({
@@ -52,7 +65,12 @@ export const Route = createFileRoute("/download")({
           breadcrumb: {
             "@type": "BreadcrumbList",
             itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://moneko.io" },
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: "https://moneko.io",
+              },
               { "@type": "ListItem", position: 2, name: "Download" },
             ],
           },
@@ -62,14 +80,14 @@ export const Route = createFileRoute("/download")({
           name: "Moneko",
           applicationCategory: "FinanceApplication",
           operatingSystem: "iOS, Android",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
+          availableLanguage: monekoAvailableLanguages,
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
         },
         {
           "@type": "FAQPage",
+          "@id": `${pageUrl}#faq`,
           mainEntity: [
             {
               "@type": "Question",
@@ -103,7 +121,7 @@ export const Route = createFileRoute("/download")({
     return {
       meta,
       links: [{ rel: "canonical", href: pageUrl }],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData),

@@ -31,21 +31,19 @@ async function authUserExists(params: {
   supabase: any;
   userId: string;
 }): Promise<boolean> {
-  const { data, error } = await params.supabase.auth.admin.getUserById(
-    params.userId,
-  );
+  const { data, error } = await params.supabase
+    .from("users")
+    .select("id")
+    .eq("id", params.userId)
+    .maybeSingle();
 
   if (error) {
-    if (error.status === 404) {
-      return false;
-    }
-
     throw new Error(
       `Failed to verify ownership user: ${error.message ?? String(error)}`,
     );
   }
 
-  return Boolean(data?.user?.id);
+  return Boolean(data?.id);
 }
 
 async function deleteBinding(params: {

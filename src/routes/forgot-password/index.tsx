@@ -39,7 +39,7 @@ export const Route = createFileRoute("/forgot-password/")({
   },
 });
 
-export function ForgotPassword() {
+function ForgotPassword() {
   const { email } = Route.useSearch();
   return (
     <>
@@ -84,5 +84,3 @@ export function ForgotPassword() {
     </>
   );
 }
-
-export default ForgotPassword;

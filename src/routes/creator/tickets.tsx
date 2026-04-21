@@ -843,7 +843,7 @@ function TicketDataTable({
                     }}
                   >
                     <SelectTrigger
-                      className={`w-full border-white/10 bg-black/20 text-white`}
+                      className={`w-full border-0 font-medium ${statusBadgeClassName[selectedTicket.status]} ${updatingTicketId === selectedTicket.id ? "cursor-not-allowed opacity-70" : ""}`}
                     >
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>

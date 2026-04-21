@@ -1,17 +1,27 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { REGEXP_ONLY_DIGITS } from 'input-otp';
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 interface WhatsAppBindingProps {
   otpFromUrl?: string;
 }
 
 export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
-  const [code, setCode] = useState(otpFromUrl || '');
+  const [code, setCode] = useState(otpFromUrl || "");
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,43 +29,47 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
   // Auto-fill OTP from URL parameter
   useEffect(() => {
     if (otpFromUrl && otpFromUrl !== code) {
-      console.log('Setting OTP from URL:', otpFromUrl);
       setCode(otpFromUrl);
 
-        verifyCode(otpFromUrl);
+      verifyCode(otpFromUrl);
     }
   }, [otpFromUrl]);
 
   const verifyCode = async (codeToVerify?: string) => {
     const verificationCode = codeToVerify || code;
-    
+
     if (!verificationCode.toString().trim()) {
-      setError('Please enter the verification code');
+      setError("Please enter the verification code");
       return;
     }
 
     setLoading(true);
     setError(null);
-    
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
-        setError('Please log in first');
+        setError("Please log in first");
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('verify-whatsapp-binding', {
-        body: { code: verificationCode },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
+      const { data, error } = await supabase.functions.invoke(
+        "verify-whatsapp-binding",
+        {
+          body: { code: verificationCode },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
         },
-      });
+      );
 
       if (error) {
         // Extract actual error message from Supabase function error
-        const errorMessage = error.message || 'Failed to verify code';
-        console.error('Error verifying code:', error);
+        const errorMessage = error.message || "Failed to verify code";
+        console.error("Error verifying code:", error);
         setError(errorMessage);
         setLoading(false);
         return;
@@ -66,12 +80,13 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
         setError(null);
       } else {
         // Use the error message from the backend response
-        setError(data?.error || 'Invalid verification code');
+        setError(data?.error || "Invalid verification code");
       }
     } catch (error: any) {
-      console.error('Error verifying code:', error);
+      console.error("Error verifying code:", error);
       // Extract the actual error message if available
-      const errorMessage = error?.context?.body?.error || error.message || 'Failed to verify code';
+      const errorMessage =
+        error?.context?.body?.error || error.message || "Failed to verify code";
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -91,7 +106,7 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             You can now use WhatsApp to track expenses and manage your budget.
           </p>
         </CardContent>
@@ -107,9 +122,7 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
             <AlertCircle className="h-5 w-5 text-red-500" />
             Verification Failed
           </CardTitle>
-          <CardDescription>
-            {error}
-          </CardDescription>
+          <CardDescription>{error}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -135,14 +148,18 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
               </InputOTP>
             </div>
           </div>
-          <Button onClick={() => verifyCode()} disabled={loading} className="w-full">
+          <Button
+            onClick={() => verifyCode()}
+            disabled={loading}
+            className="w-full"
+          >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Verifying...
               </>
             ) : (
-              'Verify'
+              "Verify"
             )}
           </Button>
         </CardContent>
@@ -155,7 +172,9 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
       <Card>
         <CardHeader>
           <CardTitle>Verifying...</CardTitle>
-          <CardDescription>Please wait while we verify your WhatsApp number</CardDescription>
+          <CardDescription>
+            Please wait while we verify your WhatsApp number
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -181,11 +200,11 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
               </InputOTP>
             </div>
             {otpFromUrl ? (
-              <p className="text-xs text-primary text-center font-medium">
+              <p className="text-primary text-center text-xs font-medium">
                 Code auto-filled from verification link
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-muted-foreground text-center text-xs">
                 Enter the 6-digit code from WhatsApp
               </p>
             )}
@@ -203,7 +222,6 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
     <Card>
       <CardHeader>
         <CardTitle>WhatsApp Verification</CardTitle>
-       
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -229,23 +247,27 @@ export function WhatsAppBinding({ otpFromUrl }: WhatsAppBindingProps) {
             </InputOTP>
           </div>
           {otpFromUrl ? (
-            <p className="text-xs text-primary text-center font-medium">
+            <p className="text-primary text-center text-xs font-medium">
               Code auto-filled from verification link
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-muted-foreground text-center text-xs">
               Enter the 6-digit code from WhatsApp
             </p>
           )}
         </div>
-        <Button onClick={() => verifyCode()} disabled={loading || !code} className="w-full">
+        <Button
+          onClick={() => verifyCode()}
+          disabled={loading || !code}
+          className="w-full"
+        >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Verifying...
             </>
           ) : (
-            'Verify'
+            "Verify"
           )}
         </Button>
       </CardContent>

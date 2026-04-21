@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlanOption, getPlanOptions } from "@/data/pricing-plans";
 import { toast } from "react-toastify";
@@ -6,14 +6,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Loader2, ArrowRight, Sparkles, Star, Crown, Zap } from "lucide-react";
+import {
+  CheckCircle2,
+  Loader2,
+  ArrowRight,
+  Sparkles,
+  Star,
+  Crown,
+  Zap,
+} from "lucide-react";
 import { PlanChangeConfirmationDialog } from "./PlanChangeConfirmationDialog";
 import { useNavigate } from "@tanstack/react-router";
 
 interface PlanSelectorProps {
   currentPlan: string;
   currentBillingInterval?: string; // Add current billing interval
-  onChangePlan: (plan: string, billingInterval: string, prorationDate?: number) => void;
+  onChangePlan: (
+    plan: string,
+    billingInterval: string,
+    prorationDate?: number,
+  ) => void;
   onPreviewPlanChange: (plan: string, billingInterval: string) => void;
   isLoading: boolean;
   isPreviewLoading: boolean;
@@ -40,13 +52,13 @@ export function PlanSelector({
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">(
-    (currentBillingInterval as "monthly" | "yearly") || "yearly"
+    (currentBillingInterval as "monthly" | "yearly") || "yearly",
   );
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Get plan options from shared data module
   const plans: PlanOption[] = getPlanOptions();
-  
+
   // Helper function to get plan level for comparison
   const getPlanLevel = (plan: string): number => {
     const levels: Record<string, number> = {
@@ -61,7 +73,10 @@ export function PlanSelector({
   // Handle preview errors
   useEffect(() => {
     if (previewError) {
-      toast.error(previewError.message || "Failed to preview plan change. Please try again.");
+      toast.error(
+        previewError.message ||
+          "Failed to preview plan change. Please try again.",
+      );
       resetPreview();
       setShowConfirmDialog(false);
     }
@@ -70,7 +85,10 @@ export function PlanSelector({
   // Handle mutation errors
   useEffect(() => {
     if (mutationError) {
-      toast.error(mutationError.message || "Failed to update subscription. Please try again.");
+      toast.error(
+        mutationError.message ||
+          "Failed to update subscription. Please try again.",
+      );
       setShowConfirmDialog(false);
     }
   }, [mutationError]);
@@ -84,19 +102,23 @@ export function PlanSelector({
 
   const handleSelectPlan = (planId: string) => {
     // Premium is coming soon
-    if(planId === "premium") {
-      toast.info("Premium plan is coming soon! Join the waitlist at hello@moneko.io");
+    if (planId === "premium") {
+      toast.info(
+        "Premium plan is coming soon. Email hello@moneko.io for updates.",
+      );
       return;
     }
 
     // Can't select free plan - must cancel subscription instead
-    if(planId === "free") {
+    if (planId === "free") {
       if (currentPlan === "free") {
         toast.info("You are already on the free plan");
         return;
       }
       // Downgrade to free requires cancellation
-      toast.info("To downgrade to free, please cancel your subscription from the Overview tab");
+      toast.info(
+        "To downgrade to free, please cancel your subscription from the Overview tab",
+      );
       return;
     }
 
@@ -168,7 +190,7 @@ export function PlanSelector({
     setShowConfirmDialog(false);
     resetPreview();
     setSelectedPlan(null);
-    
+
     // Show success message
     toast.success("Your subscription will be updated shortly!");
   };
@@ -188,19 +210,30 @@ export function PlanSelector({
 
   const getPlanIcon = (planId: string) => {
     switch (planId) {
-      case "free": return <Star className="h-5 w-5" />;
-      case "basic": return <Zap className="h-5 w-5" />;
-      case "premium": return <Crown className="h-5 w-5" />;
-      default: return <Sparkles className="h-5 w-5" />;
+      case "free":
+        return <Star className="h-5 w-5" />;
+      case "basic":
+        return <Zap className="h-5 w-5" />;
+      case "premium":
+        return <Crown className="h-5 w-5" />;
+      default:
+        return <Sparkles className="h-5 w-5" />;
     }
   };
 
-  const getPlanGradient = (planId: string, isSelected: boolean, isPopular: boolean) => {
+  const getPlanGradient = (
+    planId: string,
+    isSelected: boolean,
+    isPopular: boolean,
+  ) => {
     if (isSelected) {
       switch (planId) {
-        case "premium": return "bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 dark:from-purple-950/20 dark:to-indigo-950/20 dark:border-purple-800";
-        case "plus": return "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 dark:from-blue-950/20 dark:to-cyan-950/20 dark:border-blue-800";
-        default: return "bg-gradient-to-br from-background to-card border-primary/30";
+        case "premium":
+          return "bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200 dark:from-purple-950/20 dark:to-indigo-950/20 dark:border-purple-800";
+        case "plus":
+          return "bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200 dark:from-blue-950/20 dark:to-cyan-950/20 dark:border-blue-800";
+        default:
+          return "bg-gradient-to-br from-background to-card border-primary/30";
       }
     }
     if (isPopular) {
@@ -221,13 +254,13 @@ export function PlanSelector({
       />
 
       {/* Billing Interval Toggle */}
-      <motion.div 
+      <motion.div
         className="flex justify-center"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <div className="inline-flex rounded-xl bg-muted p-1">
+        <div className="bg-muted inline-flex rounded-xl p-1">
           <button
             type="button"
             onClick={() => setBillingInterval("monthly")}
@@ -260,7 +293,7 @@ export function PlanSelector({
 
       {/* Action Button - Moved to top for better UX */}
       {selectedPlan && selectedPlan !== currentPlan && (
-        <motion.div 
+        <motion.div
           className="flex justify-center"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -270,12 +303,12 @@ export function PlanSelector({
             onClick={handleChangePlan}
             disabled={isLoading || isPreviewLoading}
             size="lg"
-            className="bg-gradient-to-r from-primary/90 to-primary px-8 py-3 text-base font-semibold hover:from-primary hover:to-primary/90 shadow-lg"
+            className="from-primary/90 to-primary hover:from-primary hover:to-primary/90 bg-gradient-to-r px-8 py-3 text-base font-semibold shadow-lg"
           >
             {isLoading || isPreviewLoading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                {isPreviewLoading ? 'Calculating...' : 'Processing...'}
+                {isPreviewLoading ? "Calculating..." : "Processing..."}
               </>
             ) : (
               <>
@@ -290,7 +323,7 @@ export function PlanSelector({
       )}
 
       {/* Plan Cards */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 gap-6 lg:grid-cols-3"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -300,15 +333,16 @@ export function PlanSelector({
           {plans.map((plan, index) => {
             const isCurrentPlan = currentPlan === plan.id;
             const isSelected = selectedPlan === plan.id;
-            
+
             // Calculate price based on billing interval
             // Lifetime plan: always show one-time price (no interval)
             // Recurring plans: show monthly price or yearly price / 12
-            const price = plan.id === "lifetime"
-              ? plan.monthlyPrice  // One-time payment
-              : billingInterval === "monthly"
-                ? plan.monthlyPrice
-                : plan.yearlyPrice / 12;  // Yearly divided by 12 for monthly rate
+            const price =
+              plan.id === "lifetime"
+                ? plan.monthlyPrice // One-time payment
+                : billingInterval === "monthly"
+                  ? plan.monthlyPrice
+                  : plan.yearlyPrice / 12; // Yearly divided by 12 for monthly rate
 
             return (
               <motion.div
@@ -319,28 +353,32 @@ export function PlanSelector({
                 className="relative"
               >
                 <Card
-                  className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
-                    getPlanGradient(plan.id, isSelected, plan.popular || false)
-                  } ${
+                  className={`relative cursor-pointer overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${getPlanGradient(
+                    plan.id,
+                    isSelected,
+                    plan.popular || false,
+                  )} ${
                     isCurrentPlan ? "cursor-default" : ""
                   } ${plan.id === "premium" ? "cursor-not-allowed opacity-60" : ""}`}
                   onClick={() => !isCurrentPlan && handleSelectPlan(plan.id)}
                 >
                   {plan.popular && (
                     <div className="absolute -top-px left-1/2 -translate-x-1/2">
-                      <Badge className="rounded-b-lg rounded-t-none bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1 text-white">
+                      <Badge className="rounded-t-none rounded-b-lg bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1 text-white">
                         Most Popular
                       </Badge>
                     </div>
                   )}
 
-                  <CardHeader className="pb-4 pt-8">
-                    <div className="flex items-center space-x-3">                      
+                  <CardHeader className="pt-8 pb-4">
+                    <div className="flex items-center space-x-3">
                       <div>
-                        <CardTitle className="text-xl text-foreground">
+                        <CardTitle className="text-foreground text-xl">
                           {plan.name}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground">{plan.description}</p>
+                        <p className="text-muted-foreground text-sm">
+                          {plan.description}
+                        </p>
                       </div>
                     </div>
                   </CardHeader>
@@ -349,22 +387,24 @@ export function PlanSelector({
                     {/* Pricing */}
                     <div>
                       <div className="flex items-baseline">
-                        <span className="text-3xl font-bold tracking-tight text-foreground">
+                        <span className="text-foreground text-3xl font-bold tracking-tight">
                           ${price.toFixed(0)}
                         </span>
                         {plan.id !== "lifetime" && (
-                          <span className="ml-1 text-sm text-muted-foreground">
+                          <span className="text-muted-foreground ml-1 text-sm">
                             /month
                           </span>
                         )}
                       </div>
-                      {billingInterval === "yearly" && plan.id !== "lifetime" && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Billed annually (${plan.yearlyPrice.toFixed(0)}/year)
-                        </p>
-                      )}
+                      {billingInterval === "yearly" &&
+                        plan.id !== "lifetime" && (
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            Billed annually (${plan.yearlyPrice.toFixed(0)}
+                            /year)
+                          </p>
+                        )}
                       {plan.id === "lifetime" && (
-                        <p className="mt-1 text-sm text-muted-foreground">
+                        <p className="text-muted-foreground mt-1 text-sm">
                           One-time payment
                         </p>
                       )}
@@ -379,11 +419,15 @@ export function PlanSelector({
                           key={featureIndex}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.4 + index * 0.1 + featureIndex * 0.05 }}
+                          transition={{
+                            delay: 0.4 + index * 0.1 + featureIndex * 0.05,
+                          }}
                           className="flex items-start space-x-3"
                         >
                           <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500 dark:text-green-400" />
-                          <span className="text-sm text-foreground">{feature}</span>
+                          <span className="text-foreground text-sm">
+                            {feature}
+                          </span>
                         </motion.div>
                       ))}
                     </div>
@@ -391,9 +435,9 @@ export function PlanSelector({
                     {/* Action Button */}
                     <div className="pt-4">
                       {isCurrentPlan ? (
-                        <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-muted bg-muted/50 px-4 py-3">
+                        <div className="border-muted bg-muted/50 flex items-center justify-center rounded-lg border-2 border-dashed px-4 py-3">
                           <CheckCircle2 className="mr-2 h-4 w-4 text-green-500 dark:text-green-400" />
-                          <span className="text-sm font-medium text-muted-foreground">
+                          <span className="text-muted-foreground text-sm font-medium">
                             Current Plan
                           </span>
                         </div>
@@ -414,7 +458,8 @@ export function PlanSelector({
                               <CheckCircle2 className="mr-2 h-4 w-4" />
                               Selected
                             </>
-                          ) : getPlanLevel(plan.id) > getPlanLevel(currentPlan) ? (
+                          ) : getPlanLevel(plan.id) >
+                            getPlanLevel(currentPlan) ? (
                             <>
                               Upgrade to {plan.name}
                               <ArrowRight className="ml-2 h-4 w-4" />

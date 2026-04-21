@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 // Supabase Edge Function: twilio-whatsapp-ai-bot
 // Handles WhatsApp messages via Twilio, using Gemini AI and MCP-style tools.
 
@@ -5,7 +7,6 @@ import {
   createClient,
   type SupabaseClient as SupabaseJsClient,
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import {
   buildVerificationPrompt,
@@ -19,6 +20,7 @@ import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
+  resolvePocketPercentageForUpsert,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
@@ -36,15 +38,20 @@ import {
 } from "../shared/formatting-helpers.ts";
 import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import {
   isRetryableGeminiError,
   sendGeminiMessageWithRetry,
 } from "../shared/gemini-retry.ts";
 import {
+  createVertexBotChatSession,
+  getVertexAiConfigFromEnv,
+} from "../shared/vertex-ai-chat.ts";
+import {
   fetchUserCategoryPreferences,
+  fetchUserCategoryRemaps,
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
-  fetchUserCategoryRemaps,
   mergeAllowedCategories,
   upsertUserCustomCategory,
 } from "../shared/user-categories.ts";
@@ -53,11 +60,16 @@ import {
   getReplyLanguagePromptLabel,
   resolvePreferredReplyLanguage,
 } from "../shared/detect-language.ts";
+import {
+  buildInternalInvokeHeaders,
+  resolveInternalFunctionKey,
+  resolveInternalFunctionKeyWithSource,
+} from "../shared/auth.ts";
 
 // --- Constants & Types ---
 
-const MODEL_NAME = "gemini-3.1-flash-lite-preview"; // Fast and capable
-const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
+const MODEL_NAME = "gemini-3.1-flash-lite-preview";
+const FALLBACK_MODEL_NAME = "gemini-2.5-flash";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on WhatsApp.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
@@ -93,8 +105,9 @@ CRITICAL RULES:
 16. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
 17. **Options**: When offering choices (spaces, pockets, budgets, follow-up options), list them as numbered text and ask the user to reply with the number or name.
 18. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-19. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
-20. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
+19. **Wallets**: Wallets belong to one space only. Do not list or assume wallets unless the user explicitly asks about wallets or names one. When a wallet is mentioned, resolve it only inside the selected space.
+20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.
+21. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
 
 MESSAGE FORMATTING (WhatsApp-specific):
 - WhatsApp renders these formatting symbols natively — use them:
@@ -121,6 +134,7 @@ CURRENT CONTEXT:
 - Date: {{DATE}}
 - User Currency: {{CURRENCY}}
 - Spaces: {{HOUSEHOLDS}}
+- Wallets: {{WALLETS}}
 - Categories (with brand colors): {{CATEGORIES}}
 `;
 const WHATSAPP_BUDGET_FLOW = `
@@ -182,7 +196,9 @@ function buildTwimlMessage(message?: string | null, mediaUrl?: string | null) {
   }
 
   if (!media) {
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(body)}</Message></Response>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(
+      body,
+    )}</Message></Response>`;
   }
 
   const bodyXml = body ? `<Body>${escapeXml(body)}</Body>` : "";
@@ -298,6 +314,32 @@ async function normalizeQuickChartMediaUrl(url: string): Promise<string> {
   return (await createQuickChartShortUrl(cfg)) || input;
 }
 
+function extractChartMediaUrlFromToolResult(
+  toolResult: unknown,
+): string | null {
+  if (!toolResult || typeof toolResult !== "object") return null;
+
+  // Keep this list aligned with tool outputs that may carry chart links.
+  // We intentionally do not rely on model text because prompts instruct the model
+  // to avoid printing raw chart URLs.
+  const candidateValues = [
+    (toolResult as Record<string, unknown>).url,
+    (toolResult as Record<string, unknown>).chart_url,
+    (toolResult as Record<string, any>).snapshot?.chart_url,
+    (toolResult as Record<string, any>).data?.chart_url,
+  ];
+
+  for (const value of candidateValues) {
+    if (typeof value !== "string") continue;
+    const cleaned = value.trim();
+    if (!cleaned) continue;
+    if (!/^https?:\/\/quickchart\.io\/chart/i.test(cleaned)) continue;
+    return cleaned;
+  }
+
+  return null;
+}
+
 function runBackgroundTask(task: Promise<unknown>) {
   const edgeRuntime = (globalThis as any)?.EdgeRuntime;
   if (edgeRuntime?.waitUntil) {
@@ -309,12 +351,12 @@ function runBackgroundTask(task: Promise<unknown>) {
 
 async function runAnalyzeExpenseWithTimeout(
   payload: any,
-  apiKey: string,
+  apiKey: string | undefined,
   timeoutMs: number,
   timeoutError: string,
 ): Promise<any> {
   try {
-    const analysisPromise = runAnalyzeExpense(payload, apiKey);
+    const analysisPromise = runAnalyzeExpense(payload, apiKey || "");
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeoutMs);
     });
@@ -517,6 +559,79 @@ type NormalizedPocket = {
   color?: string;
   icon?: string;
 };
+
+function normalizeWalletName(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+async function listWalletRowsForScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+) {
+  let query = supabase
+    .from("accounts")
+    .select("id, name, household_id, is_default")
+    .eq("is_archived", false)
+    .order("is_default", { ascending: false })
+    .order("name", { ascending: true });
+
+  if (householdId) {
+    query = query.eq("household_id", householdId);
+  } else {
+    query = query.eq("user_id", userId).is("household_id", null);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[twilio-whatsapp-ai-bot] Failed to load wallets for scope", {
+      userId,
+      householdId,
+      error,
+    });
+    return [];
+  }
+
+  return (data || []) as Array<{
+    id: string;
+    name: string;
+    household_id: string | null;
+    is_default: boolean;
+  }>;
+}
+
+async function resolveWalletIdInScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  walletName: unknown,
+): Promise<{ accountId?: string; error?: string }> {
+  const normalizedName = normalizeWalletName(walletName);
+  if (!normalizedName) return {};
+
+  const wallets = await listWalletRowsForScope(supabase, userId, householdId);
+  const matches = wallets.filter(
+    (wallet) => normalizeWalletName(wallet.name) === normalizedName,
+  );
+
+  if (matches.length === 0) {
+    return {
+      error: `Wallet '${String(
+        walletName,
+      ).trim()}' was not found in the selected scope.`,
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      error: `More than one wallet named '${String(
+        walletName,
+      ).trim()}' exists in the selected scope. Please rename one of them or be more specific.`,
+    };
+  }
+
+  return { accountId: matches[0].id };
+}
 
 function normalizePockets(input: unknown): NormalizedPocket[] {
   const rawList: any[] = Array.isArray(input)
@@ -1324,6 +1439,7 @@ async function invokeTransactionSave(
     currency: string;
     date: string;
     description?: string;
+    merchant?: string;
     householdId?: string | null;
     isPortfolio?: boolean;
     payerUserId?: string;
@@ -1333,6 +1449,7 @@ async function invokeTransactionSave(
     source?: string;
     ownerType?: string;
     privacyScope?: string;
+    accountId?: string;
   },
 ) {
   const type =
@@ -1349,9 +1466,11 @@ async function invokeTransactionSave(
           currency: params.currency,
           date: params.date,
           description: params.description,
+          merchant: params.merchant,
           source: params.source,
           ownerType: params.ownerType || "me",
           privacyScope: params.privacyScope || "full",
+          accountId: params.accountId,
           householdId: params.householdId,
           isPortfolio: params.isPortfolio === true,
           isRecurring: params.isRecurring === true,
@@ -1368,6 +1487,8 @@ async function invokeTransactionSave(
           currency: params.currency,
           date: params.date,
           description: params.description,
+          merchant: params.merchant,
+          accountId: params.accountId,
           householdId: params.householdId,
           isPortfolio: params.isPortfolio === true,
           payerUserId: params.payerUserId,
@@ -1384,9 +1505,113 @@ async function invokeTransactionSave(
     type === "income" ? "save-income" : "save-expense",
     {
       body,
-      headers: { "X-Moneko-Internal-Key": internalKey },
+      headers: buildInternalInvokeHeaders(internalKey),
     },
   );
+}
+
+function getInvokeHttpStatus(error: unknown): number | undefined {
+  const candidate = error as Record<string, any> | null | undefined;
+  const contextStatus = candidate?.context?.status;
+  if (typeof contextStatus === "number") return contextStatus;
+  const status = candidate?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
+async function reportTwilioToolInvokeFailure(params: {
+  toolName: string;
+  targetFunction: string;
+  formatted: string;
+  error?: unknown;
+  context?: Record<string, unknown>;
+}) {
+  try {
+    await reportEdgeFunctionError({
+      functionName: "twilio-whatsapp-ai-bot",
+      error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
+      context: {
+        step: `tool:${params.toolName}`,
+        toolName: params.toolName,
+        targetFunction: params.targetFunction,
+        httpStatus: getInvokeHttpStatus(params.error),
+        ...params.context,
+      },
+    });
+  } catch (reportError) {
+    console.error("[twilio-whatsapp-ai-bot] reportEdgeFunctionError failed", {
+      toolName: params.toolName,
+      targetFunction: params.targetFunction,
+      error: String(reportError),
+    });
+  }
+}
+
+function buildMutationFailureText(
+  toolName: string | null,
+  toolResult: unknown,
+): string | null {
+  const error =
+    typeof (toolResult as Record<string, any> | null)?.error === "string"
+      ? (toolResult as Record<string, string>).error.trim()
+      : "";
+  if (!error) return null;
+
+  if (toolName === "add_transaction") {
+    return "I couldn't save that transaction right now. Please try again in a moment.";
+  }
+  if (toolName === "add_transactions_batch") {
+    return "I couldn't save those transactions right now. Please try again in a moment.";
+  }
+  if (toolName === "manage_recurring") {
+    return "I couldn't save that recurring transaction right now. Please try again in a moment.";
+  }
+  return null;
+}
+
+function fingerprintSecret(secret: string): string {
+  if (!secret) return "missing";
+  let hash = 0;
+  for (let i = 0; i < secret.length; i++) {
+    hash = ((hash << 5) - hash + secret.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(16).slice(0, 8);
+}
+
+function decodeJwtPayloadMeta(token: string | null | undefined): {
+  role: string | null;
+  iss: string | null;
+  projectRef: string | null;
+} {
+  const raw = (token || "").trim();
+  if (!raw) return { role: null, iss: null, projectRef: null };
+  let jwt = raw;
+  if (
+    (jwt.startsWith('"') && jwt.endsWith('"')) ||
+    (jwt.startsWith("'") && jwt.endsWith("'"))
+  ) {
+    jwt = jwt.slice(1, -1).trim();
+  }
+  while (/^bearer\s+/i.test(jwt)) {
+    jwt = jwt.replace(/^bearer\s+/i, "").trim();
+  }
+  const parts = jwt.split(".");
+  if (parts.length < 2) return { role: null, iss: null, projectRef: null };
+  try {
+    const payloadSegment = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded =
+      payloadSegment + "=".repeat((4 - (payloadSegment.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const iss = typeof payload?.iss === "string" ? payload.iss : null;
+    const role = typeof payload?.role === "string" ? payload.role : null;
+    let projectRef: string | null = null;
+    if (iss) {
+      const match = iss.match(/^https:\/\/([a-z0-9-]+)\.supabase\.co/i);
+      projectRef = match?.[1] || null;
+    }
+    return { role, iss, projectRef };
+  } catch {
+    return { role: null, iss: null, projectRef: null };
+  }
 }
 
 function getTwilioMessageSid(formData: FormData): string | null {
@@ -1859,24 +2084,69 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-  const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
   const WHATSAPP_DEBUG =
     (Deno.env.get("WHATSAPP_DEBUG") || "").toUpperCase() === "TRUE";
-  const EDGE_FUNCTION_KEY = (SECRET_API_KEY || "").trim();
+  const INTERNAL_FUNCTION_KEY = resolveInternalFunctionKey();
+  const internalKeyMeta = resolveInternalFunctionKeyWithSource();
   const TWILIO_SKIP_SIGNATURE =
     (Deno.env.get("TWILIO_SKIP_SIGNATURE") || "").toLowerCase() === "true";
 
   const twilioAccountSid = TWILIO_ACCOUNT_SID || "";
   const twilioAuthToken = TWILIO_AUTH_TOKEN || "";
+  let vertexConfig: ReturnType<typeof getVertexAiConfigFromEnv>;
 
-  if (
-    !SUPABASE_URL ||
-    !SUPABASE_SERVICE_ROLE_KEY ||
-    !GEMINI_API_KEY ||
-    !EDGE_FUNCTION_KEY
-  ) {
+  try {
+    vertexConfig = getVertexAiConfigFromEnv();
+  } catch (error) {
+    console.error("[twilio-whatsapp-ai-bot] Vertex AI config error", error);
+    return jsonResponse({ error: "Server configuration error" }, 500);
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !INTERNAL_FUNCTION_KEY) {
     console.error("Missing environment variables");
     return jsonResponse({ error: "Server configuration error" }, 500);
+  }
+
+  if (WHATSAPP_DEBUG) {
+    const secretSupabaseServiceRoleApiKey =
+      Deno.env.get("SECRET_SUPABASE_SERVICE_ROLE_API_KEY") || "";
+    const activeInvokeJwt =
+      secretSupabaseServiceRoleApiKey || SUPABASE_SERVICE_ROLE_KEY || "";
+    const serviceRoleMeta = decodeJwtPayloadMeta(activeInvokeJwt);
+    const serviceRoleRaw = (SUPABASE_SERVICE_ROLE_KEY || "").trim();
+    const anonRaw = (SUPABASE_ANON_KEY || "").trim();
+    const secretApiRaw = secretSupabaseServiceRoleApiKey.trim();
+    console.log("[twilio-whatsapp-ai-bot] Internal invoke auth config", {
+      source: internalKeyMeta.source,
+      fingerprint: fingerprintSecret(internalKeyMeta.key),
+      keyLength: internalKeyMeta.key.length,
+      hasSecretApiKey: !!secretSupabaseServiceRoleApiKey,
+      secretApiKeyFingerprint: fingerprintSecret(
+        secretSupabaseServiceRoleApiKey,
+      ),
+      secretApiKeyLooksJwt:
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(secretApiRaw),
+      secretApiKeyDotCount: secretApiRaw
+        ? secretApiRaw.split(".").length - 1
+        : 0,
+      hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      serviceRoleFingerprint: fingerprintSecret(
+        SUPABASE_SERVICE_ROLE_KEY || "",
+      ),
+      serviceRoleLooksJwt:
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(serviceRoleRaw),
+      serviceRoleDotCount: serviceRoleRaw
+        ? serviceRoleRaw.split(".").length - 1
+        : 0,
+      anonLooksJwt: /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+        anonRaw,
+      ),
+      anonDotCount: anonRaw ? anonRaw.split(".").length - 1 : 0,
+      activeInvokeJwtFingerprint: fingerprintSecret(activeInvokeJwt),
+      serviceRoleRole: serviceRoleMeta.role,
+      serviceRoleProjectRef: serviceRoleMeta.projectRef,
+      hasAnonKey: !!SUPABASE_ANON_KEY,
+    });
   }
 
   // 1. Determine channel and optionally validate Twilio signature
@@ -2023,6 +2293,11 @@ Deno.serve(async (req: Request) => {
       // best-effort
     }
 
+    const resolveAppRequestedWalletId = async (
+      walletName: unknown,
+      householdId: string | null,
+    ) => resolveWalletIdInScope(supabase, userId, householdId, walletName);
+
     const sessionId = payload.session_id || `app:${userId}`;
     const messageText = payload.message?.toString() || "";
     const attachments: any[] = Array.isArray(payload.attachments)
@@ -2119,22 +2394,17 @@ Deno.serve(async (req: Request) => {
       WHATSAPP_DEBUG,
     );
 
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const appSystemInstruction =
       SYSTEM_INSTRUCTION.replace("{{DATE}}", formatDateInTimeZone(userTimezone))
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", "None")
+        .replace(
+          "{{WALLETS}}",
+          "Available on request for the selected space only",
+        )
         .replace("{{CATEGORIES}}", categoryGuideForUser)
         .replace("{{LANGUAGE}}", userLangLabel) +
       buildLanguageOverride(userLang);
-    const model = genAI.getGenerativeModel(
-      {
-        model: MODEL_NAME,
-        systemInstruction: appSystemInstruction,
-      },
-      { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-    );
-
     const toolsApp = [
       {
         name: "analyze_expense",
@@ -2179,6 +2449,10 @@ Deno.serve(async (req: Request) => {
             },
             category: { type: "STRING", description: "Category name" },
             description: { type: "STRING", description: "Description/Note" },
+            merchant: {
+              type: "STRING",
+              description: "Optional merchant/store/payee name",
+            },
             date: { type: "STRING", description: "YYYY-MM-DD" },
             currency: { type: "STRING", description: "ISO Currency Code" },
             household_id: {
@@ -2192,6 +2466,11 @@ Deno.serve(async (req: Request) => {
             is_portfolio: {
               type: "BOOLEAN",
               description: "Optional: Whether the target space is a portfolio",
+            },
+            wallet_name: {
+              type: "STRING",
+              description:
+                "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
             },
             payer_name: {
               type: "STRING",
@@ -2288,10 +2567,19 @@ Deno.serve(async (req: Request) => {
                     type: "STRING",
                     description: "Description/Note",
                   },
+                  merchant: {
+                    type: "STRING",
+                    description: "Optional merchant/store/payee name",
+                  },
                   date: { type: "STRING", description: "YYYY-MM-DD" },
                   currency: {
                     type: "STRING",
                     description: "ISO Currency Code",
+                  },
+                  wallet_name: {
+                    type: "STRING",
+                    description:
+                      "Optional wallet name within the selected scope.",
                   },
                   payer_name: {
                     type: "STRING",
@@ -2351,6 +2639,75 @@ Deno.serve(async (req: Request) => {
         },
       },
       {
+        name: "list_wallets",
+        description:
+          "List wallets in personal scope or in a selected space, including current balances and which one is the default.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+            include_archived: { type: "BOOLEAN" },
+          },
+        },
+      },
+      {
+        name: "create_wallet",
+        description:
+          "Create a new wallet in personal scope or in a selected space.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING" },
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+            icon: { type: "STRING" },
+            color: { type: "STRING" },
+            opening_balance: { type: "NUMBER" },
+            goal_amount: { type: "NUMBER" },
+            is_default: { type: "BOOLEAN" },
+          },
+          required: ["name"],
+        },
+      },
+      {
+        name: "update_wallet",
+        description:
+          "Rename or update a wallet in the selected scope. Use wallet_name to choose which wallet to edit.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            wallet_name: { type: "STRING" },
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+            new_name: { type: "STRING" },
+            icon: { type: "STRING" },
+            color: { type: "STRING" },
+            goal_amount: { type: "NUMBER" },
+            is_default: { type: "BOOLEAN" },
+          },
+          required: ["wallet_name"],
+        },
+      },
+      {
+        name: "create_wallet_transfer",
+        description: "Move money between two wallets in the same scope.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            from_wallet_name: { type: "STRING" },
+            to_wallet_name: { type: "STRING" },
+            amount: { type: "NUMBER" },
+            currency: { type: "STRING" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            note: { type: "STRING" },
+            household_id: { type: "STRING" },
+            household_name: { type: "STRING" },
+          },
+          required: ["from_wallet_name", "to_wallet_name", "amount"],
+        },
+      },
+      {
         name: "update_transaction",
         description:
           "Update a previously listed transaction (no transaction IDs).",
@@ -2378,6 +2735,7 @@ Deno.serve(async (req: Request) => {
                 amount: { type: "NUMBER" },
                 category: { type: "STRING" },
                 description: { type: "STRING" },
+                merchant: { type: "STRING" },
                 date: { type: "STRING", description: "YYYY-MM-DD" },
                 currency: { type: "STRING" },
                 source: { type: "STRING" },
@@ -2481,9 +2839,12 @@ Deno.serve(async (req: Request) => {
       },
     ];
 
-    let activeChat = model.startChat({
-      history: rawHistory,
+    let activeChat = createVertexBotChatSession({
+      modelName: MODEL_NAME,
+      systemInstruction: appSystemInstruction,
+      history: rawHistory as any,
       tools: [{ function_declarations: toolsApp }] as any,
+      vertexConfig,
     });
     let response: any = null;
     let functionCalls: any[] = [];
@@ -2503,17 +2864,13 @@ Deno.serve(async (req: Request) => {
           logPrefix: "twilio-whatsapp-ai-bot",
           fallbackModelName: FALLBACK_MODEL_NAME,
           fallbackChatFactory: (modelName, history) => {
-            const fallbackModel = genAI.getGenerativeModel(
-              {
-                model: modelName,
-                systemInstruction: appSystemInstruction,
-              },
-              { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-            );
-            return fallbackModel.startChat({
+            return createVertexBotChatSession({
+              modelName,
+              systemInstruction: appSystemInstruction,
               history,
               tools: [{ function_declarations: toolsApp }] as any,
-            }) as any;
+              vertexConfig,
+            });
           },
           onChatSwitched: (chatSession) => {
             activeChat = chatSession as any;
@@ -2529,13 +2886,12 @@ Deno.serve(async (req: Request) => {
         error,
       );
 
-      // Report Gemini error for instant notification
-      await reportEdgeFunctionError({
+      await reportVertexAiFailure({
         functionName: "twilio-whatsapp-ai-bot",
         error,
+        phase: "initial_ai_response",
+        modelName: MODEL_NAME,
         context: {
-          phase: "initial_ai_response",
-          modelName: MODEL_NAME,
           message: messageText,
           hasAttachment: attachments.length > 0,
         },
@@ -2742,7 +3098,7 @@ Deno.serve(async (req: Request) => {
                     .join(" | ")
                     .slice(0, 180);
 
-                  if (!EDGE_FUNCTION_KEY) {
+                  if (!INTERNAL_FUNCTION_KEY) {
                     console.error(
                       "[twilio-whatsapp-ai-bot] update-expense invoke skipped: missing internal key",
                       {
@@ -2760,9 +3116,9 @@ Deno.serve(async (req: Request) => {
                           expenseId: resolved.candidate.id,
                           updates,
                         },
-                        headers: {
-                          "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
-                        },
+                        headers: buildInternalInvokeHeaders(
+                          INTERNAL_FUNCTION_KEY,
+                        ),
                       },
                     );
                     const success = !error && data?.success === true;
@@ -2836,7 +3192,7 @@ Deno.serve(async (req: Request) => {
                 "delete-expense",
                 {
                   body: { userId, expenseIds: resolved.candidate.id },
-                  headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                 },
               );
               const success = !error && data?.success === true;
@@ -2907,9 +3263,17 @@ Deno.serve(async (req: Request) => {
                   call.args,
                 )
               : {};
+            const requestedWallet = await resolveAppRequestedWalletId(
+              call.args.wallet_name,
+              householdId,
+            );
+            if (requestedWallet.error) {
+              toolResult = { error: requestedWallet.error };
+              continue;
+            }
             const { data, error } = await invokeTransactionSave(
               supabase,
-              EDGE_FUNCTION_KEY,
+              INTERNAL_FUNCTION_KEY,
               userId,
               {
                 type: call.args.type || "expense",
@@ -2921,6 +3285,7 @@ Deno.serve(async (req: Request) => {
                 householdId,
                 isPortfolio:
                   spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                accountId: requestedWallet.accountId ?? undefined,
                 payerUserId: splitConfig.payerUserId,
                 customSplits: splitConfig.customSplits,
                 isRecurring: call.args.is_recurring === true,
@@ -2974,6 +3339,14 @@ Deno.serve(async (req: Request) => {
                     ? tx.type.toLowerCase()
                     : "expense";
                 const dateStr = normalizeDateInput(tx.date, defaultDate);
+                const requestedWallet = await resolveAppRequestedWalletId(
+                  tx.wallet_name,
+                  householdId,
+                );
+                if (requestedWallet.error) {
+                  toolResult = { error: requestedWallet.error };
+                  break;
+                }
 
                 // Resolve splits for household expenses
                 let payerUserId: string | undefined;
@@ -2996,6 +3369,7 @@ Deno.serve(async (req: Request) => {
                   amount: tx.amount,
                   category: tx.category,
                   currency: tx.currency || userCurrency,
+                  accountId: requestedWallet.accountId ?? undefined,
                   date: dateStr,
                   description: tx.description,
                   source: tx.source,
@@ -3017,10 +3391,12 @@ Deno.serve(async (req: Request) => {
                 });
               }
 
-              // Call save-transactions-batch via direct function invoke
-              // Note: App mode doesn't have EDGE_FUNCTION_KEY context, use direct DB access
-              const SECRET_API_KEY = Deno.env.get("SECRET_API_KEY");
-              const internalKey = (SECRET_API_KEY || "").trim();
+              if ((toolResult as any)?.error) {
+                continue;
+              }
+
+              // Call save-transactions-batch via direct function invoke.
+              const internalKey = INTERNAL_FUNCTION_KEY;
 
               const { data, error } = await supabase.functions.invoke(
                 "save-transactions-batch",
@@ -3032,7 +3408,7 @@ Deno.serve(async (req: Request) => {
                     transactions: batchTransactions,
                   },
                   headers: internalKey
-                    ? { "X-Moneko-Internal-Key": internalKey }
+                    ? buildInternalInvokeHeaders(internalKey)
                     : {},
                 },
               );
@@ -3081,17 +3457,13 @@ Deno.serve(async (req: Request) => {
             logPrefix: "twilio-whatsapp-ai-bot",
             fallbackModelName: FALLBACK_MODEL_NAME,
             fallbackChatFactory: (modelName, history) => {
-              const fallbackModel = genAI.getGenerativeModel(
-                {
-                  model: modelName,
-                  systemInstruction: appSystemInstruction,
-                },
-                { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-              );
-              return fallbackModel.startChat({
+              return createVertexBotChatSession({
+                modelName,
+                systemInstruction: appSystemInstruction,
                 history,
                 tools: [{ function_declarations: toolsApp }] as any,
-              }) as any;
+                vertexConfig,
+              });
             },
             onChatSwitched: (chatSession) => {
               activeChat = chatSession as any;
@@ -3110,13 +3482,12 @@ Deno.serve(async (req: Request) => {
           error,
         );
 
-        // Report Gemini error for instant notification
-        await reportEdgeFunctionError({
+        await reportVertexAiFailure({
           functionName: "twilio-whatsapp-ai-bot",
           error,
+          phase: "final_ai_response",
+          modelName: MODEL_NAME,
           context: {
-            phase: "final_ai_response",
-            modelName: MODEL_NAME,
             toolIterations,
             lastToolCalls: functionCalls?.length || 0,
           },
@@ -3643,6 +4014,11 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    const resolveRequestedAccountId = async (
+      walletName: unknown,
+      householdId: string | null,
+    ) => resolveWalletIdInScope(supabase, userId, householdId, walletName);
+
     let sessionState = await loadSessionState(
       supabase,
       sessionId,
@@ -3837,7 +4213,6 @@ Deno.serve(async (req: Request) => {
       historyParts.shift();
     }
 
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const whatsappSystemInstruction =
       WHATSAPP_SYSTEM_INSTRUCTION.replace(
         "{{DATE}}",
@@ -3845,17 +4220,13 @@ Deno.serve(async (req: Request) => {
       )
         .replace("{{CURRENCY}}", userCurrency)
         .replace("{{HOUSEHOLDS}}", householdContext)
+        .replace(
+          "{{WALLETS}}",
+          "Available on request for the selected space only",
+        )
         .replace("{{CATEGORIES}}", categoryGuideForUser)
         .replace("{{LANGUAGE}}", userLangLabel) +
       buildLanguageOverride(userLang);
-    const model = genAI.getGenerativeModel(
-      {
-        model: MODEL_NAME,
-        systemInstruction: whatsappSystemInstruction,
-      },
-      { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-    );
-
     // Define Tools
     const tools = [
       {
@@ -3927,6 +4298,11 @@ Deno.serve(async (req: Request) => {
             is_portfolio: {
               type: "BOOLEAN",
               description: "Optional: Whether the target space is a portfolio",
+            },
+            wallet_name: {
+              type: "STRING",
+              description:
+                "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
             },
             payer_name: {
               type: "STRING",
@@ -4027,6 +4403,11 @@ Deno.serve(async (req: Request) => {
                   currency: {
                     type: "STRING",
                     description: "ISO Currency Code",
+                  },
+                  wallet_name: {
+                    type: "STRING",
+                    description:
+                      "Optional wallet name within the selected scope.",
                   },
                   payer_name: {
                     type: "STRING",
@@ -4478,6 +4859,7 @@ Deno.serve(async (req: Request) => {
             category: { type: "STRING" },
             currency: { type: "STRING" },
             description: { type: "STRING" },
+            merchant: { type: "STRING" },
             source: { type: "STRING", description: "Income only: source" },
             frequency: {
               type: "STRING",
@@ -4529,9 +4911,12 @@ Deno.serve(async (req: Request) => {
     ];
 
     // 6. Chat Loop (Model Turn)
-    let activeChat = model.startChat({
-      history: historyParts,
+    let activeChat = createVertexBotChatSession({
+      modelName: MODEL_NAME,
+      systemInstruction: whatsappSystemInstruction,
+      history: historyParts as any,
       tools: [{ function_declarations: tools }] as any,
+      vertexConfig,
     });
 
     // Send message with timeout and error handling
@@ -4547,17 +4932,13 @@ Deno.serve(async (req: Request) => {
           logPrefix: "twilio-whatsapp-ai-bot",
           fallbackModelName: FALLBACK_MODEL_NAME,
           fallbackChatFactory: (modelName, history) => {
-            const fallbackModel = genAI.getGenerativeModel(
-              {
-                model: modelName,
-                systemInstruction: whatsappSystemInstruction,
-              },
-              { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-            );
-            return fallbackModel.startChat({
+            return createVertexBotChatSession({
+              modelName,
+              systemInstruction: whatsappSystemInstruction,
               history,
               tools: [{ function_declarations: tools }] as any,
-            }) as any;
+              vertexConfig,
+            });
           },
           onChatSwitched: (chatSession) => {
             activeChat = chatSession as any;
@@ -4575,6 +4956,19 @@ Deno.serve(async (req: Request) => {
       response = await result.response;
     } catch (e) {
       console.error("[twilio-whatsapp-ai-bot] Initial AI call failed:", e);
+      await reportVertexAiFailure({
+        functionName: "twilio-whatsapp-ai-bot",
+        error: e,
+        phase: "initial_ai_response",
+        modelName: MODEL_NAME,
+        context: {
+          hasAttachment: numMedia > 0,
+          message:
+            typeof userMessageContent === "string"
+              ? userMessageContent
+              : "[non-string-message]",
+        },
+      });
       finalResponseText = isRetryableGeminiError(e)
         ? buildGeminiHighDemandMessage(userLang)
         : buildProcessingFailureMessage(userLang);
@@ -4590,6 +4984,12 @@ Deno.serve(async (req: Request) => {
       finalResponseText = response
         ? response.text()
         : buildProcessingFailureMessage(userLang);
+    }
+    if (functionCalls && functionCalls.length > 0) {
+      // Ignore optimistic model text while tools are still pending. The durable
+      // source of truth for write actions is the tool result, not the first
+      // model draft.
+      finalResponseText = "";
     }
     let persistedContent: string | undefined;
 
@@ -4846,6 +5246,18 @@ Deno.serve(async (req: Request) => {
               continue;
             }
 
+            const requestedAccount = await resolveRequestedAccountId(
+              call.args.wallet_name,
+              householdId,
+            );
+            if (requestedAccount.error) {
+              toolResult = { error: requestedAccount.error };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+
             const dateStr = normalizeDateInput(
               call.args.date,
               formatDateInTimeZone(userTimezone),
@@ -4863,6 +5275,41 @@ Deno.serve(async (req: Request) => {
                 : "expense";
 
             if (type === "income") {
+              const invokeHeaders = buildInternalInvokeHeaders(
+                INTERNAL_FUNCTION_KEY,
+              );
+              if (WHATSAPP_DEBUG) {
+                const invokeAuthMeta = decodeJwtPayloadMeta(
+                  invokeHeaders.Authorization,
+                );
+                console.log(
+                  "[twilio-whatsapp-ai-bot] save-income invoke auth debug",
+                  {
+                    hasInternalKeyHeader:
+                      typeof invokeHeaders["X-Moneko-Internal-Key"] ===
+                        "string" &&
+                      invokeHeaders["X-Moneko-Internal-Key"].length > 0,
+                    internalKeyFingerprint: fingerprintSecret(
+                      invokeHeaders["X-Moneko-Internal-Key"] || "",
+                    ),
+                    hasAuthorization:
+                      typeof invokeHeaders.Authorization === "string" &&
+                      invokeHeaders.Authorization.length > 0,
+                    authStartsWithBearer:
+                      typeof invokeHeaders.Authorization === "string" &&
+                      /^Bearer\s+/i.test(invokeHeaders.Authorization),
+                    authLooksJwt:
+                      typeof invokeHeaders.Authorization === "string" &&
+                      /^Bearer\s+[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+                        invokeHeaders.Authorization,
+                      ),
+                    authRole: invokeAuthMeta.role,
+                    authProjectRef: invokeAuthMeta.projectRef,
+                    expectedProjectRef: "qbuynyxyemigtnvdujts",
+                  },
+                );
+              }
+
               const payload = {
                 userId,
                 amount: call.args.amount,
@@ -4871,8 +5318,10 @@ Deno.serve(async (req: Request) => {
                 date: dateStr,
                 description: call.args.description,
                 source: call.args.source,
+                merchant: call.args.merchant,
                 ownerType: call.args.owner_type || "me",
                 privacyScope: call.args.privacy_scope || "full",
+                accountId: requestedAccount.accountId ?? undefined,
                 householdId,
                 isRecurring: !!call.args.is_recurring,
                 recurrence_rule: recurrenceRule || undefined,
@@ -4882,21 +5331,36 @@ Deno.serve(async (req: Request) => {
                 "save-income",
                 {
                   body: payload,
-                  headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                  headers: invokeHeaders,
                 },
               );
               const success = !error && data?.success === true;
+              const formatted = success
+                ? ""
+                : formatInvokeError(error ?? data?.error) ||
+                  "Failed to save income";
               toolResult = success
                 ? { success: true, data: data?.data ?? data }
-                : { error: error ?? data?.error };
+                : { error: formatted };
               if (!success) {
-                const formatted = formatInvokeError(error ?? data?.error);
                 if (WHATSAPP_DEBUG) {
                   debugNotes.push(`add-income error: ${formatted}`);
                 }
                 console.error("[twilio-whatsapp-ai-bot] add-income error", {
                   error,
                   formatted,
+                });
+                await reportTwilioToolInvokeFailure({
+                  toolName: "add_transaction",
+                  targetFunction: "save-income",
+                  formatted,
+                  error: error ?? data?.error,
+                  context: {
+                    type,
+                    amount: call.args.amount,
+                    category: call.args.category,
+                    householdId,
+                  },
                 });
               }
             } else {
@@ -4918,6 +5382,8 @@ Deno.serve(async (req: Request) => {
                 currency: call.args.currency || userCurrency,
                 date: dateStr,
                 description: call.args.description,
+                merchant: call.args.merchant,
+                accountId: requestedAccount.accountId ?? undefined,
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio ?? false,
                 payerUserId: splitConfig.payerUserId,
@@ -4931,21 +5397,42 @@ Deno.serve(async (req: Request) => {
                 "save-expense",
                 {
                   body: payload,
-                  headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                 },
               );
               const success = !error && data?.success === true;
+              const formatted = success
+                ? ""
+                : formatInvokeError(error ?? data?.error) ||
+                  "Failed to save expense";
               toolResult = success
                 ? { success: true, data: data?.data ?? data }
-                : { error: error ?? data?.error };
+                : { error: formatted };
               if (!success) {
-                const formatted = formatInvokeError(error ?? data?.error);
                 if (WHATSAPP_DEBUG) {
                   debugNotes.push(`add-expense error: ${formatted}`);
                 }
                 console.error("[twilio-whatsapp-ai-bot] add-expense error", {
                   error,
                   formatted,
+                  internalAuth: {
+                    source: internalKeyMeta.source,
+                    fingerprint: fingerprintSecret(INTERNAL_FUNCTION_KEY),
+                    keyLength: INTERNAL_FUNCTION_KEY.length,
+                    httpStatus: getInvokeHttpStatus(error),
+                  },
+                });
+                await reportTwilioToolInvokeFailure({
+                  toolName: "add_transaction",
+                  targetFunction: "save-expense",
+                  formatted,
+                  error: error ?? data?.error,
+                  context: {
+                    type,
+                    amount: call.args.amount,
+                    category: call.args.category,
+                    householdId,
+                  },
                 });
               }
             }
@@ -5000,6 +5487,14 @@ Deno.serve(async (req: Request) => {
                   ? tx.type.toLowerCase()
                   : "expense";
               const dateStr = normalizeDateInput(tx.date, defaultDate);
+              const requestedWallet = await resolveRequestedAccountId(
+                tx.wallet_name,
+                householdId,
+              );
+              if (requestedWallet.error) {
+                toolResult = { error: requestedWallet.error };
+                break;
+              }
 
               // Resolve splits for household expenses
               let payerUserId: string | undefined;
@@ -5022,8 +5517,10 @@ Deno.serve(async (req: Request) => {
                 amount: tx.amount,
                 category: tx.category,
                 currency: tx.currency || userCurrency,
+                accountId: requestedWallet.accountId ?? undefined,
                 date: dateStr,
                 description: tx.description,
+                merchant: tx.merchant,
                 source: tx.source,
                 ownerType: tx.owner_type || "me",
                 privacyScope: tx.privacy_scope || "full",
@@ -5043,6 +5540,13 @@ Deno.serve(async (req: Request) => {
               });
             }
 
+            if ((toolResult as any)?.error) {
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+
             // Call save-transactions-batch
             const batchPayload = {
               userId,
@@ -5060,7 +5564,7 @@ Deno.serve(async (req: Request) => {
               "save-transactions-batch",
               {
                 body: batchPayload,
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
 
@@ -5084,9 +5588,264 @@ Deno.serve(async (req: Request) => {
                 "[twilio-whatsapp-ai-bot] add_transactions_batch error",
                 { error, formatted },
               );
+              await reportTwilioToolInvokeFailure({
+                toolName: "add_transactions_batch",
+                targetFunction: "save-transactions-batch",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  count: batchTransactions.length,
+                  householdId,
+                  isPortfolio,
+                },
+              });
               toolResult = {
                 error: formatted || "Failed to save transactions",
               };
+            }
+          } else if (call.name === "list_wallets") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "list-wallets",
+              {
+                body: {
+                  userId,
+                  householdId,
+                  includeArchived: call.args.include_archived === true,
+                },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
+              },
+            );
+            const success = !error && data?.success === true;
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? [] };
+            } else {
+              const formatted =
+                formatInvokeError(error ?? data?.error) ||
+                "Failed to list wallets";
+              await reportTwilioToolInvokeFailure({
+                toolName: "list_wallets",
+                targetFunction: "list-wallets",
+                formatted,
+                error: error ?? data?.error,
+                context: { householdId },
+              });
+              toolResult = { error: formatted };
+            }
+          } else if (call.name === "create_wallet") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "save-wallet",
+              {
+                body: {
+                  userId,
+                  householdId,
+                  name: call.args.name,
+                  icon: call.args.icon,
+                  color: call.args.color,
+                  openingBalanceCents: Number.isFinite(
+                    call.args.opening_balance,
+                  )
+                    ? Math.round(Number(call.args.opening_balance) * 100)
+                    : undefined,
+                  goalAmountCents: Number.isFinite(call.args.goal_amount)
+                    ? Math.round(Number(call.args.goal_amount) * 100)
+                    : undefined,
+                  isDefault: call.args.is_default === true,
+                },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
+              },
+            );
+            const success = !error && data?.success === true;
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? data };
+            } else {
+              const formatted =
+                formatInvokeError(error ?? data?.error) ||
+                "Failed to create wallet";
+              await reportTwilioToolInvokeFailure({
+                toolName: "create_wallet",
+                targetFunction: "save-wallet",
+                formatted,
+                error: error ?? data?.error,
+                context: { householdId, name: call.args.name },
+              });
+              toolResult = { error: formatted };
+            }
+          } else if (call.name === "update_wallet") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const requestedWallet = await resolveRequestedAccountId(
+              call.args.wallet_name,
+              householdId,
+            );
+            if (requestedWallet.error || !requestedWallet.accountId) {
+              toolResult = {
+                error:
+                  requestedWallet.error ||
+                  "Wallet was not found in the selected scope.",
+              };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "update-wallet",
+              {
+                body: {
+                  userId,
+                  accountId: requestedWallet.accountId,
+                  name: call.args.new_name,
+                  icon: call.args.icon,
+                  color: call.args.color,
+                  goalAmountCents: Number.isFinite(call.args.goal_amount)
+                    ? Math.round(Number(call.args.goal_amount) * 100)
+                    : undefined,
+                  isDefault:
+                    typeof call.args.is_default === "boolean"
+                      ? call.args.is_default
+                      : undefined,
+                },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
+              },
+            );
+            const success = !error && data?.success === true;
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? data };
+            } else {
+              const formatted =
+                formatInvokeError(error ?? data?.error) ||
+                "Failed to update wallet";
+              await reportTwilioToolInvokeFailure({
+                toolName: "update_wallet",
+                targetFunction: "update-wallet",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  householdId,
+                  walletName: call.args.wallet_name,
+                },
+              });
+              toolResult = { error: formatted };
+            }
+          } else if (call.name === "create_wallet_transfer") {
+            let householdId = call.args.household_id as string | null;
+            const householdName = (
+              call.args.household_name ||
+              call.args.householdName ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+            let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+            if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+              spaceMeta = spaceMap.get(householdName);
+              householdId = spaceMeta?.id ?? null;
+            }
+            const fromWallet = await resolveRequestedAccountId(
+              call.args.from_wallet_name,
+              householdId,
+            );
+            const toWallet = await resolveRequestedAccountId(
+              call.args.to_wallet_name,
+              householdId,
+            );
+            if (fromWallet.error || !fromWallet.accountId) {
+              toolResult = {
+                error:
+                  fromWallet.error ||
+                  "Source wallet was not found in the selected scope.",
+              };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+            if (toWallet.error || !toWallet.accountId) {
+              toolResult = {
+                error:
+                  toWallet.error ||
+                  "Destination wallet was not found in the selected scope.",
+              };
+              toolResponses.push({
+                functionResponse: { name: call.name, response: toolResult },
+              });
+              continue;
+            }
+            const { data, error } = await supabase.functions.invoke(
+              "create-wallet-transfer",
+              {
+                body: {
+                  userId,
+                  fromAccountId: fromWallet.accountId,
+                  toAccountId: toWallet.accountId,
+                  amountCents: Math.round(Number(call.args.amount || 0) * 100),
+                  currency: call.args.currency || userCurrency,
+                  date: normalizeDateInput(
+                    call.args.date,
+                    formatDateInTimeZone(userTimezone),
+                  ),
+                  note: call.args.note,
+                },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
+              },
+            );
+            const success = !error && data?.success === true;
+            if (success) {
+              toolResult = { success: true, data: data?.data ?? data };
+            } else {
+              const formatted =
+                formatInvokeError(error ?? data?.error) ||
+                "Failed to create wallet transfer";
+              await reportTwilioToolInvokeFailure({
+                toolName: "create_wallet_transfer",
+                targetFunction: "create-wallet-transfer",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  householdId,
+                  fromWallet: call.args.from_wallet_name,
+                  toWallet: call.args.to_wallet_name,
+                  amount: call.args.amount,
+                },
+              });
+              toolResult = { error: formatted };
             }
           } else if (call.name === "update_transaction") {
             const updatesArgs =
@@ -5177,6 +5936,9 @@ Deno.serve(async (req: Request) => {
                     if ((updatesArgs as any).description != null) {
                       updates.raw_text = (updatesArgs as any).description;
                     }
+                    if ((updatesArgs as any).merchant !== undefined) {
+                      updates.merchant = (updatesArgs as any).merchant;
+                    }
                     if ((updatesArgs as any).currency != null) {
                       updates.currency = (updatesArgs as any).currency;
                     }
@@ -5237,7 +5999,7 @@ Deno.serve(async (req: Request) => {
                         .join(" | ")
                         .slice(0, 180);
 
-                      if (!EDGE_FUNCTION_KEY) {
+                      if (!INTERNAL_FUNCTION_KEY) {
                         console.error(
                           "[twilio-whatsapp-ai-bot] update-expense invoke skipped: missing internal key",
                           {
@@ -5251,9 +6013,9 @@ Deno.serve(async (req: Request) => {
                           "update-expense",
                           {
                             body: { userId, expenseId, updates },
-                            headers: {
-                              "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
-                            },
+                            headers: buildInternalInvokeHeaders(
+                              INTERNAL_FUNCTION_KEY,
+                            ),
                           },
                         );
                         const success = !error && data?.success === true;
@@ -5368,9 +6130,9 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: expenseId },
-                      headers: {
-                        "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(
+                        INTERNAL_FUNCTION_KEY,
+                      ),
                     },
                   );
                   const success = !error && data?.success === true;
@@ -5556,7 +6318,7 @@ Deno.serve(async (req: Request) => {
                   userId,
                   language,
                 },
-                headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
               },
             );
             const resolvedLanguage =
@@ -5721,6 +6483,10 @@ Deno.serve(async (req: Request) => {
                     name,
                   );
                   const newName = (call.args.new_name || "").toString().trim();
+                  const hasPercentageArg = Object.prototype.hasOwnProperty.call(
+                    call.args || {},
+                    "percentage",
+                  );
                   const pctInput = coerceNumber(call.args.percentage);
                   const rawCategories = normalizeCategories(
                     call.args.categories,
@@ -5748,24 +6514,43 @@ Deno.serve(async (req: Request) => {
                         "id, name, budget_percentage, budget_amount_cents",
                       )
                       .eq("budget_id", budgetRow.id);
-                    const existingPct = envelope?.budget_percentage;
-                    const desiredPctRaw =
-                      pctInput != null
-                        ? Math.max(0, Math.min(100, pctInput))
-                        : typeof existingPct === "number"
-                          ? existingPct
-                          : 0;
-                    const desiredPct = Number(desiredPctRaw.toFixed(4));
+                    const resolvedPercentage = resolvePocketPercentageForUpsert(
+                      {
+                        hasPercentageArg,
+                        providedPercentage: call.args.percentage,
+                        existingPercentage: envelope?.budget_percentage,
+                      },
+                    );
+                    if (
+                      resolvedPercentage.error ||
+                      resolvedPercentage.percentage == null
+                    ) {
+                      toolResult = {
+                        error:
+                          resolvedPercentage.error ||
+                          "Pocket percentage is required",
+                      };
+                      lastToolResult = toolResult;
+                      toolResponses.push({
+                        functionResponse: {
+                          name: call.name,
+                          response: toolResult,
+                        },
+                      });
+                      continue;
+                    }
+                    const desiredPct = Number(
+                      resolvedPercentage.percentage.toFixed(4),
+                    );
                     const others = (envelopes || [])
                       .filter((p: any) => p.id !== envelope?.id)
                       .map((p: any) => ({
                         id: p.id as string,
                         percentage: Number(p.budget_percentage) || 0,
                       }));
-                    const adjustedOthers =
-                      pctInput != null
-                        ? rebalancePocketPercentages(desiredPct, others)
-                        : {};
+                    const adjustedOthers = hasPercentageArg
+                      ? rebalancePocketPercentages(desiredPct, others)
+                      : {};
 
                     // Compute budget_amount_cents from percentage and total budget
                     const totalBudgetCents = budgetRow.total_budget_cents || 0;
@@ -5832,7 +6617,7 @@ Deno.serve(async (req: Request) => {
                         desiredAmountCents,
                       );
 
-                      if (pctInput != null) {
+                      if (hasPercentageArg) {
                         if (desiredPct >= 100 && others.length > 0) {
                           for (const other of others) {
                             await supabase
@@ -6014,6 +6799,7 @@ Deno.serve(async (req: Request) => {
                   date: dateStr,
                   description: call.args.description,
                   source: call.args.source,
+                  merchant: call.args.merchant,
                   ownerType: call.args.owner_type || "me",
                   privacyScope: call.args.privacy_scope || "full",
                   householdId,
@@ -6025,15 +6811,18 @@ Deno.serve(async (req: Request) => {
                   "save-income",
                   {
                     body: payload,
-                    headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                    headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                   },
                 );
                 const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save recurring income";
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
-                  : { error: error ?? data?.error };
+                  : { error: formatted };
                 if (!success) {
-                  const formatted = formatInvokeError(error ?? data?.error);
                   if (WHATSAPP_DEBUG) {
                     debugNotes.push(
                       `save-income (recurring add) error: ${formatted}`,
@@ -6043,6 +6832,19 @@ Deno.serve(async (req: Request) => {
                     "[twilio-whatsapp-ai-bot] save-income recurring add error",
                     { error, formatted },
                   );
+                  await reportTwilioToolInvokeFailure({
+                    toolName: "manage_recurring",
+                    targetFunction: "save-income",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      action,
+                      type,
+                      amount: call.args.amount,
+                      category: call.args.category,
+                      householdId,
+                    },
+                  });
                 }
               } else {
                 const isHouseholdExpense = !!householdId;
@@ -6062,6 +6864,7 @@ Deno.serve(async (req: Request) => {
                   currency: call.args.currency || userCurrency,
                   date: dateStr,
                   description: call.args.description,
+                  merchant: call.args.merchant,
                   householdId,
                   isPortfolio: spaceMeta?.isPortfolio ?? false,
                   payerUserId: splitConfig.payerUserId,
@@ -6075,15 +6878,18 @@ Deno.serve(async (req: Request) => {
                   "save-expense",
                   {
                     body: payload,
-                    headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                    headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
                   },
                 );
                 const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save recurring expense";
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
-                  : { error: error ?? data?.error };
+                  : { error: formatted };
                 if (!success) {
-                  const formatted = formatInvokeError(error ?? data?.error);
                   if (WHATSAPP_DEBUG) {
                     debugNotes.push(
                       `save-expense (recurring add) error: ${formatted}`,
@@ -6091,8 +6897,30 @@ Deno.serve(async (req: Request) => {
                   }
                   console.error(
                     "[twilio-whatsapp-ai-bot] save-expense recurring add error",
-                    { error, formatted },
+                    {
+                      error,
+                      formatted,
+                      internalAuth: {
+                        source: internalKeyMeta.source,
+                        fingerprint: fingerprintSecret(INTERNAL_FUNCTION_KEY),
+                        keyLength: INTERNAL_FUNCTION_KEY.length,
+                        httpStatus: getInvokeHttpStatus(error),
+                      },
+                    },
                   );
+                  await reportTwilioToolInvokeFailure({
+                    toolName: "manage_recurring",
+                    targetFunction: "save-expense",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      action,
+                      type,
+                      amount: call.args.amount,
+                      category: call.args.category,
+                      householdId,
+                    },
+                  });
                 }
               }
             } else if (action === "update") {
@@ -6199,6 +7027,9 @@ Deno.serve(async (req: Request) => {
                   if (call.args.description != null) {
                     updates.raw_text = call.args.description;
                   }
+                  if (call.args.merchant !== undefined) {
+                    updates.merchant = call.args.merchant;
+                  }
                   if (call.args.currency != null) {
                     updates.currency = call.args.currency;
                   }
@@ -6272,15 +7103,20 @@ Deno.serve(async (req: Request) => {
                       "update-expense",
                       {
                         body: requestBody,
-                        headers: { "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY },
+                        headers: buildInternalInvokeHeaders(
+                          INTERNAL_FUNCTION_KEY,
+                        ),
                       },
                     );
                     const success = !error && data?.success === true;
+                    const formatted = success
+                      ? ""
+                      : formatInvokeError(error ?? data?.error) ||
+                        "Failed to update expense";
                     toolResult = success
                       ? { success: true }
-                      : { error: error ?? data?.error };
+                      : { error: formatted };
                     if (!success) {
-                      const formatted = formatInvokeError(error ?? data?.error);
                       if (WHATSAPP_DEBUG) {
                         debugNotes.push(`update-expense error: ${formatted}`);
                       }
@@ -6288,6 +7124,16 @@ Deno.serve(async (req: Request) => {
                         "[twilio-whatsapp-ai-bot] update-expense error",
                         { error, formatted },
                       );
+                      await reportTwilioToolInvokeFailure({
+                        toolName: "update_transaction",
+                        targetFunction: "update-expense",
+                        formatted,
+                        error: error ?? data?.error,
+                        context: {
+                          expenseId: resolvedExpenseId,
+                          updateKeys: Object.keys(updates),
+                        },
+                      });
                     }
                   }
                 }
@@ -6328,17 +7174,20 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: expenseId },
-                      headers: {
-                        "X-Moneko-Internal-Key": EDGE_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(
+                        INTERNAL_FUNCTION_KEY,
+                      ),
                     },
                   );
                   const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to delete expense";
                   toolResult = success
                     ? { success: true }
-                    : { error: error ?? data?.error };
+                    : { error: formatted };
                   if (!success) {
-                    const formatted = formatInvokeError(error ?? data?.error);
                     if (WHATSAPP_DEBUG) {
                       debugNotes.push(`delete-expense error: ${formatted}`);
                     }
@@ -6349,6 +7198,13 @@ Deno.serve(async (req: Request) => {
                         formatted,
                       },
                     );
+                    await reportTwilioToolInvokeFailure({
+                      toolName: "delete_transaction",
+                      targetFunction: "delete-expense",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: { expenseId },
+                    });
                   }
                 }
               }
@@ -6403,6 +7259,12 @@ Deno.serve(async (req: Request) => {
 
         lastToolResult = toolResult;
         lastToolCallName = typeof call?.name === "string" ? call.name : null;
+        // Promote chart URLs from tool payloads so media still attaches when
+        // the model follows instructions and does not echo the URL in text.
+        const chartFromTool = extractChartMediaUrlFromToolResult(toolResult);
+        if (chartFromTool) {
+          lastGeneratedChartUrl = chartFromTool;
+        }
 
         const succeeded = (toolResult as any)?.success === true;
         if (succeeded) {
@@ -6436,17 +7298,13 @@ Deno.serve(async (req: Request) => {
             logPrefix: "twilio-whatsapp-ai-bot",
             fallbackModelName: FALLBACK_MODEL_NAME,
             fallbackChatFactory: (modelName, history) => {
-              const fallbackModel = genAI.getGenerativeModel(
-                {
-                  model: modelName,
-                  systemInstruction: whatsappSystemInstruction,
-                },
-                { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-              );
-              return fallbackModel.startChat({
+              return createVertexBotChatSession({
+                modelName,
+                systemInstruction: whatsappSystemInstruction,
                 history,
                 tools: [{ function_declarations: tools }] as any,
-              }) as any;
+                vertexConfig,
+              });
             },
             onChatSwitched: (chatSession) => {
               activeChat = chatSession as any;
@@ -6464,6 +7322,16 @@ Deno.serve(async (req: Request) => {
           "[twilio-whatsapp-ai-bot] Failed to get final AI response:",
           e,
         );
+        await reportVertexAiFailure({
+          functionName: "twilio-whatsapp-ai-bot",
+          error: e,
+          phase: "final_ai_response",
+          modelName: MODEL_NAME,
+          context: {
+            toolIterations,
+            lastToolCalls: functionCalls?.length || 0,
+          },
+        });
         finalResponseText = isRetryableGeminiError(e)
           ? buildGeminiHighDemandMessage(userLang)
           : buildProcessingFailureMessage(userLang);
@@ -6481,6 +7349,15 @@ Deno.serve(async (req: Request) => {
       lastBudgetPockets
     ) {
       finalResponseText = buildBudgetDoneText(lastBudgetPockets);
+    }
+    if (
+      typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
+      "string"
+    ) {
+      finalResponseText = buildMutationFailureText(
+        lastToolCallName,
+        lastToolResult,
+      )!;
     }
     if (
       (!finalResponseText || !finalResponseText.trim()) &&
@@ -6559,23 +7436,72 @@ Deno.serve(async (req: Request) => {
   ): Promise<Response> => {
     const { bodyToSend, persistedContent, immediateText, mediaUrl } = computed;
 
-    if (deliveryMode === "api") {
-      const sendResult = mediaUrl
-        ? await sendWhatsAppMessage(
-            twilioAccountSid,
-            twilioAuthToken,
-            to,
-            from,
-            bodyToSend,
-            mediaUrl,
-          )
-        : await sendWhatsAppMessageInChunks(
-            twilioAccountSid,
-            twilioAuthToken,
-            to,
-            from,
-            bodyToSend,
+    if (mediaUrl) {
+      // Always deliver media through the Twilio Messages API path so we can
+      // observe send failures and apply a deterministic fallback/idempotency state.
+      const mediaBody = truncateTextByCodePoints(
+        bodyToSend || immediateText,
+        Math.min(WHATSAPP_CHUNK_TARGET_CHARS, 1500),
+      );
+      const sendResult = await sendWhatsAppMessage(
+        twilioAccountSid,
+        twilioAuthToken,
+        to,
+        from,
+        mediaBody,
+        mediaUrl,
+      );
+
+      if (!sendResult.success) {
+        console.error(
+          "[twilio-whatsapp-ai-bot] Failed to send media WhatsApp message:",
+          { error: sendResult.error, deliveryMode },
+        );
+        const fallbackResult = await sendWhatsAppMessage(
+          twilioAccountSid,
+          twilioAuthToken,
+          to,
+          from,
+          DELIVERY_FAILURE_MESSAGE,
+        );
+        if (!fallbackResult.success) {
+          console.error(
+            "[twilio-whatsapp-ai-bot] Failed to send fallback WhatsApp message:",
+            fallbackResult.error,
           );
+        }
+        if (idempotencyKey) {
+          await updateTwilioIdempotency(supabase, idempotencyKey, {
+            status: "failed",
+            delivery: "api",
+            response_text: persistedContent,
+            media_url: mediaUrl || undefined,
+            error: sendResult.error || "unknown",
+          });
+        }
+        return xmlResponse(buildTwimlMessage(null));
+      }
+
+      if (idempotencyKey) {
+        await updateTwilioIdempotency(supabase, idempotencyKey, {
+          status: "done",
+          delivery: "api",
+          response_text: persistedContent,
+          media_url: mediaUrl || undefined,
+        });
+      }
+
+      return xmlResponse(buildTwimlMessage(null));
+    }
+
+    if (deliveryMode === "api") {
+      const sendResult = await sendWhatsAppMessageInChunks(
+        twilioAccountSid,
+        twilioAuthToken,
+        to,
+        from,
+        bodyToSend,
+      );
       if (!sendResult.success) {
         console.error(
           "[twilio-whatsapp-ai-bot] Failed to send WhatsApp message:",
@@ -6621,47 +7547,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (Array.from(immediateText).length > WHATSAPP_CHUNK_TARGET_CHARS) {
-      // If a chart is attached, enforce single-message delivery.
-      if (mediaUrl) {
-        const clipped = truncateTextByCodePoints(
-          immediateText,
-          WHATSAPP_CHUNK_TARGET_CHARS,
-        );
-        const sendResult = await sendWhatsAppMessage(
-          twilioAccountSid,
-          twilioAuthToken,
-          to,
-          from,
-          clipped,
-          mediaUrl,
-        );
-        if (!sendResult.success) {
-          console.error(
-            "[twilio-whatsapp-ai-bot] Failed to send media TwiML response via API:",
-            { error: sendResult.error },
-          );
-          if (idempotencyKey) {
-            await updateTwilioIdempotency(supabase, idempotencyKey, {
-              status: "failed",
-              delivery: "api",
-              response_text: persistedContent,
-              media_url: mediaUrl || undefined,
-              error: sendResult.error || "unknown",
-            });
-          }
-          return xmlResponse(buildTwimlMessage(null));
-        }
-        if (idempotencyKey) {
-          await updateTwilioIdempotency(supabase, idempotencyKey, {
-            status: "done",
-            delivery: "api",
-            response_text: persistedContent,
-            media_url: mediaUrl || undefined,
-          });
-        }
-        return xmlResponse(buildTwimlMessage(null));
-      }
-
       const sendResult = await sendWhatsAppMessageInChunks(
         twilioAccountSid,
         twilioAuthToken,

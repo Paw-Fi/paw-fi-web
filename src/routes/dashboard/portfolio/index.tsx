@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState, useMemo,useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DraggableDashboard } from "@/components/profile/DraggableDashboard";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -41,9 +41,12 @@ export const Route = createFileRoute("/dashboard/portfolio/")({
   component: Profile,
   head: () => {
     const canonicalUrl = getCanonicalUrl("/dashboard/portfolio");
-    const title = "Portfolio Dashboard - Real-Time Wealth & Health Tracking | Moneko";
-    const description = "Monitor complete financial picture with customizable dashboards. Track investments, assets & financial health with AI insights.";
-    const keywords = "financial portfolio dashboard, investment tracking, asset management, financial health monitoring, wealth tracking, portfolio analytics, financial dashboard, retirement planning, investment portfolio";
+    const title =
+      "Portfolio Dashboard - Real-Time Wealth & Health Tracking | Moneko";
+    const description =
+      "Monitor complete financial picture with customizable dashboards. Track investments, assets & financial health with AI insights.";
+    const keywords =
+      "financial portfolio dashboard, investment tracking, asset management, financial health monitoring, wealth tracking, portfolio analytics, financial dashboard, retirement planning, investment portfolio";
     const imageUrl = "https://moneko.io/og-img.png";
 
     const meta = seo({
@@ -54,202 +57,6 @@ export const Route = createFileRoute("/dashboard/portfolio/")({
       url: canonicalUrl,
     });
 
-    // Comprehensive structured data for portfolio platform
-    const structuredData = {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebApplication",
-          "@id": `${canonicalUrl}#webapp`,
-          "name": "Moneko Portfolio Dashboard",
-          "description": "Comprehensive financial portfolio tracking and management platform with customizable dashboards and real-time analytics",
-          "url": canonicalUrl,
-          "applicationCategory": "FinanceApplication",
-          "operatingSystem": "Web Browser",
-          "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD",
-            "availability": "https://schema.org/InStock",
-            "validFrom": "2024-01-01"
-          },
-          "featureList": [
-            "Customizable Portfolio Dashboards",
-            "Real-time Financial Health Scoring",
-            "Investment Performance Tracking",
-            "Asset and Liability Management",
-            "Goal Progress Monitoring",
-            "Risk Assessment Analytics",
-            "Financial Wellness Insights",
-            "Multi-view Portfolio Management",
-            "Drag-and-Drop Widget Configuration",
-            "Automated Financial Health Reports"
-          ],
-          "screenshot": "https://moneko.io/og-img.png",
-          "softwareVersion": "2.0",
-          "applicationSubCategory": "Portfolio Management",
-          "audience": {
-            "@type": "Audience",
-            "audienceType": ["Investors", "Savers", "Retirees", "Young Professionals", "Financial Planners"]
-          }
-        },
-        {
-          "@type": "Service",
-          "@id": `${canonicalUrl}#service`,
-          "name": "Personal Portfolio Management",
-          "description": "Comprehensive financial portfolio tracking service with customizable dashboards and real-time analytics",
-          "provider": {
-            "@type": "Organization",
-            "@id": "https://moneko.io#organization",
-            "name": "Moneko",
-            "description": "AI-powered personal finance platform providing portfolio tracking, education, and financial planning tools",
-            "url": "https://moneko.io",
-            "logo": "https://moneko.io/og-img.png"
-          },
-          "serviceType": "Financial Portfolio Management",
-          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
-          "audience": {
-            "@type": "Audience",
-            "audienceType": ["Individual Investors", "Retirement Planners", "Wealth Builders"]
-          },
-          "hasOfferingCatalog": {
-            "@type": "OfferingCatalog",
-            "name": "Portfolio Management Features",
-            "itemListElement": [
-              {
-                "@type": "Service",
-                "name": "Financial Health Scoring",
-                "description": "AI-calculated comprehensive financial wellness score based on multiple factors"
-              },
-              {
-                "@type": "Service", 
-                "name": "Investment Tracking",
-                "description": "Real-time monitoring of investment performance and portfolio allocation"
-              },
-              {
-                "@type": "Service",
-                "name": "Goal Management",
-                "description": "Track progress toward financial goals with visual progress indicators"
-              }
-            ]
-          }
-        },
-        {
-          "@type": "Organization",
-          "@id": "https://moneko.io#organization",
-          "name": "Moneko",
-          "alternateName": "Moneko Financial Platform",
-          "description": "Leading AI-powered personal finance platform providing comprehensive portfolio tracking, financial education, and wealth building tools",
-          "url": "https://moneko.io",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://moneko.io/og-img.png",
-            "width": "1200",
-            "height": "630"
-          },
-          "image": "https://moneko.io/og-img.png",
-          "foundingDate": "2024",
-          "areaServed": ["United States", "Canada", "United Kingdom", "Australia"],
-          "contactPoint": {
-            "@type": "ContactPoint",
-            "contactType": "customer support",
-            "email": "support@moneko.io",
-            "availableLanguage": "English"
-          },
-          "sameAs": [
-            "https://x.com/moneko_ai",
-            "https://linkedin.com/company/moneko-ai"
-          ]
-        },
-        {
-          "@type": "ItemList",
-          "@id": `${canonicalUrl}#features`,
-          "name": "Portfolio Dashboard Features",
-          "description": "Comprehensive features of Moneko's financial portfolio management platform",
-          "itemListElement": [
-            {
-              "@type": "ListItem",
-              "position": 1,
-              "item": {
-                "@type": "Service",
-                "name": "Customizable Dashboards",
-                "description": "Create multiple portfolio views tailored to different financial goals and strategies"
-              }
-            },
-            {
-              "@type": "ListItem",
-              "position": 2,
-              "item": {
-                "@type": "Service",
-                "name": "Financial Health Score",
-                "description": "AI-powered comprehensive scoring based on assets, liabilities, income, and financial habits"
-              }
-            },
-            {
-              "@type": "ListItem",
-              "position": 3,
-              "item": {
-                "@type": "Service",
-                "name": "Real-time Analytics",
-                "description": "Live tracking of portfolio performance, asset allocation, and investment returns"
-              }
-            },
-            {
-              "@type": "ListItem",
-              "position": 4,
-              "item": {
-                "@type": "Service",
-                "name": "Goal Tracking",
-                "description": "Visual progress monitoring for retirement, savings, investment, and debt payoff goals"
-              }
-            },
-            {
-              "@type": "ListItem",
-              "position": 5,
-              "item": {
-                "@type": "Service",
-                "name": "Risk Assessment",
-                "description": "Comprehensive portfolio risk analysis with diversification recommendations"
-              }
-            },
-            {
-              "@type": "ListItem",
-              "position": 6,
-              "item": {
-                "@type": "Service",
-                "name": "Wealth Tracking",
-                "description": "Complete net worth monitoring with asset and liability categorization"
-              }
-            }
-          ]
-        },
-        {
-          "@type": "BreadcrumbList",
-          "@id": `${canonicalUrl}#breadcrumb`,
-          "itemListElement": [
-            {
-              "@type": "ListItem",
-              "position": 1,
-              "name": "Dashboard",
-              "item": {
-                "@type": "WebPage",
-                "@id": "https://moneko.io/dashboard"
-              }
-            },
-            {
-              "@type": "ListItem",
-              "position": 2,
-              "name": "Portfolio",
-              "item": {
-                "@type": "WebPage",
-                "@id": canonicalUrl
-              }
-            }
-          ]
-        }
-      ]
-    };
-
     return {
       meta,
       links: [
@@ -258,12 +65,6 @@ export const Route = createFileRoute("/dashboard/portfolio/")({
           href: canonicalUrl,
         },
       ],
-      script: [
-        {
-          type: "application/ld+json",
-          children: JSON.stringify(structuredData)
-        }
-      ]
     };
   },
 });
@@ -312,7 +113,6 @@ function Profile() {
     loadDashboardView,
   } = useDashboard(user?.id);
 
-
   // Load saved dashboard configuration on initial render
   useEffect(() => {
     if (user && status === "idle") {
@@ -326,14 +126,11 @@ function Profile() {
     }
   }, [user, loadDashboard, status, getCookie, views, loadDashboardView]);
 
- // Load templates if we need to show the template selection UI
+  // Load templates if we need to show the template selection UI
   useEffect(() => {
-    if (
-      (status === "no_views") &&
-      templatesStatus === "idle"
-    ) {
+    if (status === "no_views" && templatesStatus === "idle") {
       dispatch(fetchDashboardTemplates());
-     // setIsTemplateModalOpen(true);
+      // setIsTemplateModalOpen(true);
     }
   }, [status, templatesStatus, dispatch]);
 
@@ -409,15 +206,18 @@ function Profile() {
 
     try {
       let result;
-      
+
       // Handle empty dashboard creation
       if (selectedTemplate === "empty") {
         // Use the quiz dashboard hook to create an empty dashboard
         const quizDashboard = useQuizDashboard();
-        
+
         // Create a dashboard with an empty widget list
-        const viewId = await quizDashboard.createDashboardFromQuiz(newViewName.trim(), []);
-        
+        const viewId = await quizDashboard.createDashboardFromQuiz(
+          newViewName.trim(),
+          [],
+        );
+
         if (viewId) {
           result = { view: { id: viewId } };
         } else {
@@ -492,7 +292,6 @@ function Profile() {
   const handleHealthQuizCompleted = () => {
     setShowFinancialHealthQuiz(false);
     loadDashboard();
-
   };
 
   return (
@@ -501,7 +300,7 @@ function Profile() {
         // Show loading spinner if user is not loaded yet
         !user ? (
           <div className="flex h-screen items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+            <div className="border-primary h-8 w-8 animate-spin rounded-full border-t-2 border-b-2"></div>
           </div>
         ) : status === "no_views" ? (
           <div className="flex h-full w-full items-center justify-center px-4 py-12">
@@ -517,13 +316,13 @@ function Profile() {
             <div className="text-gray-600">{error}</div>
             <button
               onClick={loadDashboard}
-              className="hover:bg-primary-dark mt-4 rounded-md bg-primary px-4 py-2 text-white"
+              className="hover:bg-primary-dark bg-primary mt-4 rounded-md px-4 py-2 text-white"
             >
               Try Again
             </button>
           </div>
         ) : (
-          <div className="flex px-0 sm:px-6 lg:px-8 py-6">
+          <div className="flex px-0 py-6 sm:px-6 lg:px-8">
             <main className="mx-auto flex w-full flex-col gap-6 sm:gap-8">
               {/* Header with user info and controls */}
               {status === "loading" ? (
@@ -531,17 +330,17 @@ function Profile() {
               ) : (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <h1 className="text-xl lg:text-xl xl:text-2xl font-bold text-gray-800 dark:text-gray-200" >
+                    <h1 className="text-xl font-bold text-gray-800 lg:text-xl xl:text-2xl dark:text-gray-200">
                       Portfolio
                     </h1>
-                  
+
                     {/* View selector dropdown - always visible */}
                     <div className="relative ml-4">
                       <button
                         onClick={() =>
                           setIsViewDropdownOpen(!isViewDropdownOpen)
                         }
-                        className="flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 sm:px-4 py-2 sm:py-1.5 text-sm lg:text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 touch-manipulation min-h-[44px]"
+                        className="focus:ring-primary flex min-h-[44px] touch-manipulation items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:ring-2 focus:ring-offset-2 focus:outline-none sm:px-4 sm:py-1.5 lg:text-sm"
                         disabled={isEditMode}
                       >
                         <span className="mr-2 text-sm lg:text-sm">
@@ -559,7 +358,7 @@ function Profile() {
                       </button>
 
                       {isViewDropdownOpen && (
-                        <div className="absolute left-0 z-10 mt-1 w-56 sm:w-64 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                        <div className="ring-opacity-5 absolute left-0 z-10 mt-1 w-56 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black focus:outline-none sm:w-64">
                           <div className="py-1">
                             {views.length > 0 ? (
                               <>
@@ -567,7 +366,7 @@ function Profile() {
                                   <button
                                     key={view.id}
                                     onClick={() => handleSwitchView(view.id)}
-                                    className={`block w-full px-4 py-2 text-left text-sm lg:text-sm min-h-[44px] touch-manipulation ${view.id === currentViewId ? "bg-gray-100 text-gray-900" : "text-gray-700 hover:bg-gray-50"}`}
+                                    className={`block min-h-[44px] w-full touch-manipulation px-4 py-2 text-left text-sm lg:text-sm ${view.id === currentViewId ? "bg-gray-100 text-gray-900" : "text-gray-700 hover:bg-gray-50"}`}
                                   >
                                     {view.name}
                                   </button>
@@ -575,7 +374,7 @@ function Profile() {
                                 <div className="my-1 border-t border-gray-200"></div>
                               </>
                             ) : (
-                              <div className="px-4 py-2 text-sm lg:text-sm italic text-gray-500">
+                              <div className="px-4 py-2 text-sm text-gray-500 italic lg:text-sm">
                                 No portfolio views yet
                               </div>
                             )}
@@ -584,7 +383,7 @@ function Profile() {
                                 setIsViewDropdownOpen(false);
                                 setIsTemplateModalOpen(true);
                               }}
-                              className="block w-full px-4 py-2 text-left text-sm lg:text-sm font-medium text-primary hover:bg-gray-50 min-h-[44px] touch-manipulation"
+                              className="text-primary block min-h-[44px] w-full touch-manipulation px-4 py-2 text-left text-sm font-medium hover:bg-gray-50 lg:text-sm"
                             >
                               <FontAwesomeIcon icon={faPlus} className="mr-2" />
                               Create New View
@@ -598,7 +397,7 @@ function Profile() {
                   {/* User controls */}
                   <div className="flex items-center space-x-2">
                     {saveSuccess && (
-                      <span className="mr-2 rounded-full bg-green-50 px-3 py-1 text-sm lg:text-sm text-green-600">
+                      <span className="mr-2 rounded-full bg-green-50 px-3 py-1 text-sm text-green-600 lg:text-sm">
                         Portfolio saved!
                       </span>
                     )}
@@ -606,13 +405,13 @@ function Profile() {
                     {isEditMode ? (
                       <>
                         {hasUnsavedChanges && (
-                          <span className="mr-2 rounded-full bg-amber-50 px-3 py-1 text-sm lg:text-sm text-amber-600">
+                          <span className="mr-2 rounded-full bg-amber-50 px-3 py-1 text-sm text-amber-600 lg:text-sm">
                             Unsaved changes
                           </span>
                         )}
                         <button
                           onClick={handleCancelClick}
-                          className="flex items-center justify-center rounded-md px-4 py-2 sm:px-3 sm:py-1.5 text-sm lg:text-sm text-gray-700 hover:bg-gray-100 touch-manipulation min-h-[44px]"
+                          className="flex min-h-[44px] touch-manipulation items-center justify-center rounded-md px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 sm:px-3 sm:py-1.5 lg:text-sm"
                           title="Cancel editing"
                         >
                           <FontAwesomeIcon
@@ -624,13 +423,15 @@ function Profile() {
                         <button
                           onClick={saveDashboard}
                           disabled={isSaving}
-                          className="hover:bg-primary-dark flex items-center justify-center rounded-md bg-primary px-4 py-2 sm:px-3 sm:py-1.5 text-sm lg:text-sm text-white transition-colors touch-manipulation min-h-[44px]"
+                          className="hover:bg-primary-dark bg-primary flex min-h-[44px] touch-manipulation items-center justify-center rounded-md px-4 py-2 text-sm text-white transition-colors sm:px-3 sm:py-1.5 lg:text-sm"
                           title="Save portfolio"
                         >
                           {isSaving ? (
                             <>
-                              <div className="mr-1 h-4 w-4 animate-spin rounded-full border-b-2 border-t-2 border-white" />
-                              <span className="text-sm lg:text-sm">Saving...</span>
+                              <div className="mr-1 h-4 w-4 animate-spin rounded-full border-t-2 border-b-2 border-white" />
+                              <span className="text-sm lg:text-sm">
+                                Saving...
+                              </span>
                             </>
                           ) : (
                             <>
@@ -645,16 +446,24 @@ function Profile() {
                       </>
                     ) : (
                       <div className="flex items-center space-x-2">
-                         <button
-                      onClick={() => setShowFinetuneSection(!showFinetuneSection)}
-                      className="flex items-center justify-center text-sm lg:text-sm font-medium text-gray-700 min-h-[44px] min-w-[44px] touch-manipulation"
-                      title="Finetune your financial data"
-                    >
-                      <FontAwesomeIcon icon={faSlidersH} className={classNames("mr-2 h-4 w-4", showFinetuneSection && "text-primary")} />
-                    </button>
+                        <button
+                          onClick={() =>
+                            setShowFinetuneSection(!showFinetuneSection)
+                          }
+                          className="flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center text-sm font-medium text-gray-700 lg:text-sm"
+                          title="Finetune your financial data"
+                        >
+                          <FontAwesomeIcon
+                            icon={faSlidersH}
+                            className={classNames(
+                              "mr-2 h-4 w-4",
+                              showFinetuneSection && "text-primary",
+                            )}
+                          />
+                        </button>
                         <button
                           onClick={toggleEditMode}
-                          className="flex items-center justify-center rounded-full p-3 sm:p-2 hover:bg-gray-100 touch-manipulation min-h-[44px] min-w-[44px]"
+                          className="flex min-h-[44px] min-w-[44px] touch-manipulation items-center justify-center rounded-full p-3 hover:bg-gray-100 sm:p-2"
                           title="Edit portfolio"
                         >
                           <FontAwesomeIcon
@@ -687,19 +496,19 @@ function Profile() {
                   );
                 } else if (status === ("failed" as DashboardStatus)) {
                   return (
-                    <div className="mt-4 rounded-lg bg-red-50 p-4 sm:p-6 text-center">
-                      <p className="mb-2 text-sm lg:text-sm text-red-600">
+                    <div className="mt-4 rounded-lg bg-red-50 p-4 text-center sm:p-6">
+                      <p className="mb-2 text-sm text-red-600 lg:text-sm">
                         {error || "Failed to load portfolio"}
                       </p>
                       <button
                         onClick={loadDashboard}
-                        className="rounded-md bg-red-100 px-4 py-2 text-sm lg:text-sm text-red-700 transition-colors hover:bg-red-200 min-h-[44px] touch-manipulation"
+                        className="min-h-[44px] touch-manipulation rounded-md bg-red-100 px-4 py-2 text-sm text-red-700 transition-colors hover:bg-red-200 lg:text-sm"
                       >
                         Retry
                       </button>
                     </div>
                   );
-                } else 
+                } else
                   return (
                     <DraggableDashboard
                       widgets={Array.isArray(data) ? data : []}
@@ -723,7 +532,6 @@ function Profile() {
         confirmText="Discard Changes"
         cancelText="Continue Editing"
       />
-    
 
       {/* Click outside handler for view dropdown */}
       {isViewDropdownOpen && (
@@ -738,11 +546,13 @@ function Profile() {
       <Modal
         isOpen={isTemplateModalOpen}
         onClose={() => setIsTemplateModalOpen(false)}
-        title={views.length === 0
-          ? "Create Your First Portfolio"
-          : "Create New Portfolio View"}
+        title={
+          views.length === 0
+            ? "Create Your First Portfolio"
+            : "Create New Portfolio View"
+        }
         footer={() => (
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
             <button
               type="button"
               onClick={handleCreateView}
@@ -757,7 +567,7 @@ function Profile() {
             >
               {isCreatingView ? (
                 <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-t-2 border-white"></div>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
                   Creating...
                 </>
               ) : (
@@ -767,7 +577,7 @@ function Profile() {
             {views.length > 0 && (
               <button
                 type="button"
-                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 sm:mt-0 sm:w-auto"
                 onClick={() => setIsTemplateModalOpen(false)}
               >
                 Cancel
@@ -780,12 +590,14 @@ function Profile() {
         <div className="inline-block transform overflow-hidden bg-white text-left align-bottom transition-all">
           <div className="">
             <div className="sm:flex sm:items-start">
-              <div className="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">               
+              <div className="mt-3 w-full text-center sm:mt-0 sm:ml-4 sm:text-left">
                 <div className="mt-4">
                   {templatesStatus === "loading" && templates.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8">
-                      <div className="mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
-                      <p className="text-sm lg:text-sm text-gray-600">Loading templates...</p>
+                      <div className="border-primary mb-4 h-8 w-8 animate-spin rounded-full border-t-2 border-b-2"></div>
+                      <p className="text-sm text-gray-600 lg:text-sm">
+                        Loading templates...
+                      </p>
                     </div>
                   ) : templatesStatus === "failed" ? (
                     <div className="flex flex-col items-center justify-center py-8">
@@ -795,13 +607,13 @@ function Profile() {
                           className="h-6 w-6"
                         />
                       </div>
-                      <p className="mb-4 text-center text-sm lg:text-sm text-red-500">
+                      <p className="mb-4 text-center text-sm text-red-500 lg:text-sm">
                         {templatesError || "Failed to load templates"}
                       </p>
                       <div className="flex space-x-4">
                         <button
                           onClick={handleRetryTemplates}
-                          className="flex items-center rounded-md bg-gray-200 px-4 py-2 text-sm lg:text-sm text-gray-700 hover:bg-gray-300 min-h-[44px] touch-manipulation"
+                          className="flex min-h-[44px] touch-manipulation items-center rounded-md bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300 lg:text-sm"
                         >
                           <FontAwesomeIcon
                             icon={faRefresh}
@@ -811,7 +623,7 @@ function Profile() {
                         </button>
                         <button
                           onClick={() => dispatch(setDefaultTemplates())}
-                          className="hover:bg-primary-dark flex items-center rounded-md bg-primary px-4 py-2 text-white"
+                          className="hover:bg-primary-dark bg-primary flex items-center rounded-md px-4 py-2 text-white"
                         >
                           Use Default Templates
                         </button>
@@ -824,14 +636,14 @@ function Profile() {
                       </p>
                       <button
                         onClick={() => dispatch(setDefaultTemplates())}
-                        className="hover:bg-primary-dark flex items-center rounded-md bg-primary px-4 py-2 text-white"
+                        className="hover:bg-primary-dark bg-primary flex items-center rounded-md px-4 py-2 text-white"
                       >
                         Use Default Templates
                       </button>
                     </div>
                   ) : (
-                    <>                 
-                      <div className="mb-6 grid gap-4 md:grid-cols-2">                      
+                    <>
+                      <div className="mb-6 grid gap-4 md:grid-cols-2">
                         {/* Template Options */}
                         {templates.map((template) => (
                           <div
@@ -856,15 +668,17 @@ function Profile() {
                                   className="h-5 w-5"
                                 />
                               </div>
-                              <h4 className="text-base lg:text-sm xl:text-base font-medium">{template.name}</h4>
+                              <h4 className="text-base font-medium lg:text-sm xl:text-base">
+                                {template.name}
+                              </h4>
                             </div>
-                            <p className="text-sm lg:text-xs xl:text-sm text-gray-600">
+                            <p className="text-sm text-gray-600 lg:text-xs xl:text-sm">
                               {template.description}
                             </p>
                           </div>
                         ))}
-                          {/* Empty Dashboard Option */}
-                          <div
+                        {/* Empty Dashboard Option */}
+                        <div
                           key="empty-dashboard"
                           className={`cursor-pointer rounded-lg border p-4 transition-all ${
                             selectedTemplate === "empty"
@@ -886,9 +700,11 @@ function Profile() {
                                 className="h-5 w-5"
                               />
                             </div>
-                            <h4 className="text-base lg:text-sm xl:text-base font-medium">Empty Portfolio</h4>
+                            <h4 className="text-base font-medium lg:text-sm xl:text-base">
+                              Empty Portfolio
+                            </h4>
                           </div>
-                          <p className="text-sm lg:text-xs xl:text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 lg:text-xs xl:text-sm">
                             Start with a blank portfolio and add widgets later
                           </p>
                         </div>
@@ -897,14 +713,14 @@ function Profile() {
                       <div className="mb-4">
                         <label
                           htmlFor="viewName"
-                          className="mb-1 block text-sm lg:text-sm font-medium text-gray-700"
+                          className="mb-1 block text-sm font-medium text-gray-700 lg:text-sm"
                         >
                           Portfolio Name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           id="viewName"
-                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm lg:text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary min-h-[44px] touch-manipulation"
+                          className="focus:border-primary focus:ring-primary min-h-[44px] w-full touch-manipulation rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:outline-none lg:text-sm"
                           value={newViewName}
                           onChange={(e) => setNewViewName(e.target.value)}
                           placeholder="My Financial Portfolio"
@@ -918,9 +734,6 @@ function Profile() {
           </div>
         </div>
       </Modal>
-
     </ProtectedRouteSubscription>
   );
 }
-
-export default Profile;

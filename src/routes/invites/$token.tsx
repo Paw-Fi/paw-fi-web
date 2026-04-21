@@ -1,152 +1,150 @@
-import { useEffect, useState, useRef } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { motion } from 'framer-motion'
-import { Clock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/auth-context'
-import { toast } from 'react-toastify'
-import { AppleDownloadButton } from '@/components/ui/apple-download-button'
-import { AndroidDownloadButton } from '@/components/ui/android-download-button'
+import { useEffect, useState, useRef } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { motion } from "framer-motion";
+import { Clock } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/auth-context";
+import { toast } from "react-toastify";
+import { AppleDownloadButton } from "@/components/ui/apple-download-button";
+import { AndroidDownloadButton } from "@/components/ui/android-download-button";
 
-export const Route = createFileRoute('/invites/$token')({
+export const Route = createFileRoute("/invites/$token")({
   component: InvitePage,
-})
+});
 
 interface InviteData {
   household: {
-    id: string
-    name: string
-    emoji: string | null
-  }
+    id: string;
+    name: string;
+    emoji: string | null;
+  };
   inviter: {
-    full_name: string
-    avatar_url: string | null
-  }
+    full_name: string;
+    avatar_url: string | null;
+  };
   invite: {
-    personal_message: string | null
-  }
+    personal_message: string | null;
+  };
 }
 
 function InvitePage() {
-  const { token } = Route.useParams()
-  const navigate = useNavigate()
-  const { user, isLoading: authLoading } = useAuth()
+  const { token } = Route.useParams();
+  const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
 
-  const [inviteData, setInviteData] = useState<InviteData | null>(null)
-  const [isValidating, setIsValidating] = useState(true)
-  const [isAccepting, setIsAccepting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isAccepted, setIsAccepted] = useState(false)
-  const [showTimeout, setShowTimeout] = useState(false)
-  const [attemptedAppOpen, setAttemptedAppOpen] = useState(false)
-  const [isMobileDevice, setIsMobileDevice] = useState(false)
+  const [inviteData, setInviteData] = useState<InviteData | null>(null);
+  const [isValidating, setIsValidating] = useState(true);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isAccepted, setIsAccepted] = useState(false);
+  const [showTimeout, setShowTimeout] = useState(false);
+  const [attemptedAppOpen, setAttemptedAppOpen] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   // Ref to prevent multiple validation calls
-  const hasValidatedRef = useRef(false)
-  const appOpenAttemptedRef = useRef(false)
+  const hasValidatedRef = useRef(false);
+  const appOpenAttemptedRef = useRef(false);
 
   // Detect if user is on mobile device
   useEffect(() => {
     const checkMobile = () => {
-      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera
-      const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
-        userAgent.toLowerCase()
-      )
-      setIsMobileDevice(isMobile)
-    }
-    checkMobile()
-  }, [])
+      const userAgent =
+        navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isMobile =
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+          userAgent.toLowerCase(),
+        );
+      setIsMobileDevice(isMobile);
+    };
+    checkMobile();
+  }, []);
 
   // Try to open app automatically if on mobile BEFORE auth check
   useEffect(() => {
     // Only attempt once, only on mobile, regardless of auth status
-    if (
-      !appOpenAttemptedRef.current &&
-      isMobileDevice
-    ) {
-      appOpenAttemptedRef.current = true
-      console.log('[InvitePage] Mobile detected, attempting to open app first (before auth check)')
-      tryOpenApp()
+    if (!appOpenAttemptedRef.current && isMobileDevice) {
+      appOpenAttemptedRef.current = true;
+      tryOpenApp();
     }
-  }, [isMobileDevice, token])
+  }, [isMobileDevice, token]);
 
   // Wait for auth check, then validate invite or redirect to login
   useEffect(() => {
     // Don't do anything until auth check is complete
-    if (authLoading) return
+    if (authLoading) return;
 
     // Skip auth check if still attempting to open app
     if (attemptedAppOpen) {
-      console.log('[InvitePage] Still attempting to open app, skipping auth check')
-      return
+      return;
     }
 
     // If not authenticated, redirect to login/register with current URL
     if (!user) {
       navigate({
-        to: '/login',
+        to: "/login",
         search: { redirect: window.location.pathname },
-      })
-      return
+      });
+      return;
     }
 
     // User is authenticated, validate the invite if we haven't already
     // But only if not attempting to open app (wait for app open to fail first)
-    if (user && !inviteData && !error && !hasValidatedRef.current && !attemptedAppOpen) {
-      hasValidatedRef.current = true
-      validateInvite()
+    if (
+      user &&
+      !inviteData &&
+      !error &&
+      !hasValidatedRef.current &&
+      !attemptedAppOpen
+    ) {
+      hasValidatedRef.current = true;
+      validateInvite();
     }
-  }, [authLoading, user, token, inviteData, error, attemptedAppOpen])
+  }, [authLoading, user, token, inviteData, error, attemptedAppOpen]);
 
   // 10-second timeout for validation
   useEffect(() => {
-    if (!isValidating) return
+    if (!isValidating) return;
 
     const timeoutId = setTimeout(() => {
       if (isValidating && !inviteData && !error) {
-        setShowTimeout(true)
+        setShowTimeout(true);
       }
-    }, 10000)
+    }, 10000);
 
-    return () => clearTimeout(timeoutId)
-  }, [isValidating, inviteData, error])
+    return () => clearTimeout(timeoutId);
+  }, [isValidating, inviteData, error]);
 
   const validateInvite = async () => {
-    setIsValidating(true)
-    setError(null)
-
-    console.log('[InvitePage] Starting validation for token:', token)
+    setIsValidating(true);
+    setError(null);
 
     try {
       // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 30000)
-      )
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 30000),
+      );
 
       const validatePromise = supabase.functions.invoke(
-        'households-validate-invite',
+        "households-validate-invite",
         {
           body: { token },
-        }
-      )
+        },
+      );
 
-      const { data, error } = await Promise.race([
+      const { data, error } = (await Promise.race([
         validatePromise,
-        timeoutPromise
-      ]) as any
-
-      console.log('[InvitePage] Validation response:', { data, error })
+        timeoutPromise,
+      ])) as any;
 
       if (error) {
-        console.error('[InvitePage] Invoke error:', error)
-        throw error
+        console.error("[InvitePage] Invoke error:", error);
+        throw error;
       }
 
       // Check if the response indicates an invalid invite
       if (data && !data.valid) {
-        console.log('[InvitePage] Invalid invite:', data.error)
-        setError(data.error || 'Invalid invitation')
-        return
+        setError(data.error || "Invalid invitation");
+        return;
       }
 
       // Map the response to the expected format
@@ -158,164 +156,158 @@ function InvitePage() {
             emoji: data.household.cover_image_url || null, // Using cover_image_url as emoji
           },
           inviter: {
-            full_name: data.inviter?.full_name || data.inviter?.email || 'Someone',
+            full_name:
+              data.inviter?.full_name || data.inviter?.email || "Someone",
             avatar_url: data.inviter?.avatar_url || null,
           },
           invite: {
             personal_message: data.invite?.personal_message || null,
           },
-        }
-        
-        console.log('[InvitePage] Setting invite data:', mappedData)
-        setInviteData(mappedData)
+        };
+        setInviteData(mappedData);
       } else {
-        console.error('[InvitePage] Unexpected response structure:', data)
-        setError('Invalid response from server')
+        console.error("[InvitePage] Unexpected response structure:", data);
+        setError("Invalid response from server");
       }
     } catch (err: any) {
-      console.error('[InvitePage] Error validating invite:', err)
-      
+      console.error("[InvitePage] Error validating invite:", err);
+
       // Provide more specific error messages
-      let errorMessage = 'Failed to validate invitation. Please try again.'
-      
-      if (err.message === 'Request timeout') {
-        errorMessage = 'Request timed out. Please check if the Supabase Edge Functions are running locally (npx supabase functions serve) or if your network connection is stable.'
-      } else if (err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
-        errorMessage = 'Cannot connect to the server. Make sure Supabase is running locally (npx supabase start) and Edge Functions are served (npx supabase functions serve).'
+      let errorMessage = "Failed to validate invitation. Please try again.";
+
+      if (err.message === "Request timeout") {
+        errorMessage =
+          "Request timed out. Please check if the Supabase Edge Functions are running locally (npx supabase functions serve) or if your network connection is stable.";
+      } else if (
+        err.message?.includes("Failed to fetch") ||
+        err.message?.includes("NetworkError")
+      ) {
+        errorMessage =
+          "Cannot connect to the server. Make sure Supabase is running locally (npx supabase start) and Edge Functions are served (npx supabase functions serve).";
       }
-      
-      setError(errorMessage)
+
+      setError(errorMessage);
     } finally {
-      setIsValidating(false)
+      setIsValidating(false);
     }
-  }
+  };
 
   const handleAcceptInvite = async () => {
     if (!user) {
       // Should not happen due to redirect, but handle gracefully
-      const currentUrl = encodeURIComponent(window.location.pathname)
+      const currentUrl = encodeURIComponent(window.location.pathname);
       navigate({
-        to: '/login',
+        to: "/login",
         search: { redirect: currentUrl },
-      })
-      return
+      });
+      return;
     }
 
-    setIsAccepting(true)
-    setError(null)
-
-    console.log('[InvitePage] Accepting invite for token:', token)
+    setIsAccepting(true);
+    setError(null);
 
     try {
       // Get current session for auth header
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData?.session?.access_token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
       if (!accessToken) {
-        throw new Error('Not authenticated. Please log in again.')
+        throw new Error("Not authenticated. Please log in again.");
       }
 
       const { data, error } = await supabase.functions.invoke(
-        'households-accept-invite',
+        "households-accept-invite",
         {
           body: { token },
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
-        }
-      )
+        },
+      );
 
-      console.log('[InvitePage] Accept response:', { data, error })
-
-      if (error) throw error
+      if (error) throw error;
 
       if (data && data.error) {
-        setError(data.error)
-        toast.error(data.error)
-        return
+        setError(data.error);
+        toast.error(data.error);
+        return;
       }
 
       // Success!
-      setIsAccepted(true)
+      setIsAccepted(true);
       toast.success(
-        `Welcome to ${inviteData?.household.name || 'the household'}!`
-      )
+        `Welcome to ${inviteData?.household.name || "the household"}!`,
+      );
     } catch (err: any) {
-      console.error('[InvitePage] Error accepting invite:', err)
-      setError(err.message || 'Failed to accept invitation. Please try again.')
-      toast.error('Failed to accept invitation')
+      console.error("[InvitePage] Error accepting invite:", err);
+      setError(err.message || "Failed to accept invitation. Please try again.");
+      toast.error("Failed to accept invitation");
     } finally {
-      setIsAccepting(false)
+      setIsAccepting(false);
     }
-  }
+  };
 
   const tryOpenApp = () => {
-    console.log('[InvitePage] Attempting to open app with deep link')
-    setAttemptedAppOpen(true)
+    setAttemptedAppOpen(true);
 
-    const deepLink = `moneko://households/join?token=${token}`
+    const deepLink = `moneko://households/join?token=${token}`;
 
     // Create an invisible iframe to attempt opening the app
-    const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
-    iframe.src = deepLink
-    document.body.appendChild(iframe)
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = deepLink;
+    document.body.appendChild(iframe);
 
     // Track if page becomes hidden (app opened)
-    let appOpened = false
+    let appOpened = false;
     const onVisibilityChange = () => {
       if (document.hidden) {
-        appOpened = true
-        console.log('[InvitePage] App likely opened (page hidden)')
+        appOpened = true;
       }
-    }
-    document.addEventListener('visibilitychange', onVisibilityChange)
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     // Fallback: Check if app opened after 2 seconds
     setTimeout(() => {
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-      document.body.removeChild(iframe)
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      document.body.removeChild(iframe);
 
       // If app didn't open and we're still on mobile, show continue button
       if (!appOpened && !document.hidden) {
-        console.log('[InvitePage] App did not open, showing web flow')
-        setAttemptedAppOpen(false) // Allow user to continue on web
+        setAttemptedAppOpen(false); // Allow user to continue on web
         // Trigger validation now that we know app isn't available
         if (!hasValidatedRef.current) {
-          hasValidatedRef.current = true
-          validateInvite()
+          hasValidatedRef.current = true;
+          validateInvite();
         }
       }
-    }, 2500)
+    }, 2500);
 
     // Fallback to app store after longer delay if really didn't work
     setTimeout(() => {
       if (!appOpened && !document.hidden) {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-        const isAndroid = /Android/.test(navigator.userAgent)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
 
         // Only show app store link, don't force redirect
-        console.log(
-          '[InvitePage] App not installed, user can download from app store links'
-        )
       }
-    }, 3000)
-  }
+    }, 3000);
+  };
 
   const handleOpenApp = () => {
-    tryOpenApp()
-  }
+    tryOpenApp();
+  };
 
   // Loading state
   if (isValidating || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4">
-        <div className="text-center max-w-md">
+      <div className="bg-moneko-background flex min-h-screen items-center justify-center px-4">
+        <div className="max-w-md text-center">
           {!showTimeout ? (
             <>
-              <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto mb-4"></div>
+              <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-t-transparent"></div>
               <p className="text-muted-foreground">
-                {isValidating ? 'Validating invitation...' : 'Loading...'}
+                {isValidating ? "Validating invitation..." : "Loading..."}
               </p>
             </>
           ) : (
@@ -329,19 +321,20 @@ function InvitePage() {
               className="bg-moneko-background rounded-3xl p-8"
             >
               <div className="mb-8">
-                <div className="mx-auto h-12 w-12 rounded-full bg-amber-50/50 dark:bg-amber-950/30 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-warning" />
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50/50 dark:bg-amber-950/30">
+                  <Clock className="text-warning h-5 w-5" />
                 </div>
               </div>
-              <h2 className="text-2xl font-light text-foreground mb-3">
+              <h2 className="text-foreground mb-3 text-2xl font-light">
                 Taking longer than expected
               </h2>
               <p className="text-muted-foreground mb-8">
-                The invitation validation is taking longer than usual. Please refresh the page to try again.
+                The invitation validation is taking longer than usual. Please
+                refresh the page to try again.
               </p>
               <motion.button
                 onClick={() => window.location.reload()}
-                className="w-full bg-primary text-primary-foreground px-6 py-4 rounded-full font-medium hover:shadow-md transition-all duration-200"
+                className="bg-primary text-primary-foreground w-full rounded-full px-6 py-4 font-medium transition-all duration-200 hover:shadow-md"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
               >
@@ -351,23 +344,23 @@ function InvitePage() {
           )}
         </div>
       </div>
-    )
+    );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4">
+      <div className="bg-moneko-background flex min-h-screen items-center justify-center px-4">
         <motion.div
-          className="max-w-md w-full bg-card rounded-3xl shadow-sm p-8 text-center"
+          className="bg-card w-full max-w-md rounded-3xl p-8 text-center shadow-sm"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
           <div className="mb-6">
-            <div className="mx-auto h-16 w-16 rounded-full bg-danger/10 flex items-center justify-center">
+            <div className="bg-danger/10 mx-auto flex h-16 w-16 items-center justify-center rounded-full">
               <svg
-                className="h-8 w-8 text-danger"
+                className="text-danger h-8 w-8"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -381,13 +374,13 @@ function InvitePage() {
               </svg>
             </div>
           </div>
-          <h1 className="text-2xl font-light text-foreground mb-3">
+          <h1 className="text-foreground mb-3 text-2xl font-light">
             Invalid Invitation
           </h1>
           <p className="text-muted-foreground mb-8">{error}</p>
           <motion.button
-            onClick={() => navigate({ to: '/' })}
-            className="w-full bg-primary text-primary-foreground px-6 py-4 rounded-full font-medium hover:shadow-md transition-all duration-200"
+            onClick={() => navigate({ to: "/" })}
+            className="bg-primary text-primary-foreground w-full rounded-full px-6 py-4 font-medium transition-all duration-200 hover:shadow-md"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
           >
@@ -395,15 +388,15 @@ function InvitePage() {
           </motion.button>
         </motion.div>
       </div>
-    )
+    );
   }
 
   // Success state (after accepting)
   if (isAccepted && inviteData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4">
+      <div className="bg-moneko-background flex min-h-screen items-center justify-center px-4">
         <motion.div
-          className="max-w-md w-full bg-card rounded-3xl shadow-sm p-8 text-center"
+          className="bg-card w-full max-w-md rounded-3xl p-8 text-center shadow-sm"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -412,11 +405,11 @@ function InvitePage() {
             className="mb-6"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           >
-            <div className="mx-auto h-20 w-20 bg-success/10 rounded-full flex items-center justify-center">
+            <div className="bg-success/10 mx-auto flex h-20 w-20 items-center justify-center rounded-full">
               <svg
-                className="h-10 w-10 text-success"
+                className="text-success h-10 w-10"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -430,20 +423,20 @@ function InvitePage() {
               </svg>
             </div>
           </motion.div>
-          <h1 className="text-3xl font-light text-foreground mb-3">
+          <h1 className="text-foreground mb-3 text-3xl font-light">
             You're In! 🎉
           </h1>
           <p className="text-muted-foreground mb-8">
-            You've successfully joined{' '}
-            <span className="font-medium text-foreground">
+            You've successfully joined{" "}
+            <span className="text-foreground font-medium">
               {inviteData.household.name}
             </span>
           </p>
 
-          <div className="space-y-3 mb-8">
+          <div className="mb-8 space-y-3">
             <motion.button
               onClick={handleOpenApp}
-              className="w-full bg-primary text-primary-foreground px-6 py-4 rounded-full font-medium hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2"
+              className="bg-primary text-primary-foreground flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 font-medium transition-all duration-200 hover:shadow-md"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
@@ -464,8 +457,8 @@ function InvitePage() {
             </motion.button>
 
             <motion.button
-              onClick={() => navigate({ to: '/dashboard' })}
-              className="w-full bg-subtle-background text-foreground px-6 py-4 rounded-full font-medium hover:bg-muted transition-all duration-200"
+              onClick={() => navigate({ to: "/dashboard" })}
+              className="bg-subtle-background text-foreground hover:bg-muted w-full rounded-full px-6 py-4 font-medium transition-all duration-200"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
             >
@@ -473,7 +466,7 @@ function InvitePage() {
             </motion.button>
           </div>
 
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             <p className="mb-3">Don't have the app yet?</p>
             <div className="flex flex-col items-center gap-3">
               <AppleDownloadButton />
@@ -482,26 +475,26 @@ function InvitePage() {
           </div>
         </motion.div>
       </div>
-    )
+    );
   }
 
   // Confirmation state (before accepting)
-  if (!inviteData) return null
+  if (!inviteData) return null;
 
   // Show "Opening app..." state while attempting to open
   if (attemptedAppOpen && isMobileDevice) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4">
+      <div className="bg-moneko-background flex min-h-screen items-center justify-center px-4">
         <motion.div
-          className="max-w-md w-full bg-card rounded-3xl shadow-sm p-8 text-center"
+          className="bg-card w-full max-w-md rounded-3xl p-8 text-center shadow-sm"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
         >
           <div className="mb-6">
-            <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
+            <div className="border-primary mx-auto h-12 w-12 animate-spin rounded-full border-2 border-t-transparent"></div>
           </div>
-          <h2 className="text-2xl font-light text-foreground mb-3">
+          <h2 className="text-foreground mb-3 text-2xl font-light">
             Opening Moneko App...
           </h2>
           <p className="text-muted-foreground mb-6">
@@ -509,7 +502,7 @@ function InvitePage() {
           </p>
           <motion.button
             onClick={() => setAttemptedAppOpen(false)}
-            className="w-full bg-subtle-background text-foreground px-6 py-4 rounded-full font-medium hover:bg-muted transition-all duration-200"
+            className="bg-subtle-background text-foreground hover:bg-muted w-full rounded-full px-6 py-4 font-medium transition-all duration-200"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
           >
@@ -517,26 +510,26 @@ function InvitePage() {
           </motion.button>
         </motion.div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-moneko-background px-4 py-8">
+    <div className="bg-moneko-background flex min-h-screen items-center justify-center px-4 py-8">
       <motion.div
-        className="max-w-2xl w-full"
+        className="w-full max-w-2xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
       >
-        <div className="bg-card rounded-3xl shadow-sm overflow-hidden">
+        <div className="bg-card overflow-hidden rounded-3xl shadow-sm">
           {/* Household Cover Image */}
           {inviteData.household.emoji && (
-            <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-              {inviteData.household.emoji.startsWith('http') ? (
+            <div className="from-primary/10 to-primary/5 relative flex h-48 items-center justify-center bg-gradient-to-br">
+              {inviteData.household.emoji.startsWith("http") ? (
                 <img
                   src={inviteData.household.emoji}
                   alt={inviteData.household.name}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
                 <div className="text-8xl">{inviteData.household.emoji}</div>
@@ -547,12 +540,12 @@ function InvitePage() {
           <div className="p-8">
             {/* Header */}
             <motion.div
-              className="text-center mb-8"
+              className="mb-8 text-center"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.4 }}
             >
-              <h1 className="text-3xl font-light text-foreground mb-2">
+              <h1 className="text-foreground mb-2 text-3xl font-light">
                 Join {inviteData.household.name}
               </h1>
               <p className="text-muted-foreground">
@@ -562,7 +555,7 @@ function InvitePage() {
 
             {/* Inviter Info */}
             <motion.div
-              className="bg-subtle-background rounded-2xl p-6 mb-8"
+              className="bg-subtle-background mb-8 rounded-2xl p-6"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.4 }}
@@ -572,25 +565,27 @@ function InvitePage() {
                   <img
                     src={inviteData.inviter.avatar_url}
                     alt={inviteData.inviter.full_name}
-                    className="w-16 h-16 rounded-full object-cover ring-2 ring-primary/20"
+                    className="ring-primary/20 h-16 w-16 rounded-full object-cover ring-2"
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20">
-                    <span className="text-primary font-medium text-2xl">
+                  <div className="bg-primary/10 ring-primary/20 flex h-16 w-16 items-center justify-center rounded-full ring-2">
+                    <span className="text-primary text-2xl font-medium">
                       {inviteData.inviter.full_name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Invited by</p>
-                  <p className="text-lg font-medium text-foreground">
+                  <p className="text-muted-foreground mb-1 text-sm">
+                    Invited by
+                  </p>
+                  <p className="text-foreground text-lg font-medium">
                     {inviteData.inviter.full_name}
                   </p>
                 </div>
               </div>
 
               {inviteData.invite.personal_message && (
-                <div className="mt-6 pt-6 border-t border-border">
+                <div className="border-border mt-6 border-t pt-6">
                   <p className="text-muted-foreground italic">
                     "{inviteData.invite.personal_message}"
                   </p>
@@ -605,15 +600,21 @@ function InvitePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.4 }}
             >
-              <h3 className="text-lg font-medium text-foreground mb-6">
+              <h3 className="text-foreground mb-6 text-lg font-medium">
                 What you can do together
               </h3>
               <div className="space-y-4">
                 {[
-                  { text: 'Track shared budgets and spending goals', delay: 0.35 },
-                  { text: 'Split expenses fairly and easily', delay: 0.4 },
-                  { text: 'Collaborate on financial decisions', delay: 0.45 },
-                  { text: 'Keep your privacy with fine-grained sharing controls', delay: 0.5 },
+                  {
+                    text: "Track shared budgets and spending goals",
+                    delay: 0.35,
+                  },
+                  { text: "Split expenses fairly and easily", delay: 0.4 },
+                  { text: "Collaborate on financial decisions", delay: 0.45 },
+                  {
+                    text: "Keep your privacy with fine-grained sharing controls",
+                    delay: 0.5,
+                  },
                 ].map((item, index) => (
                   <motion.div
                     key={index}
@@ -622,9 +623,9 @@ function InvitePage() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: item.delay, duration: 0.3 }}
                   >
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-success/10 flex items-center justify-center mt-0.5">
+                    <div className="bg-success/10 mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full">
                       <svg
-                        className="h-4 w-4 text-success"
+                        className="text-success h-4 w-4"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -653,13 +654,13 @@ function InvitePage() {
               <motion.button
                 onClick={handleAcceptInvite}
                 disabled={isAccepting}
-                className="w-full bg-primary text-primary-foreground px-6 py-4 rounded-full font-medium hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="bg-primary text-primary-foreground flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 font-medium transition-all duration-200 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                 whileHover={{ scale: isAccepting ? 1 : 1.01 }}
                 whileTap={{ scale: isAccepting ? 1 : 0.99 }}
               >
                 {isAccepting ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary-foreground border-t-transparent"></div>
+                    <div className="border-primary-foreground h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"></div>
                     <span>Joining...</span>
                   </>
                 ) : (
@@ -683,8 +684,8 @@ function InvitePage() {
               </motion.button>
 
               <motion.button
-                onClick={() => navigate({ to: '/' })}
-                className="w-full bg-subtle-background text-foreground px-6 py-4 rounded-full font-medium hover:bg-muted transition-all duration-200"
+                onClick={() => navigate({ to: "/" })}
+                className="bg-subtle-background text-foreground hover:bg-muted w-full rounded-full px-6 py-4 font-medium transition-all duration-200"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
               >
@@ -694,17 +695,17 @@ function InvitePage() {
 
             {/* Footer Note */}
             <motion.p
-              className="text-xs text-muted-foreground text-center mt-6"
+              className="text-muted-foreground mt-6 text-center text-xs"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.4 }}
             >
-              By joining this household, you agree to share financial information
-              according to your privacy settings.
+              By joining this household, you agree to share financial
+              information according to your privacy settings.
             </motion.p>
           </div>
         </div>
       </motion.div>
     </div>
-  )
+  );
 }

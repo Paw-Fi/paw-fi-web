@@ -25,6 +25,12 @@ import { BentoCard } from "@/components/ui/bento-card";
 
 // SEO Imports
 import { Helmet } from "@dr.pogodin/react-helmet";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { HomeHeader } from "@/components/index/header";
@@ -33,7 +39,7 @@ import { HomeHeader } from "@/components/index/header";
 const META_TITLE =
   "WhatsApp Expense Tracker & AI Receipt Scanner | Moneko Assistant";
 const META_DESCRIPTION =
-  "The fastest way to track spending. Use Moneko's WhatsApp AI assistant to log expenses via voice notes, scan receipts, and manage shared budgets effortlessly.";
+  "Log expenses from WhatsApp with Moneko's AI assistant. Send text, voice notes, receipts, and shared spending updates, then review the details before saving.";
 const META_KEYWORDS =
   "whatsapp expense tracker, whatsapp budget bot, ai receipt scanner, track spending via whatsapp, shared household budget whatsapp, automated expense logging";
 
@@ -77,11 +83,10 @@ export function WhatsAppAssistantRouteComponent() {
         operatingSystem: "WhatsApp, iOS, Android",
         description:
           "An AI-powered financial assistant that allows users to track expenses and scan receipts directly within WhatsApp.",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "USD",
-        },
+        availableLanguage: monekoAvailableLanguages,
+        offers: createMonekoFreeOffer(pageUrl),
+        aggregateRating: monekoAggregateRating,
+        review: monekoFeaturedReview,
       },
     ],
   };
@@ -112,19 +117,22 @@ export function WhatsAppAssistantRouteComponent() {
             >
               <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
                 <Zap className="h-3 w-3 fill-current" />
-                The World's Fastest AI Expense Tracker
+                WhatsApp expense tracking with AI review
               </span>
               <h1 className="mb-6 text-5xl font-bold tracking-tight text-slate-900 md:text-7xl dark:text-white">
-                The First Expense Tracker <br />
+                Track expenses from WhatsApp <br />
                 <span className="text-gray-400 dark:text-gray-600">
-                  Built for WhatsApp.
+                  without rebuilding your budget later.
                 </span>
               </h1>
               <p className="mx-auto max-w-2xl text-xl leading-relaxed text-slate-600 dark:text-slate-400">
                 Stop letting receipts pile up. Track spending, scan bills, and
-                manage shared budgets directly inside WhatsApp using Moneko’s
-                secure AI assistant.
-                <strong> No new apps to learn. No friction.</strong>
+                manage shared budgets directly inside WhatsApp using Moneko's AI
+                assistant.
+                <strong>
+                  {" "}
+                  Review each entry before it updates your budget.
+                </strong>
               </p>
             </motion.div>
 
@@ -149,8 +157,8 @@ export function WhatsAppAssistantRouteComponent() {
                 Just Say It.
               </h3>
               <p className="max-w-sm text-lg leading-relaxed text-slate-500 dark:text-slate-400">
-                Send a voice note or snap a photo. Moneko's AI extracts the
-                vendor, amount, and category instantly.
+                Send a voice note or snap a photo. Moneko suggests the merchant,
+                amount, and category so you can confirm the budget entry.
               </p>
             </div>
             <div className="relative order-1 flex min-h-[400px] flex-1 items-end justify-center bg-gradient-to-b from-transparent to-black/5 py-8 md:order-2 md:min-h-auto dark:to-white/5">
@@ -170,9 +178,9 @@ export function WhatsAppAssistantRouteComponent() {
                 Instant Answers
               </h3>
               <p className="text-base text-slate-500 dark:text-slate-400">
-                "How much for groceries?"
+                "How much is left for groceries?"
                 <br />
-                Get data-backed answers.
+                Get budget-aware answers.
               </p>
             </div>
             <div className="relative flex w-full flex-1 items-start justify-center overflow-hidden pt-8">
@@ -207,14 +215,13 @@ export function WhatsAppAssistantRouteComponent() {
             <div className="flex flex-1 flex-col justify-center space-y-6 p-8 md:p-12">
               <div className="flex items-center gap-2 text-sm font-medium text-white/80">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Bank-Grade Security</span>
+                <span>Privacy-focused</span>
               </div>
               <h3 className="text-3xl font-semibold tracking-tight md:text-4xl">
                 Your Data is Private.
               </h3>
               <p className="max-w-md text-lg leading-relaxed text-gray-400">
-                256-bit encryption ensures your financial data stays yours. We
-                never sell your data to advertisers.
+                We use modern security practices to protect your financial data.
               </p>
               {/* <div className="pt-2 flex gap-12 border-t border-white/10 mt-4">
                         <div>

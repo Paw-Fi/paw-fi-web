@@ -2,18 +2,19 @@
 
 import type { LearningQuizQuestion } from "@/types/learning.types";
 
-
 /**
  * Checks if all answers in a lesson are correct
  */
-export function areAllAnswersCorrect(questions: LearningQuizQuestion[], answers: Record<string, any>): boolean {
+export function areAllAnswersCorrect(
+  questions: LearningQuizQuestion[],
+  answers: Record<string, any>,
+): boolean {
   // Loop through all questions and verify answers
   return questions.every((question) => {
     const userAnswer = answers[question.id];
 
     // If no answer, it's incorrect
     if (userAnswer === undefined || userAnswer === null) {
-      console.log(`No answer for question ${question.id}`);
       return false;
     }
 
@@ -24,7 +25,10 @@ export function areAllAnswersCorrect(questions: LearningQuizQuestion[], answers:
 /**
  * Checks if a specific answer to a question is correct
  */
-export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): boolean {
+export function isAnswerCorrect(
+  question: LearningQuizQuestion,
+  answer: any,
+): boolean {
   // If no answer, it's incorrect
   if (answer === undefined || answer === null) {
     return false;
@@ -34,7 +38,8 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
     case "mcq":
       // For multiple choice, all selected options should be correct
       if (Array.isArray(answer)) {
-        const correctOptions = question.options?.filter((opt: any) => opt.isCorrect)
+        const correctOptions = question.options
+          ?.filter((opt: any) => opt.isCorrect)
           .map((opt: any) => opt.id);
         const userSelected = answer as string[];
 
@@ -50,7 +55,7 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
     case "scq":
     case "image-choice":
       // For single choice, find the correct option
-      const options=question.options || question.image_options
+      const options = question.options || question.image_options;
       const correctOption = options?.find((opt: any) => opt.isCorrect === true);
       if (!correctOption) {
         return false;
@@ -58,35 +63,35 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
       return answer === correctOption.id;
 
     case "sort-order":
-      console.log("question", question)
-      console.log("answer", answer)
       // For sorting questions, check against correct order
       if (Array.isArray(answer) && question.correct_answers) {
         // Extract just the IDs from the answer if it contains objects with an id property
         // This handles both array of objects and array of strings
-        const answerIds = answer.map((item) => typeof item === 'object' && item.id ? item.id : item);
-        console.log("answerIds", answerIds)
-        
-        return JSON.stringify(answerIds) === JSON.stringify(question.correct_answers);
+        const answerIds = answer.map((item) =>
+          typeof item === "object" && item.id ? item.id : item,
+        );
+
+        return (
+          JSON.stringify(answerIds) === JSON.stringify(question.correct_answers)
+        );
       }
       return false;
 
     case "sort-categories":
       // For categorization, compare with correct categories
       if (question.correct_answers && typeof answer === "object") {
-       
         const userCategorization = answer as Record<string, string>; // item ID -> category ID
-        
+
         // Create inverted user mapping for easier comparison
         const userCategoryItems: Record<string, string[]> = {};
-        
+
         // Initialize all categories with empty arrays
         if (question.categories) {
-          question.categories.forEach(category => {
+          question.categories.forEach((category) => {
             userCategoryItems[category.id] = [];
           });
         }
-        
+
         // Group items by category
         Object.entries(userCategorization).forEach(([itemId, categoryId]) => {
           if (!userCategoryItems[categoryId]) {
@@ -94,25 +99,27 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
           }
           userCategoryItems[categoryId].push(itemId);
         });
-        
+
         // Now compare with expected correct_answers
-        return Object.entries(question.correct_answers).every(([categoryId, expectedItems]) => {
-          const userItems = userCategoryItems[categoryId] || [];
-          
-          // Check if all expected items for this category are present in user's answer
-          if (Array.isArray(expectedItems)) {
-            // First, check if the counts match
-            if (expectedItems.length !== userItems.length) {
-              return false;
+        return Object.entries(question.correct_answers).every(
+          ([categoryId, expectedItems]) => {
+            const userItems = userCategoryItems[categoryId] || [];
+
+            // Check if all expected items for this category are present in user's answer
+            if (Array.isArray(expectedItems)) {
+              // First, check if the counts match
+              if (expectedItems.length !== userItems.length) {
+                return false;
+              }
+
+              // Then check if every expected item is in the user's items for this category
+              return expectedItems.every((expectedItemId) =>
+                userItems.includes(expectedItemId as string),
+              );
             }
-            
-            // Then check if every expected item is in the user's items for this category
-            return expectedItems.every(expectedItemId => 
-              userItems.includes(expectedItemId as string)
-            );
-          }
-          return false;
-        });
+            return false;
+          },
+        );
       }
       return false;
 
@@ -121,28 +128,29 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
       if (question.correct_answers && typeof answer === "object") {
         const userMatches = answer as Record<string, string>;
         const correctMatches = question.correct_answers;
-        
+
         // Normalize the data formats
         const correctEntries = Object.entries(correctMatches);
         const userEntries = Object.entries(userMatches);
-        
+
         // If lengths don't match, can't be correct
         if (correctEntries.length !== userEntries.length) {
           return false;
         }
-        
+
         // Check if all correct pairs exist in user matches (in either direction)
         return correctEntries.every(([itemId, matchId]) => {
           // Check direct match (item → match)
           if (userMatches[itemId] === matchId) {
             return true;
           }
-          
+
           // Check reverse match (match → item) in case the UI swapped them
           const reversePair = userEntries.find(
-            ([userItemId, userMatchId]) => userItemId === matchId && userMatchId === itemId
+            ([userItemId, userMatchId]) =>
+              userItemId === matchId && userMatchId === itemId,
           );
-          
+
           return !!reversePair;
         });
       }
@@ -153,7 +161,7 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
       if (question.correctRatings && typeof answer === "object") {
         const userRatings = answer as Record<string, string>;
         return Object.entries(question.correctRatings).every(
-          ([itemId, ratingId]) => userRatings[itemId] === ratingId
+          ([itemId, ratingId]) => userRatings[itemId] === ratingId,
         );
       }
       return false;
@@ -162,12 +170,12 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
       // For text input, validate input against rules
       const textInputQuestion = question;
       const userText = answer as string;
-      
+
       // Check if the user provided any text at all
       if (!userText || userText.trim() === "") {
         return false;
       }
-      
+
       // First, always check pattern validation if present
       // This applies to both open-ended and specific-answer questions
       if (textInputQuestion.validation?.pattern) {
@@ -178,48 +186,54 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
           }
         } catch (e) {
           // If regex is invalid, log error and continue with other validations
-          console.error("Invalid regex pattern:", textInputQuestion.validation.pattern);
+          console.error(
+            "Invalid regex pattern:",
+            textInputQuestion.validation.pattern,
+          );
         }
       }
-      
+
       // If there's no correctAnswer defined, this is an open-ended question
       // For open-ended questions, we've already checked the pattern if present
-      if (!textInputQuestion.correctAnswer&&!textInputQuestion.correct_answers) {
+      if (
+        !textInputQuestion.correctAnswer &&
+        !textInputQuestion.correct_answers
+      ) {
         // Also validate minimum text length if specified
         const minLength = Number(textInputQuestion.validation?.min);
-        console.log('[text-input validation]', {
-          userText,
-          minLength,
-          userTextLength: userText?.trim().length,
-        });
         if (minLength && userText.trim().length < minLength) {
           return false;
         }
         // The answer is valid if it passed all validations above
         return true;
       }
-      
+
       // Below logic applies when there is a specific correct answer
-      const isCaseSensitive = textInputQuestion.validation?.caseSensitive ?? false;
-      const normalizedUserAnswer = isCaseSensitive ? userText.trim() : userText.trim().toLowerCase();
-      
+      const isCaseSensitive =
+        textInputQuestion.validation?.caseSensitive ?? false;
+      const normalizedUserAnswer = isCaseSensitive
+        ? userText.trim()
+        : userText.trim().toLowerCase();
+
       // Check against array of possible answers
       if (Array.isArray(textInputQuestion.correctAnswer)) {
         return textInputQuestion.correctAnswer.some((answer: string) => {
-          const normalizedCorrectAnswer = isCaseSensitive ? answer.trim() : answer.trim().toLowerCase();
+          const normalizedCorrectAnswer = isCaseSensitive
+            ? answer.trim()
+            : answer.trim().toLowerCase();
           return normalizedUserAnswer === normalizedCorrectAnswer;
         });
       }
-      
+
       // Check against single correct answer
       if (!textInputQuestion.correctAnswer) {
         return false;
       }
-      
-      const normalizedCorrectAnswer = isCaseSensitive 
-        ? textInputQuestion.correctAnswer.trim() 
+
+      const normalizedCorrectAnswer = isCaseSensitive
+        ? textInputQuestion.correctAnswer.trim()
         : textInputQuestion.correctAnswer.trim().toLowerCase();
-      
+
       return normalizedUserAnswer === normalizedCorrectAnswer;
 
     default:
@@ -230,14 +244,19 @@ export function isAnswerCorrect(question: LearningQuizQuestion, answer: any): bo
 /**
  * Checks if the current question has been answered
  */
-export function isCurrentQuestionAnswered(currentQuestion: LearningQuizQuestion, answer: any): boolean {
+export function isCurrentQuestionAnswered(
+  currentQuestion: LearningQuizQuestion,
+  answer: any,
+): boolean {
   // If no answer yet, question is not answered
   if (!answer) return false;
 
   // For matrix rating questions, all items must be rated
   if (currentQuestion.type === "matrix-rating") {
     const matrixAnswer = answer as Record<string, string>;
-    return currentQuestion.items?.every((item) => !!matrixAnswer[item.id]) ?? false;
+    return (
+      currentQuestion.items?.every((item) => !!matrixAnswer[item.id]) ?? false
+    );
   }
 
   // For text input questions, check if there is text and it's not empty

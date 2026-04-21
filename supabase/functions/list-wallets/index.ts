@@ -1,0 +1,222 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { corsHeaders } from "../shared/cors.ts";
+import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
+import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
+
+interface RequestBody {
+  householdId?: string;
+  userId?: string;
+  includeArchived?: boolean;
+}
+
+function jsonResponse(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function toMap(rows: Array<{ account_id: string; amount_cents: number }>) {
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    result[row.account_id] = Number(row.amount_cents || 0);
+  }
+  return result;
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return jsonResponse(
+      { success: false, error: "Method not allowed", code: "VALIDATION_ERROR" },
+      405,
+    );
+  }
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonResponse(
+      {
+        success: false,
+        error: "Server configuration error",
+        code: "SERVER_ERROR",
+      },
+      500,
+    );
+  }
+
+  try {
+    const body = (await req.json()) as RequestBody;
+    const householdId = sanitizeUuid(body.householdId ?? null);
+    if (body.householdId && !householdId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Invalid householdId",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { "X-Client-Info": "moneko-list-accounts" } },
+    });
+
+    const auth = await authenticateUserOrInternalSecret(req, supabase);
+    if (!auth.success) {
+      return jsonResponse(
+        {
+          success: false,
+          error: auth.error ?? "Unauthorized",
+          code: auth.statusCode === 401 ? "UNAUTHORIZED" : "VALIDATION_ERROR",
+        },
+        auth.statusCode ?? 401,
+      );
+    }
+
+    const userId = auth.isInternalService
+      ? sanitizeUuid(body.userId ?? null)
+      : auth.userId;
+    if (!userId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Valid userId is required",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
+    const canAccess = await assertScopeAccess(supabase, userId, householdId);
+    if (!canAccess) {
+      return jsonResponse(
+        { success: false, error: "Forbidden scope", code: "UNAUTHORIZED" },
+        403,
+      );
+    }
+
+    const includeArchived = body.includeArchived === true;
+
+    let accountsQuery = supabase
+      .from("accounts")
+      .select(
+        "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
+      )
+      .order("is_default", { ascending: false })
+      .order("is_system", { ascending: false })
+      .order("name", { ascending: true });
+
+    if (!includeArchived) {
+      accountsQuery = accountsQuery.eq("is_archived", false);
+    }
+
+    if (householdId) {
+      accountsQuery = accountsQuery.eq("household_id", householdId);
+    } else {
+      accountsQuery = accountsQuery
+        .eq("user_id", userId)
+        .is("household_id", null);
+    }
+
+    const { data: accounts, error: accountsError } = await accountsQuery;
+    if (accountsError) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Failed to list accounts",
+          code: "SERVER_ERROR",
+        },
+        500,
+      );
+    }
+
+    const accountIds = (accounts ?? []).map((row: any) => row.id as string);
+    if (accountIds.length === 0) {
+      return jsonResponse({ success: true, data: [] });
+    }
+
+    const { data: expenseRows } = await supabase
+      .from("expenses")
+      .select("account_id, amount_cents, type")
+      .in("account_id", accountIds)
+      .is("deleted_at", null);
+
+    const expenseOut: Record<string, number> = {};
+    const incomeIn: Record<string, number> = {};
+    for (const row of (expenseRows ?? []) as any[]) {
+      const accountId = row.account_id as string;
+      const amount = Number(row.amount_cents || 0);
+      const type = String(row.type ?? "expense").toLowerCase();
+      if (type === "income") {
+        incomeIn[accountId] = (incomeIn[accountId] ?? 0) + amount;
+      } else {
+        expenseOut[accountId] = (expenseOut[accountId] ?? 0) + amount;
+      }
+    }
+
+    const { data: transferOutRows } = await supabase
+      .from("account_transfers")
+      .select("from_account_id, amount_cents")
+      .in("from_account_id", accountIds);
+    const { data: transferInRows } = await supabase
+      .from("account_transfers")
+      .select("to_account_id, amount_cents")
+      .in("to_account_id", accountIds);
+
+    const transferOut: Record<string, number> = {};
+    for (const row of (transferOutRows ?? []) as any[]) {
+      const key = row.from_account_id as string;
+      transferOut[key] =
+        (transferOut[key] ?? 0) + Number(row.amount_cents || 0);
+    }
+
+    const transferIn: Record<string, number> = {};
+    for (const row of (transferInRows ?? []) as any[]) {
+      const key = row.to_account_id as string;
+      transferIn[key] = (transferIn[key] ?? 0) + Number(row.amount_cents || 0);
+    }
+
+    const payload = (accounts ?? []).map((row: any) => {
+      const accountId = row.id as string;
+      const opening = Number(row.opening_balance_cents || 0);
+      const currentBalanceCents =
+        opening +
+        (incomeIn[accountId] ?? 0) -
+        (expenseOut[accountId] ?? 0) +
+        (transferIn[accountId] ?? 0) -
+        (transferOut[accountId] ?? 0);
+
+      return {
+        ...row,
+        current_balance_cents: currentBalanceCents,
+        transfer_summary: {
+          total_in_cents: transferIn[accountId] ?? 0,
+          total_out_cents: transferOut[accountId] ?? 0,
+        },
+      };
+    });
+
+    return jsonResponse({ success: true, data: payload });
+  } catch (error) {
+    console.error("[list-accounts]", error);
+    return jsonResponse(
+      {
+        success: false,
+        error: "Failed to list accounts",
+        code: "SERVER_ERROR",
+      },
+      500,
+    );
+  }
+});

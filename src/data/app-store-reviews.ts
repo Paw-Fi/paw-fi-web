@@ -31,6 +31,10 @@ export interface Review {
 // App Store rating to display in header
 export const APP_STORE_RATING = 4.8;
 
+// Store review counts used in public marketing copy
+export const APP_STORE_REVIEW_COUNT = 64;
+export const PLAY_STORE_REVIEW_COUNT = 12;
+
 // Hardcoded 5-star reviews - REAL REVIEWS FROM APP STORE
 export const appStoreReviews: Review[] = [
   {
@@ -186,10 +190,65 @@ export const appStoreReviews: Review[] = [
     createdDate: "2026-02-03T16:45:00-08:00",
     territory: "VNM",
   },
+  {
+    id: "review-018",
+    rating: 5,
+    title: "Fantastic application for everyone",
+    body: "I think Moneko is a great app for every person. The features and thinking behind it by the developers is great. I have been using it from a long time and I vouch my friends and family to also use it. 100% recommended.",
+    reviewerNickname: "DeeNewyork",
+    createdDate: "2026-03-26T16:45:00-08:00",
+    territory: "IND",
+  },
+  {
+    id: "review-019",
+    rating: 5,
+    title: "Actively Developed",
+    body: "This app actively receives updates, and the developer is extremely responsive over on Reddit. It's also a lot more budget friendly than other apps which charge exorbitant fees for anyone who doesn't have a lot of disposable income. There's even a lifetime plan for a fair price. My personal favorite thing though is that while it's not quite on par with other apps in terms of features like automation and syncing, it's moving very fast in that direction, and I have hope that it'll be a top option soon.",
+    reviewerNickname: "Maple382",
+    createdDate: "2026-03-14T16:45:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-020",
+    rating: 5,
+    title: "Lifesaver",
+    body: "Fast and easy to track my expenses I know where my money goes now",
+    reviewerNickname: "JPTohhhh",
+    createdDate: "2026-04-07T16:45:00-08:00",
+    territory: "MYS",
+  },
+  {
+    id: "review-021",
+    rating: 5,
+    title: "Switched from Spendee. This Is Way Better.",
+    body: "I used to use Spendee for the last 2 years, but not anymore. Moneko is honestly the best app I've tried so far. The best part for me is the voice logging and Siri Shortcuts assistant, it makes adding expenses so quick and effortless. The app is simple, smooth, and very easy to use. Highly recommended. Big thanks to the developer for creating such an amazing and useful app. Please keep it always updated and improving.",
+    reviewerNickname: "iamnoman21",
+    createdDate: "2026-04-17T12:00:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-022",
+    rating: 5,
+    title: "WhatsApp feature impressed me",
+    body: "The whatsapp feature really impresed me, I can log my expense easily,",
+    reviewerNickname: "Tiaowu Lo",
+    createdDate: "2026-04-17T12:00:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-023",
+    rating: 5,
+    title: "Amazing new budgeting app",
+    body: "Amazing new budgeting app. I love the feature that helps you to plan for stuff you want to get.",
+    reviewerNickname: "Kachiri Flores",
+    createdDate: "2026-04-17T12:00:00-08:00",
+    territory: "USA",
+  },
 ];
 
 // Total review count for display (update this as you get more reviews)
-export const TOTAL_REVIEW_COUNT = 17;
+export const TOTAL_REVIEW_COUNT =
+  APP_STORE_REVIEW_COUNT + PLAY_STORE_REVIEW_COUNT;
 
 // Helper to get all 5-star reviews (already filtered in the array above)
 export const getFiveStarReviews = (): Review[] => {

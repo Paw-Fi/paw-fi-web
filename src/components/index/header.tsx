@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Button } from "../ui/button";
-import { DISCORD_URL } from "@/routes";
+import { DISCORD_URL } from "@/lib/external-links";
 import { useAuth } from "@/contexts/auth-context";
 import { UserAvatar } from "../ui/user-avatar";
 import { MonekoIcon } from "../shared/moneko-icon";
@@ -81,9 +81,9 @@ const resources = [
     icon: Calculator,
   },
   {
-    title: "Learning Center",
-    href: "/dashboard/essentials",
-    description: "Master personal finance with our guides.",
+    title: "Guides",
+    href: "/guides/how-to-calculate-net-worth",
+    description: "Practical, step-by-step personal finance guides.",
     icon: BookOpen,
   },
   {
@@ -381,13 +381,7 @@ export const HomeHeader = () => {
                   "px-2 py-3 text-base",
                   isPathActive("/changelog") && "bg-accent text-primary",
                 )}
-              >
-                <History
-                  className={cn(
-                    "text-muted-foreground mr-2 h-4 w-4",
-                    isPathActive("/changelog") && "text-primary",
-                  )}
-                />
+              >              
                 Changelog
               </MobileLink>
               <MobileLink
@@ -431,12 +425,12 @@ export const HomeHeader = () => {
                   <Button
                     onClick={() => {
                       setIsOpen(false);
-                      navigate({ to: "/referral" });
+                      navigate({ to: "/register", search: { trial: true, redirect: undefined, code: undefined } });
                     }}
                     className="w-full rounded-xl dark:text-white"
                     size="lg"
                   >
-                    Join Early Access
+                    Try it Free — No Credit Card
                   </Button>
                 )}
               </div>
@@ -464,29 +458,15 @@ export const HomeHeader = () => {
                 size="sm"
                 onClick={() => navigate({ to: "/dashboard" })}
                 className="ring-background cursor-pointer ring-2 transition-transform hover:scale-105"
-              />
-              <Button
-                onClick={() => navigate({ to: "/dashboard" })}
-                className="rounded-full px-5 font-medium"
-                size="sm"
-              >
-                Dashboard
-              </Button>
+              />            
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">              
               <Button
-                variant="ghost"
-                onClick={() => navigate({ to: "/login" })}
-                className="font-medium"
-              >
-                Log in
-              </Button>
-              <Button
-                onClick={() => navigate({ to: "/referral" })}
+                onClick={() => navigate({ to: "/register", search: { trial: true, redirect: undefined, code: undefined } })}
                 className="rounded-full px-5 font-medium dark:text-white"
               >
-                Join Early Access
+                Try it Free — No Credit Card
               </Button>
             </div>
           )}

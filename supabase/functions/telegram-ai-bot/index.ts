@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 // Supabase Edge Function: telegram-ai-bot
 // Handles Telegram messages, using Gemini AI and existing tools.
 
@@ -5,7 +7,6 @@ import {
   createClient,
   type SupabaseClient as SupabaseJsClient,
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { corsHeaders } from "../shared/cors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
 import {
@@ -20,6 +21,7 @@ import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
+  resolvePocketPercentageForUpsert,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
@@ -41,11 +43,12 @@ import {
   REQUIRED_TELEGRAM_TOOL_NAMES,
 } from "../shared/telegram-parity.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import {
   fetchUserCategoryPreferences,
+  fetchUserCategoryRemaps,
   fetchUserCustomCategories,
   fetchUserHiddenCategories,
-  fetchUserCategoryRemaps,
   mergeAllowedCategories,
   upsertUserCustomCategory,
 } from "../shared/user-categories.ts";
@@ -54,9 +57,17 @@ import {
   getReplyLanguagePromptLabel,
   resolvePreferredReplyLanguage,
 } from "../shared/detect-language.ts";
+import {
+  buildInternalInvokeHeaders,
+  resolveInternalFunctionKey,
+} from "../shared/auth.ts";
+import {
+  createVertexBotChatSession,
+  getVertexAiConfigFromEnv,
+} from "../shared/vertex-ai-chat.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
-const FALLBACK_MODEL_NAME = "gemini-2.5-pro";
+const FALLBACK_MODEL_NAME = "gemini-2.5-flash";
 const SYSTEM_INSTRUCTION = `You are Moneko, a helpful and friendly financial assistant on Telegram.
 Your goal is to help users track expenses, manage budgets, and view their financial health.
 You can handle personal finances and shared spaces.
@@ -92,8 +103,9 @@ CRITICAL RULES:
 17. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
 18. **Telegram UX (choices)**: When asking the user to choose among transactions/options, ALWAYS format options as numbered lines like "1. <short label>" (one per line; label <= ~60 chars) so Telegram inline buttons can be generated. Ask them to tap a button.
 19. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-20. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
-21. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
+20. **Wallets**: Wallets belong to one space only. Do not list or assume wallets unless the user explicitly asks about wallets or names one. When a wallet is mentioned, resolve it only inside the selected space.
+21. **Financial snapshot**: For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Always include the text summary; the chart is optional/secondary.
+22. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.
 
 MESSAGE FORMATTING (Telegram-specific):
 - Your response is sent as **plain text** — do NOT use Markdown symbols like *bold* or _italic_ because they will appear as literal characters, not formatted text.
@@ -108,6 +120,7 @@ CURRENT CONTEXT:
 - Date: {{DATE}}
 - User Currency: {{CURRENCY}}
 - Spaces: {{HOUSEHOLDS}}
+- Wallets: {{WALLETS}}
 - Categories (with brand colors): {{CATEGORIES}}
 `;
 
@@ -149,19 +162,7 @@ const MAX_MEDIA_BYTES = 8 * 1024 * 1024;
 const TYPING_ACTION_INTERVAL_MS = 4000;
 const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
 const GEMINI_MAX_RETRIES = 1;
-const GEMINI_REQUEST_TIMEOUT_MS = 30000;
-
-const INTERNAL_FUNCTION_KEY = (
-  Deno.env.get("SECRET_API_KEY") ||
-  Deno.env.get("EDGE_FUNCTION_KEY") ||
-  ""
-).trim();
-
-if (!INTERNAL_FUNCTION_KEY) {
-  console.warn(
-    "[telegram-ai-bot] INTERNAL_FUNCTION_KEY not configured; internal tool calls will fail",
-  );
-}
+const GEMINI_REQUEST_TIMEOUT_MS = 60000;
 
 type TelegramUpdate = {
   update_id?: number;
@@ -308,12 +309,12 @@ function formatDateInTimeZone(
 
 async function runAnalyzeExpenseWithTimeout(
   payload: any,
-  apiKey: string,
+  apiKey: string | undefined,
   timeoutMs: number,
   timeoutError: string,
 ): Promise<any> {
   try {
-    const analysisPromise = runAnalyzeExpense(payload, apiKey);
+    const analysisPromise = runAnalyzeExpense(payload, apiKey || "");
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error("timeout")), timeoutMs);
     });
@@ -365,7 +366,27 @@ async function sendTelegramMessage(
       reply_markup: replyMarkup,
     }),
   });
-  return res.ok;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[telegram-ai-bot] sendMessage http error", {
+      chatId,
+      status: res.status,
+      body,
+    });
+    return false;
+  }
+
+  const payload = await res.json().catch(() => null);
+  // Telegram can reply HTTP 200 with { ok: false }, so check API payload too.
+  if (!payload?.ok) {
+    console.error("[telegram-ai-bot] sendMessage api error", {
+      chatId,
+      payload,
+    });
+    return false;
+  }
+
+  return true;
 }
 
 async function sendTelegramPhoto(
@@ -389,7 +410,29 @@ async function sendTelegramPhoto(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return res.ok;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error("[telegram-ai-bot] sendPhoto http error", {
+      chatId,
+      status: res.status,
+      photoUrl,
+      body,
+    });
+    return false;
+  }
+
+  const apiPayload = await res.json().catch(() => null);
+  // sendPhoto can also fail at Telegram API level with HTTP 200.
+  if (!apiPayload?.ok) {
+    console.error("[telegram-ai-bot] sendPhoto api error", {
+      chatId,
+      photoUrl,
+      payload: apiPayload,
+    });
+    return false;
+  }
+
+  return true;
 }
 
 function truncateTextByCodePoints(input: string, max: number): string {
@@ -472,6 +515,31 @@ async function normalizeQuickChartMediaUrl(url: string): Promise<string> {
   const cfg = parseQuickChartConfigFromUrl(input);
   if (!cfg) return input;
   return (await createQuickChartShortUrl(cfg)) || input;
+}
+
+function extractChartMediaUrlFromToolResult(
+  toolResult: unknown,
+): string | null {
+  if (!toolResult || typeof toolResult !== "object") return null;
+
+  // Keep this aligned with tool response fields that may contain chart URLs.
+  // We cannot depend on model text because prompts explicitly discourage URL echoing.
+  const candidateValues = [
+    (toolResult as Record<string, unknown>).url,
+    (toolResult as Record<string, unknown>).chart_url,
+    (toolResult as Record<string, any>).snapshot?.chart_url,
+    (toolResult as Record<string, any>).data?.chart_url,
+  ];
+
+  for (const value of candidateValues) {
+    if (typeof value !== "string") continue;
+    const cleaned = value.trim();
+    if (!cleaned) continue;
+    if (!/^https?:\/\/quickchart\.io\/chart/i.test(cleaned)) continue;
+    return cleaned;
+  }
+
+  return null;
 }
 
 async function sendTelegramChatAction(
@@ -648,6 +716,96 @@ function resolveTextFromCallbackChoice(
 
 function normalizeNameForMatch(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeWalletName(value: unknown) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+async function listWalletRowsForScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  includeArchived = false,
+) {
+  let query = supabase
+    .from("accounts")
+    .select(
+      "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
+    )
+    .order("is_default", { ascending: false })
+    .order("is_system", { ascending: false })
+    .order("name", { ascending: true });
+
+  if (!includeArchived) {
+    query = query.eq("is_archived", false);
+  }
+
+  if (householdId) {
+    query = query.eq("household_id", householdId);
+  } else {
+    query = query.eq("user_id", userId).is("household_id", null);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[telegram-ai-bot] Failed to load wallets for scope", {
+      userId,
+      householdId,
+      error,
+    });
+    return [];
+  }
+
+  return (data || []) as Array<{
+    id: string;
+    user_id: string;
+    household_id: string | null;
+    name: string;
+    icon: string | null;
+    color: string | null;
+    opening_balance_cents: number | null;
+    goal_amount_cents: number | null;
+    is_default: boolean;
+    is_system: boolean;
+    is_archived: boolean;
+    linked_bank_account_id: string | null;
+    created_at: string;
+    updated_at: string;
+  }>;
+}
+
+async function resolveWalletIdInScope(
+  supabase: SupabaseJsClient,
+  userId: string,
+  householdId: string | null,
+  walletName: unknown,
+): Promise<{ accountId?: string; error?: string }> {
+  const normalizedName = normalizeWalletName(walletName);
+  if (!normalizedName) return {};
+
+  const wallets = await listWalletRowsForScope(supabase, userId, householdId);
+  const matches = wallets.filter(
+    (wallet) => normalizeWalletName(wallet.name) === normalizedName,
+  );
+
+  if (matches.length === 0) {
+    return {
+      error: `Wallet '${String(
+        walletName,
+      ).trim()}' was not found in the selected scope.`,
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      error: `More than one wallet named '${String(
+        walletName,
+      ).trim()}' exists in the selected scope. Please rename one of them or be more specific.`,
+    };
+  }
+
+  return { accountId: matches[0].id };
 }
 
 type LastListedTransaction = {
@@ -1091,6 +1249,7 @@ type BudgetEnvelopeRowLite = {
   id: string;
   name: string;
   updated_at: string | null;
+  budget_percentage: number | null;
 };
 
 function normalizeEnvelopeName(value: string): string {
@@ -1144,7 +1303,7 @@ async function consolidateDuplicateEnvelopesForBudget(
   const normalizedPeriod = normalizePeriodMonth(periodMonth);
   const { data: envRowsRaw, error: envErr } = await supabase
     .from("budget_envelopes")
-    .select("id, name, updated_at")
+    .select("id, name, updated_at, budget_percentage")
     .eq("budget_id", budgetId);
 
   const envRows = (envRowsRaw || []) as BudgetEnvelopeRowLite[];
@@ -1278,7 +1437,7 @@ async function consolidateDuplicateEnvelopesForBudget(
 
   const { data: finalRowsRaw } = await supabase
     .from("budget_envelopes")
-    .select("id, name, updated_at")
+    .select("id, name, updated_at, budget_percentage")
     .eq("budget_id", budgetId);
   const finalRows = (finalRowsRaw || []) as BudgetEnvelopeRowLite[];
   const map = new Map<string, BudgetEnvelopeRowLite>();
@@ -1362,6 +1521,7 @@ async function invokeTransactionSave(
     currency: string;
     date: string;
     description?: string;
+    merchant?: string;
     householdId?: string | null;
     isPortfolio?: boolean;
     payerUserId?: string;
@@ -1371,6 +1531,7 @@ async function invokeTransactionSave(
     source?: string;
     ownerType?: string;
     privacyScope?: string;
+    accountId?: string;
   },
 ) {
   const type =
@@ -1387,9 +1548,11 @@ async function invokeTransactionSave(
           currency: params.currency,
           date: params.date,
           description: params.description,
+          merchant: params.merchant,
           source: params.source,
           ownerType: params.ownerType || "me",
           privacyScope: params.privacyScope || "full",
+          accountId: params.accountId,
           householdId: params.householdId,
           isPortfolio: params.isPortfolio === true,
           isRecurring: params.isRecurring === true,
@@ -1406,6 +1569,8 @@ async function invokeTransactionSave(
           currency: params.currency,
           date: params.date,
           description: params.description,
+          merchant: params.merchant,
+          accountId: params.accountId,
           householdId: params.householdId,
           isPortfolio: params.isPortfolio === true,
           payerUserId: params.payerUserId,
@@ -1422,9 +1587,73 @@ async function invokeTransactionSave(
     type === "income" ? "save-income" : "save-expense",
     {
       body,
-      headers: { "X-Moneko-Internal-Key": internalKey },
+      headers: buildInternalInvokeHeaders(internalKey),
     },
   );
+}
+
+function getInvokeHttpStatus(error: unknown): number | undefined {
+  const candidate = error as Record<string, any> | null | undefined;
+  const contextStatus = candidate?.context?.status;
+  if (typeof contextStatus === "number") return contextStatus;
+  const status = candidate?.status;
+  return typeof status === "number" ? status : undefined;
+}
+
+async function reportTelegramToolInvokeFailure(params: {
+  traceId: string;
+  toolName: string;
+  targetFunction: string;
+  formatted: string;
+  error?: unknown;
+  context?: Record<string, unknown>;
+}) {
+  try {
+    await reportEdgeFunctionError({
+      functionName: "telegram-ai-bot",
+      error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
+      context: {
+        traceId: params.traceId,
+        step: `tool:${params.toolName}`,
+        toolName: params.toolName,
+        targetFunction: params.targetFunction,
+        httpStatus: getInvokeHttpStatus(params.error),
+        ...params.context,
+      },
+    });
+  } catch (reportError) {
+    console.error("[telegram-ai-bot] reportEdgeFunctionError failed", {
+      traceId: params.traceId,
+      toolName: params.toolName,
+      targetFunction: params.targetFunction,
+      error: String(reportError),
+    });
+  }
+}
+
+function buildMutationFailureText(
+  toolName: string | null,
+  toolResult: unknown,
+): string | null {
+  const error =
+    typeof (toolResult as Record<string, any> | null)?.error === "string"
+      ? (toolResult as Record<string, string>).error.trim()
+      : "";
+  if (!error) return null;
+
+  if (toolName === "add_transaction") {
+    return "I couldn't save that transaction right now. Please try again in a moment.";
+  }
+  if (toolName === "add_transactions_batch") {
+    return "I couldn't save those transactions right now. Please try again in a moment.";
+  }
+  if (toolName === "manage_recurring") {
+    return "I couldn't save that recurring transaction right now. Please try again in a moment.";
+  }
+  if (toolName === "delete_transaction") {
+    return "I couldn't delete that transaction right now. Please try again in a moment.";
+  }
+  return null;
 }
 
 async function ensureHouseholdMember(
@@ -1583,13 +1812,14 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
+  const internalFunctionKey = resolveInternalFunctionKey();
+  let vertexConfig: ReturnType<typeof getVertexAiConfigFromEnv>;
 
   const missingEnv: string[] = [];
   if (!TELEGRAM_BOT_TOKEN) missingEnv.push("TELEGRAM_BOT_TOKEN");
   if (!TELEGRAM_WEBHOOK_SECRET) missingEnv.push("TELEGRAM_WEBHOOK_SECRET");
   if (!SUPABASE_URL) missingEnv.push("SUPABASE_URL");
   if (!SUPABASE_SERVICE_ROLE_KEY) missingEnv.push("SUPABASE_SERVICE_ROLE_KEY");
-  if (!GEMINI_API_KEY) missingEnv.push("GEMINI_API_KEY");
 
   if (missingEnv.length) {
     console.error(
@@ -1598,6 +1828,19 @@ Deno.serve(async (req: Request) => {
       )}`,
     );
     return jsonResponse({ error: "Server configuration error" }, 500);
+  }
+
+  try {
+    vertexConfig = getVertexAiConfigFromEnv();
+  } catch (error) {
+    console.error("[telegram-ai-bot] Vertex AI config error", error);
+    return jsonResponse({ error: "Server configuration error" }, 500);
+  }
+
+  if (!internalFunctionKey) {
+    console.warn(
+      "[telegram-ai-bot] INTERNAL_FUNCTION_KEY not configured; internal tool calls will fail",
+    );
   }
 
   const secretHeader =
@@ -1651,13 +1894,26 @@ Deno.serve(async (req: Request) => {
       });
       const choiceKeyboard = buildChoiceKeyboard(cached.response_text);
       if (cached.media_url) {
-        await sendTelegramPhoto(
+        const sentPhoto = await sendTelegramPhoto(
           TELEGRAM_BOT_TOKEN,
           chatId,
           cached.media_url,
           truncateTextByCodePoints(cached.response_text, 900),
           choiceKeyboard,
         );
+        if (!sentPhoto) {
+          // Keep duplicate replays resilient: if photo delivery fails, still return
+          // the answer with a direct chart link so users are never left with silence.
+          const fallbackText = [cached.response_text, cached.media_url]
+            .filter((part) => typeof part === "string" && part.trim())
+            .join("\n\n");
+          await sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            chatId,
+            truncateTextByCodePoints(fallbackText, 3500),
+            choiceKeyboard,
+          );
+        }
       } else {
         await sendTelegramMessage(
           TELEGRAM_BOT_TOKEN,
@@ -1962,7 +2218,6 @@ Deno.serve(async (req: Request) => {
           rawHistory.shift();
         }
 
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const telegramSystemInstruction =
           SYSTEM_INSTRUCTION.replace(
             "{{DATE}}",
@@ -1970,16 +2225,13 @@ Deno.serve(async (req: Request) => {
           )
             .replace("{{CURRENCY}}", userCurrency)
             .replace("{{HOUSEHOLDS}}", JSON.stringify(chatHouseholds))
+            .replace(
+              "{{WALLETS}}",
+              "Available on request for the selected space only",
+            )
             .replace("{{CATEGORIES}}", categoryGuideForUser)
             .replace("{{LANGUAGE}}", userLangLabel) +
           buildLanguageOverride(userLang);
-        const model = genAI.getGenerativeModel(
-          {
-            model: MODEL_NAME,
-            systemInstruction: telegramSystemInstruction,
-          },
-          { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-        );
 
         const tools = [
           {
@@ -2033,11 +2285,13 @@ Deno.serve(async (req: Request) => {
                 amount: { type: "NUMBER" },
                 category: { type: "STRING" },
                 description: { type: "STRING" },
+                merchant: { type: "STRING" },
                 date: { type: "STRING" },
                 currency: { type: "STRING" },
                 household_id: { type: "STRING" },
                 household_name: { type: "STRING" },
                 is_portfolio: { type: "BOOLEAN" },
+                wallet_name: { type: "STRING" },
                 payer_name: { type: "STRING" },
                 split_type: {
                   type: "STRING",
@@ -2093,8 +2347,10 @@ Deno.serve(async (req: Request) => {
                       amount: { type: "NUMBER" },
                       category: { type: "STRING" },
                       description: { type: "STRING" },
+                      merchant: { type: "STRING" },
                       date: { type: "STRING" },
                       currency: { type: "STRING" },
+                      wallet_name: { type: "STRING" },
                       payer_name: { type: "STRING" },
                       split_type: {
                         type: "STRING",
@@ -2138,6 +2394,75 @@ Deno.serve(async (req: Request) => {
             },
           },
           {
+            name: "list_wallets",
+            description:
+              "List wallets in personal scope or in a selected space, including balances and the default wallet.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+                include_archived: { type: "BOOLEAN" },
+              },
+            },
+          },
+          {
+            name: "create_wallet",
+            description:
+              "Create a new wallet in personal scope or in a selected space.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                name: { type: "STRING" },
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+                icon: { type: "STRING" },
+                color: { type: "STRING" },
+                opening_balance: { type: "NUMBER" },
+                goal_amount: { type: "NUMBER" },
+                is_default: { type: "BOOLEAN" },
+              },
+              required: ["name"],
+            },
+          },
+          {
+            name: "update_wallet",
+            description:
+              "Rename or update a wallet in the selected scope. Use wallet_name to choose which wallet to edit.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                wallet_name: { type: "STRING" },
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+                new_name: { type: "STRING" },
+                icon: { type: "STRING" },
+                color: { type: "STRING" },
+                goal_amount: { type: "NUMBER" },
+                is_default: { type: "BOOLEAN" },
+              },
+              required: ["wallet_name"],
+            },
+          },
+          {
+            name: "create_wallet_transfer",
+            description: "Move money between two wallets in the same scope.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                from_wallet_name: { type: "STRING" },
+                to_wallet_name: { type: "STRING" },
+                amount: { type: "NUMBER" },
+                currency: { type: "STRING" },
+                date: { type: "STRING" },
+                note: { type: "STRING" },
+                household_id: { type: "STRING" },
+                household_name: { type: "STRING" },
+              },
+              required: ["from_wallet_name", "to_wallet_name", "amount"],
+            },
+          },
+          {
             name: "update_transaction",
             description:
               "Update a previously listed transaction (no transaction IDs).",
@@ -2162,6 +2487,7 @@ Deno.serve(async (req: Request) => {
                     amount: { type: "NUMBER" },
                     category: { type: "STRING" },
                     description: { type: "STRING" },
+                    merchant: { type: "STRING" },
                     date: { type: "STRING", description: "YYYY-MM-DD" },
                     currency: { type: "STRING" },
                     source: { type: "STRING" },
@@ -2389,6 +2715,7 @@ Deno.serve(async (req: Request) => {
                 amount: { type: "NUMBER" },
                 category: { type: "STRING" },
                 description: { type: "STRING" },
+                merchant: { type: "STRING" },
                 date: { type: "STRING" },
                 currency: { type: "STRING" },
                 household_id: { type: "STRING" },
@@ -2437,9 +2764,13 @@ Deno.serve(async (req: Request) => {
           debugNotes.push("telegram tool set is below parity baseline");
         }
 
-        let activeChat = model.startChat({
-          history: rawHistory,
+        let activeChat = createVertexBotChatSession({
+          modelName: MODEL_NAME,
+          systemInstruction: telegramSystemInstruction,
+          history: rawHistory as any,
           tools: [{ function_declarations: tools }] as any,
+          timeoutMs: GEMINI_REQUEST_TIMEOUT_MS,
+          vertexConfig,
         });
         let response: any = null;
         let functionCalls: any[] = [];
@@ -2455,16 +2786,13 @@ Deno.serve(async (req: Request) => {
               logPrefix: "telegram-ai-bot",
               fallbackModelName: FALLBACK_MODEL_NAME,
               fallbackChatFactory: (modelName, history) => {
-                const fallbackModel = genAI.getGenerativeModel(
-                  {
-                    model: modelName,
-                    systemInstruction: telegramSystemInstruction,
-                  },
-                  { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-                );
-                return fallbackModel.startChat({
+                return createVertexBotChatSession({
+                  modelName,
+                  systemInstruction: telegramSystemInstruction,
                   history,
                   tools: [{ function_declarations: tools }] as any,
+                  timeoutMs: GEMINI_REQUEST_TIMEOUT_MS,
+                  vertexConfig,
                 }) as any;
               },
               onChatSwitched: (chatSession) => {
@@ -2475,6 +2803,9 @@ Deno.serve(async (req: Request) => {
           response = await result.response;
           functionCalls = (response.functionCalls() as any[]) || [];
           finalResponseText = response.text();
+          if (functionCalls.length > 0) {
+            finalResponseText = "";
+          }
 
           console.log("[telegram-ai-bot] model response", {
             traceId,
@@ -2494,13 +2825,12 @@ Deno.serve(async (req: Request) => {
             error,
           );
 
-          // Report Gemini error for instant notification
-          await reportEdgeFunctionError({
+          await reportVertexAiFailure({
             functionName: "telegram-ai-bot",
             error,
+            phase: "initial_ai_response",
+            modelName: MODEL_NAME,
             context: {
-              phase: "initial_ai_response",
-              modelName: MODEL_NAME,
               message: incomingText,
               hasAttachment: !!(
                 message?.photo ||
@@ -2512,7 +2842,9 @@ Deno.serve(async (req: Request) => {
           });
 
           debugNotes.push(
-            `initial Gemini failure: ${error instanceof Error ? error.message : String(error)}`,
+            `initial Gemini failure: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
           );
           finalResponseText = isRetryableGeminiError(error)
             ? buildGeminiBusyMessage(replyLanguage)
@@ -2970,9 +3302,23 @@ Deno.serve(async (req: Request) => {
                         call.args,
                       )
                     : {};
+                const requestedWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.wallet_name,
+                );
+                if (requestedWallet.error) {
+                  toolResult = { error: requestedWallet.error };
+                  lastToolResult = toolResult;
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
                 const { data, error } = await invokeTransactionSave(
                   supabase,
-                  INTERNAL_FUNCTION_KEY,
+                  internalFunctionKey,
                   userId,
                   {
                     recurrence_rule:
@@ -2986,12 +3332,17 @@ Deno.serve(async (req: Request) => {
                     amount: amount,
                     category: call.args.category,
                     description: call.args.description || "",
+                    merchant:
+                      typeof call.args.merchant === "string"
+                        ? call.args.merchant
+                        : undefined,
                     date: call.args.date || formatDateInTimeZone(userTimezone),
                     currency: call.args.currency || userCurrency,
                     type: call.args.type || "expense",
                     householdId,
                     isPortfolio:
                       spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
+                    accountId: requestedWallet.accountId ?? undefined,
                     isRecurring: call.args.is_recurring === true,
                     payerUserId: splitConfig.payerUserId,
                     customSplits: splitConfig.customSplits,
@@ -3000,7 +3351,32 @@ Deno.serve(async (req: Request) => {
                     privacyScope: call.args.privacy_scope,
                   },
                 );
-                toolResult = { data, error };
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save transaction";
+                toolResult = success
+                  ? { success: true, data: data?.data ?? data }
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "add_transaction",
+                    targetFunction:
+                      String(call.args.type || "expense").toLowerCase() ===
+                      "income"
+                        ? "save-income"
+                        : "save-expense",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      amount,
+                      category: call.args.category,
+                      householdId,
+                    },
+                  });
+                }
               } else if (call.name === "add_transactions_batch") {
                 const rows = Array.isArray(call.args.transactions)
                   ? call.args.transactions
@@ -3039,6 +3415,16 @@ Deno.serve(async (req: Request) => {
 
                 for (const row of rows) {
                   const amount = Number(row.amount || 0);
+                  const requestedWallet = await resolveWalletIdInScope(
+                    supabase,
+                    userId,
+                    householdId,
+                    row.wallet_name,
+                  );
+                  if (requestedWallet.error) {
+                    toolResult = { error: requestedWallet.error };
+                    break;
+                  }
                   const splitConfig =
                     householdId && !isPortfolio && row.type !== "income"
                       ? await resolveHouseholdSplitConfig(
@@ -3055,8 +3441,13 @@ Deno.serve(async (req: Request) => {
                     amount,
                     category: row.category,
                     description: row.description || "",
+                    merchant:
+                      typeof row.merchant === "string"
+                        ? row.merchant
+                        : undefined,
                     date: row.date || formatDateInTimeZone(userTimezone),
                     currency: row.currency || userCurrency,
+                    accountId: requestedWallet.accountId ?? undefined,
                     source: row.source,
                     ownerType: row.owner_type || "me",
                     privacyScope: row.privacy_scope || "full",
@@ -3082,24 +3473,293 @@ Deno.serve(async (req: Request) => {
                       isPortfolio,
                       transactions: batchTransactions,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
 
-                toolResult =
-                  !error && data?.success === true
-                    ? {
-                        success: true,
-                        summary: data?.summary,
-                        results: data?.results,
-                      }
-                    : {
-                        error:
-                          formatInvokeError(error ?? data?.error) ||
-                          "Failed to save transactions",
-                      };
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to save transactions";
+                toolResult = success
+                  ? {
+                      success: true,
+                      summary: data?.summary,
+                      results: data?.results,
+                    }
+                  : {
+                      error: formatted,
+                    };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "add_transactions_batch",
+                    targetFunction: "save-transactions-batch",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: {
+                      count: batchTransactions.length,
+                      householdId,
+                      isPortfolio,
+                    },
+                  });
+                }
+              } else if (call.name === "list_wallets") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const { data, error } = await supabase.functions.invoke(
+                  "list-wallets",
+                  {
+                    body: {
+                      userId,
+                      householdId,
+                      includeArchived: call.args.include_archived === true,
+                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
+                  },
+                );
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to list wallets";
+                toolResult = success
+                  ? { success: true, data: data?.data ?? [] }
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "list_wallets",
+                    targetFunction: "list-wallets",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: { householdId },
+                  });
+                }
+              } else if (call.name === "create_wallet") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const { data, error } = await supabase.functions.invoke(
+                  "save-wallet",
+                  {
+                    body: {
+                      userId,
+                      householdId,
+                      name: call.args.name,
+                      icon: call.args.icon,
+                      color: call.args.color,
+                      openingBalanceCents: Number.isFinite(
+                        call.args.opening_balance,
+                      )
+                        ? Math.round(Number(call.args.opening_balance) * 100)
+                        : undefined,
+                      goalAmountCents: Number.isFinite(call.args.goal_amount)
+                        ? Math.round(Number(call.args.goal_amount) * 100)
+                        : undefined,
+                      isDefault: call.args.is_default === true,
+                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
+                  },
+                );
+                const success = !error && data?.success === true;
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to create wallet";
+                toolResult = success
+                  ? { success: true, data: data?.data ?? data }
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "create_wallet",
+                    targetFunction: "save-wallet",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: { householdId, name: call.args.name },
+                  });
+                }
+              } else if (call.name === "update_wallet") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const requestedWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.wallet_name,
+                );
+                if (requestedWallet.error || !requestedWallet.accountId) {
+                  toolResult = {
+                    error:
+                      requestedWallet.error ||
+                      "Wallet was not found in the selected scope.",
+                  };
+                } else {
+                  const { data, error } = await supabase.functions.invoke(
+                    "update-wallet",
+                    {
+                      body: {
+                        userId,
+                        accountId: requestedWallet.accountId,
+                        name: call.args.new_name,
+                        icon: call.args.icon,
+                        color: call.args.color,
+                        goalAmountCents: Number.isFinite(call.args.goal_amount)
+                          ? Math.round(Number(call.args.goal_amount) * 100)
+                          : undefined,
+                        isDefault:
+                          typeof call.args.is_default === "boolean"
+                            ? call.args.is_default
+                            : undefined,
+                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
+                    },
+                  );
+                  const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to update wallet";
+                  toolResult = success
+                    ? { success: true, data: data?.data ?? data }
+                    : { error: formatted };
+                  if (!success) {
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      toolName: "update_wallet",
+                      targetFunction: "update-wallet",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: {
+                        householdId,
+                        walletName: call.args.wallet_name,
+                      },
+                    });
+                  }
+                }
+              } else if (call.name === "create_wallet_transfer") {
+                let householdId = call.args.household_id || null;
+                const householdName = (call.args.household_name || "")
+                  .toString()
+                  .toLowerCase();
+                let spaceMeta = householdId
+                  ? spaceMap.get(householdId)
+                  : undefined;
+                if (
+                  !spaceMeta &&
+                  householdName &&
+                  spaceMap.has(householdName)
+                ) {
+                  spaceMeta = spaceMap.get(householdName);
+                  householdId = spaceMeta?.id ?? null;
+                }
+                const fromWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.from_wallet_name,
+                );
+                const toWallet = await resolveWalletIdInScope(
+                  supabase,
+                  userId,
+                  householdId,
+                  call.args.to_wallet_name,
+                );
+                if (fromWallet.error || !fromWallet.accountId) {
+                  toolResult = {
+                    error:
+                      fromWallet.error ||
+                      "Source wallet was not found in the selected scope.",
+                  };
+                } else if (toWallet.error || !toWallet.accountId) {
+                  toolResult = {
+                    error:
+                      toWallet.error ||
+                      "Destination wallet was not found in the selected scope.",
+                  };
+                } else {
+                  const { data, error } = await supabase.functions.invoke(
+                    "create-wallet-transfer",
+                    {
+                      body: {
+                        userId,
+                        fromAccountId: fromWallet.accountId,
+                        toAccountId: toWallet.accountId,
+                        amountCents: Math.round(
+                          Number(call.args.amount || 0) * 100,
+                        ),
+                        currency: call.args.currency || userCurrency,
+                        date:
+                          call.args.date || formatDateInTimeZone(userTimezone),
+                        note: call.args.note,
+                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
+                    },
+                  );
+                  const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to create wallet transfer";
+                  toolResult = success
+                    ? { success: true, data: data?.data ?? data }
+                    : { error: formatted };
+                  if (!success) {
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      toolName: "create_wallet_transfer",
+                      targetFunction: "create-wallet-transfer",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: {
+                        householdId,
+                        fromWallet: call.args.from_wallet_name,
+                        toWallet: call.args.to_wallet_name,
+                        amount: call.args.amount,
+                      },
+                    });
+                  }
+                }
               } else if (call.name === "generate_chart_url") {
                 const chartConfig = {
                   type: call.args.chart_type || "bar",
@@ -3192,21 +3852,35 @@ Deno.serve(async (req: Request) => {
                       userId,
                       language,
                     },
-                    headers: {
-                      "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                    },
+                    headers: buildInternalInvokeHeaders(internalFunctionKey),
                   },
                 );
                 const resolvedLanguage =
                   data?.results?.preferredLanguage || language;
-                toolResult = error
-                  ? { error }
-                  : {
+                const success =
+                  !error && (data?.ok === true || data?.success === true);
+                const formatted = success
+                  ? ""
+                  : formatInvokeError(error ?? data?.error) ||
+                    "Failed to update preferred language";
+                toolResult = success
+                  ? {
                       success: true,
                       language: resolvedLanguage,
                       reply_language: resolvedLanguage,
                       message: `Preferred language updated to ${resolvedLanguage}. Reply in this language for this confirmation and use it as the default language for future replies.`,
-                    };
+                    }
+                  : { error: formatted };
+                if (!success) {
+                  await reportTelegramToolInvokeFailure({
+                    traceId,
+                    toolName: "set_language",
+                    targetFunction: "update-preferred-language",
+                    formatted,
+                    error: error ?? data?.error,
+                    context: { language },
+                  });
+                }
               } else if (call.name === "update_transaction") {
                 const updatesArgs =
                   call.args?.updates &&
@@ -3399,6 +4073,9 @@ Deno.serve(async (req: Request) => {
                     if ((updatesArgs as any).description != null) {
                       updates.raw_text = (updatesArgs as any).description;
                     }
+                    if ((updatesArgs as any).merchant !== undefined) {
+                      updates.merchant = (updatesArgs as any).merchant;
+                    }
                     if ((updatesArgs as any).currency != null) {
                       const currency = String(
                         (updatesArgs as any).currency || "",
@@ -3481,7 +4158,7 @@ Deno.serve(async (req: Request) => {
 
                       const expenseId = resolved.candidate.id;
 
-                      if (!INTERNAL_FUNCTION_KEY) {
+                      if (!internalFunctionKey) {
                         console.error(
                           "[telegram-ai-bot] update-expense invoke skipped: missing internal key",
                           {
@@ -3529,9 +4206,8 @@ Deno.serve(async (req: Request) => {
                               expenseId,
                               updates,
                             },
-                            headers: {
-                              "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                            },
+                            headers:
+                              buildInternalInvokeHeaders(internalFunctionKey),
                           },
                         );
 
@@ -3587,9 +4263,8 @@ Deno.serve(async (req: Request) => {
                                 step: "tool:update_transaction",
                                 traceId,
                                 tool: "update-expense",
-                                internalKeyConfigured: Boolean(
-                                  INTERNAL_FUNCTION_KEY,
-                                ),
+                                internalKeyConfigured:
+                                  Boolean(internalFunctionKey),
                                 httpStatus,
                                 status,
                                 code,
@@ -3646,20 +4321,27 @@ Deno.serve(async (req: Request) => {
                     "delete-expense",
                     {
                       body: { userId, expenseIds: resolved.candidate.id },
-                      headers: {
-                        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                      },
+                      headers: buildInternalInvokeHeaders(internalFunctionKey),
                     },
                   );
-                  toolResult =
-                    !error && data?.success
-                      ? { success: true }
-                      : {
-                          error:
-                            error ??
-                            data?.error ??
-                            "Failed to delete transaction",
-                        };
+                  const success = !error && data?.success === true;
+                  const formatted = success
+                    ? ""
+                    : formatInvokeError(error ?? data?.error) ||
+                      "Failed to delete transaction";
+                  toolResult = success
+                    ? { success: true }
+                    : { error: formatted };
+                  if (!success) {
+                    await reportTelegramToolInvokeFailure({
+                      traceId,
+                      toolName: "delete_transaction",
+                      targetFunction: "delete-expense",
+                      formatted,
+                      error: error ?? data?.error,
+                      context: { expenseId: resolved.candidate.id },
+                    });
+                  }
                 }
               } else if (
                 call.name === "draft_budget" ||
@@ -3889,10 +4571,35 @@ Deno.serve(async (req: Request) => {
                       normalizeEnvelopeName(name),
                     );
                     const nameToUse = canonical?.name || name;
-                    const percentage = Math.max(
-                      0,
-                      Math.min(100, Number(call.args.percentage || 0)),
+                    const hasPercentageArg =
+                      Object.prototype.hasOwnProperty.call(
+                        call.args || {},
+                        "percentage",
+                      );
+                    const resolvedPercentage = resolvePocketPercentageForUpsert(
+                      {
+                        hasPercentageArg,
+                        providedPercentage: call.args.percentage,
+                        existingPercentage: canonical?.budget_percentage,
+                      },
                     );
+                    if (
+                      resolvedPercentage.error ||
+                      resolvedPercentage.percentage == null
+                    ) {
+                      toolResult = {
+                        error:
+                          resolvedPercentage.error || "percentage is required",
+                      };
+                      toolResponses.push({
+                        functionResponse: {
+                          name: call.name,
+                          response: toolResult,
+                        },
+                      });
+                      continue;
+                    }
+                    const percentage = resolvedPercentage.percentage;
                     const envRes = await upsertEnvelope(
                       supabase,
                       budgetId,
@@ -4051,20 +4758,28 @@ Deno.serve(async (req: Request) => {
                         "delete-expense",
                         {
                           body: { userId, expenseIds: expenseId },
-                          headers: {
-                            "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                          },
+                          headers:
+                            buildInternalInvokeHeaders(internalFunctionKey),
                         },
                       );
-                      toolResult =
-                        !error && data?.success
-                          ? { success: true }
-                          : {
-                              error:
-                                error ??
-                                data?.error ??
-                                "Failed to delete recurring transaction",
-                            };
+                      const success = !error && data?.success === true;
+                      const formatted = success
+                        ? ""
+                        : formatInvokeError(error ?? data?.error) ||
+                          "Failed to delete recurring transaction";
+                      toolResult = success
+                        ? { success: true }
+                        : { error: formatted };
+                      if (!success) {
+                        await reportTelegramToolInvokeFailure({
+                          traceId,
+                          toolName: "manage_recurring",
+                          targetFunction: "delete-expense",
+                          formatted,
+                          error: error ?? data?.error,
+                          context: { action, expenseId },
+                        });
+                      }
                     }
                   }
                 } else if (action === "update") {
@@ -4126,6 +4841,9 @@ Deno.serve(async (req: Request) => {
                       if (call.args.description != null) {
                         updates.raw_text = call.args.description;
                       }
+                      if (call.args.merchant !== undefined) {
+                        updates.merchant = call.args.merchant;
+                      }
                       if (call.args.currency != null) {
                         updates.currency = call.args.currency;
                       }
@@ -4144,20 +4862,32 @@ Deno.serve(async (req: Request) => {
                             expenseId,
                             updates,
                           },
-                          headers: {
-                            "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY,
-                          },
+                          headers:
+                            buildInternalInvokeHeaders(internalFunctionKey),
                         },
                       );
-                      toolResult =
-                        !error && data?.success
-                          ? { success: true }
-                          : {
-                              error:
-                                error ??
-                                data?.error ??
-                                "Failed to update recurring transaction",
-                            };
+                      const success = !error && data?.success === true;
+                      const formatted = success
+                        ? ""
+                        : formatInvokeError(error ?? data?.error) ||
+                          "Failed to update recurring transaction";
+                      toolResult = success
+                        ? { success: true }
+                        : { error: formatted };
+                      if (!success) {
+                        await reportTelegramToolInvokeFailure({
+                          traceId,
+                          toolName: "manage_recurring",
+                          targetFunction: "update-expense",
+                          formatted,
+                          error: error ?? data?.error,
+                          context: {
+                            action,
+                            expenseId,
+                            updateKeys: Object.keys(updates),
+                          },
+                        });
+                      }
                     }
                   }
                 } else {
@@ -4198,31 +4928,73 @@ Deno.serve(async (req: Request) => {
                           call.args,
                         )
                       : {};
-                  const { data, error } = await invokeTransactionSave(
+                  const requestedWallet = await resolveWalletIdInScope(
                     supabase,
-                    INTERNAL_FUNCTION_KEY,
                     userId,
-                    {
-                      amount,
-                      category: call.args.category,
-                      description: call.args.description || "",
-                      date: dateValue,
-                      currency: call.args.currency || userCurrency,
-                      type: call.args.type || "expense",
-                      householdId,
-                      isPortfolio:
-                        spaceMeta?.isPortfolio ??
-                        call.args.is_portfolio === true,
-                      isRecurring: true,
-                      recurrence_rule: recurrenceRule,
-                      payerUserId: splitConfig.payerUserId,
-                      customSplits: splitConfig.customSplits,
-                      source: call.args.source,
-                      ownerType: call.args.owner_type,
-                      privacyScope: call.args.privacy_scope,
-                    },
+                    householdId,
+                    call.args.wallet_name,
                   );
-                  toolResult = { data, error };
+                  if (requestedWallet.error) {
+                    toolResult = { error: requestedWallet.error };
+                  } else {
+                    const { data, error } = await invokeTransactionSave(
+                      supabase,
+                      internalFunctionKey,
+                      userId,
+                      {
+                        amount,
+                        category: call.args.category,
+                        description: call.args.description || "",
+                        merchant:
+                          typeof call.args.merchant === "string"
+                            ? call.args.merchant
+                            : undefined,
+                        date: dateValue,
+                        currency: call.args.currency || userCurrency,
+                        type: call.args.type || "expense",
+                        householdId,
+                        isPortfolio:
+                          spaceMeta?.isPortfolio ??
+                          call.args.is_portfolio === true,
+                        accountId: requestedWallet.accountId ?? undefined,
+                        isRecurring: true,
+                        recurrence_rule: recurrenceRule,
+                        payerUserId: splitConfig.payerUserId,
+                        customSplits: splitConfig.customSplits,
+                        source: call.args.source,
+                        ownerType: call.args.owner_type,
+                        privacyScope: call.args.privacy_scope,
+                      },
+                    );
+                    const targetFunction =
+                      (call.args.type || "expense") === "income"
+                        ? "save-income"
+                        : "save-expense";
+                    const success = !error && data?.success === true;
+                    const formatted = success
+                      ? ""
+                      : formatInvokeError(error ?? data?.error) ||
+                        "Failed to save recurring transaction";
+                    toolResult = success
+                      ? { success: true, data: data?.data ?? data }
+                      : { error: formatted };
+                    if (!success) {
+                      await reportTelegramToolInvokeFailure({
+                        traceId,
+                        toolName: "manage_recurring",
+                        targetFunction,
+                        formatted,
+                        error: error ?? data?.error,
+                        context: {
+                          action,
+                          type: call.args.type || "expense",
+                          amount,
+                          category: call.args.category,
+                          householdId,
+                        },
+                      });
+                    }
+                  }
                 }
               }
             } catch (e) {
@@ -4264,6 +5036,12 @@ Deno.serve(async (req: Request) => {
                 }));
               }
             }
+            const chartFromTool =
+              extractChartMediaUrlFromToolResult(toolResult);
+            if (chartFromTool) {
+              // Persist chart from tool payload even when the model doesn't print it.
+              lastGeneratedChartUrl = chartFromTool;
+            }
             toolResponses.push({
               functionResponse: {
                 name: call.name,
@@ -4282,16 +5060,13 @@ Deno.serve(async (req: Request) => {
                 logPrefix: "telegram-ai-bot",
                 fallbackModelName: FALLBACK_MODEL_NAME,
                 fallbackChatFactory: (modelName, history) => {
-                  const fallbackModel = genAI.getGenerativeModel(
-                    {
-                      model: modelName,
-                      systemInstruction: telegramSystemInstruction,
-                    },
-                    { timeout: GEMINI_REQUEST_TIMEOUT_MS },
-                  );
-                  return fallbackModel.startChat({
+                  return createVertexBotChatSession({
+                    modelName,
+                    systemInstruction: telegramSystemInstruction,
                     history,
                     tools: [{ function_declarations: tools }] as any,
+                    timeoutMs: GEMINI_REQUEST_TIMEOUT_MS,
+                    vertexConfig,
                   }) as any;
                 },
                 onChatSwitched: (chatSession) => {
@@ -4311,13 +5086,12 @@ Deno.serve(async (req: Request) => {
               e,
             );
 
-            // Report Gemini error for instant notification
-            await reportEdgeFunctionError({
+            await reportVertexAiFailure({
               functionName: "telegram-ai-bot",
               error: e,
+              phase: "final_ai_response",
+              modelName: MODEL_NAME,
               context: {
-                phase: "final_ai_response",
-                modelName: MODEL_NAME,
                 toolIterations,
                 lastToolCalls: functionCalls?.length || 0,
               },
@@ -4347,6 +5121,15 @@ Deno.serve(async (req: Request) => {
           lastBudgetPockets
         ) {
           finalResponseText = buildBudgetDoneText(lastBudgetPockets);
+        }
+        if (
+          typeof buildMutationFailureText(lastToolCallName, lastToolResult) ===
+          "string"
+        ) {
+          finalResponseText = buildMutationFailureText(
+            lastToolCallName,
+            lastToolResult,
+          )!;
         }
         if (
           (!finalResponseText || !finalResponseText.trim()) &&
@@ -4401,13 +5184,27 @@ Deno.serve(async (req: Request) => {
 
         const caption = truncateTextByCodePoints(cleanedText, 900);
         if (mediaUrl) {
-          await sendTelegramPhoto(
+          const sentPhoto = await sendTelegramPhoto(
             TELEGRAM_BOT_TOKEN,
             chatId,
             mediaUrl,
             caption,
             choiceKeyboard,
           );
+          if (!sentPhoto) {
+            const fallbackText = [cleanedText, mediaUrl]
+              .filter((part) => typeof part === "string" && part.trim())
+              .join("\n\n");
+            const sentFallback = await sendTelegramMessage(
+              TELEGRAM_BOT_TOKEN,
+              chatId,
+              truncateTextByCodePoints(fallbackText, 3500),
+              choiceKeyboard,
+            );
+            if (!sentFallback) {
+              throw new Error("Failed to deliver Telegram chart response");
+            }
+          }
           telegramResponseSent = true;
         } else {
           await sendTelegramMessage(

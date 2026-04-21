@@ -18,6 +18,17 @@ import {
   fetchUserCategoryRemaps,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
+import {
+  assertAccountInScope,
+  resolveDefaultAccountId,
+} from "../shared/accounts.ts";
+import {
+  createHouseholdAutoSplitForTransaction,
+  type CustomSplits,
+  fetchHouseholdAutoSplitSettings,
+  type HouseholdAutoSplitSettings,
+  type HouseholdMemberRow,
+} from "../shared/household-auto-split.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -57,11 +68,14 @@ interface RequestBody {
   date: string; // ISO date (YYYY-MM-DD) or ISO datetime (YYYY-MM-DDTHH:mm:ss)
   clientCreatedAt?: string; // Optional client-side timestamp with timezone (ISO)
   description?: string; // Optional description/note
-  source?: string; // Optional income source (employer, refund origin, etc.)
+  merchant?: string; // Optional merchant/payee (used for both expense and income)
   ownerType?: "me" | "partner" | "household"; // Owner attribution (default: 'me')
   privacyScope?: "private" | "balances_only" | "full"; // Visibility scope (default: 'full')
   householdId?: string; // If provided, share with this household
   isPortfolio?: boolean; // If true, treat as personal even with householdId
+  customSplits?: CustomSplits; // Optional household split configuration
+  payerUserId?: string; // Optional explicit recipient/payer for household split
+  accountId?: string; // Optional financial account id
   fxRate?: number; // Optional FX rate for currency normalization
   idempotencyKey?: string; // Optional idempotency key for deduplication
   attachments?: Array<{
@@ -235,6 +249,20 @@ Deno.serve(async (req: Request) => {
       return errorResponse("Date is required", 400);
     }
 
+    if (body.merchant !== undefined && body.merchant !== null) {
+      if (typeof body.merchant !== "string") {
+        return errorResponse("merchant must be a string", 400);
+      }
+      if (body.merchant.trim().length > 255) {
+        return errorResponse("merchant must be less than 256 characters", 400);
+      }
+    }
+
+    const normalizedMerchant =
+      typeof body.merchant === "string" && body.merchant.trim().length > 0
+        ? body.merchant.trim()
+        : null;
+
     const normalizedDate = normalizeCalendarDateString(body.date);
     if (!normalizedDate) {
       return errorResponse("date must be a valid calendar date", 400);
@@ -337,6 +365,11 @@ Deno.serve(async (req: Request) => {
 
     let resolvedHouseholdId: string | null = null;
     let warningMessage: string | null = null;
+    let householdMembers: HouseholdMemberRow[] = [];
+    let householdAutoSplitSettings: HouseholdAutoSplitSettings = {
+      autoSplitEnabled: true,
+      defaultConfig: null,
+    };
 
     // Household mode requires membership; if not a member we store as personal and
     // return a warning (matching save-expense behavior).
@@ -358,6 +391,23 @@ Deno.serve(async (req: Request) => {
 
       if (membership) {
         resolvedHouseholdId = requestedHouseholdId;
+
+        const { data: members, error: membersError } = await supabase
+          .from("household_members")
+          .select("user_id")
+          .eq("household_id", requestedHouseholdId);
+        if (membersError) {
+          console.error(
+            "[save-income] Failed to load household members:",
+            membersError,
+          );
+        } else if (Array.isArray(members)) {
+          householdMembers = members;
+          householdAutoSplitSettings = await fetchHouseholdAutoSplitSettings(
+            supabase,
+            requestedHouseholdId,
+          );
+        }
       } else {
         warningMessage = "Income saved but not shared (not a household member)";
       }
@@ -365,6 +415,42 @@ Deno.serve(async (req: Request) => {
 
     // Convert amount to cents
     const amountCents = Math.round(body.amount * 100);
+
+    let accountId: string | null = null;
+    if (body.accountId) {
+      const isInScope = await assertAccountInScope(supabase, body.accountId, {
+        userId,
+        householdId: resolvedHouseholdId,
+      });
+      if (!isInScope) {
+        if (resolvedHouseholdId != null) {
+          console.warn(
+            "[save-income] Ignoring out-of-scope accountId and falling back to default scoped account",
+            {
+              requestedAccountId: body.accountId,
+              resolvedHouseholdId,
+            },
+          );
+          accountId = await resolveDefaultAccountId(supabase, {
+            userId,
+            householdId: resolvedHouseholdId,
+          });
+        } else {
+          return errorResponse(
+            "Provided accountId does not belong to this scope",
+            400,
+            "VALIDATION_ERROR",
+          );
+        }
+      } else {
+        accountId = body.accountId;
+      }
+    } else {
+      accountId = await resolveDefaultAccountId(supabase, {
+        userId,
+        householdId: resolvedHouseholdId,
+      });
+    }
 
     // Build income record
     const incomeRecord: any = {
@@ -375,14 +461,15 @@ Deno.serve(async (req: Request) => {
       category: effectiveCategory,
       date: body.date,
       raw_text: body.description || "",
+      merchant: normalizedMerchant,
       currency: currency,
-      source: body.source || null,
       owner_type: ownerType,
       privacy_scope: privacyScope,
       created_at: body.clientCreatedAt || new Date().toISOString(),
       attachments: Array.isArray(body.attachments) ? body.attachments : [],
       is_recurring: body.isRecurring || false,
       recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
+      account_id: accountId,
     };
 
     // Add household reference if resolved (portfolio uses household_id as a private space scope)
@@ -451,21 +538,58 @@ Deno.serve(async (req: Request) => {
 
     console.log("[save-income] Income saved successfully:", income.id);
 
+    let responseIncome = income;
+    let splitSkipped = false;
+
+    if (resolvedHouseholdId && !isPortfolio) {
+      const splitResult = await createHouseholdAutoSplitForTransaction({
+        supabase,
+        householdId: resolvedHouseholdId,
+        transaction: income as Record<string, unknown>,
+        actorUserId: userId,
+        members: householdMembers,
+        settings: householdAutoSplitSettings,
+        explicitCustomSplits: body.customSplits,
+        payerUserId: body.payerUserId ?? null,
+      });
+
+      if (splitResult.kind === "created") {
+        responseIncome = splitResult.transaction;
+      } else if (splitResult.kind === "skipped") {
+        splitSkipped = true;
+        warningMessage = warningMessage ??
+          "Income saved to household without split lines";
+      } else if (splitResult.kind === "invalid") {
+        console.warn("[save-income] Invalid household split payload:", {
+          code: splitResult.code,
+          error: splitResult.error,
+        });
+        warningMessage = warningMessage ?? splitResult.error;
+      } else if (splitResult.kind === "failed") {
+        console.error(
+          "[save-income] Failed to create household split:",
+          splitResult.error,
+        );
+        warningMessage = warningMessage ??
+          "Income saved but split group creation failed";
+      }
+    }
+
     // Learn/ensure custom category + preference mapping for future AI categorization
     try {
       await ensureUserCategory({
         supabase,
         userId,
-        categoryName: income.category ?? body.category,
+        categoryName: responseIncome.category ?? body.category,
         transactionType: "income",
       });
       await learnUserCategoryPreference({
         supabase,
         userId,
         transactionType: "income",
-        categoryName: income.category ?? body.category,
-        sourceText: body.source || null,
-        descriptionText: body.description || income.raw_text || null,
+        categoryName: responseIncome.category ?? body.category,
+        sourceText: normalizedMerchant,
+        descriptionText: body.description || responseIncome.raw_text || null,
       });
     } catch (e) {
       console.error(
@@ -505,8 +629,8 @@ Deno.serve(async (req: Request) => {
             actor_name: actorName,
             amount_cents: amountCents,
             currency: currency,
-            category: income.category ?? effectiveCategory,
-            source: body.source || "",
+            category: responseIncome.category ?? effectiveCategory,
+            source: normalizedMerchant || "",
             note: body.description || "",
             privacy_scope: privacyScope,
             owner_type: ownerType,
@@ -532,8 +656,9 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: true,
-        data: income,
+        data: responseIncome,
         shared: !!resolvedHouseholdId && !isPortfolio,
+        splitSkipped,
         privacyScope: privacyScope,
         ownerType: ownerType,
         ...(warningMessage ? { warning: warningMessage } : {}),

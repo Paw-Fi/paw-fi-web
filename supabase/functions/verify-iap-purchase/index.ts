@@ -4,18 +4,27 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
 import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  AppStoreServerAPIClient,
   Environment,
-  GetTransactionHistoryVersion,
+  Status,
   type JWSTransactionDecodedPayload,
-  Order,
-  ProductType,
-  SignedDataVerifier,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getGoogleAccessToken } from "../shared/google-auth.ts";
 import {
+  type AppStoreSubscriptionStatusLookup,
+  decodeJwsPayload,
+  findAppStoreSubscriptionStatusWithEnvironmentFallback,
+  findAppStoreTransactionWithEnvironmentFallback,
+  fetchLatestAppStoreTransactionByOriginalId,
+  getValidatedAppStorePrivateKey,
+  isAppStoreServerApiConfigured,
+  matchesVerifiedAppStoreTransaction,
+} from "../shared/app-store-api.ts";
+import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import {
   ensureAppStoreOwnership,
+  getAppStoreOwnershipBinding,
   hasAppStoreOwnershipConflict,
   PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
   purchaseOwnershipConflictMessage,
@@ -66,20 +75,83 @@ async function resolveActiveAuthUserId(
 ): Promise<string | null> {
   if (!candidateUserId) return null;
 
-  const { data, error } =
-    await supabase.auth.admin.getUserById(candidateUserId);
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", candidateUserId)
+    .maybeSingle();
 
   if (error) {
-    if (error.status === 404) {
-      return null;
-    }
-
     throw new Error(
       `Failed to verify auth user existence: ${error.message ?? String(error)}`,
     );
   }
 
-  return data?.user?.id ?? null;
+  return data?.id ?? null;
+}
+
+async function attemptAutomaticAppStoreOwnershipTransfer(params: {
+  supabase: any;
+  originalTransactionId: string;
+  currentUserId: string;
+  transactionId: string | null;
+  storeProductId: string;
+  environment: string;
+}): Promise<
+  | { transferred: true; previousOwnerUserId: string }
+  | { transferred: false; reason: string }
+> {
+  const binding = await getAppStoreOwnershipBinding({
+    supabase: params.supabase,
+    originalTransactionId: params.originalTransactionId,
+  });
+
+  if (!binding?.user_id) {
+    return { transferred: false, reason: "binding_missing" };
+  }
+
+  if (binding.user_id === params.currentUserId) {
+    return { transferred: false, reason: "already_owned_by_current_user" };
+  }
+
+  const { count: dependentCount, error: dependentCountError } =
+    await params.supabase
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("bound_to_user_id", binding.user_id)
+      .or("status.eq.trialing,and(status.eq.active,plan.neq.free)");
+
+  if (dependentCountError) {
+    throw new Error(
+      `Failed to inspect bound dependents before ownership transfer: ${dependentCountError.message ?? dependentCountError.code ?? String(dependentCountError)}`,
+    );
+  }
+
+  if ((dependentCount ?? 0) > 0) {
+    return { transferred: false, reason: "active_bound_dependents" };
+  }
+
+  const now = new Date().toISOString();
+  const { error: transferError } = await params.supabase
+    .from("iap_account_bindings")
+    .update({
+      user_id: params.currentUserId,
+      latest_transaction_id: params.transactionId,
+      store_product_id: params.storeProductId,
+      app_store_environment: params.environment,
+      claim_source: "verify_iap_purchase_auto_transfer",
+      last_verified_at: now,
+      updated_at: now,
+    })
+    .eq("id", binding.id);
+
+  if (transferError) {
+    throw new Error(
+      `Failed to transfer App Store ownership binding: ${transferError.message ?? transferError.code ?? String(transferError)}`,
+    );
+  }
+
+  return { transferred: true, previousOwnerUserId: binding.user_id };
 }
 
 function parseMsToIso(ms: string | null): string | null {
@@ -101,6 +173,115 @@ function nowIso(): string {
 
 function safeJson<T>(value: unknown): T {
   return value as T;
+}
+
+function buildVerificationLogContext(params: {
+  userId?: string | null;
+  body?: VerifyRequestBody | null;
+  storeProductId?: string | null;
+  transactionId?: string | null;
+  originalTransactionId?: string | null;
+  environment?: Environment | null;
+  phase?: string;
+}) {
+  const serverReceipt = asString(
+    params.body?.verificationData?.serverVerificationData,
+  );
+  const localReceipt = asString(
+    params.body?.verificationData?.localVerificationData,
+  );
+
+  return {
+    phase: params.phase ?? "unknown",
+    userId: params.userId ?? null,
+    platform: params.body?.platform ?? null,
+    storeProductId: params.storeProductId ?? null,
+    purchaseId: params.body?.purchaseId ?? null,
+    transactionDate: params.body?.transactionDate ?? null,
+    verificationSource: params.body?.verificationData?.source ?? null,
+    serverReceiptLength: serverReceipt?.length ?? 0,
+    localReceiptLength: localReceipt?.length ?? 0,
+    serverReceiptPrefix: serverReceipt ? serverReceipt.slice(0, 12) : null,
+    localReceiptPrefix: localReceipt ? localReceipt.slice(0, 12) : null,
+    transactionId: params.transactionId ?? null,
+    originalTransactionId: params.originalTransactionId ?? null,
+    environmentHint:
+      params.environment === Environment.SANDBOX
+        ? "sandbox"
+        : params.environment === Environment.PRODUCTION
+          ? "production"
+          : null,
+    appAccountToken: params.body?.appAccountToken ?? null,
+  };
+}
+
+function buildAppStoreSubscriptionStatusContext(
+  subscriptionStatusLookup: AppStoreSubscriptionStatusLookup | null,
+) {
+  return {
+    appStoreSubscriptionStatus: subscriptionStatusLookup?.status ?? null,
+    appStoreStatusOriginalTransactionId:
+      subscriptionStatusLookup?.originalTransactionId ?? null,
+    appStoreStatusTransactionId:
+      subscriptionStatusLookup?.transaction?.transactionId ?? null,
+    appStoreStatusTransactionProductId:
+      subscriptionStatusLookup?.transaction?.productId ?? null,
+    appStoreStatusTransactionExpiresDate: asIsoMillisUnknown(
+      subscriptionStatusLookup?.transaction?.expiresDate,
+    ),
+    appStoreStatusRenewalProductId:
+      typeof subscriptionStatusLookup?.renewalInfo?.productId === "string"
+        ? subscriptionStatusLookup.renewalInfo.productId
+        : null,
+    appStoreStatusAutoRenewProductId:
+      typeof subscriptionStatusLookup?.renewalInfo?.autoRenewProductId ===
+      "string"
+        ? subscriptionStatusLookup.renewalInfo.autoRenewProductId
+        : null,
+    appStoreStatusRenewalDate: asIsoMillisUnknown(
+      subscriptionStatusLookup?.renewalInfo?.renewalDate,
+    ),
+    appStoreStatusGracePeriodExpiresDate: asIsoMillisUnknown(
+      subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate,
+    ),
+    appStoreStatusBillingRetry:
+      subscriptionStatusLookup?.renewalInfo?.isInBillingRetryPeriod ?? null,
+    appStoreStatusAutoRenewStatus:
+      subscriptionStatusLookup?.renewalInfo?.autoRenewStatus ?? null,
+  };
+}
+
+function asIsoMillisUnknown(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  if (typeof value === "string") {
+    return asIsoMillis(value);
+  }
+  return null;
+}
+
+function isFreeTrialTransaction(
+  transaction: Pick<
+    JWSTransactionDecodedPayload,
+    "offerDiscountType" | "offerType" | "offerIdentifier"
+  >,
+): boolean {
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
+  const offerIdentifier =
+    asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
+  const offerType = Number(transaction.offerType);
+
+  return (
+    offerDiscountType === "FREE_TRIAL" ||
+    (offerType === 1 && offerIdentifier.includes("trial"))
+  );
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -134,6 +315,9 @@ const isProductionEnv = envSecret.toUpperCase() === "PROD";
 const defaultAppStoreEnvironment = isProductionEnv
   ? Environment.PRODUCTION
   : Environment.SANDBOX;
+const allowUnverifiedIapDevFallback =
+  !isProductionEnv &&
+  readBooleanEnv("ALLOW_UNVERIFIED_IAP_DEV_FALLBACK", false);
 
 console.log(
   `🌍 Environment config: ENV="${envSecret}", isProduction=${isProductionEnv}, defaultAppStoreEnv=${
@@ -154,7 +338,6 @@ const appStoreIssuerId = Deno.env.get("APPLE_APP_STORE_ISSUER_ID") || "";
 const appStoreKeyId = Deno.env.get("APPLE_APP_STORE_KEY_ID") || "";
 const appStorePrivateKeyRaw = Deno.env.get("APPLE_APP_STORE_PRIVATE_KEY") || "";
 const appStoreBundleId = Deno.env.get("APPLE_BUNDLE_ID") || "";
-const appStoreAppId = Deno.env.get("APPLE_APP_ID") || "";
 const googleServiceAccountJson =
   Deno.env.get("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON") || "";
 const androidPackageName = Deno.env.get("ANDROID_PACKAGE_NAME") || "";
@@ -175,75 +358,6 @@ const iapOwnershipBindingEnabled = readBooleanEnv(
   true,
 );
 
-const appleRootCaUrls = [
-  "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer",
-  "https://www.apple.com/certificateauthority/AppleRootCA-G2.cer",
-];
-
-let cachedRootCAs: Uint8Array[] | null = null;
-
-async function getAppleRootCAs(): Promise<Uint8Array[]> {
-  if (cachedRootCAs) return cachedRootCAs;
-
-  const certs = await Promise.all(
-    appleRootCaUrls.map(async (url) => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch Apple root CA: ${url}`);
-      }
-      const buffer = await response.arrayBuffer();
-      return new Uint8Array(buffer);
-    }),
-  );
-
-  cachedRootCAs = certs;
-  return certs;
-}
-
-function normalizePrivateKey(value: string): string {
-  if (!value) return "";
-
-  // Handle various escape formats that might come from environment variables
-  let normalized = value
-    .replace(/\\n/g, "\n") // Escaped \n to actual newline
-    .replace(/\\r/g, "") // Remove any \r
-    .trim();
-
-  // If the key doesn't have proper PEM structure, it might be base64 encoded
-  if (!normalized.includes("-----BEGIN")) {
-    // Try to decode if it looks like it might be base64 encoded
-    try {
-      const decoded = atob(normalized);
-      if (decoded.includes("-----BEGIN")) {
-        normalized = decoded;
-      }
-    } catch {
-      // Not base64, use as-is
-    }
-  }
-
-  // Ensure proper line breaks in PEM format
-  // Some systems store the key as a single line with spaces instead of newlines
-  if (normalized.includes("-----BEGIN") && !normalized.includes("\n")) {
-    normalized = normalized
-      .replace(
-        /-----BEGIN PRIVATE KEY-----\s*/,
-        "-----BEGIN PRIVATE KEY-----\n",
-      )
-      .replace(/\s*-----END PRIVATE KEY-----/, "\n-----END PRIVATE KEY-----")
-      .replace(/\s+/g, "\n");
-  }
-
-  console.log("Private key format check:", {
-    hasBeginMarker: normalized.includes("-----BEGIN PRIVATE KEY-----"),
-    hasEndMarker: normalized.includes("-----END PRIVATE KEY-----"),
-    hasNewlines: normalized.includes("\n"),
-    length: normalized.length,
-  });
-
-  return normalized;
-}
-
 function asIsoMillis(value: string | null): string | null {
   if (!value) return null;
   const n = Number(value);
@@ -251,16 +365,6 @@ function asIsoMillis(value: string | null): string | null {
   const date = new Date(n);
   if (Number.isNaN(date.getTime())) return null;
   return date.toISOString();
-}
-
-function isAppleServerApiConfigured(): boolean {
-  return Boolean(
-    appStoreIssuerId &&
-      appStoreKeyId &&
-      appStorePrivateKeyRaw &&
-      appStoreBundleId &&
-      appStoreAppId,
-  );
 }
 
 /**
@@ -273,122 +377,57 @@ function isJws(data: string): boolean {
   return data.startsWith("eyJ");
 }
 
-/**
- * Decodes a base64url string to a regular string.
- */
-function base64UrlDecode(input: string): string {
-  // Replace base64url characters with base64 characters
-  let base64 = input.replace(/-/g, "+").replace(/_/g, "/");
-  // Add padding if needed
-  const padding = base64.length % 4;
-  if (padding) {
-    base64 += "=".repeat(4 - padding);
-  }
-  // Decode
-  return atob(base64);
+const appStoreApiConfig = {
+  issuerId: appStoreIssuerId,
+  keyId: appStoreKeyId,
+  bundleId: appStoreBundleId,
+  privateKey: appStorePrivateKeyRaw,
+};
+
+function isAppleServerApiConfigured(): boolean {
+  return isAppStoreServerApiConfigured(appStoreApiConfig);
 }
 
-/**
- * Decodes a JWS payload without cryptographic verification.
- * The JWS format is: header.payload.signature (all base64url encoded)
- *
- * Note: This does NOT verify the signature. We validate the transaction
- * by calling the App Store Server API with the extracted transactionId.
- */
-function decodeJwsPayload(jws: string): JWSTransactionDecodedPayload {
-  const parts = jws.split(".");
-  if (parts.length !== 3) {
-    throw new Error("Invalid JWS format: expected 3 parts");
-  }
+function getNormalizedAppStoreApiConfig() {
+  const normalizedPrivateKey = getValidatedAppStorePrivateKey(
+    appStorePrivateKeyRaw,
+  );
+  console.log("Private key format check:", {
+    hasBeginMarker: normalizedPrivateKey.includes(
+      "-----BEGIN PRIVATE KEY-----",
+    ),
+    hasEndMarker: normalizedPrivateKey.includes("-----END PRIVATE KEY-----"),
+    hasNewlines: normalizedPrivateKey.includes("\n"),
+    length: normalizedPrivateKey.length,
+  });
 
-  const payloadJson = base64UrlDecode(parts[1]);
-  const payload = JSON.parse(payloadJson);
-
-  // Map the raw payload to JWSTransactionDecodedPayload structure
   return {
-    transactionId: payload.transactionId,
-    originalTransactionId: payload.originalTransactionId,
-    bundleId: payload.bundleId,
-    productId: payload.productId,
-    purchaseDate: payload.purchaseDate,
-    originalPurchaseDate: payload.originalPurchaseDate,
-    quantity: payload.quantity,
-    type: payload.type,
-    inAppOwnershipType: payload.inAppOwnershipType,
-    signedDate: payload.signedDate,
-    environment: payload.environment,
-    transactionReason: payload.transactionReason,
-    appAccountToken: payload.appAccountToken,
-    storefront: payload.storefront,
-    storefrontId: payload.storefrontId,
-    price: payload.price,
-    currency: payload.currency,
-    // Subscription-specific fields
-    expiresDate: payload.expiresDate,
-    renewalDate: payload.renewalDate,
-    isUpgraded: payload.isUpgraded,
-    offerType: payload.offerType,
-    offerIdentifier: payload.offerIdentifier,
-    // Revocation fields
-    revocationDate: payload.revocationDate,
-    revocationReason: payload.revocationReason,
-  } as JWSTransactionDecodedPayload;
+    ...appStoreApiConfig,
+    privateKey: normalizedPrivateKey,
+  };
 }
 
-/**
- * Fetches and validates a transaction from the App Store Server API.
- * This is the primary validation method since Deno doesn't support crypto.X509Certificate
- * which is required for local JWS signature verification.
- *
- * The App Store Server API response is trusted because:
- * 1. We authenticate with Apple using our private key
- * 2. The response comes directly from Apple's servers over HTTPS
- * 3. Apple validates the transaction on their end
- */
 async function fetchLatestAppStoreTransaction(params: {
   originalTransactionId: string;
   environment: Environment;
 }): Promise<JWSTransactionDecodedPayload | null> {
   if (!isAppleServerApiConfigured()) return null;
 
-  const privateKey = normalizePrivateKey(appStorePrivateKeyRaw);
-  if (!privateKey) return null;
-
-  const client = new AppStoreServerAPIClient(
-    privateKey,
-    appStoreKeyId,
-    appStoreIssuerId,
-    appStoreBundleId,
-    params.environment,
-  );
-
-  const historyRequest = {
-    sort: Order.DESCENDING,
+  return await fetchLatestAppStoreTransactionByOriginalId({
+    config: getNormalizedAppStoreApiConfig(),
+    originalTransactionId: params.originalTransactionId,
+    environment: params.environment,
     revoked: false,
-    productTypes: [ProductType.AUTO_RENEWABLE, ProductType.NON_CONSUMABLE],
-  };
-
-  const response = await client.getTransactionHistory(
-    params.originalTransactionId,
-    null,
-    historyRequest,
-    GetTransactionHistoryVersion.V2,
-  );
-
-  const signedTransaction = response?.signedTransactions?.[0];
-  if (!signedTransaction) return null;
-
-  // Decode the JWS payload without cryptographic verification.
-  // This is safe because:
-  // 1. The JWS comes from Apple's App Store Server API (authenticated request)
-  // 2. We're not using client-provided data directly
-  // 3. The API response is trusted as it comes over HTTPS from Apple
-  return decodeJwsPayload(signedTransaction);
+  });
 }
 
 serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   const corsHeaders = getCorsHeaders(origin);
+  let errorReportContext: Record<string, unknown> = {
+    phase: "request_start",
+    path: new URL(req.url).pathname,
+  };
 
   try {
     if (req.method === "OPTIONS") {
@@ -424,6 +463,13 @@ serve(async (req: Request) => {
 
     const storeProductId = asString(body.storeProductId);
     const requestAppAccountToken = asString(body.appAccountToken);
+    let verificationLogContext = buildVerificationLogContext({
+      userId,
+      body,
+      storeProductId,
+      phase: "request_received",
+    });
+    errorReportContext = verificationLogContext;
     if (!storeProductId) {
       return new Response(
         JSON.stringify({ error: "storeProductId is required" }),
@@ -455,7 +501,7 @@ serve(async (req: Request) => {
     const { data: existingSub } = await supabase
       .from("subscriptions")
       .select(
-        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id",
+        "id, provider, plan, status, bound_to_user_id, bound_to_household_id, stripe_subscription_id, trial_start, trial_end, current_period_end, billing_interval, store_product_id, app_store_original_transaction_id",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
@@ -528,14 +574,14 @@ serve(async (req: Request) => {
       const localReceipt = asString(
         body.verificationData?.localVerificationData,
       );
-      const serverPrefix = serverReceipt ? serverReceipt.slice(0, 12) : "";
-      const localPrefix = localReceipt ? localReceipt.slice(0, 12) : "";
       console.log("Receipt payload", {
+        userId,
         source: body.verificationData?.source ?? null,
         serverLength: serverReceipt?.length ?? 0,
         localLength: localReceipt?.length ?? 0,
-        serverPrefix,
-        localPrefix,
+        requestAppAccountToken,
+        purchaseId: body.purchaseId ?? null,
+        transactionDate: body.transactionDate ?? null,
       });
 
       // StoreKit 2 sends JWS (starts with "eyJ"), StoreKit 1 sends base64 receipt
@@ -551,6 +597,12 @@ serve(async (req: Request) => {
       let originalTransactionId: string | null = null;
       let transactionId: string | null = null;
       let verifiedTransactionAppAccountUserId: string | null = null;
+      let transferredOwnershipFromUserId: string | null = null;
+      let appStoreTrialStart: string | null = null;
+      let appStoreTrialEnd: string | null = null;
+      let appStoreOfferType: number | string | null = null;
+      let appStoreOfferDiscountType: string | null = null;
+      let appStoreOfferIdentifier: string | null = null;
       // Use the environment from ENV secret as default.
       // Will be updated based on JWS payload or App Store Server API response if available.
       // See ENV configuration comments at the top of this file for details.
@@ -573,8 +625,9 @@ serve(async (req: Request) => {
           );
         }
 
-        // Step 1 (CRITICAL): Verify the signed transaction cryptographically.
-        // Never trust unverified JWS payloads.
+        // Step 1: Decode the client JWS only to extract lookup hints.
+        // Trust is established only after Apple confirms the transaction via the
+        // App Store Server API unless explicit non-production fallback is enabled.
         let decodedHint: JWSTransactionDecodedPayload;
         try {
           decodedHint = decodeJwsPayload(serverReceipt);
@@ -589,12 +642,12 @@ serve(async (req: Request) => {
           );
         }
 
-        const appAppleId = Number(appStoreAppId);
-        if (!Number.isFinite(appAppleId)) {
+        if (!decodedHint.transactionId) {
+          console.error("❌ StoreKit 2 transaction is missing transactionId");
           return new Response(
-            JSON.stringify({ error: "APPLE_APP_ID not configured" }),
+            JSON.stringify({ error: "Invalid transaction" }),
             {
-              status: 500,
+              status: 400,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
@@ -605,6 +658,34 @@ serve(async (req: Request) => {
           envString === "sandbox"
             ? Environment.SANDBOX
             : Environment.PRODUCTION;
+        verificationLogContext = buildVerificationLogContext({
+          userId,
+          body,
+          storeProductId,
+          transactionId: decodedHint.transactionId ?? null,
+          originalTransactionId: decodedHint.originalTransactionId ?? null,
+          environment: envHint,
+          phase: "decoded_storekit2_jws",
+        });
+        errorReportContext = verificationLogContext;
+
+        console.log("Decoded StoreKit 2 transaction hint:", {
+          userId,
+          storeProductId,
+          requestAppAccountToken,
+          transactionId: decodedHint.transactionId ?? null,
+          originalTransactionId: decodedHint.originalTransactionId ?? null,
+          bundleId: decodedHint.bundleId ?? null,
+          productId: decodedHint.productId ?? null,
+          purchaseDate: decodedHint.purchaseDate ?? null,
+          expiresDate: decodedHint.expiresDate ?? null,
+          transactionReason: decodedHint.transactionReason ?? null,
+          offerType: decodedHint.offerType ?? null,
+          offerDiscountType: decodedHint.offerDiscountType ?? null,
+          offerIdentifier: decodedHint.offerIdentifier ?? null,
+          appAccountToken: decodedHint.appAccountToken ?? null,
+          environment: decodedHint.environment ?? null,
+        });
 
         // ============================================================
         // DENO COMPATIBILITY: Skip local JWS cryptographic verification
@@ -619,6 +700,7 @@ serve(async (req: Request) => {
         // ============================================================
 
         let decodedTransaction: JWSTransactionDecodedPayload;
+        let usedServerValidatedTransaction = false;
         let serverRevocationDate: number | undefined = undefined;
 
         // Validate bundle ID matches our app
@@ -640,8 +722,12 @@ serve(async (req: Request) => {
         }
 
         // Try to validate via App Store Server API (preferred method for Deno)
-        if (isAppleServerApiConfigured() && decodedHint.originalTransactionId) {
+        if (
+          isAppleServerApiConfigured() &&
+          (decodedHint.transactionId || decodedHint.originalTransactionId)
+        ) {
           console.log("🔐 Validating transaction via App Store Server API...");
+          console.log("🔐 Transaction ID:", decodedHint.transactionId ?? null);
           console.log(
             "🔐 Original Transaction ID:",
             decodedHint.originalTransactionId,
@@ -649,31 +735,83 @@ serve(async (req: Request) => {
           console.log("🔐 Environment hint:", envHint);
 
           try {
-            // Try with the hinted environment first
-            let serverTransaction = await fetchLatestAppStoreTransaction({
-              originalTransactionId: decodedHint.originalTransactionId,
-              environment: envHint,
+            const transactionLookup =
+              await findAppStoreTransactionWithEnvironmentFallback({
+                config: getNormalizedAppStoreApiConfig(),
+                environmentHint: envHint,
+                transactionId: decodedHint.transactionId,
+                originalTransactionId: decodedHint.originalTransactionId,
+              });
+            const serverTransaction = transactionLookup.transaction;
+            environment = transactionLookup.environment;
+
+            console.log("App Store transaction lookup result:", {
+              userId,
+              storeProductId,
+              requestedTransactionId: decodedHint.transactionId ?? null,
+              requestedOriginalTransactionId:
+                decodedHint.originalTransactionId ?? null,
+              resolvedEnvironment:
+                environment === Environment.SANDBOX ? "Sandbox" : "Production",
+              foundTransactionId: serverTransaction?.transactionId ?? null,
+              foundOriginalTransactionId:
+                serverTransaction?.originalTransactionId ?? null,
+              foundExpiresDate: serverTransaction?.expiresDate ?? null,
+              foundOfferType: serverTransaction?.offerType ?? null,
+              foundOfferDiscountType:
+                serverTransaction?.offerDiscountType ?? null,
+              foundOfferIdentifier: serverTransaction?.offerIdentifier ?? null,
+              foundTransactionReason:
+                serverTransaction?.transactionReason ?? null,
             });
 
-            // If not found, try the other environment
-            if (!serverTransaction) {
-              const otherEnv =
-                envHint === Environment.SANDBOX
-                  ? Environment.PRODUCTION
-                  : Environment.SANDBOX;
-              console.log("🔐 Retrying with environment:", otherEnv);
-              serverTransaction = await fetchLatestAppStoreTransaction({
-                originalTransactionId: decodedHint.originalTransactionId,
-                environment: otherEnv,
-              });
-              if (serverTransaction) {
-                environment = otherEnv;
-              }
-            } else {
-              environment = envHint;
+            if (serverTransaction && environment !== envHint) {
+              console.log("🔐 Retrying with environment:", environment);
             }
 
             if (serverTransaction) {
+              if (
+                decodedHint.transactionId &&
+                !matchesVerifiedAppStoreTransaction({
+                  hint: {
+                    transactionId: decodedHint.transactionId,
+                    originalTransactionId: decodedHint.originalTransactionId,
+                    bundleId: decodedHint.bundleId,
+                  },
+                  verified: {
+                    transactionId: serverTransaction.transactionId,
+                    originalTransactionId:
+                      serverTransaction.originalTransactionId,
+                    bundleId: serverTransaction.bundleId,
+                  },
+                })
+              ) {
+                console.error(
+                  "❌ App Store transaction mismatch between client JWS and Apple response",
+                  {
+                    hintedTransactionId: decodedHint.transactionId,
+                    hintedOriginalTransactionId:
+                      decodedHint.originalTransactionId,
+                    verifiedTransactionId: serverTransaction.transactionId,
+                    verifiedOriginalTransactionId:
+                      serverTransaction.originalTransactionId,
+                  },
+                );
+                return new Response(
+                  JSON.stringify({
+                    error: "Transaction verification failed",
+                    details: "Apple could not verify the submitted purchase.",
+                  }),
+                  {
+                    status: 400,
+                    headers: {
+                      ...corsHeaders,
+                      "Content-Type": "application/json",
+                    },
+                  },
+                );
+              }
+
               console.log(
                 "✅ Transaction validated via App Store Server API:",
                 {
@@ -687,13 +825,23 @@ serve(async (req: Request) => {
 
               // Use the server-validated transaction data
               decodedTransaction = serverTransaction;
+              usedServerValidatedTransaction = true;
               serverRevocationDate = serverTransaction.revocationDate;
             } else {
               // Server API didn't return a transaction
-              // SECURITY: In production, we MUST fail-closed - no fallback to unverified JWS
-              if (isProductionEnv) {
+              if (!allowUnverifiedIapDevFallback) {
+                await reportEdgeFunctionError({
+                  functionName: "verify-iap-purchase",
+                  error: new Error(
+                    "App Store API returned no transaction for submitted purchase",
+                  ),
+                  context: {
+                    ...verificationLogContext,
+                    phase: "app_store_api_transaction_not_found",
+                  },
+                });
                 console.error(
-                  "🚨 PRODUCTION SECURITY: App Store Server API returned no transaction. Rejecting request.",
+                  "🚨 App Store Server API returned no transaction. Rejecting request.",
                 );
                 console.error(
                   "🚨 This could indicate: (1) Very new transaction not yet propagated, (2) Invalid transaction ID, or (3) Fraudulent request.",
@@ -713,19 +861,24 @@ serve(async (req: Request) => {
                   },
                 );
               }
-              // In DEV/Sandbox, allow fallback for testing convenience
               console.warn(
-                "⚠️ DEV MODE: App Store Server API returned no transaction, using decoded JWS data (unverified)",
+                "⚠️ Explicit unverified App Store fallback enabled; using decoded JWS data because Apple returned no transaction.",
               );
               decodedTransaction = decodedHint;
               environment = envHint;
             }
           } catch (apiError) {
-            // API call failed
-            // SECURITY: In production, we MUST fail-closed - no fallback to unverified JWS
-            if (isProductionEnv) {
+            if (!allowUnverifiedIapDevFallback) {
+              await reportEdgeFunctionError({
+                functionName: "verify-iap-purchase",
+                error: apiError,
+                context: {
+                  ...verificationLogContext,
+                  phase: "app_store_api_call_failed",
+                },
+              });
               console.error(
-                "🚨 PRODUCTION SECURITY: App Store Server API call failed. Rejecting request.",
+                "🚨 App Store Server API call failed. Rejecting request.",
               );
               console.error(
                 "🚨 Error:",
@@ -749,23 +902,29 @@ serve(async (req: Request) => {
                 },
               );
             }
-            // In DEV/Sandbox, allow fallback for testing convenience
             console.warn(
-              "⚠️ DEV MODE: App Store Server API call failed:",
+              "⚠️ Explicit unverified App Store fallback enabled after API failure:",
               apiError instanceof Error ? apiError.message : apiError,
-            );
-            console.warn(
-              "⚠️ DEV MODE: Falling back to decoded JWS data (unverified)",
             );
             decodedTransaction = decodedHint;
             environment = envHint;
           }
         } else {
-          // App Store Server API not configured
-          // SECURITY: In production, this is a misconfiguration - we MUST reject
-          if (isProductionEnv) {
+          if (!allowUnverifiedIapDevFallback) {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error("App Store API configuration missing"),
+              context: {
+                ...verificationLogContext,
+                phase: "app_store_api_config_missing",
+                hasIssuerId: Boolean(appStoreIssuerId),
+                hasKeyId: Boolean(appStoreKeyId),
+                hasPrivateKey: Boolean(appStorePrivateKeyRaw),
+                hasBundleId: Boolean(appStoreBundleId),
+              },
+            });
             console.error(
-              "🚨 PRODUCTION SECURITY: App Store Server API not configured. Rejecting request.",
+              "🚨 App Store Server API not configured. Rejecting request.",
             );
             console.error(
               "🚨 Configure APPLE_APP_STORE_ISSUER_ID, APPLE_APP_STORE_KEY_ID, APPLE_APP_STORE_PRIVATE_KEY, and APPLE_BUNDLE_ID.",
@@ -782,18 +941,15 @@ serve(async (req: Request) => {
               },
             );
           }
-          // In DEV/Sandbox, allow fallback for testing without full API setup
           console.warn(
-            "⚠️ DEV MODE: App Store Server API not configured, using decoded JWS data (unverified)",
-          );
-          console.warn(
-            "⚠️ Configure APPLE_APP_STORE_* env vars for secure validation",
+            "⚠️ Explicit unverified App Store fallback enabled without full App Store API configuration.",
           );
           decodedTransaction = decodedHint;
           environment = envHint;
         }
 
         console.log("Transaction data to use:", {
+          userId,
           transactionId: decodedTransaction.transactionId,
           originalTransactionId: decodedTransaction.originalTransactionId,
           productId: decodedTransaction.productId,
@@ -803,6 +959,10 @@ serve(async (req: Request) => {
           purchaseDate: decodedTransaction.purchaseDate,
           expiresDate: decodedTransaction.expiresDate,
           revocationDate: decodedTransaction.revocationDate,
+          offerType: decodedTransaction.offerType ?? null,
+          offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+          offerIdentifier: decodedTransaction.offerIdentifier ?? null,
+          transactionReason: decodedTransaction.transactionReason ?? null,
         });
 
         // Legacy code path for additional server validation (kept for compatibility)
@@ -810,7 +970,8 @@ serve(async (req: Request) => {
         if (
           isAppleServerApiConfigured() &&
           decodedTransaction.originalTransactionId &&
-          !serverRevocationDate // Only if we haven't already checked
+          !serverRevocationDate &&
+          !usedServerValidatedTransaction
         ) {
           try {
             console.log(
@@ -853,7 +1014,7 @@ serve(async (req: Request) => {
           }
         } else {
           console.log(
-            "App Store Server API not configured or no originalTransactionId, using decoded JWS data",
+            "Skipping legacy revocation re-check because the transaction already came from the App Store API",
           );
         }
 
@@ -905,15 +1066,94 @@ serve(async (req: Request) => {
           verifiedTransactionAppAccountUserId &&
           verifiedTransactionAppAccountUserId !== userId
         ) {
-          console.error("App Store appAccountToken does not match auth user", {
-            authUserId: userId,
-            requestAppAccountToken,
-            transactionAppAccountToken,
-            verifiedTransactionAppAccountUserId,
-            originalTransactionId,
-            transactionId,
-            storeProductId,
+          const transferResult =
+            await attemptAutomaticAppStoreOwnershipTransfer({
+              supabase,
+              originalTransactionId:
+                decodedTransaction.originalTransactionId ??
+                decodedTransaction.transactionId!,
+              currentUserId: userId,
+              transactionId: decodedTransaction.transactionId ?? null,
+              storeProductId,
+              environment:
+                environment === Environment.SANDBOX ? "Sandbox" : "Production",
+            });
+
+          if (transferResult.transferred) {
+            transferredOwnershipFromUserId = transferResult.previousOwnerUserId;
+            verifiedTransactionAppAccountUserId = userId;
+            console.warn(
+              "Auto-transferred App Store ownership after verified token mismatch",
+              {
+                fromUserId: transferResult.previousOwnerUserId,
+                toUserId: userId,
+                originalTransactionId: decodedTransaction.originalTransactionId,
+                transactionId: decodedTransaction.transactionId,
+              },
+            );
+          } else {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error(
+                "Verified App Store appAccountToken does not match auth user",
+              ),
+              context: {
+                ...verificationLogContext,
+                phase: "verified_app_account_token_mismatch",
+                verifiedTransactionAppAccountUserId,
+                authUserId: userId,
+                transferBlockedReason: transferResult.reason,
+              },
+            });
+            console.error(
+              "App Store appAccountToken does not match auth user",
+              {
+                authUserId: userId,
+                requestAppAccountToken,
+                transactionAppAccountToken,
+                verifiedTransactionAppAccountUserId,
+                originalTransactionId,
+                transactionId,
+                storeProductId,
+                transferBlockedReason: transferResult.reason,
+              },
+            );
+            return new Response(
+              JSON.stringify({
+                error: purchaseOwnershipConflictMessage(),
+                code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+              }),
+              {
+                status: 409,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
+        }
+
+        if (requestAppAccountToken && requestAppAccountToken !== userId) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: new Error(
+              "Request appAccountToken does not match auth user",
+            ),
+            context: {
+              ...verificationLogContext,
+              phase: "request_app_account_token_mismatch",
+              requestAppAccountToken,
+              authUserId: userId,
+            },
           });
+          console.error(
+            "verify-iap-purchase request appAccountToken mismatch",
+            {
+              authUserId: userId,
+              requestAppAccountToken,
+              originalTransactionId,
+              transactionId,
+              storeProductId,
+            },
+          );
           return new Response(
             JSON.stringify({
               error: purchaseOwnershipConflictMessage(),
@@ -926,29 +1166,16 @@ serve(async (req: Request) => {
           );
         }
 
-        if (requestAppAccountToken && requestAppAccountToken !== userId) {
-          console.error(
-            "verify-iap-purchase request appAccountToken mismatch",
-            {
-              authUserId: userId,
-              requestAppAccountToken,
-              originalTransactionId,
-              transactionId,
-              storeProductId,
-            },
-          );
-        }
-
         if (plan === "lifetime") {
           // Non-consumable: just needs to exist and not be revoked
           status = "active";
           currentPeriodEnd = null;
         } else {
-          // Subscription: Parse expiry date from client transaction
+          // Subscription: resolve the verified transaction into a lifecycle
+          // state. A past expiresDate is valid for expired subscriptions.
           const expiresDate = decodedTransaction.expiresDate;
           const now = Date.now();
 
-          // Parse expiresDate safely (it's milliseconds as number or string)
           let expiresMs: number | null = null;
           if (expiresDate !== undefined && expiresDate !== null) {
             expiresMs =
@@ -961,78 +1188,251 @@ serve(async (req: Request) => {
             }
           }
 
+          let subscriptionStatusLookup: AppStoreSubscriptionStatusLookup | null =
+            null;
+
+          if (isAppleServerApiConfigured() && transactionId) {
+            try {
+              const subscriptionStatusResult =
+                await findAppStoreSubscriptionStatusWithEnvironmentFallback({
+                  config: getNormalizedAppStoreApiConfig(),
+                  environmentHint: environment,
+                  transactionId,
+                  originalTransactionId,
+                  productId: storeProductId,
+                });
+              subscriptionStatusLookup = subscriptionStatusResult.subscription;
+
+              if (
+                subscriptionStatusLookup &&
+                subscriptionStatusResult.environment !== environment
+              ) {
+                environment = subscriptionStatusResult.environment;
+              }
+            } catch (error) {
+              await reportEdgeFunctionError({
+                functionName: "verify-iap-purchase",
+                error,
+                context: {
+                  ...verificationLogContext,
+                  phase: "app_store_subscription_status_lookup_failed",
+                  billingInterval,
+                  originalTransactionId,
+                  transactionId,
+                  environment:
+                    environment === Environment.SANDBOX
+                      ? "Sandbox"
+                      : "Production",
+                  appleExpiresMs: expiresMs,
+                  appleExpiresDate: expiresMs
+                    ? new Date(expiresMs).toISOString()
+                    : null,
+                  submittedProductId: decodedTransaction.productId ?? null,
+                  submittedPurchaseDate: asIsoMillisUnknown(
+                    decodedTransaction.purchaseDate,
+                  ),
+                },
+              });
+            }
+          }
+
           console.log("Parsing expiry date:", {
+            userId,
+            transactionId: decodedTransaction.transactionId ?? null,
+            originalTransactionId:
+              decodedTransaction.originalTransactionId ?? null,
             rawExpiresDate: expiresDate,
             parsedExpiresMs: expiresMs,
             nowMs: now,
             isExpired: expiresMs ? expiresMs <= now : "unknown",
+            purchaseDate: decodedTransaction.purchaseDate ?? null,
+            offerType: decodedTransaction.offerType ?? null,
+            offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+            offerIdentifier: decodedTransaction.offerIdentifier ?? null,
+            subscriptionStatus: subscriptionStatusLookup?.status ?? null,
+            renewalDate:
+              subscriptionStatusLookup?.renewalInfo?.renewalDate ?? null,
+            gracePeriodExpiresDate:
+              subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate ??
+              null,
           });
 
-          // ROBUST PERIOD END CALCULATION
-          // For subscriptions, we need a valid future current_period_end
-          //
-          // CRITICAL: Apple Sandbox uses ACCELERATED TIME:
-          // - Monthly subscriptions expire in ~5 minutes
-          // - Yearly subscriptions expire in ~1 hour
-          // So even though Sandbox dates ARE "in the future", they're WRONG for our purposes!
-          //
-          // Approach:
-          // - SANDBOX: ALWAYS calculate period end (ignore Apple's accelerated dates)
-          // - PRODUCTION: Use Apple's date if valid and in the future
-          const isSandboxEnv = environment === Environment.SANDBOX;
+          if (
+            subscriptionStatusLookup?.status === Status.REVOKED &&
+            !decodedTransaction.revocationDate &&
+            !serverRevocationDate
+          ) {
+            console.log("Purchase was revoked by App Store status lookup:", {
+              userId,
+              transactionId: decodedTransaction.transactionId ?? null,
+              originalTransactionId:
+                decodedTransaction.originalTransactionId ?? null,
+              subscriptionStatus: subscriptionStatusLookup.status,
+            });
+            return new Response(
+              JSON.stringify({ error: "Purchase was refunded" }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
 
-          // For Sandbox: ALWAYS calculate proper period end
-          // For Production: Use Apple's date if valid and in future, otherwise calculate
-          const shouldUseAppleDate =
-            !isSandboxEnv && expiresMs && expiresMs > now;
+          const lifecycle = resolveAppStoreSubscriptionLifecycle({
+            transaction: decodedTransaction,
+            statusTransaction: subscriptionStatusLookup?.transaction ?? null,
+            renewalInfo: subscriptionStatusLookup?.renewalInfo ?? null,
+            subscriptionStatus: subscriptionStatusLookup?.status ?? null,
+            nowMs: now,
+          });
 
-          if (shouldUseAppleDate) {
-            // Production with valid future expiry date from Apple - use it
-            currentPeriodEnd = new Date(expiresMs!).toISOString();
-            status = "active";
-            console.log("PRODUCTION: Using Apple's expiry date:", {
+          if (lifecycle.currentPeriodEnd) {
+            currentPeriodEnd = lifecycle.currentPeriodEnd;
+            status = lifecycle.status;
+            console.log("Using Apple's verified expiry date:", {
+              userId,
+              transactionId: decodedTransaction.transactionId ?? null,
+              originalTransactionId:
+                decodedTransaction.originalTransactionId ?? null,
               currentPeriodEnd,
               status,
               expiresMs,
+              purchaseDate: decodedTransaction.purchaseDate ?? null,
+              offerType: decodedTransaction.offerType ?? null,
+              offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+              offerIdentifier: decodedTransaction.offerIdentifier ?? null,
+              subscriptionStatus: subscriptionStatusLookup?.status ?? null,
+              renewalDate:
+                subscriptionStatusLookup?.renewalInfo?.renewalDate ?? null,
+              gracePeriodExpiresDate:
+                subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate ??
+                null,
             });
           } else {
-            // Sandbox OR Production with invalid/expired date
-            // Calculate proper period end based on billing interval
-            const periodEnd = new Date();
-            if (billingInterval === "monthly") {
-              periodEnd.setMonth(periodEnd.getMonth() + 1);
-            } else if (billingInterval === "yearly") {
-              periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-            } else {
-              // Default to 1 month if billing interval unknown
-              periodEnd.setMonth(periodEnd.getMonth() + 1);
-            }
-
-            currentPeriodEnd = periodEnd.toISOString();
-            status = "active"; // New purchase should be active
-
-            console.log("CALCULATED period end:", {
-              isSandbox: isSandboxEnv,
-              appleExpiresMs: expiresMs,
-              appleExpiresDate: expiresMs
-                ? new Date(expiresMs).toISOString()
-                : null,
-              calculatedPeriodEnd: currentPeriodEnd,
-              billingInterval,
-              reason: isSandboxEnv
-                ? "Sandbox uses accelerated time - ignoring Apple's date"
-                : expiresMs === null
-                  ? "Missing expiry date"
-                  : "Expiry date in the past",
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error(
+                "Production App Store transaction missing valid expiry",
+              ),
+              context: {
+                ...verificationLogContext,
+                phase: "production_missing_expiry",
+                billingInterval,
+                appleExpiresMs: expiresMs,
+                appleExpiresDate: expiresMs
+                  ? new Date(expiresMs).toISOString()
+                  : null,
+                reason:
+                  expiresMs === null
+                    ? "Missing expiry date"
+                    : "No resolvable entitlement end",
+                resolvedLifecycleStatus: lifecycle.status,
+                resolvedCurrentPeriodEnd: lifecycle.currentPeriodEnd,
+                submittedProductId: decodedTransaction.productId ?? null,
+                submittedPurchaseDate: asIsoMillisUnknown(
+                  decodedTransaction.purchaseDate,
+                ),
+                submittedExpiresDate: asIsoMillisUnknown(
+                  decodedTransaction.expiresDate,
+                ),
+                ...buildAppStoreSubscriptionStatusContext(
+                  subscriptionStatusLookup,
+                ),
+              },
             });
+            return new Response(
+              JSON.stringify({
+                error: "Transaction verification failed",
+                details: "Apple returned an invalid subscription expiry.",
+              }),
+              {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
           }
 
           console.log("Final subscription status:", {
+            userId,
+            transactionId: decodedTransaction.transactionId ?? null,
+            originalTransactionId:
+              decodedTransaction.originalTransactionId ?? null,
             status,
             currentPeriodEnd,
+            trialStart:
+              status === "trialing"
+                ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
+                : null,
+            trialEnd: status === "trialing" ? currentPeriodEnd : null,
+            offerType: decodedTransaction.offerType ?? null,
+            offerDiscountType: decodedTransaction.offerDiscountType ?? null,
+            offerIdentifier: decodedTransaction.offerIdentifier ?? null,
             environment:
               environment === Environment.SANDBOX ? "Sandbox" : "Production",
           });
+
+          appStoreTrialStart =
+            status === "trialing"
+              ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
+              : asString((existingSub as any)?.trial_start);
+          appStoreTrialEnd =
+            status === "trialing"
+              ? currentPeriodEnd
+              : asString((existingSub as any)?.trial_end);
+          appStoreOfferType = decodedTransaction.offerType ?? null;
+          appStoreOfferDiscountType =
+            typeof decodedTransaction.offerDiscountType === "string"
+              ? decodedTransaction.offerDiscountType
+              : null;
+          appStoreOfferIdentifier =
+            typeof decodedTransaction.offerIdentifier === "string"
+              ? decodedTransaction.offerIdentifier
+              : null;
+
+          if (
+            status !== "trialing" &&
+            originalTransactionId &&
+            !appStoreTrialStart &&
+            !appStoreTrialEnd
+          ) {
+            try {
+              const originalTransactionLookup =
+                await findAppStoreTransactionWithEnvironmentFallback({
+                  config: getNormalizedAppStoreApiConfig(),
+                  environmentHint: environment,
+                  transactionId: originalTransactionId,
+                  originalTransactionId,
+                });
+              const originalTransaction = originalTransactionLookup.transaction;
+              if (
+                originalTransaction &&
+                isFreeTrialTransaction(originalTransaction)
+              ) {
+                appStoreTrialStart = asIsoMillisUnknown(
+                  originalTransaction.purchaseDate,
+                );
+                appStoreTrialEnd = asIsoMillisUnknown(
+                  originalTransaction.expiresDate,
+                );
+                console.log("Recovered original App Store trial history:", {
+                  userId,
+                  originalTransactionId,
+                  recoveredTrialStart: appStoreTrialStart,
+                  recoveredTrialEnd: appStoreTrialEnd,
+                });
+              }
+            } catch (error) {
+              await reportEdgeFunctionError({
+                functionName: "verify-iap-purchase",
+                error,
+                context: {
+                  ...verificationLogContext,
+                  phase: "recover_original_trial_history",
+                  originalTransactionId,
+                },
+              });
+            }
+          }
         }
       } else {
         // ============================================================
@@ -1419,16 +1819,50 @@ serve(async (req: Request) => {
         });
 
         if (ownershipDecision.kind === "owned_by_another_user") {
-          return new Response(
-            JSON.stringify({
-              error: purchaseOwnershipConflictMessage(),
-              code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
-            }),
-            {
-              status: 409,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          const transferResult =
+            await attemptAutomaticAppStoreOwnershipTransfer({
+              supabase,
+              originalTransactionId,
+              currentUserId: userId,
+              transactionId,
+              storeProductId,
+              environment: environmentString,
+            });
+
+          if (transferResult.transferred) {
+            transferredOwnershipFromUserId = transferResult.previousOwnerUserId;
+            console.warn(
+              "Auto-transferred App Store ownership after binding conflict",
+              {
+                fromUserId: transferResult.previousOwnerUserId,
+                toUserId: userId,
+                originalTransactionId,
+                transactionId,
+              },
+            );
+          } else {
+            await reportEdgeFunctionError({
+              functionName: "verify-iap-purchase",
+              error: new Error("App Store ownership bound to another user"),
+              context: {
+                ...verificationLogContext,
+                phase: "ownership_bound_to_another_user",
+                ownerUserId: ownershipDecision.binding.user_id,
+                authUserId: userId,
+                transferBlockedReason: transferResult.reason,
+              },
+            });
+            return new Response(
+              JSON.stringify({
+                error: purchaseOwnershipConflictMessage(),
+                code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
+              }),
+              {
+                status: 409,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              },
+            );
+          }
         }
       } else if (iapOwnershipBindingEnabled) {
         console.warn(
@@ -1457,6 +1891,8 @@ serve(async (req: Request) => {
         play_order_id: null,
         play_package_name: null,
         current_period_end: plan === "lifetime" ? null : currentPeriodEnd,
+        trial_start: appStoreTrialStart,
+        trial_end: appStoreTrialEnd,
         cancel_at_period_end: false,
         app_store_transaction_id: transactionId,
         app_store_original_transaction_id: originalTransactionId,
@@ -1469,6 +1905,11 @@ serve(async (req: Request) => {
         plan,
         status,
         currentPeriodEnd,
+        trialStart: appStoreTrialStart,
+        trialEnd: appStoreTrialEnd,
+        offerType: appStoreOfferType,
+        offerDiscountType: appStoreOfferDiscountType,
+        offerIdentifier: appStoreOfferIdentifier,
         environment: environmentString,
       });
 
@@ -1515,7 +1956,73 @@ serve(async (req: Request) => {
         );
       }
 
+      if (transferredOwnershipFromUserId) {
+        const { error: resetPreviousOwnerError } = await supabase
+          .from("subscriptions")
+          .update({
+            plan: "free",
+            status: "active",
+            billing_interval: null,
+            current_period_end: null,
+            trial_start: null,
+            trial_end: null,
+            cancel_at_period_end: false,
+            store_product_id: null,
+            app_store_transaction_id: null,
+            app_store_original_transaction_id: null,
+            stripe_subscription_id: null,
+            stripe_customer_id: null,
+            play_purchase_token: null,
+            play_order_id: null,
+            play_package_name: null,
+            ended_at: nowIso(),
+            updated_at: nowIso(),
+          })
+          .eq("user_id", transferredOwnershipFromUserId)
+          .eq("provider", "app_store")
+          .eq("app_store_original_transaction_id", originalTransactionId);
+
+        if (resetPreviousOwnerError) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: resetPreviousOwnerError,
+            context: {
+              ...verificationLogContext,
+              phase: "reset_previous_owner_subscription_after_transfer",
+              previousOwnerUserId: transferredOwnershipFromUserId,
+              originalTransactionId,
+            },
+          });
+        }
+      }
+
       console.log("✅ Successfully wrote subscription to database");
+
+      if (originalTransactionId) {
+        const { error: backlogResolveError } = await supabase
+          .from("app_store_notification_backlog")
+          .update({
+            resolved_at: nowIso(),
+            resolved_user_id: userId,
+            resolution_source: "verify_iap_purchase",
+            updated_at: nowIso(),
+          })
+          .eq("provider", "app_store")
+          .eq("original_transaction_id", originalTransactionId)
+          .is("resolved_at", null);
+
+        if (backlogResolveError) {
+          await reportEdgeFunctionError({
+            functionName: "verify-iap-purchase",
+            error: backlogResolveError,
+            context: {
+              ...verificationLogContext,
+              phase: "resolve_pending_notification_backlog",
+              originalTransactionId,
+            },
+          });
+        }
+      }
 
       const { data: finalSub } = await supabase
         .from("subscriptions")
@@ -1785,6 +2292,14 @@ serve(async (req: Request) => {
       },
     );
   } catch (e) {
+    await reportEdgeFunctionError({
+      functionName: "verify-iap-purchase",
+      error: e,
+      context: {
+        ...errorReportContext,
+        phase: "serve_handler",
+      },
+    });
     console.error("verify-iap-purchase error:", e);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,

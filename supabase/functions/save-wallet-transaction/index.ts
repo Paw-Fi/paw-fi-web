@@ -23,6 +23,8 @@ import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { isRetryableGeminiError } from "../shared/gemini-retry.ts";
+import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import { formatMoney } from "../shared/currency-symbols.ts";
 import {
   ensureUserCategory,
@@ -35,6 +37,7 @@ import {
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
 import {
   buildWalletCaptureIdempotencyKey,
+  getLocalYyyyMmDdInTimeZone,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
   resolveWalletCaptureScope,
@@ -42,7 +45,10 @@ import {
   resolveWalletTransactionDate,
   resolveWalletTransactionPackageName,
 } from "../shared/wallet-capture.ts";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  createVertexGenerativeAI,
+  getVertexAiConfigFromEnv,
+} from "../shared/vertex-ai-chat.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -61,6 +67,15 @@ const CATEGORIZE_FUNCTION_CALLING_CONFIG = {
 
 const IDEMPOTENCY_PROCESSING_TTL_MS = 10 * 60 * 1000;
 const IDEMPOTENCY_KEY_TTL_HOURS = 24;
+const GEMINI_CATEGORIZATION_MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+] as const;
+
+type GenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
+const GEMINI_RETRY_DELAYS_MS = [300] as const;
 const readRuntimeEnv = (name: string): string | null => {
   const env = (
     globalThis as {
@@ -319,42 +334,16 @@ function formatWalletNotificationCategory(value: string): string {
     .join(" ");
 }
 
-function getLocalYyyyMmDdInTimeZone(
-  timeZone: string | null | undefined,
-  date = new Date(),
-): string {
-  const normalizedTimeZone = (timeZone || "UTC").trim();
-  try {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: normalizedTimeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(date);
-    const map = new Map(parts.map((part) => [part.type, part.value]));
-    const year = map.get("year");
-    const month = map.get("month");
-    const day = map.get("day");
-    if (year && month && day) {
-      return `${year}-${month}-${day}`;
-    }
-  } catch (error) {
-    console.warn(
-      "[save-wallet-transaction] Failed to derive local date from timezone:",
-      normalizedTimeZone,
-      error,
-    );
-  }
-
-  return date.toISOString().slice(0, 10);
-}
-
 function extractCalendarDatePrefix(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
   return normalizeCalendarDateString(trimmed);
+}
+
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function getFcmAccessToken(): Promise<string | null> {
@@ -945,10 +934,7 @@ function buildWalletPocketNotificationMessage(params: {
     };
   }
 
-  const remainingLabel = formatCurrencyAmount(
-    pocket.remainingCents,
-    currency,
-  );
+  const remainingLabel = formatCurrencyAmount(pocket.remainingCents, currency);
   return {
     title,
     body: buildBody(`🪙 ${remainingLabel} left on ${pocket.name}`),
@@ -1294,7 +1280,7 @@ function getFunctionCalls(response: any): any[] {
  * @returns The AI-suggested category (normalized for storage), or "other" on failure.
  */
 async function categorizeWithAI(params: {
-  genAI?: GoogleGenerativeAI | null;
+  genAI?: GenerativeAIClient | null;
   merchantName: string;
   transactionType: "expense" | "income";
   amount: number;
@@ -1342,16 +1328,11 @@ async function categorizeWithAI(params: {
       },
     ];
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite-preview",
-      tools: tools as any,
-    });
-
     const descriptionParts = [merchantName];
     if (note) descriptionParts.push(note);
     const description = descriptionParts.join(" – ");
 
-    const response = await model.generateContent({
+    const request = {
       contents: [
         {
           role: "user",
@@ -1374,48 +1355,97 @@ Transactions:
         functionCallingConfig: CATEGORIZE_FUNCTION_CALLING_CONFIG,
       },
       generationConfig: { maxOutputTokens: 256 },
-    } as any);
+    } as any;
 
-    const toolCalls = getFunctionCalls(response).filter(
-      (call: any) => call && call.name === "categorize_transactions",
-    );
+    for (let index = 0; index < GEMINI_CATEGORIZATION_MODELS.length; index++) {
+      const modelName = GEMINI_CATEGORIZATION_MODELS[index];
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          tools: tools as any,
+        });
 
-    if (toolCalls.length > 0) {
-      for (const call of toolCalls) {
-        const categories = Array.isArray(call.args?.categories)
-          ? call.args.categories
-          : [];
-        if (categories.length >= 1) {
-          return normalizeCategoryForStorage(categories[0]);
+        let response: any = null;
+        for (
+          let attempt = 0;
+          attempt <= GEMINI_RETRY_DELAYS_MS.length;
+          attempt++
+        ) {
+          try {
+            response = await model.generateContent(request);
+            break;
+          } catch (error) {
+            const retryable = isRetryableGeminiError(error);
+            const hasRetryLeft = attempt < GEMINI_RETRY_DELAYS_MS.length;
+            if (!retryable || !hasRetryLeft) {
+              throw error;
+            }
+            const waitMs = GEMINI_RETRY_DELAYS_MS[attempt];
+            console.warn(
+              `[save-wallet-transaction] ${modelName} transient categorization failure (attempt ${
+                attempt + 1
+              }/${GEMINI_RETRY_DELAYS_MS.length + 1}), retrying in ${waitMs}ms`,
+            );
+            await sleepMs(waitMs);
+          }
         }
-      }
-    }
 
-    // Fallback: if AI didn't return structured output, try parsing text response
-    const text = response?.response?.text?.();
-    if (text) {
-      const normalized = normalizeCategoryForStorage(text.trim());
-      if (normalized !== "other") return normalized;
+        const toolCalls = getFunctionCalls(response).filter(
+          (call: any) => call && call.name === "categorize_transactions",
+        );
+
+        if (toolCalls.length > 0) {
+          for (const call of toolCalls) {
+            const categories = Array.isArray(call.args?.categories)
+              ? call.args.categories
+              : [];
+            if (categories.length >= 1) {
+              return normalizeCategoryForStorage(categories[0]);
+            }
+          }
+        }
+
+        const text = response?.response?.text?.();
+        if (text) {
+          const normalized = normalizeCategoryForStorage(text.trim());
+          if (normalized !== "other") return normalized;
+        }
+
+        return "other";
+      } catch (error) {
+        const retryable = isRetryableGeminiError(error);
+        const hasNextModel = index < GEMINI_CATEGORIZATION_MODELS.length - 1;
+        if (retryable && hasNextModel) {
+          console.warn(
+            `[save-wallet-transaction] ${modelName} transient categorization failure, switching to ${
+              GEMINI_CATEGORIZATION_MODELS[index + 1]
+            }`,
+            error,
+          );
+          continue;
+        }
+        throw error;
+      }
     }
 
     return "other";
   } catch (error) {
     console.error("[save-wallet-transaction] AI categorization failed:", error);
-    
-    // Report Gemini error for instant notification
-    await reportEdgeFunctionError({
+
+    await reportVertexAiFailure({
       functionName: "save-wallet-transaction",
       error,
+      phase: "ai_categorization",
+      modelName: GEMINI_CATEGORIZATION_MODELS[0],
       context: {
-        phase: "ai_categorization",
-        modelName: "gemini-3.1-flash-lite-preview",
+        fallbackModelName: GEMINI_CATEGORIZATION_MODELS.slice(1).join(","),
         merchantName: params.merchantName,
         transactionType: params.transactionType,
         amount: params.amount,
         currency: params.currency,
       },
     });
-    
+
     return "other";
   }
 }
@@ -1542,7 +1572,6 @@ Deno.serve(async (req: Request) => {
     // ── Environment ───────────────────────────────────────────────────
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return errorResponse("Server configuration error", 500, "SERVER_ERROR");
     }
@@ -1558,12 +1587,13 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    const genAI = GEMINI_API_KEY
-      ? new GoogleGenerativeAI(GEMINI_API_KEY)
-      : null;
-    if (!GEMINI_API_KEY) {
+    let genAI: GenerativeAIClient | null = null;
+    try {
+      genAI = createVertexGenerativeAI(getVertexAiConfigFromEnv());
+    } catch (error) {
       console.warn(
-        "[save-wallet-transaction] GEMINI_API_KEY not configured; using fallback category 'other'",
+        "[save-wallet-transaction] Vertex AI not configured; using fallback category 'other'",
+        error,
       );
     }
 
@@ -1616,10 +1646,10 @@ Deno.serve(async (req: Request) => {
     const isPortfolio = body.isPortfolio === true;
     const householdId = sanitizeUuid(body.householdId);
     const description = buildDescription(tx);
-    const transactionType = typeof tx.type === "string" &&
-        tx.type.trim().toLowerCase() === "income"
-      ? "income"
-      : "expense";
+    const transactionType =
+      typeof tx.type === "string" && tx.type.trim().toLowerCase() === "income"
+        ? "income"
+        : "expense";
 
     let householdMembers: Array<{ user_id: string }> = [];
     let requiresHouseholdSplit = false;
@@ -1731,32 +1761,33 @@ Deno.serve(async (req: Request) => {
 
     const payloadCurrency = resolveWalletTransactionCurrency(tx);
 
-    if (!preferredCurrency) {
-      if (!payloadCurrency) {
-        await reportEdgeFunctionError({
-          functionName: "save-wallet-transaction",
-          error: new Error(
-            "Wallet capture missing currency on both payload and user contact",
-          ),
-          context: {
-            step: "resolve_currency",
-            captureSource,
-            userId,
-            householdId,
-            payloadCurrency,
-            transaction: requestDebugContext?.transaction ?? null,
-          },
-        });
-        logWalletCaptureValidationFailure(
-          "missing_currency",
-          requestDebugContext,
-          { preferredCurrency, payloadCurrency },
-        );
-        return errorResponse("transaction.currency is required", 400);
-      }
+    if (!payloadCurrency && !preferredCurrency) {
+      await reportEdgeFunctionError({
+        functionName: "save-wallet-transaction",
+        error: new Error(
+          "Wallet capture missing currency on both payload and user contact",
+        ),
+        context: {
+          step: "resolve_currency",
+          captureSource,
+          userId,
+          householdId,
+          payloadCurrency,
+          preferredCurrency,
+          fallbackCurrency: "USD",
+          transaction: requestDebugContext?.transaction ?? null,
+        },
+      });
+      logWalletCaptureValidationFailure(
+        "missing_currency_fallback_to_usd",
+        requestDebugContext,
+        { preferredCurrency, payloadCurrency, fallbackCurrency: "USD" },
+      );
     }
 
-    const currency = validateCurrency(payloadCurrency ?? preferredCurrency);
+    const currency = validateCurrency(
+      payloadCurrency ?? preferredCurrency ?? "USD",
+    );
 
     const clientCreatedAtPrefix = extractCalendarDatePrefix(
       body.clientCreatedAt,
@@ -2021,7 +2052,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (householdId && requiresHouseholdSplit && transactionType === "expense") {
+    if (
+      householdId &&
+      requiresHouseholdSplit &&
+      transactionType === "expense"
+    ) {
       console.log(
         "[save-wallet-transaction] Creating household split for:",
         householdId,

@@ -63,6 +63,12 @@ const StarRating: React.FC<StarRatingProps> = ({
 const APP_STORE_URL = "https://apps.apple.com/app/moneko/id6753925279";
 const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.moneko.app";
+const INITIAL_REVIEW_ID = "review-021";
+const REVIEW_ROW_DURATIONS = [
+  "[--duration:70s]",
+  "[--duration:65s]",
+  "[--duration:72s]",
+];
 
 /**
  * Detect user platform based on user agent
@@ -103,6 +109,30 @@ const itemVariants: Variants = {
   },
 };
 
+function prioritizeInitialReview(reviews: Review[]): Review[] {
+  const initialReview = reviews.find(
+    (review) => review.id === INITIAL_REVIEW_ID,
+  );
+
+  if (!initialReview) {
+    return reviews;
+  }
+
+  return [
+    initialReview,
+    ...reviews.filter((review) => review.id !== INITIAL_REVIEW_ID),
+  ];
+}
+
+function splitReviewsIntoRows(reviews: Review[]): Review[][] {
+  const rowCount = reviews.length > 10 ? 2 : 1;
+  const rowSize = Math.ceil(reviews.length / rowCount);
+
+  return Array.from({ length: rowCount }, (_, index) =>
+    reviews.slice(index * rowSize, (index + 1) * rowSize),
+  ).filter((rowReviews) => rowReviews.length > 0);
+}
+
 interface ReviewCardProps {
   review: Review;
   onClick?: () => void;
@@ -111,6 +141,7 @@ interface ReviewCardProps {
 const ReviewCard: React.FC<ReviewCardProps> = ({ review, onClick }) => {
   const { rating, title, body, reviewerNickname, createdDate, territory } =
     review;
+  const reviewDate = new Date(createdDate);
 
   return (
     <motion.div
@@ -136,7 +167,9 @@ const ReviewCard: React.FC<ReviewCardProps> = ({ review, onClick }) => {
       <p className="text-muted-foreground line-clamp-3 text-xs">{body}</p>
       <div className="text-muted-foreground mt-1 flex items-center justify-between text-xs">
         <span>{territory}</span>
-        <span>{format(new Date(createdDate), "M/d/yyyy")}</span>
+        <time dateTime={format(reviewDate, "yyyy-MM-dd")}>
+          {format(reviewDate, "MMM d, yyyy")}
+        </time>
       </div>
     </motion.div>
   );
@@ -146,10 +179,11 @@ export function UserCommunityShowcase() {
   const navigate = useNavigate();
   const reducedVisualEffects = useReducedVisualEffects();
 
-  const reviews = appStoreReviews;
+  const reviews = prioritizeInitialReview(appStoreReviews);
   const displayRating = APP_STORE_RATING;
   const totalReviews = TOTAL_REVIEW_COUNT;
   const featuredReviews = reviews.slice(0, reducedVisualEffects ? 6 : 10);
+  const reviewRows = splitReviewsIntoRows(reviews);
 
   /**
    * Handle review card click - navigate to appropriate store
@@ -197,13 +231,16 @@ export function UserCommunityShowcase() {
               App Store rating
             </h2>
 
-            <div className="text-muted-foreground flex items-center justify-center gap-2 text-xl">
-              <span className="text-foreground font-medium">6,000+</span>
-              <span>people have already joined</span>
+            <div className="text-muted-foreground sr-only flex items-center justify-center gap-2 text-xl">
+              <span className="text-foreground font-medium">
+                {totalReviews}+
+              </span>
+              <span>public store reviews tracked</span>
             </div>
 
             <p className="text-muted-foreground mx-auto max-w-2xl text-lg sm:text-xl">
-              See what our users are saying about Moneko
+              Real App Store feedback from people using Moneko for AI expense
+              tracking, shared budgets, and WhatsApp capture.
             </p>
           </motion.div>
 
@@ -222,45 +259,26 @@ export function UserCommunityShowcase() {
                 </div>
               ) : (
                 <>
-                  <Marquee pauseOnHover className="[--duration:70s]">
-                    {reviews
-                      .slice(0, Math.min(10, reviews.length))
-                      .map((review) => (
+                  {reviewRows.map((rowReviews, rowIndex) => (
+                    <Marquee
+                      key={`review-row-${rowIndex}`}
+                      reverse={rowIndex % 2 === 1}
+                      pauseOnHover
+                      className={
+                        REVIEW_ROW_DURATIONS[
+                          rowIndex % REVIEW_ROW_DURATIONS.length
+                        ]
+                      }
+                    >
+                      {rowReviews.map((review) => (
                         <ReviewCard
-                          key={`row1-${review.id}`}
+                          key={`row${rowIndex + 1}-${review.id}`}
                           review={review}
                           onClick={handleReviewClick}
                         />
                       ))}
-                  </Marquee>
-
-                  {reviews.length >= 10 && (
-                    <Marquee reverse pauseOnHover className="[--duration:65s]">
-                      {reviews
-                        .slice(10, Math.min(20, reviews.length))
-                        .map((review) => (
-                          <ReviewCard
-                            key={`row2-${review.id}`}
-                            review={review}
-                            onClick={handleReviewClick}
-                          />
-                        ))}
                     </Marquee>
-                  )}
-
-                  {reviews.length >= 20 && (
-                    <Marquee pauseOnHover className="[--duration:70s]">
-                      {reviews
-                        .slice(20, Math.min(30, reviews.length))
-                        .map((review) => (
-                          <ReviewCard
-                            key={`row3-${review.id}`}
-                            review={review}
-                            onClick={handleReviewClick}
-                          />
-                        ))}
-                    </Marquee>
-                  )}
+                  ))}
                 </>
               )}
             </div>
@@ -269,7 +287,8 @@ export function UserCommunityShowcase() {
           {/* Call to Action */}
           <motion.div variants={itemVariants} className="text-center">
             <p className="text-muted-foreground text-sm">
-              Download Moneko and join thousands of happy users
+              Download Moneko and see why reviewers mention AI capture, shared
+              expenses, and WhatsApp budgeting.
             </p>
           </motion.div>
         </motion.div>

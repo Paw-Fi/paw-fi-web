@@ -1,10 +1,5 @@
 import BreadCrumbsHeader from "@/components/ui/breadcrumbs";
-import {
-  Outlet,
-  Link,
-  useLocation,
-  useNavigate,
-} from "@tanstack/react-router";
+import { Outlet, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -60,7 +55,6 @@ import { useDashboardGuidance } from "@/hooks/useDashboardGuidance";
 import { Button } from "@/components/ui/button";
 import monekoLogo from "@/assets/images/logo/moneko.png";
 import finniLogo from "@/assets/images/logo/finni.png";
-import DownloadPage from "@/routes/download";
 import { DashboardAppProviders } from "@/providers/dashboard-app-providers";
 
 // Custom CSS for hiding scrollbars while maintaining functionality
@@ -87,8 +81,8 @@ interface MenuItem {
   icon: IconDefinition;
   path: string;
   submenu?: SubMenuItem[];
+  comingSoon?: boolean;
 }
-
 
 export function DashboardRouteComponent() {
   return (
@@ -159,11 +153,6 @@ export function Dashboard() {
       // If subscription is null, it means no row exists in subscriptions table
       // This means the user has never tried the trial before
       const isEligible = subscription === null;
-      console.log("🎯 Setting trial eligibility:", {
-        isEligible,
-        subscription,
-        user: !!user,
-      });
       setTrialEligibility(isEligible);
     }
   }, [subscription, isSubscriptionLoading, user, setTrialEligibility]);
@@ -220,10 +209,6 @@ export function Dashboard() {
     }
 
     try {
-      console.log(
-        `Migrating ${guestGoalIds.length} guest goals to user ${userId}`,
-      );
-
       // Update each guest goal with the user ID and log activity
       for (const goalId of guestGoalIds) {
         // Update the goal with user ID
@@ -234,8 +219,6 @@ export function Dashboard() {
           .is("user_id", null)
           .select()
           .single();
-
-        console.log("data", goalData);
         if (updateError) {
           console.error(`Failed to migrate guest goal ${goalId}:`, updateError);
           return;
@@ -264,10 +247,6 @@ export function Dashboard() {
             },
             timestamp: goalData.created_at, // Use original creation time
           });
-
-          console.log(
-            `Successfully migrated guest goal ${goalId} to user ${userId} with activity log`,
-          );
         } catch (activityError) {
           console.warn(
             `Failed to log activity for migrated goal ${goalId}:`,
@@ -282,10 +261,6 @@ export function Dashboard() {
 
       // Refetch goals once after all migrations complete
       refetch();
-
-      console.log(
-        `Completed migration of ${guestGoalIds.length} guest goals with activity logging`,
-      );
     } catch (error) {
       console.error("Failed to migrate guest goals:", error);
     }
@@ -303,10 +278,6 @@ export function Dashboard() {
     }
 
     try {
-      console.log(
-        `Migrating ${guestProfileIds.length} guest financial health profiles to user ${userId}`,
-      );
-
       let successfulMigrations = 0;
 
       // Update each guest profile with the user ID
@@ -330,10 +301,6 @@ export function Dashboard() {
 
         if (updatedProfile) {
           successfulMigrations++;
-          console.log(
-            `Successfully migrated guest financial health profile ${profileId} to user ${userId}`,
-          );
-          console.log(`Profile created at: ${updatedProfile.created_at}`);
         }
       }
 
@@ -342,10 +309,6 @@ export function Dashboard() {
       setHasCheckedGuestProfiles(true);
 
       if (successfulMigrations > 0) {
-        console.log(
-          `Completed migration of ${successfulMigrations}/${guestProfileIds.length} guest financial health profiles`,
-        );
-
         // Show a toast notification to the user about the successful migration
         if (typeof toast !== "undefined") {
           toast.success(
@@ -364,19 +327,11 @@ export function Dashboard() {
   useEffect(() => {
     const runMigrations = async () => {
       if (user?.id && !hasCheckedGuestGoals) {
-        console.log("User logged in, checking for guest goals to migrate...");
-        const guestGoalIds = getGuestGoalIds();
-        console.log("Found guest goal IDs:", guestGoalIds);
         await migrateGuestGoals(user.id);
         // Always set the flag after migration attempt, even if no goals to migrate
         setHasCheckedGuestGoals(true);
       }
       if (user?.id && !hasCheckedGuestProfiles) {
-        console.log(
-          "User logged in, checking for guest profiles to migrate...",
-        );
-        const guestProfileIds = getGuestProfileIds();
-        console.log("Found guest profile IDs:", guestProfileIds);
         await migrateGuestProfiles(user.id);
         setHasCheckedGuestProfiles(true);
       }
@@ -412,26 +367,9 @@ export function Dashboard() {
       const hasPendingGuestGoals = guestGoalIds.length > 0;
       const hasPendingGuestProfiles = guestProfileIds.length > 0;
 
-      console.log("🎯 Onboarding check:", {
-        hasUser: !!user,
-        hasGoals,
-        hasProfile,
-        hasPendingGuestGoals,
-        hasPendingGuestProfiles,
-        goalsCount: goals?.length,
-        profileComplete: hasProfile,
-        guestGoalIds,
-        guestProfileIds,
-        migrationsComplete: {
-          goals: hasCheckedGuestGoals,
-          profiles: hasCheckedGuestProfiles,
-        },
-      });
-
       // Redirect to onboarding only if user has never created any goals OR complete profile
       // and has no pending guest goals/profiles to migrate
       // if (!hasGoals && !hasProfile && !hasPendingGuestGoals && !hasPendingGuestProfiles) {
-      //   console.log('🚀 Redirecting to onboarding - user needs to complete setup');
       //   navigate({ to: '/onboarding' });
       // }
 
@@ -477,24 +415,33 @@ export function Dashboard() {
   };
 
   const menuItems = [
-    { id: "home", label: "Home", icon: faHouseChimney, path: "/dashboard" },
+    {
+      id: "home",
+      label: "Home",
+      icon: faHouseChimney,
+      path: "/dashboard",
+      comingSoon: true,
+    },
     {
       id: "tracker",
       label: "Goal Guide",
       icon: faTrophy,
       path: "/dashboard/tracker",
+      comingSoon: true,
     },
     {
       id: "portfolio",
       label: "Portfolio",
       icon: faHandHoldingDollar,
       path: "/dashboard/portfolio",
+      comingSoon: true,
     },
     {
       id: "income-builder",
       label: "Income Builder",
       icon: faHammer,
       path: "/dashboard/income-builder",
+      comingSoon: true,
     },
 
     {
@@ -502,10 +449,25 @@ export function Dashboard() {
       label: "Learning",
       icon: faChessKnight,
       path: "/dashboard/learning",
+      comingSoon: true,
     },
   ];
 
-  // Effect to handle menu expansion based on current route (simplified since no submenus)
+  // Handle menu item click - show coming soon for all except membership
+  const handleMenuItemClick = (e: React.MouseEvent, item: MenuItem) => {
+    // Allow membership to navigate normally
+    if (item.id === "membership") {
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    // For items marked as coming soon, prevent navigation and show toast
+    if (item.comingSoon) {
+      e.preventDefault();
+      setMobileMenuOpen(false);
+      toast.info("Coming soon! This feature is under development.");
+    }
+  };
   useEffect(() => {
     // Clear expanded menu since we no longer use submenus
     setExpandedMenu(null);
@@ -656,20 +618,7 @@ export function Dashboard() {
                       <Link
                         to={item.path}
                         className="group"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          // Track visits for calculators
-                          if (item.id === "calculators") {
-                            markCalculatorsVisited();
-                          }
-                          // Track learning and portfolio visits
-                          if (item.id === "learning") {
-                            trackUserAction("learning_visited");
-                          }
-                          if (item.id === "portfolio") {
-                            trackUserAction("portfolio_visited");
-                          }
-                        }}
+                        onClick={(e) => handleMenuItemClick(e, item)}
                       >
                         <motion.div
                           className={`dashboard-nav-item flex min-h-[44px] w-full items-center justify-between rounded-lg px-3 py-3 transition-all duration-200 sm:px-4 sm:py-3.5 ${
@@ -765,9 +714,13 @@ export function Dashboard() {
                           <Link
                             to="/dashboard/user-settings"
                             className="block"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
                               setUserMenuOpen(false);
                               setMobileMenuOpen(false);
+                              toast.info(
+                                "Coming soon! This feature is under development.",
+                              );
                             }}
                           >
                             <motion.div
@@ -790,9 +743,13 @@ export function Dashboard() {
                           <Link
                             to="/dashboard/user-settings/profile"
                             className="block"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
                               setUserMenuOpen(false);
                               setMobileMenuOpen(false);
+                              toast.info(
+                                "Coming soon! This feature is under development.",
+                              );
                             }}
                           >
                             <motion.div
@@ -835,7 +792,18 @@ export function Dashboard() {
                               </span>
                             </motion.div>
                           </Link>
-                          <a href="mailto:hello@moneko.io" className="block">
+                          <a
+                            href="mailto:hello@moneko.io"
+                            className="block"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setUserMenuOpen(false);
+                              setMobileMenuOpen(false);
+                              toast.info(
+                                "Coming soon! This feature is under development.",
+                              );
+                            }}
+                          >
                             <motion.div
                               className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"
                               whileHover={{ x: 1 }}

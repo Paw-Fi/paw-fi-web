@@ -9,11 +9,9 @@ import AmbientHalo from "@/components/ui/ambient-halo";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { useDeviceType } from "@/hooks/use-device-type";
+import { getPassiveIncomePageOrFallback } from "@/lib/passive-income-pages";
 import { disableAnimationsOnMobile } from "../../utils/disable-framer-motion-mobile";
 import { useEffect } from "react";
-
-// Dynamic content system
-import passiveIncomeVariants from "@/data/home/passive-income-variants.json";
 
 // Direct imports to avoid lazy loading issues
 import HeroSection from "@/components/homepage/new/hero-section";
@@ -26,16 +24,15 @@ import FAQSection from "@/components/homepage/new/faq-section";
 import { Footer } from "@/components/homepage/footer";
 
 // Discord URL for community link
-export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
-
-// Use high-interest portfolios variant
-const contentVariant = "high-interest-portfolios";
-const pageData = passiveIncomeVariants[contentVariant];
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 export const Route = createFileRoute("/passive-income/high-interest-portfolios")({
+  loader: async () =>
+    getPassiveIncomePageOrFallback("high-interest-portfolios"),
   component: HighInterestPortfoliosPage,
   staticData: () => ({}),
-  head: () => {
+  head: ({ loaderData }) => {
+    const pageData = loaderData as any;
     const pageUrl = getCanonicalUrl("/passive-income/high-interest-portfolios");
     const meta = seo({
       title: pageData.meta.title,
@@ -57,7 +54,8 @@ export const Route = createFileRoute("/passive-income/high-interest-portfolios")
   },
 });
 
-export default function HighInterestPortfoliosPage() {
+function HighInterestPortfoliosPage() {
+  const pageData = Route.useLoaderData() as any;
   const { isMobile } = useDeviceType();
   
   useEffect(() => {

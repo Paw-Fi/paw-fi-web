@@ -1,24 +1,34 @@
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
+import {
+  createMonekoPricingOffers,
+  monekoAggregateRating,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { seo } from "@/utils/seo";
 
 // Added new pro-max components
 
-export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
+const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
 export const Route = createFileRoute("/pricing")({
-  component: lazyRouteComponent(() => import("@/components/performance/pricing-route-component"), "PricingRouteComponent"),
+  component: lazyRouteComponent(
+    () => import("@/components/performance/pricing-route-component"),
+    "PricingRouteComponent",
+  ),
   head: () => {
     const pageUrl = "https://moneko.io/pricing";
     const meta = seo({
-      title: "Moneko Pricing | AI Budgeting App Plans for Individuals & Households",
+      title:
+        "Moneko Pricing | AI Budgeting App Plans for Individuals & Households",
       description:
-        "Moneko Pro is your WhatsApp-first money assistant. Start a 30-day free trial, then keep everything unlocked for $9.99/year (best value) or $2.99/month. Track, budget, and get AI insights without leaving chat.",
+        "Compare Moneko plans for AI budgeting, WhatsApp expense tracking, Pockets, and shared household budgets. Start with a 30-day free trial.",
       keywords:
         "moneko pricing, moneko plans, AI budgeting app pricing, budgeting app subscription, envelope budgeting app, household budgeting app, WhatsApp expense tracker, personal finance app subscription",
       image: "https://moneko.io/og-img.png",
       url: pageUrl,
     });
 
+    const pricingOffers = createMonekoPricingOffers(pageUrl);
     const structuredData = {
       "@context": "https://schema.org",
       "@type": "Product",
@@ -33,33 +43,24 @@ export const Route = createFileRoute("/pricing")({
       category: "FinanceApplication",
       audience: {
         "@type": "Audience",
-        "audienceType": "Individual Financial Learners"
+        audienceType: "Individual Financial Learners",
       },
+      aggregateRating: monekoAggregateRating,
+      review: monekoFeaturedReview,
       offers: {
+        "@type": "AggregateOffer",
+        url: pageUrl,
+        priceCurrency: "USD",
+        lowPrice: "4.99",
+        highPrice: "69.99",
+        offerCount: pricingOffers.length,
+        availability: "https://schema.org/InStock",
+        offers: pricingOffers,
+      },
+      hasOfferCatalog: {
         "@type": "OfferCatalog",
         name: "Moneko - AI Personal Finance Coach & Budgeting App",
-        itemListElement: [
-          {
-            "@type": "Offer",
-            name: "Moneko Pro Monthly",
-            price: "2.99",
-            priceCurrency: "USD",
-            description: "Monthly subscription to Moneko Pro with WhatsApp-first money assistance.",
-            url: pageUrl,
-            availability: "https://schema.org/InStock",
-            category: "Digital Good",
-          },
-          {
-            "@type": "Offer",
-            name: "Moneko Pro Annual",
-            price: "9.99",
-            priceCurrency: "USD",
-            description: "Annual subscription to Moneko Pro — best value plan with WhatsApp assistant features.",
-            url: pageUrl,
-            availability: "https://schema.org/InStock",
-            category: "Digital Good",
-          },
-        ],
+        itemListElement: pricingOffers,
       },
     };
 
@@ -71,7 +72,7 @@ export const Route = createFileRoute("/pricing")({
           href: pageUrl,
         },
       ],
-      script: [
+      scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(structuredData),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -10,17 +10,22 @@ import {
   faFacebook,
   faLinkedin,
 } from "@fortawesome/free-brands-svg-icons";
-import { blogs as staticBlogs } from "@/data/blogs/blogs";
 import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { StructuredData } from "@/components/seo/structured-data";
-import { Markdown } from "@/components/ui/markdown";
+import { findStaticBlogBySlug, loadStaticBlogs } from "@/lib/static-blogs";
 import {
   fetchSubredditBlogBySlug,
   fetchSubredditBlogs,
 } from "@/services/reddit-blog-service";
+
+const Markdown = lazy(() =>
+  import("@/components/ui/markdown").then((module) => ({
+    default: module.Markdown,
+  })),
+);
 
 export const Route = createFileRoute("/blogs/$blogId")({
   component: BlogDetailPage,
@@ -42,7 +47,10 @@ export const Route = createFileRoute("/blogs/$blogId")({
       // Fall through to static content if Reddit API is unavailable.
     }
 
-    const staticBlog = staticBlogs.find((blog) => blog.slug === params.blogId);
+    const [staticBlogs, staticBlog] = await Promise.all([
+      loadStaticBlogs(),
+      findStaticBlogBySlug(params.blogId),
+    ]);
     if (!staticBlog) {
       throw new Response("Not Found", { status: 404 });
     }
@@ -329,36 +337,23 @@ function BlogDetailPage() {
 
         {/* FAQ Schema for Common Financial Questions */}
         <StructuredData
-          type="faqpage"
-          data={{
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: `What is ${blog.title.toLowerCase().replace(/[?]/g, "")}?`,
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: blog.excerpt,
-                },
-              },
-              {
-                "@type": "Question",
-                name: "How can Moneko help with financial planning?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Moneko provides AI-powered financial education, interactive calculators, and personalized guidance to help you achieve your financial goals through expert-validated content and tools.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Is this financial advice suitable for beginners?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Yes, all Moneko content is designed to be accessible for beginners while providing valuable insights for more experienced investors. Our expert authors break down complex topics into easy-to-understand concepts.",
-                },
-              },
-            ],
-          }}
+          type="faq"
+          data={[
+            {
+              question: `What is ${blog.title.toLowerCase().replace(/[?]/g, "")}?`,
+              answer: blog.excerpt,
+            },
+            {
+              question: "How can Moneko help with financial planning?",
+              answer:
+                "Moneko provides AI-powered financial education, interactive calculators, and personalized guidance to help you achieve your financial goals through expert-validated content and tools.",
+            },
+            {
+              question: "Is this financial advice suitable for beginners?",
+              answer:
+                "Yes, all Moneko content is designed to be accessible for beginners while providing valuable insights for more experienced investors. Our expert authors break down complex topics into easy-to-understand concepts.",
+            },
+          ]}
         />
 
         {/* HowTo Schema for Financial Guides */}
@@ -526,7 +521,13 @@ function BlogDetailPage() {
           </div>
 
           <article className="mx-auto max-w-none">
-            <Markdown content={blog.content} className="prose-lg" />
+            <Suspense
+              fallback={
+                <div className="bg-muted/40 h-64 animate-pulse rounded-2xl" />
+              }
+            >
+              <Markdown content={blog.content} className="prose-lg" />
+            </Suspense>
           </article>
 
           <div className="border-border mt-12 flex flex-wrap items-center justify-between gap-4 border-t pt-6">

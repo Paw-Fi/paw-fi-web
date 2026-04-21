@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BarChart3,
-  CreditCard,
   DoorOpen,
   MousePointerClick,
   RefreshCw,
@@ -39,7 +38,7 @@ import {
 } from "@/components/ui/table";
 import { CreatorHeader } from "@/components/creator/creator-header";
 
-export const Route = createFileRoute("/creator/analytics" as never)({
+export const Route = createFileRoute("/creator/analytics")({
   component: CreatorAnalyticsPage,
 });
 
@@ -199,25 +198,23 @@ function CreatorAnalyticsPage() {
               <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                 <Card className="border-white/10 bg-white/5 backdrop-blur">
                   <CardHeader>
-                    <CardTitle className="text-white">Funnel</CardTitle>
+                    <CardTitle className="text-white">Journey Steps</CardTitle>
                     <CardDescription className="text-slate-300">
-                      Follow each cohort through preview, onboarding, paywall,
-                      and conversion.
+                      Follow how many people reached each major step in the
+                      current onboarding journey.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {analytics.funnel.map((step, index) => (
+                    {buildCreatorJourneySteps(analytics).map((step, index) => (
                       <div key={step.step_key} className="space-y-2">
                         <div className="flex items-center justify-between gap-4 text-sm">
                           <div>
                             <div className="font-medium text-white">
-                              {index + 1}. {humanizeKey(step.step_key)}
+                              {index + 1}.{" "}
+                              {getFunnelStepMeta(step.step_key).label}
                             </div>
                             <div className="text-slate-400">
-                              {formatPercent(
-                                step.conversion_rate_from_previous,
-                              )}{" "}
-                              conversion from previous
+                              {getFunnelStepMeta(step.step_key).description}
                             </div>
                           </div>
                           <div className="text-right">
@@ -225,8 +222,10 @@ function CreatorAnalyticsPage() {
                               {formatInteger(step.session_count)}
                             </div>
                             <div className="text-slate-400">
-                              dropoff{" "}
-                              {formatPercent(step.dropoff_rate_from_previous)}
+                              {formatPercent(
+                                step.conversion_rate_from_previous,
+                              )}{" "}
+                              conversion from previous
                             </div>
                           </div>
                         </div>
@@ -265,12 +264,14 @@ function CreatorAnalyticsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="border-white/10 hover:bg-transparent">
-                          <TableHead className="text-white/60">Page</TableHead>
-                          <TableHead className="text-right text-white/60">
-                            Exits
+                          <TableHead className="text-white/60">
+                            Last step
                           </TableHead>
                           <TableHead className="text-right text-white/60">
-                            Rate
+                            Sessions
+                          </TableHead>
+                          <TableHead className="text-right text-white/60">
+                            Share
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -291,22 +292,31 @@ function CreatorAnalyticsPage() {
                           (analytics.exit_pages.length === 0
                             ? analytics.recent_exit_pages
                             : analytics.exit_pages
-                          ).map((row) => (
-                            <TableRow
-                              key={row.page_id}
-                              className="border-white/10 hover:bg-white/5"
-                            >
-                              <TableCell className="font-medium text-white">
-                                {humanizeKey(row.page_id)}
-                              </TableCell>
-                              <TableCell className="text-right text-white/80">
-                                {formatInteger(row.exits)}
-                              </TableCell>
-                              <TableCell className="text-right text-white/80">
-                                {formatPercent(row.exit_rate)}
-                              </TableCell>
-                            </TableRow>
-                          ))
+                          ).map((row) => {
+                            const pageMeta = getPageMeta(row.page_id);
+
+                            return (
+                              <TableRow
+                                key={row.page_id}
+                                className="border-white/10 hover:bg-white/5"
+                              >
+                                <TableCell className="font-medium text-white">
+                                  <div className="space-y-1">
+                                    <div>{pageMeta.label}</div>
+                                    <div className="text-xs font-normal text-slate-400">
+                                      {pageMeta.description}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right text-white/80">
+                                  {formatInteger(row.exits)}
+                                </TableCell>
+                                <TableCell className="text-right text-white/80">
+                                  {formatPercent(row.exit_rate)}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
                         )}
                       </TableBody>
                     </Table>
@@ -318,11 +328,50 @@ function CreatorAnalyticsPage() {
                 <Card className="border-white/10 bg-white/5 backdrop-blur">
                   <CardHeader>
                     <CardTitle className="text-white">
-                      Post-auth Usage
+                      Preview App Taps
                     </CardTitle>
                     <CardDescription className="text-slate-300">
-                      See whether people actually use the post-auth tasks or
-                      skip them.
+                      Shows which page most often convinces people to try the
+                      app before they finish signup.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-white/10 hover:bg-transparent">
+                          <TableHead className="text-white/60">Page</TableHead>
+                          <TableHead className="text-right text-white/60">
+                            Taps
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {buildPreviewTapRows(
+                          analytics.preview_entry_points,
+                        ).map((row) => (
+                          <TableRow
+                            key={row.preview_entry_point}
+                            className="border-white/10 hover:bg-white/5"
+                          >
+                            <TableCell className="font-medium text-white">
+                              {formatPreviewEntryPoint(row.preview_entry_point)}
+                            </TableCell>
+                            <TableCell className="text-right text-white/80">
+                              {formatInteger(row.taps)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-white/10 bg-white/5 backdrop-blur">
+                  <CardHeader>
+                    <CardTitle className="text-white">Setup Actions</CardTitle>
+                    <CardDescription className="text-slate-300">
+                      Shows whether people use the signed-in setup tasks or skip
+                      them for later.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -358,7 +407,7 @@ function CreatorAnalyticsPage() {
                               className="border-white/10 hover:bg-white/5"
                             >
                               <TableCell className="font-medium text-white">
-                                {humanizeKey(row.step_key)}
+                                {getPostAuthStepMeta(row.step_key).label}
                               </TableCell>
                               <TableCell className="text-right text-emerald-300">
                                 {formatInteger(row.used_count)}
@@ -376,22 +425,26 @@ function CreatorAnalyticsPage() {
                     </Table>
                   </CardContent>
                 </Card>
+              </section>
 
+              <section>
                 <Card className="border-white/10 bg-white/5 backdrop-blur">
                   <CardHeader>
                     <CardTitle className="text-white">
                       Paywall Breakdown
                     </CardTitle>
                     <CardDescription className="text-slate-300">
-                      Compare plans, checkout starts, conversion, and
-                      abandonment.
+                      Compare plan interest, payment starts, and completed
+                      purchases.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Table>
                       <TableHeader>
                         <TableRow className="border-white/10 hover:bg-transparent">
-                          <TableHead className="text-white/60">Plan</TableHead>
+                          <TableHead className="text-white/60">
+                            Plan choice
+                          </TableHead>
                           <TableHead className="text-right text-white/60">
                             Views
                           </TableHead>
@@ -424,13 +477,17 @@ function CreatorAnalyticsPage() {
                             >
                               <TableCell className="font-medium text-white">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span>{humanizeKey(row.selected_plan)}</span>
+                                  <span>
+                                    {formatPlanChoice(row.selected_plan)}
+                                  </span>
                                   {row.billing_interval ? (
                                     <Badge
                                       variant="secondary"
                                       className="bg-white/10 text-white/80"
                                     >
-                                      {row.billing_interval}
+                                      {formatBillingInterval(
+                                        row.billing_interval,
+                                      )}
                                     </Badge>
                                   ) : null}
                                 </div>
@@ -606,6 +663,8 @@ async function fetchCreatorOnboardingAnalytics({
     funnel: (data.funnel ?? []) as CreatorFunnelRow[],
     post_auth_usage: (data.post_auth_usage ?? []) as CreatorPostAuthUsageRow[],
     paywall_breakdown: (data.paywall_breakdown ?? []) as CreatorPaywallRow[],
+    preview_entry_points: (data.preview_entry_points ??
+      []) as CreatorPreviewEntryPointRow[],
     exit_pages: (data.exit_pages ?? []) as CreatorExitPageRow[],
     recent_exit_pages: (data.recent_exit_pages ?? []) as CreatorExitPageRow[],
     timeseries: (data.timeseries ?? []) as CreatorTimeseriesRow[],
@@ -613,45 +672,54 @@ async function fetchCreatorOnboardingAnalytics({
 }
 
 function buildSummaryCards(summary: CreatorSummary) {
+  const completionRate = safeRate(
+    summary.completed_flow_sessions,
+    summary.sessions,
+  );
+  const paywallReachRate = safeRate(summary.paywall_views, summary.sessions);
+  const checkoutWinRate = safeRate(
+    summary.purchase_successes,
+    summary.checkout_starts,
+  );
+  const stallRate = safeRate(summary.abandoned_sessions, summary.sessions);
+
   return [
     {
-      label: "Tracked Sessions",
+      label: "Started Onboarding",
       value: formatInteger(summary.sessions),
-      helpText: `${formatInteger(summary.in_app_new_users)} in-app new users in the selected window`,
+      helpText: `${formatInteger(summary.in_app_new_users)} brand-new app users in this date range`,
       icon: UserRoundPlus,
       className:
         "border-white/10 bg-gradient-to-br from-sky-500/20 to-transparent",
     },
     {
-      label: "Average Dwell",
-      value: formatDuration(summary.avg_dwell_ms),
-      helpText: `${formatInteger(summary.abandoned_sessions)} stalled sessions older than 30 minutes`,
+      label: "Reached Pricing",
+      value: formatInteger(summary.paywall_views),
+      helpText: `${formatPercent(paywallReachRate)} of starts made it to the pricing step`,
       icon: Timer,
       className:
         "border-white/10 bg-gradient-to-br from-violet-500/20 to-transparent",
     },
     {
-      label: "Checkout Starts",
+      label: "Started Payment",
       value: formatInteger(summary.checkout_starts),
-      helpText: `${formatInteger(summary.purchase_successes)} purchases completed`,
+      helpText: `${formatInteger(summary.purchase_successes)} completed a purchase. Payment win rate is ${formatPercent(checkoutWinRate)}.`,
       icon: MousePointerClick,
       className:
         "border-white/10 bg-gradient-to-br from-amber-500/20 to-transparent",
     },
     {
-      label: "Return Trial Grants",
-      value: formatInteger(summary.paywall_return_trial_grants),
-      helpText: "Users granted 14-day trial after returning to paywall",
+      label: "Finished Into App",
+      value: formatInteger(summary.completed_flow_sessions),
+      helpText: `${formatPercent(completionRate)} of starts reached the main app`,
       icon: BarChart3,
       className:
         "border-white/10 bg-gradient-to-br from-emerald-500/20 to-transparent",
     },
     {
-      label: "Exit Focus",
-      value: formatInteger(
-        summary.purchase_cancellations + summary.purchase_failures,
-      ),
-      helpText: `${formatInteger(summary.external_prepaid_users)} external prepaid users detected`,
+      label: "Stopped Before Finish",
+      value: formatInteger(summary.abandoned_sessions),
+      helpText: `${formatPercent(stallRate)} of starts have been inactive for at least 30 minutes`,
       icon: DoorOpen,
       className:
         "border-white/10 bg-gradient-to-br from-rose-500/20 to-transparent",
@@ -660,9 +728,7 @@ function buildSummaryCards(summary: CreatorSummary) {
 }
 
 function defaultStartDate() {
-  const date = new Date();
-  date.setDate(date.getDate() - 29);
-  return date.toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
 }
 
 function defaultEndDate() {
@@ -672,66 +738,231 @@ function defaultEndDate() {
 function humanizeKey(value: string | null) {
   if (!value) return "Unknown";
 
-  // Map specific onboarding page IDs to more readable names
-  const pageNameMap: Record<string, string> = {
-    onboarding_intro: "Intro Page",
-    onboarding_preview: "Onboarding Preview",
-    onboarding_setup_notifications: "Post-auth Setup Notifications",
-    onboarding_setup_import: "Post-auth Setup Import",
-    onboarding_setup_ai_log: "Post-auth Setup AI Log",
-    preauth_housing_situation: "Pre-auth Housing Situation",
-    preauth_bill_split: "Pre-auth Bill Split",
-    preauth_subscriptions: "Pre-auth Subscriptions",
-    preauth_eating_out: "Pre-auth Eating Out",
-    preauth_testimonial: "Pre-auth Testimonial",
-    preauth_lifestyle: "Pre-auth Lifestyle",
-    preauth_goal: "Pre-auth Goal",
-    preauth_savings_target: "Pre-auth Savings Target",
-    preauth_currency: "Pre-auth Currency",
-    preauth_calculating: "Pre-auth Calculating",
-    preauth_starter_budget: "Pre-auth Starter Budget",
-    preauth_create_account: "Pre-auth Create Account",
-    create_account: "Pre-auth Create Account",
-    post_auth_log_expense: "Post-auth Log Expense",
-    post_auth_import: "Post-auth Import",
-    post_auth_notifications: "Post-auth Notifications",
-    onboarding_account_preparing: "Account Preparing",
-    onboarding_save_budget: "Save Budget",
-    save_budget_sign_in_tapped: "Save Budget Sign In",
-    onboarding_preview_clicked: "Save Budget Preview Clicked",
-    preview_app_tapped: "Paywall Preview Clicked",
-    intro_preview_app: "Intro Preview App",
-    intro_sign_in_tapped: "Intro Sign In",
-    intro_completed: "Intro Get My Plan",
-    intro_next: "Intro Next",
-    intro_back: "Intro Back",
-    try_demo: "Try Demo",
-    paywall: "Paywall",
-    plan_selected: "Paywall Plan Selected",
-    subscribe_tapped: "Paywall Subscribe Tapped",
-    restore_purchases_tapped: "Paywall Restore Tapped",
-    terms_privacy_tapped: "Paywall Terms Tapped",
-    retry_load_options_tapped: "Paywall Retry Load Options",
-    auto_renew_ack_toggled: "Paywall Auto-Renew Ack Toggled",
-    manage_store_subscription_tapped: "Paywall Manage Store Subscription",
-    paywall_checkout_started: "Paywall Checkout Started",
-    paywall_purchase_succeeded: "Paywall Purchase Succeeded",
-    paywall_return_trial_granted: "Paywall Return Trial Granted",
-    paywall_purchase_cancelled: "Paywall Purchase Cancelled",
-    paywall_purchase_failed: "Paywall Purchase Failed",
-    prepare_open_dashboard_tapped: "Preparing Open Dashboard",
-    prepare_try_again_tapped: "Preparing Try Again",
-    prepare_continue_tapped: "Preparing Continue",
-  };
-
-  // Return mapped name if exists, otherwise apply default humanization
-  if (pageNameMap[value]) {
-    return pageNameMap[value];
-  }
-
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getFunnelStepMeta(stepKey: string) {
+  const mapping: Record<string, { label: string; description: string }> = {
+    intro_seen: {
+      label: "Get started page",
+      description: "People reached the opening intro carousel.",
+    },
+    preauth_seen: {
+      label: "Personal questions",
+      description: "People started the budget and lifestyle questions.",
+    },
+    preauth_started: {
+      label: "Personal questions",
+      description: "People started the budget and lifestyle questions.",
+    },
+    account_preparing_seen: {
+      label: "Account setup",
+      description: "People reached account creation or account finishing.",
+    },
+    paywall_seen: {
+      label: "Pricing page",
+      description: "People reached the pricing screen.",
+    },
+    postauth_seen: {
+      label: "Signed-in setup",
+      description: "People reached the signed-in setup tasks.",
+    },
+    subscribe_tapped: {
+      label: "Started payment",
+      description: "People tapped to start payment from the pricing page.",
+    },
+    purchase_succeeded: {
+      label: "Finished payment",
+      description: "People finished payment and unlocked access.",
+    },
+  };
+
+  return (
+    mapping[stepKey] ?? {
+      label: humanizeKey(stepKey),
+      description: "Tracked journey step.",
+    }
+  );
+}
+
+function getPostAuthStepMeta(stepKey: string) {
+  const mapping: Record<string, { label: string }> = {
+    log_expense: { label: "Log an expense" },
+    import: { label: "Import past transactions" },
+    notifications: { label: "Enable reminders" },
+  };
+
+  return mapping[stepKey] ?? { label: humanizeKey(stepKey) };
+}
+
+function getPageMeta(pageId: string) {
+  const mapping: Record<string, { label: string; description: string }> = {
+    onboarding_intro: {
+      label: "Get started page",
+      description: "They left during the opening intro carousel.",
+    },
+    onboarding_save_budget: {
+      label: "Save budget page",
+      description: "They reached the save-your-plan step before signing up.",
+    },
+    preauth_housing_situation: {
+      label: "Personal questions",
+      description: "They left during the question flow.",
+    },
+    onboarding_account_preparing: {
+      label: "Account setup",
+      description: "They left while the account was being prepared.",
+    },
+    paywall: {
+      label: "Pricing page",
+      description: "They left on the pricing screen.",
+    },
+    post_auth_log_expense: {
+      label: "Signed-in setup",
+      description: "They left during the signed-in setup tasks.",
+    },
+    post_auth_import: {
+      label: "Signed-in setup",
+      description: "They left during the signed-in setup tasks.",
+    },
+    post_auth_notifications: {
+      label: "Final setup step",
+      description:
+        "They reached the last setup screen but did not continue into the app.",
+    },
+    onboarding_setup_notifications: {
+      label: "Final setup step",
+      description:
+        "They reached the last setup screen but did not continue into the app.",
+    },
+    onboarding_setup_import: {
+      label: "Signed-in setup",
+      description: "They left during the signed-in setup tasks.",
+    },
+    onboarding_setup_ai_log: {
+      label: "Signed-in setup",
+      description: "They left during the signed-in setup tasks.",
+    },
+  };
+
+  return (
+    mapping[pageId] ?? {
+      label: humanizeKey(pageId),
+      description: "Tracked last step before the session stopped moving.",
+    }
+  );
+}
+
+function formatPlanChoice(value: string | null) {
+  if (!value || value === "unknown") return "No plan chosen yet";
+  if (value === "plus") return "Moneko Plus";
+  if (value === "lifetime") return "Lifetime";
+  return humanizeKey(value);
+}
+
+function formatBillingInterval(value: string | null) {
+  if (!value) return "";
+  if (value === "yearly") return "Yearly";
+  if (value === "monthly") return "Monthly";
+  return humanizeKey(value);
+}
+
+function buildPreviewTapRows(rows: CreatorPreviewEntryPointRow[]) {
+  const tapMap = new Map(
+    rows.map((row) => [row.preview_entry_point, row.taps]),
+  );
+
+  return [
+    {
+      preview_entry_point: "get_started",
+      taps: tapMap.get("get_started") ?? 0,
+    },
+    {
+      preview_entry_point: "save_budget",
+      taps: tapMap.get("save_budget") ?? 0,
+    },
+    { preview_entry_point: "paywall", taps: tapMap.get("paywall") ?? 0 },
+  ];
+}
+
+function buildCreatorJourneySteps(analytics: CreatorAnalyticsResponse) {
+  const funnelMap = new Map(analytics.funnel.map((row) => [row.step_key, row]));
+
+  const rawSteps = [
+    {
+      step_key: "intro_seen",
+      session_count: funnelMap.get("intro_seen")?.session_count ?? 0,
+    },
+    {
+      step_key: "preauth_started",
+      session_count:
+        funnelMap.get("preauth_started")?.session_count ??
+        funnelMap.get("preauth_seen")?.session_count ??
+        0,
+    },
+    {
+      step_key: "account_preparing_seen",
+      session_count:
+        funnelMap.get("account_preparing_seen")?.session_count ?? 0,
+    },
+    {
+      step_key: "paywall_seen",
+      session_count: funnelMap.get("paywall_seen")?.session_count ?? 0,
+    },
+    {
+      step_key: "subscribe_tapped",
+      session_count:
+        funnelMap.get("subscribe_tapped")?.session_count ??
+        analytics.summary.checkout_starts,
+    },
+    {
+      step_key: "purchase_succeeded",
+      session_count:
+        funnelMap.get("purchase_succeeded")?.session_count ??
+        analytics.summary.purchase_successes,
+    },
+    {
+      step_key: "postauth_seen",
+      session_count: funnelMap.get("postauth_seen")?.session_count ?? 0,
+    },
+  ];
+
+  return rawSteps.reduce<CreatorFunnelRow[]>((steps, step, index) => {
+    const previousCount =
+      index === 0 ? null : (steps[index - 1]?.session_count ?? 0);
+    const normalizedCount =
+      previousCount === null
+        ? step.session_count
+        : Math.min(step.session_count, previousCount);
+
+    steps.push({
+      step_rank: index + 1,
+      step_key: step.step_key,
+      session_count: normalizedCount,
+      conversion_rate_from_previous:
+        previousCount === null ? 100 : safeRate(normalizedCount, previousCount),
+      dropoff_rate_from_previous:
+        previousCount === null
+          ? 0
+          : Math.max(0, 100 - safeRate(normalizedCount, previousCount)),
+    });
+
+    return steps;
+  }, []);
+}
+
+function formatPreviewEntryPoint(value: string) {
+  if (value === "get_started") return "Get started page";
+  if (value === "save_budget") return "Save budget page";
+  if (value === "paywall") return "Pricing page";
+  return humanizeKey(value);
+}
+
+function safeRate(part: number, whole: number) {
+  if (!whole) return 0;
+  return (part / whole) * 100;
 }
 
 function formatInteger(value: number | null | undefined) {
@@ -743,16 +974,6 @@ function formatPercent(value: number | null | undefined) {
     return "-";
   }
   return `${Number(value).toFixed(1)}%`;
-}
-
-function formatDuration(value: number | null | undefined) {
-  const durationMs = value ?? 0;
-  if (durationMs < 1000) return `${durationMs} ms`;
-  const totalSeconds = Math.round(durationMs / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}m ${seconds}s`;
 }
 
 function funnelWidth(rows: CreatorFunnelRow[], sessionCount: number) {
@@ -797,6 +1018,7 @@ interface CreatorAnalyticsResponse {
   funnel: CreatorFunnelRow[];
   post_auth_usage: CreatorPostAuthUsageRow[];
   paywall_breakdown: CreatorPaywallRow[];
+  preview_entry_points: CreatorPreviewEntryPointRow[];
   exit_pages: CreatorExitPageRow[];
   recent_exit_pages: CreatorExitPageRow[];
   timeseries: CreatorTimeseriesRow[];
@@ -845,6 +1067,11 @@ interface CreatorPaywallRow {
   abandonments: number;
   conversion_rate: number;
   abandonment_rate: number;
+}
+
+interface CreatorPreviewEntryPointRow {
+  preview_entry_point: string;
+  taps: number;
 }
 
 interface CreatorExitPageRow {

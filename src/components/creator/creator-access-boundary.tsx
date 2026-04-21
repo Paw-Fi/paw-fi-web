@@ -30,7 +30,7 @@ export function CreatorAccessBoundary({
       void navigate({
         to: "/login",
         search: {
-          redirect: window.location.href,
+          redirect: window.location.pathname + window.location.search,
         },
         replace: true,
       });

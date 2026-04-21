@@ -12,6 +12,60 @@ interface ContactRow {
   created_at?: string;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientTransportError(error: unknown) {
+  const message = String((error as { message?: string })?.message || "")
+    .toLowerCase();
+  return (
+    message.includes("error sending request") ||
+    message.includes("fetch failed") ||
+    message.includes("connection reset") ||
+    message.includes("timed out") ||
+    message.includes("bad gateway") ||
+    message.includes("error code 502") ||
+    message.includes("cloudflare")
+  );
+}
+
+function isMissingFunctionError(error: unknown) {
+  const errorLike = error as { code?: string; message?: string };
+  if (errorLike?.code === "PGRST202") return true;
+  const message = String(errorLike?.message || "").toLowerCase();
+  return message.includes("could not find the function");
+}
+
+async function runWithRetry<T>(
+  run: () => PromiseLike<{ data: T | null; error: unknown }>,
+  maxAttempts = 2,
+) {
+  let lastResult: RetryResult<T> = {
+    data: null,
+    error: new Error("Unknown query failure"),
+    attempts: 0,
+  };
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const result =
+      (await run()) as { data: T | null; error: unknown };
+    lastResult = {
+      ...result,
+      attempts: attempt,
+    };
+    if (!result.error) return lastResult;
+
+    if (!isTransientTransportError(result.error) || attempt === maxAttempts) {
+      return lastResult;
+    }
+
+    await sleep(120 * attempt);
+  }
+
+  return lastResult;
+}
+
 interface LastExpenseRow {
   user_id: string;
   last_created_at: string | null;
@@ -25,6 +79,22 @@ interface LastExpenseRow {
 interface ReminderStats {
   count: number;
   last_at: string;
+}
+
+interface ReminderUserRow {
+  user_id: string | null;
+}
+
+interface ReminderStatsRow {
+  user_id: string | null;
+  reminder_count: number | string | null;
+  last_at: string | null;
+}
+
+interface RetryResult<T> {
+  data: T | null;
+  error: unknown;
+  attempts: number;
 }
 
 function fmtLocalDate(tz: string | null | undefined, date = new Date()) {
@@ -206,6 +276,7 @@ Deno.serve(async (req: Request) => {
     } catch {}
 
     const now = new Date();
+    const runStartedAt = now.toISOString();
     const allowedHours: number[] = Array.isArray(body.allowedHours)
       ? (body.allowedHours as any[])
           .map((x) => Number(x))
@@ -273,20 +344,92 @@ Deno.serve(async (req: Request) => {
     // Keep PostgREST `in(...)` query strings small to avoid transport/proxy URL limits.
     const chunkSize = 120;
     let recentReminderGuardFailed = false;
+    const runContext = {
+      runStartedAt,
+      userIdsCount: userIds.length,
+      minHoursBetween,
+      slotMins,
+      chunkSize,
+      quietStart,
+      quietEnd,
+      allowedHoursCount: allowedHours.length,
+      last24hIso,
+      statsSinceIso,
+    };
 
     for (let i = 0; i < userIds.length; i += chunkSize) {
       const chunk = userIds.slice(i, i + chunkSize);
+      const chunkContext = {
+        chunkStart: i,
+        chunkLength: chunk.length,
+        chunkSize,
+      };
 
-      const { data: reminderRows, error: reminderErr } = await supabase
-        .from("notification_events")
-        .select("user_id")
-        .eq("event_type", "log_expense_reminder")
-        .gte("created_at", last24hIso)
-        .in("user_id", chunk);
+      let reminderRows: ReminderUserRow[] = [];
+      let reminderErr: unknown = null;
+
+      const reminderRpcResult = await runWithRetry<ReminderUserRow[]>(
+        () =>
+          supabase.rpc("get_recent_log_expense_reminder_users", {
+            p_user_ids: chunk,
+            p_since: last24hIso,
+          }),
+        3,
+      );
+
+      const reminderFallbackReason = reminderRpcResult.error
+        ? isMissingFunctionError(reminderRpcResult.error)
+          ? "rpc_missing"
+          : isTransientTransportError(reminderRpcResult.error)
+            ? "rpc_transient"
+            : "rpc_error"
+        : null;
+
+      if (reminderRpcResult.error) {
+        const fallbackChunkSize = 25;
+        const fallbackRows: ReminderUserRow[] = [];
+        let fallbackChunksTried = 0;
+
+        for (let j = 0; j < chunk.length; j += fallbackChunkSize) {
+          fallbackChunksTried++;
+          const fallbackChunk = chunk.slice(j, j + fallbackChunkSize);
+          const fallbackResult = await runWithRetry<ReminderUserRow[]>(() =>
+            supabase
+              .from("notification_events")
+              .select("user_id")
+              .eq("event_type", "log_expense_reminder")
+              .gte("created_at", last24hIso)
+              .in("user_id", fallbackChunk)
+          );
+          if (fallbackResult.error) {
+            reminderErr = {
+              cause: fallbackResult.error,
+              mode: "fallback_get",
+              fallbackChunkStart: j,
+              fallbackChunkLength: fallbackChunk.length,
+              fallbackChunkSize,
+              fallbackChunksTried,
+              fallbackAttempts: fallbackResult.attempts,
+            };
+            break;
+          }
+          fallbackRows.push(...((fallbackResult.data || []) as ReminderUserRow[]));
+        }
+
+        reminderRows = fallbackRows;
+      } else {
+        reminderErr = reminderRpcResult.error;
+        reminderRows = (reminderRpcResult.data || []) as ReminderUserRow[];
+      }
 
       if (reminderErr) {
         // If this guard is incomplete, we can create duplicates on the next cron tick.
         // Fail the run so the next invocation can retry with complete data.
+        const reminderErrObject =
+          reminderErr && typeof reminderErr === "object"
+            ? (reminderErr as Record<string, unknown>)
+            : null;
+        const reminderRootError = reminderErrObject?.cause || reminderErr;
         console.error(
           "[expense-daily-nudges] recent reminder batch error",
           reminderErr,
@@ -296,9 +439,23 @@ Deno.serve(async (req: Request) => {
           error: reminderErr,
           context: {
             step: "load_recent_reminders",
-            chunkSize,
-            chunkStart: i,
-            chunkLength: chunk.length,
+            operation: "recent_reminder_guard",
+            lookupMode: reminderRpcResult.error
+              ? "fallback_get"
+              : "rpc",
+            fallbackReason: reminderFallbackReason,
+            rpcAttempts: reminderRpcResult.attempts,
+            isRpcMissingFunctionError:
+              !!reminderRpcResult.error &&
+              isMissingFunctionError(reminderRpcResult.error),
+            isTransportError: isTransientTransportError(reminderRootError),
+            fallbackChunkStart: reminderErrObject?.fallbackChunkStart,
+            fallbackChunkLength: reminderErrObject?.fallbackChunkLength,
+            fallbackChunkSize: reminderErrObject?.fallbackChunkSize,
+            fallbackChunksTried: reminderErrObject?.fallbackChunksTried,
+            fallbackAttempts: reminderErrObject?.fallbackAttempts,
+            ...runContext,
+            ...chunkContext,
           },
         });
         recentReminderGuardFailed = true;
@@ -309,8 +466,14 @@ Deno.serve(async (req: Request) => {
         if (row?.user_id) recentReminderUsers.add(row.user_id);
       });
 
-      const { data: lastExpenseRows, error: lastExpenseErr } =
-        await supabase.rpc("get_last_expense_per_user", { p_user_ids: chunk });
+      const {
+        data: lastExpenseRows,
+        error: lastExpenseErr,
+        attempts: lastExpenseAttempts,
+      } =
+        await runWithRetry<LastExpenseRow[]>(() =>
+          supabase.rpc("get_last_expense_per_user", { p_user_ids: chunk })
+        );
 
       if (lastExpenseErr) {
         console.warn(
@@ -325,13 +488,76 @@ Deno.serve(async (req: Request) => {
         }
       });
 
-      const { data: reminderStatsRows, error: reminderStatsErr } =
-        await supabase
-          .from("notification_events")
-          .select("user_id, created_at")
-          .eq("event_type", "log_expense_reminder")
-          .gte("created_at", statsSinceIso)
-          .in("user_id", chunk);
+      let reminderStatsRows: ReminderStatsRow[] = [];
+      let reminderStatsErr: unknown = null;
+
+      const reminderStatsRpcResult = await runWithRetry<ReminderStatsRow[]>(() =>
+        supabase.rpc("get_log_expense_reminder_stats", {
+          p_user_ids: chunk,
+          p_since: statsSinceIso,
+        })
+      );
+
+      if (reminderStatsRpcResult.error) {
+        const fallbackChunkSize = 25;
+        const statsAccumulator = new Map<string, ReminderStats>();
+        let fallbackChunksTried = 0;
+
+        for (let j = 0; j < chunk.length; j += fallbackChunkSize) {
+          fallbackChunksTried++;
+          const fallbackChunk = chunk.slice(j, j + fallbackChunkSize);
+          const fallbackResult = await runWithRetry<
+            Array<{ user_id: string | null; created_at: string | null }>
+          >(() =>
+            supabase
+              .from("notification_events")
+              .select("user_id, created_at")
+              .eq("event_type", "log_expense_reminder")
+              .gte("created_at", statsSinceIso)
+              .in("user_id", fallbackChunk)
+          );
+
+          if (fallbackResult.error) {
+            reminderStatsErr = {
+              cause: fallbackResult.error,
+              mode: "fallback_get",
+              fallbackChunkStart: j,
+              fallbackChunkLength: fallbackChunk.length,
+              fallbackChunkSize,
+              fallbackChunksTried,
+              fallbackAttempts: fallbackResult.attempts,
+            };
+            break;
+          }
+
+          (fallbackResult.data || []).forEach(
+            (row: { user_id: string | null; created_at: string | null }) => {
+              if (!row?.user_id || !row?.created_at) return;
+              const existing = statsAccumulator.get(row.user_id) || {
+                count: 0,
+                last_at: row.created_at,
+              };
+              existing.count += 1;
+              if (!existing.last_at || row.created_at > existing.last_at) {
+                existing.last_at = row.created_at;
+              }
+              statsAccumulator.set(row.user_id, existing);
+            },
+          );
+        }
+
+        reminderStatsRows = Array.from(statsAccumulator.entries()).map(
+          ([userId, stats]) => ({
+            user_id: userId,
+            reminder_count: stats.count,
+            last_at: stats.last_at,
+          }),
+        );
+      } else {
+        reminderStatsErr = reminderStatsRpcResult.error;
+        reminderStatsRows =
+          (reminderStatsRpcResult.data || []) as ReminderStatsRow[];
+      }
 
       if (reminderStatsErr) {
         console.warn(
@@ -340,20 +566,14 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      (reminderStatsRows || []).forEach(
-        (row: { user_id: string | null; created_at: string | null }) => {
-          if (!row?.user_id || !row?.created_at) return;
-          const existing = reminderStatsByUser.get(row.user_id) || {
-            count: 0,
-            last_at: row.created_at,
-          };
-          existing.count += 1;
-          if (!existing.last_at || row.created_at > existing.last_at) {
-            existing.last_at = row.created_at;
-          }
-          reminderStatsByUser.set(row.user_id, existing);
-        },
-      );
+      (reminderStatsRows || []).forEach((row: ReminderStatsRow) => {
+        if (!row?.user_id || !row?.last_at) return;
+        const parsedCount = Number(row.reminder_count || 0);
+        reminderStatsByUser.set(row.user_id, {
+          count: Number.isFinite(parsedCount) ? parsedCount : 0,
+          last_at: row.last_at,
+        });
+      });
     }
 
     if (recentReminderGuardFailed) {
@@ -521,7 +741,7 @@ Deno.serve(async (req: Request) => {
         .from("notification_events")
         .insert(toInsert, {
           ignoreDuplicates: true,
-        })
+        } as any)
         .select("id");
       if (insertErr) {
         console.error("[expense-daily-nudges] insert error", insertErr);
@@ -530,7 +750,15 @@ Deno.serve(async (req: Request) => {
           error: insertErr,
           context: {
             step: "insert_notifications",
+            operation: "insert_notification_events",
             toInsertCount: toInsert.length,
+            scanned,
+            skippedHour,
+            skippedRecentExpense,
+            skippedRecentReminder,
+            cadenceSkipped,
+            softPauseSkipped,
+            ...runContext,
           },
         });
       } else {
@@ -562,6 +790,8 @@ Deno.serve(async (req: Request) => {
       error,
       context: {
         step: "unhandled",
+        operation: "handler_top_level",
+        lockHeld,
       },
     });
     return new Response(

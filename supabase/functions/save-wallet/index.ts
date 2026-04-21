@@ -1,0 +1,207 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { corsHeaders } from "../shared/cors.ts";
+import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
+import {
+  assertScopeAccess,
+  resolveDefaultAccountId,
+  sanitizeUuid,
+} from "../shared/accounts.ts";
+
+interface RequestBody {
+  householdId?: string;
+  userId?: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  goalAmountCents?: number | null;
+  openingBalanceCents?: number;
+  isDefault?: boolean;
+  linkedBankAccountId?: string | null;
+}
+
+function jsonResponse(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return jsonResponse(
+      { success: false, error: "Method not allowed", code: "VALIDATION_ERROR" },
+      405,
+    );
+  }
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return jsonResponse(
+      {
+        success: false,
+        error: "Server configuration error",
+        code: "SERVER_ERROR",
+      },
+      500,
+    );
+  }
+
+  try {
+    const body = (await req.json()) as RequestBody;
+    const householdId = sanitizeUuid(body.householdId ?? null);
+    if (body.householdId && !householdId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Invalid householdId",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
+    const name = String(body.name ?? "").trim();
+    if (!name) {
+      return jsonResponse(
+        { success: false, error: "name is required", code: "VALIDATION_ERROR" },
+        400,
+      );
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+      global: { headers: { "X-Client-Info": "moneko-save-account" } },
+    });
+
+    const auth = await authenticateUserOrInternalSecret(req, supabase);
+    if (!auth.success) {
+      return jsonResponse(
+        {
+          success: false,
+          error: auth.error ?? "Unauthorized",
+          code: "UNAUTHORIZED",
+        },
+        auth.statusCode ?? 401,
+      );
+    }
+
+    const userId = auth.isInternalService
+      ? sanitizeUuid(body.userId ?? null)
+      : auth.userId;
+    if (!userId) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Valid userId is required",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
+    const canAccess = await assertScopeAccess(supabase, userId, householdId);
+    if (!canAccess) {
+      return jsonResponse(
+        { success: false, error: "Forbidden scope", code: "UNAUTHORIZED" },
+        403,
+      );
+    }
+
+    const linkedBankAccountId = sanitizeUuid(body.linkedBankAccountId ?? null);
+    const openingBalanceCents = Number.isFinite(body.openingBalanceCents)
+      ? Math.round(Number(body.openingBalanceCents))
+      : 0;
+    const goalAmountCents = body.goalAmountCents == null
+      ? null
+      : Math.round(Number(body.goalAmountCents));
+
+    const shouldSetDefault = body.isDefault === true;
+
+    if (shouldSetDefault) {
+      let resetQuery = supabase
+        .from("accounts")
+        .update({ is_default: false })
+        .eq("is_archived", false);
+
+      if (householdId) {
+        resetQuery = resetQuery.eq("household_id", householdId);
+      } else {
+        resetQuery = resetQuery.eq("user_id", userId).is("household_id", null);
+      }
+
+      const { error: resetError } = await resetQuery;
+      if (resetError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to set default account",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("accounts")
+      .insert({
+        user_id: userId,
+        household_id: householdId,
+        name,
+        icon: String(body.icon ?? "wallet"),
+        color: String(body.color ?? "#6B7280"),
+        opening_balance_cents: openingBalanceCents,
+        goal_amount_cents: goalAmountCents,
+        is_default: shouldSetDefault,
+        linked_bank_account_id: linkedBankAccountId,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("[save-account]", error);
+      return jsonResponse(
+        {
+          success: false,
+          error: "Failed to create account",
+          code: "SERVER_ERROR",
+        },
+        500,
+      );
+    }
+
+    const fallbackDefault = await resolveDefaultAccountId(supabase, {
+      userId,
+      householdId,
+    });
+
+    if (!fallbackDefault) {
+      await supabase
+        .from("accounts")
+        .update({ is_default: true })
+        .eq("id", data.id);
+      data.is_default = true;
+    }
+
+    return jsonResponse({ success: true, data });
+  } catch (error) {
+    console.error("[save-account]", error);
+    return jsonResponse(
+      {
+        success: false,
+        error: "Failed to create account",
+        code: "SERVER_ERROR",
+      },
+      500,
+    );
+  }
+});

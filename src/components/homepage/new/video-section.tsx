@@ -1,9 +1,12 @@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay } from "@fortawesome/free-solid-svg-icons";
-import videoDemo from "/public/Moneko-onboard .webm";
+import * as React from "react";
 import { motion, Variants } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+
+const VIDEO_DEMO_URL = "/Moneko-onboard%20.webm";
+const VIDEO_POSTER_URL = "/video-poster.webp";
 
 interface VideoSectionProps {
   data: {
@@ -17,6 +20,7 @@ interface VideoSectionProps {
 export default function VideoSection({ data }: VideoSectionProps) {
   const { videoSection } = data;
   const prefersReducedMotion = usePrefersReducedMotion();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 
   const sectionVariants: Variants = {
     hidden: { opacity: 0, y: prefersReducedMotion ? 0 : 30 },
@@ -70,22 +74,19 @@ export default function VideoSection({ data }: VideoSectionProps) {
 
             {/* Video Content */}
             <div className="relative">
-              <Dialog>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <div className="group relative cursor-pointer">
                     <div className="relative aspect-video w-full">
-                      {/* Video Poster Image */}
-                      <video
-                        className="w-full h-full object-cover"
-                        src={videoDemo}
+                      <img
+                        className="h-full w-full object-cover"
+                        src={VIDEO_POSTER_URL}
+                        alt={videoSection.title}
                         width={1920}
                         height={1080}
-                        controls
-                        autoPlay
-                        playsInline
-                      preload="metadata"
-                      muted
-                    />
+                        loading="lazy"
+                        decoding="async"
+                      />
                       
                       {/* Play button overlay */}
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -116,7 +117,8 @@ export default function VideoSection({ data }: VideoSectionProps) {
                   >
                     <video
                       className="absolute inset-0 h-full w-full object-contain"
-                      src={videoDemo}
+                      src={isDialogOpen ? VIDEO_DEMO_URL : undefined}
+                      poster={VIDEO_POSTER_URL}
                       width={1920}
                       height={1080}
                       controls
