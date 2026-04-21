@@ -114,7 +114,7 @@ interface PreparedTransactionRecord {
   importSemanticKey: string;
 }
 
-interface SaveTransactionsBatchSuccess {
+export interface SaveTransactionsBatchSuccess {
   success: boolean;
   data: any[];
   results: SavedTransaction[];
@@ -210,13 +210,16 @@ function createProgressEmitter(
   return (stage: string, message: string, currentLocalItem?: number) => {
     if (!onProgress) return;
 
-    const normalizedCurrent = currentLocalItem == null ? undefined : Math.max(
-      lastCurrentItem,
-      Math.min(
-        totalItems,
-        progressOffset + Math.max(0, Math.trunc(currentLocalItem)),
-      ),
-    );
+    const normalizedCurrent =
+      currentLocalItem == null
+        ? undefined
+        : Math.max(
+            lastCurrentItem,
+            Math.min(
+              totalItems,
+              progressOffset + Math.max(0, Math.trunc(currentLocalItem)),
+            ),
+          );
 
     if (normalizedCurrent != null) {
       lastCurrentItem = normalizedCurrent;
@@ -247,7 +250,7 @@ async function runWithConcurrencyLimit<T>(
   }
 }
 
-async function saveTransactionsBatchInternal(
+export async function saveTransactionsBatchInternal(
   req: Request,
   body: RequestBody,
   onProgress?: SaveBatchProgressCallback,
@@ -355,7 +358,8 @@ async function saveTransactionsBatchInternal(
     }
   }
 
-  const scopeHouseholdId: string | null = resolvedHouseholdId ??
+  const scopeHouseholdId: string | null =
+    resolvedHouseholdId ??
     (isPortfolio ? (requestedHouseholdId ?? null) : null);
   const invalidAccountSentinel = "__invalid__";
   const accountResolutionCache = new Map<string, string | null>();
@@ -460,12 +464,10 @@ async function saveTransactionsBatchInternal(
       transactionId: expenseId,
       payerUserId: sanitizeUuid(meta.payerUserId ?? null) || resolvedUserId,
       amountCents: Number(expense["amount_cents"] ?? 0),
-      currency: typeof expense["currency"] === "string"
-        ? expense["currency"]
-        : "",
-      description: typeof expense["raw_text"] === "string"
-        ? expense["raw_text"]
-        : null,
+      currency:
+        typeof expense["currency"] === "string" ? expense["currency"] : "",
+      description:
+        typeof expense["raw_text"] === "string" ? expense["raw_text"] : null,
       members: householdMembers,
       customSplits: effective.customSplits,
     });
@@ -587,9 +589,10 @@ async function saveTransactionsBatchInternal(
         continue;
       }
 
-      const normalizedEndDate = tx.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(tx.recurrence_rule.end_date);
+      const normalizedEndDate =
+        tx.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(tx.recurrence_rule.end_date);
 
       if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
         validationErrors.push({
@@ -617,8 +620,8 @@ async function saveTransactionsBatchInternal(
       });
       continue;
     }
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(tx.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
     const effectiveCategory = applyCategoryRemap({
       categoryName: resolvedCategory,
       transactionType: tx.type === "income" ? "income" : "expense",
@@ -678,18 +681,18 @@ async function saveTransactionsBatchInternal(
       category: effectiveCategory,
       date: tx.date,
       raw_text: tx.description || "",
-      merchant: typeof tx.merchant === "string" && tx.merchant.trim().length > 0
-        ? tx.merchant.trim()
-        : null,
+      merchant:
+        typeof tx.merchant === "string" && tx.merchant.trim().length > 0
+          ? tx.merchant.trim()
+          : null,
       currency: currency,
       breakdown: tx.breakdown ?? null,
       receipt_image_url: tx.receiptImageUrl || null,
       created_at: tx.clientCreatedAt || new Date().toISOString(),
       household_id: householdIdForRecord,
       is_recurring: tx.isRecurring === true,
-      recurrence_rule: tx.isRecurring === true
-        ? tx.recurrence_rule || null
-        : null,
+      recurrence_rule:
+        tx.isRecurring === true ? tx.recurrence_rule || null : null,
       import_request_key: importRequestKey,
       import_semantic_key: importSemanticKey,
     };
@@ -703,8 +706,8 @@ async function saveTransactionsBatchInternal(
           type: "income",
           owner_type: tx.ownerType || "me",
           privacy_scope: tx.privacyScope || "full",
-          household_id: resolvedHouseholdId ||
-            (isPortfolio ? requestedHouseholdId : null),
+          household_id:
+            resolvedHouseholdId || (isPortfolio ? requestedHouseholdId : null),
         },
         customSplits: tx.customSplits,
         payerUserId: tx.payerUserId,
@@ -761,25 +764,26 @@ async function saveTransactionsBatchInternal(
   const requestKeys = preparedRecords
     .map((record) => record.importRequestKey)
     .filter((key): key is string => !!key);
-  const semanticKeys = body.skipSemanticDuplicates === true
-    ? preparedRecords.map((record) => record.importSemanticKey)
-    : [];
+  const semanticKeys =
+    body.skipSemanticDuplicates === true
+      ? preparedRecords.map((record) => record.importSemanticKey)
+      : [];
 
   if (requestKeys.length > 0 || semanticKeys.length > 0) {
     const [existingRequestRows, existingSemanticRows] = await Promise.all([
       requestKeys.length > 0
         ? supabase
-          .from("expenses")
-          .select(
-            "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
-          )
-          .in("import_request_key", requestKeys)
+            .from("expenses")
+            .select(
+              "id, import_request_key, split_group_id, household_id, amount_cents, currency, raw_text, is_recurring, category",
+            )
+            .in("import_request_key", requestKeys)
         : Promise.resolve({ data: [], error: null }),
       semanticKeys.length > 0
         ? supabase
-          .from("expenses")
-          .select("import_semantic_key")
-          .in("import_semantic_key", semanticKeys)
+            .from("expenses")
+            .select("import_semantic_key")
+            .in("import_semantic_key", semanticKeys)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -790,12 +794,12 @@ async function saveTransactionsBatchInternal(
       );
     } else if (Array.isArray(existingRequestRows.data)) {
       for (const existingRow of existingRequestRows.data) {
-        const existingId = typeof existingRow.id === "string"
-          ? existingRow.id
-          : "";
-        const requestKey = typeof existingRow.import_request_key === "string"
-          ? existingRow.import_request_key
-          : null;
+        const existingId =
+          typeof existingRow.id === "string" ? existingRow.id : "";
+        const requestKey =
+          typeof existingRow.import_request_key === "string"
+            ? existingRow.import_request_key
+            : null;
         if (requestKey) {
           duplicateRequestKeys.set(requestKey, {
             ...existingRow,
@@ -812,9 +816,10 @@ async function saveTransactionsBatchInternal(
       );
     } else if (Array.isArray(existingSemanticRows.data)) {
       for (const existingRow of existingSemanticRows.data) {
-        const semanticKey = typeof existingRow.import_semantic_key === "string"
-          ? existingRow.import_semantic_key
-          : null;
+        const semanticKey =
+          typeof existingRow.import_semantic_key === "string"
+            ? existingRow.import_semantic_key
+            : null;
         if (semanticKey) {
           duplicateSemanticKeys.add(semanticKey);
         }
@@ -932,7 +937,9 @@ async function saveTransactionsBatchInternal(
       for (let i = 0; i < insertedIncome.length; i++) {
         let income = insertedIncome[i];
         if (
-          resolvedHouseholdId && !isPortfolio && householdMembers.length > 0
+          resolvedHouseholdId &&
+          !isPortfolio &&
+          householdMembers.length > 0
         ) {
           const splitResult = await createHouseholdAutoSplitForTransaction({
             supabase,
@@ -1134,8 +1141,8 @@ async function saveTransactionsBatchInternal(
               householdId: resolvedHouseholdId,
               expenseId: expense.id,
               autoSplitEnabled: householdAutoSplitSettings.autoSplitEnabled,
-              hasDefaultConfig: householdAutoSplitSettings.defaultConfig !=
-                null,
+              hasDefaultConfig:
+                householdAutoSplitSettings.defaultConfig != null,
               hasRequestCustomSplits: meta.customSplits != null,
               decision: effective.kind,
             });
@@ -1364,9 +1371,8 @@ async function saveTransactionsBatchInternal(
         if (learned >= MAX_PREF_LEARN) break;
         const categoryName = typeof r.category === "string" ? r.category : "";
         const sourceText = typeof r.merchant === "string" ? r.merchant : null;
-        const descriptionText = typeof r.raw_text === "string"
-          ? r.raw_text
-          : null;
+        const descriptionText =
+          typeof r.raw_text === "string" ? r.raw_text : null;
         learningItems.push({
           transactionType: "income",
           categoryName,
@@ -1379,9 +1385,8 @@ async function saveTransactionsBatchInternal(
       for (const r of expenseRecords) {
         if (learned >= MAX_PREF_LEARN) break;
         const categoryName = typeof r.category === "string" ? r.category : "";
-        const descriptionText = typeof r.raw_text === "string"
-          ? r.raw_text
-          : null;
+        const descriptionText =
+          typeof r.raw_text === "string" ? r.raw_text : null;
         learningItems.push({
           transactionType: "expense",
           categoryName,
@@ -1472,15 +1477,16 @@ function createSSEStream(
         streamClosed = true;
         controller.close();
       } catch (error) {
-        const status = error instanceof SaveTransactionsBatchError
-          ? error.status
-          : 500;
-        const code = error instanceof SaveTransactionsBatchError
-          ? error.code
-          : "SERVER_ERROR";
-        const message = error instanceof Error
-          ? error.message
-          : "Failed to save transactions batch";
+        const status =
+          error instanceof SaveTransactionsBatchError ? error.status : 500;
+        const code =
+          error instanceof SaveTransactionsBatchError
+            ? error.code
+            : "SERVER_ERROR";
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to save transactions batch";
 
         if (!(error instanceof SaveTransactionsBatchError)) {
           await reportEdgeFunctionError({
@@ -1516,86 +1522,88 @@ function createSSEStream(
   });
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return errorResponse("Method not allowed. Use POST.", 405);
-  }
-
-  const url = new URL(req.url);
-  const isStreamMode = url.searchParams.get("stream") === "true";
-
-  let body: RequestBody;
-  try {
-    body = await req.json();
-  } catch (_error) {
-    return errorResponse("Invalid JSON body", 400);
-  }
-
-  console.log("[save-transactions-batch] Incoming request:", {
-    debugTraceId: body.debugTraceId,
-    transactionCount: body.transactions?.length || 0,
-    householdId: body.householdId,
-    isPortfolio: body.isPortfolio,
-    progressOffset: body.progressOffset,
-    progressTotal: body.progressTotal,
-    stream: isStreamMode,
-  });
-
-  if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
-    return errorResponse(
-      "transactions array is required and must not be empty",
-      400,
-    );
-  }
-
-  const MAX_BATCH_SIZE = 500;
-  if (body.transactions.length > MAX_BATCH_SIZE) {
-    return errorResponse(
-      `Batch size exceeds maximum of ${MAX_BATCH_SIZE} transactions`,
-      400,
-    );
-  }
-
-  if (isStreamMode) {
-    const stream = createSSEStream(req, body);
-    return new Response(stream, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
-  }
-
-  try {
-    const result = await saveTransactionsBatchInternal(req, body);
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    if (error instanceof SaveTransactionsBatchError) {
-      return errorResponse(error.message, error.status, error.code);
+if (import.meta.main) {
+  Deno.serve(async (req: Request) => {
+    if (req.method === "OPTIONS") {
+      return new Response("ok", { headers: corsHeaders });
     }
 
-    console.error("[save-transactions-batch] Error:", error);
-    await reportEdgeFunctionError({
-      functionName: "save-transactions-batch",
-      error,
-      context: {
-        step: "unhandled",
-      },
+    if (req.method !== "POST") {
+      return errorResponse("Method not allowed. Use POST.", 405);
+    }
+
+    const url = new URL(req.url);
+    const isStreamMode = url.searchParams.get("stream") === "true";
+
+    let body: RequestBody;
+    try {
+      body = await req.json();
+    } catch (_error) {
+      return errorResponse("Invalid JSON body", 400);
+    }
+
+    console.log("[save-transactions-batch] Incoming request:", {
+      debugTraceId: body.debugTraceId,
+      transactionCount: body.transactions?.length || 0,
+      householdId: body.householdId,
+      isPortfolio: body.isPortfolio,
+      progressOffset: body.progressOffset,
+      progressTotal: body.progressTotal,
+      stream: isStreamMode,
     });
-    return errorResponse(
-      "Failed to save transactions batch",
-      500,
-      "SERVER_ERROR",
-    );
-  }
-});
+
+    if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
+      return errorResponse(
+        "transactions array is required and must not be empty",
+        400,
+      );
+    }
+
+    const MAX_BATCH_SIZE = 500;
+    if (body.transactions.length > MAX_BATCH_SIZE) {
+      return errorResponse(
+        `Batch size exceeds maximum of ${MAX_BATCH_SIZE} transactions`,
+        400,
+      );
+    }
+
+    if (isStreamMode) {
+      const stream = createSSEStream(req, body);
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
+
+    try {
+      const result = await saveTransactionsBatchInternal(req, body);
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (error) {
+      if (error instanceof SaveTransactionsBatchError) {
+        return errorResponse(error.message, error.status, error.code);
+      }
+
+      console.error("[save-transactions-batch] Error:", error);
+      await reportEdgeFunctionError({
+        functionName: "save-transactions-batch",
+        error,
+        context: {
+          step: "unhandled",
+        },
+      });
+      return errorResponse(
+        "Failed to save transactions batch",
+        500,
+        "SERVER_ERROR",
+      );
+    }
+  });
+}
