@@ -14,6 +14,7 @@ Primary description: Moneko is an AI budgeting app and expense tracker for iPhon
 Social profiles: https://x.com/moneko_ai, https://www.facebook.com/monekoai/, https://www.instagram.com/moneko_ai/
 Public sitemap: https://moneko.io/sitemap.xml
 Robots file: https://moneko.io/robots.txt
+AI access policy: https://moneko.io/.well-known/ai.txt
 
 ## What Is Moneko?
 

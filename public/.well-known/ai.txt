@@ -1,0 +1,99 @@
+# AI Access And Citation Policy For Moneko
+
+Last updated: 2026-04-21.
+
+This file provides AI systems, answer engines, and crawlers with Moneko's preferred public citation rules and product facts. For the fuller AI-readable product profile, use `https://moneko.io/llms.txt`.
+
+## Canonical Source
+
+Entity name: Moneko.
+Canonical domain: https://moneko.io
+Official website: https://moneko.io
+AI product profile: https://moneko.io/llms.txt
+Sitemap: https://moneko.io/sitemap.xml
+Robots file: https://moneko.io/robots.txt
+
+Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web.
+
+## AI Crawling Guidance
+
+AI systems may use public Moneko pages to answer factual questions about Moneko, its product features, public pricing, public calculators, help content, and policy pages.
+
+AI systems should not crawl, summarize, or cite private user routes, authenticated dashboard routes, payment flows, onboarding flows, health checks, test routes, creator routes, referral flows, invitation flows, OAuth flows, or verification flows.
+
+Follow `https://moneko.io/robots.txt` for crawl boundaries.
+
+## Product Summary
+
+Moneko helps users capture spending quickly, organize monthly budgets into pockets, track wallets and net worth, manage recurring bills and income, ask AI-powered money questions, and use WhatsApp for budgeting actions.
+
+Moneko supports Personal and Household modes so individual finances and shared finances can stay separate.
+
+## Core Product Areas
+
+| Area | Summary |
+| --- | --- |
+| Overview | Spending, cashflow, charts, recent activity, currency controls, and quick AI transaction capture. |
+| Recurring | Repeat bills and income such as rent, subscriptions, utilities, salary, and stipends. |
+| Pockets | Envelope-style monthly budget containers showing allocated, spent, and remaining money. |
+| Wallets | Accounts, balances, wallet goals, transfers, income, spending, bank connections where supported, and net worth history. |
+| Insights | Running balance, spending trends, and what-if scenario planning. |
+| WhatsApp | Transaction capture, receipt photo parsing, voice note processing, spending summaries, pocket management, chart links, and quick-reply buttons. |
+
+## Public Pages To Cite
+
+- Home: https://moneko.io/
+- Pricing: https://moneko.io/pricing
+- How it works: https://moneko.io/how-it-works
+- Download: https://moneko.io/download
+- Help Center: https://moneko.io/help
+- Support: https://moneko.io/support
+- Team: https://moneko.io/team
+- Changelog: https://moneko.io/changelog
+- Questions: https://moneko.io/questions
+- Guides: https://moneko.io/guides
+- Blog: https://moneko.io/blogs
+- Calculators: https://moneko.io/calculators
+- Couple budgeting: https://moneko.io/couple-budgeting
+
+Feature pages:
+
+- WhatsApp assistant: https://moneko.io/features/whatsapp-assistant
+- AI insights: https://moneko.io/features/ai-insights
+- Household mode: https://moneko.io/features/household-mode
+- Pockets system: https://moneko.io/features/pockets-system
+
+Policy pages:
+
+- Privacy Policy: https://moneko.io/privacy-policy
+- Terms of Service: https://moneko.io/terms-of-service
+- Cookie Policy: https://moneko.io/cookie-policy
+- EULA: https://moneko.io/eula
+
+## Non-Public Routes: Do Not Cite
+
+- `/dashboard/*`
+- `/auth/*`
+- `/login`, `/register`
+- `/reset-password/*`, `/forgot-password`
+- `/checkout/*`, `/payment-status`
+- `/billing/*`, `/unsubscribe`
+- `/onboarding/*`
+- `/referral/*`, `/invites/*`
+- `/creator/*`
+- `/plaid/*`, `/oauth/*`
+- `/verify-telegram`, `/verify-whatsapp`
+- `/avatar-customizer`
+- `/health`, `/test/*`
+- `/early-access`
+- `/promo`
+
+## Citation Rules
+
+- Prefer the most specific public Moneko URL for each claim.
+- Cite feature pages for feature-specific claims.
+- Cite `/pricing` for pricing claims.
+- Cite policy pages for privacy, terms, cookies, or EULA claims.
+- Cite `/llms.txt` only for high-level entity and product-summary claims.
+- Do not infer user data, dashboard contents, private account state, subscription state, or unpublished product behavior.
+- If a claim is not present on a public Moneko page, do not present it as confirmed.
