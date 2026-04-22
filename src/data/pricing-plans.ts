@@ -57,6 +57,7 @@ export interface FeatureComparison {
   multiCurrency: FeatureDetail;
   homeWidgets: FeatureDetail;
   emailCapture: FeatureDetail;
+  householdSharing: FeatureDetail;
 }
 
 // Pricing tier interface used in PricingPage
@@ -145,8 +146,8 @@ export const planData: Record<string, PlanData> = {
       "Unlimited AI expense capture — text, photo, voice, email",
       "Smart email receipt capture — forward receipts to auto-log",
       "WhatsApp budgeting assistant — capture + summaries on chat",
-      "Envelope budgeting with Pockets — set, track, save",
       "Personal & Household modes — solo or shared finances",
+      "One subscription shared across all household members",
       "Recurring bills & income tracking — never miss a payment",
       "Scenario planning — what-if insights with AI",
       "Multi-currency support — track spending globally",
@@ -157,12 +158,11 @@ export const planData: Record<string, PlanData> = {
       { text: "Unlimited AI expense capture — text, photo, voice, email", icon: faRobot },
       { text: "Smart email receipt capture — forward receipts to auto-log", icon: faEnvelope },
       { text: "WhatsApp budgeting assistant — capture + summaries on chat", icon: faComments },
-      { text: "Envelope budgeting with Pockets — set, track, save", icon: faPiggyBank },
       { text: "Personal & Household modes — solo or shared finances", icon: faUsers },
+      { text: "One subscription shared across all household members", icon: faUsers },
       { text: "Recurring bills & income tracking — never miss a payment", icon: faSync },
       { text: "Scenario planning — what-if insights with AI", icon: faLightbulb },
       { text: "Multi-currency support — track spending globally", icon: faChartLine },
-      { text: "Home screen widgets — quick add & budget glance", icon: faGift },
       { text: "Bank sync via Plaid — auto-import transactions (Coming Soon)", icon: faWallet }
     ],
     featureComparison: {
@@ -173,8 +173,8 @@ export const planData: Record<string, PlanData> = {
       personalHousehold: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
       recurring: { description: "Recurring bills & income", isIncluded: true, highlight: true },
       multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency", highlight: true },
-      homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true },
-      emailCapture: { description: "Email receipt capture", isIncluded: true, limit: "Unlimited forwarding", highlight: true }
+      emailCapture: { description: "Email receipt capture", isIncluded: true, limit: "Unlimited forwarding", highlight: true },
+      householdSharing: { description: "Shared household subscription", isIncluded: true, limit: "All members", highlight: true }
     }
   },
 
@@ -201,12 +201,11 @@ export const planData: Record<string, PlanData> = {
       "Unlimited AI expense capture — text, photo, voice, email",
       "Smart email receipt capture — forward receipts to auto-log",
       "WhatsApp budgeting assistant — capture + summaries on chat",
-      "Envelope budgeting with Pockets — set, track, save",
       "Personal & Household modes — solo or shared finances",
+      "One subscription shared across all household members",
       "Recurring bills & income tracking — never miss a payment",
       "Scenario planning — what-if insights with AI",
       "Multi-currency support — track spending globally",
-      "Home screen widgets — quick add & budget glance",
       "Bank sync via Plaid — auto-import transactions (Coming Soon)"
     ],
     featureItems: [
@@ -216,6 +215,7 @@ export const planData: Record<string, PlanData> = {
       { text: "WhatsApp budgeting assistant — capture + summaries on chat", icon: faComments },
       { text: "Envelope budgeting with Pockets — set, track, save", icon: faPiggyBank },
       { text: "Personal & Household modes — solo or shared finances", icon: faUsers },
+      { text: "One subscription shared across all household members", icon: faUsers },
       { text: "Recurring bills & income tracking — never miss a payment", icon: faSync },
       { text: "Scenario planning — what-if insights with AI", icon: faLightbulb },
       { text: "Multi-currency support — track spending globally", icon: faChartLine },
@@ -231,7 +231,8 @@ export const planData: Record<string, PlanData> = {
       recurring: { description: "Recurring bills & income", isIncluded: true, highlight: true },
       multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency", highlight: true },
       homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true },
-      emailCapture: { description: "Email receipt capture", isIncluded: true, limit: "Unlimited forwarding", highlight: true }
+      emailCapture: { description: "Email receipt capture", isIncluded: true, limit: "Unlimited forwarding", highlight: true },
+      householdSharing: { description: "Shared household subscription", isIncluded: true, limit: "All members", highlight: true }
     }
   },
 };

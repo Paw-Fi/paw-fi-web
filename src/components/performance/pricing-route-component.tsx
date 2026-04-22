@@ -402,7 +402,7 @@ export function PricingRouteComponent() {
             {/* Right Column: Interactive Pricing Checkout Box */}
             <motion.div
               variants={itemVariants}
-              className="w-full max-w-md shrink-0 lg:w-[440px]"
+              className="w-md shrink-0 lg:w-[32rem]"
             >
               <div className="border-border/50 bg-card/60 relative overflow-hidden rounded-[2rem] border p-[2px] shadow-2xl backdrop-blur-3xl">
                 {/* Subtle animated gradient border effect */}
@@ -449,19 +449,14 @@ export function PricingRouteComponent() {
 
                   {/* Feature Checklist inside the card */}
                   <div className="border-border/50 mb-8 space-y-3 border-t pt-6">
-                    {yearlyTier?.features
-                      .slice(0, 4)
-                      .map((feature: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-3">
-                          <Check className="text-primary h-4 w-4 shrink-0" />
-                          <span className="text-foreground/80 text-sm">
-                            {feature.text || feature}
-                          </span>
-                        </div>
-                      ))}
-                    <div className="text-muted-foreground flex items-center gap-3 pt-1 text-sm font-medium">
-                      <span>+ And much more</span>
-                    </div>
+                    {yearlyTier?.features.map((feature: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <Check className="text-primary h-4 w-4 shrink-0" />
+                        <span className="text-foreground/80 text-sm">
+                          {feature.text || feature}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Checkout CTA */}
@@ -551,6 +546,49 @@ export function PricingRouteComponent() {
                 <BentoCard key={feature.name} {...feature} />
               ))}
             </BentoGrid>
+          </div>
+        </motion.div>
+
+        {/* Feature Highlights List */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={containerVariants}
+          className="mx-auto mt-20 max-w-7xl px-4 md:mt-32"
+        >
+          <div className="mb-10 text-center">
+            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+              Everything you get with Pro
+            </h2>
+            <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
+              A complete budgeting toolkit designed to save you time and keep your finances on track.
+            </p>
+          </div>
+          <div className="mx-auto grid max-w-4xl gap-4">
+            {[
+              "Log expenses your way. Add spending by text, photo, voice, or email in seconds.",
+              "Forward receipts, done. Email receipts are automatically captured and logged for you.",
+              "Budget in WhatsApp. Add transactions and get summaries without leaving chat.",
+              "Stay in control with Pockets. Use simple envelope-style budgeting to set limits and save with purpose.",
+              "Built for solo or shared finances. Manage your own budget or plan together as a household.",
+              "One plan for the whole household. Everyone stays aligned under a single subscription.",
+              "Stay on top of bills and income. Track recurring payments and paydays with less manual work.",
+              "See the impact before you decide. Use AI-powered scenario planning to explore what-if decisions.",
+              "Track spending across currencies. Keep your budget clear, even when money moves globally.",
+              "Bank sync via Plaid, coming soon. Auto-import transactions when direct bank connections launch.",
+            ].map((feature, idx) => (
+              <motion.div
+                key={idx}
+                variants={itemVariants}
+                className="flex items-start gap-4 rounded-xl border border-border/50 bg-card/50 p-4 backdrop-blur-sm"
+              >
+                <div className="bg-primary/10 mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                  <Check className="text-primary h-3.5 w-3.5" />
+                </div>
+                <span className="text-foreground/90 text-base leading-relaxed">{feature}</span>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
 
