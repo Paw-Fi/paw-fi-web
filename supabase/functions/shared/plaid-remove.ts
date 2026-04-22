@@ -91,7 +91,7 @@ export async function removePlaidConnection(params: {
     throw bankAccountCleanupError;
   }
 
-  await params.supabase
+  const { error: connectionUpdateError } = await params.supabase
     .from("bank_connections")
     .update({
       status: "disabled",
@@ -108,12 +108,20 @@ export async function removePlaidConnection(params: {
     })
     .eq("id", params.connection.id);
 
-  await params.supabase
+  if (connectionUpdateError) {
+    throw connectionUpdateError;
+  }
+
+  const { error: tokenDeleteError } = await params.supabase
     .from("bank_connection_tokens")
     .delete()
     .eq("bank_connection_id", params.connection.id);
 
-  await params.supabase
+  if (tokenDeleteError) {
+    throw tokenDeleteError;
+  }
+
+  const { error: jobUpdateError } = await params.supabase
     .from("bank_sync_jobs")
     .update({
       status: "failed",
@@ -127,4 +135,8 @@ export async function removePlaidConnection(params: {
     })
     .eq("bank_connection_id", params.connection.id)
     .in("status", ["pending", "processing"]);
+
+  if (jobUpdateError) {
+    throw jobUpdateError;
+  }
 }

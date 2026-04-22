@@ -149,7 +149,8 @@ async function reconcileStaleItems(
 
   let enqueued = 0;
   for (const connection of connections || []) {
-    const shouldEnqueue = connection.needs_resync === true ||
+    const shouldEnqueue =
+      connection.needs_resync === true ||
       !connection.last_successful_sync_at ||
       connection.last_successful_sync_at < staleBefore ||
       !connection.last_webhook_received_at ||
@@ -201,9 +202,9 @@ async function enforceLifecyclePolicies(
   );
   const { data: subscriptionRows, error: subscriptionError } = userIds.length
     ? await supabase
-      .from("subscriptions")
-      .select("user_id, plan, status, current_period_end, created_at")
-      .in("user_id", userIds)
+        .from("subscriptions")
+        .select("user_id, plan, status, current_period_end, created_at")
+        .in("user_id", userIds)
     : { data: [], error: null };
 
   if (subscriptionError) {
@@ -239,14 +240,17 @@ async function enforceLifecyclePolicies(
     const updatedAt = connection.updated_at
       ? new Date(connection.updated_at)
       : null;
-    const shouldRemoveForTrialInactivity = subscription?.status !== "active" &&
+    const shouldRemoveForTrialInactivity =
+      subscription?.status !== "active" &&
       (!connection.last_financial_feature_used_at ||
         new Date(connection.last_financial_feature_used_at) <
           trialInactivityThreshold);
-    const shouldRemoveForRelinkTimeout = connection.status === "needs_reauth" &&
+    const shouldRemoveForRelinkTimeout =
+      connection.status === "needs_reauth" &&
       updatedAt != null &&
       updatedAt.getTime() < trialInactivityThreshold.getTime();
-    const shouldRemoveForBilling = scheduledRemovalAt != null &&
+    const shouldRemoveForBilling =
+      scheduledRemovalAt != null &&
       scheduledRemovalAt.getTime() <= now.getTime() &&
       !keepBeyondSecondMonth;
 
@@ -261,8 +265,8 @@ async function enforceLifecyclePolicies(
         removalReason: shouldRemoveForBilling
           ? "billing_deadline"
           : shouldRemoveForRelinkTimeout
-          ? "relink_timeout"
-          : "trial_inactive",
+            ? "relink_timeout"
+            : "trial_inactive",
       });
       removed += 1;
       continue;
@@ -338,7 +342,7 @@ async function cleanupRetentionData(
     })
     .eq("provider", PLAID_PROVIDER)
     .not("raw_provider_payload", "is", null)
-    .lt("updated_at", rawPayloadCutoff);
+    .lt("created_at", rawPayloadCutoff);
 
   if (expensePayloadError) {
     throw expensePayloadError;
@@ -352,7 +356,7 @@ async function cleanupRetentionData(
     })
     .eq("provider", PLAID_PROVIDER)
     .not("raw_provider_payload", "is", null)
-    .lt("updated_at", rawPayloadCutoff);
+    .lt("created_at", rawPayloadCutoff);
 
   if (accountPayloadError) {
     throw accountPayloadError;

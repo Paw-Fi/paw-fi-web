@@ -225,6 +225,29 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (!requestedConnectionId && body.institutionId?.trim()) {
+      const duplicateConnections = await findInstitutionDuplicateConnections({
+        supabase,
+        institutionId: body.institutionId,
+        userId: authResult.userId,
+      });
+
+      if (duplicateConnections.length) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "This institution is already connected. Use the existing bank connection instead of linking it again.",
+            errorCode: "duplicate_item_accounts",
+            duplicateConnectionIds: duplicateConnections,
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
     const plaidResponse = await exchangePublicToken(body.publicToken);
     const encryptedToken = await encryptSecret(plaidResponse.access_token);
     const { data: existingConnectionForItem, error: existingItemError } =
@@ -460,6 +483,12 @@ Deno.serve(async (req) => {
       }
     } catch (postExchangeError) {
       if (shouldCompensateOrphanItem) {
+        if (connectionId) {
+          await rollbackLocalPlaidExchangeState({
+            connectionId,
+            supabase,
+          });
+        }
         await cleanupOrphanPlaidItem({
           accessToken: plaidResponse.access_token,
           itemId: plaidResponse.item_id,
@@ -578,5 +607,94 @@ async function cleanupOrphanPlaidItem(params: {
           : String(cleanupError),
       }),
     );
+  }
+}
+
+async function findInstitutionDuplicateConnections(params: {
+  supabase: any;
+  institutionId: string;
+  userId: string;
+}): Promise<string[]> {
+  const institutionId = params.institutionId.trim();
+  if (!institutionId) {
+    return [];
+  }
+
+  const { data: connections, error } = await params.supabase
+    .from("bank_connections")
+    .select("id")
+    .eq("user_id", params.userId)
+    .eq("provider", PLAID_PROVIDER)
+    .is("removed_at", null)
+    .in("status", ["pending", "active", "needs_reauth", "error"])
+    .eq("metadata->>institution_id", institutionId);
+
+  if (error) {
+    throw error;
+  }
+
+  return ((connections || []) as { id: string }[])
+    .map((row) => row.id)
+    .filter(Boolean);
+}
+
+async function rollbackLocalPlaidExchangeState(params: {
+  supabase: any;
+  connectionId: string;
+}): Promise<void> {
+  const nowIso = new Date().toISOString();
+
+  const { error: jobDeleteError } = await params.supabase
+    .from("bank_sync_jobs")
+    .delete()
+    .eq("bank_connection_id", params.connectionId);
+
+  if (jobDeleteError) {
+    throw jobDeleteError;
+  }
+
+  const { error: tokenDeleteError } = await params.supabase
+    .from("bank_connection_tokens")
+    .delete()
+    .eq("bank_connection_id", params.connectionId);
+
+  if (tokenDeleteError) {
+    throw tokenDeleteError;
+  }
+
+  const { error: rawDeleteError } = await params.supabase
+    .from("bank_transaction_raw")
+    .delete()
+    .eq("bank_connection_id", params.connectionId);
+
+  if (rawDeleteError) {
+    throw rawDeleteError;
+  }
+
+  const { error: accountDeleteError } = await params.supabase
+    .from("bank_accounts")
+    .delete()
+    .eq("bank_connection_id", params.connectionId);
+
+  if (accountDeleteError) {
+    throw accountDeleteError;
+  }
+
+  const { error: connectionUpdateError } = await params.supabase
+    .from("bank_connections")
+    .update({
+      access_token_encrypted: null,
+      plaid_access_token_encrypted: null,
+      status: "disabled",
+      item_status: "removed",
+      item_health_state: "removed",
+      relink_state: null,
+      removed_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq("id", params.connectionId);
+
+  if (connectionUpdateError) {
+    throw connectionUpdateError;
   }
 }

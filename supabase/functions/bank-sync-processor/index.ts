@@ -3,7 +3,7 @@ import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import {
   authenticateInternalSecret,
   buildInternalInvokeHeaders,
-  resolveInternalFunctionKey,
+  resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
@@ -15,7 +15,7 @@ const INTERNAL_FUNCTION_KEY = Deno.env.get(
   "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
 );
 const RESOLVED_INTERNAL_FUNCTION_KEY = INTERNAL_FUNCTION_KEY ||
-  resolveInternalFunctionKey();
+  resolveAnyInternalFunctionKey();
 const AUTO_BANK_SYNC_ENABLED =
   Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() === "true";
 
@@ -60,9 +60,9 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (!INTERNAL_FUNCTION_KEY) {
+  if (!RESOLVED_INTERNAL_FUNCTION_KEY) {
     console.error(
-      "[bank-sync-processor] INTERNAL_SERVICE_SECRET not configured",
+      "[bank-sync-processor] Internal invoke secret not configured",
     );
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),

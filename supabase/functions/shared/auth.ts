@@ -74,6 +74,10 @@ export function resolveInternalFunctionKey(): string {
   return getSecretApiKey();
 }
 
+export function resolveAnyInternalFunctionKey(): string {
+  return getSecretApiKey() || getInternalServiceSecret();
+}
+
 export function resolveInternalFunctionKeyWithSource(): {
   key: string;
   source: "SECRET_SUPABASE_SERVICE_ROLE_API_KEY" | "none";
@@ -107,8 +111,8 @@ export function buildInternalInvokeHeaders(
 function getAcceptedInternalSecrets(): string[] {
   return Array.from(
     new Set(
-      [getSecretApiKey(), getInternalServiceSecret()].filter((value) =>
-        value.length > 0
+      [getSecretApiKey(), getInternalServiceSecret()].filter(
+        (value) => value.length > 0,
       ),
     ),
   );
