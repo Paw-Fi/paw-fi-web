@@ -334,7 +334,7 @@ function buildFollowupEmail(params: {
   } = params;
 
   const transactionLines = transactions
-    .slice(0, 20)
+    .slice(0, 30)
     .map((item) => {
       const type = item.type === "income" ? "Income" : "Expense";
       const amount = Number(item.amount ?? 0);
@@ -357,7 +357,7 @@ function buildFollowupEmail(params: {
         formatCurrency(amount, currency),
       )}${date ? ` · ${escapeHtml(date)}` : ""}</li>`;
     })
-    .join("");
+    .join("") + (transactions.length > 30 ? "<li>...</li>" : "");
 
   const attachmentLines = attachmentResults
     .map(
@@ -378,10 +378,6 @@ function buildFollowupEmail(params: {
     <p class="subtitle">We finished processing the files forwarded from ${escapeHtml(
       senderEmail,
     )}.</p>
-    <p><strong>Import inbox:</strong> ${escapeHtml(IMPORT_INBOX_EMAIL)}</p>
-    <p><strong>Email subject:</strong> ${escapeHtml(
-      subjectLine || "(no subject)",
-    )}</p>
     <p><strong>Saved:</strong> ${savedCount} ${pluralize(
       savedCount,
       "transaction",
@@ -390,7 +386,6 @@ function buildFollowupEmail(params: {
     <p><strong>Failed:</strong> ${failedCount}</p>
     <p><strong>Attachment summary</strong></p>
     <ul>${attachmentLines}</ul>
-    <p>This mailbox does not monitor replies. If you need help, contact <a href="mailto:${escapeHtml(SUPPORT_EMAIL)}" style="color:#7458FF;">${escapeHtml(SUPPORT_EMAIL)}</a>.</p>
     ${
       transactionLines
         ? `<p><strong>Saved transactions</strong></p><ul>${transactionLines}</ul>`
@@ -403,7 +398,7 @@ function buildFollowupEmail(params: {
     html: baseTemplate(
       content,
       renderFooter({
-        customReason: `You're receiving this email because you used Moneko Email File Import at ${IMPORT_INBOX_EMAIL}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,
+        customReason: `Replies are not monitored.`,
       }),
     ),
     text: `Moneko processed files from ${senderEmail}. Import inbox: ${IMPORT_INBOX_EMAIL}. Saved: ${savedCount}. Duplicates skipped: ${duplicateCount}. Failed: ${failedCount}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,

@@ -98,6 +98,11 @@ import {
   createVertexGenerativeAI,
   getVertexAiConfigFromEnv,
 } from "./vertex-ai-chat.ts";
+import {
+  buildTransactionCategoryClusters,
+  type TransactionCategoryCluster,
+} from "./pdf-analysis/categorization.ts";
+import { runPdfAnalysisPipeline } from "./pdf-analysis/pipeline.ts";
 
 type GenerativeAIClient = ReturnType<typeof createVertexGenerativeAI>;
 
@@ -141,14 +146,26 @@ function convertParsedTransactions(
 // Google Cloud Document AI for efficient PDF text extraction
 const DOCUMENT_AI_ENDPOINT =
   "https://us-documentai.googleapis.com/v1/projects/1075784863194/locations/us/processors/26186df0eef1dad9:process";
-const GOOGLE_CLOUD_SERVICE_ACCOUNT =
-  Deno.env.get("GOOGLE_CLOUD_SERVICE_ACCOUNT") || "";
-const DEBUG_LOGS = Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
+const GOOGLE_CLOUD_SERVICE_ACCOUNT = (() => {
+  try {
+    return Deno.env.get("GOOGLE_CLOUD_SERVICE_ACCOUNT") || "";
+  } catch {
+    return "";
+  }
+})();
+const DEBUG_LOGS = (() => {
+  try {
+    return Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
+  } catch {
+    return false;
+  }
+})();
 const GEMINI_FALLBACK_MODEL_NAMES = [
   "gemini-3.1-flash-lite-preview",
   "gemini-2.5-flash",
   "gemini-2.5-pro",
 ] as const;
+const PDF_CATEGORY_BATCH_SIZE = 80;
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1749,6 +1766,11 @@ export interface ExpenseItem {
   breakdown?: string[];
   payerUserId?: string;
   customSplits?: CustomSplits;
+  categoryConfidence?: number;
+  categoryReasonCodes?: string[];
+  categorySource?: string;
+  categoryClusterId?: string;
+  needsReview?: boolean;
 }
 
 // Progress callback types for SSE streaming support
@@ -1810,6 +1832,8 @@ function buildTransactionSystemInstruction(
 
     "### 4. DESCRIPTION & LANGUAGE",
     "- Write natural, conversational notes generally matching the user's intent.",
+    "- Extract merchant as the clean store/payee/counterparty name when present. Keep merchant separate from description. Example: merchant='Starbucks', description='Latte'.",
+    "- For bank statements, use the counterparty/payee/merchant column as merchant when available, cleaned of card numbers, reference IDs, and dates.",
     `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
 
     ...(householdContext
@@ -1914,6 +1938,7 @@ function buildQuickTextSystemInstruction(
     "- Use 'other' only when the text is truly ambiguous.",
     "- Use caller currency/date when absent.",
     "- Description should be short and natural.",
+    "- Merchant should be the clean store/payee/counterparty name when present, separate from description.",
     `- Free-text fields must be in ${language}.`,
     ...(householdContext
       ? [
@@ -2164,15 +2189,27 @@ export function inferPayerFromText(
 }
 
 export function inferSplitAmountsFromText(
-  _text: string,
-  _ctx: ReturnType<typeof resolveHouseholdContext> | null,
-  _payerUserId?: string,
+  text: string,
+  ctx: ReturnType<typeof resolveHouseholdContext> | null,
+  payerUserId?: string,
 ): CustomSplits | undefined {
-  // DEPRECATED: Split extraction is now handled entirely by the AI model.
-  // The AI receives household member context and is instructed to return
-  // customSplits directly in the function call response.
-  // This function is kept for backward compatibility but always returns undefined.
-  return undefined;
+  if (!ctx) return undefined;
+
+  const match = text.match(/split\s+([\d.,]+)\s+for\s+([^.,;]+)/i);
+  if (!match || !match[1] || !match[2]) return undefined;
+
+  const amount = normalizeAmountString(match[1]);
+  if (!amount || amount <= 0) return undefined;
+
+  const lastMentionedUserId = inferPayerFromText(text, ctx) || payerUserId;
+  const resolvedUserId = resolveMemberFromFragment(match[2], ctx) ||
+    resolvePronounUserId(match[2], ctx, payerUserId, lastMentionedUserId);
+  if (!resolvedUserId) return undefined;
+
+  return {
+    splitType: "amount",
+    memberSplits: [{ userId: resolvedUserId, amount }],
+  };
 }
 
 export function normalizeCustomSplits(
@@ -2262,10 +2299,7 @@ export function normalizeCustomSplits(
       const last = full[full.length - 1];
       last.amount = Math.max(0, (last.amount || 0) + diff);
     }
-    if (
-      full.length > 1 &&
-      isUniform(full.map((split) => split.amount || 0))
-    ) {
+    if (full.length > 1 && isUniform(full.map((split) => split.amount || 0))) {
       return undefined;
     }
   } else if (splitType === "percentage") {
@@ -2329,10 +2363,7 @@ export function normalizeCustomSplits(
       full.push({ userId: id, shares: safeShares });
     }
     if (!hasExplicitShares) return undefined;
-    if (
-      full.length > 1 &&
-      isUniform(full.map((split) => split.shares || 0))
-    ) {
+    if (full.length > 1 && isUniform(full.map((split) => split.shares || 0))) {
       return undefined;
     }
   }
@@ -2521,13 +2552,15 @@ async function extractTransactionsJsonWithGemini(
               "No markdown, no commentary, no extra keys.",
               "",
               "Required JSON schema:",
-              '{"transactions":[{"date":"YYYY-MM-DD","description":"string","amount":0,"currency":"USD","type":"expense|income"}]}',
+              '{"transactions":[{"date":"YYYY-MM-DD","description":"string","merchant":"string","amount":0,"currency":"USD","type":"expense|income"}]}',
               "",
               "Rules:",
               "- Return ALL transactions; never summarize or collapse into totals.",
               "- Skip opening/closing balance lines and totals.",
               "- Use caller date if no date is present in a row.",
               "- Use caller currency if missing.",
+              "- Merchant must be the clean store/payee/counterparty name when present. Do not put card numbers, reference IDs, dates, or amounts in merchant.",
+              "- Description should be short transaction context; keep it separate from merchant.",
               `Caller Date: ${callerDate}`,
               `Caller Currency: ${callerCurrency}`,
               "",
@@ -2585,6 +2618,7 @@ function mergeTransactionJsonSnippets(snippets: string[]): string | null {
   const all: Array<{
     date?: string;
     description?: string;
+    merchant?: string;
     amount?: number;
     currency?: string;
     type?: string;
@@ -2620,7 +2654,7 @@ function mergeTransactionJsonSnippets(snippets: string[]): string | null {
   return JSON.stringify({ transactions: deduped });
 }
 
-function parseTransactionsJsonToItems(
+export function parseTransactionsJsonToItems(
   jsonText: string,
   callerCurrency: string,
   callerDate: string,
@@ -2640,6 +2674,12 @@ function parseTransactionsJsonToItems(
       .trim()
       .replace(/^description\s*[:=]\s*/i, "")
       .replace(/^"+|"+$/g, "");
+    const merchant = typeof item?.merchant === "string"
+      ? item.merchant
+        .trim()
+        .replace(/^merchant\s*[:=]\s*/i, "")
+        .replace(/^"+|"+$/g, "")
+      : "";
     const amount = Math.abs(Number(item?.amount));
     if (!Number.isFinite(amount) || amount <= 0) continue;
 
@@ -2664,6 +2704,7 @@ function parseTransactionsJsonToItems(
       currencySymbol: getCurrencySymbol(currency),
       date: normalizedDateAndDescription.date,
       description: normalizedDateAndDescription.description,
+      merchant: merchant.length > 0 ? merchant : undefined,
     });
   }
 
@@ -3362,10 +3403,229 @@ function deduplicateAndCleanItems(
   });
 }
 
+function convertPdfPipelineItems(
+  items: any[],
+  callerCurrency: string,
+  callerDate: string,
+  householdContext: ReturnType<typeof resolveHouseholdContext> | null,
+): ExpenseItem[] {
+  return deduplicateAndCleanItems(
+    items
+      .map((item): ExpenseItem => {
+        const type: ExpenseItem["type"] = item.type === "income"
+          ? "income"
+          : "expense";
+        const normalizedDateAndDescription =
+          normalizeTransactionDateAndDescription(
+            typeof item.date === "string" ? item.date : undefined,
+            typeof item.description === "string" ? item.description : undefined,
+            callerDate,
+          );
+        const currency =
+          typeof item.currency === "string" && item.currency.trim().length > 0
+            ? item.currency.trim().toUpperCase()
+            : callerCurrency;
+        const rawBreakdown = Array.isArray(item.breakdown)
+          ? item.breakdown
+            .map((value: unknown) => String(value).trim())
+            .filter(Boolean)
+          : undefined;
+
+        return {
+          type,
+          amount: Number(item.amount),
+          category: normalizeCategory(
+            typeof item.category === "string" && item.category.trim().length > 0
+              ? item.category.trim()
+              : normalizedDateAndDescription.description || "other",
+          ),
+          currency,
+          currencySymbol: getCurrencySymbol(currency),
+          date: normalizedDateAndDescription.date,
+          description: normalizedDateAndDescription.description,
+          merchant: typeof item.merchant === "string"
+            ? item.merchant.trim()
+            : undefined,
+          breakdown: rawBreakdown && rawBreakdown.length > 0
+            ? rawBreakdown
+            : undefined,
+          payerUserId: normalizePayerUserId(item.payerUserId, householdContext),
+          customSplits:
+            item.customSplits && typeof item.customSplits === "object"
+              ? normalizeCustomSplits(
+                item.customSplits,
+                householdContext,
+                Number(item.amount),
+              )
+              : undefined,
+        };
+      })
+      .filter((item) => Number.isFinite(item.amount) && item.amount > 0),
+  );
+}
+
+function buildPdfCategoryClusterDescription(
+  cluster: TransactionCategoryCluster,
+): string {
+  const parts = [
+    cluster.evidence.normalizedText,
+    cluster.evidence.merchants.length > 0
+      ? `merchants: ${cluster.evidence.merchants.join(" | ")}`
+      : "",
+    cluster.evidence.descriptions.length > 0
+      ? `examples: ${cluster.evidence.descriptions.join(" | ")}`
+      : "",
+    cluster.evidence.existingCategories.length > 0
+      ? `extraction guesses: ${cluster.evidence.existingCategories.join(" | ")}`
+      : "",
+  ].filter((part) => part.trim().length > 0);
+
+  return parts.join("; ");
+}
+
+function fallbackPdfClusterCategory(params: {
+  cluster: TransactionCategoryCluster;
+  allowed: Set<string>;
+}): string {
+  for (const category of params.cluster.evidence.existingCategories) {
+    const coerced = coerceCategoryToAllowed(category, params.allowed);
+    if (coerced !== "other") return coerced;
+  }
+  return params.allowed.has("uncategorized") ? "uncategorized" : "other";
+}
+
+async function categorizePdfExtractedItems(params: {
+  genAI: GenerativeAIClient;
+  items: ExpenseItem[];
+  expenseCategories: string[];
+  incomeCategories: string[];
+  language: string;
+  onProgress?: ProgressCallback;
+}): Promise<ExpenseItem[]> {
+  if (params.items.length === 0) return params.items;
+
+  const startedAt = Date.now();
+  const clusters = buildTransactionCategoryClusters(params.items);
+  const expenseAllowed = new Set(params.expenseCategories);
+  const incomeAllowed = new Set(params.incomeCategories);
+  const clusterCategories = new Map<
+    number,
+    { category: string; confidence: number; source: string }
+  >();
+  let aiCategorized = 0;
+  let fallbackCategorized = 0;
+
+  for (
+    let offset = 0;
+    offset < clusters.length;
+    offset += PDF_CATEGORY_BATCH_SIZE
+  ) {
+    const batch = clusters.slice(offset, offset + PDF_CATEGORY_BATCH_SIZE);
+    const candidates = batch.map((cluster) => ({
+      ...cluster.representative,
+      description: buildPdfCategoryClusterDescription(cluster),
+    }));
+
+    try {
+      const categories = await resolveCandidateCategories(
+        params.genAI,
+        candidates,
+        params.expenseCategories,
+        params.incomeCategories,
+        params.language,
+        params.onProgress,
+      );
+
+      categories.forEach((category, batchIndex) => {
+        const cluster = batch[batchIndex];
+        const allowed = cluster.representative.type === "income"
+          ? incomeAllowed
+          : expenseAllowed;
+        const coerced = coerceCategoryToAllowed(category, allowed);
+        clusterCategories.set(offset + batchIndex, {
+          category: coerced,
+          confidence: coerced === "other" || coerced === "uncategorized"
+            ? 0.52
+            : 0.82,
+          source: "pdf_cluster_ai",
+        });
+        aiCategorized += 1;
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `[analyze-expense] PDF category batch failed; falling back to extraction categories: ${message}`,
+      );
+      batch.forEach((cluster, batchIndex) => {
+        const allowed = cluster.representative.type === "income"
+          ? incomeAllowed
+          : expenseAllowed;
+        clusterCategories.set(offset + batchIndex, {
+          category: fallbackPdfClusterCategory({ cluster, allowed }),
+          confidence: 0.35,
+          source: "pdf_extraction_fallback",
+        });
+        fallbackCategorized += 1;
+      });
+    }
+  }
+
+  const clusterByMemberIndex = new Map<number, number>();
+  clusters.forEach((cluster, clusterIndex) => {
+    cluster.memberIndexes.forEach((memberIndex) => {
+      clusterByMemberIndex.set(memberIndex, clusterIndex);
+    });
+  });
+
+  const categorized = params.items.map((item, index) => {
+    const clusterIndex = clusterByMemberIndex.get(index);
+    if (clusterIndex === undefined) return item;
+
+    const cluster = clusters[clusterIndex];
+    const result = clusterCategories.get(clusterIndex);
+    if (!result) return item;
+
+    const needsReview = result.confidence < 0.55 ||
+      result.category === "other" ||
+      result.category === "uncategorized";
+
+    return {
+      ...item,
+      category: result.category,
+      categoryConfidence: result.confidence,
+      categoryReasonCodes: [
+        result.source,
+        cluster.memberIndexes.length > 1
+          ? "repeated_transaction_cluster"
+          : "single_transaction_cluster",
+      ],
+      categorySource: result.source,
+      categoryClusterId: `pdf_cluster_${clusterIndex + 1}`,
+      needsReview,
+    };
+  });
+
+  console.log("[analyze-expense] PDF categorization metrics", {
+    transactionCount: params.items.length,
+    clusterCount: clusters.length,
+    averageClusterSize: clusters.length > 0
+      ? params.items.length / clusters.length
+      : 0,
+    aiCategorizationRate: clusters.length > 0
+      ? aiCategorized / clusters.length
+      : 0,
+    fallbackCategorized,
+    reviewRequiredCount: categorized.filter((item) => item.needsReview).length,
+    latencyMs: Date.now() - startedAt,
+  });
+
+  return categorized;
+}
+
 /**
- * PDF Analysis with text extraction optimization.
- * First attempts to extract text from PDF (5-10x faster for text-based PDFs).
- * Falls back to vision-based analysis for scanned/image-based PDFs.
+ * PDF Analysis with a dedicated universal pipeline.
+ * The attachment contract stays the same: this function still feeds `items[]`
+ * back into the analyze-expense flow.
  */
 async function analyzeFromPdf(
   genAI: GenerativeAIClient,
@@ -3374,17 +3634,17 @@ async function analyzeFromPdf(
   language: string,
   base64Pdf: string,
   contentType: string,
-  tools: any,
-  expenseCategories: string[],
-  incomeCategories: string[],
+  _tools: any,
+  _expenseCategories: string[],
+  _incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
   onProgress?: ProgressCallback,
-): Promise<ExpenseItem[]> {
-  // OPTIMIZATION: Try text extraction first (5-10x faster than vision)
-  console.log("[analyze-expense] PDF: Attempting text extraction optimization");
+): Promise<{ items: ExpenseItem[]; rawText?: string; error?: string }> {
+  console.log("[analyze-expense] PDF: Starting universal PDF pipeline");
+  const canonicalExpenseCategories = getExpenseCategories();
+  const canonicalIncomeCategories = getIncomeCategories();
 
-  // Report progress: extracting text
   if (onProgress) {
     onProgress({
       type: "extracting_text",
@@ -3392,259 +3652,59 @@ async function analyzeFromPdf(
     });
   }
 
-  const textResult = await extractPdfTextNew(base64Pdf);
-
-  if (textResult && textResult.text.length > 0) {
-    const rawText = textResult.pages && textResult.pages.length > 0
-      ? textResult.pages.join("\n\n")
-      : textResult.text;
-    const hasPageChunks = textResult.pages && textResult.pages.length > 1;
-    console.log(
-      `[analyze-expense] PDF: Using text mode (${textResult.pageCount} pages, ${textResult.text.length} chars)` +
-        (hasPageChunks
-          ? ` with ${
-            textResult.pages!.length
-          } page chunks for parallel processing`
-          : ""),
-    );
-    if (DEBUG_LOGS) {
-      console.log(
-        `[analyze-expense] PDF: Table rows available: ${
-          textResult.tableRows?.length ?? 0
-        }`,
-      );
-      if (textResult.lineTexts && textResult.lineTexts.length > 0) {
-        const sample = textResult.lineTexts
-          .slice(0, 15)
-          .map((line) =>
-            line.replace(/\d/g, (match, idx) => (idx % 6 === 0 ? match : "*"))
-          );
-        console.log(
-          `[analyze-expense] PDF: Line text sample (masked):\n${
-            sample.join(
-              "\n",
-            )
-          }`,
-        );
-      }
-    }
-    const hasLineDates = textResult.lineTexts
-      ? textResult.lineTexts.some(
-        (line) => !!parseDateFromText(line, callerDate),
-      )
-      : false;
-
-    if (textResult.tableRows && textResult.tableRows.length > 0) {
-      const tableItems = extractDeterministicItemsFromTableRows(
-        textResult.tableRows,
-        callerDate,
-        callerCurrency,
-      );
-      if (tableItems.length > 0) {
-        console.log(
-          `[analyze-expense] PDF: Table-row extraction produced ${tableItems.length} item(s)`,
-        );
-        return tableItems;
-      }
-      console.log(
-        "[analyze-expense] PDF: Table-row extraction empty, falling back to text",
-      );
-    }
-    if (textResult.lineTexts && textResult.lineTexts.length > 0) {
-      const lineItems = extractStatementItemsFromLines(
-        textResult.lineTexts,
-        callerDate,
-        callerCurrency,
-        rawText,
-      );
-      if (lineItems.length > 0) {
-        console.log(
-          `[analyze-expense] PDF: Line-based statement extraction produced ${lineItems.length} item(s)`,
-        );
-        return lineItems;
-      }
-      console.log(
-        "[analyze-expense] PDF: Line-based statement extraction empty, falling back",
-      );
-    }
-
-    const transactionJson = await extractTransactionsJsonWithGemini(
-      genAI,
-      rawText,
-      callerCurrency,
-      callerDate,
-    );
-    if (transactionJson) {
-      console.log(
-        "[analyze-expense] PDF: Using Gemini transaction JSON for analysis",
-      );
-      const parsedItems = parseTransactionsJsonToItems(
-        transactionJson,
-        callerCurrency,
-        callerDate,
-      );
-      if (parsedItems.length > 0) {
-        return parsedItems;
-      }
-      console.warn(
-        "[analyze-expense] PDF: Transaction JSON parsed empty, falling back to analyzer",
-      );
-      // BUG FIX: Pass original document text (rawText), not the LLM-extracted JSON
-      return analyzeFromText(
-        genAI,
-        callerCurrency,
-        callerDate,
-        language,
-        rawText,
-        tools,
-        expenseCategories,
-        incomeCategories,
-        householdContext,
-        typeHint,
-        undefined,
-        onProgress,
-      );
-    }
-
-    if (textResult.pages && textResult.pages.length > 0) {
-      const snippets: string[] = [];
-      for (const page of textResult.pages) {
-        const pageJson = await extractTransactionsJsonWithGemini(
-          genAI,
-          page,
-          callerCurrency,
-          callerDate,
-        );
-        if (pageJson) snippets.push(pageJson);
-      }
-      const mergedJson = mergeTransactionJsonSnippets(snippets);
-      if (mergedJson) {
-        console.log(
-          "[analyze-expense] PDF: Using per-page Gemini transaction JSON for analysis",
-        );
-        const parsedItems = parseTransactionsJsonToItems(
-          mergedJson,
-          callerCurrency,
-          callerDate,
-        );
-        if (parsedItems.length > 0) {
-          return parsedItems;
-        }
-        console.warn(
-          "[analyze-expense] PDF: Per-page JSON parsed empty, falling back to analyzer",
-        );
-        // BUG FIX: Pass original document text (rawText), not the LLM-extracted JSON
-        return analyzeFromText(
-          genAI,
-          callerCurrency,
-          callerDate,
-          language,
-          rawText,
-          tools,
-          expenseCategories,
-          incomeCategories,
-          householdContext,
-          typeHint,
-          textResult.pages,
-          onProgress,
-        );
-      }
-    }
-
-    if (!hasLineDates) {
-      console.log(
-        "[analyze-expense] PDF: No line-level dates found, forcing vision OCR",
-      );
-      return analyzeFromPdfVision(
-        genAI,
-        callerCurrency,
-        callerDate,
-        language,
-        base64Pdf,
-        contentType,
-        tools,
-        expenseCategories,
-        incomeCategories,
-        householdContext,
-        typeHint,
-        onProgress,
-      );
-    }
-    const statementItems = extractStatementItemsFromText(
-      rawText,
-      callerDate,
-      callerCurrency,
-    );
-    if (statementItems.length > 0) {
-      console.log(
-        `[analyze-expense] PDF: Statement-mode extraction produced ${statementItems.length} item(s)`,
-      );
-      return statementItems;
-    }
-    console.log(
-      "[analyze-expense] PDF: Statement-mode extraction empty, falling back",
-    );
-    const deterministicItems = extractDeterministicItemsFromText(
-      rawText,
-      callerDate,
-      callerCurrency,
-    );
-    if (deterministicItems.length > 0) {
-      console.log(
-        `[analyze-expense] PDF: Deterministic extraction produced ${deterministicItems.length} item(s)`,
-      );
-      return deterministicItems;
-    }
-    console.log(
-      "[analyze-expense] PDF: Deterministic text extraction empty, falling back to LLM",
-    );
-
-    console.log(
-      "[analyze-expense] PDF: Deterministic extraction empty, falling back to LLM text parsing",
-    );
-    return analyzeFromText(
-      genAI,
-      callerCurrency,
-      callerDate,
-      language,
-      rawText,
-      tools,
-      expenseCategories,
-      incomeCategories,
-      householdContext,
-      typeHint,
-      textResult.pages,
-      onProgress,
-    );
-  }
-
-  // Fall back to vision-based analysis for image/scanned PDFs
-  console.log(
-    "[analyze-expense] PDF: Text extraction failed, using vision mode",
-  );
-
-  // Report progress: switching to vision mode
-  if (onProgress) {
-    onProgress({
-      type: "processing_vision",
-      message: "Processing scanned PDF with vision",
-    });
-  }
-
-  return analyzeFromPdfVision(
-    genAI,
-    callerCurrency,
-    callerDate,
-    language,
+  const pipelineResult = await runPdfAnalysisPipeline({
     base64Pdf,
     contentType,
-    tools,
-    expenseCategories,
-    incomeCategories,
-    householdContext,
+    callerCurrency,
+    callerDate,
+    expenseCategories: canonicalExpenseCategories,
+    incomeCategories: canonicalIncomeCategories,
     typeHint,
-    onProgress,
+    householdPrompt: householdContext
+      ? buildHouseholdContextPrompt(householdContext)
+      : undefined,
+  });
+  const extractedItems = convertPdfPipelineItems(
+    pipelineResult.items,
+    callerCurrency,
+    callerDate,
+    householdContext,
   );
+  const items = await categorizePdfExtractedItems({
+    genAI,
+    items: extractedItems,
+    expenseCategories: canonicalExpenseCategories,
+    incomeCategories: canonicalIncomeCategories,
+    language,
+    onProgress,
+  });
+  const shouldFallbackToText =
+    pipelineResult.analysis.document_type === "bank_statement" &&
+    (pipelineResult.analysis.requires_review || items.length === 0) &&
+    typeof pipelineResult.rawText === "string" &&
+    pipelineResult.rawText.trim().length > 0;
+
+  console.log(
+    `[analyze-expense] PDF: Universal pipeline returned ${items.length} item(s)` +
+      (pipelineResult.analysis.requires_review ? " (requires review)" : ""),
+  );
+
+  if (shouldFallbackToText) {
+    console.log(
+      "[analyze-expense] PDF: Falling back to text analyzer for low-confidence bank statement result",
+    );
+    return {
+      items: [],
+      rawText: pipelineResult.rawText,
+      error: pipelineResult.error || "analysis_failed",
+    };
+  }
+
+  return {
+    items,
+    rawText: pipelineResult.rawText,
+    error: pipelineResult.error,
+  };
 }
 
 /**
@@ -4660,6 +4720,7 @@ export async function runAnalyzeExpense(
         /\.pdf$/i.test(lowerName);
 
       let syntheticText = "";
+      let pdfProcessingError: string | null = null;
 
       if (textLike) {
         // CSV files: use deterministic parser first, then fall through to LLM if needed
@@ -4774,7 +4835,6 @@ export async function runAnalyzeExpense(
         }
       } else if (isPdf) {
         const base64Data = b64encode(bytes);
-        let pdfProcessingError: string | null = null;
 
         // Report progress for PDF processing
         if (onProgress) {
@@ -4785,7 +4845,7 @@ export async function runAnalyzeExpense(
         }
 
         try {
-          items = await analyzeFromPdf(
+          const pdfResult = await analyzeFromPdf(
             genAI,
             callerCurrency,
             callerDate,
@@ -4799,6 +4859,13 @@ export async function runAnalyzeExpense(
             typeHint,
             onProgress,
           );
+          items = pdfResult.items;
+          if (pdfResult.rawText) {
+            syntheticText = pdfResult.rawText;
+          }
+          if (pdfResult.error) {
+            pdfProcessingError = pdfResult.error;
+          }
         } catch (e) {
           pdfProcessingError = e instanceof Error ? e.message : String(e);
           console.error("[analyze-expense] PDF direct extraction failed", e);
@@ -4817,31 +4884,15 @@ export async function runAnalyzeExpense(
             language,
           };
         }
-
-        if (items.length === 0) {
-          const summary = await summarizePdfWithGemini(
-            base64Data,
-            "application/pdf",
-            _geminiApiKey,
-          );
-          syntheticText = summary || "";
-          if (syntheticText) {
-            const normalized = await preprocessExtractedTextWithGemini(
-              genAI,
-              syntheticText,
-              "pdf_gemini_summary",
-              onProgress,
-            );
-            if (normalized) syntheticText = normalized;
-          }
-        }
       }
 
       if (items.length === 0) {
         if (!syntheticText.trim()) {
           return {
             success: false,
-            error: "Unsupported or unreadable attachment format",
+            error: isPdf
+              ? pdfProcessingError || "No importable transactions found in PDF"
+              : "Unsupported or unreadable attachment format",
             code: isPdf ? "PDF_PARSE_FAILED" : "UNSUPPORTED_FORMAT",
             status: 400,
             language,

@@ -1,4 +1,7 @@
-import { assertStringIncludes } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertStringIncludes,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 Deno.test(
   "import contract: mobile save-expense payload fields are supported",
@@ -77,5 +80,32 @@ Deno.test(
     assertStringIncludes(source, "progressOffset");
     assertStringIncludes(source, "progressTotal");
     assertStringIncludes(source, ": keep-alive\\n\\n");
+  },
+);
+
+Deno.test(
+  "import contract: inbound follow-up email caps long transaction lists",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    const transactionLinesStart = source.indexOf(
+      "const transactionLines = transactions",
+    );
+    const transactionLinesEnd = source.indexOf(
+      "const attachmentLines",
+      transactionLinesStart,
+    );
+    const transactionLinesSource = source.slice(
+      transactionLinesStart,
+      transactionLinesEnd,
+    );
+
+    assertStringIncludes(transactionLinesSource, ".map((item) => {");
+    assertStringIncludes(transactionLinesSource, ".slice(0, 30)");
+    assertStringIncludes(transactionLinesSource, "transactions.length > 30");
+    assertStringIncludes(transactionLinesSource, "<li>...</li>");
+    assertEquals(transactionLinesSource.includes(".slice(0, 20)"), false);
   },
 );

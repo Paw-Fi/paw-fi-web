@@ -3,8 +3,9 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   inferPayerFromText,
   inferSplitAmountsFromText,
-  normalizeTransactionDateAndDescription,
   normalizeCustomSplits,
+  normalizeTransactionDateAndDescription,
+  parseTransactionsJsonToItems,
   resolveHouseholdContext,
 } from "../shared/analyze-core.ts";
 
@@ -84,4 +85,25 @@ Deno.test("analyze-core: invalid raw date falls back to caller date", () => {
 
   assertEquals(normalized.date, "2026-03-18");
   assertEquals(normalized.description, "burger");
+});
+
+Deno.test("analyze-core: transaction JSON fallback preserves merchant", () => {
+  const [item] = parseTransactionsJsonToItems(
+    JSON.stringify({
+      transactions: [
+        {
+          date: "2026-04-22",
+          description: "Latte",
+          merchant: "Blue Bottle Coffee",
+          amount: 4.8,
+          currency: "USD",
+          type: "expense",
+        },
+      ],
+    }),
+    "USD",
+    "2026-04-22",
+  );
+
+  assertEquals(item.merchant, "Blue Bottle Coffee");
 });
