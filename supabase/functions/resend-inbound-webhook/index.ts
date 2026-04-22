@@ -621,8 +621,8 @@ async function sendImportProcessedNotification(params: {
   const accessToken = await getFcmAccessToken();
   if (!accessToken) return;
 
-  const title = `Files processed from ${senderEmail}`;
-  const body = `${savedCount} ${pluralize(savedCount, "transaction")} saved`;
+  const title = `Your files are ready!`;
+  const body = `${savedCount} ${pluralize(savedCount, "transaction")} have been added to your account`;
   const data = {
     event_type: "email_import_processed",
     notification_type: "email_import_processed",

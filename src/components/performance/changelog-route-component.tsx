@@ -28,9 +28,10 @@ const changelogs: ChangelogEntry[] = [
       "This release introduces email receipt capture for effortless transaction logging, date range exports for better reporting, and includes wallet improvements.",
     items: [
       "Email capture feature to import transactions from email receipts automatically",
-       "New category details page with spending metrics and insights",
+      "New category details page with spending metrics and insights",
       "Export transactions with a custom date range for easier reporting",
       "Merchant field now included in files import and export",
+      "Custom split configuration for each shared space - decide default split percentage",
       "Improved wallet synchronization settings",
       "General stability and performance improvements",
     ],
