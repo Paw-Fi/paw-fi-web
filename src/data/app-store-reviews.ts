@@ -244,6 +244,24 @@ export const appStoreReviews: Review[] = [
     createdDate: "2026-04-17T12:00:00-08:00",
     territory: "USA",
   },
+  {
+    id: "review-024",
+    rating: 5,
+    title: "First budget app that i lurve itttt",
+    body: "Nice ! More convenient as compared to other budgeting app",
+    reviewerNickname: "Alansisa",
+    createdDate: "2026-04-20T12:00:00+08:00",
+    territory: "MYS",
+  },
+  {
+    id: "review-025",
+    rating: 5,
+    title: "Awesome Budgeting App",
+    body: "It has been a lifesaver to keep track of the expenses! Lots more to save after keeping track of the expenses!",
+    reviewerNickname: "2.5Turbo",
+    createdDate: "2026-04-20T12:00:00+08:00",
+    territory: "MYS",
+  },
 ];
 
 // Total review count for display (update this as you get more reviews)
