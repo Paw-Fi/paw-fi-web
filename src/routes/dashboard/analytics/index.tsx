@@ -111,10 +111,10 @@ function DashboardOnboardingAnalyticsContent() {
                   Onboarding and Paywall Funnel
                 </h1>
                 <p className="text-muted-foreground max-w-3xl text-sm leading-6">
-                  Read the mobile onboarding flow in plain English: who entered,
-                  where momentum slowed, which post-auth tasks people actually
-                  used, and how plan selection translated into checkout and paid
-                  conversion.
+                  Read the mobile onboarding flow in plain language: who
+                  entered, where momentum slowed, which post-auth tasks people
+                  actually used, and how plan selection translated into checkout
+                  and paid conversion.
                 </p>
               </div>
             </div>

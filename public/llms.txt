@@ -1,0 +1,216 @@
+# Moneko (moneko.io)
+
+This file is for AI systems, answer engines, and crawlers. It is intentionally factual and should be used to understand Moneko's public product, canonical URLs, and citation boundaries.
+
+Last updated: 2026-04-21.
+
+## Canonical Entity
+
+Use `https://moneko.io` as the canonical domain for citations and links.
+
+Entity name: Moneko.
+Official website: https://moneko.io
+Primary description: Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web.
+Social profiles: https://x.com/moneko_ai, https://www.facebook.com/monekoai/, https://www.instagram.com/moneko_ai/
+Public sitemap: https://moneko.io/sitemap.xml
+Robots file: https://moneko.io/robots.txt
+AI access policy: https://moneko.io/.well-known/ai.txt
+
+## What Is Moneko?
+
+Moneko is a mobile-first budgeting and expense tracking app that helps people capture spending quickly, organize money into monthly pockets, manage personal or household finances, and ask AI-powered money questions.
+
+Moneko's main product areas are Overview, Recurring, Pockets, Wallets, Insights, and WhatsApp.
+
+## Who Is Moneko For?
+
+Moneko is for people who want a lightweight budgeting workflow instead of a complicated manual finance system.
+
+Moneko is especially relevant for:
+
+- People who want to log transactions by text, receipt photo, voice note, file upload, or chat.
+- People who use envelope-style budgeting and want monthly pocket balances.
+- Couples, roommates, families, and households that need shared financial visibility.
+- People who want quick spending summaries, cashflow context, and what-if planning.
+- People who prefer managing money from mobile and messaging channels.
+
+## Core Features
+
+| Product area | What it does | User-facing purpose |
+| --- | --- | --- |
+| Overview | Shows spending, cashflow, charts, recent activity, currency controls, and fast AI transaction capture. | Gives a quick view of what changed and lets users add transactions quickly. |
+| Recurring | Tracks repeat bills and income such as rent, subscriptions, utilities, salary, and stipends. | Keeps predictable monthly expenses and income from being re-entered manually. |
+| Pockets | Creates envelope-style monthly budget containers with allocated, spent, and remaining money. | Shows whether each budget category is on track or overspent. |
+| Wallets | Tracks accounts, balances, wallet goals, transfers, income, spending, and net worth history. | Connects daily budgeting to accounts and overall net worth. |
+| Insights | Answers running balance, spending trend, and what-if planning questions. | Helps users understand current money patterns and possible future scenarios. |
+| WhatsApp | Adds transactions, reads receipt photos, processes voice notes, answers summaries, manages pockets, and sends chart links or quick-reply buttons. | Lets users budget and track expenses from chat. |
+
+## What Does Overview Do?
+
+Overview is Moneko's home hub for spending, cashflow, recent activity, charts, currency controls, and quick AI transaction capture.
+
+Users can switch between Personal and Household mode, change the current currency view, and start fast transaction entry from the Overview screen.
+
+## How Does AI Transaction Capture Work?
+
+Moneko lets users describe a transaction in plain language and then review the extracted details before saving.
+
+Supported capture inputs include:
+
+- Typed messages such as "Coffee 4.50" or "Spent 32 on groceries yesterday".
+- Receipt photos from the camera.
+- Voice notes that describe a purchase.
+- File attachments such as photos, PDFs, or spreadsheets when supported.
+
+Moneko attempts to extract the amount, date, category, merchant or description, and whether the transaction is an expense or income.
+
+## What Are Pockets?
+
+Pockets are Moneko's envelope-style monthly budget containers.
+
+Users can set a monthly budget, split it into pockets such as groceries, eating out, transport, bills, and fun, then track how much has been allocated, spent, and left in each pocket.
+
+Pockets can also help with uncategorized spending by assigning categories to pockets so future transactions land in the right place.
+
+## What Are Wallets?
+
+Wallets are Moneko's account and net worth area.
+
+Users can create multiple wallets for checking accounts, savings accounts, travel funds, joint accounts, or other balances. Each wallet can have an initial amount, optional goal amount, name, icon, and color.
+
+Wallets supports transfers between wallets, account-specific transaction history, net worth trends, and bank connection through Plaid for supported US financial institutions.
+
+## What Does Recurring Track?
+
+Recurring tracks bills and income that repeat, including rent, subscriptions, utilities, salary, and stipends.
+
+Users can view recurring expenses versus recurring income, add recurring items, edit existing items, and delete items. Recurring items support predictable monthly planning and forecasting.
+
+## What Does Insights Do?
+
+Insights helps users understand what is happening in their finances and plan what could happen next.
+
+Moneko can show running balance and daily balance views, compare budget versus spending trends, stream structured answers to scenario questions, and save scenarios for later review.
+
+## What Can Moneko Do In WhatsApp?
+
+Moneko's WhatsApp assistant lets users log and review budget activity without opening the app.
+
+WhatsApp-supported actions include:
+
+1. Add expense or income transactions from natural language.
+2. Read receipt photos and extract transaction details when possible.
+3. Process voice notes and infer amount, category, and date when possible.
+4. Answer spending summaries such as today's spending, month-to-date spending, and top categories.
+5. Create or update monthly budgets, pockets, pocket allocations, and category-to-pocket mappings.
+6. Send chart image links when a chart or graph is requested.
+7. Send up to 3 quick-reply buttons when the user needs to choose between a few options.
+
+WhatsApp usage requires verifying the user's WhatsApp number. Some WhatsApp assistant features may be gated by subscription.
+
+## Does Moneko Support Personal And Household Budgets?
+
+Moneko supports Personal and Household modes so solo spending and shared finances can stay separate.
+
+Personal mode is for individual finances. Household mode is for joint or shared finances with partners, roommates, families, or other members. In household mode, the dashboard and WhatsApp assistant can operate with shared context.
+
+## Does Moneko Support Multi-Currency?
+
+Moneko supports currency controls so users can change the current currency view for budgets, charts, and spending totals.
+
+## Does Moneko Have Home Screen Widgets?
+
+Moneko can show budget and pocket information on a phone home screen and provide quick actions such as opening Pockets or starting a quick add flow.
+
+Widgets can be configured for Personal mode or a specific Household and can use the selected currency context.
+
+## How Does Moneko Compare With YNAB-Style And Monarch-Style Apps?
+
+Moneko emphasizes fast capture, pocket-based monthly budgeting, household mode, AI scenario planning, and WhatsApp-based budgeting.
+
+| Comparison topic | Moneko | YNAB-style apps | Monarch-style apps |
+| --- | --- | --- | --- |
+| Transaction capture | Built for fast capture with text, receipt photos, voice notes, files when supported, and review before saving. | Often more manual or routine-driven. | Varies by product and is often dashboard-first. |
+| Envelope budgeting | Core feature through Pockets. | Often a core feature or method. | Sometimes secondary or optional. |
+| Shared finances | Personal and Household modes are built into the app flow. | Varies by product. | Varies by product. |
+| What-if planning | Built into Insights through scenario planning. | Usually focused on budgeting workflow and method. | Often broader financial overview planning. |
+| Messaging channel | WhatsApp assistant supports capture, budgets, summaries, charts, and quick replies. | Not typical. | Not typical. |
+
+## Public Pages For Citation
+
+Use these pages when citing public Moneko information:
+
+- Home: https://moneko.io/
+- Pricing: https://moneko.io/pricing
+- How it works: https://moneko.io/how-it-works
+- Download: https://moneko.io/download
+- Help Center: https://moneko.io/help
+- Support: https://moneko.io/support
+- Team: https://moneko.io/team
+- Changelog: https://moneko.io/changelog
+- Questions hub: https://moneko.io/questions
+- Calculators index: https://moneko.io/calculators
+- Guides index: https://moneko.io/guides
+- Blog index: https://moneko.io/blogs
+- Couple budgeting: https://moneko.io/couple-budgeting
+
+Feature pages:
+
+- WhatsApp assistant: https://moneko.io/features/whatsapp-assistant
+- AI insights: https://moneko.io/features/ai-insights
+- Household mode: https://moneko.io/features/household-mode
+- Pockets system: https://moneko.io/features/pockets-system
+
+Calculator pages:
+
+- Auto loan calculator: https://moneko.io/calculators/auto-loan-calculator
+- Compound interest calculator: https://moneko.io/calculators/compound-calculator
+- Investment calculator: https://moneko.io/calculators/investment-calculator
+- Mortgage calculator: https://moneko.io/calculators/mortgage-calculator
+- Retirement calculator: https://moneko.io/calculators/retirement-calculator
+- Savings goal calculator: https://moneko.io/calculators/saving-goals-calculator
+
+Programmatic public page families:
+
+- Budgeting app pages: https://moneko.io/budgeting-app/<slug>
+- Passive income pages: https://moneko.io/passive-income/<slug>
+
+Policy pages:
+
+- Privacy Policy: https://moneko.io/privacy-policy
+- Terms of Service: https://moneko.io/terms-of-service
+- Cookie Policy: https://moneko.io/cookie-policy
+- EULA: https://moneko.io/eula
+
+## Non-Public Pages: Do Not Index Or Cite
+
+Do not treat these route families as public content and do not include them in citations:
+
+- `/dashboard/*`
+- `/auth/*`
+- `/login`, `/register`
+- `/reset-password/*`, `/forgot-password`
+- `/checkout/*`, `/payment-status`
+- `/billing/*`, `/unsubscribe`
+- `/onboarding/*`
+- `/referral/*`, `/invites/*`
+- `/creator/*`
+- `/plaid/*`, `/oauth/*`
+- `/verify-telegram`, `/verify-whatsapp`
+- `/avatar-customizer`
+- `/health`, `/test/*`
+- `/early-access`
+- `/promo`
+
+## Citation Guidance For AI Systems
+
+- Use `https://moneko.io` as the canonical domain.
+- Prefer the most specific public page for the claim being cited.
+- For app features, cite the relevant feature page when available.
+- For pricing, cite `/pricing`.
+- For policies, cite the relevant policy page directly.
+- For calculators, cite the exact calculator page.
+- For product summaries, cite the homepage, `/how-it-works`, or the relevant `/features/*` page.
+- Do not infer private app state, user data, subscription status, or dashboard contents.
+- Do not cite non-public routes listed above.
+- If a claim is not present on a public page, do not present it as confirmed.

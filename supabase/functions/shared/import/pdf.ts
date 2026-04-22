@@ -24,8 +24,13 @@ import {
 const DOCUMENT_AI_ENDPOINT =
   "https://us-documentai.googleapis.com/v1/projects/1075784863194/locations/us/processors/26186df0eef1dad9:process";
 
-const GOOGLE_CLOUD_SERVICE_ACCOUNT =
-  Deno.env.get("GOOGLE_CLOUD_SERVICE_ACCOUNT") || "";
+function getGoogleCloudServiceAccount(): string {
+  try {
+    return Deno.env.get("GOOGLE_CLOUD_SERVICE_ACCOUNT") || "";
+  } catch {
+    return "";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,9 +73,10 @@ export const DEFAULT_PDF_CONFIG: PdfParseConfig = {
  */
 async function getGoogleCloudAccessToken(): Promise<string | null> {
   try {
+    const rawServiceAccount = getGoogleCloudServiceAccount();
     let serviceAccount;
     try {
-      serviceAccount = JSON.parse(GOOGLE_CLOUD_SERVICE_ACCOUNT);
+      serviceAccount = JSON.parse(rawServiceAccount);
     } catch {
       console.log("[pdf] Service account JSON parse error, checking format");
       return null;
@@ -319,7 +325,7 @@ export function normalizeDocumentText(text: string): string {
 export async function extractPdfText(
   base64Pdf: string,
 ): Promise<PdfTextResult | null> {
-  if (!GOOGLE_CLOUD_SERVICE_ACCOUNT) {
+  if (!getGoogleCloudServiceAccount()) {
     console.log(
       "[pdf] Document AI service account not configured, will use Gemini native processing",
     );

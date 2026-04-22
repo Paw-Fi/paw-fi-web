@@ -267,7 +267,7 @@ export function renderFooter(options: {
 } = {}): string {
   const { showUnsubscribe = false, showSupport = true, customReason, unsubscribeUrl } = options;
   
-  let footerContent = '<p>&copy; 2025 Moneko. All rights reserved.</p>';
+  let footerContent = '<p>&copy; 2026 Moneko. All rights reserved.</p>';
   
   if (customReason) {
     footerContent += `<p>${escapeHtml(customReason)}</p>`;

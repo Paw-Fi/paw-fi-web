@@ -671,6 +671,25 @@ function isStartVerification(text: string) {
   return normalizeText(text).toLowerCase() === "start verification";
 }
 
+function hasExpiredSubscriptionAccess(
+  subscription?: {
+    status?: string | null;
+    currentPeriodEnd?: string | Date | null;
+  } | null,
+): boolean {
+  if (!subscription) return false;
+
+  const normalizedStatus = String(subscription.status ?? "").toLowerCase();
+  if (normalizedStatus !== "trialing" && normalizedStatus !== "active") {
+    return false;
+  }
+
+  if (subscription.currentPeriodEnd == null) return false;
+  const periodEnd = new Date(subscription.currentPeriodEnd);
+  if (Number.isNaN(periodEnd.getTime())) return false;
+  return periodEnd.getTime() <= Date.now();
+}
+
 function extractNumberedOptions(text: string): TelegramChoiceOption[] {
   const options: TelegramChoiceOption[] = [];
   for (const rawLine of text.split("\n")) {
@@ -2048,12 +2067,68 @@ Deno.serve(async (req: Request) => {
           return;
         }
 
-        const subscription = contextData
+        let subscription = contextData
           ? {
               plan: contextData.subscription_plan,
               status: contextData.subscription_status,
+              currentPeriodEnd:
+                contextData.subscription_current_period_end ?? null,
             }
           : null;
+
+        const userIdForSubscription = String(contact.user_id || "");
+        if (userIdForSubscription) {
+          const { data: liveSubscription, error: liveSubscriptionError } =
+            await supabase
+              .from("subscriptions")
+              .select("plan, status, current_period_end")
+              .eq("user_id", userIdForSubscription)
+              .order("updated_at", { ascending: false })
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+          if (liveSubscriptionError) {
+            debugNotes.push(
+              `subscription lookup error: ${formatInvokeError(
+                liveSubscriptionError,
+              )}`,
+            );
+          } else if (liveSubscription) {
+            subscription = {
+              plan: liveSubscription.plan,
+              status: liveSubscription.status,
+              currentPeriodEnd: liveSubscription.current_period_end,
+            };
+          }
+        }
+
+        if (hasExpiredSubscriptionAccess(subscription)) {
+          const expiredSubscriptionMessage =
+            "Your subscription has expired. Please renew your subscription to continue using Moneko";
+          await sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            chatId,
+            expiredSubscriptionMessage,
+            {
+              inline_keyboard: [
+                [
+                  {
+                    text: "View Pricing",
+                    url: "https://moneko.io/pricing",
+                  },
+                ],
+              ],
+            },
+          );
+          telegramResponseSent = true;
+          await updateIdempotency(supabase, idempotencyKey, {
+            status: "done",
+            response_text: expiredSubscriptionMessage,
+          });
+          return;
+        }
+
         if (isFreeUser(subscription)) {
           const nonSubscriberMessage =
             "You're on the free plan. Upgrade to unlock full features.";
@@ -2061,6 +2136,16 @@ Deno.serve(async (req: Request) => {
             TELEGRAM_BOT_TOKEN,
             chatId,
             nonSubscriberMessage,
+               {
+              inline_keyboard: [
+                [
+                  {
+                    text: "View Pricing",
+                    url: "https://moneko.io/pricing",
+                  },
+                ],
+              ],
+            },
           );
           telegramResponseSent = true;
           await updateIdempotency(supabase, idempotencyKey, {

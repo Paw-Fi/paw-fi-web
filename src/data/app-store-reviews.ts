@@ -32,8 +32,8 @@ export interface Review {
 export const APP_STORE_RATING = 4.8;
 
 // Store review counts used in public marketing copy
-export const APP_STORE_REVIEW_COUNT = 61;
-export const PLAY_STORE_REVIEW_COUNT = 11;
+export const APP_STORE_REVIEW_COUNT = 64;
+export const PLAY_STORE_REVIEW_COUNT = 12;
 
 // Hardcoded 5-star reviews - REAL REVIEWS FROM APP STORE
 export const appStoreReviews: Review[] = [
@@ -190,7 +190,7 @@ export const appStoreReviews: Review[] = [
     createdDate: "2026-02-03T16:45:00-08:00",
     territory: "VNM",
   },
-   {
+  {
     id: "review-018",
     rating: 5,
     title: "Fantastic application for everyone",
@@ -215,6 +215,51 @@ export const appStoreReviews: Review[] = [
     body: "Fast and easy to track my expenses I know where my money goes now",
     reviewerNickname: "JPTohhhh",
     createdDate: "2026-04-07T16:45:00-08:00",
+    territory: "MYS",
+  },
+  {
+    id: "review-021",
+    rating: 5,
+    title: "Switched from Spendee. This Is Way Better.",
+    body: "I used to use Spendee for the last 2 years, but not anymore. Moneko is honestly the best app I've tried so far. The best part for me is the voice logging and Siri Shortcuts assistant, it makes adding expenses so quick and effortless. The app is simple, smooth, and very easy to use. Highly recommended. Big thanks to the developer for creating such an amazing and useful app. Please keep it always updated and improving.",
+    reviewerNickname: "iamnoman21",
+    createdDate: "2026-04-17T12:00:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-022",
+    rating: 5,
+    title: "WhatsApp feature impressed me",
+    body: "The whatsapp feature really impresed me, I can log my expense easily,",
+    reviewerNickname: "Tiaowu Lo",
+    createdDate: "2026-04-17T12:00:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-023",
+    rating: 5,
+    title: "Amazing new budgeting app",
+    body: "Amazing new budgeting app. I love the feature that helps you to plan for stuff you want to get.",
+    reviewerNickname: "Kachiri Flores",
+    createdDate: "2026-04-17T12:00:00-08:00",
+    territory: "USA",
+  },
+  {
+    id: "review-024",
+    rating: 5,
+    title: "First budget app that i lurve itttt",
+    body: "Nice ! More convenient as compared to other budgeting app",
+    reviewerNickname: "Alansisa",
+    createdDate: "2026-04-20T12:00:00+08:00",
+    territory: "MYS",
+  },
+  {
+    id: "review-025",
+    rating: 5,
+    title: "Awesome Budgeting App",
+    body: "It has been a lifesaver to keep track of the expenses! Lots more to save after keeping track of the expenses!",
+    reviewerNickname: "2.5Turbo",
+    createdDate: "2026-04-20T12:00:00+08:00",
     territory: "MYS",
   },
 ];

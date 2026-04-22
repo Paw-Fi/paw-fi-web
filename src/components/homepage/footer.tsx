@@ -191,7 +191,7 @@ export const Footer = () => {
         {/* Bottom Section */}
         <div className="border-border mt-12 flex flex-col border-t pt-6 sm:mt-14 sm:pt-8 md:mt-16 md:flex-row md:items-center md:justify-between">
           <p className="text-muted-foreground mb-3 text-xs sm:mb-4 sm:text-sm md:mb-0">
-            © 2025 Moneko. All rights reserved.
+            © 2026 Moneko. All rights reserved.
           </p>
 
           {/* Social Icons */}

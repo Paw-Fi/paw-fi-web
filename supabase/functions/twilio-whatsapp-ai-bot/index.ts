@@ -164,6 +164,25 @@ type IdempotencyRecord = {
   error?: string;
 };
 
+function hasExpiredSubscriptionAccess(
+  subscription?: {
+    status?: string | null;
+    currentPeriodEnd?: string | Date | null;
+  } | null,
+): boolean {
+  if (!subscription) return false;
+
+  const normalizedStatus = String(subscription.status ?? "").toLowerCase();
+  if (normalizedStatus !== "trialing" && normalizedStatus !== "active") {
+    return false;
+  }
+
+  if (subscription.currentPeriodEnd == null) return false;
+  const periodEnd = new Date(subscription.currentPeriodEnd);
+  if (Number.isNaN(periodEnd.getTime())) return false;
+  return periodEnd.getTime() <= Date.now();
+}
+
 // --- Helper Functions ---
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -3856,9 +3875,30 @@ Deno.serve(async (req: Request) => {
     ? {
         plan: contextData.subscription_plan,
         status: contextData.subscription_status,
+        currentPeriodEnd: contextData.subscription_current_period_end ?? null,
       }
     : null;
   debugLog(WHATSAPP_DEBUG, "subscription", { subscription });
+
+  if (hasExpiredSubscriptionAccess(subscription)) {
+    const expiredSubscriptionMessage =
+      "Your subscription has expired. Please subscribe at https://moneko.io/pricing to continue using Moneko.";
+    await sendWhatsAppMessage(
+      twilioAccountSid,
+      twilioAuthToken,
+      to,
+      from,
+      expiredSubscriptionMessage,
+    );
+    if (idempotencyKey) {
+      await updateTwilioIdempotency(supabase, idempotencyKey, {
+        status: "done",
+        delivery: "api",
+        response_text: "subscription_expired",
+      });
+    }
+    return xmlResponse(buildTwimlMessage(null));
+  }
 
   if (isFreeUser(subscription)) {
     // Optional: Enforce paid-only features here if needed.

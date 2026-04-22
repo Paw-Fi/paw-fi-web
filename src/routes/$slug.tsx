@@ -7,11 +7,18 @@ import { QueryLandingPage } from "@/components/geo/query-landing-page";
 import { HomeHeader } from "@/components/index/header";
 import { HeroV2 } from "@/components/homepage/v2/hero-v2";
 import { Footer } from "@/components/homepage/footer";
+import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import AmbientHalo from "@/components/ui/ambient-halo";
 import {
   getGeoLandingPage,
   type GeoLandingPage,
 } from "@/lib/geo-landing-pages";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 
@@ -65,6 +72,10 @@ export const Route = createFileRoute("/$slug")({
           applicationSubCategory: "BudgetingApplication",
           description: loaderData.description,
           url: "https://moneko.io",
+          availableLanguage: monekoAvailableLanguages,
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
         },
         {
           "@type": "FAQPage",
@@ -118,6 +129,11 @@ function GeoLandingPageView({ page }: GeoLandingPageViewProps) {
       <main className="flex-1">
         <HeroV2 />
 
+ <MobileAppPreviewCarousel
+          title="Try the app behind these budgeting workflows"
+          description="See how Moneko turns mobile spending, WhatsApp messages, receipt scans, and shared budgets into a clearer plan."
+        />
+        
         <Suspense
           fallback={
             <div className={`${deferredSectionFallback} min-h-[28rem]`} />
@@ -148,6 +164,8 @@ function GeoLandingPageView({ page }: GeoLandingPageViewProps) {
           resourceLinks={page.resourceLinks ?? []}
           showIntro={false}
         />
+
+       
       </main>
 
       <Footer />

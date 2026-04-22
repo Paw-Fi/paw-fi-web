@@ -29,6 +29,12 @@ import { BentoCard } from "@/components/ui/bento-card";
 
 // SEO & Meta Imports
 import { Helmet } from "@dr.pogodin/react-helmet";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { HomeHeader } from "@/components/index/header";
@@ -36,7 +42,7 @@ import { HomeHeader } from "@/components/index/header";
 const META_TITLE =
   "Joint Expense Tracker & Budgeting for Couples | Moneko Household";
 const META_DESCRIPTION =
-  "The best joint expense tracker for couples. Manage shared household bills, split expenses fairly, and track joint savings without losing your personal privacy.";
+  "Use Moneko Household Mode to track shared bills, split expenses fairly, manage joint savings, and keep personal spending separate from shared budgets.";
 const META_KEYWORDS =
   "joint expense tracker, couples budgeting app, shared household finances, bill splitter for partners, joint budget planner, finance app for couples, split rent and utilities";
 
@@ -79,10 +85,14 @@ export function HouseholdModeRouteComponent() {
         operatingSystem: "iOS, Android",
         description:
           "Collaborative financial tool for couples to manage joint expenses and shared household budgets.",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        availableLanguage: monekoAvailableLanguages,
+        offers: createMonekoFreeOffer(pageUrl),
+        aggregateRating: monekoAggregateRating,
+        review: monekoFeaturedReview,
       },
       {
         "@type": "FAQPage",
+        "@id": `${pageUrl}#faq`,
         mainEntity: [
           {
             "@type": "Question",
@@ -143,10 +153,10 @@ export function HouseholdModeRouteComponent() {
                 </span>
               </h1>
               <p className="mx-auto max-w-2xl text-xl leading-relaxed text-slate-600 dark:text-slate-400">
-                Stop the "Who owes who?" texts. Moneko is the{" "}
+                Stop the "who owes whom?" texts. Moneko is the{" "}
                 <strong>joint expense tracker</strong> that keeps shared bills
                 separate from personal spending, giving couples a transparent,
-                stress-free picture of their financial life.
+                calmer picture of their financial life.
               </p>
             </motion.div>
 
@@ -243,8 +253,8 @@ export function HouseholdModeRouteComponent() {
                 The Science of Shared Finances
               </h2>
               <p className="text-slate-600 dark:text-slate-400">
-                Why thousands of couples trust Moneko to manage their household
-                economy.
+                Why shared budgets work better when personal spending stays
+                private.
               </p>
             </div>
             <div className="grid gap-8 md:grid-cols-2">
@@ -282,7 +292,8 @@ export function HouseholdModeRouteComponent() {
             Ready to team up?
           </h2>
           <p className="mx-auto mb-10 max-w-xl text-lg text-slate-600 dark:text-slate-400">
-            Join over 50,000 users building better financial futures together.
+            Track shared bills, settle reimbursements, and keep personal budgets
+            private.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <AppleDownloadButton />
@@ -307,10 +318,10 @@ export function HouseholdModeRouteComponent() {
           </p>
           <div className="mt-12 flex items-center justify-center gap-8 text-sm font-medium text-slate-500 dark:text-slate-400">
             <span className="flex items-center gap-2">
-              <Lock className="h-4 w-4" /> End-to-End Encryption
+              <Lock className="h-4 w-4" /> Private by Default
             </span>
             <span className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4" /> Bank-Level Security
+              <ShieldCheck className="h-4 w-4" /> Shared Expense Controls
             </span>
           </div>
         </section>

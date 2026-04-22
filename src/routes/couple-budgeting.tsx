@@ -4,16 +4,18 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Bell,
-  Camera,
-  Shield,
-  Smartphone,
   Check,
-  Code,
   Rocket,
   Palette,
   TestTube,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  createMonekoFreeOffer,
+  monekoAggregateRating,
+  monekoAvailableLanguages,
+  monekoFeaturedReview,
+} from "@/utils/app-schema";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { DotPattern } from "@/components/ui/dot-pattern";
@@ -23,13 +25,8 @@ import {
   type ArcTimelineItem,
 } from "@/components/ui/arc-timeline";
 import { FaqSection } from "@/components/ui/faq-section";
-import { Carousel } from "@/components/ui/apple-cards-carousel";
+import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import { cn } from "@/lib/utils";
-import phone1 from "@assets/images/couple-budgeting/1.png";
-import phone2 from "@assets/images/couple-budgeting/2.png";
-import phone3 from "@assets/images/couple-budgeting/3.png";
-import phone4 from "@assets/images/couple-budgeting/4.png";
-import phone5 from "@assets/images/couple-budgeting/5.png";
 
 import { MonekoIcon } from "@/components/shared/moneko-icon";
 import { AppleDownloadButton } from "@/components/ui/apple-download-button";
@@ -101,11 +98,10 @@ export const Route = createFileRoute("/couple-budgeting")({
           name: "Moneko: Budgeting for Couples",
           applicationCategory: "FinanceApplication",
           operatingSystem: "iOS, Android",
-          offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD",
-          },
+          availableLanguage: monekoAvailableLanguages,
+          offers: createMonekoFreeOffer(pageUrl),
+          aggregateRating: monekoAggregateRating,
+          review: monekoFeaturedReview,
           description:
             "The AI-powered mobile app that helps couples budget, track shared expenses, and save for joint goals together.",
         },
@@ -236,40 +232,6 @@ const itemVariants = {
   },
 };
 
-// Mobile preview cards data (moved out of JSX for reuse)
-const mobilePreview = [
-  {
-    src: phone1,
-    title: "Link accounts, view, and manage together",
-    description:
-      "Log groceries, bills, and date nights. See who paid for what, instantly.",
-  },
-  {
-    src: phone2,
-    title: "Add expenses, split bills fast and fair",
-    description:
-      "Watch your savings for that dream home or vacation grow together.",
-  },
-  {
-    src: phone3,
-    title: "Get notified, confirm, and stay aligned",
-    description:
-      "Set up shared budgets for joint costs and keep personal spending separate.",
-  },
-  {
-    src: phone4,
-    title: "Set goals, track, and celebrate together",
-    description:
-      "AI identifies trends and opportunities for you to save more as a team.",
-  },
-  {
-    src: phone5,
-    title: "Scan receipts in WhatsApp, log automatically",
-    description:
-      "AI identifies trends and opportunities for you to save more as a team.",
-  },
-];
-
 function CoupleBudgetingPage() {
   const navigate = useNavigate();
 
@@ -351,55 +313,11 @@ function CoupleBudgetingPage() {
           </motion.div>
         </section>
 
-        {/* Mobile App Preview Section */}
-        <section className="relative overflow-hidden px-6 py-20">
-          <motion.div
-            className="mx-auto flex max-w-7xl flex-col items-center"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-          >
-            <motion.div className="mb-16 text-center" variants={itemVariants}>
-              <h2 className="mb-6 text-4xl font-bold tracking-tight text-slate-800 sm:text-5xl dark:text-slate-200">
-                Smarter couple budgeting with AI
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-400">
-                Moneko gives you and your partner a crystal-clear view of your
-                money, so you can make smarter decisions as a team.
-              </p>
-              <div className="mt-6 mb-4 flex flex-col justify-center gap-3 lg:flex-row">
-                <AppleDownloadButton />
-                <AndroidDownloadButton />
-              </div>
-            </motion.div>
-
-            {/* Carousel rendering: preserve exact item styles; phone mockup is injected via prop */}
-            <Carousel
-              className="h-[540px] md:h-[620px] lg:h-[600px] xl:h-[600px] 2xl:h-[700px]"
-              items={mobilePreview.map((mockup, index) => (
-                <motion.div
-                  key={index}
-                  className="relative flex flex-col items-center"
-                  variants={itemVariants}
-                >
-                  {/* Content */}
-                  <h3 className="w-[70%] -translate-y-8 text-lg font-semibold text-slate-800 dark:text-slate-200">
-                    {mockup.title}
-                  </h3>
-                </motion.div>
-              ))}
-              iphoneMockups={mobilePreview.map((mockup) => (
-                <motion.div
-                  key={(mockup as any).title}
-                  className="flex h-[80%] w-full items-end justify-center"
-                >
-                  <img src={mockup.src} className="h-full w-auto" />
-                </motion.div>
-              ))}
-            />
-          </motion.div>
-        </section>
+        <MobileAppPreviewCarousel
+          className="px-6"
+          title="Smarter couple budgeting with AI"
+          description="Moneko gives you and your partner a crystal-clear view of your money, so you can make smarter decisions as a team."
+        />
 
         {/* Features Section - Exact Uninbox style */}
         <section className="px-6 py-20">

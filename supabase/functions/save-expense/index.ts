@@ -23,6 +23,12 @@ import {
   assertAccountInScope,
   resolveDefaultAccountId,
 } from "../shared/accounts.ts";
+import {
+  buildHouseholdSplitRecords,
+  type CustomSplits,
+  fetchHouseholdAutoSplitSettings,
+  resolveEffectiveSplit,
+} from "../shared/household-auto-split.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -52,90 +58,6 @@ function errorResponse(message: string, status = 400, code?: string): Response {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     },
   );
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function normalizePercentage(value: unknown): number {
-  if (!isFiniteNumber(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 100) return 100;
-  return value;
-}
-
-function normalizeShares(value: unknown): number | undefined {
-  if (!isFiniteNumber(value)) return undefined;
-  const shares = Math.trunc(value);
-  // DB constraint: shares must be > 0 when present; treat <= 0 as excluded.
-  return shares > 0 ? shares : undefined;
-}
-
-function normalizeAmount(value: unknown): number {
-  if (!isFiniteNumber(value)) return 0;
-  return value < 0 ? 0 : value;
-}
-
-function allocateCentsByWeights(
-  totalCents: number,
-  weights: number[],
-): number[] {
-  const safeTotal = Number.isFinite(totalCents)
-    ? Math.max(0, Math.trunc(totalCents))
-    : 0;
-  const safeWeights = weights.map((w) => (Number.isFinite(w) && w > 0 ? w : 0));
-  const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0);
-
-  if (safeTotal === 0 || totalWeight <= 0 || safeWeights.length === 0) {
-    return safeWeights.map(() => 0);
-  }
-
-  const floors: number[] = [];
-  const fracs: { idx: number; frac: number }[] = [];
-  let sumFloors = 0;
-
-  for (let i = 0; i < safeWeights.length; i++) {
-    const weight = safeWeights[i];
-    if (weight <= 0) {
-      floors.push(0);
-      continue;
-    }
-    const raw = safeTotal * (weight / totalWeight);
-    const floored = Math.floor(raw);
-    const frac = raw - floored;
-    floors.push(floored);
-    sumFloors += floored;
-    fracs.push({ idx: i, frac });
-  }
-
-  let remainder = safeTotal - sumFloors;
-  if (remainder <= 0) return floors;
-
-  fracs.sort((a, b) => b.frac - a.frac);
-  if (fracs.length === 0) return floors;
-
-  let cursor = 0;
-  while (remainder > 0) {
-    const target = fracs[cursor % fracs.length].idx;
-    floors[target] += 1;
-    remainder -= 1;
-    cursor += 1;
-  }
-
-  return floors;
-}
-
-interface MemberSplit {
-  userId: string;
-  amount?: number; // For 'amount' type (in major units)
-  percentage?: number; // For 'percentage' type (0-100)
-  shares?: number; // For 'shares' type
-}
-
-interface CustomSplits {
-  splitType: "equal" | "amount" | "percentage" | "shares";
-  memberSplits: MemberSplit[];
 }
 
 interface RequestBody {
@@ -251,10 +173,9 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate =
-        body.recurrence_rule.end_date == null
-          ? undefined
-          : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate = body.recurrence_rule.end_date == null
+        ? undefined
+        : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -298,8 +219,8 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt && !sanitizedCategory) {
       return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
     }
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
+    const resolvedCategory = sanitizedCategory ??
+      normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -707,151 +628,93 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Determine split type and validate custom splits
-      const rawSplitType =
-        typeof body.customSplits?.splitType === "string"
-          ? body.customSplits.splitType.trim().toLowerCase()
-          : "equal";
-      const normalizedSplitType = [
-        "equal",
-        "amount",
-        "percentage",
-        "shares",
-      ].includes(rawSplitType)
-        ? rawSplitType
-        : "equal";
-      const hasMemberSplits =
-        Array.isArray(body.customSplits?.memberSplits) &&
-        body.customSplits!.memberSplits.length > 0;
-      const customSplits =
-        hasMemberSplits && normalizedSplitType !== "equal"
-          ? body.customSplits
-          : null;
-      const splitType = customSplits ? normalizedSplitType : "equal";
+      // Resolve effective split configuration from explicit payload + household defaults.
+      const autoSplitSettings = await fetchHouseholdAutoSplitSettings(
+        supabase,
+        body.householdId,
+      );
+      const effectiveSplit = resolveEffectiveSplit(
+        body.customSplits,
+        autoSplitSettings,
+      );
+      console.log("[save-expense] Auto-split decision:", {
+        householdId: body.householdId,
+        autoSplitEnabled: autoSplitSettings.autoSplitEnabled,
+        hasDefaultConfig: autoSplitSettings.defaultConfig != null,
+        hasRequestCustomSplits: body.customSplits != null,
+        decision: effectiveSplit.kind,
+      });
 
-      // Validate custom splits if provided
-      if (customSplits) {
-        console.log("[save-expense] Processing custom splits:", splitType);
+      if (effectiveSplit.kind === "skip") {
+        console.log(
+          "[save-expense] Auto-split disabled for household; logging expense without split group",
+        );
 
-        // Normalize member split values so downstream validations and inserts
-        // don't violate DB constraints (e.g., shares cannot be 0).
-        const normalizedMemberSplits: MemberSplit[] =
-          customSplits.memberSplits.map((split) => ({
-            userId: split.userId,
-            amount: normalizeAmount(split.amount),
-            percentage: normalizePercentage(split.percentage),
-            shares: normalizeShares(split.shares),
-          }));
-
-        // Validate all members are included
-        const customUserIds = normalizedMemberSplits
-          .map((s) => s.userId)
-          .sort();
-        const allUserIds = members.map((m) => m.user_id).sort();
-
-        if (JSON.stringify(customUserIds) !== JSON.stringify(allUserIds)) {
+        // Still notify the household so members see the activity, even though
+        // we're intentionally not creating split records.
+        const { error: notifyError } = await supabase.rpc(
+          "notify_household_members_expense",
+          {
+            p_household_id: body.householdId,
+            p_expense_id: expense.id,
+            p_actor_user_id: userId,
+            p_event_type: "expense_added",
+            p_expense_data: {
+              actor_name: actorName,
+              amount_cents: amountCents,
+              currency: currency,
+              category: expense.category ?? effectiveCategory,
+              note: body.description || "",
+              is_recurring: body.isRecurring === true,
+            },
+          },
+        );
+        if (notifyError) {
           console.error(
-            "[save-expense] Custom splits do not match household members",
-          );
-          return errorResponse(
-            "Custom splits must include all household members",
-            400,
+            "[save-expense] Error creating notifications (auto-split skipped):",
+            notifyError,
           );
         }
 
-        // Validate based on split type
-        if (splitType === "amount") {
-          const totalSplitCents = normalizedMemberSplits.reduce(
-            (sum, s) => sum + Math.round((s.amount || 0) * 100),
-            0,
-          );
-          if (Math.abs(totalSplitCents - amountCents) > 1) {
-            // Allow 1 cent rounding difference
-            console.error(
-              "[save-expense] Amount splits do not equal total:",
-              totalSplitCents,
-              "vs",
-              amountCents,
-            );
-            return new Response(
-              JSON.stringify({
-                success: false,
-                error: `Amount splits must equal total expense amount (${body.amount})`,
-                code: "VALIDATION_ERROR",
-              }),
-              {
-                status: 400,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-          }
-        } else if (splitType === "percentage") {
-          const totalPercent = normalizedMemberSplits.reduce(
-            (sum, s) => sum + (s.percentage || 0),
-            0,
-          );
-          if (Math.abs(totalPercent - 100) > 0.01) {
-            // Allow 0.01% rounding difference
-            console.error(
-              "[save-expense] Percentage splits do not equal 100%:",
-              totalPercent,
-            );
-            return errorResponse(
-              `Percentage splits (${totalPercent}%) must equal 100%`,
-              400,
-            );
-          }
-        } else if (splitType === "shares") {
-          const totalShares = normalizedMemberSplits.reduce(
-            (sum, s) => sum + (s.shares || 0),
-            0,
-          );
-          if (totalShares <= 0) {
-            console.error(
-              "[save-expense] Invalid shares: total shares must be > 0",
-            );
-            return errorResponse(
-              "At least one member must have a share greater than 0",
-              400,
-            );
-          }
-        }
-
-        // Use normalized splits for all downstream logic.
-        customSplits.memberSplits = normalizedMemberSplits;
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: expense,
+            shared: true,
+            splitSkipped: true,
+            resolvedUserId: userId,
+            meta: resolvedUserMetadata,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
-      // Resolve payer for split group: default current user unless explicit payerUserId provided and valid
-      let payerUserId = sanitizeUuid(body.payerUserId ?? null) || userId;
-      if (payerUserId && body.householdId) {
-        const { data: validPayer } = await supabase
-          .from("household_members")
-          .select("user_id")
-          .eq("household_id", body.householdId)
-          .eq("user_id", payerUserId)
-          .maybeSingle();
-        if (!validPayer) {
-          console.warn(
-            "[save-expense] Provided payerUserId is not a member of the household; falling back to current user",
-            { payerUserId },
-          );
-          payerUserId = userId;
-        }
+      const buildResult = buildHouseholdSplitRecords({
+        householdId: body.householdId,
+        transactionId: expense.id,
+        payerUserId: sanitizeUuid(body.payerUserId ?? null) || userId,
+        amountCents,
+        currency,
+        description: body.description || null,
+        members,
+        customSplits: effectiveSplit.customSplits,
+      });
+      if (!buildResult.ok) {
+        console.error("[save-expense] Invalid household split payload:", {
+          code: buildResult.code,
+          error: buildResult.error,
+        });
+        return errorResponse(buildResult.error, 400);
       }
+      const splitType = buildResult.group.split_type;
 
       // Create expense split group
       const { data: splitGroup, error: splitGroupError } = await supabase
         .from("expense_split_groups")
-        .insert({
-          household_id: body.householdId,
-          expense_id: expense.id,
-          payer_user_id: payerUserId,
-          split_type: splitType,
-          currency: currency,
-          total_amount_cents: amountCents,
-          description: body.description || null,
-          created_at: new Date().toISOString(),
-        })
+        .insert(buildResult.group)
         .select()
         .single();
 
@@ -882,109 +745,9 @@ Deno.serve(async (req: Request) => {
         splitType,
       );
 
-      // Create split lines based on split type
-      let splitLines: any[];
-
-      if (splitType === "equal") {
-        // Equal split: divide amount equally
-        const amountPerMember = Math.floor(amountCents / members.length);
-        const remainder = amountCents - amountPerMember * members.length;
-        splitLines = members.map((member, index) => ({
-          split_group_id: splitGroup.id,
-          user_id: member.user_id,
-          amount_cents: amountPerMember + (index == 0 ? remainder : 0),
-          is_settled: false,
-          settled_at: null,
-          created_at: new Date().toISOString(),
-        }));
-      } else if (splitType === "amount" && customSplits) {
-        // Custom amount split
-        const cents = customSplits.memberSplits.map((split) =>
-          Math.max(0, Math.round((split.amount || 0) * 100)),
-        );
-        const sumCents = cents.reduce((sum, v) => sum + v, 0);
-        const diff = amountCents - sumCents;
-        if (diff !== 0 && cents.length > 0) {
-          cents[cents.length - 1] = Math.max(0, cents[cents.length - 1] + diff);
-        }
-        splitLines = customSplits.memberSplits.map((split, index) => ({
-          split_group_id: splitGroup.id,
-          user_id: split.userId,
-          amount_cents: cents[index] ?? 0,
-          is_settled: false,
-          settled_at: null,
-          created_at: new Date().toISOString(),
-        }));
-      } else if (splitType === "percentage" && customSplits) {
-        // Percentage split: calculate amount from percentage with remainder-safe allocation
-        const weights = customSplits.memberSplits.map(
-          (split) => split.percentage || 0,
-        );
-        const allocatedCents = allocateCentsByWeights(amountCents, weights);
-        splitLines = customSplits.memberSplits.map((split, index) => ({
-          split_group_id: splitGroup.id,
-          user_id: split.userId,
-          amount_cents: allocatedCents[index] ?? 0,
-          percentage: split.percentage,
-          is_settled: false,
-          settled_at: null,
-          created_at: new Date().toISOString(),
-        }));
-      } else if (splitType === "shares" && customSplits) {
-        // Shares split: calculate amount from shares with remainder-safe allocation.
-        const totalShares = customSplits.memberSplits.reduce(
-          (sum, s) => sum + (s.shares || 0),
-          0,
-        );
-        if (totalShares <= 0) {
-          console.error(
-            "[save-expense] Cannot create split lines: total shares is 0",
-          );
-          return new Response(
-            JSON.stringify({
-              success: true,
-              data: expense,
-              warning:
-                "Expense saved but split lines creation failed due to invalid shares",
-              resolvedUserId: userId,
-              meta: resolvedUserMetadata,
-            }),
-            {
-              status: 200,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
-        }
-        const weights = customSplits.memberSplits.map(
-          (split) => split.shares || 0,
-        );
-        const allocatedCents = allocateCentsByWeights(amountCents, weights);
-        splitLines = customSplits.memberSplits.map((split, index) => ({
-          split_group_id: splitGroup.id,
-          user_id: split.userId,
-          amount_cents: allocatedCents[index] ?? 0,
-          shares: split.shares ?? null,
-          is_settled: false,
-          settled_at: null,
-          created_at: new Date().toISOString(),
-        }));
-      } else {
-        // Fallback to equal split
-        const amountPerMember = Math.floor(amountCents / members.length);
-        const remainder = amountCents - amountPerMember * members.length;
-        splitLines = members.map((member, index) => ({
-          split_group_id: splitGroup.id,
-          user_id: member.user_id,
-          amount_cents: amountPerMember + (index == 0 ? remainder : 0),
-          is_settled: false,
-          settled_at: null,
-          created_at: new Date().toISOString(),
-        }));
-      }
-
       const { error: splitLinesError } = await supabase
         .from("expense_split_lines")
-        .insert(splitLines);
+        .insert(buildResult.lines);
 
       if (splitLinesError) {
         console.error(

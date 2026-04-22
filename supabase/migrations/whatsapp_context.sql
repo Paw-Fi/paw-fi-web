@@ -11,6 +11,7 @@ returns table (
   preferred_timezone text,
   subscription_plan text,
   subscription_status text,
+  subscription_current_period_end timestamptz,
   households jsonb,
   chat_session_id uuid
 )
@@ -58,6 +59,7 @@ begin
     coalesce(c.preferred_timezone, 'UTC')::text as preferred_timezone,
     s.plan::text as subscription_plan,
     s.status::text as subscription_status,
+    s.current_period_end as subscription_current_period_end,
     coalesce(h.households, '[]'::jsonb) as households,
     lc.id as chat_session_id
   from contact_row c

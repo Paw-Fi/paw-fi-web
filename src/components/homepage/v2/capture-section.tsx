@@ -38,13 +38,13 @@ export function CaptureSection() {
           <div className="space-y-8 lg:col-span-5">
             <div>
               <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
-                Capture Anything. <br />
-                <span className="text-primary">Instantly.</span>
+                Capture expenses in chat. <br />
+                <span className="text-primary">Review before saving.</span>
               </h2>
               <p className="text-muted-foreground text-lg leading-relaxed">
-                Moneko lives where you chat. No clunky forms to fill out. Just
-                send a message, voice note, or photo on WhatsApp, and our AI
-                handles the rest.
+                Moneko lives where you already talk about money. Send a message,
+                voice note, or receipt photo on WhatsApp, then confirm the
+                amount, merchant, and category before it updates your budget.
               </p>
             </div>
 
@@ -53,22 +53,22 @@ export function CaptureSection() {
                 active={activeTab === "text"}
                 onClick={() => setActiveTab("text")}
                 icon={Type}
-                title="Text It"
-                description="Just type 'Lunch $15'. We categorize it automatically."
+                title="Text an expense"
+                description="Type 'Lunch $15' and Moneko suggests the category."
               />
               <FeatureRow
                 active={activeTab === "voice"}
                 onClick={() => setActiveTab("voice")}
                 icon={Mic}
-                title="Say It"
-                description="On the go? Send a voice note. We transcribe and log it."
+                title="Send a voice note"
+                description="On the go? Moneko transcribes the note and prepares the entry."
               />
               <FeatureRow
                 active={activeTab === "camera"}
                 onClick={() => setActiveTab("camera")}
                 icon={Camera}
-                title="Snap It"
-                description="Take a photo of a receipt. We extract every detail."
+                title="Scan a receipt"
+                description="Take a receipt photo and review the extracted details."
               />
             </div>
           </div>

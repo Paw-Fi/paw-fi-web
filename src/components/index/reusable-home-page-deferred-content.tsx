@@ -23,6 +23,7 @@ import {
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { FaqSection } from "@/components/ui/faq-section";
+import { MobileAppPreviewCarousel } from "@/components/shared/mobile-app-preview-carousel";
 import faqData from "@/data/home/home-faq.json";
 import type { HomePageVariant } from "@/components/index/reusable-home-page";
 
@@ -328,9 +329,8 @@ export function ReusableHomePageDeferredContent({
                       24/7 Moneko AI Finance Coach
                     </CardTitle>
                     <CardDescription className="text-muted-foreground feature-summary text-sm leading-relaxed sm:text-base">
-                      Get instant, personalized advice on budgeting, investing,
-                      goal tracking, and wealth building from Moneko's expert AI
-                      built from vetted financial principles.
+                      Ask budget questions, review spending patterns, and get
+                      practical next steps from Moneko's AI finance coach.
                     </CardDescription>
                   </div>
                 </CardContent>
@@ -468,6 +468,13 @@ export function ReusableHomePageDeferredContent({
           </div>
         </div>
       </section>
+
+      <div className="bg-muted/30 relative z-10">
+        <MobileAppPreviewCarousel
+          title="Use Moneko while you build your money plan"
+          description="Move from reading about passive income to tracking the spending, goals, and decisions that make the plan real."
+        />
+      </div>
 
       <div className="bg-muted/30 relative z-10">
         <FaqSection faqData={faqData} />
@@ -616,7 +623,7 @@ export function ReusableHomePageDeferredContent({
 
           <div className="border-border mt-12 flex flex-col border-t pt-6 sm:mt-14 sm:pt-8 md:mt-16 md:flex-row md:items-center md:justify-between">
             <p className="text-muted-foreground mb-3 text-xs sm:mb-4 sm:text-sm md:mb-0">
-              © 2025 Moneko. All rights reserved.
+              © 2026 Moneko. All rights reserved.
             </p>
 
             <div className="flex space-x-4 sm:space-x-6">

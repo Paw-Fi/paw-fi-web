@@ -212,8 +212,6 @@ const HouseholdOrbitVisual = () => {
   return (
     <div className="relative h-full min-h-full w-full overflow-hidden bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/30 dark:to-amber-950/30">
       <div className="absolute inset-0 top-12 flex scale-110 items-center justify-center">
-   
-
         {motionSpeed > 0 && (
           <>
             {/* Inner Ring: People (Real Photos) */}
@@ -416,7 +414,7 @@ const features = [
     Icon: Zap,
     name: "WhatsApp Assistant",
     description:
-      "Update expenses via text, voice, image, PDF, or Excel. No app needed.",
+      "Log expenses from WhatsApp with text, voice notes, receipt photos, PDFs, or spreadsheets.",
     href: "/features/whatsapp-assistant",
     cta: "Chat on WhatsApp",
     className:
@@ -427,7 +425,7 @@ const features = [
     Icon: Wallet,
     name: "Pockets System",
     description:
-      "Envelope budgeting designed for modern life. Give every dollar a job.",
+      "Use envelope-style Pockets to plan spending before money leaves your account.",
     href: "/features/pockets-system",
     cta: "Learn about pockets",
     className: "col-span-1 lg:col-span-1 min-h-[300px] lg:min-h-[200px]",
@@ -437,7 +435,7 @@ const features = [
     Icon: Users,
     name: "Household Mode",
     description:
-      "Manage joint finances without the headache. Switch between personal and shared views.",
+      "Separate personal spending from shared bills, rent, groceries, and partner reimbursements.",
     href: "/features/household-mode",
     cta: "Explore households",
     className: "col-span-1 lg:col-span-1 min-h-[300px] lg:min-h-[200px]",
@@ -447,7 +445,7 @@ const features = [
     Icon: BrainCircuit,
     name: "AI Insights",
     description:
-      'Ask "Can I buy X by Y date?" and get instant, data-backed answers.',
+      'Ask "Can I buy this?" and get answers based on your budget, pockets, and goals.',
     href: "/features/ai-insights",
     cta: "Ask Moneko",
     className: "col-span-1 lg:col-span-2 min-h-[400px] lg:min-h-[250px]",
@@ -461,11 +459,11 @@ export function FeaturesSection() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="mb-12 text-center">
           <h2 className="text-foreground mb-4 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-            Everything you need to master your money
+            Budget daily spending and shared money with AI
           </h2>
           <p className="text-muted-foreground mx-auto max-w-[800px] text-lg">
-            Moneko combines powerful financial tools with the simplicity of a
-            chat app.
+            Moneko combines chat-based expense capture, envelope budgeting, and
+            household workflows in one personal finance app.
           </p>
         </div>
         <BentoGrid className="mx-auto max-w-5xl auto-rows-auto lg:auto-rows-[20rem]">

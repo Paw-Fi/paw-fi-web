@@ -16,6 +16,11 @@ const UserCommunityShowcase = lazy(() =>
     default: module.UserCommunityShowcase,
   })),
 );
+const MobileAppPreviewCarousel = lazy(() =>
+  import("@/components/shared/mobile-app-preview-carousel").then((module) => ({
+    default: module.MobileAppPreviewCarousel,
+  })),
+);
 const CaptureSection = lazy(() =>
   import("@/components/homepage/v2/capture-section").then((module) => ({
     default: module.CaptureSection,
@@ -25,6 +30,13 @@ const FeaturesSection = lazy(() =>
   import("@/components/homepage/v2/features-section").then((module) => ({
     default: module.FeaturesSection,
   })),
+);
+const ProductOverviewSection = lazy(() =>
+  import("@/components/homepage/v2/product-overview-section").then(
+    (module) => ({
+      default: module.ProductOverviewSection,
+    }),
+  ),
 );
 const HowItWorksSection = lazy(() =>
   import("@/components/homepage/v2/how-it-works-section").then((module) => ({
@@ -65,8 +77,16 @@ export function HomePageRouteComponent() {
         {/* Hero Section */}
         <HeroV2 />
 
-        {/* Social Proof / Trust (Optional separator or keep it clean) */}
-
+ <Suspense
+          fallback={
+            <div className={`${deferredSectionFallback} min-h-[32rem]`} />
+          }
+        >
+          <MobileAppPreviewCarousel
+            title="A smarter way to track every expense"
+            description="Add expenses by chat, follow your spending in real time, and get a clearer view of where your money goes—without the friction of traditional budgeting apps."
+          />
+        </Suspense>
         {/* Core Features Bento Grid (Pockets, Households, Insights) */}
         <Suspense
           fallback={
@@ -75,6 +95,16 @@ export function HomePageRouteComponent() {
         >
           <FeaturesSection />
         </Suspense>
+
+        <Suspense
+          fallback={
+            <div className={`${deferredSectionFallback} min-h-[42rem]`} />
+          }
+        >
+          <ProductOverviewSection />
+        </Suspense>
+
+       
 
         {/* Social Proof: User Reviews & Ratings */}
         <Suspense

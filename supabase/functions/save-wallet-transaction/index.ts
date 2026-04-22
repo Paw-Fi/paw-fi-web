@@ -35,6 +35,7 @@ import {
   resolveCategory,
 } from "../shared/category-resolution.ts";
 import { normalizeCategoryForStorage } from "../shared/category-colors.ts";
+import { assertAccountInScope } from "../shared/accounts.ts";
 import {
   buildWalletCaptureIdempotencyKey,
   getLocalYyyyMmDdInTimeZone,
@@ -114,6 +115,7 @@ interface RequestBody {
   userId?: string | null;
   householdId?: string | null;
   isPortfolio?: boolean;
+  accountId?: string | null;
   idempotencyKey?: string | null;
   clientCreatedAt?: string | null;
   transaction: TransactionPayload;
@@ -1654,6 +1656,7 @@ Deno.serve(async (req: Request) => {
     const amountCents = Math.round(tx.amount * 100);
     const isPortfolio = body.isPortfolio === true;
     const householdId = sanitizeUuid(body.householdId);
+    const requestedAccountId = sanitizeUuid(body.accountId);
     const description = buildDescription(tx);
     const transactionType =
       typeof tx.type === "string" && tx.type.trim().toLowerCase() === "income"
@@ -1710,6 +1713,27 @@ Deno.serve(async (req: Request) => {
           return errorResponse("No active household members", 400);
         }
         throw error;
+      }
+    }
+
+    let accountId: string | null = null;
+    if (requestedAccountId) {
+      const isAccountInScope = await assertAccountInScope(
+        supabase,
+        requestedAccountId,
+        { userId, householdId },
+      );
+      if (isAccountInScope) {
+        accountId = requestedAccountId;
+      } else {
+        console.warn(
+          "[save-wallet-transaction] Ignoring out-of-scope accountId",
+          {
+            requestedAccountId,
+            userId,
+            householdId,
+          },
+        );
       }
     }
 
@@ -1841,6 +1865,7 @@ Deno.serve(async (req: Request) => {
       date: normalizedDate,
       householdId,
       isPortfolio,
+      accountId,
       preferredTimezone,
       usedProvidedDate: Boolean(normalizedProvidedDate),
       usedClientCreatedAtDate: !normalizedProvidedDate &&
@@ -1947,6 +1972,7 @@ Deno.serve(async (req: Request) => {
         is_recurring: false,
         recurrence_rule: null,
         household_id: householdId,
+        account_id: accountId,
         wallet_capture_idempotency_key: requestIdempotencyKey,
       })
       .select()

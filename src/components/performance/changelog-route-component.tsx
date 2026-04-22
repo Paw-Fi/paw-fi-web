@@ -20,6 +20,23 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Email Capture, Export Date Range & Category Insights",
+    date: "2026-04-22",
+    version: "1.5.8",
+    tags: ["Feature", "Import", "Export", "Analytics", "Wallet"],
+    description:
+      "This release introduces email receipt capture for effortless transaction logging, date range exports for better reporting, and includes wallet improvements.",
+    items: [
+      "Email capture feature to import transactions from email receipts automatically",
+      "New category details page with spending metrics and insights",
+      "Export transactions with a custom date range for easier reporting",
+      "Merchant field now included in files import and export",
+      "Custom split configuration for each shared space - decide default split percentage",
+      "Improved wallet synchronization settings",
+      "General stability and performance improvements",
+    ],
+  },
+  {
     title: "Merchant field, CSV Import Upgrades & Performance",
     date: "2026-04-17",
     version: "1.5.7",

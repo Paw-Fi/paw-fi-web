@@ -337,36 +337,23 @@ function BlogDetailPage() {
 
         {/* FAQ Schema for Common Financial Questions */}
         <StructuredData
-          type="faqpage"
-          data={{
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: `What is ${blog.title.toLowerCase().replace(/[?]/g, "")}?`,
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: blog.excerpt,
-                },
-              },
-              {
-                "@type": "Question",
-                name: "How can Moneko help with financial planning?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Moneko provides AI-powered financial education, interactive calculators, and personalized guidance to help you achieve your financial goals through expert-validated content and tools.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "Is this financial advice suitable for beginners?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Yes, all Moneko content is designed to be accessible for beginners while providing valuable insights for more experienced investors. Our expert authors break down complex topics into easy-to-understand concepts.",
-                },
-              },
-            ],
-          }}
+          type="faq"
+          data={[
+            {
+              question: `What is ${blog.title.toLowerCase().replace(/[?]/g, "")}?`,
+              answer: blog.excerpt,
+            },
+            {
+              question: "How can Moneko help with financial planning?",
+              answer:
+                "Moneko provides AI-powered financial education, interactive calculators, and personalized guidance to help you achieve your financial goals through expert-validated content and tools.",
+            },
+            {
+              question: "Is this financial advice suitable for beginners?",
+              answer:
+                "Yes, all Moneko content is designed to be accessible for beginners while providing valuable insights for more experienced investors. Our expert authors break down complex topics into easy-to-understand concepts.",
+            },
+          ]}
         />
 
         {/* HowTo Schema for Financial Guides */}
