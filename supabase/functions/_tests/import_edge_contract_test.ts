@@ -84,6 +84,28 @@ Deno.test(
 );
 
 Deno.test(
+  "import contract: forwarded inbound email body is not sent as attachment analysis text",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    const analyzeBodyStart = source.indexOf(
+      "const analyzeBody: AnalyzeRequestBody",
+    );
+    const analyzeBodyEnd = source.indexOf(
+      "const result = await runAnalyzeExpense",
+      analyzeBodyStart,
+    );
+    const analyzeBodySource = source.slice(analyzeBodyStart, analyzeBodyEnd);
+
+    assertStringIncludes(analyzeBodySource, "attachments:");
+    assertEquals(analyzeBodySource.includes("emailContent?.text"), false);
+    assertEquals(analyzeBodySource.includes("emailContent.text"), false);
+  },
+);
+
+Deno.test(
   "import contract: inbound follow-up email caps long transaction lists",
   async () => {
     const source = await Deno.readTextFile(
@@ -107,5 +129,27 @@ Deno.test(
     assertStringIncludes(transactionLinesSource, "transactions.length > 30");
     assertStringIncludes(transactionLinesSource, "<li>...</li>");
     assertEquals(transactionLinesSource.includes(".slice(0, 20)"), false);
+  },
+);
+
+Deno.test(
+  "import contract: inbound follow-up email explains attachment retention",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    const followupStart = source.indexOf("function buildFollowupEmail");
+    const followupEnd = source.indexOf("async function getFcmAccessToken");
+    const followupSource = source.slice(followupStart, followupEnd);
+
+    assertStringIncludes(
+      followupSource,
+      "Moneko does not store forwarded attachments on our servers.",
+    );
+    assertStringIncludes(
+      followupSource,
+      "We download them temporarily only to extract transactions.",
+    );
   },
 );
