@@ -75,6 +75,7 @@ export class PlaidError extends Error {
     public code?: string,
     public type?: string,
     public details?: unknown,
+    public requestId?: string,
   ) {
     super(message);
     this.name = "PlaidError";
@@ -103,6 +104,7 @@ async function plaidRequest<T>(
       payload?.error_code,
       payload?.error_type,
       payload,
+      payload?.request_id,
     );
   }
   return payload as T;
@@ -116,11 +118,15 @@ export interface CreateLinkTokenParams {
   countryCodes?: string[];
   transactionsDaysRequested?: number;
   platform?: "android" | "ios" | string;
+  update?: {
+    accountSelectionEnabled?: boolean;
+  };
 }
 
 export interface CreateLinkTokenResponse {
   link_token: string;
   expiration: string;
+  request_id?: string;
 }
 
 export async function createPlaidLinkToken(
@@ -156,6 +162,9 @@ export async function createPlaidLinkToken(
     request.link_customization_name = config.linkCustomizationName;
   }
   if (params.accessToken) request.access_token = params.accessToken;
+  if (params.update?.accountSelectionEnabled) {
+    request.update = { account_selection_enabled: true };
+  }
   const transactionsDaysRequested = normalizeTransactionsDaysRequested(
     params.transactionsDaysRequested,
   );
@@ -184,6 +193,7 @@ function normalizeTransactionsDaysRequested(
 export interface ExchangePublicTokenResponse {
   access_token: string;
   item_id: string;
+  request_id?: string;
 }
 
 export async function exchangePublicToken(
@@ -213,6 +223,7 @@ export interface PlaidAccount {
 
 interface AccountsGetResponse {
   accounts: PlaidAccount[];
+  request_id?: string;
 }
 
 export async function getPlaidAccounts(
@@ -258,6 +269,7 @@ interface PlaidSyncResponse {
   removed: { transaction_id: string }[];
   has_more: boolean;
   next_cursor: string;
+  request_id?: string;
 }
 
 interface PlaidTransactionsRefreshResponse {
@@ -276,6 +288,7 @@ export async function syncPlaidTransactions(
   return plaidRequest<PlaidSyncResponse>("/transactions/sync", {
     access_token: accessToken,
     cursor: cursor || undefined,
+    count: 500,
     options: { include_personal_finance_category: true },
   });
 }

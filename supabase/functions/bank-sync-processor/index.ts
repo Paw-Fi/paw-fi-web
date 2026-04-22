@@ -14,6 +14,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const INTERNAL_FUNCTION_KEY = Deno.env.get(
   "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
 );
+const RESOLVED_INTERNAL_FUNCTION_KEY = INTERNAL_FUNCTION_KEY ||
+  resolveInternalFunctionKey();
 const AUTO_BANK_SYNC_ENABLED =
   Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() === "true";
 
@@ -281,7 +283,9 @@ async function processTinkJob(
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
-  const internalHeaders = buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY);
+  const internalHeaders = buildInternalInvokeHeaders(
+    RESOLVED_INTERNAL_FUNCTION_KEY,
+  );
 
   const payload = job.payload as Record<string, unknown> | null;
   const event = payload?.event as string | undefined;
@@ -341,7 +345,10 @@ async function processPlaidJob(
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
-  const internalHeaders = buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY);
+  const internalHeaders = buildInternalInvokeHeaders(
+    RESOLVED_INTERNAL_FUNCTION_KEY,
+  );
+  const jobPayload = (job.payload || {}) as Record<string, unknown>;
 
   // Call plaid-sync-transactions
   console.log(`[bank-sync-processor] Triggering Plaid sync for job ${job.id}`);
@@ -355,6 +362,8 @@ async function processPlaidJob(
       },
       body: JSON.stringify({
         connectionId: connection.id,
+        cursorOverride: jobPayload.cursorOverride,
+        targetHouseholdId: jobPayload.targetHouseholdId,
       }),
     },
   );
@@ -368,29 +377,30 @@ async function processPlaidJob(
     throw new Error(`Plaid sync failed: ${response.status} ${errorText}`);
   }
 
-  const payload = await response.json().catch(() => null) as
-    | {
-      status?: string;
-      connections?: { connectionId: string; status: string; error?: string }[];
-    }
-    | null;
+  const syncPayload = (await response.json().catch(() => null)) as {
+    status?: string;
+    connections?: { connectionId: string; status: string; error?: string }[];
+  } | null;
 
   console.log(
     "[bank-sync-processor] Plaid sync response payload",
     JSON.stringify({
       jobId: job.id,
       connectionId: connection.id,
-      payload,
+      payload: syncPayload,
     }),
   );
 
-  if (payload?.status === "partial_error" || payload?.connections?.some((item) => item.status !== "succeeded")) {
-    const failedConnection = payload?.connections?.find((item) =>
-      item.connectionId === connection.id && item.status !== "succeeded"
+  if (
+    syncPayload?.status === "partial_error" ||
+    syncPayload?.connections?.some((item) => item.status !== "succeeded")
+  ) {
+    const failedConnection = syncPayload?.connections?.find(
+      (item) =>
+        item.connectionId === connection.id && item.status !== "succeeded",
     );
     throw new Error(
-      failedConnection?.error ||
-        "Plaid sync completed with an error summary",
+      failedConnection?.error || "Plaid sync completed with an error summary",
     );
   }
 }

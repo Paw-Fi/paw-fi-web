@@ -10,6 +10,10 @@ import {
   getPlaidConfig,
   PLAID_PROVIDER,
 } from "../shared/plaid-client.ts";
+import {
+  PLAID_NEW_ACCOUNTS_RELINK_STATE,
+  shouldEnablePlaidAccountSelection,
+} from "../shared/plaid-update-mode.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -25,6 +29,7 @@ interface CreateLinkTokenRequest {
   countryCode?: string;
   platform?: string;
   institutionId?: string;
+  updateReason?: string;
   mode?: "new" | "update" | "reconnect" | "duplicate_blocked";
 }
 
@@ -84,23 +89,26 @@ Deno.serve(async (req) => {
     let accessToken: string | undefined;
     let connectionCountryCode: string | undefined;
     let resolvedConnectionId = body.connectionId?.trim() || undefined;
-    let modeUsed = body.mode ?? (resolvedConnectionId != null ? "update" : "new");
+    let modeUsed = body.mode ??
+      (resolvedConnectionId != null ? "update" : "new");
+    let relinkState = body.updateReason?.trim() || undefined;
 
     const requestedInstitutionId = body.institutionId?.trim();
     if (!resolvedConnectionId && (requestedInstitutionId?.length ?? 0) > 0) {
-      const { data: duplicateConnection, error: duplicateError } = await supabase
-        .from("bank_connections")
-        .select(
-          "id, user_id, provider, status, country_code, access_token_encrypted, plaid_access_token_encrypted",
-        )
-        .eq("user_id", authResult.userId)
-        .eq("provider", PLAID_PROVIDER)
-        .eq("metadata->>institution_id", requestedInstitutionId!)
-        .is("removed_at", null)
-        .in("status", ["active", "needs_reauth"])
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: duplicateConnection, error: duplicateError } =
+        await supabase
+          .from("bank_connections")
+          .select(
+            "id, user_id, provider, status, relink_state, country_code, access_token_encrypted, plaid_access_token_encrypted",
+          )
+          .eq("user_id", authResult.userId)
+          .eq("provider", PLAID_PROVIDER)
+          .eq("metadata->>institution_id", requestedInstitutionId!)
+          .is("removed_at", null)
+          .in("status", ["active", "needs_reauth"])
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
       if (duplicateError) {
         throw duplicateError;
@@ -108,6 +116,7 @@ Deno.serve(async (req) => {
 
       if (duplicateConnection?.id) {
         resolvedConnectionId = duplicateConnection.id;
+        relinkState = duplicateConnection.relink_state?.trim() || relinkState;
         modeUsed = duplicateConnection.status === "needs_reauth"
           ? "reconnect"
           : "update";
@@ -131,7 +140,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({
             error:
-                "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
+              "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
           }),
           {
             status: 403,
@@ -145,7 +154,7 @@ Deno.serve(async (req) => {
       const { data: connection, error: connectionError } = await supabase
         .from("bank_connections")
         .select(
-          "id, user_id, provider, country_code, access_token_encrypted, plaid_access_token_encrypted",
+          "id, user_id, provider, country_code, relink_state, access_token_encrypted, plaid_access_token_encrypted",
         )
         .eq("id", resolvedConnectionId)
         .eq("provider", PLAID_PROVIDER)
@@ -180,18 +189,23 @@ Deno.serve(async (req) => {
 
       connectionCountryCode = connection.country_code?.trim().toUpperCase() ||
         undefined;
+      relinkState = connection.relink_state?.trim() || relinkState;
     }
 
     const products = derivePlaidLinkProducts(getPlaidConfig().products, {
       isConvertedPaidUser: accessState.isConvertedPaidUser,
       enableRecurringTransactionsProduct:
         Deno.env.get("PLAID_ENABLE_RECURRING_FOR_PAID")?.toLowerCase() ===
-            "true",
+          "true",
     });
 
     const countryCode = resolvePlaidCountryCode({
       requestedCountryCode: body.countryCode,
       connectionCountryCode,
+    });
+    const accountSelectionEnabled = shouldEnablePlaidAccountSelection({
+      countryCode,
+      relinkState,
     });
 
     const response = await createPlaidLinkToken({
@@ -201,6 +215,9 @@ Deno.serve(async (req) => {
       transactionsDaysRequested: body.transactionsDaysRequested,
       countryCodes: countryCode ? [countryCode] : undefined,
       platform: body.platform,
+      update: {
+        accountSelectionEnabled,
+      },
     });
 
     return new Response(
@@ -208,7 +225,9 @@ Deno.serve(async (req) => {
         success: true,
         linkToken: response.link_token,
         expiration: response.expiration,
+        requestId: response.request_id || null,
         connectionId: resolvedConnectionId,
+        updateReason: relinkState || null,
         modeUsed,
       }),
       {

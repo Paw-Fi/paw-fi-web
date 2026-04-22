@@ -14,6 +14,10 @@ import {
 } from "../shared/plaid-client.ts";
 import { readPlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
 import {
+  PLAID_NEW_ACCOUNTS_RELINK_STATE,
+  PLAID_REQUIRED_RELINK_STATE,
+} from "../shared/plaid-update-mode.ts";
+import {
   type ExpensePreview,
   loadLinkedWalletsForBankAccounts,
   persistPlaidTransactions,
@@ -146,7 +150,7 @@ Deno.serve(async (req) => {
     let connectionsQuery = supabase
       .from("bank_connections")
       .select(
-        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, cursor_generation, status, last_successful_sync_at",
+        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, cursor_generation, status, item_status, item_health_state, relink_state, last_successful_sync_at",
       )
       .eq("user_id", authResult.userId)
       .eq("provider", PLAID_PROVIDER)
@@ -495,9 +499,37 @@ async function syncConnection(params: {
       },
     );
     let hasMore = true;
+    const originalCursor = cursor;
+    let paginationRestartCount = 0;
 
     while (hasMore) {
-      const response = await syncPlaidTransactions(accessToken, cursor);
+      let response;
+      try {
+        response = await syncPlaidTransactions(accessToken, cursor);
+      } catch (error) {
+        if (
+          error instanceof PlaidError &&
+          error.code === "TRANSACTIONS_SYNC_MUTATION_DURING_PAGINATION" &&
+          paginationRestartCount < 2
+        ) {
+          paginationRestartCount += 1;
+          cursor = originalCursor;
+          hasMore = true;
+          console.warn(
+            "[plaid-sync] Restarting paginated Plaid sync from original cursor",
+            JSON.stringify({
+              connectionId: params.connection.id,
+              originalCursor: originalCursor ?? null,
+              requestId: error.requestId || null,
+              restartCount: paginationRestartCount,
+            }),
+          );
+          continue;
+        }
+
+        throw error;
+      }
+
       const combined: PlaidTransaction[] = [
         ...response.added,
         ...response.modified,
@@ -588,9 +620,16 @@ async function syncConnection(params: {
         last_successful_sync_at: new Date().toISOString(),
         last_synced_at: new Date().toISOString(),
         status: "active",
-        item_status: "active",
+        item_status: params.connection.item_status === "pending_relink"
+          ? "active"
+          : (params.connection.item_status ?? "active"),
         item_health_state: "healthy",
-        relink_state: null,
+        relink_state:
+          params.connection.relink_state === PLAID_REQUIRED_RELINK_STATE
+            ? null
+            : params.connection.relink_state === PLAID_NEW_ACCOUNTS_RELINK_STATE
+            ? PLAID_NEW_ACCOUNTS_RELINK_STATE
+            : null,
         error_code: null,
         error_message: null,
       })
@@ -713,6 +752,7 @@ async function syncConnection(params: {
       error,
       context: {
         connection_id: params.connection.id,
+        plaid_request_id: error instanceof PlaidError ? error.requestId : null,
         provider_item_id: params.connection.provider_item_id,
         cursor_generation: params.connection.cursor_generation ?? 0,
       },
@@ -750,13 +790,9 @@ function logPlaidTransactionSample(params: {
   const summarizedSample = params.sample.map((transaction) => ({
     transactionId: transaction.transaction_id,
     accountId: transaction.account_id,
-    name: transaction.name,
-    merchantName: transaction.merchant_name ?? null,
-    amount: transaction.amount,
     currency: transaction.iso_currency_code ??
       transaction.unofficial_currency_code ??
       null,
-    date: transaction.date,
     pending: transaction.pending ?? false,
     pendingTransactionId: transaction.pending_transaction_id ?? null,
   }));
@@ -792,7 +828,6 @@ function logPlaidAccountMappingDebug(params: {
       plaidAccountId,
       transactionCount: transactions.length,
       sampleTransactionId: transactions[0]?.transaction_id ?? null,
-      sampleName: transactions[0]?.name ?? null,
     }))
     .slice(0, 5);
 
@@ -845,4 +880,7 @@ interface BankConnectionRow {
   cursor_generation?: number | null;
   last_successful_sync_at?: string | null;
   status: string;
+  item_status?: string | null;
+  item_health_state?: string | null;
+  relink_state?: string | null;
 }

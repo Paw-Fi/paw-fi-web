@@ -1,5 +1,5 @@
 import { decryptSecret } from "./token-encryption.ts";
-import { PlaidError, removePlaidItem } from "./plaid-client.ts";
+import { PLAID_PROVIDER, PlaidError, removePlaidItem } from "./plaid-client.ts";
 
 export interface PlaidRemovableConnection {
   id: string;
@@ -20,15 +20,76 @@ export async function removePlaidConnection(params: {
   if (encryptedToken) {
     try {
       const accessToken = await decryptSecret(encryptedToken);
-      await removePlaidItem(accessToken);
+      const response = await removePlaidItem(accessToken);
+      console.log(
+        "[plaid-remove] Removed Plaid item",
+        JSON.stringify({
+          connectionId: params.connection.id,
+          requestId: response.request_id || null,
+        }),
+      );
     } catch (error) {
       if (!(error instanceof PlaidError && error.code === "ITEM_NOT_FOUND")) {
         throw error;
       }
+
+      console.warn(
+        "[plaid-remove] Plaid item already removed",
+        JSON.stringify({
+          connectionId: params.connection.id,
+          requestId: error.requestId || null,
+        }),
+      );
     }
   }
 
   const nowIso = new Date().toISOString();
+  const { data: bankAccounts, error: bankAccountsError } = await params.supabase
+    .from("bank_accounts")
+    .select("id")
+    .eq("bank_connection_id", params.connection.id);
+
+  if (bankAccountsError) {
+    throw bankAccountsError;
+  }
+
+  const bankAccountIds = ((bankAccounts || []) as { id: string }[])
+    .map((row) => row.id)
+    .filter(Boolean);
+
+  if (bankAccountIds.length) {
+    const { error: expensesError } = await params.supabase
+      .from("expenses")
+      .update({
+        bank_account_id: null,
+        raw_provider_payload: null,
+        updated_at: nowIso,
+      })
+      .eq("provider", PLAID_PROVIDER)
+      .in("bank_account_id", bankAccountIds);
+
+    if (expensesError) {
+      throw expensesError;
+    }
+  }
+
+  const { error: rawCleanupError } = await params.supabase
+    .from("bank_transaction_raw")
+    .delete()
+    .eq("bank_connection_id", params.connection.id);
+
+  if (rawCleanupError) {
+    throw rawCleanupError;
+  }
+
+  const { error: bankAccountCleanupError } = await params.supabase
+    .from("bank_accounts")
+    .delete()
+    .eq("bank_connection_id", params.connection.id);
+
+  if (bankAccountCleanupError) {
+    throw bankAccountCleanupError;
+  }
 
   await params.supabase
     .from("bank_connections")

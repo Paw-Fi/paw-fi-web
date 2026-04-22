@@ -9,8 +9,9 @@ import { shouldKeepPlaidItemBeyondSecondMonth } from "../shared/plaid-lifecycle.
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
-const LEGACY_INTERNAL_SECRET =
-  Deno.env.get("SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
+const LEGACY_INTERNAL_SECRET = Deno.env.get(
+  "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+);
 
 type PlaidMaintenanceAction =
   | "reconcile_stale"
@@ -51,8 +52,12 @@ interface SubscriptionRow {
 }
 
 function isSupportedAction(value: unknown): value is PlaidMaintenanceAction {
-  return value === "reconcile_stale" || value === "enforce_lifecycle" ||
-    value === "cleanup_retention" || value === "run_all";
+  return (
+    value === "reconcile_stale" ||
+    value === "enforce_lifecycle" ||
+    value === "cleanup_retention" ||
+    value === "run_all"
+  );
 }
 
 function constantTimeCompare(a: string, b: string): boolean {
@@ -79,8 +84,8 @@ function isAuthorizedInternalRequest(req: Request): boolean {
     return true;
   }
 
-  const providedLegacySecret = req.headers.get("X-Moneko-Internal-Key")
-    ?.trim() || "";
+  const providedLegacySecret =
+    req.headers.get("X-Moneko-Internal-Key")?.trim() || "";
   if (
     LEGACY_INTERNAL_SECRET &&
     providedLegacySecret &&
@@ -125,7 +130,9 @@ function pickLatestSubscriptions(rows: SubscriptionRow[]) {
   return byUser;
 }
 
-async function reconcileStaleItems(supabase: ReturnType<typeof createServiceClient>) {
+async function reconcileStaleItems(
+  supabase: ReturnType<typeof createServiceClient>,
+) {
   const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: connections, error } = await supabase
     .from("bank_connections")
@@ -194,9 +201,9 @@ async function enforceLifecyclePolicies(
   );
   const { data: subscriptionRows, error: subscriptionError } = userIds.length
     ? await supabase
-        .from("subscriptions")
-        .select("user_id, plan, status, current_period_end, created_at")
-        .in("user_id", userIds)
+      .from("subscriptions")
+      .select("user_id, plan, status, current_period_end, created_at")
+      .in("user_id", userIds)
     : { data: [], error: null };
 
   if (subscriptionError) {
@@ -232,17 +239,14 @@ async function enforceLifecyclePolicies(
     const updatedAt = connection.updated_at
       ? new Date(connection.updated_at)
       : null;
-    const shouldRemoveForTrialInactivity =
-      subscription?.status !== "active" &&
+    const shouldRemoveForTrialInactivity = subscription?.status !== "active" &&
       (!connection.last_financial_feature_used_at ||
         new Date(connection.last_financial_feature_used_at) <
           trialInactivityThreshold);
-    const shouldRemoveForRelinkTimeout =
-      connection.status === "needs_reauth" &&
+    const shouldRemoveForRelinkTimeout = connection.status === "needs_reauth" &&
       updatedAt != null &&
       updatedAt.getTime() < trialInactivityThreshold.getTime();
-    const shouldRemoveForBilling =
-      scheduledRemovalAt != null &&
+    const shouldRemoveForBilling = scheduledRemovalAt != null &&
       scheduledRemovalAt.getTime() <= now.getTime() &&
       !keepBeyondSecondMonth;
 
@@ -288,6 +292,9 @@ async function enforceLifecyclePolicies(
 async function cleanupRetentionData(
   supabase: ReturnType<typeof createServiceClient>,
 ) {
+  const rawPayloadCutoff = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
   const webhookCutoff = new Date(
     Date.now() - 90 * 24 * 60 * 60 * 1000,
   ).toISOString();
@@ -311,6 +318,44 @@ async function cleanupRetentionData(
 
   if (auditError) {
     throw auditError;
+  }
+
+  const { error: rawTransactionsError } = await supabase
+    .from("bank_transaction_raw")
+    .delete()
+    .eq("provider", PLAID_PROVIDER)
+    .lt("created_at", rawPayloadCutoff);
+
+  if (rawTransactionsError) {
+    throw rawTransactionsError;
+  }
+
+  const { error: expensePayloadError } = await supabase
+    .from("expenses")
+    .update({
+      raw_provider_payload: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("provider", PLAID_PROVIDER)
+    .not("raw_provider_payload", "is", null)
+    .lt("updated_at", rawPayloadCutoff);
+
+  if (expensePayloadError) {
+    throw expensePayloadError;
+  }
+
+  const { error: accountPayloadError } = await supabase
+    .from("bank_accounts")
+    .update({
+      raw_provider_payload: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("provider", PLAID_PROVIDER)
+    .not("raw_provider_payload", "is", null)
+    .lt("updated_at", rawPayloadCutoff);
+
+  if (accountPayloadError) {
+    throw accountPayloadError;
   }
 
   return { success: true };
@@ -375,18 +420,24 @@ Deno.serve(async (req) => {
 
     if (body.action === "reconcile_stale") {
       const result = await reconcileStaleItems(supabase);
-      return new Response(JSON.stringify({ success: true, action: body.action, ...result }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: true, action: body.action, ...result }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (body.action === "enforce_lifecycle") {
       const result = await enforceLifecyclePolicies(supabase);
-      return new Response(JSON.stringify({ success: true, action: body.action, ...result }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: true, action: body.action, ...result }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (body.action === "cleanup_retention") {

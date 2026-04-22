@@ -117,6 +117,7 @@ export async function upsertBankConnection(params: {
   userId: string;
   provider: string;
   providerItemId: string;
+  duplicateGroupKey?: string | null;
   accessTokenEncrypted: string;
   refreshTokenEncrypted?: string | null;
   expiresAt?: string | null;
@@ -171,6 +172,7 @@ export async function upsertBankConnection(params: {
           requestedCountryCode: normalizedCountryCode,
           connectionCountryCode: existing.country_code,
         }) ?? null,
+        duplicate_group_key: params.duplicateGroupKey || undefined,
         idempotency_key: params.idempotencyKey || undefined,
         household_id: params.householdId === undefined
           ? undefined
@@ -202,6 +204,7 @@ export async function upsertBankConnection(params: {
     expires_at: params.expiresAt || null,
     status: "active",
     country_code: normalizedCountryCode,
+    duplicate_group_key: params.duplicateGroupKey || null,
     idempotency_key: params.idempotencyKey || null,
     household_id: params.householdId || null,
     metadata: params.metadata || {},
@@ -243,6 +246,7 @@ export async function upsertBankConnection(params: {
         requestedCountryCode: normalizedCountryCode,
         connectionCountryCode: retry.country_code,
       }) ?? null,
+      duplicate_group_key: params.duplicateGroupKey || undefined,
       idempotency_key: params.idempotencyKey || undefined,
       household_id: params.householdId === undefined
         ? undefined
@@ -525,7 +529,7 @@ export async function persistPlaidTransactions(
   const mutationPlan = buildBankExpenseMutationPlan({
     records: normalizedRecords,
     transactions: params.transactions,
-    existingRows: ((existingRows || []) as ExistingExpenseProjectionRow[]),
+    existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
     providerPendingTransactionIds,
     cursorGeneration: params.cursorGeneration ?? 0,
   });

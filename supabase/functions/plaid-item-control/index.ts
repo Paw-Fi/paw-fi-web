@@ -66,10 +66,13 @@ Deno.serve(async (req) => {
     }
 
     if (!body.connectionId) {
-      return new Response(JSON.stringify({ error: "connectionId is required" }), {
-        status: 400,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "connectionId is required" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -101,7 +104,7 @@ Deno.serve(async (req) => {
     const { data: connection, error: connectionError } = await supabase
       .from("bank_connections")
       .select(
-        "id, user_id, provider, status, item_status, item_health_state, access_token_encrypted, plaid_access_token_encrypted, last_successful_sync_at, next_manual_refresh_eligible_at, removed_at",
+        "id, user_id, provider, status, item_status, item_health_state, metadata, access_token_encrypted, plaid_access_token_encrypted, last_successful_sync_at, next_manual_refresh_eligible_at, removed_at",
       )
       .eq("id", body.connectionId)
       .eq("provider", PLAID_PROVIDER)
@@ -151,7 +154,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const accessState = await loadPlaidUserAccessState(supabase, authResult.userId);
+    const accessState = await loadPlaidUserAccessState(
+      supabase,
+      authResult.userId,
+    );
 
     const { count: inFlightJobCount, error: jobsError } = await supabase
       .from("bank_sync_jobs")
@@ -220,22 +226,42 @@ Deno.serve(async (req) => {
     const encryptedToken = connection.access_token_encrypted ||
       connection.plaid_access_token_encrypted;
     if (!encryptedToken) {
-      return new Response(JSON.stringify({ error: "Missing Plaid access token" }), {
-        status: 409,
-        headers: { ...headers, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing Plaid access token" }),
+        {
+          status: 409,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const accessToken = await decryptSecret(encryptedToken);
-    await requestPlaidTransactionsRefresh(accessToken);
+    const refreshResponse = await requestPlaidTransactionsRefresh(accessToken);
+    const metadata =
+      connection.metadata && typeof connection.metadata === "object"
+        ? (connection.metadata as Record<string, unknown>)
+        : {};
 
     await supabase
       .from("bank_connections")
       .update({
         last_financial_feature_used_at: requestedAt.toISOString(),
+        metadata: {
+          ...metadata,
+          plaid_last_refresh_request_id: refreshResponse.request_id || null,
+        },
         updated_at: requestedAt.toISOString(),
       })
       .eq("id", connection.id);
+
+    console.log(
+      "[plaid-item-control] Requested Plaid refresh",
+      JSON.stringify({
+        connectionId: connection.id,
+        nextRefreshEligibleAt: nextEligibleAt.toISOString(),
+        requestId: refreshResponse.request_id || null,
+      }),
+    );
 
     return new Response(
       JSON.stringify({

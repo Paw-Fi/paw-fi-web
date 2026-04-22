@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
+import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
+import { classifyPlaidItemWebhook } from "../shared/plaid-update-mode.ts";
 import { verifyPlaidWebhook } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -21,12 +24,6 @@ if (SKIP_WEBHOOK_VERIFICATION) {
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for plaid-webhook");
 }
-
-// Event codes that indicate the user needs to re-authenticate
-const REAUTH_EVENT_CODES = new Set([
-  "PENDING_EXPIRATION",
-  "USER_PERMISSION_REVOKED",
-]);
 
 interface PlaidWebhookPayload {
   webhook_type?: string;
@@ -131,15 +128,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Log the webhook event
-    await supabase.from("bank_webhook_events").insert({
-      provider: PLAID_PROVIDER,
-      event_type: payload.webhook_type || null,
-      event_code: payload.webhook_code || null,
-      provider_item_id: payload.item_id,
-      bank_connection_id: connection?.id || null,
-      payload,
-    });
+    const { data: insertedWebhookEvent, error: webhookInsertError } =
+      await supabase
+        .from("bank_webhook_events")
+        .insert({
+          provider: PLAID_PROVIDER,
+          event_type: payload.webhook_type || null,
+          event_code: payload.webhook_code || null,
+          provider_item_id: payload.item_id,
+          bank_connection_id: connection?.id || null,
+          payload,
+        })
+        .select("id")
+        .single();
+
+    if (webhookInsertError) {
+      throw webhookInsertError;
+    }
 
     if (connection?.id && payload.webhook_type === "TRANSACTIONS") {
       await supabase
@@ -155,60 +160,84 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         })
         .eq("id", connection.id);
+
+      const enqueueResult = await enqueuePlaidSyncJob({
+        supabase,
+        connectionId: connection.id,
+        triggerSource: "plaid_transactions_webhook",
+        payload: {
+          webhookCode: payload.webhook_code || null,
+          initialUpdateComplete: payload.initial_update_complete ?? null,
+          historicalUpdateComplete: payload.historical_update_complete ?? null,
+        },
+        webhookEventId: insertedWebhookEvent?.id || null,
+      });
+
+      console.log(
+        "[plaid-webhook] Queued transactions sync",
+        JSON.stringify({
+          connectionId: connection.id,
+          duplicate: enqueueResult.duplicate,
+          enqueued: enqueueResult.enqueued,
+          itemId: payload.item_id || null,
+          webhookCode: payload.webhook_code || null,
+          webhookEventId: insertedWebhookEvent?.id || null,
+        }),
+      );
     }
 
-    // Handle ITEM webhook type (for reauth and error scenarios)
     if (payload.webhook_type === "ITEM") {
-      if (
-        payload.webhook_code === "ERROR" &&
-        payload.error?.error_code === "ITEM_LOGIN_REQUIRED"
-      ) {
-        // Mark connection as needs_reauth
-        if (connection?.id) {
-          await supabase
-            .from("bank_connections")
-            .update({
-              status: "needs_reauth",
-              item_status: "pending_relink",
-              item_health_state: "unhealthy",
-              relink_state: "required",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", connection.id);
-          console.log(
-            `[plaid-webhook] Marked connection ${connection.id} as needs_reauth (ITEM_LOGIN_REQUIRED)`,
-          );
+      const action = classifyPlaidItemWebhook({
+        webhookCode: payload.webhook_code,
+        errorCode: payload.error?.error_code,
+      });
+
+      if (action && connection?.id) {
+        const { error: updateError } = await supabase
+          .from("bank_connections")
+          .update({
+            status: action.status,
+            item_status: action.itemStatus,
+            item_health_state: action.itemHealthState,
+            relink_state: action.relinkState,
+            error_code: action.relinkState == null
+              ? null
+              : payload.error?.error_code || payload.webhook_code || null,
+            error_message: action.relinkState == null
+              ? null
+              : payload.error?.error_message || null,
+            last_webhook_received_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", connection.id);
+
+        if (updateError) {
+          throw updateError;
         }
-      } else if (
-        payload.webhook_code &&
-        REAUTH_EVENT_CODES.has(payload.webhook_code)
-      ) {
-        // Mark connection as needs_reauth for other reauth-related events
-        if (connection?.id) {
-          await supabase
-            .from("bank_connections")
-            .update({
-              status: "needs_reauth",
-              item_status: "pending_relink",
-              item_health_state: "unhealthy",
-              relink_state: "required",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", connection.id);
-          console.log(
-            `[plaid-webhook] Marked connection ${connection.id} as needs_reauth (${payload.webhook_code})`,
-          );
+
+        console.log(
+          "[plaid-webhook] Applied item webhook action",
+          JSON.stringify({
+            connectionId: connection.id,
+            itemId: payload.item_id || null,
+            relinkState: action.relinkState,
+            status: action.status,
+            webhookCode: payload.webhook_code || null,
+          }),
+        );
+
+        if (action.shouldEnqueueSync) {
+          await enqueuePlaidSyncJob({
+            supabase,
+            connectionId: connection.id,
+            triggerSource: "plaid_item_webhook",
+            payload: {
+              webhookCode: payload.webhook_code || null,
+            },
+            webhookEventId: insertedWebhookEvent?.id || null,
+          });
         }
       }
-    }
-
-    // Auto sync is intentionally disabled; keep recording webhooks for audit.
-    if (payload.webhook_type === "TRANSACTIONS") {
-      console.log("[plaid-webhook] Auto sync disabled; webhook recorded", {
-        connectionId: connection?.id || null,
-        webhookCode: payload.webhook_code || null,
-        itemId: payload.item_id || null,
-      });
     }
 
     return new Response(JSON.stringify({ received: true }), {
