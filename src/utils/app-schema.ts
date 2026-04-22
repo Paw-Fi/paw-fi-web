@@ -17,7 +17,6 @@ export const monekoAggregateRating = {
 
 export const monekoFeaturedReview = {
   "@type": "Review",
-  "@id": `https://moneko.io/#${featuredReview.id}`,
   name: featuredReview.title,
   reviewBody: featuredReview.body,
   datePublished: featuredReview.createdDate.split("T")[0],
