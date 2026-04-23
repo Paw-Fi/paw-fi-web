@@ -7,7 +7,7 @@ const MAX_LIMIT = 100;
 const FALLBACK_AUTHOR_AVATAR =
   "https://www.redditstatic.com/avatars/defaults/v2/avatar_default_1.png";
 const FALLBACK_COVER_IMAGE =
-  "https://lh3.googleusercontent.com/uDanMwuotwC6ikrr41UP5jELZ7iQuWDNVH0d-xrn6DKeC_y_KROF5TsE-gBhkqqNZS-uYP9Ln6PdtivDXKNpeqQ=s1024";
+  "https://firebasestorage.googleapis.com/v0/b/paw-fi-3c4f7.firebasestorage.app/o/email_template_photos%2Fcover.png?alt=media&token=f51c02c5-a744-4c07-8ee0-a90d52577b4e";
 
 interface FetchSubredditBlogsOptions {
   limit?: number;
@@ -73,7 +73,9 @@ export async function fetchSubredditBlogs(
         (post.author || "").trim().toLowerCase() === HARD_AUTHOR.toLowerCase(),
     );
 
-  return posts.map((post, index) => mapRedditPostToBlog(post, index === 0));
+  return Promise.all(
+    posts.map((post, index) => mapRedditPostToBlog(post, index === 0)),
+  );
 }
 
 export async function fetchSubredditBlogBySlug(
@@ -88,7 +90,7 @@ export async function fetchSubredditBlogBySlug(
   return blogs.find((blog) => blog.slug === cleanSlug) || null;
 }
 
-function mapRedditPostToBlog(post: RedditPost, featured: boolean): Blog {
+async function mapRedditPostToBlog(post: RedditPost, featured: boolean): Promise<Blog> {
   const safeTitle = sanitizeUserText(post.title || "Untitled post");
   const safeAuthor = sanitizeUserText(post.author || HARD_AUTHOR);
   const safeSubreddit = sanitizeUserText(HARD_SUBREDDIT);
@@ -101,7 +103,7 @@ function mapRedditPostToBlog(post: RedditPost, featured: boolean): Blog {
     title: safeTitle,
     excerpt: createExcerpt(post),
     content,
-    coverImage: selectCoverImage(post),
+    coverImage: await selectCoverImage(post),
     author: {
       id: `reddit-author-${toSlug(safeAuthor) || "unknown"}`,
       name: safeAuthor,
@@ -168,7 +170,7 @@ function createPostContent(post: RedditPost): string {
   const externalUrl = getSafeExternalUrl(post.url);
 
   if (textBody) {
-    return textBody;
+    return `${textBody}\n\n---\n\n[View on Reddit](${permalink})`;
   }
 
   if (externalUrl && !post.is_self) {
@@ -214,7 +216,7 @@ function createTags(post: RedditPost, subreddit: string): BlogTag[] {
   return tags;
 }
 
-function selectCoverImage(post: RedditPost): string {
+async function selectCoverImage(post: RedditPost): Promise<string> {
   const galleryImage = selectBestGalleryImage(post);
   if (galleryImage) {
     return galleryImage;
@@ -227,11 +229,28 @@ function selectCoverImage(post: RedditPost): string {
   }
 
   const safeThumbnailUrl = getSafeExternalUrl(decodeHtmlEntity(post.thumbnail));
-  if (safeThumbnailUrl) {
+  if (safeThumbnailUrl && (await isImageAtLeast100KB(safeThumbnailUrl))) {
     return safeThumbnailUrl;
   }
 
   return FALLBACK_COVER_IMAGE;
+}
+
+async function isImageAtLeast100KB(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (!response.ok) {
+      return false;
+    }
+    const contentLength = response.headers.get("content-length");
+    if (!contentLength) {
+      return true;
+    }
+    const sizeBytes = parseInt(contentLength, 10);
+    return sizeBytes >= 100 * 1024;
+  } catch {
+    return false;
+  }
 }
 
 function selectBestGalleryImage(post: RedditPost): string | null {
