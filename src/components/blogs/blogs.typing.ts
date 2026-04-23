@@ -20,6 +20,7 @@ export interface BlogAuthor {
     excerpt: string;
     content: string; // Markdown content
     coverImage: string;
+    hideCreditLabel?:boolean;
     author: BlogAuthor;
     tags: BlogTag[];
     publishedAt: string; // ISO date string

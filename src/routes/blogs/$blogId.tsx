@@ -4,7 +4,7 @@ import { Suspense, lazy, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faClock, faTag } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faClock, faTag, faX } from "@fortawesome/free-solid-svg-icons";
 import {
   faTwitter,
   faFacebook,
@@ -113,7 +113,7 @@ function BlogDetailPage() {
 
   const shareOnTwitter = () => {
     window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(blog.title)}&url=${encodeURIComponent(shareUrl)}`,
+      `https://x.com/intent/tweet?text=${encodeURIComponent(blog.title)}&url=${encodeURIComponent(shareUrl)}`,
       "_blank",
       "noopener,noreferrer",
     );
@@ -510,14 +510,14 @@ function BlogDetailPage() {
               alt={`Cover image for ${blog.title}`}
               className="h-full w-full object-cover"
             />
-            <a
+           {!blog.hideCreditLabel&& <a
               href={blog.coverImage}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-background/80 text-muted-foreground border-border absolute right-2 bottom-2 rounded-sm border px-2 py-1 text-xs backdrop-blur-sm"
             >
               Image from Unsplash
-            </a>
+            </a>}
           </div>
 
           <article className="mx-auto max-w-none">
@@ -553,11 +553,11 @@ function BlogDetailPage() {
               </span>
               <button
                 onClick={shareOnTwitter}
-                aria-label="Share on Twitter"
+                aria-label="Share on X"
                 className="bg-muted text-muted-foreground hover:bg-muted/80 rounded-full p-2 transition-colors"
               >
                 <FontAwesomeIcon
-                  icon={faTwitter}
+                  icon={faX}
                   className="h-4 w-4"
                   aria-hidden="true"
                 />

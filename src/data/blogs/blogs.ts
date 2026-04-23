@@ -6,6 +6,7 @@ import telegramBotsBlog from "./new-blog-telegram-bots";
 import whatsappBudgetSetupBlog from "./new-blog-whatsapp-budget-setup";
 import whatsappVsAppsBlog from "./new-blog-whatsapp-vs-apps";
 import appleWalletSyncBlog from "./new-blog-apple-wallet-sync";
+import { APP_FEATURES_GUIDELINES } from "./app-features-guidelines";
 
 // Helper function to find tags by name
 const findTag = (name: string) => tags.find((tag) => tag.name === name);
@@ -3873,6 +3874,7 @@ Moneko isn't just an app; it's a dashboard for your entire FIRE journey.
         "financial independence, fire movement, how to retire early, financial freedom, early retirement",
     },
   },
+  ...APP_FEATURES_GUIDELINES,
   whatsappBlog,
   ynabAlternativesBlog,
   telegramBotsBlog,

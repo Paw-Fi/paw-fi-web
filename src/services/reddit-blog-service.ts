@@ -109,6 +109,7 @@ function mapRedditPostToBlog(post: RedditPost, featured: boolean): Blog {
       title: "Reddit Contributor",
       bio: `Shared on r/${safeSubreddit}`,
     },
+    hideCreditLabel:true,
     tags,
     publishedAt: post.created_utc
       ? new Date(post.created_utc * 1000).toISOString()

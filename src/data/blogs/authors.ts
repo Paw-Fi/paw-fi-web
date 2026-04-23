@@ -1,5 +1,6 @@
 import { BlogAuthor, BlogTag } from "@/components/blogs/blogs.typing";
 import RoeImg from "@/assets/images/blogs/roe.jpg";// Replace with actual image path
+import MonekoImg from "@/assets/images/logo/finni.png";
 
 // --- Reusable Authors ---
 export const authorsData: BlogAuthor[] = [
@@ -31,6 +32,13 @@ export const authorsData: BlogAuthor[] = [
     title: "Real Estate & Mortgage Expert",
     bio: "David Chen has over 15 years of experience in the real estate and mortgage industries. He provides expert analysis on housing market trends, affordability, and property investment strategies. David is committed to helping prospective buyers and investors navigate the complexities of real estate transactions with confidence.",
   },
+  {
+  id: "moneko-team",
+  name: "Moneko Team",
+  avatar: MonekoImg,
+  title: "Personal Finance Educators",
+  bio: "The Moneko Team creates practical, easy-to-understand financial content designed to help people build better money habits with confidence. With a focus on budgeting, saving, investing, and long-term financial wellness, the team turns complex financial concepts into clear, actionable insights for everyday users.",
+},
 ];
 
 // --- Reusable Tags ---
