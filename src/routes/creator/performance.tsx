@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity } from "lucide-react";
 
@@ -30,6 +30,30 @@ export const Route = createFileRoute("/creator/performance")({
   component: PerformancePage,
 });
 
+const trialExpiryFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function formatTrialExpiryDistance(expiryAt: number): string {
+  const diffMs = expiryAt - Date.now();
+  const totalMinutes = Math.max(1, Math.round(Math.abs(diffMs) / 60000));
+
+  if (totalMinutes < 60) {
+    return diffMs >= 0 ? `in ${totalMinutes}m` : `${totalMinutes}m ago`;
+  }
+
+  const totalHours = Math.round(totalMinutes / 60);
+  if (totalHours < 24) {
+    return diffMs >= 0 ? `in ${totalHours}h` : `${totalHours}h ago`;
+  }
+
+  const totalDays = Math.round(totalHours / 24);
+  return diffMs >= 0 ? `in ${totalDays}d` : `${totalDays}d ago`;
+}
+
 function PerformancePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const totalUsers = useUserCount(refreshKey);
@@ -40,6 +64,20 @@ function PerformancePage() {
   const dailySignups = useDailySignups(refreshKey);
   const dauByTimezone = useDAUByTimezone(refreshKey);
   const totalDAU = useTotalDAU(refreshKey);
+  const trialingUsersByClosestExpiry = useMemo(
+    () => {
+      const now = Date.now();
+
+      return trialingUsers
+        .map((user) => ({
+          ...user,
+          expiryAt: user.trialEnd ? new Date(user.trialEnd).getTime() : Number.NaN,
+        }))
+        .filter((user) => Number.isFinite(user.expiryAt) && user.expiryAt >= now)
+        .sort((a, b) => a.expiryAt - b.expiryAt);
+    },
+    [trialingUsers],
+  );
 
   return (
     <>
@@ -66,7 +104,7 @@ function PerformancePage() {
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-white">Total Users</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <SubscriptionMetricCard
                 title="All Registered Users"
                 value={totalUsers.currentValue}
@@ -83,6 +121,49 @@ function PerformancePage() {
                 color="#F59E0B"
                 icon={<Activity className="h-4 w-4" />}
               />
+              <Card className="border-white/10 bg-slate-900/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                  <div>
+                    <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                      Trial Status
+                    </CardDescription>
+                    <CardTitle className="mt-1 text-xl text-white">
+                      Trialing Users by Expiry
+                    </CardTitle>
+                  </div>
+                  <AlertCircle className="h-5 w-5 text-amber-400/80" />
+                </CardHeader>
+                <CardContent className="max-h-[200px] overflow-y-auto">
+                  <div className="space-y-2">
+                    {trialingUsersByClosestExpiry.slice(0, 8).map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-white/5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-white/85">
+                            {user.fullName || user.email || user.userId}
+                          </p>
+                          <p className="text-xs text-white/50">Status: trialing</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-amber-300">
+                            {trialExpiryFormatter.format(user.expiryAt)}
+                          </p>
+                          <p className="text-xs text-white/45">
+                            {formatTrialExpiryDistance(user.expiryAt)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {trialingUsersByClosestExpiry.length === 0 && (
+                      <p className="text-sm text-white/50">
+                        No trialing users with an expiry time
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </section>
 

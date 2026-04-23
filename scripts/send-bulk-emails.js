@@ -27,7 +27,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-const DEFAULT_EMAIL_SUBJECT='Meet Wallets, now on Moneko'
+const DEFAULT_EMAIL_SUBJECT='New in Moneko: forward receipts, auto-log spending'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
