@@ -2,16 +2,23 @@ import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import {
   faGift,
   faBullseye,
-  faBook, 
-  faUsers, 
-  faHeadset, 
-  faChartLine, 
-  faUserTie, 
+  faBook,
+  faUsers,
+  faHeadset,
+  faChartLine,
+  faUserTie,
   faGraduationCap,
   faUserGraduate,
   faRobot,
   faComments,
-  faEdit
+  faEdit,
+  faEnvelope,
+  faCamera,
+  faMicrophone,
+  faWallet,
+  faPiggyBank,
+  faSync,
+  faLightbulb
 } from "@fortawesome/free-solid-svg-icons";
 
 // Basic plan option interface used in PlanSelector
@@ -49,6 +56,8 @@ export interface FeatureComparison {
   recurring: FeatureDetail;
   multiCurrency: FeatureDetail;
   homeWidgets: FeatureDetail;
+  emailCapture: FeatureDetail;
+  householdSharing: FeatureDetail;
 }
 
 // Pricing tier interface used in PricingPage
@@ -108,57 +117,12 @@ export interface PlanData {
 
 // Shared plan data that can be transformed for different components
 export const planData: Record<string, PlanData> = {
-  free: {
-    id: "free",
-    name: "Starter",
-    title: "Starter",
-    subtitle: "Free AI budgeting dashboard for simple monthly money tracking",
-    description: "A free budgeting plan to track spending, set up pockets (digital envelopes), and manage recurring bills.",
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    priceMonthly: "$0",
-    priceYearly: "$0",
-    priceFrequencyText: "/month",
-    highlight: false,
-    actionText: "Get Started Free",
-    actionLink: "/signup",
-    audienceText: "Best for trying Moneko before upgrading",
-    bgColor: "bg-white dark:bg-slate-800",
-    textColor: "text-gray-900 dark:text-white",
-    features: [
-      "Fast capture with a review-first workflow",
-      "Pockets & envelope budgeting",
-      "Personal and Household modes",
-      "Recurring bills and income tracking",
-      "Multi-currency overview",
-      "Home screen widgets + quick add"
-    ],
-    featureItems: [
-      { text: "Fast capture with a review-first workflow", icon: faComments },
-      { text: "Pockets & envelope budgeting", icon: faBullseye },
-      { text: "Personal and Household modes", icon: faUsers },
-      { text: "Recurring bills and income tracking", icon: faEdit },
-      { text: "Multi-currency overview", icon: faChartLine },
-      { text: "Home screen widgets + quick add", icon: faGift }
-    ],
-    featureComparison: {
-      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text capture + review" },
-      pockets: { description: "Pockets & envelopes", isIncluded: true },
-      whatsapp: { description: "WhatsApp assistant", isIncluded: false },
-      scenarioPlanning: { description: "Scenario planning", isIncluded: true },
-      personalHousehold: { description: "Personal vs Household mode", isIncluded: true },
-      recurring: { description: "Recurring bills & income", isIncluded: true },
-      multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency" },
-      homeWidgets: { description: "Home screen widgets", isIncluded: true }
-    }
-  },
-  
   plus: {
     id: "plus",
     name: "Plus",
     title: "Plus",
-    subtitle: "Full AI budgeting plan for faster capture + scenario planning",
-    description: "Upgrade for WhatsApp expense tracking (where available), receipt/voice capture (where available), and scenario insights.",
+    subtitle: "AI-powered budgeting with unlimited capture & smart automation",
+    description: "Full-featured budgeting with AI expense capture via text, photo, voice, email, and WhatsApp. Includes envelope budgeting, scenario planning, and automatic receipt processing.",
     monthlyPrice: 4.99,
     yearlyPrice: 34.99,
     compareAtMonthlyPrice: 9.99,
@@ -179,31 +143,41 @@ export const planData: Record<string, PlanData> = {
     textColor: "text-gray-900 dark:text-white",
     borderColor: "border-purple-200 dark:border-purple-800",
     features: [
-      "Everything in Starter",
-      "WhatsApp assistant for capture + summaries",
-      "Receipt/photo/voice capture (where available)",
-      "Scenario planning with saved insights",
-      "Home screen widgets + quick add"
+      "Unlimited AI expense capture — text, photo, voice, email",
+      "Smart email receipt capture — forward receipts to auto-log",
+      "WhatsApp budgeting assistant — capture + summaries on chat",
+      "Personal & Household modes — solo or shared finances",
+      "One subscription shared across all household members",
+      "Recurring bills & income tracking — never miss a payment",
+      "Scenario planning — what-if insights with AI",
+      "Multi-currency support — track spending globally",
+      "Home screen widgets — quick add & budget glance",
+      "Bank sync via Plaid — auto-import transactions (Coming Soon)"
     ],
     featureItems: [
-      { text: "Everything in Starter", icon: faGift },
-      { text: "WhatsApp assistant for capture + summaries", icon: faRobot },
-      { text: "Receipt/photo/voice capture (where available)", icon: faBook },
-      { text: "Scenario planning with saved insights", icon: faChartLine },
-      { text: "Home screen widgets + quick add", icon: faComments }
+      { text: "Unlimited AI expense capture — text, photo, voice, email", icon: faRobot },
+      { text: "Smart email receipt capture — forward receipts to auto-log", icon: faEnvelope },
+      { text: "WhatsApp budgeting assistant — capture + summaries on chat", icon: faComments },
+      { text: "Personal & Household modes — solo or shared finances", icon: faUsers },
+      { text: "One subscription shared across all household members", icon: faUsers },
+      { text: "Recurring bills & income tracking — never miss a payment", icon: faSync },
+      { text: "Scenario planning — what-if insights with AI", icon: faLightbulb },
+      { text: "Multi-currency support — track spending globally", icon: faChartLine },
+      { text: "Bank sync via Plaid — auto-import transactions (Coming Soon)", icon: faWallet }
     ],
     featureComparison: {
-      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text, photo & voice", highlight: true },
+      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text, photo, voice & email", highlight: true },
       pockets: { description: "Pockets & envelopes", isIncluded: true, highlight: true },
       whatsapp: { description: "WhatsApp assistant", isIncluded: true, limit: "Chat capture + summaries", highlight: true },
       scenarioPlanning: { description: "Scenario planning", isIncluded: true, highlight: true },
       personalHousehold: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
       recurring: { description: "Recurring bills & income", isIncluded: true, highlight: true },
       multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency", highlight: true },
-      homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true }
+      emailCapture: { description: "Email receipt capture", isIncluded: true, limit: "Unlimited forwarding", highlight: true },
+      householdSharing: { description: "Shared household subscription", isIncluded: true, limit: "All members", highlight: true }
     }
   },
-  
+
   premium: {
     id: "lifetime",
     name: "Lifetime",
@@ -223,26 +197,42 @@ export const planData: Record<string, PlanData> = {
     bgColor: "bg-white dark:bg-slate-800",
     textColor: "text-gray-900 dark:text-white",
     features: [
-      "All Plus features unlocked",
-      "Fast capture + pockets workflows",
-      "WhatsApp budgeting assistant",
-      "Scenario planning & insights"
+      "Lifetime access to all Plus features — pay once, use forever",
+      "Unlimited AI expense capture — text, photo, voice, email",
+      "Smart email receipt capture — forward receipts to auto-log",
+      "WhatsApp budgeting assistant — capture + summaries on chat",
+      "Personal & Household modes — solo or shared finances",
+      "One subscription shared across all household members",
+      "Recurring bills & income tracking — never miss a payment",
+      "Scenario planning — what-if insights with AI",
+      "Multi-currency support — track spending globally",
+      "Bank sync via Plaid — auto-import transactions (Coming Soon)"
     ],
     featureItems: [
-      { text: "All Plus features unlocked", icon: faGift },
-      { text: "Fast capture + pockets workflows", icon: faBullseye },
-      { text: "WhatsApp budgeting assistant", icon: faRobot },
-      { text: "Scenario planning & insights", icon: faChartLine }
+      { text: "Lifetime access to all Plus features — pay once, use forever", icon: faGift },
+      { text: "Unlimited AI expense capture — text, photo, voice, email", icon: faRobot },
+      { text: "Smart email receipt capture — forward receipts to auto-log", icon: faEnvelope },
+      { text: "WhatsApp budgeting assistant — capture + summaries on chat", icon: faComments },
+      { text: "Envelope budgeting with Pockets — set, track, save", icon: faPiggyBank },
+      { text: "Personal & Household modes — solo or shared finances", icon: faUsers },
+      { text: "One subscription shared across all household members", icon: faUsers },
+      { text: "Recurring bills & income tracking — never miss a payment", icon: faSync },
+      { text: "Scenario planning — what-if insights with AI", icon: faLightbulb },
+      { text: "Multi-currency support — track spending globally", icon: faChartLine },
+      { text: "Home screen widgets — quick add & budget glance", icon: faGift },
+      { text: "Bank sync via Plaid — auto-import transactions (Coming Soon)", icon: faWallet }
     ],
     featureComparison: {
-      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text, photo & voice", highlight: true },
+      fastCapture: { description: "Fast capture workflow", isIncluded: true, limit: "Text, photo, voice & email", highlight: true },
       pockets: { description: "Pockets & envelopes", isIncluded: true, highlight: true },
       whatsapp: { description: "WhatsApp assistant", isIncluded: true, limit: "Chat capture + summaries", highlight: true },
       scenarioPlanning: { description: "Scenario planning", isIncluded: true, highlight: true },
       personalHousehold: { description: "Personal vs Household mode", isIncluded: true, highlight: true },
       recurring: { description: "Recurring bills & income", isIncluded: true, highlight: true },
       multiCurrency: { description: "Multi-currency view", isIncluded: true, limit: "Switch currency", highlight: true },
-      homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true }
+      homeWidgets: { description: "Home screen widgets", isIncluded: true, highlight: true },
+      emailCapture: { description: "Email receipt capture", isIncluded: true, limit: "Unlimited forwarding", highlight: true },
+      householdSharing: { description: "Shared household subscription", isIncluded: true, limit: "All members", highlight: true }
     }
   },
 };

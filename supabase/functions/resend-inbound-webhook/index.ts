@@ -398,10 +398,11 @@ function buildFollowupEmail(params: {
     html: baseTemplate(
       content,
       renderFooter({
-        customReason: `Replies are not monitored.`,
+        customReason:
+          `Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored.`,
       }),
     ),
-    text: `Moneko processed files from ${senderEmail}. Import inbox: ${IMPORT_INBOX_EMAIL}. Saved: ${savedCount}. Duplicates skipped: ${duplicateCount}. Failed: ${failedCount}. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,
+    text: `Moneko processed files from ${senderEmail}. Import inbox: ${IMPORT_INBOX_EMAIL}. Saved: ${savedCount}. Duplicates skipped: ${duplicateCount}. Failed: ${failedCount}. Moneko does not store forwarded attachments on our servers. We download them temporarily only to extract transactions. Replies are not monitored; contact ${SUPPORT_EMAIL} if you need help.`,
   };
 }
 
@@ -1005,10 +1006,6 @@ Deno.serve(async (req: Request) => {
         }
         const analyzeBody: AnalyzeRequestBody = {
           userId: owner.userId,
-          text:
-            typeof emailContent?.text === "string"
-              ? emailContent.text
-              : undefined,
           date: (
             event.data.created_at ||
             event.created_at ||
