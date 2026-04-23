@@ -1,7 +1,4 @@
-import type {
-  ExpenseUpsertInput,
-  PlaidTransaction,
-} from "./plaid-client.ts";
+import type { ExpenseUpsertInput, PlaidTransaction } from "./plaid-client.ts";
 
 export interface ExistingExpenseProjectionRow {
   id: string;
@@ -53,6 +50,7 @@ function extractProviderFields(
     type: record.type,
     category: record.category,
     raw_text: record.raw_text,
+    merchant: record.merchant,
     source: record.source,
     is_recurring: record.is_recurring,
     recurrence_rule: record.recurrence_rule,
@@ -128,13 +126,12 @@ export function buildBankExpenseMutationPlan(
       record.provider_transaction_id,
     );
     const pendingTransactionId = explicitPendingId ||
-      transaction?.pending_transaction_id ||
-      null;
+      transaction?.pending_transaction_id || null;
 
-    const matchedRow = pendingTransactionId &&
-        existingByProviderId.has(pendingTransactionId)
-      ? existingByProviderId.get(pendingTransactionId)!
-      : existingByProviderId.get(record.provider_transaction_id) ?? null;
+    const matchedRow =
+      pendingTransactionId && existingByProviderId.has(pendingTransactionId)
+        ? existingByProviderId.get(pendingTransactionId)!
+        : (existingByProviderId.get(record.provider_transaction_id) ?? null);
 
     const providerFields = extractProviderFields(record);
     const userOverrides = matchedRow?.user_overrides || {};
@@ -147,10 +144,10 @@ export function buildBankExpenseMutationPlan(
       sync_version: (matchedRow?.sync_version ?? 0) + 1,
       provider_sync_cursor_generation: params.cursorGeneration,
       provider_pending_transaction_id: pendingTransactionId,
-      provider_posted_from_pending_transaction_id:
-        pendingTransactionId && pendingTransactionId !== record.provider_transaction_id
-          ? pendingTransactionId
-          : null,
+      provider_posted_from_pending_transaction_id: pendingTransactionId &&
+          pendingTransactionId !== record.provider_transaction_id
+        ? pendingTransactionId
+        : null,
     };
 
     if (!matchedRow) {
