@@ -2,6 +2,7 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   inferPayerFromText,
+  inferAttachmentFallbackCurrency,
   inferSplitAmountsFromText,
   normalizeCustomSplits,
   normalizeTransactionDateAndDescription,
@@ -107,3 +108,42 @@ Deno.test("analyze-core: transaction JSON fallback preserves merchant", () => {
 
   assertEquals(item.merchant, "Blue Bottle Coffee");
 });
+
+Deno.test(
+  "analyze-core: attachment fallback currency prefers unambiguous document evidence",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "USD",
+      rawText: "Statement currency: eur\nTotal amount 45.90",
+      parsedItems: [{ currency: "" }, { currency: undefined }],
+    });
+
+    assertEquals(inferred, "EUR");
+  },
+);
+
+Deno.test(
+  "analyze-core: attachment fallback currency keeps caller currency when evidence is mixed",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "USD",
+      rawText: "Totals shown in EUR and USD",
+      parsedItems: [{ currency: "EUR" }, { currency: "USD" }],
+    });
+
+    assertEquals(inferred, "USD");
+  },
+);
+
+Deno.test(
+  "analyze-core: attachment fallback can override caller-defaulted item currency using raw text evidence",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "USD",
+      rawText: "Account currency EUR\nStatement total €157.65",
+      parsedItems: [{ currency: "USD" }, { currency: "USD" }],
+    });
+
+    assertEquals(inferred, "EUR");
+  },
+);

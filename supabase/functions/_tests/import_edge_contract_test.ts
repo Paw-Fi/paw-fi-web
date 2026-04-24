@@ -1,3 +1,5 @@
+/// <reference lib="deno.ns" />
+
 import {
   assertEquals,
   assertStringIncludes,
@@ -151,5 +153,43 @@ Deno.test(
       followupSource,
       "We download them temporarily only to extract transactions.",
     );
+  },
+);
+
+Deno.test(
+  "import contract: inbound webhook uses processing lease state for retries",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, 'status: "processing"');
+    assertStringIncludes(source, "lock_expires_at");
+    assertStringIncludes(source, "processing_attempt_count");
+  },
+);
+
+Deno.test(
+  "import contract: inbound duplicate response exposes in-progress state",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "in_progress");
+    assertStringIncludes(source, "reason: claim.reason");
+  },
+);
+
+Deno.test(
+  "import contract: inbound inbox recipient matching is environment configurable",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../resend-inbound-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "EMAIL_IMPORT_INBOX_EMAIL");
+    assertStringIncludes(source, "EMAIL_IMPORT_INBOX_EMAILS");
+    assertStringIncludes(source, "shouldProcessInboundToConfiguredInboxes");
   },
 );

@@ -7,6 +7,7 @@
  */
 
 import { normalizeCurrencyCode } from "../currency-normalize.ts";
+import { CURRENCY_SYMBOLS } from "../currency-symbols.ts";
 
 // ---------------------------------------------------------------------------
 // Error codes
@@ -362,22 +363,70 @@ export function extractAmountTokens(
  * Detect currency from symbols or ISO codes in text.
  * Falls back to callerCurrency if nothing is detected.
  */
+const SUPPORTED_CURRENCY_CODES = new Set(Object.keys(CURRENCY_SYMBOLS));
+
+const CURRENCY_SYMBOL_TO_CODES = (() => {
+  const map = new Map<string, Set<string>>();
+  for (const [code, rawSymbol] of Object.entries(CURRENCY_SYMBOLS)) {
+    const normalizedCode = normalizeCurrencyCode(code);
+    if (!normalizedCode || !SUPPORTED_CURRENCY_CODES.has(normalizedCode)) {
+      continue;
+    }
+
+    const symbol = String(rawSymbol || "").trim();
+    if (!symbol) continue;
+
+    if (!map.has(symbol)) {
+      map.set(symbol, new Set<string>());
+    }
+    map.get(symbol)!.add(normalizedCode);
+  }
+  return map;
+})();
+
+const SORTED_CURRENCY_SYMBOLS = Array.from(CURRENCY_SYMBOL_TO_CODES.keys())
+  .filter((symbol) => /[^\p{L}]/u.test(symbol))
+  .sort((left, right) => right.length - left.length);
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function detectCurrencyFromText(
   line: string,
   callerCurrency: string,
 ): string {
-  if (/₽|(?:\bRUR\b)|(?:\bRUB\b)|(?:\bРУБ\b)|(?:руб\.?)/iu.test(line)) {
-    return "RUB";
+  const detected: string[] = [];
+  const pushCode = (value: string | null) => {
+    if (!value) return;
+    if (!SUPPORTED_CURRENCY_CODES.has(value)) return;
+    detected.push(value);
+  };
+
+  let remainingLine = line;
+  for (const symbol of SORTED_CURRENCY_SYMBOLS) {
+    const mappedCodes = CURRENCY_SYMBOL_TO_CODES.get(symbol);
+    if (!mappedCodes || mappedCodes.size !== 1) continue;
+    const symbolRegex = new RegExp(escapeRegex(symbol), "gu");
+    let matched = false;
+    remainingLine = remainingLine.replace(symbolRegex, () => {
+      matched = true;
+      return " ";
+    });
+    if (!matched) continue;
+    pushCode(mappedCodes.values().next().value ?? null);
   }
-  if (/€/.test(line)) return "EUR";
-  if (/£/.test(line)) return "GBP";
-  if (/\$/.test(line)) return "USD";
-  if (/¥/.test(line)) return "JPY";
-  if (/₹/.test(line)) return "INR";
-  const isoMatch = line.match(/\b([A-Z]{3})\b/);
-  if (isoMatch) {
-    return normalizeCurrencyCode(isoMatch[1]) || isoMatch[1];
+
+  const tokenMatches = remainingLine.match(/[\p{L}\p{Sc}.]{2,8}/gu) || [];
+  for (const rawToken of tokenMatches) {
+    const token = rawToken.replace(/^[^\p{L}\p{Sc}]+|[^\p{L}\p{Sc}]+$/gu, "");
+    const normalized = normalizeCurrencyCode(token);
+    if (normalized) {
+      pushCode(normalized);
+    }
   }
+
+  if (detected.length > 0) return detected[0];
   return callerCurrency;
 }
 

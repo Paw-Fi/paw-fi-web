@@ -760,7 +760,7 @@ export async function saveTransactionsBatchInternal(
   }
 
   const duplicateRequestKeys = new Map<string, Record<string, unknown>>();
-  const duplicateSemanticKeys = new Set<string>();
+  const duplicateSemanticKeyCounts = new Map<string, number>();
   const requestKeys = preparedRecords
     .map((record) => record.importRequestKey)
     .filter((key): key is string => !!key);
@@ -821,7 +821,10 @@ export async function saveTransactionsBatchInternal(
             ? existingRow.import_semantic_key
             : null;
         if (semanticKey) {
-          duplicateSemanticKeys.add(semanticKey);
+          duplicateSemanticKeyCounts.set(
+            semanticKey,
+            (duplicateSemanticKeyCounts.get(semanticKey) || 0) + 1,
+          );
         }
       }
     }
@@ -840,7 +843,7 @@ export async function saveTransactionsBatchInternal(
     customSplits?: CustomSplits | null;
     payerUserId?: string | null;
   }> = [];
-  const seenSemanticKeys = new Set<string>();
+  const seenSemanticKeyCounts = new Map<string, number>();
 
   for (const prepared of preparedRecords) {
     const requestKey = prepared.importRequestKey;
@@ -866,10 +869,15 @@ export async function saveTransactionsBatchInternal(
       continue;
     }
 
+    const semanticOccurrence =
+      (seenSemanticKeyCounts.get(prepared.importSemanticKey) || 0) + 1;
+    seenSemanticKeyCounts.set(prepared.importSemanticKey, semanticOccurrence);
+    const existingSemanticCount =
+      duplicateSemanticKeyCounts.get(prepared.importSemanticKey) || 0;
+
     if (
       body.skipSemanticDuplicates === true &&
-      (duplicateSemanticKeys.has(prepared.importSemanticKey) ||
-        seenSemanticKeys.has(prepared.importSemanticKey))
+      semanticOccurrence <= existingSemanticCount
     ) {
       results.push({
         id: "",
@@ -884,8 +892,6 @@ export async function saveTransactionsBatchInternal(
       processedCount += 1;
       continue;
     }
-
-    seenSemanticKeys.add(prepared.importSemanticKey);
 
     if (prepared.type === "income") {
       incomeRecords.push(prepared.record);

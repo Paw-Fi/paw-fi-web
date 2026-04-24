@@ -21,6 +21,21 @@ Deno.test("import locale: Russian currency aliases normalize to RUB", () => {
   assertEquals(detectCurrencyFromText("1 110,00 ₽", "USD"), "RUB");
 });
 
+Deno.test("import locale: currency detection handles lowercase ISO codes", () => {
+  assertEquals(detectCurrencyFromText("coffee 4.20 eur", "USD"), "EUR");
+  assertEquals(detectCurrencyFromText("salary 2000 gbp", "USD"), "GBP");
+  assertEquals(detectCurrencyFromText("refund 10.00 usd", "EUR"), "USD");
+});
+
+Deno.test(
+  "import locale: currency detection supports broader symbols from shared mapping",
+  () => {
+    assertEquals(detectCurrencyFromText("transfer 80.00 ₱", "USD"), "PHP");
+    assertEquals(detectCurrencyFromText("paid 900.00 RON", "USD"), "RON");
+    assertEquals(detectCurrencyFromText("purchase 21.00 BZ$", "USD"), "BZD");
+  },
+);
+
 Deno.test("import locale: CSV parser extracts Russian bank statement rows", () => {
   const csv = [
     "Дата проводки;Описание;Сумма в валюте счета",

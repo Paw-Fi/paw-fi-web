@@ -13,6 +13,9 @@
 #   API key used for Resend inbound fetches and follow-up emails.
 # RESEND_WEBHOOK_SECRET
 #   Webhook signing secret used to verify Resend inbound deliveries.
+# EMAIL_IMPORT_INBOX_EMAIL / EMAIL_IMPORT_INBOX_EMAILS
+#   Optional inbox override(s). Example for dev:
+#   EMAIL_IMPORT_INBOX_EMAIL=test-files@inbound.moneko.io
 # FIREBASE_SERVICE_ACCOUNT_JSON
 #   Service account used to send push notifications through FCM.
 # FIREBASE_PROJECT_ID
@@ -98,7 +101,8 @@ echo "  Post-deployment checklist:"
 echo "     1. Ensure migrations are applied (supabase db push)"
 echo "     2. Verify secrets: supabase secrets list --project-ref $PROJECT_REF"
 echo "     3. Verify GEMINI_API_KEY, RESEND_API_KEY, and RESEND_WEBHOOK_SECRET are set"
+echo "     3a. In dev, set EMAIL_IMPORT_INBOX_EMAIL=test-files@inbound.moneko.io"
 echo "     4. Verify FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_PROJECT_ID, and IOS_BUNDLE_ID are set"
 echo "     5. Configure Resend inbound webhook to call resend-inbound-webhook"
-echo "     6. Test with a forwarded email to files@inbound.moneko.io and confirm logs + follow-up email"
+echo "     6. Test with a forwarded email to the configured import inbox and confirm logs + follow-up email"
 echo "════════════════════════════════════════════════════════════"

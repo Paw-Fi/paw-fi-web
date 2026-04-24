@@ -71,7 +71,7 @@ import type {
   UserCategoryPreferenceRow,
   UserCategoryRemapRow,
 } from "./user-categories.ts";
-import { getCurrencySymbol } from "./currency-symbols.ts";
+import { CURRENCY_SYMBOLS, getCurrencySymbol } from "./currency-symbols.ts";
 
 import { decodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
@@ -282,7 +282,7 @@ async function getGoogleCloudAccessToken(): Promise<string | null> {
     );
 
     const signatureArray = new Uint8Array(signature);
-    const signatureChars = [];
+    const signatureChars: string[] = [];
     for (let i = 0; i < signatureArray.length; i++) {
       signatureChars.push(String.fromCharCode(signatureArray[i]));
     }
@@ -581,17 +581,121 @@ function extractAmountTokens(line: string): { raw: string; value: number }[] {
   return tokens;
 }
 
-function detectCurrencyFromText(line: string, callerCurrency: string): string {
-  if (/₽|(?:\bRUR\b)|(?:\bRUB\b)|(?:\bРУБ\b)|(?:руб\.?)/iu.test(line)) {
-    return "RUB";
+const SUPPORTED_CURRENCY_CODES = new Set(Object.keys(CURRENCY_SYMBOLS));
+
+const CURRENCY_SYMBOL_TO_CODES = (() => {
+  const map = new Map<string, Set<string>>();
+  for (const [code, rawSymbol] of Object.entries(CURRENCY_SYMBOLS)) {
+    const normalizedCode = normalizeCurrencyCode(code);
+    if (!normalizedCode || !SUPPORTED_CURRENCY_CODES.has(normalizedCode)) {
+      continue;
+    }
+
+    const symbol = String(rawSymbol || "").trim();
+    if (!symbol) continue;
+
+    if (!map.has(symbol)) {
+      map.set(symbol, new Set<string>());
+    }
+    map.get(symbol)!.add(normalizedCode);
   }
-  if (/€/.test(line)) return "EUR";
-  if (/£/.test(line)) return "GBP";
-  if (/\$/.test(line)) return "USD";
-  if (/¥/.test(line)) return "JPY";
-  if (/₹/.test(line)) return "INR";
-  const isoMatch = line.match(/\b([A-Z]{3})\b/);
-  if (isoMatch) return normalizeCurrencyCode(isoMatch[1]) || isoMatch[1];
+  return map;
+})();
+
+const SORTED_CURRENCY_SYMBOLS = Array.from(CURRENCY_SYMBOL_TO_CODES.keys())
+  .filter((symbol) => /[^\p{L}]/u.test(symbol))
+  .sort((left, right) => right.length - left.length);
+
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractCurrencyCodesFromText(text: string): string[] {
+  if (typeof text !== "string" || text.trim().length === 0) {
+    return [];
+  }
+
+  const codes: string[] = [];
+  const pushCode = (value: string | null) => {
+    if (!value) return;
+    if (!SUPPORTED_CURRENCY_CODES.has(value)) return;
+    codes.push(value);
+  };
+
+  let remainingText = text;
+  for (const symbol of SORTED_CURRENCY_SYMBOLS) {
+    const mappedCodes = CURRENCY_SYMBOL_TO_CODES.get(symbol);
+    if (!mappedCodes || mappedCodes.size !== 1) continue;
+    const symbolRegex = new RegExp(escapeRegex(symbol), "gu");
+    let matched = false;
+    remainingText = remainingText.replace(symbolRegex, () => {
+      matched = true;
+      return " ";
+    });
+    if (!matched) continue;
+    pushCode(mappedCodes.values().next().value ?? null);
+  }
+
+  const tokenMatches = remainingText.match(/[\p{L}\p{Sc}.]{2,8}/gu) || [];
+  for (const rawToken of tokenMatches) {
+    const token = rawToken.replace(/^[^\p{L}\p{Sc}]+|[^\p{L}\p{Sc}]+$/gu, "");
+    const normalized = normalizeCurrencyCode(token);
+    if (normalized) {
+      pushCode(normalized);
+    }
+  }
+
+  return codes;
+}
+
+function detectCurrencyFromText(line: string, callerCurrency: string): string {
+  return extractCurrencyCodesFromText(line)[0] || callerCurrency;
+}
+
+export function inferAttachmentFallbackCurrency(params: {
+  callerCurrency: string;
+  rawText?: string | null;
+  parsedItems?: Array<{ currency?: unknown }>;
+}): string {
+  const callerCurrency = validateCurrency(params.callerCurrency);
+
+  const explicitItemCurrencies = new Set<string>();
+  const parsedItems = Array.isArray(params.parsedItems)
+    ? params.parsedItems
+    : [];
+  for (const item of parsedItems) {
+    const normalized = typeof item?.currency === "string"
+      ? normalizeCurrencyCode(item.currency)
+      : null;
+    if (normalized && SUPPORTED_CURRENCY_CODES.has(normalized)) {
+      explicitItemCurrencies.add(normalized);
+    }
+  }
+
+  const detectedFromText = new Set(
+    extractCurrencyCodesFromText(params.rawText || ""),
+  );
+  if (explicitItemCurrencies.size === 1) {
+    const itemCurrency = explicitItemCurrencies.values().next().value as string;
+    if (detectedFromText.size === 1) {
+      const textCurrency = detectedFromText.values().next().value as string;
+      // If AI output exactly matches caller currency but the document text is
+      // unambiguously another currency, trust the document evidence.
+      if (itemCurrency === callerCurrency && textCurrency !== callerCurrency) {
+        return textCurrency;
+      }
+      return itemCurrency;
+    }
+    return itemCurrency;
+  }
+  if (explicitItemCurrencies.size > 1) {
+    return callerCurrency;
+  }
+
+  if (detectedFromText.size === 1) {
+    return detectedFromText.values().next().value as string;
+  }
+
   return callerCurrency;
 }
 
@@ -3383,29 +3487,12 @@ function deduplicateAndCleanItems(
     result = result.filter((it, i) => Math.abs(it.amount - sums[i]) > 0.0001);
   }
 
-  // Deduplicate by (date, amount, description) composite key
-  // Be conservative when description is missing to avoid dropping valid rows
-  const seen = new Set<string>();
-  return result.filter((item) => {
-    const normalizedDescription = (item.description || "").toLowerCase().trim();
-    if (normalizedDescription.length < 3) {
-      return true;
-    }
-    const key = `${item.date}|${item.amount.toFixed(2)}|${
-      normalizedDescription.slice(
-        0,
-        50,
-      )
-    }`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return result;
 }
 
 function convertPdfPipelineItems(
   items: any[],
-  callerCurrency: string,
+  fallbackCurrency: string,
   callerDate: string,
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
 ): ExpenseItem[] {
@@ -3424,7 +3511,7 @@ function convertPdfPipelineItems(
         const currency =
           typeof item.currency === "string" && item.currency.trim().length > 0
             ? item.currency.trim().toUpperCase()
-            : callerCurrency;
+            : fallbackCurrency;
         const rawBreakdown = Array.isArray(item.breakdown)
           ? item.breakdown
             .map((value: unknown) => String(value).trim())
@@ -3664,28 +3751,77 @@ async function analyzeFromPdf(
       ? buildHouseholdContextPrompt(householdContext)
       : undefined,
   });
+  console.log("[analyze-expense] PDF pipeline diagnostics", {
+    documentType: pipelineResult.analysis.document_type,
+    pageCount: pipelineResult.analysis.metadata.page_count,
+    chunkCount: pipelineResult.analysis.metadata.chunk_count ?? 1,
+    chunkItemCounts: pipelineResult.analysis.metadata.chunk_item_counts ?? [
+      pipelineResult.items.length,
+    ],
+    mergedItemCount: pipelineResult.analysis.metadata.merged_item_count ??
+      pipelineResult.items.length,
+    synthesisItemCount: pipelineResult.analysis.metadata.synthesis_item_count ??
+      null,
+    estimatedStatementRows:
+      pipelineResult.analysis.metadata.estimated_statement_rows ?? null,
+    completenessSuspect:
+      pipelineResult.analysis.metadata.completeness_suspect === true,
+    cacheHit: pipelineResult.analysis.metadata.cache_hit === true,
+    inputTokens: pipelineResult.analysis.metadata.input_tokens ?? null,
+    outputTokens: pipelineResult.analysis.metadata.output_tokens ?? null,
+    requiresReview: pipelineResult.analysis.requires_review === true,
+    error: pipelineResult.analysis.error ?? null,
+  });
+  const inferredFallbackCurrency = inferAttachmentFallbackCurrency({
+    callerCurrency,
+    rawText: pipelineResult.rawText,
+    parsedItems: pipelineResult.items,
+  });
+  const pipelineItemCurrencies = Array.from(
+    new Set(
+      (Array.isArray(pipelineResult.items) ? pipelineResult.items : [])
+        .map((item) =>
+          typeof item?.currency === "string"
+            ? normalizeCurrencyCode(item.currency)
+            : null
+        )
+        .filter((code): code is string => !!code),
+    ),
+  );
+  const rawTextCurrencies = Array.from(
+    new Set(extractCurrencyCodesFromText(pipelineResult.rawText || "")),
+  );
+  console.log("[analyze-expense] PDF currency evidence", {
+    callerCurrency,
+    inferredFallbackCurrency,
+    pipelineItemCurrencies,
+    rawTextCurrencies,
+    rawTextLength: typeof pipelineResult.rawText === "string"
+      ? pipelineResult.rawText.length
+      : 0,
+  });
+  if (inferredFallbackCurrency !== callerCurrency) {
+    console.log("[analyze-expense] PDF: inferred fallback currency override", {
+      callerCurrency,
+      inferredFallbackCurrency,
+    });
+  }
   const extractedItems = convertPdfPipelineItems(
     pipelineResult.items,
-    callerCurrency,
+    inferredFallbackCurrency,
     callerDate,
     householdContext,
   );
-  const items = await categorizePdfExtractedItems({
-    genAI,
-    items: extractedItems,
-    expenseCategories: canonicalExpenseCategories,
-    incomeCategories: canonicalIncomeCategories,
-    language,
-    onProgress,
-  });
-  const shouldFallbackToText =
-    pipelineResult.analysis.document_type === "bank_statement" &&
-    (pipelineResult.analysis.requires_review || items.length === 0) &&
+  const shouldFallbackToText = (
+    pipelineResult.analysis.document_type === "bank_statement" ||
+    pipelineResult.analysis.metadata.completeness_suspect === true
+  ) &&
+    (pipelineResult.analysis.requires_review || extractedItems.length === 0) &&
     typeof pipelineResult.rawText === "string" &&
     pipelineResult.rawText.trim().length > 0;
 
   console.log(
-    `[analyze-expense] PDF: Universal pipeline returned ${items.length} item(s)` +
+    `[analyze-expense] PDF: Universal pipeline returned ${extractedItems.length} item(s)` +
       (pipelineResult.analysis.requires_review ? " (requires review)" : ""),
   );
 
@@ -3696,9 +3832,24 @@ async function analyzeFromPdf(
     return {
       items: [],
       rawText: pipelineResult.rawText,
-      error: pipelineResult.error || "analysis_failed",
+      error: pipelineResult.analysis.error || pipelineResult.error ||
+        "analysis_failed",
     };
   }
+
+  console.log("[analyze-expense] PDF categorization start", {
+    itemCount: extractedItems.length,
+    expenseCategoryCount: canonicalExpenseCategories.length,
+    incomeCategoryCount: canonicalIncomeCategories.length,
+  });
+  const items = await categorizePdfExtractedItems({
+    genAI,
+    items: extractedItems,
+    expenseCategories: canonicalExpenseCategories,
+    incomeCategories: canonicalIncomeCategories,
+    language,
+    onProgress,
+  });
 
   return {
     items,
@@ -4899,17 +5050,34 @@ export async function runAnalyzeExpense(
           };
         }
 
+        const attachmentFallbackCurrency = inferAttachmentFallbackCurrency({
+          callerCurrency,
+          rawText: syntheticText,
+          parsedItems: items,
+        });
+        if (attachmentFallbackCurrency !== callerCurrency) {
+          console.log(
+            "[analyze-expense] Attachment text fallback currency override",
+            {
+              callerCurrency,
+              attachmentFallbackCurrency,
+              isPdf,
+              syntheticTextLength: syntheticText.length,
+            },
+          );
+        }
+
         if (!isSpreadsheet) {
           const transactionJson = await extractTransactionsJsonWithGemini(
             genAI,
             syntheticText,
-            callerCurrency,
+            attachmentFallbackCurrency,
             callerDate,
           );
           if (transactionJson) {
             const parsedItems = parseTransactionsJsonToItems(
               transactionJson,
-              callerCurrency,
+              attachmentFallbackCurrency,
               callerDate,
             );
             if (parsedItems.length > 0) {
@@ -4924,7 +5092,7 @@ export async function runAnalyzeExpense(
         if (items.length === 0) {
           items = await analyzeFromText(
             genAI,
-            callerCurrency,
+            attachmentFallbackCurrency,
             callerDate,
             language,
             syntheticText,

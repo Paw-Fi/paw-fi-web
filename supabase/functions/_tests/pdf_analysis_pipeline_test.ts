@@ -3,6 +3,7 @@
 import {
   assertEquals,
   assertMatch,
+  assertObjectMatch,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 import { cleanExtractedText } from "../shared/pdf-analysis/utils/cleaner.ts";
@@ -25,6 +26,26 @@ import {
   normalizeCategorizationText,
 } from "../shared/pdf-analysis/categorization.ts";
 import { runPdfAnalysisPipeline } from "../shared/pdf-analysis/pipeline.ts";
+
+function buildMockPdfItems(params: {
+  count: number;
+  prefix: string;
+  startIndex?: number;
+}) {
+  const startIndex = params.startIndex ?? 0;
+  return Array.from({ length: params.count }, (_, index) => {
+    const itemNumber = startIndex + index + 1;
+    return {
+      type: itemNumber % 9 === 0 ? "income" : "expense",
+      amount: Number((itemNumber + 0.37).toFixed(2)),
+      category: itemNumber % 9 === 0 ? "salary" : "other",
+      currency: "USD",
+      date: `2026-04-${String((itemNumber % 28) + 1).padStart(2, "0")}`,
+      description: `${params.prefix} transaction ${itemNumber}`,
+      merchant: `${params.prefix.toUpperCase()}-${itemNumber}`,
+    };
+  });
+}
 
 Deno.test(
   "pdf analysis: cleaner removes control characters and collapses whitespace",
@@ -288,6 +309,313 @@ Deno.test(
     });
 
     assertEquals(cacheWrites, 0);
+  },
+);
+
+Deno.test(
+  "pdf analysis: multi-chunk imports preserve all unique chunk items without lossy synthesis",
+  async () => {
+    const previousChunkLimit = Deno.env.get("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT");
+    Deno.env.set("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT", "120");
+
+    try {
+      let synthesisAttempts = 0;
+      const firstChunkItems = buildMockPdfItems({
+        count: 60,
+        prefix: "chunk-a",
+      });
+      const secondChunkItems = buildMockPdfItems({
+        count: 60,
+        prefix: "chunk-b",
+        startIndex: 60,
+      });
+
+      const result = await runPdfAnalysisPipeline({
+        base64Pdf: "JVBERi0xLjQ=",
+        contentType: "application/pdf",
+        callerCurrency: "USD",
+        callerDate: "2026-04-21",
+        expenseCategories: ["other"],
+        incomeCategories: ["salary", "other"],
+        createProvider: () => ({
+          name: "mock",
+          async analyze(content) {
+            const text = content.text || "";
+
+            if (text.includes("Merge these chunk-level analysis results")) {
+              synthesisAttempts += 1;
+              return {
+                text: JSON.stringify({
+                  document_type: "bank_statement",
+                  language: "en",
+                  confidence: 0.95,
+                  summary: "Lossy synthesized summary",
+                  data: {},
+                  anomalies: [],
+                  items: buildMockPdfItems({
+                    count: 50,
+                    prefix: "truncated",
+                  }),
+                  metadata: {
+                    page_count: 4,
+                    extraction_strategy: "native",
+                    currencies_detected: ["USD"],
+                  },
+                }),
+                model: "mock-model",
+                latencyMs: 1,
+              };
+            }
+
+            const chunkItems = text.includes("[Page 1]")
+              ? firstChunkItems
+              : secondChunkItems;
+            return {
+              text: JSON.stringify({
+                document_type: "bank_statement",
+                language: "en",
+                confidence: 0.96,
+                summary: "Chunk analysis",
+                data: {},
+                anomalies: [],
+                items: chunkItems,
+                metadata: {
+                  page_count: 2,
+                  extraction_strategy: "native",
+                  currencies_detected: ["USD"],
+                },
+              }),
+              model: "mock-model",
+              latencyMs: 1,
+            };
+          },
+        }),
+        storage: {
+          async get() {
+            return null;
+          },
+          async set() {
+            return;
+          },
+          async log() {
+            return;
+          },
+        },
+        extractors: {
+          async native() {
+            return {
+              text: [
+                "2026-04-01 chunk a 10.00 ".repeat(20),
+                "2026-04-02 chunk b 20.00 ".repeat(20),
+                "2026-04-03 chunk c 30.00 ".repeat(20),
+                "2026-04-04 chunk d 40.00 ".repeat(20),
+              ].join("\n\n"),
+              pages: [
+                "2026-04-01 chunk a 10.00 ".repeat(20),
+                "2026-04-02 chunk b 20.00 ".repeat(20),
+                "2026-04-03 chunk c 30.00 ".repeat(20),
+                "2026-04-04 chunk d 40.00 ".repeat(20),
+              ],
+              pageCount: 4,
+            };
+          },
+          async ocr() {
+            return null;
+          },
+          async vision() {
+            return { documents: [], pageCount: 4 };
+          },
+        },
+      });
+
+      assertEquals(result.items.length, 120);
+      assertEquals(synthesisAttempts, 0);
+      assertObjectMatch(result.items[0], firstChunkItems[0]);
+      assertObjectMatch(result.items[119], secondChunkItems[59]);
+    } finally {
+      if (previousChunkLimit == null) {
+        Deno.env.delete("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT");
+      } else {
+        Deno.env.set("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT", previousChunkLimit);
+      }
+    }
+  },
+);
+
+Deno.test(
+  "pdf analysis: multi-chunk merge preserves repeated legitimate transactions",
+  async () => {
+    const previousChunkLimit = Deno.env.get("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT");
+    Deno.env.set("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT", "120");
+
+    try {
+      const repeatedTransaction = {
+        type: "expense",
+        amount: 12.5,
+        category: "other",
+        currency: "USD",
+        date: "2026-04-21",
+        description: "Parking meter",
+        merchant: "City Parking",
+      };
+
+      const result = await runPdfAnalysisPipeline({
+        base64Pdf: "JVBERi0xLjQ=",
+        contentType: "application/pdf",
+        callerCurrency: "USD",
+        callerDate: "2026-04-21",
+        expenseCategories: ["other"],
+        incomeCategories: ["salary", "other"],
+        createProvider: () => ({
+          name: "mock",
+          async analyze() {
+            return {
+              text: JSON.stringify({
+                document_type: "bank_statement",
+                language: "en",
+                confidence: 0.96,
+                summary: "Chunk analysis",
+                data: {},
+                anomalies: [],
+                items: [repeatedTransaction],
+                metadata: {
+                  page_count: 1,
+                  extraction_strategy: "native",
+                  currencies_detected: ["USD"],
+                },
+              }),
+              model: "mock-model",
+              latencyMs: 1,
+            };
+          },
+        }),
+        storage: {
+          async get() {
+            return null;
+          },
+          async set() {
+            return;
+          },
+          async log() {
+            return;
+          },
+        },
+        extractors: {
+          async native() {
+            return {
+              text: [
+                "2026-04-21 Parking meter 12.50",
+                "2026-04-21 Parking meter 12.50",
+                "2026-04-22 Coffee 4.80",
+                "2026-04-23 Lunch 18.20",
+              ].join("\n\n"),
+              pages: [
+                "2026-04-21 Parking meter 12.50",
+                "2026-04-21 Parking meter 12.50",
+                "2026-04-22 Coffee 4.80",
+                "2026-04-23 Lunch 18.20",
+              ],
+              pageCount: 4,
+            };
+          },
+          async ocr() {
+            return null;
+          },
+          async vision() {
+            return { documents: [], pageCount: 4 };
+          },
+        },
+      });
+
+      assertEquals(result.items.length, 2);
+      assertObjectMatch(result.items[0], repeatedTransaction);
+      assertObjectMatch(result.items[1], repeatedTransaction);
+    } finally {
+      if (previousChunkLimit == null) {
+        Deno.env.delete("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT");
+      } else {
+        Deno.env.set("PDF_ANALYSIS_CHUNK_TOKEN_LIMIT", previousChunkLimit);
+      }
+    }
+  },
+);
+
+Deno.test(
+  "pdf analysis: suspiciously incomplete bank-statement results are marked for review and not cached",
+  async () => {
+    let cacheWrites = 0;
+    const bankStatementText = Array.from({ length: 40 }, (_, index) => {
+      const day = String((index % 28) + 1).padStart(2, "0");
+      return `2026-04-${day} Merchant ${index + 1} ${index + 1}.45`;
+    }).join("\n");
+
+    const result = await runPdfAnalysisPipeline({
+      base64Pdf: "JVBERi0xLjQ=",
+      contentType: "application/pdf",
+      callerCurrency: "USD",
+      callerDate: "2026-04-21",
+      expenseCategories: ["other"],
+      incomeCategories: ["salary", "other"],
+      createProvider: () => ({
+        name: "mock",
+        async analyze() {
+          return {
+            text: JSON.stringify({
+              document_type: "bank_statement",
+              language: "en",
+              confidence: 0.97,
+              summary: "Partial statement extraction",
+              data: {},
+              anomalies: [],
+              items: buildMockPdfItems({
+                count: 10,
+                prefix: "partial",
+              }),
+              metadata: {
+                page_count: 1,
+                extraction_strategy: "native",
+                currencies_detected: ["USD"],
+              },
+            }),
+            model: "mock-model",
+            latencyMs: 1,
+          };
+        },
+      }),
+      storage: {
+        async get() {
+          return null;
+        },
+        async set() {
+          cacheWrites += 1;
+        },
+        async log() {
+          return;
+        },
+      },
+      extractors: {
+        async native() {
+          return {
+            text: bankStatementText,
+            pages: [bankStatementText],
+            pageCount: 1,
+          };
+        },
+        async ocr() {
+          return null;
+        },
+        async vision() {
+          return { documents: [], pageCount: 1 };
+        },
+      },
+    });
+
+    assertEquals(result.analysis.requires_review, true);
+    assertEquals(cacheWrites, 0);
+    assertEquals(
+      result.analysis.anomalies.includes("incomplete_bank_statement_extraction"),
+      true,
+    );
   },
 );
 
