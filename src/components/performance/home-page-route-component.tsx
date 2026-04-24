@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import "@/types/route-types";
 import { HomeHeader } from "@/components/index/header";
 
@@ -63,7 +63,13 @@ const CTASection = lazy(() =>
 // Discord URL for community link
 export const DISCORD_URL = "https://discord.gg/M2Dgujvtze";
 
-export function HomePageRouteComponent() {
+interface HomePageRouteComponentProps {
+  children?: ReactNode;
+}
+
+export function HomePageRouteComponent({
+  children,
+}: HomePageRouteComponentProps = {}) {
   const deferredSectionFallback =
     "mx-auto my-6 w-full max-w-6xl rounded-[32px] border border-border/40 bg-background/60 p-10";
 
@@ -77,7 +83,7 @@ export function HomePageRouteComponent() {
         {/* Hero Section */}
         <HeroV2 />
 
- <Suspense
+        <Suspense
           fallback={
             <div className={`${deferredSectionFallback} min-h-[32rem]`} />
           }
@@ -103,8 +109,6 @@ export function HomePageRouteComponent() {
         >
           <ProductOverviewSection />
         </Suspense>
-
-       
 
         {/* Social Proof: User Reviews & Ratings */}
         <Suspense
@@ -150,6 +154,8 @@ export function HomePageRouteComponent() {
         >
           <ComparisonTable />
         </Suspense>
+
+        {children}
 
         <Suspense
           fallback={

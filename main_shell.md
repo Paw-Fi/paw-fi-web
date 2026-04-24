@@ -5,6 +5,7 @@ Moneko is a budgeting + spending assistant designed to make "staying on top of m
 Instead of making you do a lot of manual work up-front, Moneko focuses on:
 
 - Fast capture (text, receipt photo, voice note, files)
+- Email receipt capture (forward receipts or PDF/CSV/XLS/XLSX attachments)
 - Budgets that behave like "pockets/envelopes"
 - A clean split between **personal** and **household (joint)** finances
 - Practical insights (what's happening now + "what if" planning)
@@ -33,6 +34,7 @@ Moneko supports "just tell it what happened" capture:
 - Snap a receipt photo (camera)
 - Attach files (photos, PDFs, spreadsheets) when supported
 - Record a voice note (describe the purchase)
+- Forward receipt emails and supported attachments to `files@inbound.moneko.io`
 
 Moneko tries to extract:
 
@@ -43,6 +45,21 @@ Moneko tries to extract:
 - and whether it's an **expense** or **income**
 
 Then it routes you into a review screen where you can confirm and edit before saving.
+
+#### Email receipt capture
+
+Moneko can also log online receipts from email. In Profile Settings, users can enable Email receipt capture, choose a default space and wallet, copy the forwarding address, and approve sender email addresses.
+
+Once set up, a user can forward receipt emails or supported attachments to `files@inbound.moneko.io`. Moneko extracts the merchant, amount, date, and useful transaction details, saves the expense to the chosen space and wallet, then sends a confirmation email and phone notification when processing is complete.
+
+Supported attachment types include:
+
+- PDF
+- CSV
+- XLS
+- XLSX
+
+Approved senders keep the feature intentional and secure: only receipts sent from approved email addresses are processed.
 
 #### Personal vs Household mode
 
@@ -302,6 +319,7 @@ This is a "what we optimize for" comparison, not a judgment of which app is best
 | Household/joint finances  | Built into the main flow                           | Varies                              | Varies                                    |
 | "What if?" planning       | Built-in scenario planning                         | Typically more plan/budget workflow | Often broader "finance overview" planning |
 | WhatsApp as a channel     | Yes (capture, budgets, summaries, charts)          | Not typical                         | Not typical                               |
+| Email receipt capture     | Yes (forward receipts and supported attachments)   | Not typical                         | Varies                                    |
 | Home screen widgets       | Yes (budget/pockets + quick actions)               | Varies                              | Varies                                    |
 
 ### Moneko vs YNAB (at a glance)
@@ -333,6 +351,7 @@ Monarch-style apps tend to fit you if you want:
 ### What's uniquely "Moneko"
 
 - WhatsApp-native budgeting assistant (capture + budgets + summaries + charts)
+- Email receipt capture for online receipts and supported file attachments
 - A mobile-first, month-based pockets flow that is designed to be easy to maintain
 - AI capture that supports more than just typed entries (receipt photos, voice notes, and certain files)
 

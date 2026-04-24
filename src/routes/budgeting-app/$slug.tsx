@@ -17,7 +17,10 @@ export const Route = createFileRoute("/budgeting-app/$slug")({
       throw notFound();
     }
 
-    return pageData as any;
+    return {
+      ...pageData,
+      slug: params.slug,
+    } as any;
   },
   component: lazyRouteComponent(
     () => import("@/components/performance/budgeting-app-slug-route-component"),
