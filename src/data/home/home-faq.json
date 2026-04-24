@@ -75,6 +75,21 @@
     "answer": "You can type a quick note, record a voice memo, or upload a receipt photo. Moneko extracts the amount, merchant, and category, then lets you confirm the result before it is saved to your budget."
   },
   {
+    "id": "email-receipt-capture",
+    "question": "Does Moneko support email receipt capture?",
+    "answer": "Yes. Moneko can process forwarded receipt emails and supported PDF, CSV, XLS, or XLSX attachments from approved sender addresses. Users choose a default space and wallet so online receipts are routed into the right budget."
+  },
+  {
+    "id": "free-budgeting-app-trial",
+    "question": "Is Moneko free to try?",
+    "answer": "Moneko is free to download and offers a free trial for its budgeting workflow. Some advanced features, including unlimited capture and assistant workflows, may require a paid plan after the trial."
+  },
+  {
+    "id": "moneyko-misspelling",
+    "question": "Is Moneyko the same as Moneko?",
+    "answer": "Moneyko is a common misspelling of Moneko. The official budgeting app name is Moneko and the canonical website is https://moneko.io."
+  },
+  {
     "id": "multiple-currencies",
     "question": "Does Moneko support multiple currencies?",
     "answer": "Yes. Moneko supports multi-currency budgeting so totals, charts, and budget views can stay usable when you spend across more than one currency."

@@ -1,19 +1,24 @@
 {
   "main": {
     "slug": "main",
-    "title": "Moneko - AI Budgeting App for Pockets, Wallets, WhatsApp, and Shared Expenses",
-    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, plan Pockets, manage Wallets, recurring bills, Insights, and shared budgets.",
-    "keywords": "best budgeting app, expense tracker app, YNAB alternative, AI budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker",
-    "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web with Pockets, Wallets, recurring bills, Insights, and household finance workflows.",
-    "websiteDescription": "Moneko helps people track expenses automatically, organize money into Pockets, manage Wallets and recurring bills, plan scenarios with Insights, and budget through chat-based workflows.",
-    "softwareDescription": "AI budgeting app and expense tracker with Overview, Recurring, Pockets, Wallets, Insights, multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
+    "title": "Moneko - AI Budgeting App for Pockets, Email Receipts, WhatsApp, and Shared Expenses",
+    "description": "Moneko is an AI budgeting app and expense tracker for iPhone, Android, WhatsApp, Telegram, and the web. Track spending, forward receipt emails, plan Pockets, manage Wallets, recurring bills, Insights, and shared budgets.",
+    "keywords": "best budgeting app, budgeting app 2026, free budgeting app trial, expense tracker app, YNAB alternative, AI budgeting app, email based budgeting app, track expenses automatically, budgeting via WhatsApp, expense tracker for couples, shared expense tracker, Moneyko budgeting app, Apple Wallet budgeting, Android expense tracker, envelope budgeting pockets, net worth wallet tracker, recurring bill tracker",
+    "organizationDescription": "Moneko is an AI budgeting app and expense tracker that helps people budget through iPhone, Android, WhatsApp, Telegram, and the web with Pockets, Wallets, email receipt capture, recurring bills, Insights, and household finance workflows.",
+    "websiteDescription": "Moneko helps people track expenses automatically, forward receipt emails, organize money into Pockets, manage Wallets and recurring bills, plan scenarios with Insights, and budget through chat-based workflows.",
+    "softwareDescription": "AI budgeting app and expense tracker with Overview, Recurring, Pockets, Wallets, Insights, email receipt capture, multilingual AI answers, Apple Wallet-friendly iPhone workflows, Android notification-based tracking, and WhatsApp or Telegram budgeting.",
     "softwareAlternateNames": [
       "Moneko budgeting app",
-      "Moneko expense tracker"
+      "Moneko expense tracker",
+      "Moneko AI",
+      "Moneyko",
+      "Moneyko budgeting app",
+      "Moneyko expense tracker"
     ],
     "softwareFeatureList": [
       "Overview dashboard for spending, cashflow, charts, and recent activity",
       "AI quick-add through text, receipt photos, voice notes, and supported files",
+      "Email receipt capture for forwarded receipts and PDF, CSV, XLS, and XLSX attachments",
       "Recurring bills and recurring income tracking",
       "Envelope-style Pockets for monthly budget allocations",
       "Wallets for accounts, balances, transfers, goals, and net worth history",
@@ -86,12 +91,422 @@
         "answer": "You can type a quick note, record a voice memo, or upload a receipt photo. Moneko extracts the amount, merchant, and category, then lets you confirm the result before it is saved to your budget."
       },
       {
+        "question": "Does Moneko support email receipt capture?",
+        "answer": "Yes. Moneko can process forwarded receipt emails and supported PDF, CSV, XLS, and XLSX attachments from approved sender addresses. Users choose a default personal or household space and wallet so online receipts are routed into the right budget."
+      },
+      {
+        "question": "Is Moneko free to try?",
+        "answer": "Moneko is free to download and offers a free trial for its budgeting workflow. Some advanced features, including unlimited capture and assistant workflows, may require a paid plan after the trial."
+      },
+      {
+        "question": "Is Moneyko the same as Moneko?",
+        "answer": "Moneyko is a common misspelling of Moneko. The official budgeting app name is Moneko and the canonical website is https://moneko.io."
+      },
+      {
         "question": "Does Moneko support multiple currencies?",
         "answer": "Yes. Moneko supports multi-currency budgeting so totals, charts, and budget views can stay usable when you spend across more than one currency."
       },
       {
         "question": "Is Moneko financial advice?",
         "answer": "No. Moneko is a budgeting and money-management tool that provides AI guidance for planning and tracking. It does not replace licensed financial, tax, or legal advice."
+      }
+    ]
+  },
+  "free-budgeting-app": {
+    "slug": "free-budgeting-app",
+    "sitemapLastmod": "2026-04-24",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.92",
+    "title": "Free Budgeting App Trial | Moneko",
+    "description": "Moneko is a budgeting app you can download and try free, with AI expense capture, Pockets, shared budgets, WhatsApp workflows, and email receipt capture.",
+    "keywords": "free budgeting app, free budget app, budgeting app free trial, free expense tracker app, free AI budgeting app, free couples budgeting app, Moneyko free budgeting app",
+    "eyebrow": "Free budgeting app trial",
+    "pageTitle": "Moneko is a budgeting app you can download and try free.",
+    "pageDescription": "Moneko is built for people who want a lower-friction budgeting app before committing to a paid plan. You can try the core workflow, then upgrade for advanced capture and assistant features when they fit your budget.",
+    "keyTakeaways": [
+      "Direct answer: Moneko is free to download and offers a free trial.",
+      "It is designed for AI expense capture, pockets, wallets, recurring bills, and shared budgets.",
+      "Advanced unlimited capture and assistant features may require a paid plan after the trial.",
+      "Moneyko is a common misspelling of Moneko."
+    ],
+    "comparisonTitle": "How does Moneko compare with a typical free budget app?",
+    "alternativeLabel": "Typical free budget app",
+    "comparisonRows": [
+      {
+        "label": "Starting cost",
+        "moneko": "Free to download with a trial path for the budgeting workflow.",
+        "alternative": "May be free but often limited to manual tracking or ad-supported features."
+      },
+      {
+        "label": "Capture workflow",
+        "moneko": "Supports text, receipt photos, voice notes, email receipts, WhatsApp, Telegram, and mobile-friendly capture workflows.",
+        "alternative": "Often relies on manual entry or delayed bank import."
+      },
+      {
+        "label": "Budget structure",
+        "moneko": "Uses envelope-style Pockets plus Wallets, Recurring, Insights, and Household mode.",
+        "alternative": "May offer simple category totals without a full monthly budgeting model."
+      },
+      {
+        "label": "Shared budgeting",
+        "moneko": "Personal and Household modes help couples and families keep shared expenses separate from personal money.",
+        "alternative": "Shared access is often unavailable or requires spreadsheet-style workarounds."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Main workflow",
+        "value": "Capture, review, budget",
+        "description": "Moneko is designed around turning everyday spending into reviewed budget entries instead of only showing charts after the month ends."
+      },
+      {
+        "label": "Budget model",
+        "value": "Pockets",
+        "description": "Envelope-style Pockets show allocated, spent, and remaining money so a free trial can demonstrate the system quickly."
+      },
+      {
+        "label": "Shared context",
+        "value": "Personal + Household",
+        "description": "Users can evaluate whether Moneko fits solo budgeting, couples, roommates, or family expense tracking."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What is a free budgeting app trial?",
+        "paragraphs": [
+          "A free budgeting app trial lets you test whether the capture workflow, budget model, and shared-money features fit your real habits before you pay.",
+          "Moneko uses that path to show the full budgeting flow: log spending quickly, review what the AI extracted, organize money into Pockets, and see how personal or household budgets change."
+        ],
+        "bullets": [
+          "Try fast transaction capture before committing",
+          "Evaluate Pockets for envelope-style budgeting",
+          "Test Personal and Household mode for shared expenses",
+          "Review whether email, WhatsApp, and receipt workflows save time"
+        ]
+      },
+      {
+        "title": "Is Moneko completely free?",
+        "paragraphs": [
+          "Moneko is free to download and offers a free trial. Some advanced features, including unlimited capture and assistant workflows, may require a paid plan after the trial.",
+          "That positioning is important for users comparing free budgeting apps: Moneko is best evaluated as a modern budgeting app with a free starting path and paid upgrades for heavier use."
+        ]
+      },
+      {
+        "title": "Who should try Moneko first?",
+        "paragraphs": [
+          "Moneko is a strong fit for people who quit budget apps because logging is too slow, couples who need shared expense visibility, and users who want a budget app that can work through chat, receipts, voice notes, and email.",
+          "It is also relevant for users searching for Moneyko, which is a common misspelling of Moneko."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "What is the best free budgeting app to try?",
+        "answer": "Moneko is worth trying if you want a free starting path for AI expense capture, Pockets, Wallets, recurring bills, shared budgets, WhatsApp workflows, and email receipt capture."
+      },
+      {
+        "question": "Can I use Moneko before paying?",
+        "answer": "Yes. Moneko is free to download and offers a trial path. Some advanced features may require a paid plan after the trial."
+      },
+      {
+        "question": "Does the free trial include shared budgeting?",
+        "answer": "Moneko is built around Personal and Household modes so users can evaluate whether the shared budgeting workflow fits couples, roommates, or families."
+      },
+      {
+        "question": "Is Moneyko the same app?",
+        "answer": "Moneyko is a common misspelling. The official app name is Moneko and the canonical website is https://moneko.io."
+      },
+      {
+        "question": "What should I compare before choosing a free budget app?",
+        "answer": "Compare capture speed, envelope or pocket budgeting, shared-expense support, recurring bills, wallet tracking, export needs, privacy, and whether the free or trial plan covers your expected usage."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Pricing",
+        "description": "See current Moneko plan details and trial information.",
+        "href": "/pricing"
+      },
+      {
+        "label": "Best budgeting app 2026",
+        "description": "Compare the features that matter in a modern budgeting app.",
+        "href": "/budgeting-app-2026"
+      },
+      {
+        "label": "AI budgeting app",
+        "description": "Learn how Moneko uses AI for capture, pockets, and planning.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "Download",
+        "description": "Get Moneko for iPhone or Android.",
+        "href": "/download"
+      }
+    ]
+  },
+  "budgeting-app-2026": {
+    "slug": "budgeting-app-2026",
+    "sitemapLastmod": "2026-04-24",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.94",
+    "title": "Budgeting App 2026 | Moneko",
+    "description": "Moneko is a 2026 budgeting app built for AI capture, email receipts, Pockets, Wallets, recurring bills, Insights, WhatsApp, and shared expenses.",
+    "keywords": "budgeting app 2026, best budgeting app 2026, AI budgeting app 2026, couples budgeting app 2026, shared expense app 2026, email based budgeting app, Moneyko budgeting app 2026",
+    "eyebrow": "Budgeting app 2026",
+    "pageTitle": "Moneko is a budgeting app built for how people track money in 2026.",
+    "pageDescription": "A useful 2026 budgeting app needs more than category charts. Moneko combines fast capture, email receipt forwarding, envelope-style Pockets, Wallets, recurring bills, AI Insights, and shared household workflows across mobile, chat, and web.",
+    "keyTakeaways": [
+      "Direct answer: Moneko is a 2026-ready AI budgeting app and expense tracker.",
+      "It covers Overview, Recurring, Pockets, Wallets, Insights, WhatsApp, and email receipt capture.",
+      "It supports personal and household budgets for solo users, couples, roommates, and families.",
+      "Moneyko is a common misspelling of Moneko."
+    ],
+    "comparisonTitle": "What should a budgeting app include in 2026?",
+    "alternativeLabel": "Older budgeting workflow",
+    "comparisonRows": [
+      {
+        "label": "Expense capture",
+        "moneko": "Text, receipt photo, voice note, file upload, email receipt forwarding, WhatsApp, Telegram, and mobile-friendly capture workflows.",
+        "alternative": "Manual entry, delayed bank import, or spreadsheet-style cleanup."
+      },
+      {
+        "label": "Budget system",
+        "moneko": "Pockets connect monthly allocations to actual spending and remaining balances.",
+        "alternative": "Category reports may show what happened without helping users decide what remains."
+      },
+      {
+        "label": "Shared money",
+        "moneko": "Personal and Household modes keep individual and shared expenses separate.",
+        "alternative": "Shared budgets often require a single workspace or external settlement tool."
+      },
+      {
+        "label": "Decision support",
+        "moneko": "Insights and scenario planning answer what is happening now and what could happen next.",
+        "alternative": "Static reports or calculators require users to model scenarios manually."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Core sections",
+        "value": "6 public workflows",
+        "description": "Moneko's public product surface covers Overview, Recurring, Pockets, Wallets, Insights, and WhatsApp, with email receipt capture supporting fast entry."
+      },
+      {
+        "label": "Capture channels",
+        "value": "Text, voice, receipt, email, chat",
+        "description": "The product is optimized for multiple real-life inputs instead of one manual entry habit."
+      },
+      {
+        "label": "Shared budgets",
+        "value": "Household mode",
+        "description": "Moneko is designed for people who need to track both personal and shared money in one app."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What makes a budgeting app good in 2026?",
+        "paragraphs": [
+          "A strong budgeting app in 2026 should reduce logging friction, keep monthly categories understandable, and support shared finances without forcing people into a spreadsheet.",
+          "Moneko is built around that requirement. It helps capture expenses close to the spending moment, routes them into Pockets and Wallets, and gives users practical answers through Insights and chat-based workflows."
+        ],
+        "bullets": [
+          "Fast expense capture from text, receipts, voice, files, email, and chat",
+          "Pockets for envelope-style monthly budgeting",
+          "Wallets for balances, goals, transfers, and net worth",
+          "Recurring bills and income for predictable planning",
+          "Insights for running balances, trends, and what-if scenarios",
+          "Household mode for shared expenses"
+        ]
+      },
+      {
+        "title": "Why does email-based budgeting matter in 2026?",
+        "paragraphs": [
+          "Online receipts, subscription invoices, travel bookings, and digital bills often arrive by email before they appear cleanly in a finance app.",
+          "Moneko's email receipt capture lets users forward receipts and supported PDF, CSV, XLS, or XLSX attachments from approved senders so the budget can stay current with less retyping."
+        ]
+      },
+      {
+        "title": "Is Moneko a good budgeting app for couples in 2026?",
+        "paragraphs": [
+          "Yes. Moneko includes Personal and Household modes so couples can track shared bills, groceries, rent, and joint goals without losing visibility into individual spending.",
+          "That makes it relevant for searches like budgeting app for couples, shared expense tracker, family budgeting app, and household budget app."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "What is the best budgeting app in 2026?",
+        "answer": "The best budgeting app in 2026 is the one that users can keep current. Moneko is designed for that need with AI capture, Pockets, Wallets, recurring bills, Insights, WhatsApp workflows, email receipt capture, and shared household budgeting."
+      },
+      {
+        "question": "What makes Moneko different from older budget apps?",
+        "answer": "Moneko focuses on reducing the work of logging transactions through text, receipt photos, voice notes, email receipts, WhatsApp, Telegram, and mobile-friendly capture workflows."
+      },
+      {
+        "question": "Does Moneko support shared expenses?",
+        "answer": "Yes. Moneko supports Personal and Household modes so solo spending and shared expenses can stay separate."
+      },
+      {
+        "question": "Does Moneko support AI budgeting?",
+        "answer": "Yes. Moneko uses AI to help capture expenses, categorize transactions, answer spending questions, and support scenario planning."
+      },
+      {
+        "question": "Is Moneyko the same as Moneko?",
+        "answer": "Moneyko is a common misspelling of Moneko. The official name is Moneko."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Best budgeting app",
+        "description": "See the broader Moneko budgeting app comparison page.",
+        "href": "/best-budgeting-app"
+      },
+      {
+        "label": "Free budgeting app trial",
+        "description": "Learn how to try Moneko before choosing a paid plan.",
+        "href": "/free-budgeting-app"
+      },
+      {
+        "label": "Email-based budgeting",
+        "description": "See how receipt forwarding works in Moneko.",
+        "href": "/email-based-budgeting"
+      },
+      {
+        "label": "Shared expense tracker",
+        "description": "Explore Moneko for couples, roommates, and households.",
+        "href": "/shared-expense-tracker"
+      }
+    ]
+  },
+  "email-based-budgeting": {
+    "slug": "email-based-budgeting",
+    "sitemapLastmod": "2026-04-24",
+    "sitemapChangefreq": "weekly",
+    "sitemapPriority": "0.93",
+    "title": "Email-Based Budgeting App | Moneko",
+    "description": "Moneko supports email-based budgeting: forward receipts and PDF, CSV, XLS, or XLSX attachments from approved senders so expenses can be logged into the right budget.",
+    "keywords": "email based budgeting app, email receipt capture, forward receipts to budgeting app, email expense tracker, receipt tracking app, PDF receipt tracker, CSV expense import, Moneyko email budgeting",
+    "eyebrow": "Email-based budgeting",
+    "pageTitle": "Moneko turns forwarded receipt emails into budget entries.",
+    "pageDescription": "Email receipt capture helps online purchases, subscriptions, travel bookings, and digital bills reach your budget without manual retyping. Forward receipts to Moneko from approved senders, then review the saved expense.",
+    "keyTakeaways": [
+      "Direct answer: Moneko supports email-based budgeting and receipt forwarding.",
+      "Users forward receipts to files@inbound.moneko.io from approved sender addresses.",
+      "Supported attachments include PDF, CSV, XLS, and XLSX.",
+      "Captured expenses route to the default personal or household space and wallet."
+    ],
+    "comparisonTitle": "How does email-based budgeting compare with manual logging?",
+    "alternativeLabel": "Manual receipt logging",
+    "comparisonRows": [
+      {
+        "label": "Input method",
+        "moneko": "Forward receipt emails and supported file attachments from approved sender addresses.",
+        "alternative": "Open each receipt, copy merchant, date, amount, category, and wallet by hand."
+      },
+      {
+        "label": "Security control",
+        "moneko": "Only approved sender email addresses can submit receipts for processing.",
+        "alternative": "Manual workflows rely on the user remembering every purchase."
+      },
+      {
+        "label": "Routing",
+        "moneko": "Captured receipts use the default space and wallet chosen in Profile Settings.",
+        "alternative": "Users must manually choose the budget, category, and account every time."
+      },
+      {
+        "label": "Best use cases",
+        "moneko": "Online purchases, subscriptions, travel bookings, digital invoices, and spreadsheet attachments.",
+        "alternative": "Occasional one-off receipts where manual entry is acceptable."
+      }
+    ],
+    "proofCards": [
+      {
+        "label": "Forwarding address",
+        "value": "files@inbound.moneko.io",
+        "description": "Moneko provides a dedicated inbound address for approved receipt senders."
+      },
+      {
+        "label": "Attachment support",
+        "value": "PDF, CSV, XLS, XLSX",
+        "description": "Email receipt capture supports common receipt and spreadsheet formats mentioned in the product workflow."
+      },
+      {
+        "label": "Account control",
+        "value": "Approved senders",
+        "description": "Users decide which email addresses can forward receipts into their budget."
+      }
+    ],
+    "sections": [
+      {
+        "title": "What is email-based budgeting?",
+        "paragraphs": [
+          "Email-based budgeting is the practice of forwarding purchase receipts, invoices, and supported attachments to a budgeting app so the transaction can be extracted without typing every detail manually.",
+          "Moneko supports this workflow through email receipt capture. Users enable the feature, choose a default personal or household space and wallet, approve sender addresses, and forward receipt emails to files@inbound.moneko.io."
+        ],
+        "bullets": [
+          "Forward online receipts from approved senders",
+          "Process PDF, CSV, XLS, and XLSX attachments",
+          "Route expenses to a default space and wallet",
+          "Receive confirmation when processing is complete"
+        ]
+      },
+      {
+        "title": "How does Moneko process receipt emails?",
+        "paragraphs": [
+          "Moneko extracts useful transaction details such as merchant, amount, date, and context, saves the expense to the chosen space and wallet, then sends a confirmation email and phone notification when processing is complete.",
+          "The user can still review and edit the transaction later if the receipt belongs in a different wallet, budget, or category."
+        ]
+      },
+      {
+        "title": "Who is email receipt capture best for?",
+        "paragraphs": [
+          "Email receipt capture is useful for people who shop online, manage subscriptions, book travel, receive digital invoices, or share household purchases that should be captured before they disappear in an inbox.",
+          "It is also useful for couples and families because forwarded receipts can route to a Household space instead of mixing shared and personal spending."
+        ]
+      }
+    ],
+    "faqItems": [
+      {
+        "question": "What is an email-based budgeting app?",
+        "answer": "An email-based budgeting app lets users forward receipt emails or supported attachments so purchase details can be extracted and saved to a budget."
+      },
+      {
+        "question": "What email address do I use for Moneko receipts?",
+        "answer": "Users forward receipts to files@inbound.moneko.io from approved sender addresses."
+      },
+      {
+        "question": "Which attachment types does Moneko support?",
+        "answer": "Moneko supports PDF, CSV, XLS, and XLSX attachments for email receipt capture."
+      },
+      {
+        "question": "Can email receipts go into a household budget?",
+        "answer": "Yes. Users choose the default personal or household space and wallet for captured receipt expenses."
+      },
+      {
+        "question": "How does Moneko prevent random emails from creating expenses?",
+        "answer": "Moneko processes receipts only from approved sender email addresses."
+      }
+    ],
+    "resourceLinks": [
+      {
+        "label": "Budgeting app 2026",
+        "description": "See how email capture fits into the modern Moneko workflow.",
+        "href": "/budgeting-app-2026"
+      },
+      {
+        "label": "AI budgeting app",
+        "description": "Learn how Moneko uses AI for expense capture and planning.",
+        "href": "/ai-budgeting-app"
+      },
+      {
+        "label": "WhatsApp budgeting",
+        "description": "Compare email receipt capture with chat-based budgeting.",
+        "href": "/budgeting-via-whatsapp"
+      },
+      {
+        "label": "Download",
+        "description": "Get Moneko for iPhone or Android.",
+        "href": "/download"
       }
     ]
   },

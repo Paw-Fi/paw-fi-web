@@ -12,8 +12,11 @@ import { getMainGeoLandingPage } from "@/lib/geo-landing-pages";
 import {
   createMonekoFreeOffer,
   monekoAggregateRating,
+  monekoAlternateNames,
   monekoAvailableLanguages,
   monekoFeaturedReview,
+  monekoKnowsAbout,
+  monekoSameAs,
 } from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
@@ -40,20 +43,19 @@ export const Route = createFileRoute("/")({
           url: "https://moneko.io",
           logo: "https://moneko.io/logo192.png",
           description: mainLandingPage.organizationDescription,
-          sameAs: [
-            "https://x.com/moneko_ai",
-            "https://www.linkedin.com/company/moneko-ai",
-            "https://www.instagram.com/moneko_ai",
-            "https://www.facebook.com/moneko-ai",
-          ],
+          alternateName: monekoAlternateNames,
+          sameAs: monekoSameAs,
+          knowsAbout: monekoKnowsAbout,
         },
         {
           "@type": "WebSite",
           "@id": "https://moneko.io/#website",
           name: "Moneko",
           url: "https://moneko.io",
+          alternateName: monekoAlternateNames,
           description: mainLandingPage.websiteDescription,
           publisher: { "@id": "https://moneko.io/#organization" },
+          about: { "@id": "https://moneko.io/#software" },
         },
         {
           "@type": "WebPage",
@@ -78,7 +80,10 @@ export const Route = createFileRoute("/")({
           "@type": "SoftwareApplication",
           "@id": "https://moneko.io/#software",
           name: "Moneko",
-          alternateName: mainLandingPage.softwareAlternateNames,
+          alternateName: [
+            ...(mainLandingPage.softwareAlternateNames ?? []),
+            ...monekoAlternateNames,
+          ],
           operatingSystem: "Android, iOS, Web",
           applicationCategory: "FinanceApplication",
           applicationSubCategory: "BudgetingApplication",
@@ -86,6 +91,8 @@ export const Route = createFileRoute("/")({
           url: "https://moneko.io",
           availableLanguage: monekoAvailableLanguages,
           featureList: mainLandingPage.softwareFeatureList,
+          keywords: mainLandingPage.keywords,
+          knowsAbout: monekoKnowsAbout,
           screenshot: ["https://moneko.io/og-img.png"],
           dateModified: monekoContentDates.updated,
           publisher: { "@id": "https://moneko.io/#organization" },

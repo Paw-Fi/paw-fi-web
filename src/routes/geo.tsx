@@ -9,14 +9,40 @@ import { seo } from "@/utils/seo";
 
 const META_TITLE = "Moneko GEO Hub | Budgeting App Query Pages";
 const META_DESCRIPTION =
-  "Explore Moneko's query-specific budgeting and expense-tracking landing pages, including AI budgeting, YNAB alternatives, WhatsApp budgeting, shared expense tracking, and more.";
+  "Explore Moneko's query-specific budgeting and expense-tracking landing pages, including AI budgeting, free budgeting app trials, 2026 budgeting, email-based budgeting, WhatsApp budgeting, shared expense tracking, and more.";
 const META_KEYWORDS =
-  "budgeting app hub, expense tracker hub, AI budgeting app, YNAB alternative, WhatsApp budgeting, shared expense tracker";
+  "budgeting app hub, expense tracker hub, AI budgeting app, free budgeting app, budgeting app 2026, email based budgeting app, YNAB alternative, WhatsApp budgeting, shared expense tracker, Moneyko";
 
 export const Route = createFileRoute("/geo")({
   component: GeoHubPage,
   head: () => {
     const pageUrl = getCanonicalUrl("/geo");
+    const pages = getGeoLandingPageSlugs()
+      .map((slug) => getGeoLandingPage(slug))
+      .filter(isGeoLandingPage);
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "@id": pageUrl,
+      url: pageUrl,
+      name: META_TITLE,
+      description: META_DESCRIPTION,
+      about: {
+        "@type": "SoftwareApplication",
+        name: "Moneko",
+        applicationCategory: "FinanceApplication",
+      },
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: pages.map((page, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: page.title,
+          description: page.description,
+          url: getCanonicalUrl(`/${page.slug}`),
+        })),
+      },
+    };
 
     return {
       meta: seo({
@@ -27,6 +53,12 @@ export const Route = createFileRoute("/geo")({
         url: pageUrl,
       }),
       links: [{ rel: "canonical", href: pageUrl }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(structuredData),
+        },
+      ],
     };
   },
 });

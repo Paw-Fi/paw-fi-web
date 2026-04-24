@@ -6,6 +6,38 @@ import {
 
 const featuredReview = appStoreReviews[0];
 
+export const monekoSameAs = [
+  "https://x.com/moneko_ai",
+  "https://www.linkedin.com/company/moneko-ai",
+  "https://www.instagram.com/moneko_ai",
+  "https://www.facebook.com/moneko-ai",
+];
+
+export const monekoAlternateNames = [
+  "Moneko AI",
+  "Moneko app",
+  "Moneko budgeting app",
+  "Moneko expense tracker",
+  "Moneyko",
+  "Moneyko budgeting app",
+  "Moneyko expense tracker",
+];
+
+export const monekoKnowsAbout = [
+  "AI budgeting",
+  "automatic expense tracking",
+  "budgeting app for couples",
+  "email receipt capture",
+  "envelope budgeting",
+  "expense sharing",
+  "free budgeting app trial",
+  "household budgeting",
+  "personal finance apps",
+  "pocket budgeting",
+  "shared expense tracking",
+  "WhatsApp budgeting",
+];
+
 export const monekoAggregateRating = {
   "@type": "AggregateRating",
   ratingValue: APP_STORE_RATING,

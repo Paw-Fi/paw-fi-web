@@ -19,7 +19,7 @@ export interface MonekoCaptureMethod {
 
 export const monekoContentDates = {
   published: "2026-03-19",
-  updated: "2026-04-19",
+  updated: "2026-04-24",
 };
 
 export const monekoContentByline = {
@@ -95,6 +95,20 @@ export const monekoProductAreas: MonekoProductArea[] = [
       "How are my pockets doing?",
     ],
   },
+  {
+    id: "email-receipts",
+    question: "Does Moneko support email receipt capture?",
+    directAnswer:
+      "Moneko supports email receipt capture so users can forward receipts or supported PDF, CSV, XLS, and XLSX attachments to files@inbound.moneko.io from approved sender addresses.",
+    details:
+      "In Profile Settings, users can enable email receipt capture, choose a default personal or household space, choose a wallet, approve sender addresses, and receive confirmation when processing is complete.",
+    examples: [
+      "Online shopping receipts",
+      "Subscription invoices",
+      "Travel bookings",
+      "PDF, CSV, XLS, and XLSX attachments",
+    ],
+  },
 ];
 
 export const monekoCaptureMethods: MonekoCaptureMethod[] = [
@@ -116,7 +130,12 @@ export const monekoCaptureMethods: MonekoCaptureMethod[] = [
   {
     label: "Files and chat",
     answer:
-      "Attach supported files or use WhatsApp to log spending, request summaries, update pockets, and keep shared budgets current.",
+      "Attach supported files, forward receipt emails, or use WhatsApp to log spending, request summaries, update pockets, and keep shared budgets current.",
+  },
+  {
+    label: "Email receipt forwarding",
+    answer:
+      "Forward receipts or PDF, CSV, XLS, and XLSX attachments from approved senders to files@inbound.moneko.io so Moneko can extract the transaction and notify you when it is ready.",
   },
 ];
 
@@ -155,5 +174,12 @@ export const monekoComparisonRows: MonekoComparisonRow[] = [
       "WhatsApp can log expenses, answer totals, update pockets, and send quick-reply choices.",
     traditionalApps:
       "Messaging-app budgeting is usually not part of the main product workflow.",
+  },
+  {
+    label: "Email receipt capture",
+    moneko:
+      "Forward receipt emails and supported attachments from approved senders so online purchases can become budget entries.",
+    traditionalApps:
+      "Email-based capture is often missing, requires third-party workflows, or only works after manual import.",
   },
 ];

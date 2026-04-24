@@ -3,8 +3,11 @@ import React from "react";
 import {
   createMonekoFreeOffer,
   monekoAggregateRating,
+  monekoAlternateNames,
   monekoAvailableLanguages,
   monekoFeaturedReview,
+  monekoKnowsAbout,
+  monekoSameAs,
 } from "@/utils/app-schema";
 
 interface OrganizationData {
@@ -12,7 +15,9 @@ interface OrganizationData {
   url: string;
   logo?: string;
   description?: string;
+  alternateName?: string[];
   sameAs?: string[];
+  knowsAbout?: string[];
 }
 
 interface WebsiteData {
@@ -140,7 +145,9 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           url: orgData.url,
           logo: orgData.logo,
           description: orgData.description,
+          alternateName: orgData.alternateName,
           sameAs: orgData.sameAs,
+          knowsAbout: orgData.knowsAbout,
         };
 
       case "website":
@@ -303,11 +310,11 @@ export function MonekoOrganizationData() {
         name: "Moneko",
         url: "https://moneko.io",
         logo: "https://moneko.io/logo192.png",
-        description: "Personal finance education and budgeting tools platform",
-        sameAs: [
-          "https://twitter.com/moneko",
-          "https://linkedin.com/company/moneko-ai",
-        ],
+        description:
+          "AI budgeting app and expense tracker for Pockets, Wallets, WhatsApp, email receipt capture, and shared expenses.",
+        alternateName: monekoAlternateNames,
+        sameAs: monekoSameAs,
+        knowsAbout: monekoKnowsAbout,
       }}
     />
   );
@@ -321,7 +328,7 @@ export function MonekoWebsiteData() {
         url: "https://moneko.io",
         name: "Moneko",
         description:
-          "Learn personal finance with comprehensive budgeting tools, calculators, and educational resources",
+          "Track expenses, organize monthly Pockets, manage Wallets, capture receipts, and coordinate shared budgets with Moneko.",
         publisher: {
           name: "Moneko",
           url: "https://moneko.io",
