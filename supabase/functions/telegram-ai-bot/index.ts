@@ -14,7 +14,9 @@ import {
   buildCategoryGuide,
   CATEGORY_GUIDE,
   formatInvokeError,
+  formatInvokeErrorWithResponseBody,
   normalizeExpensesForTool,
+  readInvokeErrorResponseDetails,
 } from "../shared/formatting-helpers.ts";
 import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
@@ -1628,6 +1630,7 @@ async function reportTelegramToolInvokeFailure(params: {
   context?: Record<string, unknown>;
 }) {
   try {
+    const responseDetails = await readInvokeErrorResponseDetails(params.error);
     await reportEdgeFunctionError({
       functionName: "telegram-ai-bot",
       error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
@@ -1636,7 +1639,17 @@ async function reportTelegramToolInvokeFailure(params: {
         step: `tool:${params.toolName}`,
         toolName: params.toolName,
         targetFunction: params.targetFunction,
-        httpStatus: getInvokeHttpStatus(params.error),
+        httpStatus: responseDetails?.status ??
+          getInvokeHttpStatus(params.error),
+        ...(responseDetails?.statusText
+          ? { targetStatusText: responseDetails.statusText }
+          : {}),
+        ...(responseDetails?.contentType
+          ? { targetContentType: responseDetails.contentType }
+          : {}),
+        ...(responseDetails?.body
+          ? { targetResponseBody: responseDetails.body }
+          : {}),
         ...params.context,
       },
     });
@@ -3439,7 +3452,9 @@ Deno.serve(async (req: Request) => {
                 const success = !error && data?.success === true;
                 const formatted = success
                   ? ""
-                  : formatInvokeError(error ?? data?.error) ||
+                  : await formatInvokeErrorWithResponseBody(
+                      error ?? data?.error,
+                    ) ||
                     "Failed to save transaction";
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
@@ -5058,7 +5073,9 @@ Deno.serve(async (req: Request) => {
                     const success = !error && data?.success === true;
                     const formatted = success
                       ? ""
-                      : formatInvokeError(error ?? data?.error) ||
+                      : await formatInvokeErrorWithResponseBody(
+                          error ?? data?.error,
+                        ) ||
                         "Failed to save recurring transaction";
                     toolResult = success
                       ? { success: true, data: data?.data ?? data }

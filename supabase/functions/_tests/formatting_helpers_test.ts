@@ -44,3 +44,30 @@ Deno.test(
     assert(guide.includes("other ("));
   },
 );
+
+Deno.test(
+  "formatting helpers: formatInvokeErrorWithResponseBody includes function response body",
+  async () => {
+    const { formatInvokeErrorWithResponseBody } = await import(
+      "../shared/formatting-helpers.ts"
+    );
+    const error = {
+      name: "FunctionsHttpError",
+      message: "Edge Function returned a non-2xx status code",
+      context: new Response(
+        JSON.stringify({ error: "worker failed to boot" }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    };
+
+    const formatted = await formatInvokeErrorWithResponseBody(error);
+
+    assert(formatted.includes("status=503"));
+    assert(
+      formatted.includes('responseBody={"error":"worker failed to boot"}'),
+    );
+  },
+);

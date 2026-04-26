@@ -10,15 +10,15 @@ import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  normalizeCategoryForStorage,
-  sanitizeCategoryName,
-} from "../shared/category-colors.ts";
-import {
   applyCategoryRemap,
   ensureUserCategory,
   fetchUserCategoryRemaps,
   learnUserCategoryPreference,
 } from "../shared/user-categories.ts";
+import {
+  normalizeBatchCategory,
+  normalizeBatchTransactionInput,
+} from "./request-normalization.ts";
 import {
   assertAccountInScope,
   resolveDefaultAccountId,
@@ -533,20 +533,16 @@ export async function saveTransactionsBatchInternal(
     const tx = body.transactions[i];
 
     // Basic validation
-    if (!tx.type || !["expense", "income"].includes(tx.type)) {
-      validationErrors.push({ index: i, error: "Invalid or missing type" });
+    const normalizedInput = normalizeBatchTransactionInput({
+      type: tx.type,
+      amount: tx.amount,
+    });
+    if (!normalizedInput.ok) {
+      validationErrors.push({ index: i, error: normalizedInput.error });
       continue;
     }
-
-    if (!tx.amount || tx.amount <= 0) {
-      validationErrors.push({ index: i, error: "Invalid amount" });
-      continue;
-    }
-
-    if (!tx.category) {
-      validationErrors.push({ index: i, error: "Missing category" });
-      continue;
-    }
+    tx.type = normalizedInput.type;
+    tx.amount = normalizedInput.amount;
 
     if (tx.merchant !== undefined && tx.merchant !== null) {
       if (typeof tx.merchant !== "string") {
@@ -612,22 +608,13 @@ export async function saveTransactionsBatchInternal(
     const currency = validateCurrency(tx.currency || "USD");
     const amountCents = Math.round(tx.amount * 100);
     const rawCategory = String(tx.category ?? "");
-    const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    if (!authResult.isInternalService && !sanitizedCategory) {
-      validationErrors.push({
-        index: i,
-        error: "Invalid category",
-      });
-      continue;
-    }
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
+    const normalizedCategory = normalizeBatchCategory(tx.category);
     const effectiveCategory = applyCategoryRemap({
-      categoryName: resolvedCategory,
+      categoryName: normalizedCategory.category,
       transactionType: tx.type === "income" ? "income" : "expense",
       remaps: categoryRemaps,
     });
-    if (!sanitizedCategory && rawCategory.trim().length > 0) {
+    if (normalizedCategory.usedFallback && rawCategory.trim().length > 0) {
       void reportEdgeFunctionError({
         functionName: "save-transactions-batch",
         error: new Error("CATEGORY_SANITIZE_FALLBACK"),
@@ -743,6 +730,13 @@ export async function saveTransactionsBatchInternal(
     uniqueRequestedAccountIds: [...uniqueRequestedAccountIds],
     cachedAccountResolutions: accountResolutionCache.size,
     validationErrorCount: validationErrors.length,
+    validationErrorSummary: validationErrors.reduce<Record<string, number>>(
+      (summary, err) => {
+        summary[err.error] = (summary[err.error] ?? 0) + 1;
+        return summary;
+      },
+      {},
+    ),
   });
 
   const results: SavedTransaction[] = [];
