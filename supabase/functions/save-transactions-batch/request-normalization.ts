@@ -1,4 +1,5 @@
 import { sanitizeCategoryName } from "../shared/category-colors.ts";
+import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 
 export type BatchTransactionType = "expense" | "income";
 
@@ -50,6 +51,25 @@ export function normalizeBatchCategory(value: unknown): {
   };
 }
 
+export function normalizeBatchDateInput(input: {
+  value: unknown;
+  manualImportMode?: boolean;
+  referenceYear?: number;
+}): string | null {
+  const normalized = normalizeCalendarDateString(input.value);
+  if (normalized != null) return normalized;
+
+  if (typeof input.value !== "string") {
+    return null;
+  }
+
+  const recovered = recoverZeroPaddedTwoDigitYearDate(
+    input.value,
+    input.referenceYear,
+  );
+  return recovered == null ? null : normalizeCalendarDateString(recovered);
+}
+
 function normalizeExplicitTransactionType(
   value: unknown,
 ): BatchTransactionType | null {
@@ -75,4 +95,36 @@ function normalizeAmount(value: unknown): number | null {
 
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function recoverZeroPaddedTwoDigitYearDate(
+  value: string,
+  referenceYear?: number,
+): string | null {
+  const match = /^00(\d{2})-(\d{2})-(\d{2})(?:[Tt\s].*)?$/.exec(
+    value.trim(),
+  );
+  if (!match) return null;
+
+  const year = expandTwoDigitYear(Number(match[1]), referenceYear);
+  return `${year}-${match[2]}-${match[3]}`;
+}
+
+function expandTwoDigitYear(year: number, referenceYear?: number): number {
+  const safeReferenceYear = Number.isInteger(referenceYear) &&
+      referenceYear != null &&
+      referenceYear >= 1900 &&
+      referenceYear <= 9999
+    ? referenceYear
+    : new Date().getUTCFullYear();
+  const century = Math.floor(safeReferenceYear / 100) * 100;
+  let expanded = century + year;
+
+  if (expanded > safeReferenceYear + 20) {
+    expanded -= 100;
+  } else if (expanded < safeReferenceYear - 80) {
+    expanded += 100;
+  }
+
+  return expanded;
 }

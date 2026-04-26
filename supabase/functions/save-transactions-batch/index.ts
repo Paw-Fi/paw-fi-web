@@ -7,7 +7,6 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
-import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   applyCategoryRemap,
@@ -17,6 +16,7 @@ import {
 } from "../shared/user-categories.ts";
 import {
   normalizeBatchCategory,
+  normalizeBatchDateInput,
   normalizeBatchTransactionInput,
 } from "./request-normalization.ts";
 import {
@@ -528,6 +528,7 @@ export async function saveTransactionsBatchInternal(
   }
 
   emitProgress("validating", "Checking transactions...", 0);
+  const shouldRecoverManualImportDates = body.manualImportMode === true;
 
   for (let i = 0; i < body.transactions.length; i++) {
     const tx = body.transactions[i];
@@ -563,7 +564,10 @@ export async function saveTransactionsBatchInternal(
       continue;
     }
 
-    const normalizedDate = normalizeCalendarDateString(tx.date);
+    const normalizedDate = normalizeBatchDateInput({
+      value: tx.date,
+      manualImportMode: shouldRecoverManualImportDates,
+    });
     if (!normalizedDate) {
       validationErrors.push({
         index: i,
@@ -574,9 +578,10 @@ export async function saveTransactionsBatchInternal(
     tx.date = normalizedDate;
 
     if (tx.recurrence_rule) {
-      const normalizedAnchorDate = normalizeCalendarDateString(
-        tx.recurrence_rule.anchor_date,
-      );
+      const normalizedAnchorDate = normalizeBatchDateInput({
+        value: tx.recurrence_rule.anchor_date,
+        manualImportMode: shouldRecoverManualImportDates,
+      });
       if (!normalizedAnchorDate) {
         validationErrors.push({
           index: i,
@@ -588,7 +593,10 @@ export async function saveTransactionsBatchInternal(
       const normalizedEndDate =
         tx.recurrence_rule.end_date == null
           ? undefined
-          : normalizeCalendarDateString(tx.recurrence_rule.end_date);
+          : normalizeBatchDateInput({
+              value: tx.recurrence_rule.end_date,
+              manualImportMode: shouldRecoverManualImportDates,
+            });
 
       if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
         validationErrors.push({
