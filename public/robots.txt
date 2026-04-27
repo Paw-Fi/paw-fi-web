@@ -14,6 +14,9 @@ Allow: /email-based-budgeting
 Allow: /ai-budgeting-app
 Allow: /expense-tracker-for-couples
 Allow: /shared-expense-tracker
+Allow: /early-access
+Allow: /referral$
+Allow: /referral/$
 
 # Non-public app routes and flows
 Disallow: /dashboard/
@@ -27,7 +30,7 @@ Disallow: /payment-status
 Disallow: /billing/
 Disallow: /unsubscribe
 Disallow: /onboarding/
-Disallow: /referral/
+Disallow: /referral/*
 Disallow: /invites/
 Disallow: /creator/
 Disallow: /plaid/
@@ -37,7 +40,6 @@ Disallow: /verify-whatsapp
 Disallow: /avatar-customizer
 Disallow: /health
 Disallow: /test/
-Disallow: /early-access
 Disallow: /promo
 
 Sitemap: https://moneko.io/sitemap.xml

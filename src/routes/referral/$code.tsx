@@ -54,6 +54,10 @@ export const Route = createFileRoute("/referral/$code")({
           "Accept your invitation to join Moneko and claim 50% off the lifetime plan with the referral code auto-applied at checkout.",
         url: getCanonicalUrl("/referral"),
       }),
+      {
+        name: "robots",
+        content: "noindex, nofollow",
+      },
     ],
   }),
 });

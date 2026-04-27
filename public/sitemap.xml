@@ -18,6 +18,16 @@
     <priority>0.8</priority>
   </url>
 <url>
+    <loc>https://moneko.io/early-access</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/referral</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
     <loc>https://moneko.io/cookie-policy</loc>
     <lastmod>2025-09-08</lastmod>
     <changefreq>yearly</changefreq>
