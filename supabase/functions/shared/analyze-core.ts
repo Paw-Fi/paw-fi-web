@@ -1936,8 +1936,11 @@ function buildTransactionSystemInstruction(
 
     "### 4. DESCRIPTION & LANGUAGE",
     "- Write natural, conversational notes generally matching the user's intent.",
-    "- Extract merchant as the clean store/payee/counterparty name when present. Keep merchant separate from description. Example: merchant='Starbucks', description='Latte'.",
-    "- For bank statements, use the counterparty/payee/merchant column as merchant when available, cleaned of card numbers, reference IDs, and dates.",
+    "- For expense items, analyze the merchant/store/payee and return it in merchant when identifiable.",
+    "- For income items, analyze the source/payer/origin and return it in merchant when identifiable.",
+    "- Only include merchant when the merchant/source is available with reasonable confidence; omit it otherwise.",
+    "- Keep merchant separate from description. Example expense: merchant='Starbucks', description='Latte'. Example income: merchant='Acme Payroll', description='Salary'.",
+    "- For bank statements, use the counterparty/payee/merchant/source column as merchant when available, cleaned of card numbers, reference IDs, and dates.",
     `   - **CRITICAL**: All free-text fields (especially description) must be strictly in ${language}, even if the input is in another language.`,
 
     ...(householdContext
@@ -2042,7 +2045,10 @@ function buildQuickTextSystemInstruction(
     "- Use 'other' only when the text is truly ambiguous.",
     "- Use caller currency/date when absent.",
     "- Description should be short and natural.",
-    "- Merchant should be the clean store/payee/counterparty name when present, separate from description.",
+    "- For expense items, analyze the merchant/store/payee and return it in merchant when identifiable.",
+    "- For income items, analyze the source/payer/origin and return it in merchant when identifiable.",
+    "- Only include merchant when the merchant/source is available with reasonable confidence; omit it otherwise.",
+    "- Keep merchant separate from description.",
     `- Free-text fields must be in ${language}.`,
     ...(householdContext
       ? [
@@ -2663,7 +2669,10 @@ async function extractTransactionsJsonWithGemini(
               "- Skip opening/closing balance lines and totals.",
               "- Use caller date if no date is present in a row.",
               "- Use caller currency if missing.",
-              "- Merchant must be the clean store/payee/counterparty name when present. Do not put card numbers, reference IDs, dates, or amounts in merchant.",
+              "- For expense rows, analyze the merchant/store/payee and return it in merchant when identifiable.",
+              "- For income rows, analyze the source/payer/origin and return it in merchant when identifiable.",
+              "- Only include merchant when the merchant/source is available with reasonable confidence; omit it otherwise.",
+              "- Do not put card numbers, reference IDs, dates, or amounts in merchant.",
               "- Description should be short transaction context; keep it separate from merchant.",
               `Caller Date: ${callerDate}`,
               `Caller Currency: ${callerCurrency}`,
@@ -4693,7 +4702,7 @@ export async function runAnalyzeExpense(
                       merchant: {
                         type: "string",
                         description:
-                          "Optional merchant/store/payee name (e.g. 'Starbucks').",
+                          "Optional merchant field. For expenses, use the merchant/store/payee; for income, use the source/payer/origin. Omit when unavailable.",
                       },
                       payerUserId: {
                         type: "string",
@@ -4780,7 +4789,11 @@ export async function runAnalyzeExpense(
                       currency: { type: "string" },
                       date: { type: "string" },
                       description: { type: "string" },
-                      merchant: { type: "string" },
+                      merchant: {
+                        type: "string",
+                        description:
+                          "Optional merchant field. For expenses, use the merchant/store/payee; for income, use the source/payer/origin. Omit when unavailable.",
+                      },
                       payerUserId: { type: "string" },
                       customSplits: { type: "object" },
                     },
@@ -5283,7 +5296,7 @@ export async function runAnalyzeExpense(
         "   - **Action**: Return exactly ONE transaction.",
 
         "### 1. DATA EXTRACTION RULES",
-        "- **Bank Feed / App History**: For list views, extract Date, Merchant (Title), and Amount for each row.",
+        "- **Bank Feed / App History**: For list views, extract Date, Merchant/Source (Title), and Amount for each row.",
         "- **Ambiguity**: If unsure if it's a list or detail view, prefer extracting multiple items if they look like distinct transactions.",
         "- **Amount policy**: Always return amounts as positive numbers (no minus signs). Negative or red values in the UI indicate 'expense' vs 'income' type, not a negative amount.",
 
@@ -5297,7 +5310,10 @@ export async function runAnalyzeExpense(
         "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
 
         "### 3. DATA REFINEMENT",
-        "- **Merchant**: Clean up raw text (e.g., 'Uber *Trip 4920' -> 'Uber').",
+        "- **Merchant field**: For expense items, analyze the merchant/store/payee and return it in merchant when identifiable.",
+        "- **Merchant field**: For income items, analyze the source/payer/origin and return it in merchant when identifiable.",
+        "- Only include merchant when the merchant/source is available with reasonable confidence; omit it otherwise.",
+        "- Clean up raw text (e.g., 'Uber *Trip 4920' -> 'Uber') and do not put card numbers, reference IDs, dates, or amounts in merchant.",
         "- **Date**: Parse absolute dates or relative ('Yesterday'). Default to Caller Date if not found.",
         "- **Currency**: Trust symbol in image ($/€/£) over Caller Currency. Defaults to Caller Currency.",
         "- **Noise**: Ignore loyalty points, barcodes, IDs, tax numbers unless needed for context.",

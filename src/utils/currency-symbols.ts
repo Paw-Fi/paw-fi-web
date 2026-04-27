@@ -16,6 +16,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'CZK': 'Kč',
   'DKK': 'kr',
   'DOP': 'RD$',
+  'DZD': 'د.ج',
   'EGP': 'E£',
   'EUR': '€',
   'GBP': '£',
