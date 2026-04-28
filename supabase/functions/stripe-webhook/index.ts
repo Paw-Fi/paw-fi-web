@@ -830,18 +830,18 @@ async function getUserByCustomerId(customerId: string) {
 
 // Helper function to get plan name from product ID
 async function getPlanNameFromProductId(productId: string | null | undefined) {
-  if (!productId) return "Premium";
+  if (!productId) return "Plus";
 
   try {
     // Try to get product name from Stripe
     const product = await stripe.products.retrieve(productId);
-    return product.name || "Premium";
+    return product.name || "Plus";
   } catch (error: any) {
     reportStripeWebhookError("get_plan_name_from_product_id", error, {
       productId,
     });
     console.error("Error getting product name:", error);
-    return "Premium";
+    return "Plus";
   }
 }
 

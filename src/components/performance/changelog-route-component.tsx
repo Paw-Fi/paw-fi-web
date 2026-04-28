@@ -20,6 +20,21 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "Algerian Dinar Support & Apple Pay Offline",
+    date: "2026-04-27",
+    version: "1.5.9",
+    tags: ["Feature", "Currency", "Wallet"],
+    description:
+      "This release adds new currency support and enhances Apple Pay functionality",
+    items: [
+      "Added Algerian Dinar (DZD) to supported currencies",
+      "Apple Pay now works in offline mode for faster transactions",
+      "Improved import page with better transaction handling",
+      "Merchant information is now captured for bank transactions",
+      "General stability and performance improvements",
+    ],
+  },
+  {
     title: "Email Capture, Export Date Range & Category Insights",
     date: "2026-04-22",
     version: "1.5.8",

@@ -48,8 +48,6 @@ export const GOOD_STANDING_STATUSES: SubscriptionStatus[] = [
   "past_due",
 ];
 
-// Trial period in days
-export const TRIAL_PERIOD_DAYS = 30;
 
 // Payment retry settings (for past_due subscriptions)
 export const PAYMENT_RETRY_CONFIG = {

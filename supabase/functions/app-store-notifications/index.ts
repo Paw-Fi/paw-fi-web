@@ -1284,6 +1284,7 @@ serve(async (req: Request): Promise<Response> => {
         catalogProduct.plan === "lifetime" ? null : resolvedExpiresIso,
       trial_start: trialStartIso,
       trial_end: trialEndIso,
+      ended_at: status === "canceled" ? new Date().toISOString() : null,
       cancel_at_period_end: false,
       stripe_customer_id: null,
       stripe_subscription_id: null,

@@ -419,7 +419,7 @@ export const invoiceFinalizedTemplate = (data: {
       }),
     ),
     text: htmlToText(content),
-    subject: sanitizeSubject(`Invoice Ready — ${data.planName}`),
+    subject: sanitizeSubject(`Invoice Ready — Moneko`),
   };
 };
 
