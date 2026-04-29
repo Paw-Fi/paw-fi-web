@@ -268,7 +268,7 @@ function PerformancePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <UserGeoMap data={dailySignupsByTimezone} />
+                <UserGeoMap data={dailySignupsByTimezone} dailyOnly />
               </CardContent>
             </Card>
           </section>

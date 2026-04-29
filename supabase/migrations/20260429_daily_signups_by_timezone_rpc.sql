@@ -24,13 +24,20 @@ BEGIN
 
     RETURN QUERY
     SELECT
-        COALESCE(uc.preferred_timezone, 'Unknown')::TEXT as timezone,
+        uc.preferred_timezone::TEXT as timezone,
         COUNT(*)::BIGINT as user_count
     FROM users u
-    JOIN user_contacts uc ON uc.user_id = u.id
-    WHERE u.created_at >= NOW() - INTERVAL '24 hours'
-      AND uc.preferred_timezone IS NOT NULL
-    GROUP BY COALESCE(uc.preferred_timezone, 'Unknown')
+    JOIN LATERAL (
+        SELECT user_contacts.preferred_timezone
+        FROM user_contacts
+        WHERE user_contacts.user_id = u.id
+          AND user_contacts.preferred_timezone IS NOT NULL
+        ORDER BY user_contacts.updated_at DESC NULLS LAST,
+                 user_contacts.created_at DESC NULLS LAST
+        LIMIT 1
+    ) uc ON TRUE
+    WHERE (u.created_at AT TIME ZONE 'UTC')::DATE = (NOW() AT TIME ZONE 'UTC')::DATE
+    GROUP BY uc.preferred_timezone
     ORDER BY user_count DESC;
 END;
 $$;
