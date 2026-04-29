@@ -1,3 +1,9 @@
+/**
+ * Sample checkout URLs:
+ * - Monthly + MONEKO-3:    /checkout?plan=plus&billing=monthly&promo=MONEKO-3
+ * - Yearly + MONEKO100:  /checkout?plan=plus&billing=yearly&promo=MONEKO100
+ */
+
 import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 import {
   createMonekoPricingOffers,
