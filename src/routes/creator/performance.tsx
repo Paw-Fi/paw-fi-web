@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity } from "lucide-react";
+import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity, UserPlus } from "lucide-react";
 
 import { useUserCount } from "@/hooks/use-user-count";
 import { useUsersByTimezone } from "@/hooks/use-users-by-timezone";
@@ -8,6 +8,7 @@ import { useSubscriptionAnalytics } from "@/hooks/use-subscription-analytics";
 import { useTrialingUsers } from "@/hooks/use-trialing-users";
 import { useMessageAnalytics } from "@/hooks/use-message-analytics";
 import { useDailySignups } from "@/hooks/use-daily-signups";
+import { useDailySignupsByTimezone } from "@/hooks/use-daily-signups-by-timezone";
 import { useDAUByTimezone } from "@/hooks/use-dau-by-timezone";
 import { useTotalDAU } from "@/hooks/use-total-dau";
 import { UserGeoMap } from "@/components/performance/user-geo-map";
@@ -15,7 +16,6 @@ import { DAUGeoMap } from "@/components/performance/dau-geo-map";
 import { SubscriptionMetricCard } from "@/components/performance/subscription-metric-card";
 import { TrialingUsersTable } from "@/components/performance/trialing-users-table";
 import { MessageAnalyticsCard } from "@/components/performance/message-analytics-card";
-import { DailySignupsCard } from "@/components/performance/daily-signups-card";
 import {
   Card,
   CardContent,
@@ -62,6 +62,7 @@ function PerformancePage() {
   const trialingUsers = useTrialingUsers(refreshKey);
   const messageAnalytics = useMessageAnalytics(refreshKey);
   const dailySignups = useDailySignups(refreshKey);
+  const dailySignupsByTimezone = useDailySignupsByTimezone(refreshKey);
   const dauByTimezone = useDAUByTimezone(refreshKey);
   const totalDAU = useTotalDAU(refreshKey);
   const trialingUsersByClosestExpiry = useMemo(
@@ -213,12 +214,6 @@ function PerformancePage() {
                 icon={<Ban className="h-4 w-4" />}
               />
               <TrialingUsersTable users={trialingUsers} />
-              <DailySignupsCard
-                dailyData={dailySignups.dailyData}
-                todayCount={dailySignups.todayCount}
-                averagePerDay={dailySignups.averagePerDay}
-                changePercent={dailySignups.changePercent}
-              />
             </div>
           </section>
 
@@ -242,6 +237,40 @@ function PerformancePage() {
                 icon={<MessageCircle className="h-4 w-4" />}
               />
             </div>
+          </section>
+
+          <section className="space-y-4">
+            <Card className="border-white/10 bg-slate-900/50">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <div>
+                  <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
+                    Daily Signups
+                  </CardDescription>
+                  <CardTitle className="mt-1 text-xl text-white">
+                    New Signups by Region
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-white">
+                      {dailySignups.todayCount.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-white/50">
+                      {dailySignups.averagePerDay} avg/day (30d)
+                    </div>
+                  </div>
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-full"
+                    style={{ backgroundColor: "#10B98120" }}
+                  >
+                    <UserPlus className="h-4 w-4 text-emerald-400" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <UserGeoMap data={dailySignupsByTimezone} />
+              </CardContent>
+            </Card>
           </section>
 
           <section className="space-y-4">
