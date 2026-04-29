@@ -4,16 +4,20 @@
 drop view if exists public.v_envelope_monthly_spend;
 
 alter table if exists public.expenses
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 alter table if exists public.daily_budgets
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 alter table if exists public.envelope_allocations
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 alter table if exists public.goal_contributions
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 create or replace view public.v_envelope_monthly_spend as
 select

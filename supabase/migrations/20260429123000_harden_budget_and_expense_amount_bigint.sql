@@ -112,6 +112,9 @@ join public.expenses ex
  and lower(coalesce(ex.category, 'uncategorized')) = lower(l.category)
 group by e.id, date_trunc('month', ex.date)::date;
 
+comment on view public.v_envelope_monthly_spend is
+  'Aggregated monthly spend per envelope using user_id, category links and expenses';
+
 do $$
 declare
   backup record;
