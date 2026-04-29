@@ -1330,20 +1330,6 @@ function reconcileStatementTotals(text: string, items: ExpenseItem[]): void {
   }
 }
 
-export function buildAllowedCategoryEnum(
-  expenseCategories: string[],
-  incomeCategories: string[],
-): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const category of [...expenseCategories, ...incomeCategories]) {
-    if (!category || seen.has(category)) continue;
-    seen.add(category);
-    out.push(category);
-  }
-  return out;
-}
-
 async function resolveCandidateCategories(
   genAI: GenerativeAIClient,
   candidates: Array<{
@@ -1356,8 +1342,16 @@ async function resolveCandidateCategories(
   expenseCategories: string[],
   incomeCategories: string[],
   language: string,
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
   onProgress?: ProgressCallback,
 ): Promise<string[]> {
+  const categoryPreferenceGuidance = buildCategoryPreferenceGuidance({
+    expenseCategories,
+    incomeCategories,
+    preferences: categoryPreferences,
+    remaps: categoryRemaps,
+  });
   const tools: any = [
     {
       functionDeclarations: [
@@ -1369,13 +1363,7 @@ async function resolveCandidateCategories(
             properties: {
               categories: {
                 type: "array",
-                items: {
-                  type: "string",
-                  enum: buildAllowedCategoryEnum(
-                    expenseCategories,
-                    incomeCategories,
-                  ),
-                },
+                items: { type: "string" },
               },
             },
             required: ["categories"],
@@ -1391,25 +1379,25 @@ async function resolveCandidateCategories(
         role: "user",
         parts: [
           {
-            text:
-              `You are a transaction categorization engine.\nReturn exactly ${candidates.length} categories in the same order as the input.\nUse only the allowed categories.\nExpense categories: ${
-                expenseCategories.join(
-                  ", ",
+            text: [
+              "You are a transaction categorization engine.",
+              `Return exactly ${candidates.length} categories in the same order as the input.`,
+              "Use only the allowed categories.",
+              `Expense categories: ${expenseCategories.join(", ")}`,
+              `Income categories: ${incomeCategories.join(", ")}`,
+              ...categoryPreferenceGuidance,
+              `Language: ${language}`,
+              "",
+              "Transactions:",
+              candidates
+                .map(
+                  (item, index) =>
+                    `${
+                      index + 1
+                    }. ${item.type.toUpperCase()} | ${item.date} | ${item.description} | ${item.amount} ${item.currency}`,
                 )
-              }\nIncome categories: ${
-                incomeCategories.join(
-                  ", ",
-                )
-              }\nLanguage: ${language}\n\nTransactions:\n${
-                candidates
-                  .map(
-                    (item, index) =>
-                      `${
-                        index + 1
-                      }. ${item.type.toUpperCase()} | ${item.date} | ${item.description} | ${item.amount} ${item.currency}`,
-                  )
-                  .join("\n")
-              }`,
+                .join("\n"),
+            ].join("\n"),
           },
         ],
       },
@@ -1920,10 +1908,18 @@ function buildTransactionSystemInstruction(
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
 ): string {
   const normalizedHint = typeHint && typeHint !== "mixed"
     ? typeHint
     : undefined;
+  const categoryPreferenceGuidance = buildCategoryPreferenceGuidance({
+    expenseCategories,
+    incomeCategories,
+    preferences: categoryPreferences,
+    remaps: categoryRemaps,
+  });
   return [
     "You are a professional transaction extraction and classification system.",
     "Task: Parse the input (plain text) into one or more transactions and return them ONLY by calling add_transactions. Every item MUST include a type (expense|income).",
@@ -1943,6 +1939,7 @@ function buildTransactionSystemInstruction(
     "- **Bank/Notification Context**: 'Credited', 'Deposit', 'Received', 'Top up' -> INCOME. 'Debited', 'Paid', 'Purchase', 'Sent to', 'Withdrawal' -> EXPENSE.",
     `   - **Expense Categories**: ${expenseCategories.join(", ")}.`,
     `   - **Income Categories**: ${incomeCategories.join(", ")}.`,
+    ...categoryPreferenceGuidance,
     "- **Fallback**: If unrecognizable, choose the closest generic category from the provided lists (for example an 'other'/'misc' style expense category or a generic income category). Never invent category names that are not present in the provided lists.",
     "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
 
@@ -2028,6 +2025,85 @@ function buildTransactionSystemInstruction(
   ].join("\n");
 }
 
+export function buildCategoryPreferenceGuidance(params: {
+  expenseCategories: string[];
+  incomeCategories: string[];
+  preferences?: UserCategoryPreferenceRow[];
+  remaps?: UserCategoryRemapRow[];
+}): string[] {
+  const allowedExpense = new Set(
+    params.expenseCategories.map((category) =>
+      normalizeStoredUserCategory(category)
+    ),
+  );
+  const allowedIncome = new Set(
+    params.incomeCategories.map((category) =>
+      normalizeStoredUserCategory(category)
+    ),
+  );
+
+  const allowedFor = (transactionType: "expense" | "income") =>
+    transactionType === "income" ? allowedIncome : allowedExpense;
+
+  const preferenceLines = [...(params.preferences ?? [])]
+    .sort((left, right) => {
+      const countDiff = Number(right.use_count || 0) -
+        Number(left.use_count || 0);
+      if (countDiff !== 0) return countDiff;
+      return String(right.last_used_at ?? "").localeCompare(
+        String(left.last_used_at ?? ""),
+      );
+    })
+    .flatMap((preference) => {
+      const transactionType = preference.transaction_type === "income"
+        ? "income"
+        : "expense";
+      const matchKey = String(preference.match_key ?? "").trim();
+      const category = normalizeStoredUserCategory(preference.category_name);
+      if (!matchKey || !allowedFor(transactionType).has(category)) return [];
+      return [`${transactionType}: "${matchKey}" -> ${category}`];
+    })
+    .slice(0, 24);
+
+  const remapLines = [...(params.remaps ?? [])]
+    .sort((left, right) => {
+      const countDiff = Number(right.use_count || 0) -
+        Number(left.use_count || 0);
+      if (countDiff !== 0) return countDiff;
+      return String(right.last_used_at ?? "").localeCompare(
+        String(left.last_used_at ?? ""),
+      );
+    })
+    .flatMap((remap) => {
+      const transactionType = remap.transaction_type === "income"
+        ? "income"
+        : "expense";
+      const fromCategory = normalizeStoredUserCategory(
+        remap.from_category_name,
+      );
+      const toCategory = normalizeStoredUserCategory(remap.to_category_name);
+      if (!fromCategory || !allowedFor(transactionType).has(toCategory)) {
+        return [];
+      }
+      return [`${transactionType}: ${fromCategory} -> ${toCategory}`];
+    })
+    .slice(0, 24);
+
+  if (preferenceLines.length === 0 && remapLines.length === 0) {
+    return [];
+  }
+
+  return [
+    "- **User Category Priority**: Prefer these user-specific category preferences/remaps when the transaction text or merchant/source matches. They are higher priority than generic category choice.",
+    ...(preferenceLines.length > 0
+      ? [`   - Learned preferences: ${preferenceLines.join("; ")}.`]
+      : []),
+    ...(remapLines.length > 0
+      ? [`   - Explicit remaps: ${remapLines.join("; ")}.`]
+      : []),
+  ];
+}
+
 function isQuickTextFastPathCandidate(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
@@ -2044,10 +2120,18 @@ function buildQuickTextSystemInstruction(
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
 ): string {
   const normalizedHint = typeHint && typeHint !== "mixed"
     ? `Hint: ${typeHint}.`
     : "";
+  const categoryPreferenceGuidance = buildCategoryPreferenceGuidance({
+    expenseCategories,
+    incomeCategories,
+    preferences: categoryPreferences,
+    remaps: categoryRemaps,
+  });
 
   return [
     "You extract transactions from short user text.",
@@ -2056,6 +2140,7 @@ function buildQuickTextSystemInstruction(
     normalizedHint,
     `Expense categories: ${expenseCategories.join(", ")}.`,
     `Income categories: ${incomeCategories.join(", ")}.`,
+    ...categoryPreferenceGuidance,
     "Rules:",
     "- Amount must be positive.",
     "- Infer expense|income from wording.",
@@ -2860,6 +2945,8 @@ async function analyzeFromText(
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
   preChunkedPages?: string[], // Optional: pre-split pages from PDF extraction
   onProgress?: ProgressCallback, // Optional: progress callback for SSE streaming
 ): Promise<ExpenseItem[]> {
@@ -2869,6 +2956,8 @@ async function analyzeFromText(
     incomeCategories,
     householdContext,
     typeHint,
+    categoryPreferences,
+    categoryRemaps,
   );
 
   const householdPrompt = householdContext
@@ -2963,6 +3052,8 @@ async function analyzeFromText(
       expenseCategories,
       incomeCategories,
       language,
+      categoryPreferences,
+      categoryRemaps,
       onProgress,
     );
 
@@ -3128,6 +3219,8 @@ async function analyzeFromQuickText(
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
   onProgress?: ProgressCallback,
 ): Promise<ExpenseItem[]> {
   const systemInstruction = buildQuickTextSystemInstruction(
@@ -3136,6 +3229,8 @@ async function analyzeFromQuickText(
     incomeCategories,
     householdContext,
     typeHint,
+    categoryPreferences,
+    categoryRemaps,
   );
   const householdPrompt = householdContext
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
@@ -3616,6 +3711,8 @@ async function categorizePdfExtractedItems(params: {
   expenseCategories: string[];
   incomeCategories: string[];
   language: string;
+  categoryPreferences?: UserCategoryPreferenceRow[];
+  categoryRemaps?: UserCategoryRemapRow[];
   onProgress?: ProgressCallback;
 }): Promise<ExpenseItem[]> {
   if (params.items.length === 0) return params.items;
@@ -3649,6 +3746,8 @@ async function categorizePdfExtractedItems(params: {
         params.expenseCategories,
         params.incomeCategories,
         params.language,
+        params.categoryPreferences ?? [],
+        params.categoryRemaps ?? [],
         params.onProgress,
       );
 
@@ -3755,11 +3854,23 @@ async function analyzeFromPdf(
   _incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
   onProgress?: ProgressCallback,
 ): Promise<{ items: ExpenseItem[]; rawText?: string; error?: string }> {
   console.log("[analyze-expense] PDF: Starting universal PDF pipeline");
-  const canonicalExpenseCategories = getExpenseCategories();
-  const canonicalIncomeCategories = getIncomeCategories();
+  const pdfExpenseCategories = _expenseCategories.length > 0
+    ? _expenseCategories
+    : getExpenseCategories();
+  const pdfIncomeCategories = _incomeCategories.length > 0
+    ? _incomeCategories
+    : getIncomeCategories();
+  const pdfCategoryPreferenceGuidance = buildCategoryPreferenceGuidance({
+    expenseCategories: pdfExpenseCategories,
+    incomeCategories: pdfIncomeCategories,
+    preferences: categoryPreferences,
+    remaps: categoryRemaps,
+  });
 
   if (onProgress) {
     onProgress({
@@ -3773,9 +3884,10 @@ async function analyzeFromPdf(
     contentType,
     callerCurrency,
     callerDate,
-    expenseCategories: canonicalExpenseCategories,
-    incomeCategories: canonicalIncomeCategories,
+    expenseCategories: pdfExpenseCategories,
+    incomeCategories: pdfIncomeCategories,
     typeHint,
+    categoryPreferenceGuidance: pdfCategoryPreferenceGuidance,
     householdPrompt: householdContext
       ? buildHouseholdContextPrompt(householdContext)
       : undefined,
@@ -3868,15 +3980,17 @@ async function analyzeFromPdf(
 
   console.log("[analyze-expense] PDF categorization start", {
     itemCount: extractedItems.length,
-    expenseCategoryCount: canonicalExpenseCategories.length,
-    incomeCategoryCount: canonicalIncomeCategories.length,
+    expenseCategoryCount: pdfExpenseCategories.length,
+    incomeCategoryCount: pdfIncomeCategories.length,
   });
   const items = await categorizePdfExtractedItems({
     genAI,
     items: extractedItems,
-    expenseCategories: canonicalExpenseCategories,
-    incomeCategories: canonicalIncomeCategories,
+    expenseCategories: pdfExpenseCategories,
+    incomeCategories: pdfIncomeCategories,
     language,
+    categoryPreferences,
+    categoryRemaps,
     onProgress,
   });
 
@@ -4146,6 +4260,8 @@ async function analyzeFromAudio(
   incomeCategories: string[],
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   typeHint?: AnalyzeRequestBody["typeHint"],
+  categoryPreferences: UserCategoryPreferenceRow[] = [],
+  categoryRemaps: UserCategoryRemapRow[] = [],
 ): Promise<ExpenseItem[]> {
   const systemInstruction = buildTransactionSystemInstruction(
     language,
@@ -4153,6 +4269,8 @@ async function analyzeFromAudio(
     incomeCategories,
     householdContext,
     typeHint,
+    categoryPreferences,
+    categoryRemaps,
   );
   const householdPrompt = householdContext
     ? `\n${buildHouseholdContextPrompt(householdContext)}\n`
@@ -4648,10 +4766,6 @@ export async function runAnalyzeExpense(
     const incomeCategories = callerIncomeAllowed.length > 0
       ? callerIncomeAllowed
       : getIncomeCategories();
-    const allowedCategoryEnum = buildAllowedCategoryEnum(
-      expenseCategories,
-      incomeCategories,
-    );
 
     const allowedExpenseSet = new Set<string>(
       expenseCategories.map((c) => normalizeAllowedCategory(c)),
@@ -4659,6 +4773,13 @@ export async function runAnalyzeExpense(
     const allowedIncomeSet = new Set<string>(
       incomeCategories.map((c) => normalizeAllowedCategory(c)),
     );
+    const categoryPreferencesForPrompt: UserCategoryPreferenceRow[] =
+      Array.isArray(body.categoryPreferences) ? body.categoryPreferences : [];
+    const categoryRemapsForPrompt: UserCategoryRemapRow[] = Array.isArray(
+        body.categoryRemaps,
+      )
+      ? body.categoryRemaps
+      : [];
 
     // Debug: Log categories being passed to AI
     if (DEBUG_LOGS) {
@@ -4712,7 +4833,6 @@ export async function runAnalyzeExpense(
                       },
                       category: {
                         type: "string",
-                        enum: allowedCategoryEnum,
                         description: "Canonical category from provided list.",
                       },
                       currency: {
@@ -4810,7 +4930,7 @@ export async function runAnalyzeExpense(
                         enum: ["expense", "income"],
                       },
                       amount: { type: "number" },
-                      category: { type: "string", enum: allowedCategoryEnum },
+                      category: { type: "string" },
                       currency: { type: "string" },
                       date: { type: "string" },
                       description: { type: "string" },
@@ -5046,6 +5166,8 @@ export async function runAnalyzeExpense(
             incomeCategories,
             householdContext,
             typeHint,
+            categoryPreferencesForPrompt,
+            categoryRemapsForPrompt,
             onProgress,
           );
           items = pdfResult.items;
@@ -5139,6 +5261,8 @@ export async function runAnalyzeExpense(
             incomeCategories,
             householdContext,
             typeHint,
+            categoryPreferencesForPrompt,
+            categoryRemapsForPrompt,
             undefined, // no pre-chunked pages
             onProgress,
           );
@@ -5165,6 +5289,8 @@ export async function runAnalyzeExpense(
           incomeCategories,
           householdContext,
           typeHint,
+          categoryPreferencesForPrompt,
+          categoryRemapsForPrompt,
           onProgress,
         );
       } else {
@@ -5179,6 +5305,8 @@ export async function runAnalyzeExpense(
           incomeCategories,
           householdContext,
           typeHint,
+          categoryPreferencesForPrompt,
+          categoryRemapsForPrompt,
           undefined, // no pre-chunked pages
           onProgress,
         );
@@ -5237,6 +5365,8 @@ export async function runAnalyzeExpense(
         incomeCategories,
         householdContext,
         typeHint,
+        categoryPreferencesForPrompt,
+        categoryRemapsForPrompt,
       );
     } else if (hasImage) {
       if (onProgress) {
@@ -5301,6 +5431,12 @@ export async function runAnalyzeExpense(
       const typeHintNote = typeHint && typeHint !== "mixed"
         ? `Caller Hint: The transactions are most likely ${typeHint}. Use this only as a hint; still return the correct type when evidence suggests otherwise.`
         : null;
+      const imageCategoryPreferenceGuidance = buildCategoryPreferenceGuidance({
+        expenseCategories,
+        incomeCategories,
+        preferences: categoryPreferencesForPrompt,
+        remaps: categoryRemapsForPrompt,
+      });
       const systemInstruction = [
         "You are an expert Financial OCR Analyst for Moneko.",
         "OBJECTIVE: Analyze the image to extract transaction data. Minimize noise, maximize accuracy.",
@@ -5331,6 +5467,7 @@ export async function runAnalyzeExpense(
         "   - Text Cues: 'Credit', 'Deposit', 'Refund', 'Top up' -> Income. 'Debit', 'Purchase', 'Payment', 'Sent to' -> Expense.",
         `   - **Expense Categories**: ${expenseCategories.join(", ")}.`,
         `   - **Income Categories**: ${incomeCategories.join(", ")}.`,
+        ...imageCategoryPreferenceGuidance,
         "- **Fallback**: If unrecognizable, choose the closest generic category from the provided lists (for example an 'other'/'misc' style expense category or a generic income category). Never invent category names that are not present in the provided lists.",
         "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
 
@@ -5368,8 +5505,7 @@ export async function runAnalyzeExpense(
         "FINAL RULE: Under no circumstances output plain text or JSON. Always and only respond by calling add_transactions.",
       ].join("\n");
 
-      // Model progression: prefer stable fast model first.
-      // Preview models can be more prone to overload.
+      // Model progression follows GEMINI_FALLBACK_MODEL_NAMES.
       const modelAttempts = GEMINI_FALLBACK_MODEL_NAMES.map((name) => ({
         name,
         timeout: 30000,
@@ -5436,6 +5572,12 @@ export async function runAnalyzeExpense(
           '- Treat each readable line that looks like "<label> <amount>" (e.g. "gym $45", "grocery $120") as a separate transaction.',
           "- Prioritize darker, thicker handwriting lines over faint background print or noise.",
           "- If you can reasonably infer a transaction from partial handwriting, include it with best-effort classification.",
+          "",
+          "### CATEGORY RULES",
+          `- Expense categories: ${expenseCategories.join(", ")}.`,
+          `- Income categories: ${incomeCategories.join(", ")}.`,
+          ...imageCategoryPreferenceGuidance,
+          "- Never invent category names that are not present in the provided lists.",
         ].join("\n");
 
         try {

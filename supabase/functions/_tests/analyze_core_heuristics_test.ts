@@ -1,9 +1,12 @@
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertStringIncludes,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
-  buildAllowedCategoryEnum,
-  inferPayerFromText,
+  buildCategoryPreferenceGuidance,
   inferAttachmentFallbackCurrency,
+  inferPayerFromText,
   inferSplitAmountsFromText,
   normalizeCustomSplits,
   normalizeTransactionDateAndDescription,
@@ -11,15 +14,45 @@ import {
   resolveHouseholdContext,
 } from "../shared/analyze-core.ts";
 
-Deno.test("analyze-core: allowed category enum deduplicates categories", () => {
-  assertEquals(
-    buildAllowedCategoryEnum(
-      ["restaurants", "takeout & delivery", "other"],
-      ["income", "other"],
-    ),
-    ["restaurants", "takeout & delivery", "other", "income"],
-  );
-});
+Deno.test(
+  "analyze-core: category guidance passes allowed user preferences without schema enums",
+  () => {
+    const guidance = buildCategoryPreferenceGuidance({
+      expenseCategories: ["restaurants", "takeout & delivery", "other"],
+      incomeCategories: ["salary", "refund"],
+      preferences: [
+        {
+          transaction_type: "expense",
+          match_key: "uber eats",
+          category_name: "takeout & delivery",
+          use_count: 8,
+          last_used_at: "2026-04-01T00:00:00Z",
+        },
+        {
+          transaction_type: "expense",
+          match_key: "ignored",
+          category_name: "not allowed",
+          use_count: 99,
+          last_used_at: "2026-04-02T00:00:00Z",
+        },
+      ],
+      remaps: [
+        {
+          transaction_type: "expense",
+          from_category_name: "dining",
+          to_category_name: "restaurants",
+          use_count: 3,
+          last_used_at: "2026-04-01T00:00:00Z",
+        },
+      ],
+    });
+
+    const text = guidance.join("\n");
+    assertStringIncludes(text, '"uber eats" -> takeout & delivery');
+    assertStringIncludes(text, "dining -> restaurants");
+    assertEquals(text.includes("not allowed"), false);
+  },
+);
 
 Deno.test("analyze-core: payer + split pronoun heuristic", () => {
   const callerId = "11111111-1111-4111-8111-111111111111";

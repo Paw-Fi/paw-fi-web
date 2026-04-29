@@ -116,6 +116,9 @@ export async function runPdfAnalysisPipeline(
     incomeCategories: [...options.incomeCategories].sort(),
     typeHint: options.typeHint || "",
     householdPrompt: options.householdPrompt || "",
+    categoryPreferenceGuidance: (options.categoryPreferenceGuidance ?? []).join(
+      "\n",
+    ),
   });
   const storage = options.storage || createPdfAnalysisStorage();
   const cached = await storage.get(hash);
