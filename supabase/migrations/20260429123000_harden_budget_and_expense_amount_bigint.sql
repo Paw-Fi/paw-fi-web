@@ -70,7 +70,7 @@ begin
     pg_get_viewdef(dd.view_oid, true) as view_definition
   from deduplicated dd
   on conflict (full_name) do nothing;
-end
+end;
 $$;
 
 drop view if exists public.household_expense_split_diagnostics cascade;
@@ -135,7 +135,7 @@ begin
         backup.view_definition
       );
   end loop;
-end
+end;
 $$;
 
 do $$
@@ -153,7 +153,7 @@ begin
     for each row
     execute function public.set_expense_import_semantic_key();
   end if;
-end
+end;
 $$;
 
 do $$
@@ -171,5 +171,5 @@ begin
     for each row
     execute function public.set_budget_amount_cents();
   end if;
-end
+end;
 $$;

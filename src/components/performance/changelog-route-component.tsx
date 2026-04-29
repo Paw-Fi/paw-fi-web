@@ -20,6 +20,23 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title:
+      "Receipt Photo Replacement, Home Screen Widget Fixes & Transactions Page Improvements",
+    date: "2026-04-29",
+    version: "1.6.0",
+    tags: ["Feature", "Fix", "Widget", "Transactions"],
+    description:
+      "This release adds the ability to replace receipt photos, fixes home screen widget calculation issues on both iOS and Android, and includes significant transactions page improvements for better category visualization.",
+    items: [
+      "You can now replace receipt photos on your transactions",
+      "Fixed home screen widget calculation issues on Android",
+      "Fixed home screen widget calculation issues on iOS",
+      "Transactions page now shows category pie chart with better visualization",
+      "Budget amount decimal precision has been improved",
+      "General stability improvements",
+    ],
+  },
+  {
     title: "Algerian Dinar Support & Apple Pay Offline",
     date: "2026-04-27",
     version: "1.5.9",
