@@ -1,6 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
+  buildAllowedCategoryEnum,
   inferPayerFromText,
   inferAttachmentFallbackCurrency,
   inferSplitAmountsFromText,
@@ -9,6 +10,16 @@ import {
   parseTransactionsJsonToItems,
   resolveHouseholdContext,
 } from "../shared/analyze-core.ts";
+
+Deno.test("analyze-core: allowed category enum deduplicates categories", () => {
+  assertEquals(
+    buildAllowedCategoryEnum(
+      ["restaurants", "takeout & delivery", "other"],
+      ["income", "other"],
+    ),
+    ["restaurants", "takeout & delivery", "other", "income"],
+  );
+});
 
 Deno.test("analyze-core: payer + split pronoun heuristic", () => {
   const callerId = "11111111-1111-4111-8111-111111111111";

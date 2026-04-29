@@ -6,7 +6,25 @@ import {
   normalizeBatchCategory,
   normalizeBatchDateInput,
   normalizeBatchTransactionInput,
+  resolveBatchCategoryForStorage,
 } from "../save-transactions-batch/request-normalization.ts";
+
+function makeCategoryContext(overrides = {}) {
+  return {
+    allowedExpenseSet: new Set([
+      "coffee & tea",
+      "restaurants",
+      "takeout & delivery",
+      "other",
+      "uncategorized",
+      "อาหาร",
+    ]),
+    allowedIncomeSet: new Set(["salary", "income", "other"]),
+    preferences: [],
+    remaps: [],
+    ...overrides,
+  };
+}
 
 Deno.test(
   "save-transactions-batch request normalization: accepts signed amounts when explicit type is valid",
@@ -75,6 +93,73 @@ Deno.test(
       category: "other",
       usedFallback: true,
     });
+  },
+);
+
+Deno.test(
+  "save-transactions-batch request normalization: resolves model categories to canonical storage keys",
+  () => {
+    assertEquals(
+      resolveBatchCategoryForStorage({
+        rawCategory: "Dining",
+        description: "Cafe Bloom lunch",
+        merchant: null,
+        transactionType: "expense",
+        ctx: makeCategoryContext(),
+      }),
+      {
+        category: "restaurants",
+        usedFallback: false,
+      },
+    );
+  },
+);
+
+Deno.test(
+  "save-transactions-batch request normalization: keeps final user preference mapping intact",
+  () => {
+    assertEquals(
+      resolveBatchCategoryForStorage({
+        rawCategory: "Dining",
+        description: "Cafe Bloom lunch",
+        merchant: null,
+        transactionType: "expense",
+        ctx: makeCategoryContext({
+          preferences: [
+            {
+              transaction_type: "expense",
+              match_key: "cafe bloom lunch",
+              category_name: "coffee & tea",
+              use_count: 3,
+              last_used_at: null,
+            },
+          ],
+        }),
+      }),
+      {
+        category: "coffee & tea",
+        usedFallback: false,
+      },
+    );
+  },
+);
+
+Deno.test(
+  "save-transactions-batch request normalization: preserves safe localized custom categories",
+  () => {
+    assertEquals(
+      resolveBatchCategoryForStorage({
+        rawCategory: "อาหาร",
+        description: "ร้านอาหารกลางวัน",
+        merchant: null,
+        transactionType: "expense",
+        ctx: makeCategoryContext(),
+      }),
+      {
+        category: "อาหาร",
+        usedFallback: false,
+      },
+    );
   },
 );
 

@@ -9,15 +9,18 @@ import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  applyCategoryRemap,
   ensureUserCategory,
-  fetchUserCategoryRemaps,
   learnUserCategoryPreference,
+  mergeAllowedCategories,
 } from "../shared/user-categories.ts";
 import {
-  normalizeBatchCategory,
+  type CategoryContext,
+  loadCategoryContext,
+} from "../shared/category-resolution.ts";
+import {
   normalizeBatchDateInput,
   normalizeBatchTransactionInput,
+  resolveBatchCategoryForStorage,
 } from "./request-normalization.ts";
 import {
   assertAccountInScope,
@@ -148,6 +151,16 @@ class SaveTransactionsBatchError extends Error {
     this.status = status;
     this.code = code ?? resolveErrorCode(status);
   }
+}
+
+function createFallbackCategoryContext(): CategoryContext {
+  const merged = mergeAllowedCategories({ customCategories: [] });
+  return {
+    allowedExpenseSet: merged.allowedExpenseSet,
+    allowedIncomeSet: merged.allowedIncomeSet,
+    preferences: [],
+    remaps: [],
+  };
 }
 
 function resolveErrorCode(status: number): string {
@@ -513,16 +526,15 @@ export async function saveTransactionsBatchInternal(
   const preparedRecords: PreparedTransactionRecord[] = [];
   const validationErrors: { index: number; error: string }[] = [];
 
-  let categoryRemaps: Awaited<ReturnType<typeof fetchUserCategoryRemaps>> = [];
+  let categoryContext = createFallbackCategoryContext();
   try {
-    categoryRemaps = await fetchUserCategoryRemaps({
+    categoryContext = await loadCategoryContext({
       supabase,
       userId,
-      limit: 120,
     });
   } catch (error) {
     console.error(
-      "[save-transactions-batch] Failed to load category remaps:",
+      "[save-transactions-batch] Failed to load category context:",
       error,
     );
   }
@@ -616,13 +628,15 @@ export async function saveTransactionsBatchInternal(
     const currency = validateCurrency(tx.currency || "USD");
     const amountCents = Math.round(tx.amount * 100);
     const rawCategory = String(tx.category ?? "");
-    const normalizedCategory = normalizeBatchCategory(tx.category);
-    const effectiveCategory = applyCategoryRemap({
-      categoryName: normalizedCategory.category,
+    const resolvedCategory = resolveBatchCategoryForStorage({
+      rawCategory: tx.category,
+      description: tx.description,
+      merchant: tx.merchant,
       transactionType: tx.type === "income" ? "income" : "expense",
-      remaps: categoryRemaps,
+      ctx: categoryContext,
     });
-    if (normalizedCategory.usedFallback && rawCategory.trim().length > 0) {
+    const effectiveCategory = resolvedCategory.category;
+    if (resolvedCategory.usedFallback && rawCategory.trim().length > 0) {
       void reportEdgeFunctionError({
         functionName: "save-transactions-batch",
         error: new Error("CATEGORY_SANITIZE_FALLBACK"),

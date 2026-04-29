@@ -1330,6 +1330,20 @@ function reconcileStatementTotals(text: string, items: ExpenseItem[]): void {
   }
 }
 
+export function buildAllowedCategoryEnum(
+  expenseCategories: string[],
+  incomeCategories: string[],
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const category of [...expenseCategories, ...incomeCategories]) {
+    if (!category || seen.has(category)) continue;
+    seen.add(category);
+    out.push(category);
+  }
+  return out;
+}
+
 async function resolveCandidateCategories(
   genAI: GenerativeAIClient,
   candidates: Array<{
@@ -1355,7 +1369,13 @@ async function resolveCandidateCategories(
             properties: {
               categories: {
                 type: "array",
-                items: { type: "string" },
+                items: {
+                  type: "string",
+                  enum: buildAllowedCategoryEnum(
+                    expenseCategories,
+                    incomeCategories,
+                  ),
+                },
               },
             },
             required: ["categories"],
@@ -4628,6 +4648,10 @@ export async function runAnalyzeExpense(
     const incomeCategories = callerIncomeAllowed.length > 0
       ? callerIncomeAllowed
       : getIncomeCategories();
+    const allowedCategoryEnum = buildAllowedCategoryEnum(
+      expenseCategories,
+      incomeCategories,
+    );
 
     const allowedExpenseSet = new Set<string>(
       expenseCategories.map((c) => normalizeAllowedCategory(c)),
@@ -4688,6 +4712,7 @@ export async function runAnalyzeExpense(
                       },
                       category: {
                         type: "string",
+                        enum: allowedCategoryEnum,
                         description: "Canonical category from provided list.",
                       },
                       currency: {
@@ -4785,7 +4810,7 @@ export async function runAnalyzeExpense(
                         enum: ["expense", "income"],
                       },
                       amount: { type: "number" },
-                      category: { type: "string" },
+                      category: { type: "string", enum: allowedCategoryEnum },
                       currency: { type: "string" },
                       date: { type: "string" },
                       description: { type: "string" },

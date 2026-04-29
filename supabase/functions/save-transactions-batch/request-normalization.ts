@@ -1,4 +1,8 @@
 import { sanitizeCategoryName } from "../shared/category-colors.ts";
+import {
+  type CategoryContext,
+  resolveCategory,
+} from "../shared/category-resolution.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 
 export type BatchTransactionType = "expense" | "income";
@@ -51,6 +55,46 @@ export function normalizeBatchCategory(value: unknown): {
   };
 }
 
+export function resolveBatchCategoryForStorage(input: {
+  rawCategory: unknown;
+  description?: unknown;
+  merchant?: unknown;
+  transactionType: BatchTransactionType;
+  ctx: CategoryContext;
+}): {
+  category: string;
+  usedFallback: boolean;
+} {
+  const normalizedCategory = normalizeBatchCategory(input.rawCategory);
+  const description = resolvePreferenceSourceText({
+    transactionType: input.transactionType,
+    description: input.description,
+    merchant: input.merchant,
+  });
+  const resolvedCategory = resolveCategory({
+    initialGuess: normalizedCategory.category,
+    description,
+    transactionType: input.transactionType,
+    ctx: input.ctx,
+  });
+
+  if (
+    !normalizedCategory.usedFallback &&
+    !isGenericBatchCategory(normalizedCategory.category) &&
+    isGenericBatchCategory(resolvedCategory)
+  ) {
+    return {
+      category: normalizedCategory.category,
+      usedFallback: false,
+    };
+  }
+
+  return {
+    category: resolvedCategory,
+    usedFallback: normalizedCategory.usedFallback,
+  };
+}
+
 export function normalizeBatchDateInput(input: {
   value: unknown;
   manualImportMode?: boolean;
@@ -81,6 +125,29 @@ function normalizeExplicitTransactionType(
   }
 
   return null;
+}
+
+function normalizeOptionalText(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+function resolvePreferenceSourceText(input: {
+  transactionType: BatchTransactionType;
+  description?: unknown;
+  merchant?: unknown;
+}): string | null {
+  const description = normalizeOptionalText(input.description);
+  const merchant = normalizeOptionalText(input.merchant);
+  return input.transactionType === "income"
+    ? merchant ?? description
+    : description ?? merchant;
+}
+
+function isGenericBatchCategory(category: string): boolean {
+  const normalized = category.trim().toLowerCase();
+  return normalized === "other" || normalized === "uncategorized";
 }
 
 function normalizeAmount(value: unknown): number | null {
