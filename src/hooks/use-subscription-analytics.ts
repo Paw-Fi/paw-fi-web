@@ -24,6 +24,7 @@ export interface SubscriptionAnalytics {
   yearlyActive: SubscriptionMetric;
   lifetimeActive: SubscriptionMetric;
   totalCancelled: SubscriptionMetric;
+  trialToActive: SubscriptionMetric;
 }
 
 export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics {
@@ -32,6 +33,7 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
     yearlyActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
     lifetimeActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
     totalCancelled: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
+    trialToActive: { currentValue: 0, trend: [], changePercent: 0, providers: { stripe: 0, apple: 0 } },
   });
 
   useEffect(() => {
@@ -53,11 +55,13 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
         let yearlyActiveCount = 0;
         let lifetimeActiveCount = 0;
         let cancelledCount = 0;
+        let trialToActiveCount = 0;
 
         const monthlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const yearlyProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const lifetimeProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
         const cancelledProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
+        const trialToActiveProviders: ProviderBreakdown = { stripe: 0, apple: 0 };
 
         for (const row of rows) {
           const provider = row.provider as 'stripe' | 'app_store';
@@ -85,6 +89,20 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
             cancelledCount += count;
             if (provider === 'stripe') cancelledProviders.stripe += count;
             else if (provider === 'app_store') cancelledProviders.apple += count;
+          }
+
+          if (
+            row.status === 'active'
+            && (
+              (row.plan_type === 'plus' && (row.billing_interval === 'monthly' || row.billing_interval === 'yearly'))
+              || row.plan_type === 'lifetime'
+            )
+          ) {
+            const trialToActiveRowCount = Number(row.trial_to_active_count ?? 0);
+
+            trialToActiveCount += trialToActiveRowCount;
+            if (provider === 'stripe') trialToActiveProviders.stripe += trialToActiveRowCount;
+            else if (provider === 'app_store') trialToActiveProviders.apple += trialToActiveRowCount;
           }
         }
 
@@ -116,6 +134,12 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
             trend: generateTrend(thirtyDaysAgo, now, cancelledCount),
             changePercent: 0,
             providers: cancelledProviders,
+          },
+          trialToActive: {
+            currentValue: trialToActiveCount,
+            trend: generateTrend(thirtyDaysAgo, now, trialToActiveCount),
+            changePercent: 0,
+            providers: trialToActiveProviders,
           },
         });
       } catch {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity, UserPlus } from "lucide-react";
+import { RefreshCw, Users, MapPin, Calendar, CalendarDays, Infinity, Ban, MessageCircle, AlertCircle, Activity, UserPlus, BadgeCheck } from "lucide-react";
 
 import { useUserCount } from "@/hooks/use-user-count";
 import { useUsersByTimezone } from "@/hooks/use-users-by-timezone";
@@ -212,6 +212,15 @@ function PerformancePage() {
                 providers={subscriptionAnalytics.totalCancelled.providers}
                 color="#EF4444"
                 icon={<Ban className="h-4 w-4" />}
+              />
+              <SubscriptionMetricCard
+                title="Paying After Trial"
+                value={subscriptionAnalytics.trialToActive.currentValue}
+                trend={subscriptionAnalytics.trialToActive.trend}
+                changePercent={subscriptionAnalytics.trialToActive.changePercent}
+                providers={subscriptionAnalytics.trialToActive.providers}
+                color="#22C55E"
+                icon={<BadgeCheck className="h-4 w-4" />}
               />
               <TrialingUsersTable users={trialingUsers} />
             </div>

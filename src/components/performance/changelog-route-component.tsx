@@ -20,20 +20,20 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
-    title:
-      "Receipt Photo Replacement, Home Screen Widget Fixes & Transactions Page Improvements",
-    date: "2026-04-29",
+    title: "New Currencies, CSV Import Enhancements & Calendar Improvements",
+    date: "2026-04-30",
     version: "1.6.0",
-    tags: ["Feature", "Fix", "Widget", "Transactions"],
+    tags: ["Feature", "Currency", "Import", "Widget"],
     description:
-      "This release adds the ability to replace receipt photos, fixes home screen widget calculation issues on both iOS and Android, and includes significant transactions page improvements for better category visualization.",
+      "This release adds support for three new currencies, enhances CSV import with automatic language detection, improves the calendar widget with more details, and fixes various display issues.",
     items: [
+      "Added currency support for COP, ETB, and XOF",
       "You can now replace receipt photos on your transactions",
-      "Fixed home screen widget calculation issues on Android",
-      "Fixed home screen widget calculation issues on iOS",
-      "Transactions page now shows category pie chart with better visualization",
-      "Budget amount decimal precision has been improved",
-      "General stability improvements",
+      "CSV import now automatically detects and supports different languages",
+      "Calendar widget now shows more detailed information",
+      "Fixed home screen widget calculation issues on both iOS and Android",
+      "Fixed pie chart display issues",
+      "Minor UI refinements and stability improvements",
     ],
   },
   {
