@@ -13,10 +13,12 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'CHF': 'CHF',
   'CLP': 'CLP\$',
   'CNY': '¥',
+  'COP': 'COP\$',
   'CZK': 'Kč',
   'DKK': 'kr',
   'DOP': 'RD\$',
   'EGP': 'E£',
+  'ETB': 'Br',
   'EUR': '€',
   'GBP': '£',
   'GHS': '₵',
@@ -57,6 +59,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'ZAR': 'R',
   'HUF': 'Ft',
   'ZMW': 'ZK',
+  'XOF': 'CFA',
 };
 
 /**
