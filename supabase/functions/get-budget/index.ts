@@ -6,7 +6,8 @@ import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
-import { getDaysInMonth, clampDayToMonth } from "../shared/date-utils.ts";
+import { clampDayToMonth, getDaysInMonth } from "../shared/date-utils.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface GetBudgetRequest {
   phone?: string;
@@ -33,8 +34,9 @@ function formatMoney(cents: number, currency: string) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const detection = detectGptRequest(req);
@@ -70,14 +72,17 @@ Deno.serve(async (req: Request) => {
   if (!phone && !userId && !detection.isGpt) {
     return errorResponse("Either 'phone' or 'userId' must be provided", 400);
   }
-  if (phone && typeof phone !== "string")
+  if (phone && typeof phone !== "string") {
     return errorResponse("'phone' must be a string", 400);
-  if (userId && typeof userId !== "string")
+  }
+  if (userId && typeof userId !== "string") {
     return errorResponse("'userId' must be a string", 400);
+  }
 
   const targetDate = inputDate ? new Date(inputDate) : new Date();
-  if (Number.isNaN(targetDate.getTime()))
+  if (Number.isNaN(targetDate.getTime())) {
     return errorResponse("Invalid date format", 400);
+  }
   const targetDateIso = targetDate.toISOString().slice(0, 10);
   const monthStartIso = new Date(
     Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1),
@@ -159,11 +164,26 @@ Deno.serve(async (req: Request) => {
     if (!contactFetchErr) {
       contactRecord = fetchedContact;
       resolvedUserId = resolvedUserId ?? fetchedContact?.user_id ?? null;
+    } else {
+      await reportEdgeFunctionError({
+        functionName: "get-budget",
+        error: contactFetchErr,
+        context: { operation: "user_contacts.select_by_id", contactId },
+      });
     }
   }
 
   if (contactErr) {
     console.error("contact select error", contactErr);
+    await reportEdgeFunctionError({
+      functionName: "get-budget",
+      error: contactErr,
+      context: {
+        operation: "user_contacts.resolve_contact",
+        phone,
+        resolvedUserId,
+      },
+    });
     return errorResponse("Failed to fetch contact", 500);
   }
 
@@ -175,8 +195,8 @@ Deno.serve(async (req: Request) => {
   const preferredCurrency = contactRecord?.preferred_currency
     ? validateCurrency(contactRecord.preferred_currency)
     : null;
-  const targetCurrency =
-    validateCurrency(inputCurrency) || preferredCurrency || "USD";
+  const targetCurrency = validateCurrency(inputCurrency) || preferredCurrency ||
+    "USD";
 
   const { data: budgetRows, error: budgetErr } = await supabase
     .from("daily_budgets")
@@ -263,9 +283,13 @@ Deno.serve(async (req: Request) => {
 
   const messageLines = [
     `Daily budget: ${formatMoney(dailyBudgetCents, targetCurrency)}.`,
-    `Budget to day ${targetDay} (${daysInMonth}-day month): ${formatMoney(budgetToDateCents, targetCurrency)}.`,
+    `Budget to day ${targetDay} (${daysInMonth}-day month): ${
+      formatMoney(budgetToDateCents, targetCurrency)
+    }.`,
     `Spent to date: ${formatMoney(spentToDateCents, targetCurrency)}.`,
-    `Remaining for period: ${formatMoney(remainingToDateCents, targetCurrency)}.`,
+    `Remaining for period: ${
+      formatMoney(remainingToDateCents, targetCurrency)
+    }.`,
   ];
 
   if (detection.isGpt) {

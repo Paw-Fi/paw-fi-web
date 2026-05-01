@@ -1,6 +1,8 @@
 -- Extend creator subscription analytics with trial-to-active conversion count.
 -- This supports creator dashboard "Paying After Trial" metric.
 
+DROP FUNCTION IF EXISTS public.get_creator_subscription_analytics();
+
 CREATE OR REPLACE FUNCTION public.get_creator_subscription_analytics()
 RETURNS TABLE (
     plan_type TEXT,

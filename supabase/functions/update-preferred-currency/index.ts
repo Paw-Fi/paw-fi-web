@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -24,8 +25,9 @@ function errorResponse(message: string, status = 400, details?: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -135,6 +137,15 @@ Deno.serve(async (req: Request) => {
   let contactId: string | null = contact?.id ?? null;
   if (contactErr) {
     console.error("contact select error", contactErr);
+    await reportEdgeFunctionError({
+      functionName: "update-preferred-currency",
+      error: contactErr,
+      context: {
+        operation: "user_contacts.select",
+        hasPhone: Boolean(phone),
+        hasUserId: Boolean(userId),
+      },
+    });
     return errorResponse("Failed to fetch contact", 500);
   }
 
@@ -151,24 +162,44 @@ Deno.serve(async (req: Request) => {
             preferred_currency: providedCurrency,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "phone_e164" },
+          { onConflict: userId ? "user_id" : "phone_e164" },
         )
         .select("id")
         .single();
       if (upsertErr) {
         console.error("contact upsert error", upsertErr);
+        await reportEdgeFunctionError({
+          functionName: "update-preferred-currency",
+          error: upsertErr,
+          context: {
+            operation: "user_contacts.upsert_by_phone",
+            hasUserId: Boolean(userId),
+          },
+        });
         return errorResponse("Failed to create contact", 500);
       }
       contactId = upserted.id;
     } else if (userId) {
-      // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
+      // If only userId provided, upsert on user_id to prevent duplicate contacts.
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, preferred_currency: providedCurrency })
+        .upsert(
+          {
+            user_id: userId,
+            preferred_currency: providedCurrency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        )
         .select("id")
         .single();
       if (insertErr) {
         console.error("contact insert error", insertErr);
+        await reportEdgeFunctionError({
+          functionName: "update-preferred-currency",
+          error: insertErr,
+          context: { operation: "user_contacts.upsert_by_user_id", userId },
+        });
         return errorResponse("Failed to create contact", 500);
       }
       contactId = inserted.id;
@@ -182,6 +213,15 @@ Deno.serve(async (req: Request) => {
 
   if (updateErr) {
     console.error("contact update error", updateErr);
+    await reportEdgeFunctionError({
+      functionName: "update-preferred-currency",
+      error: updateErr,
+      context: {
+        operation: "user_contacts.update_preferred_currency",
+        contactId,
+        userId,
+      },
+    });
     return errorResponse("Failed to update contact", 500);
   }
   const results = {

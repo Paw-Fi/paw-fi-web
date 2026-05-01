@@ -4,6 +4,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -13,12 +14,16 @@ function json(body: unknown, status = 200) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return json({ error: "Server not configured" }, 500);
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    return json({ error: "Server not configured" }, 500);
+  }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -26,23 +31,36 @@ Deno.serve(async (req) => {
   });
 
   let payload: any;
-  try { payload = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+  try {
+    payload = await req.json();
+  } catch {
+    return json({ error: "Invalid JSON" }, 400);
+  }
 
   const action = String(payload?.action || "").toLowerCase();
   const phone = String(payload?.phone || "").trim();
   const name = typeof payload?.name === "string" ? payload.name.trim() : "";
 
   if (!phone) return json({ error: "Missing phone" }, 400);
-  if (!["add", "list"].includes(action)) return json({ error: "Invalid action" }, 400);
+  if (!["add", "list"].includes(action)) {
+    return json({ error: "Invalid action" }, 400);
+  }
 
   // Ensure contact (handle duplicates by getting most recent)
   const contactResult = await supabase
     .from("user_contacts")
     .select("id")
     .eq("phone_e164", phone)
-    .order('id', { ascending: false })
+    .order("id", { ascending: false })
     .limit(1);
-  if (contactResult.error) return json({ error: "Contact lookup failed" }, 500);
+  if (contactResult.error) {
+    await reportEdgeFunctionError({
+      functionName: "categories",
+      error: contactResult.error,
+      context: { operation: "user_contacts.select_by_phone", phone },
+    });
+    return json({ error: "Contact lookup failed" }, 500);
+  }
   let contactId = contactResult.data?.[0]?.id as string | undefined;
   if (!contactId) {
     // Use UPSERT to prevent duplicates on phone_e164
@@ -50,24 +68,37 @@ Deno.serve(async (req) => {
       .from("user_contacts")
       .upsert(
         { phone_e164: phone, updated_at: new Date().toISOString() },
-        { onConflict: 'phone_e164' }
+        { onConflict: "phone_e164" },
       )
       .select("id")
       .single();
-    if (upsertErr || !upserted?.id) return json({ error: "Contact create failed" }, 500);
+    if (upsertErr || !upserted?.id) {
+      await reportEdgeFunctionError({
+        functionName: "categories",
+        error: upsertErr ?? new Error("Missing upserted contact id"),
+        context: { operation: "user_contacts.upsert_by_phone", phone },
+      });
+      return json({ error: "Contact create failed" }, 500);
+    }
     contactId = upserted.id;
   }
 
   if (action === "add") {
     if (!name) return json({ error: "Missing name" }, 400);
     // Basic validation: 1-40 chars, letters/numbers/spaces/-/_
-    if (!/^[\w\s\-]{1,40}$/.test(name)) return json({ error: "Invalid category name" }, 400);
+    if (!/^[\w\s\-]{1,40}$/.test(name)) {
+      return json({ error: "Invalid category name" }, 400);
+    }
 
     const { error: insErr } = await supabase
       .from("expense_categories")
       .insert({ contact_id: contactId, name, is_default: false });
     if (insErr) {
-      if (String(insErr.message || "").toLowerCase().includes("duplicate")) {
+      if (
+        String(insErr.message || "")
+          .toLowerCase()
+          .includes("duplicate")
+      ) {
         return json({ ok: true, message: "Category already exists" });
       }
       return json({ error: "Failed to add category" }, 500);
@@ -88,5 +119,8 @@ Deno.serve(async (req) => {
     .order("name", { ascending: true });
   if (dErr || uErr) return json({ error: "Failed to fetch categories" }, 500);
 
-  return json({ ok: true, categories: [...(defaults || []), ...(custom || [])] });
+  return json({
+    ok: true,
+    categories: [...(defaults || []), ...(custom || [])],
+  });
 });

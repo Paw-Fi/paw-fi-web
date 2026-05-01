@@ -6,6 +6,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { detectGptRequest, ensureGuestIdentity } from "../shared/gpt-guests.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 // Types
 interface SetBudgetRequest {
@@ -28,8 +29,9 @@ function errorResponse(message: string, status = 400, details?: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const detection = detectGptRequest(req);
@@ -119,6 +121,15 @@ Deno.serve(async (req: Request) => {
       };
     } catch (identityError) {
       console.error("set-budget identity error", identityError);
+      await reportEdgeFunctionError({
+        functionName: "set-budget",
+        error: identityError,
+        context: {
+          operation: "user_contacts.ensure_guest_identity",
+          conversationId,
+          ephemeralUserId,
+        },
+      });
       return errorResponse("Failed to resolve GPT session", 500);
     }
   }
@@ -153,6 +164,16 @@ Deno.serve(async (req: Request) => {
 
   if (contactErr) {
     console.error("contact select error", contactErr);
+    await reportEdgeFunctionError({
+      functionName: "set-budget",
+      error: contactErr,
+      context: {
+        operation: "user_contacts.select",
+        hasPhone: Boolean(phone),
+        hasUserId: Boolean(resolvedUserId),
+        conversationId,
+      },
+    });
     return errorResponse("Failed to fetch contact", 500);
   }
 
@@ -170,8 +191,7 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const budgetCurrency =
-    providedCurrency ||
+  const budgetCurrency = providedCurrency ||
     validateCurrency(contact?.preferred_currency as string | null);
 
   if (!contactId) {
@@ -179,6 +199,16 @@ Deno.serve(async (req: Request) => {
       phone,
       resolvedUserId,
       conversationId,
+    });
+    await reportEdgeFunctionError({
+      functionName: "set-budget",
+      error: new Error("Failed to resolve user_contacts contact id"),
+      context: {
+        operation: "user_contacts.resolve_contact_id",
+        hasPhone: Boolean(phone),
+        hasUserId: Boolean(resolvedUserId),
+        conversationId,
+      },
     });
     return errorResponse("Failed to resolve contact", 500);
   }
@@ -200,24 +230,49 @@ Deno.serve(async (req: Request) => {
             preferred_currency: budgetCurrency,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "phone_e164" },
+          { onConflict: resolvedUserId ? "user_id" : "phone_e164" },
         )
         .select("id")
         .single();
       if (upsertErr) {
         console.error("contact upsert error", upsertErr);
+        await reportEdgeFunctionError({
+          functionName: "set-budget",
+          error: upsertErr,
+          context: {
+            operation: "user_contacts.upsert_by_phone",
+            hasUserId: Boolean(resolvedUserId),
+            conversationId,
+          },
+        });
         return errorResponse("Failed to create contact", 500);
       }
       contactId = upserted.id;
     } else if (resolvedUserId) {
-      // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
+      // If only userId provided, upsert on user_id to prevent duplicate contacts.
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: resolvedUserId, preferred_currency: budgetCurrency })
+        .upsert(
+          {
+            user_id: resolvedUserId,
+            preferred_currency: budgetCurrency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        )
         .select("id")
         .single();
       if (insertErr) {
         console.error("contact insert error", insertErr);
+        await reportEdgeFunctionError({
+          functionName: "set-budget",
+          error: insertErr,
+          context: {
+            operation: "user_contacts.upsert_by_user_id",
+            userId: resolvedUserId,
+            conversationId,
+          },
+        });
         return errorResponse("Failed to create contact", 500);
       }
       contactId = inserted.id;
@@ -280,7 +335,15 @@ Deno.serve(async (req: Request) => {
   // Simple text reply
   const sym = getCurrencySymbol(budgetCurrency);
   const toMoney = (cents: number) => (cents / 100).toFixed(2);
-  const reply = `Budget set to ${sym}${toMoney(budgetCents)}. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${toMoney(budgetCents)}. Remaining: ${sym}${toMoney(remainingCents)}.`;
+  const reply = `Budget set to ${sym}${
+    toMoney(
+      budgetCents,
+    )
+  }. Today: spent ${sym}${toMoney(totalSpentCents)} / budget ${sym}${
+    toMoney(
+      budgetCents,
+    )
+  }. Remaining: ${sym}${toMoney(remainingCents)}.`;
 
   if (detection.isGpt) {
     return new Response(reply, {

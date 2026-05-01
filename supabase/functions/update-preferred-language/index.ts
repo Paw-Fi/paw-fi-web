@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
 import { normalizePreferredLanguage } from "../shared/currency-helpers.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface RequestBody {
   phone?: string;
@@ -30,14 +31,16 @@ function normalizeLanguage(input?: string | null): string | null {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return error("Server not configured", 500);
+  }
 
   let payload: RequestBody;
   try {
@@ -50,10 +53,12 @@ Deno.serve(async (req: Request) => {
   const rawLanguage = payload?.language;
   const preferredLanguage = normalizeLanguage(rawLanguage ?? undefined);
 
-  if (phone && typeof phone !== "string")
+  if (phone && typeof phone !== "string") {
     return error("'phone' must be a string", 400);
-  if (requestedUserId && typeof requestedUserId !== "string")
+  }
+  if (requestedUserId && typeof requestedUserId !== "string") {
     return error("'userId' must be a string", 400);
+  }
   if (rawLanguage != null && preferredLanguage == null) {
     return error("Invalid language", 400);
   }
@@ -82,8 +87,9 @@ Deno.serve(async (req: Request) => {
     : authResult.userId;
   const effectivePhone = authResult.isInternalService ? phone : undefined;
 
-  if (!effectivePhone && !userId)
+  if (!effectivePhone && !userId) {
     return error("Either 'phone' or 'userId' must be provided", 400);
+  }
 
   // find existing contact
   let contact: any = null;
@@ -110,6 +116,15 @@ Deno.serve(async (req: Request) => {
 
   if (contactErr) {
     console.error("contact select error", contactErr);
+    await reportEdgeFunctionError({
+      functionName: "update-preferred-language",
+      error: contactErr,
+      context: {
+        operation: "user_contacts.select",
+        hasPhone: Boolean(effectivePhone),
+        hasUserId: Boolean(userId),
+      },
+    });
     return error("Failed to fetch contact", 500);
   }
 
@@ -126,19 +141,43 @@ Deno.serve(async (req: Request) => {
             preferred_language: preferredLanguage,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "phone_e164" },
+          { onConflict: userId ? "user_id" : "phone_e164" },
         )
         .select("id")
         .single();
-      if (upsertErr) return error("Failed to create contact", 500, upsertErr);
+      if (upsertErr) {
+        await reportEdgeFunctionError({
+          functionName: "update-preferred-language",
+          error: upsertErr,
+          context: {
+            operation: "user_contacts.upsert_by_phone",
+            hasUserId: Boolean(userId),
+          },
+        });
+        return error("Failed to create contact", 500, upsertErr);
+      }
       contactId = upserted.id;
     } else if (userId) {
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, preferred_language: preferredLanguage })
+        .upsert(
+          {
+            user_id: userId,
+            preferred_language: preferredLanguage,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        )
         .select("id")
         .single();
-      if (insertErr) return error("Failed to create contact", 500, insertErr);
+      if (insertErr) {
+        await reportEdgeFunctionError({
+          functionName: "update-preferred-language",
+          error: insertErr,
+          context: { operation: "user_contacts.upsert_by_user_id", userId },
+        });
+        return error("Failed to create contact", 500, insertErr);
+      }
       contactId = inserted.id;
     }
   }
@@ -147,11 +186,21 @@ Deno.serve(async (req: Request) => {
   const updateQuery = supabase
     .from("user_contacts")
     .update({ preferred_language: preferredLanguage });
-  const { error: updateErr } =
-    userId && !effectivePhone
-      ? await updateQuery.eq("user_id", userId)
-      : await updateQuery.eq("id", contactId!);
-  if (updateErr) return error("Failed to update contact", 500, updateErr);
+  const { error: updateErr } = userId && !effectivePhone
+    ? await updateQuery.eq("user_id", userId)
+    : await updateQuery.eq("id", contactId!);
+  if (updateErr) {
+    await reportEdgeFunctionError({
+      functionName: "update-preferred-language",
+      error: updateErr,
+      context: {
+        operation: "user_contacts.update_preferred_language",
+        contactId,
+        userId,
+      },
+    });
+    return error("Failed to update contact", 500, updateErr);
+  }
 
   return json({ ok: true, results: { contactId, preferredLanguage } });
 });

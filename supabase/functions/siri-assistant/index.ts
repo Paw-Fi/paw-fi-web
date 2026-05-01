@@ -9,6 +9,7 @@ import {
 } from "../shared/budgets-helpers.ts";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { validateCurrency } from "../shared/currency-validator.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -63,7 +64,9 @@ function normalizeDateInput(value?: string | null): string | null {
 
 function normalizePeriodMonth(value?: string | null): string {
   const now = new Date();
-  const fallback = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+  const fallback = `${now.getUTCFullYear()}-${
+    String(now.getUTCMonth() + 1).padStart(2, "0")
+  }`;
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return /^\d{4}-\d{2}$/.test(trimmed) ? trimmed : fallback;
@@ -147,6 +150,11 @@ async function loadUserContext(supabase: BudgetSupabaseClient, userId: string) {
     .maybeSingle();
 
   if (error) {
+    await reportEdgeFunctionError({
+      functionName: "siri-assistant",
+      error,
+      context: { operation: "user_contacts.load_user_context", userId },
+    });
     throw new Error(`Failed to load user context: ${error.message}`);
   }
 
@@ -205,8 +213,9 @@ async function resolveScope(
     }
   }
 
-  const displayName =
-    typeof household.name === "string" ? household.name : "that space";
+  const displayName = typeof household.name === "string"
+    ? household.name
+    : "that space";
 
   return {
     householdId,
@@ -283,8 +292,8 @@ async function buildBudgetStatusResponse(
   contactId: string | null,
   body: SiriAssistantRequestBody,
 ) {
-  const currency =
-    validateCurrency(body.currency) || preferredCurrency || "USD";
+  const currency = validateCurrency(body.currency) || preferredCurrency ||
+    "USD";
   const periodMonth = normalizePeriodMonth(body.periodMonth);
   const budgetStatus = await getBudgetStatusDirect(
     supabase,
@@ -307,7 +316,8 @@ async function buildBudgetStatusResponse(
     return {
       success: true,
       data: {
-        speech: `You do not have a ${currency} budget set for ${scope.displayName} this month yet.`,
+        speech:
+          `You do not have a ${currency} budget set for ${scope.displayName} this month yet.`,
         shouldOpenApp: false,
       },
     };
@@ -321,7 +331,8 @@ async function buildBudgetStatusResponse(
     .slice()
     .sort((left: any, right: any) => right.spent_cents - left.spent_cents)[0];
 
-  let speech = `For ${scope.displayName}, you have ${remaining} left out of ${budget} this month. You have spent ${spent} so far.`;
+  let speech =
+    `For ${scope.displayName}, you have ${remaining} left out of ${budget} this month. You have spent ${spent} so far.`;
   if (leadEnvelope?.name) {
     speech += ` ${leadEnvelope.name} is your biggest pocket right now.`;
   }
@@ -347,16 +358,14 @@ async function buildSpendTotalResponse(
   const normalizedCurrency = validateCurrency(body.currency);
   const explicitStartDate = normalizeDateInput(body.startDate);
   const explicitEndDate = normalizeDateInput(body.endDate);
-  const period =
-    explicitStartDate && explicitEndDate
-      ? {
-          startDate: explicitStartDate,
-          endDate: explicitEndDate,
-          label:
-            (body.periodLabel || currentMonthLabel()).trim() ||
-            currentMonthLabel(),
-        }
-      : buildDateRangeFromPeriodLabel(body.periodLabel);
+  const period = explicitStartDate && explicitEndDate
+    ? {
+      startDate: explicitStartDate,
+      endDate: explicitEndDate,
+      label: (body.periodLabel || currentMonthLabel()).trim() ||
+        currentMonthLabel(),
+    }
+    : buildDateRangeFromPeriodLabel(body.periodLabel);
 
   const rows = await queryExpenseRows(
     supabase,
@@ -371,7 +380,8 @@ async function buildSpendTotalResponse(
     return {
       success: true,
       data: {
-        speech: `I could not find any expenses for ${scope.displayName} ${period.label}.`,
+        speech:
+          `I could not find any expenses for ${scope.displayName} ${period.label}.`,
         shouldOpenApp: false,
       },
     };
@@ -389,14 +399,15 @@ async function buildSpendTotalResponse(
     return {
       success: true,
       data: {
-        speech: `You spent in ${currencies.length} currencies for ${scope.displayName} ${period.label}. Open Moneko for the full breakdown, or ask again in ${fallbackCurrency}.`,
+        speech:
+          `You spent in ${currencies.length} currencies for ${scope.displayName} ${period.label}. Open Moneko for the full breakdown, or ask again in ${fallbackCurrency}.`,
         shouldOpenApp: false,
       },
     };
   }
 
-  const currency =
-    normalizedCurrency || currencies[0] || preferredCurrency || "USD";
+  const currency = normalizedCurrency || currencies[0] || preferredCurrency ||
+    "USD";
   const totalCents = rows.reduce(
     (sum: number, row: any) => sum + (Number(row.amount_cents) || 0),
     0,
@@ -405,9 +416,17 @@ async function buildSpendTotalResponse(
     rows as Array<{ amount_cents: number; category: string | null }>,
   );
   const topCategory = categories[0];
-  let speech = `${period.label[0].toUpperCase()}${period.label.slice(1)} you spent ${formatMoney(totalCents, currency)} across ${rows.length} expense${rows.length == 1 ? "" : "s"} in ${scope.displayName}.`;
+  let speech = `${period.label[0].toUpperCase()}${
+    period.label.slice(1)
+  } you spent ${
+    formatMoney(totalCents, currency)
+  } across ${rows.length} expense${
+    rows.length == 1 ? "" : "s"
+  } in ${scope.displayName}.`;
   if (topCategory) {
-    speech += ` ${titleCaseCategory(topCategory.category)} was your top category.`;
+    speech += ` ${
+      titleCaseCategory(topCategory.category)
+    } was your top category.`;
   }
 
   return {
@@ -450,8 +469,7 @@ async function buildSpendAnalysisResponse(
     return {
       success: true,
       data: {
-        speech:
-          totalData?.speech ??
+        speech: totalData?.speech ??
           `I could not analyze spending for ${scope.displayName}.`,
         shouldOpenApp: true,
       },
@@ -460,16 +478,14 @@ async function buildSpendAnalysisResponse(
 
   const explicitStartDate = normalizeDateInput(body.startDate);
   const explicitEndDate = normalizeDateInput(body.endDate);
-  const period =
-    explicitStartDate && explicitEndDate
-      ? {
-          startDate: explicitStartDate,
-          endDate: explicitEndDate,
-          label:
-            (body.periodLabel || currentMonthLabel()).trim() ||
-            currentMonthLabel(),
-        }
-      : buildDateRangeFromPeriodLabel(body.periodLabel || currentMonthLabel());
+  const period = explicitStartDate && explicitEndDate
+    ? {
+      startDate: explicitStartDate,
+      endDate: explicitEndDate,
+      label: (body.periodLabel || currentMonthLabel()).trim() ||
+        currentMonthLabel(),
+    }
+    : buildDateRangeFromPeriodLabel(body.periodLabel || currentMonthLabel());
   const rows = await queryExpenseRows(
     supabase,
     userId,
@@ -507,11 +523,17 @@ async function buildSpendAnalysisResponse(
   const categoryMessage = categories
     .map(
       (entry) =>
-        `${titleCaseCategory(entry.category)} at ${Math.round(entry.share * 100)}%`,
+        `${titleCaseCategory(entry.category)} at ${
+          Math.round(entry.share * 100)
+        }%`,
     )
     .join(", ");
 
-  let speech = `${period.label[0].toUpperCase()}${period.label.slice(1)} you spent ${formatMoney(totalData.totalCents as number, totalData.currency as string)} in ${scope.displayName}.`;
+  let speech = `${period.label[0].toUpperCase()}${
+    period.label.slice(1)
+  } you spent ${
+    formatMoney(totalData.totalCents as number, totalData.currency as string)
+  } in ${scope.displayName}.`;
   if (categoryMessage) {
     speech += ` Your top categories were ${categoryMessage}.`;
   }
@@ -594,8 +616,8 @@ Deno.serve(async (req: Request) => {
           return errorResponse("A positive budget amount is required", 400);
         }
 
-        const currency =
-          validateCurrency(body.currency) || preferredCurrency || "USD";
+        const currency = validateCurrency(body.currency) || preferredCurrency ||
+          "USD";
         const periodMonth = normalizePeriodMonth(body.periodMonth);
         const budgetResponse = await createOrUpdateBudget(
           budgetSupabase,
@@ -616,7 +638,9 @@ Deno.serve(async (req: Request) => {
         return jsonResponse({
           success: true,
           data: {
-            speech: `Set the ${currency} budget for ${scope.displayName} to ${formatMoney(Math.round(amount * 100), currency)} this month.`,
+            speech: `Set the ${currency} budget for ${scope.displayName} to ${
+              formatMoney(Math.round(amount * 100), currency)
+            } this month.`,
             shouldOpenApp: false,
             budgetId: budgetResponse.data?.id ?? null,
           },

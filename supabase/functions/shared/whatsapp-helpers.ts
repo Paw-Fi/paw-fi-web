@@ -1,6 +1,7 @@
 // Shared WhatsApp helper functions and types
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCurrencySymbol } from "./currency-symbols.ts";
+import { reportEdgeFunctionError } from "./edge-error-alert.ts";
 
 export interface WhatsAppReply {
   text: string;
@@ -117,7 +118,8 @@ export async function sendWhatsAppMessage(
       formData.append("MediaUrl", mediaUrl);
     }
 
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const url =
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
 
     const response = await fetch(url, {
@@ -176,7 +178,8 @@ export async function sendWhatsAppTemplate(
     const toNumber = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
 
     // Make request to Twilio Messages API
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const url =
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
 
     const postTemplate = async (useMessagingService: boolean) => {
@@ -222,13 +225,13 @@ export async function sendWhatsAppTemplate(
       return { response, responseText, result };
     };
 
-    let { response, responseText, result } =
-      await postTemplate(!!messagingServiceSid);
+    let { response, responseText, result } = await postTemplate(
+      !!messagingServiceSid,
+    );
 
     if (!response.ok) {
       const errorCode = Number(result?.code ?? result?.error_code ?? NaN);
-      const errorMessage =
-        result?.message ||
+      const errorMessage = result?.message ||
         result?.error_message ||
         responseText ||
         `Twilio API error: ${response.status}`;
@@ -250,8 +253,7 @@ export async function sendWhatsAppTemplate(
         ({ response, responseText, result } = await postTemplate(false));
         if (!response.ok) {
           const retryCode = Number(result?.code ?? result?.error_code ?? NaN);
-          const retryMessage =
-            result?.message ||
+          const retryMessage = result?.message ||
             result?.error_message ||
             responseText ||
             `Twilio API error: ${response.status}`;
@@ -271,16 +273,15 @@ export async function sendWhatsAppTemplate(
     }
 
     const errorCode = Number(result?.error_code ?? result?.code ?? NaN);
-    const status =
-      typeof result?.status === "string" ? result.status.toLowerCase() : "";
-    const hasImmediateFailure =
-      Number.isFinite(errorCode) ||
+    const status = typeof result?.status === "string"
+      ? result.status.toLowerCase()
+      : "";
+    const hasImmediateFailure = Number.isFinite(errorCode) ||
       status === "failed" ||
       status === "undelivered";
 
     if (hasImmediateFailure) {
-      const errorMessage =
-        result?.error_message ||
+      const errorMessage = result?.error_message ||
         result?.message ||
         `Twilio template send failed with status: ${status || "unknown"}`;
       console.error("[sendWhatsAppTemplate] Twilio immediate failure:", {
@@ -333,7 +334,8 @@ export async function sendWhatsAppInteractiveButtons(
       formData.append("PersistentAction", `reply "${opt}"`);
     });
 
-    const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    const url =
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
 
     const response = await fetch(url, {
@@ -390,6 +392,13 @@ export async function getUserCurrency(
     .eq("phone_e164", phone)
     .order("id", { ascending: false })
     .limit(1);
+  if (contactResult.error) {
+    await reportEdgeFunctionError({
+      functionName: "shared/whatsapp-helpers",
+      error: contactResult.error,
+      context: { operation: "user_contacts.select_currency_by_phone", phone },
+    });
+  }
   const contactData = contactResult.data?.[0] ?? null;
 
   const code = contactData?.preferred_currency || "USD";

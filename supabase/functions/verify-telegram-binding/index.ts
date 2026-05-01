@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface UserContactRow {
   id: string;
@@ -37,6 +38,11 @@ async function selectBestContactForUser(
       "[verify-telegram-binding] contact select error",
       preferred.error,
     );
+    await reportEdgeFunctionError({
+      functionName: "verify-telegram-binding",
+      error: preferred.error,
+      context: { operation: "user_contacts.select_preferred", userId },
+    });
     return null;
   }
   if (preferred.data) return preferred.data as UserContactRow;
@@ -57,6 +63,11 @@ async function selectBestContactForUser(
       "[verify-telegram-binding] contact select error",
       fallback.error,
     );
+    await reportEdgeFunctionError({
+      functionName: "verify-telegram-binding",
+      error: fallback.error,
+      context: { operation: "user_contacts.select_fallback", userId },
+    });
     return null;
   }
   return (fallback.data as UserContactRow) ?? null;
@@ -74,6 +85,15 @@ async function mergeContacts(
 
   if (error) {
     console.error("[verify-telegram-binding] merge_user_contacts error", error);
+    await reportEdgeFunctionError({
+      functionName: "verify-telegram-binding",
+      error,
+      context: {
+        operation: "user_contacts.merge",
+        primaryContactId,
+        secondaryContactId,
+      },
+    });
     return false;
   }
 
@@ -82,6 +102,15 @@ async function mergeContacts(
       "[verify-telegram-binding] merge_user_contacts failed",
       (data as any).error,
     );
+    await reportEdgeFunctionError({
+      functionName: "verify-telegram-binding",
+      error: data,
+      context: {
+        operation: "user_contacts.merge_result",
+        primaryContactId,
+        secondaryContactId,
+      },
+    });
     return false;
   }
 
@@ -239,11 +268,14 @@ Deno.serve(async (req: Request) => {
         const secondary = primary.id === userRow.id ? chatRow : userRow;
 
         // Ensure the primary contact is linked and carries the telegram chat id.
+        const shouldSetUserIdBeforeMerge = primary.id === userRow.id;
         const updatePrimary = await supabase
           .from("user_contacts")
           .update({
-            user_id: user.id,
-            telegram_chat_id: chatIdText,
+            ...(shouldSetUserIdBeforeMerge ? { user_id: user.id } : {}),
+            ...(primary.id === chatRow.id
+              ? { telegram_chat_id: chatIdText }
+              : {}),
             verified: true,
             updated_at: nowIso,
           })
@@ -285,12 +317,15 @@ Deno.serve(async (req: Request) => {
         upsertError = res.error;
       } else {
         // No contact exists yet; create one for Telegram.
-        const res = await supabase.from("user_contacts").insert({
-          user_id: user.id,
-          telegram_chat_id: chatIdText,
-          verified: true,
-          updated_at: nowIso,
-        });
+        const res = await supabase.from("user_contacts").upsert(
+          {
+            user_id: user.id,
+            telegram_chat_id: chatIdText,
+            verified: true,
+            updated_at: nowIso,
+          },
+          { onConflict: "user_id" },
+        );
         upsertError = res.error;
       }
     } else {
@@ -298,6 +333,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (upsertError) {
+      await reportEdgeFunctionError({
+        functionName: "verify-telegram-binding",
+        error: upsertError,
+        context: {
+          operation: "user_contacts.bind_telegram",
+          userId: user.id,
+          isValidChatId: Number.isFinite(chatId),
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to bind Telegram chat" }),
         {

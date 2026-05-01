@@ -1,3 +1,5 @@
+import { reportEdgeFunctionError } from "./edge-error-alert.ts";
+
 interface QueryResult<T> {
   data: T | null;
   error: unknown;
@@ -35,11 +37,21 @@ export async function fetchLatestUserContact<T = UserContactLookup>(
     .from("user_contacts")
     .select(columns) as LatestUserContactQuery<T>;
 
-  return await query
+  const result = await query
     .eq("user_id", userId)
     .order("updated_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false, nullsFirst: false })
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (result.error) {
+    await reportEdgeFunctionError({
+      functionName: "shared/user-contacts",
+      error: result.error,
+      context: { operation: "user_contacts.fetch_latest", userId, columns },
+    });
+  }
+
+  return result;
 }

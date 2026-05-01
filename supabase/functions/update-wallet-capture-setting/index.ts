@@ -5,6 +5,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface UpdateWalletCaptureRequest {
   enabled: boolean;
@@ -22,8 +23,9 @@ function errorResponse(message: string, status = 400, details?: unknown) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -55,8 +57,9 @@ Deno.serve(async (req: Request) => {
     },
   });
 
-  const { data: userData, error: authError } =
-    await authClient.auth.getUser(bearerToken);
+  const { data: userData, error: authError } = await authClient.auth.getUser(
+    bearerToken,
+  );
   if (authError || !userData?.user?.id) {
     return errorResponse("Unauthorized", 401);
   }
@@ -97,6 +100,11 @@ Deno.serve(async (req: Request) => {
 
   if (selectErr) {
     console.error("[update-wallet-capture-setting] select error", selectErr);
+    await reportEdgeFunctionError({
+      functionName: "update-wallet-capture-setting",
+      error: selectErr,
+      context: { operation: "user_contacts.select", userId },
+    });
     return errorResponse("Failed to fetch contact", 500);
   }
 
@@ -111,6 +119,15 @@ Deno.serve(async (req: Request) => {
 
     if (updateErr) {
       console.error("[update-wallet-capture-setting] update error", updateErr);
+      await reportEdgeFunctionError({
+        functionName: "update-wallet-capture-setting",
+        error: updateErr,
+        context: {
+          operation: "user_contacts.update_wallet_capture",
+          userId,
+          contactId: existing.id,
+        },
+      });
       return errorResponse("Failed to update setting", 500);
     }
     contactId = existing.id;
@@ -119,15 +136,24 @@ Deno.serve(async (req: Request) => {
     // migration 20251008_user_contacts_preferred_currency.sql).
     const { data: inserted, error: insertErr } = await supabase
       .from("user_contacts")
-      .insert({
-        user_id: userId,
-        wallet_capture_enabled: payload.enabled,
-      })
+      .upsert(
+        {
+          user_id: userId,
+          wallet_capture_enabled: payload.enabled,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      )
       .select("id")
       .single();
 
     if (insertErr) {
       console.error("[update-wallet-capture-setting] insert error", insertErr);
+      await reportEdgeFunctionError({
+        functionName: "update-wallet-capture-setting",
+        error: insertErr,
+        context: { operation: "user_contacts.upsert_wallet_capture", userId },
+      });
       return errorResponse("Failed to create contact", 500);
     }
     contactId = inserted.id;

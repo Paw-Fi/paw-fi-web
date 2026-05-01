@@ -38,6 +38,7 @@ import {
   resolveDuplicateWebhookStatusCode,
 } from "../shared/email-import-event-state.ts";
 import { saveTransactionsBatchInternal } from "../save-transactions-batch/index.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
 const DEFAULT_IMPORT_INBOX_EMAIL = "files@inbound.moneko.io";
@@ -194,7 +195,9 @@ function ensureSoftDeadline(startedAtMs: number, stage: string): void {
 
 function matchesRetryableFailurePattern(message: string): boolean {
   return /(SOFT_DEADLINE_EXCEEDED|timeout|timed out|abort|429|500|502|503|504|overloaded|temporarily unavailable|resource_exhausted|ATTACHMENT_FETCH_FAILED)/i
-    .test(message);
+    .test(
+      message,
+    );
 }
 
 function isRetryableAnalyzeFailure(result: {
@@ -248,9 +251,11 @@ function scheduleBackgroundTask(
     });
   });
 
-  const edgeRuntime = (globalThis as unknown as {
-    EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void };
-  }).EdgeRuntime;
+  const edgeRuntime = (
+    globalThis as unknown as {
+      EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void };
+    }
+  ).EdgeRuntime;
 
   if (typeof edgeRuntime?.waitUntil === "function") {
     edgeRuntime.waitUntil(observed);
@@ -715,22 +720,34 @@ async function resolveOwnerBySender(params: {
   const resolved = resolveNewestSenderOwner(candidates);
   if (!resolved) return null;
 
-  const [{ data: user }, { data: contact }] = await Promise.all([
-    supabase
-      .from("users")
-      .select("email, full_name")
-      .eq("id", resolved.userId)
-      .maybeSingle(),
-    supabase
-      .from("user_contacts")
-      .select(
-        "email_import_enabled, email_import_household_id, email_import_is_portfolio, email_import_account_id, preferred_currency",
-      )
-      .eq("user_id", resolved.userId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [{ data: user }, { data: contact, error: contactError }] = await Promise
+    .all([
+      supabase
+        .from("users")
+        .select("email, full_name")
+        .eq("id", resolved.userId)
+        .maybeSingle(),
+      supabase
+        .from("user_contacts")
+        .select(
+          "email_import_enabled, email_import_household_id, email_import_is_portfolio, email_import_account_id, preferred_currency",
+        )
+        .eq("user_id", resolved.userId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  if (contactError) {
+    await reportEdgeFunctionError({
+      functionName: "resend-inbound-webhook",
+      error: contactError,
+      context: {
+        operation: "user_contacts.select_email_import_settings",
+        userId: resolved.userId,
+      },
+    });
+  }
 
   const defaultEmail = normalizeEmailAddress(user?.email) ||
     normalizedSenderEmail;
@@ -808,10 +825,14 @@ function buildUnavailableEmail(params: {
   }.</p>
     <p>${escapeHtml(reason)}</p>
     <p>To import files, forward supported attachments to <strong>${
-    escapeHtml(PRIMARY_IMPORT_INBOX_EMAIL)
+    escapeHtml(
+      PRIMARY_IMPORT_INBOX_EMAIL,
+    )
   }</strong>.</p>
     <p>This address does not monitor replies. If you need help, contact <a href="mailto:${
-    escapeHtml(SUPPORT_EMAIL)
+    escapeHtml(
+      SUPPORT_EMAIL,
+    )
   }" style="color:#7458FF;">${escapeHtml(SUPPORT_EMAIL)}</a>.</p>
     <p>Open Moneko, go to Settings, and configure Email File Import to allow this sender.</p>
     <p><a href="${APP_URL}" style="color:#7458FF;">Open Moneko</a></p>
@@ -864,7 +885,8 @@ function buildFollowupEmail(params: {
       const description = typeof item.description === "string" &&
           item.description.trim().length > 0
         ? item.description.trim()
-        : typeof item.merchant === "string" && item.merchant.trim().length > 0
+        : typeof item.merchant === "string" &&
+            item.merchant.trim().length > 0
         ? item.merchant.trim()
         : "Imported transaction";
       const date = typeof item.date === "string" ? item.date : "";
@@ -1182,7 +1204,10 @@ async function sendImportProcessedNotification(params: {
 
   const title = `Your files are ready!`;
   const body = `${savedCount} ${
-    pluralize(savedCount, "transaction")
+    pluralize(
+      savedCount,
+      "transaction",
+    )
   } have been added to your account`;
   const data = {
     event_type: "email_import_processed",
