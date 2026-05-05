@@ -7,16 +7,16 @@ import { verifyAppleReceipt } from "../shared/apple-verify-receipt.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
   Environment,
-  Status,
   type JWSTransactionDecodedPayload,
+  Status,
 } from "https://esm.sh/@apple/app-store-server-library@2.0.0?target=deno";
 import { getGoogleAccessToken } from "../shared/google-auth.ts";
 import {
   type AppStoreSubscriptionStatusLookup,
   decodeJwsPayload,
+  fetchLatestAppStoreTransactionByOriginalId,
   findAppStoreSubscriptionStatusWithEnvironmentFallback,
   findAppStoreTransactionWithEnvironmentFallback,
-  fetchLatestAppStoreTransactionByOriginalId,
   getValidatedAppStorePrivateKey,
   isAppStoreServerApiConfigured,
   matchesVerifiedAppStoreTransaction,
@@ -26,8 +26,10 @@ import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
   hasAppStoreOwnershipConflict,
+  normalizeAppStoreInAppOwnershipType,
   PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
   purchaseOwnershipConflictMessage,
+  shouldEnforceAppStoreOwnershipBinding,
 } from "../shared/iap-ownership.ts";
 
 type Platform = "ios" | "android";
@@ -114,16 +116,19 @@ async function attemptAutomaticAppStoreOwnershipTransfer(params: {
     return { transferred: false, reason: "already_owned_by_current_user" };
   }
 
-  const { count: dependentCount, error: dependentCountError } =
-    await params.supabase
-      .from("subscriptions")
-      .select("id", { count: "exact", head: true })
-      .eq("bound_to_user_id", binding.user_id)
-      .or("status.eq.trialing,and(status.eq.active,plan.neq.free)");
+  const { count: dependentCount, error: dependentCountError } = await params
+    .supabase
+    .from("subscriptions")
+    .select("id", { count: "exact", head: true })
+    .eq("bound_to_user_id", binding.user_id)
+    .or("status.eq.trialing,and(status.eq.active,plan.neq.free)");
 
   if (dependentCountError) {
     throw new Error(
-      `Failed to inspect bound dependents before ownership transfer: ${dependentCountError.message ?? dependentCountError.code ?? String(dependentCountError)}`,
+      `Failed to inspect bound dependents before ownership transfer: ${
+        dependentCountError.message ?? dependentCountError.code ??
+          String(dependentCountError)
+      }`,
     );
   }
 
@@ -147,7 +152,9 @@ async function attemptAutomaticAppStoreOwnershipTransfer(params: {
 
   if (transferError) {
     throw new Error(
-      `Failed to transfer App Store ownership binding: ${transferError.message ?? transferError.code ?? String(transferError)}`,
+      `Failed to transfer App Store ownership binding: ${
+        transferError.message ?? transferError.code ?? String(transferError)
+      }`,
     );
   }
 
@@ -205,12 +212,11 @@ function buildVerificationLogContext(params: {
     localReceiptPrefix: localReceipt ? localReceipt.slice(0, 12) : null,
     transactionId: params.transactionId ?? null,
     originalTransactionId: params.originalTransactionId ?? null,
-    environmentHint:
-      params.environment === Environment.SANDBOX
-        ? "sandbox"
-        : params.environment === Environment.PRODUCTION
-          ? "production"
-          : null,
+    environmentHint: params.environment === Environment.SANDBOX
+      ? "sandbox"
+      : params.environment === Environment.PRODUCTION
+      ? "production"
+      : null,
     appAccountToken: params.body?.appAccountToken ?? null,
   };
 }
@@ -235,7 +241,7 @@ function buildAppStoreSubscriptionStatusContext(
         : null,
     appStoreStatusAutoRenewProductId:
       typeof subscriptionStatusLookup?.renewalInfo?.autoRenewProductId ===
-      "string"
+          "string"
         ? subscriptionStatusLookup.renewalInfo.autoRenewProductId
         : null,
     appStoreStatusRenewalDate: asIsoMillisUnknown(
@@ -270,10 +276,9 @@ function isFreeTrialTransaction(
     "offerDiscountType" | "offerType" | "offerIdentifier"
   >,
 ): boolean {
-  const offerDiscountType =
-    typeof transaction.offerDiscountType === "string"
-      ? transaction.offerDiscountType.toUpperCase()
-      : "";
+  const offerDiscountType = typeof transaction.offerDiscountType === "string"
+    ? transaction.offerDiscountType.toUpperCase()
+    : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
@@ -315,8 +320,7 @@ const isProductionEnv = envSecret.toUpperCase() === "PROD";
 const defaultAppStoreEnvironment = isProductionEnv
   ? Environment.PRODUCTION
   : Environment.SANDBOX;
-const allowUnverifiedIapDevFallback =
-  !isProductionEnv &&
+const allowUnverifiedIapDevFallback = !isProductionEnv &&
   readBooleanEnv("ALLOW_UNVERIFIED_IAP_DEV_FALLBACK", false);
 
 console.log(
@@ -533,8 +537,7 @@ serve(async (req: Request) => {
         );
       }
 
-      const ownerHasActiveSubscription =
-        !!ownerSub &&
+      const ownerHasActiveSubscription = !!ownerSub &&
         !ownerSub.bound_to_user_id &&
         ((ownerSub.plan === "lifetime" && ownerSub.status === "active") ||
           ownerSub.status === "trialing" ||
@@ -603,6 +606,8 @@ serve(async (req: Request) => {
       let appStoreOfferType: number | string | null = null;
       let appStoreOfferDiscountType: string | null = null;
       let appStoreOfferIdentifier: string | null = null;
+      let appStoreInAppOwnershipType: "FAMILY_SHARED" | "PURCHASED" | null =
+        null;
       // Use the environment from ENV secret as default.
       // Will be updated based on JWS payload or App Store Server API response if available.
       // See ENV configuration comments at the top of this file for details.
@@ -654,10 +659,9 @@ serve(async (req: Request) => {
         }
 
         const envString = decodedHint.environment?.toLowerCase();
-        const envHint =
-          envString === "sandbox"
-            ? Environment.SANDBOX
-            : Environment.PRODUCTION;
+        const envHint = envString === "sandbox"
+          ? Environment.SANDBOX
+          : Environment.PRODUCTION;
         verificationLogContext = buildVerificationLogContext({
           userId,
           body,
@@ -680,6 +684,8 @@ serve(async (req: Request) => {
           purchaseDate: decodedHint.purchaseDate ?? null,
           expiresDate: decodedHint.expiresDate ?? null,
           transactionReason: decodedHint.transactionReason ?? null,
+          inAppOwnershipType:
+            (decodedHint as Record<string, unknown>).inAppOwnershipType ?? null,
           offerType: decodedHint.offerType ?? null,
           offerDiscountType: decodedHint.offerDiscountType ?? null,
           offerIdentifier: decodedHint.offerIdentifier ?? null,
@@ -712,7 +718,8 @@ serve(async (req: Request) => {
           return new Response(
             JSON.stringify({
               error: "Bundle ID mismatch",
-              details: `Expected ${appStoreBundleId}, got ${decodedHint.bundleId}`,
+              details:
+                `Expected ${appStoreBundleId}, got ${decodedHint.bundleId}`,
             }),
             {
               status: 400,
@@ -751,18 +758,19 @@ serve(async (req: Request) => {
               requestedTransactionId: decodedHint.transactionId ?? null,
               requestedOriginalTransactionId:
                 decodedHint.originalTransactionId ?? null,
-              resolvedEnvironment:
-                environment === Environment.SANDBOX ? "Sandbox" : "Production",
+              resolvedEnvironment: environment === Environment.SANDBOX
+                ? "Sandbox"
+                : "Production",
               foundTransactionId: serverTransaction?.transactionId ?? null,
               foundOriginalTransactionId:
                 serverTransaction?.originalTransactionId ?? null,
               foundExpiresDate: serverTransaction?.expiresDate ?? null,
               foundOfferType: serverTransaction?.offerType ?? null,
-              foundOfferDiscountType:
-                serverTransaction?.offerDiscountType ?? null,
+              foundOfferDiscountType: serverTransaction?.offerDiscountType ??
+                null,
               foundOfferIdentifier: serverTransaction?.offerIdentifier ?? null,
-              foundTransactionReason:
-                serverTransaction?.transactionReason ?? null,
+              foundTransactionReason: serverTransaction?.transactionReason ??
+                null,
             });
 
             if (serverTransaction && environment !== envHint) {
@@ -963,6 +971,8 @@ serve(async (req: Request) => {
           offerDiscountType: decodedTransaction.offerDiscountType ?? null,
           offerIdentifier: decodedTransaction.offerIdentifier ?? null,
           transactionReason: decodedTransaction.transactionReason ?? null,
+          inAppOwnershipType: (decodedTransaction as Record<string, unknown>)
+            .inAppOwnershipType ?? null,
         });
 
         // Legacy code path for additional server validation (kept for compatibility)
@@ -998,7 +1008,8 @@ serve(async (req: Request) => {
                 serverRevocationDate,
                 serverExpiresDate: serverTransaction.expiresDate,
                 clientExpiresDate: decodedTransaction.expiresDate,
-                note: "Using client transaction data, server API for revocation only",
+                note:
+                  "Using client transaction data, server API for revocation only",
               });
             } else {
               console.log(
@@ -1049,34 +1060,38 @@ serve(async (req: Request) => {
         }
 
         transactionId = decodedTransaction.transactionId ?? null;
-        originalTransactionId =
-          decodedTransaction.originalTransactionId ?? null;
+        originalTransactionId = decodedTransaction.originalTransactionId ??
+          null;
+        appStoreInAppOwnershipType = normalizeAppStoreInAppOwnershipType(
+          (decodedTransaction as Record<string, unknown>).inAppOwnershipType,
+        );
         const transactionAppAccountToken = asString(
           decodedTransaction.appAccountToken,
         );
         verifiedTransactionAppAccountUserId =
           transactionAppAccountToken && isUuid(transactionAppAccountToken)
             ? await resolveActiveAuthUserId(
-                supabase,
-                transactionAppAccountToken,
-              )
+              supabase,
+              transactionAppAccountToken,
+            )
             : null;
 
         if (
           verifiedTransactionAppAccountUserId &&
-          verifiedTransactionAppAccountUserId !== userId
+          verifiedTransactionAppAccountUserId !== userId &&
+          shouldEnforceAppStoreOwnershipBinding(appStoreInAppOwnershipType)
         ) {
           const transferResult =
             await attemptAutomaticAppStoreOwnershipTransfer({
               supabase,
-              originalTransactionId:
-                decodedTransaction.originalTransactionId ??
+              originalTransactionId: decodedTransaction.originalTransactionId ??
                 decodedTransaction.transactionId!,
               currentUserId: userId,
               transactionId: decodedTransaction.transactionId ?? null,
               storeProductId,
-              environment:
-                environment === Environment.SANDBOX ? "Sandbox" : "Production",
+              environment: environment === Environment.SANDBOX
+                ? "Sandbox"
+                : "Production",
             });
 
           if (transferResult.transferred) {
@@ -1178,18 +1193,18 @@ serve(async (req: Request) => {
 
           let expiresMs: number | null = null;
           if (expiresDate !== undefined && expiresDate !== null) {
-            expiresMs =
-              typeof expiresDate === "number"
-                ? expiresDate
-                : parseInt(String(expiresDate), 10);
+            expiresMs = typeof expiresDate === "number"
+              ? expiresDate
+              : parseInt(String(expiresDate), 10);
 
             if (!Number.isFinite(expiresMs)) {
               expiresMs = null;
             }
           }
 
-          let subscriptionStatusLookup: AppStoreSubscriptionStatusLookup | null =
-            null;
+          let subscriptionStatusLookup:
+            | AppStoreSubscriptionStatusLookup
+            | null = null;
 
           if (isAppleServerApiConfigured() && transactionId) {
             try {
@@ -1219,10 +1234,9 @@ serve(async (req: Request) => {
                   billingInterval,
                   originalTransactionId,
                   transactionId,
-                  environment:
-                    environment === Environment.SANDBOX
-                      ? "Sandbox"
-                      : "Production",
+                  environment: environment === Environment.SANDBOX
+                    ? "Sandbox"
+                    : "Production",
                   appleExpiresMs: expiresMs,
                   appleExpiresDate: expiresMs
                     ? new Date(expiresMs).toISOString()
@@ -1239,8 +1253,8 @@ serve(async (req: Request) => {
           console.log("Parsing expiry date:", {
             userId,
             transactionId: decodedTransaction.transactionId ?? null,
-            originalTransactionId:
-              decodedTransaction.originalTransactionId ?? null,
+            originalTransactionId: decodedTransaction.originalTransactionId ??
+              null,
             rawExpiresDate: expiresDate,
             parsedExpiresMs: expiresMs,
             nowMs: now,
@@ -1250,11 +1264,11 @@ serve(async (req: Request) => {
             offerDiscountType: decodedTransaction.offerDiscountType ?? null,
             offerIdentifier: decodedTransaction.offerIdentifier ?? null,
             subscriptionStatus: subscriptionStatusLookup?.status ?? null,
-            renewalDate:
-              subscriptionStatusLookup?.renewalInfo?.renewalDate ?? null,
+            renewalDate: subscriptionStatusLookup?.renewalInfo?.renewalDate ??
+              null,
             gracePeriodExpiresDate:
               subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate ??
-              null,
+                null,
           });
 
           if (
@@ -1265,8 +1279,8 @@ serve(async (req: Request) => {
             console.log("Purchase was revoked by App Store status lookup:", {
               userId,
               transactionId: decodedTransaction.transactionId ?? null,
-              originalTransactionId:
-                decodedTransaction.originalTransactionId ?? null,
+              originalTransactionId: decodedTransaction.originalTransactionId ??
+                null,
               subscriptionStatus: subscriptionStatusLookup.status,
             });
             return new Response(
@@ -1292,8 +1306,8 @@ serve(async (req: Request) => {
             console.log("Using Apple's verified expiry date:", {
               userId,
               transactionId: decodedTransaction.transactionId ?? null,
-              originalTransactionId:
-                decodedTransaction.originalTransactionId ?? null,
+              originalTransactionId: decodedTransaction.originalTransactionId ??
+                null,
               currentPeriodEnd,
               status,
               expiresMs,
@@ -1302,11 +1316,11 @@ serve(async (req: Request) => {
               offerDiscountType: decodedTransaction.offerDiscountType ?? null,
               offerIdentifier: decodedTransaction.offerIdentifier ?? null,
               subscriptionStatus: subscriptionStatusLookup?.status ?? null,
-              renewalDate:
-                subscriptionStatusLookup?.renewalInfo?.renewalDate ?? null,
+              renewalDate: subscriptionStatusLookup?.renewalInfo?.renewalDate ??
+                null,
               gracePeriodExpiresDate:
                 subscriptionStatusLookup?.renewalInfo?.gracePeriodExpiresDate ??
-                null,
+                  null,
             });
           } else {
             await reportEdgeFunctionError({
@@ -1322,10 +1336,9 @@ serve(async (req: Request) => {
                 appleExpiresDate: expiresMs
                   ? new Date(expiresMs).toISOString()
                   : null,
-                reason:
-                  expiresMs === null
-                    ? "Missing expiry date"
-                    : "No resolvable entitlement end",
+                reason: expiresMs === null
+                  ? "Missing expiry date"
+                  : "No resolvable entitlement end",
                 resolvedLifecycleStatus: lifecycle.status,
                 resolvedCurrentPeriodEnd: lifecycle.currentPeriodEnd,
                 submittedProductId: decodedTransaction.productId ?? null,
@@ -1355,30 +1368,28 @@ serve(async (req: Request) => {
           console.log("Final subscription status:", {
             userId,
             transactionId: decodedTransaction.transactionId ?? null,
-            originalTransactionId:
-              decodedTransaction.originalTransactionId ?? null,
+            originalTransactionId: decodedTransaction.originalTransactionId ??
+              null,
             status,
             currentPeriodEnd,
-            trialStart:
-              status === "trialing"
-                ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
-                : null,
+            trialStart: status === "trialing"
+              ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
+              : null,
             trialEnd: status === "trialing" ? currentPeriodEnd : null,
             offerType: decodedTransaction.offerType ?? null,
             offerDiscountType: decodedTransaction.offerDiscountType ?? null,
             offerIdentifier: decodedTransaction.offerIdentifier ?? null,
-            environment:
-              environment === Environment.SANDBOX ? "Sandbox" : "Production",
+            environment: environment === Environment.SANDBOX
+              ? "Sandbox"
+              : "Production",
           });
 
-          appStoreTrialStart =
-            status === "trialing"
-              ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
-              : asString((existingSub as any)?.trial_start);
-          appStoreTrialEnd =
-            status === "trialing"
-              ? currentPeriodEnd
-              : asString((existingSub as any)?.trial_end);
+          appStoreTrialStart = status === "trialing"
+            ? asIsoMillisUnknown(decodedTransaction.purchaseDate)
+            : asString((existingSub as any)?.trial_start);
+          appStoreTrialEnd = status === "trialing"
+            ? currentPeriodEnd
+            : asString((existingSub as any)?.trial_end);
           appStoreOfferType = decodedTransaction.offerType ?? null;
           appStoreOfferDiscountType =
             typeof decodedTransaction.offerDiscountType === "string"
@@ -1479,10 +1490,9 @@ serve(async (req: Request) => {
           );
         }
 
-        environment =
-          receiptResponse.environment?.toLowerCase() === "sandbox"
-            ? Environment.SANDBOX
-            : Environment.PRODUCTION;
+        environment = receiptResponse.environment?.toLowerCase() === "sandbox"
+          ? Environment.SANDBOX
+          : Environment.PRODUCTION;
 
         if (plan === "lifetime") {
           // Non-consumable: must exist in receipt.in_app without cancellation_date
@@ -1522,6 +1532,9 @@ serve(async (req: Request) => {
 
           originalTransactionId = asString(latest["original_transaction_id"]);
           transactionId = asString(latest["transaction_id"]);
+          appStoreInAppOwnershipType = normalizeAppStoreInAppOwnershipType(
+            latest["in_app_ownership_type"],
+          );
           status = "active";
           currentPeriodEnd = null;
         } else {
@@ -1558,6 +1571,9 @@ serve(async (req: Request) => {
 
           originalTransactionId = asString(latest["original_transaction_id"]);
           transactionId = asString(latest["transaction_id"]);
+          appStoreInAppOwnershipType = normalizeAppStoreInAppOwnershipType(
+            latest["in_app_ownership_type"],
+          );
           const expiresIso = parseMsToIso(asString(latest["expires_date_ms"]));
           if (!expiresIso) {
             return new Response(
@@ -1574,8 +1590,9 @@ serve(async (req: Request) => {
           if (!Number.isFinite(expiresMs) || expiresMs <= now) {
             status = "canceled";
           } else {
-            status =
-              latest["is_trial_period"] === "true" ? "trialing" : "active";
+            status = latest["is_trial_period"] === "true"
+              ? "trialing"
+              : "active";
           }
         }
 
@@ -1596,11 +1613,11 @@ serve(async (req: Request) => {
               );
               verifiedTransactionAppAccountUserId =
                 serverTransactionAppAccountToken &&
-                isUuid(serverTransactionAppAccountToken)
+                  isUuid(serverTransactionAppAccountToken)
                   ? await resolveActiveAuthUserId(
-                      supabase,
-                      serverTransactionAppAccountToken,
-                    )
+                    supabase,
+                    serverTransactionAppAccountToken,
+                  )
                   : null;
 
               const serverTransactionId = asString(
@@ -1609,6 +1626,10 @@ serve(async (req: Request) => {
               if (serverTransactionId) {
                 transactionId = serverTransactionId;
               }
+              appStoreInAppOwnershipType = normalizeAppStoreInAppOwnershipType(
+                (serverTransaction as Record<string, unknown>)
+                  .inAppOwnershipType,
+              ) ?? appStoreInAppOwnershipType;
 
               if (serverTransaction.revocationDate) {
                 return new Response(
@@ -1673,6 +1694,7 @@ serve(async (req: Request) => {
 
       console.log("Idempotency check:", {
         eventKey,
+        inAppOwnershipType: appStoreInAppOwnershipType,
         hasError: !!idemError,
         errorCode: idemError?.code,
         isFirstTimeVerification,
@@ -1749,9 +1771,11 @@ serve(async (req: Request) => {
                 console.log("🔧 Sandbox duplicate override (recent):", {
                   wasStatus: status,
                   newStatus: "active",
-                  reason: `Duplicate verification but subscription updated ${Math.round(
-                    ageMinutes,
-                  )} min ago`,
+                  reason: `Duplicate verification but subscription updated ${
+                    Math.round(
+                      ageMinutes,
+                    )
+                  } min ago`,
                   currentPeriodEnd,
                 });
                 status = "active";
@@ -1771,10 +1795,18 @@ serve(async (req: Request) => {
         }
       }
 
-      const environmentString =
-        environment === Environment.SANDBOX ? "Sandbox" : "Production";
+      const environmentString = environment === Environment.SANDBOX
+        ? "Sandbox"
+        : "Production";
 
-      if (iapOwnershipBindingEnabled && originalTransactionId) {
+      const shouldEnforceOwnershipBinding =
+        shouldEnforceAppStoreOwnershipBinding(appStoreInAppOwnershipType);
+
+      if (
+        iapOwnershipBindingEnabled &&
+        originalTransactionId &&
+        shouldEnforceOwnershipBinding
+      ) {
         const hasLegacyConflict = await hasAppStoreOwnershipConflict({
           supabase,
           originalTransactionId,
@@ -1790,7 +1822,8 @@ serve(async (req: Request) => {
           );
           return new Response(
             JSON.stringify({
-              error: `${purchaseOwnershipConflictMessage()} If you still cannot restore after signing into the original account, please contact support.`,
+              error:
+                `${purchaseOwnershipConflictMessage()} If you still cannot restore after signing into the original account, please contact support.`,
               code: PURCHASE_OWNED_BY_ANOTHER_ACCOUNT_CODE,
             }),
             {
@@ -1864,6 +1897,17 @@ serve(async (req: Request) => {
             );
           }
         }
+      } else if (iapOwnershipBindingEnabled && !shouldEnforceOwnershipBinding) {
+        console.log(
+          "Skipping App Store ownership binding for family-shared entitlement",
+          {
+            userId,
+            originalTransactionId,
+            transactionId,
+            storeProductId,
+            inAppOwnershipType: appStoreInAppOwnershipType,
+          },
+        );
       } else if (iapOwnershipBindingEnabled) {
         console.warn(
           "Skipping ownership binding because original transaction id is missing",
@@ -1910,6 +1954,7 @@ serve(async (req: Request) => {
         offerType: appStoreOfferType,
         offerDiscountType: appStoreOfferDiscountType,
         offerIdentifier: appStoreOfferIdentifier,
+        inAppOwnershipType: appStoreInAppOwnershipType,
         environment: environmentString,
       });
 
@@ -1932,10 +1977,9 @@ serve(async (req: Request) => {
           console.error("Failed to cancel previous Stripe subscription:", {
             userId,
             stripe_subscription_id: (existingSub as any).stripe_subscription_id,
-            error:
-              cancelError instanceof Error
-                ? cancelError.message
-                : String(cancelError),
+            error: cancelError instanceof Error
+              ? cancelError.message
+              : String(cancelError),
           });
         }
       }
@@ -2085,11 +2129,16 @@ serve(async (req: Request) => {
     let orderId: string | null = null;
 
     if (isLifetime) {
-      const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(
-        androidPackageName,
-      )}/purchases/products/${encodeURIComponent(storeProductId)}/tokens/${encodeURIComponent(
-        purchaseToken,
-      )}`;
+      const url =
+        `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${
+          encodeURIComponent(
+            androidPackageName,
+          )
+        }/purchases/products/${encodeURIComponent(storeProductId)}/tokens/${
+          encodeURIComponent(
+            purchaseToken,
+          )
+        }`;
       const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -2120,9 +2169,14 @@ serve(async (req: Request) => {
       }
       currentPeriodEnd = null;
     } else {
-      const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(
-        androidPackageName,
-      )}/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
+      const url =
+        `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${
+          encodeURIComponent(
+            androidPackageName,
+          )
+        }/purchases/subscriptionsv2/tokens/${
+          encodeURIComponent(purchaseToken)
+        }`;
       const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -2253,10 +2307,9 @@ serve(async (req: Request) => {
         console.error("Failed to cancel previous Stripe subscription:", {
           userId,
           stripe_subscription_id: (existingSub as any).stripe_subscription_id,
-          error:
-            cancelError instanceof Error
-              ? cancelError.message
-              : String(cancelError),
+          error: cancelError instanceof Error
+            ? cancelError.message
+            : String(cancelError),
         });
       }
     }
