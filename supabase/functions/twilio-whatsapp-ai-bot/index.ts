@@ -65,6 +65,20 @@ import {
   resolveInternalFunctionKey,
   resolveInternalFunctionKeyWithSource,
 } from "../shared/auth.ts";
+import {
+  normalizeAiToolAmount,
+  normalizeAiToolMoneyCents,
+  normalizeAiToolTransactionType,
+  normalizeRequiredAiToolString,
+} from "../shared/bot/ai-tool-validation.ts";
+import {
+  buildUnsafeMutationClaimFallback,
+  detectWriteIntentFromUserText,
+  diagnoseUnsafeTransactionMutationClaim,
+  isWriteMutationToolName,
+  shouldBlockUnsafeTransactionMutationClaim,
+  WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
+} from "../shared/bot/mutation-claim-guard.ts";
 
 // --- Constants & Types ---
 
@@ -76,6 +90,8 @@ Your goal is to help users track expenses, manage budgets, and view their financ
 You can handle personal finances and shared spaces.
 
 **LANGUAGE RULE (HIGHEST PRIORITY):** Always reply in {{LANGUAGE}}. This value is resolved by the backend before your prompt is built. Do not choose the reply language yourself and do not infer it from the user's latest message.
+
+**TOOL-USE RULE (NON-NEGOTIABLE):** NEVER claim an action was performed unless you actually called the corresponding tool on this turn. Phrases like "I've added", "I've saved", "I've logged", "I've recorded", "I've updated", "I've deleted" are FORBIDDEN unless a tool call accompanies the turn. If the user asks to add/save/log/record a transaction and you have enough details, you MUST call \`add_transaction\` (or \`add_transactions_batch\`). If details are missing, ask one short clarification question instead — do not pretend the save happened. The backend enforces this and will replace any false success claim with an error message to the user.
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
@@ -1527,13 +1543,30 @@ async function invokeTransactionSave(
       clientCreatedAt: new Date().toISOString(),
     };
 
-  return await supabase.functions.invoke(
-    type === "income" ? "save-income" : "save-expense",
-    {
-      body,
-      headers: buildInternalInvokeHeaders(internalKey),
-    },
-  );
+  const targetFunction = type === "income" ? "save-income" : "save-expense";
+  console.log("[twilio-whatsapp-ai-bot] invokeTransactionSave: calling", {
+    targetFunction,
+    userId,
+    type,
+    amount: params.amount,
+    category: params.category,
+    currency: params.currency,
+    householdId: params.householdId,
+  });
+
+  const result = await supabase.functions.invoke(targetFunction, {
+    body,
+    headers: buildInternalInvokeHeaders(internalKey),
+  });
+
+  console.log("[twilio-whatsapp-ai-bot] invokeTransactionSave: result", {
+    targetFunction,
+    success: !result.error && result.data?.success === true,
+    hasData: !!result.data,
+    error: result.error ? String(result.error) : null,
+  });
+
+  return result;
 }
 
 function getInvokeHttpStatus(error: unknown): number | undefined {
@@ -2140,40 +2173,6 @@ Deno.serve(async (req: Request) => {
     const activeInvokeJwt = secretSupabaseServiceRoleApiKey ||
       SUPABASE_SERVICE_ROLE_KEY || "";
     const serviceRoleMeta = decodeJwtPayloadMeta(activeInvokeJwt);
-    const serviceRoleRaw = (SUPABASE_SERVICE_ROLE_KEY || "").trim();
-    const anonRaw = (SUPABASE_ANON_KEY || "").trim();
-    const secretApiRaw = secretSupabaseServiceRoleApiKey.trim();
-    console.log("[twilio-whatsapp-ai-bot] Internal invoke auth config", {
-      source: internalKeyMeta.source,
-      fingerprint: fingerprintSecret(internalKeyMeta.key),
-      keyLength: internalKeyMeta.key.length,
-      hasSecretApiKey: !!secretSupabaseServiceRoleApiKey,
-      secretApiKeyFingerprint: fingerprintSecret(
-        secretSupabaseServiceRoleApiKey,
-      ),
-      secretApiKeyLooksJwt: /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/
-        .test(secretApiRaw),
-      secretApiKeyDotCount: secretApiRaw
-        ? secretApiRaw.split(".").length - 1
-        : 0,
-      hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
-      serviceRoleFingerprint: fingerprintSecret(
-        SUPABASE_SERVICE_ROLE_KEY || "",
-      ),
-      serviceRoleLooksJwt: /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/
-        .test(serviceRoleRaw),
-      serviceRoleDotCount: serviceRoleRaw
-        ? serviceRoleRaw.split(".").length - 1
-        : 0,
-      anonLooksJwt: /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
-        anonRaw,
-      ),
-      anonDotCount: anonRaw ? anonRaw.split(".").length - 1 : 0,
-      activeInvokeJwtFingerprint: fingerprintSecret(activeInvokeJwt),
-      serviceRoleRole: serviceRoleMeta.role,
-      serviceRoleProjectRef: serviceRoleMeta.projectRef,
-      hasAnonKey: !!SUPABASE_ANON_KEY,
-    });
   }
 
   // 1. Determine channel and optionally validate Twilio signature
@@ -3295,6 +3294,18 @@ Deno.serve(async (req: Request) => {
               toolResult = { error: requestedWallet.error };
               continue;
             }
+            console.log(
+              "[twilio-whatsapp-ai-bot] add_transaction: invoking save",
+              {
+                type: call.args.type || "expense",
+                amount: call.args.amount,
+                category: call.args.category,
+                currency: call.args.currency || userCurrency,
+                householdId,
+                isPortfolio: spaceMeta?.isPortfolio ??
+                  call.args.is_portfolio === true,
+              },
+            );
             const { data, error } = await invokeTransactionSave(
               supabase,
               INTERNAL_FUNCTION_KEY,
@@ -3322,6 +3333,14 @@ Deno.serve(async (req: Request) => {
                 source: call.args.source,
                 ownerType: call.args.owner_type,
                 privacyScope: call.args.privacy_scope,
+              },
+            );
+            console.log(
+              "[twilio-whatsapp-ai-bot] add_transaction: save result",
+              {
+                success: !error,
+                hasData: !!data,
+                error: error ? String(error) : null,
               },
             );
             toolResult = error ? { error } : { success: true, data };
@@ -5010,6 +5029,18 @@ Deno.serve(async (req: Request) => {
     let functionCalls: any[] | null = response
       ? (response.functionCalls() as any[])
       : null;
+    let persistedContent: string | undefined;
+
+    // Tool-call loop (bounded) to support multi-round function calling.
+    let toolSucceededAny = false;
+    let writeMutationSucceededAny = false;
+    let lastToolResult: any = null;
+    let lastToolCallName: string | null = null;
+    let lastGeneratedChartUrl: string | null = null;
+    let lastBudgetPockets: Array<{ name: string; percentage: number }> | null =
+      null;
+    let toolIterations = 0;
+
     if (!finalResponseText) {
       finalResponseText = response
         ? response.text()
@@ -5020,17 +5051,87 @@ Deno.serve(async (req: Request) => {
       // source of truth for write actions is the tool result, not the first
       // model draft.
       finalResponseText = "";
-    }
-    let persistedContent: string | undefined;
+    } else {
+      // Layered defense against AI hallucinating a save without calling a tool.
+      // Layer 1: deterministic write-intent detection on the raw user message
+      //          (e.g. "20 for kfc").
+      // Layer 2: regex guard on the model's response detecting assertive
+      //          first-person "I've added/saved/logged" claims.
+      // Layer 3: if either fires, force a tool call via toolConfig.
+      const writeIntentDetected = detectWriteIntentFromUserText(body);
+      const claimDiag = diagnoseUnsafeTransactionMutationClaim({
+        responseText: finalResponseText,
+        writeMutationSucceeded: writeMutationSucceededAny,
+      });
+      const shouldForceToolCall = claimDiag.blocked || writeIntentDetected;
 
-    // Tool-call loop (bounded) to support multi-round function calling.
-    let toolSucceededAny = false;
-    let lastToolResult: any = null;
-    let lastToolCallName: string | null = null;
-    let lastGeneratedChartUrl: string | null = null;
-    let lastBudgetPockets: Array<{ name: string; percentage: number }> | null =
-      null;
-    let toolIterations = 0;
+      console.log(
+        "[twilio-whatsapp-ai-bot] initial-response tool-call guard",
+        {
+          userMessage: body,
+          writeIntentDetected,
+          claimBlocked: claimDiag.blocked,
+          claimReason: claimDiag.reason,
+          hasFunctionCalls: false,
+          willForceToolCall: shouldForceToolCall,
+        },
+      );
+
+      if (shouldForceToolCall) {
+        try {
+          const repairPrompt =
+            `Your previous response did not call a save tool. ` +
+            `The user's message ("${body}") requires a write action. ` +
+            `Call add_transaction now with the details you can extract. ` +
+            `Do not reply with text claiming a save happened.`;
+          const repairResult = await (activeChat as any).sendMessage(
+            repairPrompt,
+            {
+              toolConfig: {
+                functionCallingConfig:
+                  WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
+              },
+            },
+          );
+          response = await repairResult.response;
+          functionCalls = (response.functionCalls() as any[]) || [];
+          const repairText = response.text();
+          console.log(
+            "[twilio-whatsapp-ai-bot] forced-tool-call retry result",
+            {
+              forcedCallCount: functionCalls.length,
+              forcedCallNames: functionCalls.map((c: any) => c?.name),
+              hadTextFallback: !!repairText,
+            },
+          );
+          if (functionCalls.length > 0) {
+            finalResponseText = "";
+          } else {
+            // Model still refused to emit a tool call. Never echo its text if
+            // it looks like a save claim.
+            const repairDiag = diagnoseUnsafeTransactionMutationClaim({
+              responseText: repairText,
+              writeMutationSucceeded: false,
+            });
+            finalResponseText = repairDiag.blocked
+              ? buildUnsafeMutationClaimFallback()
+              : (repairText || buildUnsafeMutationClaimFallback());
+          }
+        } catch (error) {
+          console.error(
+            "[twilio-whatsapp-ai-bot] forced-tool-call retry failed:",
+            error,
+          );
+          if (WHATSAPP_DEBUG) {
+            debugNotes.push(
+              `forced-tool-call-retry-error: ${String(error)}`,
+            );
+          }
+          finalResponseText = buildUnsafeMutationClaimFallback();
+          functionCalls = null;
+        }
+      }
+    }
     while (functionCalls && functionCalls.length > 0 && toolIterations < 3) {
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
@@ -5310,33 +5411,6 @@ Deno.serve(async (req: Request) => {
                 const invokeAuthMeta = decodeJwtPayloadMeta(
                   invokeHeaders.Authorization,
                 );
-                console.log(
-                  "[twilio-whatsapp-ai-bot] save-income invoke auth debug",
-                  {
-                    hasInternalKeyHeader:
-                      typeof invokeHeaders["X-Moneko-Internal-Key"] ===
-                        "string" &&
-                      invokeHeaders["X-Moneko-Internal-Key"].length > 0,
-                    internalKeyFingerprint: fingerprintSecret(
-                      invokeHeaders["X-Moneko-Internal-Key"] || "",
-                    ),
-                    hasAuthorization:
-                      typeof invokeHeaders.Authorization === "string" &&
-                      invokeHeaders.Authorization.length > 0,
-                    authStartsWithBearer:
-                      typeof invokeHeaders.Authorization === "string" &&
-                      /^Bearer\s+/i.test(invokeHeaders.Authorization),
-                    authLooksJwt:
-                      typeof invokeHeaders.Authorization === "string" &&
-                      /^Bearer\s+[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/
-                        .test(
-                          invokeHeaders.Authorization,
-                        ),
-                    authRole: invokeAuthMeta.role,
-                    authProjectRef: invokeAuthMeta.projectRef,
-                    expectedProjectRef: "qbuynyxyemigtnvdujts",
-                  },
-                );
               }
 
               const payload = {
@@ -5596,6 +5670,16 @@ Deno.serve(async (req: Request) => {
             );
 
             const success = !error && data?.success === true;
+            console.log(
+              "[twilio-whatsapp-ai-bot] add_transactions_batch: save result",
+              {
+                success,
+                count: batchTransactions.length,
+                succeeded: data?.summary?.succeeded,
+                failed: data?.summary?.failed,
+                error: error ? String(error) : null,
+              },
+            );
             if (success) {
               const summary = data?.summary || {};
               toolResult = {
@@ -7278,6 +7362,9 @@ Deno.serve(async (req: Request) => {
         const succeeded = (toolResult as any)?.success === true;
         if (succeeded) {
           toolSucceededAny = true;
+          if (isWriteMutationToolName(call.name)) {
+            writeMutationSucceededAny = true;
+          }
           if (call.name === "confirm_budget" || call.name === "set_budget") {
             const pocketsRaw = Array.isArray((toolResult as any)?.envelopes)
               ? ((toolResult as any).envelopes as any[])
@@ -7376,6 +7463,24 @@ Deno.serve(async (req: Request) => {
     ) {
       const errorSnippet = lastToolResult.error.trim().slice(0, 180);
       finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
+    }
+    {
+      const finalDiag = diagnoseUnsafeTransactionMutationClaim({
+        responseText: finalResponseText,
+        writeMutationSucceeded: writeMutationSucceededAny,
+      });
+      if (finalDiag.blocked) {
+        console.log(
+          "[twilio-whatsapp-ai-bot] final-response mutation-claim blocked",
+          {
+            lastToolCallName,
+            writeMutationSucceededAny,
+            reason: finalDiag.reason,
+            responseTextPreview: finalResponseText.slice(0, 200),
+          },
+        );
+        finalResponseText = buildUnsafeMutationClaimFallback();
+      }
     }
     if (!finalResponseText || !finalResponseText.trim()) {
       finalResponseText = buildProcessingFailureMessage(userLang);
