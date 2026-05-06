@@ -20,6 +20,20 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "New Currencies, Apple Family Sharing & Help Center",
+    date: "2026-05-06",
+    version: "1.6.1",
+    tags: ["Feature", "Currency", "Family", "Support"],
+    description:
+      "This release adds multiple new currencies, introduces Apple Family Sharing support for shared subscriptions, and brings help center access directly in settings.",
+    items: [
+      "Added Costa Rican Colón (CRC) and CFA Franc BEAC (XAF) to supported currencies",
+      "Apple Family Sharing support for shared plan subscriptions",
+      "Help center link now available in Settings for direct support access",
+      "General stability and performance improvements",
+    ],
+  },
+  {
     title: "New Currencies, CSV Import Enhancements & Calendar Improvements",
     date: "2026-04-30",
     version: "1.6.0",

@@ -231,19 +231,6 @@ function HelpArticlePage() {
               ))}
             </nav>
           </section>
-
-          <section className="rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm">
-            <h2 className="mb-2 text-sm font-bold text-foreground">Need help?</h2>
-            <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
-              Can't find what you're looking for? Reach out to our team.
-            </p>
-            <Link
-              to="/help"
-              className="text-xs font-bold text-primary hover:underline"
-            >
-              Contact Support
-            </Link>
-          </section>
         </div>
       </aside>
     </div>
