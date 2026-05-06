@@ -2,16 +2,7 @@
 
 import { Suspense, lazy } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ArrowRight, Clock, FileText } from "lucide-react";
 import { StructuredData } from "@/components/seo/structured-data";
 import {
   findHelpArticleBySlug,
@@ -20,6 +11,7 @@ import {
 } from "@/data/help-articles";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
+import { FaqSection } from "@/components/ui/faq-section";
 
 const Markdown = lazy(() =>
   import("@/components/ui/markdown").then((module) => ({
@@ -135,7 +127,7 @@ function HelpArticlePage() {
       : [];
 
   return (
-    <div className="bg-moneko-background min-h-screen">
+    <div className="flex flex-col lg:flex-row lg:items-start lg:gap-16">
       <StructuredData type="article" data={articleSchemaData} />
       {article.includeTechArticleSchema ? (
         <StructuredData type="techArticle" data={articleSchemaData} />
@@ -164,133 +156,96 @@ function HelpArticlePage() {
         />
       ) : null}
 
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <nav aria-label="Help Center navigation">
-          <Button asChild variant="ghost" className="mb-8 rounded-full">
-            <Link to="/help">
-              <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-              Back to Help Center
-            </Link>
-          </Button>
-        </nav>
-
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-          <article className="min-w-0" aria-labelledby="help-article-title">
-            <header className="border-border/70 bg-card/80 mb-8 rounded-3xl border p-6 shadow-sm sm:p-8">
-              <div className="mb-5 flex flex-wrap items-center gap-3">
-                <Badge className="rounded-full" variant="secondary">
-                  {article.number}
-                </Badge>
-                {category ? (
-                  <Badge className="rounded-full" variant="outline">
-                    {category.title}
-                  </Badge>
-                ) : null}
-                <span className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  {article.readTime} min read
-                </span>
-              </div>
-              <h1
-                id="help-article-title"
-                className="text-foreground max-w-3xl text-4xl leading-tight font-semibold tracking-tight sm:text-5xl"
-              >
-                {article.title}
-              </h1>
-              <p className="text-muted-foreground mt-5 max-w-3xl text-lg leading-8">
-                {article.description}
-              </p>
-            </header>
-
-            <section aria-label="Article content">
-              <Card className="bg-card/80">
-                <CardContent className="p-6 sm:p-8">
-                  <Suspense
-                    fallback={
-                      <div
-                        className="bg-muted/40 h-80 animate-pulse rounded-2xl"
-                        aria-label="Loading article content"
-                      />
-                    }
-                  >
-                    <Markdown content={article.content} className="prose-lg" />
-                  </Suspense>
-                </CardContent>
-              </Card>
-            </section>
-
-            <footer className="text-muted-foreground mt-6 text-sm">
-              Last updated May 6, 2026. This Help Center article is free to read
-              and maintained by Moneko.
-            </footer>
-          </article>
-
-          <aside
-            className="space-y-6 lg:sticky lg:top-24"
-            aria-label="Related help"
+      <div className="min-w-0 flex-1">
+        <header className="mb-10">
+          <div className="mb-4 flex items-center gap-3 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+            {category && <span>{category.title}</span>}
+            {category && <span className="h-1 w-1 rounded-full bg-border" />}
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {article.readTime} min read
+            </span>
+          </div>
+          <h1
+            id="help-article-title"
+            className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl"
           >
-            <Card className="bg-card/80">
-              <CardHeader>
-                <CardTitle>In this category</CardTitle>
-                <CardDescription>
-                  {category?.description ?? "More Moneko Help Center guides."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <nav className="grid gap-3" aria-label="Related articles">
-                  {relatedArticles.map((relatedArticle) => (
-                    <Link
-                      key={relatedArticle.id}
-                      to="/help/$helpId"
-                      params={{ helpId: relatedArticle.slug }}
-                      className="group border-border/70 bg-background/80 hover:border-primary/40 focus-visible:ring-primary rounded-2xl border p-4 transition-all hover:shadow-sm focus-visible:ring-2 focus-visible:outline-none"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <Badge
-                            variant="secondary"
-                            className="mb-2 rounded-full"
-                          >
-                            {relatedArticle.number}
-                          </Badge>
-                          <h2 className="text-foreground group-hover:text-primary text-sm font-semibold">
-                            {relatedArticle.title}
-                          </h2>
-                        </div>
-                        <ArrowRight
-                          className="text-muted-foreground group-hover:text-primary mt-1 h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1"
-                          aria-hidden="true"
-                        />
-                      </div>
-                    </Link>
-                  ))}
-                </nav>
-              </CardContent>
-            </Card>
+            {article.title}
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-muted-foreground sm:text-xl">
+            {article.description}
+          </p>
+        </header>
 
-            <Card className="bg-primary text-primary-foreground">
-              <CardHeader>
-                <CardTitle>Can't find your answer?</CardTitle>
-                <CardDescription className="text-primary-foreground/80">
-                  Ask Moneko or contact support with details about your Space.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                <Button asChild variant="secondary" className="rounded-full">
-                  <Link to="/questions">Ask Moneko</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 rounded-full bg-transparent"
+        <section aria-label="Article content" className="border-t border-border pt-10">
+          <div className="max-w-none">
+            <Suspense
+              fallback={
+                <div
+                  className="h-80 animate-pulse rounded-2xl bg-muted/40"
+                  aria-label="Loading article content"
+                />
+              }
+            >
+              <Markdown content={article.content} className="prose-base sm:prose-lg" />
+            </Suspense>
+
+            {article.faqItems && article.faqItems.length > 0 && (
+              <div className="mt-16 border-t border-border pt-10">
+                <FaqSection faqData={article.faqItems} />
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="mt-16 border-t border-border pt-8 text-xs text-muted-foreground">
+          Last updated May 6, 2026. This Help Center article is free to read
+          and maintained by Moneko.
+        </footer>
+      </div>
+
+      <aside className="order-first w-full shrink-0 lg:order-last lg:w-64 lg:sticky lg:top-32" aria-label="Related help">
+        <div className="space-y-12 pb-12 lg:pb-0">
+          <section>
+            <h2 className="mb-4 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+              In this category
+            </h2>
+            <nav className="space-y-5" aria-label="Related articles">
+              {relatedArticles.map((relatedArticle) => (
+                <Link
+                  key={relatedArticle.id}
+                  to="/help/$helpId"
+                  params={{ helpId: relatedArticle.slug }}
+                  className="group block"
                 >
-                  <a href="mailto:hello@moneko.io">Email support</a>
-                </Button>
-              </CardContent>
-            </Card>
-          </aside>
+                  <div className="flex items-start gap-3">
+                    <FileText className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+                    <h3 className="text-sm font-medium leading-tight text-foreground transition-colors group-hover:text-primary">
+                      {relatedArticle.title}
+                    </h3>
+                  </div>
+                  <div className="mt-1.5 flex items-center pl-6 text-[10px] font-bold text-primary opacity-0 transition-all group-hover:opacity-100">
+                    Read guide <ArrowRight className="ml-1 h-3 w-3" />
+                  </div>
+                </Link>
+              ))}
+            </nav>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-card/50 p-6 backdrop-blur-sm">
+            <h2 className="mb-2 text-sm font-bold text-foreground">Need help?</h2>
+            <p className="mb-4 text-xs leading-relaxed text-muted-foreground">
+              Can't find what you're looking for? Reach out to our team.
+            </p>
+            <Link
+              to="/help"
+              className="text-xs font-bold text-primary hover:underline"
+            >
+              Contact Support
+            </Link>
+          </section>
         </div>
-      </main>
+      </aside>
     </div>
   );
 }

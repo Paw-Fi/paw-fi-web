@@ -18,7 +18,7 @@ export const helpCategories: HelpCategory[] = [
     iconName: "receipt",
   },
   {
-    id: "budgets-pockets",
+    id: "budgeting-pockets",
     title: "Budgets & Pockets",
     eyebrow: "Organize money",
     description:

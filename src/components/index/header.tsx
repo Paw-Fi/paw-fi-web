@@ -19,6 +19,7 @@ import {
   Calculator,
   DollarSign,
   History,
+  LifeBuoy,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -91,6 +92,12 @@ const resources = [
     href: "/pricing",
     description: "Simple plans for powerful tools.",
     icon: DollarSign,
+  },
+  {
+    title: "Help Center",
+    href: "/help",
+    description: "Guides, tutorials, and support resources.",
+    icon: LifeBuoy,
   },
 ];
 

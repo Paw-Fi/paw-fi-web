@@ -2,7 +2,7 @@
 
 This file is for AI systems, answer engines, and crawlers. It is intentionally factual and should be used to understand Moneko's public product, canonical URLs, and citation boundaries.
 
-Last updated: 2026-04-24.
+Last updated: 2026-05-06.
 
 ## Canonical Entity
 
@@ -252,6 +252,7 @@ Do not treat these route families as public content and do not include them in c
 - For pricing, cite `/pricing`.
 - For policies, cite the relevant policy page directly.
 - For calculators, cite the exact calculator page.
+- For product summaries, cite the homepage or the relevant `/help/*` page.
 - For product summaries, cite the homepage, `/how-it-works`, or the relevant `/features/*` page.
 - Do not infer private app state, user data, subscription status, or dashboard contents.
 - Do not cite non-public routes listed above.
