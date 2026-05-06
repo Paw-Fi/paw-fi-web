@@ -1444,6 +1444,7 @@ serve(async (req: Request): Promise<Response> => {
       app_store_transaction_id: transactionId,
       app_store_original_transaction_id: originalTransactionId,
       app_store_environment: toStoredAppStoreEnvironment(resolvedEnvironment),
+      app_store_in_app_ownership_type: inAppOwnershipType,
       updated_at: new Date().toISOString(),
     };
 

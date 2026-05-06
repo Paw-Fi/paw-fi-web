@@ -126,7 +126,8 @@ async function attemptAutomaticAppStoreOwnershipTransfer(params: {
   if (dependentCountError) {
     throw new Error(
       `Failed to inspect bound dependents before ownership transfer: ${
-        dependentCountError.message ?? dependentCountError.code ??
+        dependentCountError.message ??
+          dependentCountError.code ??
           String(dependentCountError)
       }`,
     );
@@ -1941,6 +1942,7 @@ serve(async (req: Request) => {
         app_store_transaction_id: transactionId,
         app_store_original_transaction_id: originalTransactionId,
         app_store_environment: environmentString,
+        app_store_in_app_ownership_type: appStoreInAppOwnershipType,
         updated_at: nowIso(),
       };
 
@@ -2014,6 +2016,7 @@ serve(async (req: Request) => {
             store_product_id: null,
             app_store_transaction_id: null,
             app_store_original_transaction_id: null,
+            app_store_in_app_ownership_type: null,
             stripe_subscription_id: null,
             stripe_customer_id: null,
             play_purchase_token: null,
@@ -2280,6 +2283,7 @@ serve(async (req: Request) => {
       app_store_transaction_id: null,
       app_store_original_transaction_id: null,
       app_store_environment: null,
+      app_store_in_app_ownership_type: null,
       current_period_end: isLifetime ? null : currentPeriodEnd,
       cancel_at_period_end: false,
       play_purchase_token: purchaseToken,
