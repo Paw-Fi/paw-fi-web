@@ -91,6 +91,9 @@ const CURRENCY_LANGUAGE_FALLBACKS: Record<string, string> = {
   VND: "vi",
   ZAR: "en",
   ZMW: "en",
+  XOF: "fr",
+  CRC: "es",
+  XAF: "fr",
 };
 
 function normalizeReplyLanguage(language?: string | null): string | null {

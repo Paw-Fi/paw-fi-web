@@ -60,6 +60,8 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'HUF': 'Ft',
   'ZMW': 'ZK',
   'XOF': 'CFA',
+  'CRC': '₡',
+  'XAF': 'FCFA',
 };
 
 /**

@@ -98,6 +98,9 @@ serve(async (req: Request) => {
         updated_at: directSubscription.updated_at,
       };
     } else if (finalSubscription && directSubscription) {
+      finalSubscription.provider ??= directSubscription.provider;
+      finalSubscription.store_product_id ??=
+        directSubscription.store_product_id;
       finalSubscription.app_store_in_app_ownership_type ??=
         directSubscription.app_store_in_app_ownership_type;
     }

@@ -64,6 +64,8 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'SYP': '£S',
   'ZMW': 'ZK',
   'XOF': 'CFA',
+  'CRC': '₡',
+  'XAF': 'FCFA',
 };
 
 export function getCurrencySymbolBasedOnTimeZone(): string {
