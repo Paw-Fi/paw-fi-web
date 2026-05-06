@@ -80,18 +80,6 @@ function AuthCallback() {
           });
           return;
         }
-
-        const needsAvatar = await shouldPromptForAvatar();
-
-        if (needsAvatar) {
-          navigate({
-            to: "/avatar-customizer",
-            search:
-              next && next !== "/dashboard" ? { redirect: next } : undefined,
-          });
-          return;
-        }
-
         navigate({ to: next });
       } catch (error) {
         console.error("OAuth callback processing error:", error);

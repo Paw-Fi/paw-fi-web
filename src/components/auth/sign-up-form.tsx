@@ -46,17 +46,7 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
         if (result.data?.user?.confirmation_sent_at) {
           setVerificationSent(true);
         } else {
-          // If no confirmation needed, check avatar and navigate accordingly
-          const hasAvatar = await checkUserHasAvatar();
-
-          if (!hasAvatar) {
-            navigate({
-              to: "/avatar-customizer",
-              search: redirectUrl ? { redirect: redirectUrl } : undefined,
-            });
-          } else {
-            navigate({ to: redirectUrl || "/dashboard" });
-          }
+          navigate({ to: redirectUrl || "/dashboard" });
         }
       }
     } catch (error: any) {
@@ -102,19 +92,9 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
       }
 
       if (data.session) {
-        // Successfully verified and logged in
-        // Check if user has avatar, if not redirect to avatar customizer
-        const hasAvatar = await checkUserHasAvatar();
-
-        if (!hasAvatar) {
-          navigate({
-            to: "/avatar-customizer",
-            search: redirectUrl ? { redirect: redirectUrl } : undefined,
-          });
-        } else {
+        // Successfully verified and logged in    
           const targetUrl = redirectUrl || "/dashboard";
-          navigate({ to: targetUrl });
-        }
+          navigate({ to: targetUrl });        
       }
     } catch (error: any) {
       console.error("OTP verification error:", error);

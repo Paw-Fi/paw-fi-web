@@ -50,19 +50,8 @@ function AuthConfirm() {
           data: { session },
         } = await supabase.auth.getSession();
 
-        if (session) {
-          // Check if user needs avatar setup
-          const needsAvatar = await shouldPromptForAvatar();
-
-          if (needsAvatar) {
-            navigate({
-              to: "/avatar-customizer",
-              search:
-                next && next !== "/dashboard" ? { redirect: next } : undefined,
-            });
-          } else {
-            navigate({ to: next });
-          }
+        if (session) {         
+            navigate({ to: next });          
         } else {
           console.error("No session found after email confirmation");
           navigate({

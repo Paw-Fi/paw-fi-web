@@ -74,18 +74,12 @@ export function ShadcnSignInForm({
     
     try {
       const result = await signIn(data.email, data.password)
-      if (result.success) {
-        // Check if user needs to create an avatar
-        const needsAvatar = await shouldPromptForAvatar()
-        
-        if (needsAvatar) {
+      if (result.success) {    
           navigate({ 
-            to: "/avatar-customizer",
+            to: "/dashboard",
             search: redirectUrl ? { redirect: redirectUrl } : undefined
           })
-        } else {
-          navigate({ to: redirectUrl || "/couple-budgeting" })
-        }
+      
       }
     } catch (error: any) {
       setError(error.message || "Invalid email or password")

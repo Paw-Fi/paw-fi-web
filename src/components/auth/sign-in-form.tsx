@@ -25,18 +25,8 @@ export function SignInForm({ redirectUrl }: SignInFormProps) {
     
     try {
       const result = await signIn(email, password);
-      if (result.success) {
-        // Check if user needs to create an avatar
-        const needsAvatar = await shouldPromptForAvatar();
-        
-        if (needsAvatar) {
-          navigate({ 
-            to: '/avatar-customizer',
-            search: redirectUrl ? { redirect: redirectUrl } : undefined
-          });
-        } else {
-          navigate({ to: redirectUrl || '/dashboard' });
-        }
+      if (result.success) {       
+          navigate({ to: redirectUrl || '/dashboard' });        
       }
     } catch (error: any) {
       setError(error.message || 'Invalid email or password');
