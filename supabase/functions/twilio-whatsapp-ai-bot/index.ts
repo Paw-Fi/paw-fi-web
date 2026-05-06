@@ -4961,11 +4961,19 @@ Deno.serve(async (req: Request) => {
     ];
 
     // 6. Chat Loop (Model Turn)
+    // Image/receipt analysis on Vertex (Gemini) routinely takes 30-60s, and
+    // can spike past 60s under load. Use a longer timeout when the user
+    // attached media; keep the default for fast text-only chats.
+    const hasAttachment = numMedia > 0;
+    const aiInnerTimeoutMs = hasAttachment ? 110000 : 60000;
+    const aiOuterTimeoutMs = hasAttachment ? 120000 : 60000;
+
     let activeChat = createVertexBotChatSession({
       modelName: MODEL_NAME,
       systemInstruction: whatsappSystemInstruction,
       history: historyParts as any,
       tools: [{ function_declarations: tools }] as any,
+      timeoutMs: aiInnerTimeoutMs,
       vertexConfig,
     });
 
@@ -4987,6 +4995,7 @@ Deno.serve(async (req: Request) => {
               systemInstruction: whatsappSystemInstruction,
               history,
               tools: [{ function_declarations: tools }] as any,
+              timeoutMs: aiInnerTimeoutMs,
               vertexConfig,
             });
           },
@@ -4997,8 +5006,15 @@ Deno.serve(async (req: Request) => {
       );
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error("AI response timed out after 60 seconds")),
-          60000,
+          () =>
+            reject(
+              new Error(
+                `AI response timed out after ${
+                  Math.round(aiOuterTimeoutMs / 1000)
+                } seconds`,
+              ),
+            ),
+          aiOuterTimeoutMs,
         )
       );
 

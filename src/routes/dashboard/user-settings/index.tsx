@@ -47,18 +47,25 @@ export const Route = createFileRoute("/dashboard/user-settings/")({
 });
 
 function UserSettings() {
-  const { user, resetPassword, deleteAccount, signOut } = useAuth();
+  const { user, resetPassword, changeEmail, deleteAccount, signOut } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState(
     user?.user_metadata?.full_name || "",
   );
+  const [newEmail, setNewEmail] = useState(user?.email || "");
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailChangeSuccess, setEmailChangeSuccess] = useState(false);
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    setNewEmail(user?.email || "");
+  }, [user?.email]);
 
   if (!user) {
     return (
@@ -132,6 +139,34 @@ function UserSettings() {
     }
   };
 
+  const handleChangeEmail = async () => {
+    setError(null);
+    setEmailChangeSuccess(false);
+
+    const trimmedEmail = newEmail.trim().toLowerCase();
+
+    if (!trimmedEmail) {
+      setError("Please enter a new email address");
+      return;
+    }
+
+    if (trimmedEmail === (user?.email || "").toLowerCase()) {
+      setError("Please use a different email address");
+      return;
+    }
+
+    setIsChangingEmail(true);
+
+    try {
+      await changeEmail(trimmedEmail, "/dashboard/user-settings");
+      setEmailChangeSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "An error occurred while changing your email");
+    } finally {
+      setIsChangingEmail(false);
+    }
+  };
+
   return (
     <div className="bg-moneko-background text-foreground dark:text-dark-foreground min-h-screen px-0 py-3 sm:px-4 sm:py-6 md:px-6 lg:px-8 lg:py-8">
       <div className="mx-auto w-full max-w-2xl">
@@ -164,7 +199,12 @@ function UserSettings() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate({ to: "/avatar-customizer" })}
+                  onClick={() =>
+                    navigate({
+                      to: "/avatar-customizer",
+                      search: { redirect: undefined },
+                    })
+                  }
                   className="text-mobile-sm flex min-h-[44px] items-center gap-2 sm:text-sm"
                 >
                   <FontAwesomeIcon icon={faPen} className="size-3" />
@@ -180,21 +220,55 @@ function UserSettings() {
           >
             <div>
               <label
-                htmlFor="email"
+                htmlFor="currentEmail"
                 className="text-mobile-sm text-foreground dark:text-dark-foreground mb-1.5 block font-medium sm:text-sm"
               >
-                Email
+                Current Email
               </label>
               <Input
-                id="email"
+                id="currentEmail"
                 type="email"
                 value={user?.email || ""}
                 disabled
                 className="bg-input-disabled dark:bg-dark-input-disabled text-mobile-base sm:text-base"
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="newEmail"
+                className="text-mobile-sm text-foreground dark:text-dark-foreground mb-1.5 block font-medium sm:text-sm"
+              >
+                New Email
+              </label>
+              <div className="space-y-2">
+                <Input
+                  id="newEmail"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Enter your new email"
+                  required
+                  className="bg-input dark:bg-dark-input text-mobile-base sm:text-base"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleChangeEmail}
+                  disabled={isChangingEmail}
+                  className="text-mobile-sm min-h-[44px] sm:text-sm"
+                >
+                  {isChangingEmail ? "Sending Confirmation..." : "Change Email"}
+                </Button>
+              </div>
               <p className="text-mobile-xs text-muted-foreground dark:text-dark-muted-foreground mt-1 sm:text-xs">
-                Email cannot be changed
+                We&apos;ll send a confirmation email to complete this change.
               </p>
+              {emailChangeSuccess && (
+                <div className="text-success dark:text-dark-success text-mobile-sm mt-2 sm:text-sm">
+                  Confirmation email sent. Please check your inbox to finish updating your email.
+                </div>
+              )}
             </div>
 
             <div>
