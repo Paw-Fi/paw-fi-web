@@ -1,0 +1,612 @@
+﻿How to import and export data in Moneko
+Moneko makes it easy to bring in your existing data and export it whenever you need.
+You can import bank exports, receipts, or spreadsheets, and export your transactions or receipts in just a few taps.
+________________
+
+
+What you can import
+Moneko supports:
+* photos (JPG, PNG)
+* PDF files
+* CSV and Excel files
+* plain text
+You can use this to import:
+* bank or credit card statements
+* Excel budgeting sheets
+* receipts and invoices
+________________
+
+
+How to import files
+1. Go to the Space where you want the data
+2. Tap the + button
+3. Select Files
+4. Choose your file
+Moneko will analyze and organize the transactions for you.
+________________
+
+
+How to import receipts
+1. Tap the + button
+2. Select Gallery or take a photo
+3. Upload your receipt
+Receipts are saved with your transactions for easy reference.
+________________
+
+
+How to export data
+There are two ways to export.
+Export a full Space
+1. Select your Space (top left)
+2. Tap the three dot menu
+3. Tap Export transactions
+You can export:
+* an Excel file (transactions)
+* a ZIP file (receipts)
+________________
+
+
+Export specific transactions
+1. Go to Overview
+2. Tap View all transactions
+3. Apply filters (like date range)
+4. Tap the download icon
+________________
+
+
+In short
+* Import files or receipts using the + button
+* Export everything from a Space or filter what you need
+* Use Excel for data, ZIP for receipts
+Moneko keeps your data flexible, so you can move it in and out anytime.
+________________
+# 1. SEO Analysis
+
+
+## Current Strengths
+- Clearly explains both import and export workflows
+- Covers supported file types
+- Includes two export methods:
+  - full Space export
+  - filtered transaction export
+- Mentions practical use cases such as bank statements, receipts, invoices, and spreadsheets
+- Simple and beginner-friendly structure
+
+
+## Main SEO Issues
+- Title can be more search-friendly
+- Headings need clearer SEO hierarchy
+- Import and export steps should be easier to scan
+- The difference between exporting a full Space and exporting specific transactions should be clearer
+- FAQ section is missing
+- Troubleshooting section is missing
+- Internal linking opportunities are not included
+- CTA can be improved for users who want to manage their data confidently
+
+
+## Search Intent Being Targeted
+
+
+This article should target users who want to:
+- import existing financial data into Moneko
+- upload bank statements, receipts, or spreadsheets
+- export Moneko transactions
+- download receipts from Moneko
+- export filtered transaction data
+- understand which file formats Moneko supports
+
+
+---
+
+
+# 2. Suggested SEO Keywords
+
+
+## Primary Keyword
+- import and export data in Moneko
+
+
+## Secondary Keywords
+- Moneko import data
+- Moneko export transactions
+- import receipts in Moneko
+- export receipts in Moneko
+- upload bank statement to Moneko
+- export Space transactions
+- Moneko CSV import
+- Moneko Excel export
+
+
+## Semantic Keywords
+- bank statements
+- credit card statements
+- receipts and invoices
+- CSV files
+- Excel files
+- PDF files
+- JPG files
+- PNG files
+- plain text
+- transaction export
+- receipt ZIP file
+- filtered transactions
+
+
+## Long-Tail Keywords
+- how to import files into Moneko
+- how to export transactions from Moneko
+- how to import receipts in Moneko
+- how to export receipts from a Space in Moneko
+- how to upload a bank statement to Moneko
+- how to export filtered transactions in Moneko
+- what file types can I import into Moneko
+
+
+---
+
+
+# 3. Improved Title Options
+
+
+1. How to Import and Export Data in Moneko
+2. How to Import Files, Receipts, and Spreadsheets into Moneko
+3. How to Export Transactions and Receipts from Moneko
+4. Moneko Import and Export Guide
+5. How to Move Your Data In and Out of Moneko
+6. Import Bank Statements and Export Transactions in Moneko
+
+
+---
+
+
+# 4. Optimized Meta Description
+
+
+Learn how to import files, receipts, bank statements, and spreadsheets into Moneko, then export transactions or receipts from a full Space or filtered transaction list.
+
+
+---
+
+
+# 5. Suggested URL Slug
+
+
+`/import-export-data-moneko`
+
+
+Alternative slugs:
+- `/how-to-import-data`
+- `/how-to-export-transactions`
+- `/moneko-import-export-guide`
+
+
+---
+
+
+# 6. Rewritten Blog Content
+
+
+# How to Import and Export Data in Moneko
+
+
+Moneko makes it easy to bring your existing data into the app and export it whenever you need.
+
+
+You can import:
+- bank exports
+- credit card statements
+- receipts
+- invoices
+- spreadsheets
+- plain text
+
+
+You can also export your transactions or receipts in just a few taps.
+
+
+This gives you more flexibility when managing your money, reviewing past spending, or keeping your own records outside Moneko.
+
+
+---
+
+
+## What You Can Import into Moneko
+
+
+Moneko supports several file types for importing data.
+
+
+You can import:
+
+
+- **Photos:** JPG and PNG files
+- **PDF files**
+- **CSV files**
+- **Excel files**
+- **Plain text**
+
+
+You can use these import options for:
+
+
+- bank statements
+- credit card statements
+- Excel budgeting sheets
+- receipts
+- invoices
+
+
+### Expected Result
+
+
+After importing a supported file, Moneko analyzes the file and organizes the transactions for you.
+
+
+---
+
+
+## How to Import Files into Moneko
+
+
+Use this option when you want to import a file such as a bank statement, credit card statement, CSV file, Excel file, PDF, or plain text document.
+
+
+1. Go to the **Space** where you want to import the data.
+2. Tap the **+** button.
+3. Select **Files**.
+4. Choose the file you want to upload.
+5. Moneko will analyze and organize the transactions for you.
+
+
+### Important
+
+
+Make sure you are in the correct Space before importing.
+
+
+Imported data is added to the Space you are currently using.
+
+
+### Expected Result
+
+
+Your imported file is processed, and the related transactions are organized inside the selected Space.
+
+
+---
+
+
+## How to Import Receipts into Moneko
+
+
+Use this option when you want to save a receipt with your transactions.
+
+
+1. Tap the **+** button.
+2. Select **Gallery** or take a photo.
+3. Upload your receipt.
+
+
+Receipts are saved with your transactions so you can find them again later.
+
+
+This is useful when you want to:
+- keep proof of purchase
+- review transaction details
+- store invoices
+- keep shared spending easier to verify
+
+
+### Expected Result
+
+
+Your receipt is uploaded and saved with your transactions for easy reference.
+
+
+---
+
+
+## How to Export Data from Moneko
+
+
+There are two ways to export data in Moneko:
+
+
+1. Export a full Space
+2. Export specific transactions
+
+
+Choose the option that matches what you need.
+
+
+---
+
+
+## Option 1: Export a Full Space
+
+
+Use this option when you want to export all transaction data or receipts from a Space.
+
+
+1. Select your **Space** from the top left.
+2. Tap the **three dot menu**.
+3. Tap **Export transactions**.
+4. Choose the export format you need.
+
+
+You can export:
+
+
+- **Excel file:** for transactions
+- **ZIP file:** for receipts
+
+
+### Expected Result
+
+
+Moneko exports the selected Space data, so you can keep a copy outside the app.
+
+
+### Best Practice
+
+
+Use a full Space export when you want a complete record of your transactions or receipts from that Space.
+
+
+---
+
+
+## Option 2: Export Specific Transactions
+
+
+Use this option when you only want to export certain transactions.
+
+
+For example, you may want to export transactions from a specific date range.
+
+
+1. Go to **Overview**.
+2. Tap **View all transactions**.
+3. Apply filters, such as a date range.
+4. Tap the **download icon**.
+
+
+### Expected Result
+
+
+Moneko exports only the transactions that match your selected filters.
+
+
+### Best Practice
+
+
+Use filters before exporting if you only need a specific set of transactions.
+
+
+---
+
+
+# Troubleshooting Common Issues
+
+
+## I Imported Data into the Wrong Space
+
+
+Imported data is added to the Space you are currently using.
+
+
+Switch to the correct Space before importing your file or receipt.
+
+
+## I Cannot Find My Imported Transactions
+
+
+Check whether:
+- you are viewing the correct Space
+- the file format is supported
+- the import finished processing
+
+
+## My Receipt Is Not Showing Where I Expected
+
+
+Receipts are saved with your transactions.
+
+
+Check the relevant transaction inside the Space where you uploaded the receipt.
+
+
+## I Only Want to Export Some Transactions
+
+
+Go to **Overview**, tap **View all transactions**, apply filters such as a date range, then tap the **download icon**.
+
+
+## I Want to Export Receipts
+
+
+Export the full Space and choose the **ZIP file** option for receipts.
+
+
+---
+
+
+# In Short
+
+
+Moneko gives you flexible ways to move your data in and out of the app.
+
+
+Use the **+** button to import:
+- files
+- receipts
+- photos
+- spreadsheets
+- plain text
+
+
+Export data by:
+- exporting a full Space
+- filtering and downloading specific transactions
+
+
+Use:
+- **Excel** for transaction data
+- **ZIP** for receipts
+
+
+This helps you keep your data organized, accessible, and easy to manage.
+
+
+---
+
+
+# 7. FAQ Section
+
+
+## What file types can I import into Moneko?
+
+
+Moneko supports JPG, PNG, PDF, CSV, Excel files, and plain text.
+
+
+## Can I import bank statements into Moneko?
+
+
+Yes. You can import bank or credit card statements using the **Files** option.
+
+
+## Can I import Excel budgeting sheets?
+
+
+Yes. Moneko supports Excel files, so you can import spreadsheet-based budgeting data.
+
+
+## How do I import a file into Moneko?
+
+
+Go to the Space where you want the data, tap the **+** button, select **Files**, then choose your file.
+
+
+## How do I import a receipt?
+
+
+Tap the **+** button, select **Gallery** or take a photo, then upload your receipt.
+
+
+## Where are receipts saved?
+
+
+Receipts are saved with your transactions for easy reference.
+
+
+## How do I export all transactions from a Space?
+
+
+Select your Space from the top left, tap the **three dot menu**, then tap **Export transactions**.
+
+
+## Can I export receipts from Moneko?
+
+
+Yes. You can export receipts as a **ZIP file**.
+
+
+## Can I export only specific transactions?
+
+
+Yes. Go to **Overview**, tap **View all transactions**, apply filters such as a date range, then tap the **download icon**.
+
+
+## What export format should I use for transactions?
+
+
+Use the **Excel file** option to export transactions.
+
+
+---
+
+
+# 8. Internal Linking Suggestions
+
+
+Add internal links to:
+- “How to Create Your First Space in Moneko”
+- “How to Add an Expense in Moneko”
+- “How to Import Receipts in Moneko”
+- “How to Export Transactions from Moneko”
+- “How to Use Filters in Transaction Overview”
+- “How to Manage Spaces in Moneko”
+- “What Is Moneko Shared Expense Tracker?”
+
+
+---
+
+
+# 9. CTA Suggestions
+
+
+## Import CTA
+
+
+Import your existing files or receipts into the right Space to keep your records organized in Moneko.
+
+
+## Export CTA
+
+
+Export your transactions or receipts whenever you need a copy outside Moneko.
+
+
+## Help Center CTA
+
+
+Need help deciding what to import or export? Review the supported file types before uploading your data.
+
+
+---
+
+
+# 10. Additional SEO Recommendations
+
+
+## Add Structured Data
+
+
+Implement:
+- FAQ schema
+- Article schema
+- Breadcrumb schema
+- HowTo schema
+
+
+## Suggested Image Alt Text
+
+
+- “Importing files into Moneko”
+- “Uploading a receipt in Moneko”
+- “Exporting transactions from a Moneko Space”
+- “Downloading filtered transactions in Moneko”
+- “Exporting receipts as a ZIP file in Moneko”
+
+
+## Improve Content Engagement
+
+
+Consider adding:
+- screenshots of the **+** button
+- screenshot of the **Files** upload option
+- screenshot of the receipt upload flow
+- screenshot of the **Export transactions** option
+- visual comparison of full Space export vs filtered transaction export
+
+
+## Recommended Future Content
+
+
+Create supporting articles for:
+- “How to Import Receipts in Moneko”
+- “How to Export Transactions from Moneko”
+- “How to Use Spaces in Moneko”
+- “How to Filter Transactions in Moneko”
+- “How to Upload Bank Statements to Moneko”

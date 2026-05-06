@@ -1,0 +1,753 @@
+﻿How to log an expense in Moneko
+Logging an expense in Moneko takes a few seconds.
+You do not need to fill out forms or choose categories. Just log it like a message.
+________________
+
+
+The simplest way
+Tap the + button and enter something like:
+Lunch 18
+Uber 24
+Groceries 60 shared
+That’s it.
+Moneko detects the amount, understands the expense, and organizes it for you.
+________________
+
+
+Log in whatever way is fastest
+You can log expenses in the way that feels most natural.
+Text
+Dinner 45
+Coffee 5
+Voice
+“Lunch 18 with Sarah”
+Photos / receipts
+Upload a receipt and Moneko will extract details when possible.
+Chat style
+Taxi 30 split
+________________
+
+
+Shared expenses
+If you are in a shared Space, you can include how to split.
+Dinner 120 split
+Groceries 80 shared
+Moneko tracks who paid and who owes what automatically.
+________________
+
+
+Make logging even faster
+If you usually log the same way, you can skip extra taps.
+Set a default action for press and hold the “+” button.
+For example:
+* voice
+* receipt photo
+* quick text
+To set it:
+Open Moneko → three dots (top right) → Settings → Press and hold quick action
+After that, just press and hold “+” to jump straight in.
+________________
+
+
+Log without opening the app
+You can also log expenses using Siri.
+Set it up in the Shortcuts app:
+* tap “+”
+* search Moneko
+* add Log Expense
+Then you can say:
+“Hey Siri, log expense”
+You can even do this from the lock screen.
+________________
+
+
+Do you need to choose categories?
+No.
+You do not need to organize anything while logging.
+You can always edit details later if needed.
+________________
+
+
+In short
+* Tap + (or press and hold)
+* Log it like a message
+* Moneko handles the rest
+Log fast and move on.
+________________
+# 1. SEO Analysis
+
+
+## Current Strengths
+- Clear and simple explanation of how expense logging works in Moneko
+- Strong beginner-friendly message: users can log expenses like a normal message
+- Covers multiple logging methods:
+  - text
+  - voice
+  - photos and receipts
+  - chat-style input
+  - Siri
+- Explains shared expense logging
+- Includes a useful shortcut feature for faster logging
+- Reinforces that users do not need to manually choose categories
+
+
+## Main SEO Issues
+- Title can be optimized for search queries like “how to log an expense”
+- Headings need clearer structure
+- Steps should be easier to scan
+- The quick action and Siri setup sections should be separated more clearly
+- Troubleshooting section is missing
+- FAQ section is missing
+- Internal linking suggestions are not included
+- CTA can be improved to encourage users to try their first expense entry
+
+
+## Search Intent Being Targeted
+
+
+This article should target users who want to:
+- log an expense in Moneko
+- add expenses quickly
+- track spending without filling out forms
+- upload receipts
+- log shared expenses
+- split expenses in a shared Space
+- use Siri to log expenses
+- set up faster expense logging with press-and-hold quick action
+
+
+---
+
+
+# 2. Suggested SEO Keywords
+
+
+## Primary Keyword
+- log an expense in Moneko
+
+
+## Secondary Keywords
+- add expense in Moneko
+- Moneko expense logging
+- quick expense tracker
+- log shared expense
+- Moneko receipt upload
+- Moneko voice expense
+- Siri expense logging
+- split expense in Moneko
+
+
+## Semantic Keywords
+- quick text expense
+- voice note expense
+- receipt photo
+- chat-style expense logging
+- shared Space
+- split expenses
+- who paid
+- who owes what
+- press and hold quick action
+- shortcuts app
+
+
+## Long-Tail Keywords
+- how to log an expense in Moneko
+- how to add an expense without choosing categories
+- how to log shared expenses in Moneko
+- how to split expenses in Moneko
+- how to log expenses with Siri
+- how to upload receipts in Moneko
+- how to set press and hold quick action in Moneko
+
+
+---
+
+
+# 3. Improved Title Options
+
+
+1. How to Log an Expense in Moneko
+2. How to Add Expenses Quickly in Moneko
+3. Log Expenses Like a Message in Moneko
+4. How to Track Expenses with Text, Voice, Receipts, or Siri in Moneko
+5. How to Log Shared Expenses in Moneko
+6. Moneko Expense Logging Guide: Text, Voice, Receipts, and Siri
+
+
+---
+
+
+# 4. Optimized Meta Description
+
+
+Learn how to log an expense in Moneko using text, voice, receipts, chat-style input, shared expense notes, press-and-hold quick action, or Siri.
+
+
+---
+
+
+# 5. Suggested URL Slug
+
+
+`/how-to-log-expense-moneko`
+
+
+Alternative slugs:
+- `/add-expense-in-moneko`
+- `/moneko-expense-logging-guide`
+- `/log-shared-expense-moneko`
+
+
+---
+
+
+# 6. Rewritten Blog Content
+
+
+# How to Log an Expense in Moneko
+
+
+Logging an expense in Moneko only takes a few seconds.
+
+
+You do not need to fill out long forms or choose categories before saving an expense.
+
+
+Just log it like a message, and Moneko handles the rest.
+
+
+---
+
+
+## The Simplest Way to Log an Expense
+
+
+To add an expense:
+
+
+1. Tap the **+** button.
+2. Enter your expense like a short message.
+3. Save it.
+
+
+For example:
+
+
+- Lunch 18
+- Uber 24
+- Groceries 60 shared
+
+
+That’s it.
+
+
+Moneko detects the amount, understands the expense, and organizes it for you.
+
+
+### Expected Result
+
+
+Your expense is logged quickly without needing to manually choose categories or complete extra fields.
+
+
+---
+
+
+## Log Expenses in the Way That Feels Fastest
+
+
+Moneko lets you log expenses in the way that feels most natural to you.
+
+
+You can use:
+
+
+- text
+- voice
+- photos or receipts
+- chat-style input
+
+
+---
+
+
+## Log an Expense with Text
+
+
+Text is the fastest option when you already know the amount.
+
+
+Examples:
+
+
+- Dinner 45
+- Coffee 5
+- Taxi 30 split
+
+
+Use short, natural entries. You do not need to write a full sentence.
+
+
+### Expected Result
+
+
+Moneko reads the text, detects the amount, and organizes the expense.
+
+
+---
+
+
+## Log an Expense with Voice
+
+
+You can also log expenses by voice.
+
+
+For example, you can say:
+
+
+- “Lunch 18 with Sarah”
+
+
+This is useful when you are on the move or do not want to type.
+
+
+### Expected Result
+
+
+Moneko uses your voice entry to understand and record the expense.
+
+
+---
+
+
+## Log an Expense with a Photo or Receipt
+
+
+If you have a receipt, you can upload it instead of typing everything manually.
+
+
+Upload a receipt, and Moneko will extract details when possible.
+
+
+This is useful for:
+- keeping receipts connected to expenses
+- checking details later
+- saving proof of purchase
+- tracking shared expenses more clearly
+
+
+### Expected Result
+
+
+Your receipt is saved with the expense, and Moneko extracts details when possible.
+
+
+---
+
+
+## Log an Expense in Chat Style
+
+
+You can also log expenses using short chat-style messages.
+
+
+Example:
+
+
+- Taxi 30 split
+
+
+This works well when you want to quickly record what happened without filling out a form.
+
+
+### Expected Result
+
+
+Moneko understands the message and logs the expense based on the information you entered.
+
+
+---
+
+
+## How to Log Shared Expenses
+
+
+If you are in a shared Space, you can include how the expense should be split.
+
+
+Examples:
+
+
+- Dinner 120 split
+- Groceries 80 shared
+- Taxi 30 split
+
+
+Moneko tracks who paid and who owes what automatically.
+
+
+### Expected Result
+
+
+The shared expense is recorded in the Space, and Moneko helps keep track of payment responsibility.
+
+
+### Best Practice
+
+
+Include words like **split** or **shared** when logging expenses that involve other people.
+
+
+---
+
+
+## Make Logging Faster with Press-and-Hold Quick Action
+
+
+If you usually log expenses the same way, you can make the **+** button faster.
+
+
+You can set a default action for when you press and hold the **+** button.
+
+
+For example, your press-and-hold action can open:
+
+
+- voice
+- receipt photo
+- quick text
+
+
+To set it up:
+
+
+1. Open **Moneko**.
+2. Tap the **three dots** in the top right.
+3. Go to **Settings**.
+4. Select **Press and hold quick action**.
+5. Choose your preferred action.
+
+
+After that, press and hold the **+** button to jump straight into your selected logging method.
+
+
+### Expected Result
+
+
+You can log expenses faster by skipping extra taps.
+
+
+---
+
+
+## How to Log an Expense Without Opening Moneko
+
+
+You can also log expenses using Siri.
+
+
+To set it up in the Shortcuts app:
+
+
+1. Open the **Shortcuts** app.
+2. Tap **+**.
+3. Search for **Moneko**.
+4. Add **Log Expense**.
+
+
+After setup, you can say:
+
+
+- “Hey Siri, log expense”
+
+
+You can even do this from the lock screen.
+
+
+### Expected Result
+
+
+Siri starts the Moneko expense logging shortcut without requiring you to open the app manually.
+
+
+---
+
+
+## Do You Need to Choose Categories?
+
+
+No.
+
+
+You do not need to organize anything while logging an expense.
+
+
+Moneko is designed so you can log first and move on.
+
+
+You can always edit details later if needed.
+
+
+### Common Mistake to Avoid
+
+
+Do not stop logging just because you are unsure about the category.
+
+
+Save the expense first. You can adjust details later.
+
+
+---
+
+
+# Troubleshooting Common Issues
+
+
+## Moneko Did Not Understand My Expense
+
+
+Try entering the expense more clearly.
+
+
+For example:
+
+
+- Lunch 18
+- Uber 24
+- Dinner 120 split
+
+
+Make sure the amount is included in the entry.
+
+
+## I Logged an Expense in the Wrong Space
+
+
+Expenses are added to the Space you are currently using.
+
+
+Switch to the correct Space before logging expenses that belong somewhere else.
+
+
+## I Cannot Find a Shared Expense
+
+
+Check whether:
+- you are in the correct shared Space
+- the expense was saved successfully
+- the entry included enough information, such as the amount
+
+
+## My Shared Expense Did Not Split Correctly
+
+
+When logging shared expenses, include words like:
+
+
+- split
+- shared
+
+
+For example:
+
+
+- Groceries 80 shared
+- Dinner 120 split
+
+
+## Siri Is Not Logging Expenses
+
+
+Check that you added **Log Expense** from Moneko inside the Shortcuts app.
+
+
+Then try saying:
+
+
+- “Hey Siri, log expense”
+
+
+---
+
+
+# In Short
+
+
+Logging expenses in Moneko is designed to be fast.
+
+
+You can:
+
+
+- tap **+**
+- press and hold **+**
+- type a quick message
+- use voice
+- upload a receipt
+- log with Siri
+
+
+You do not need to choose categories or fill out forms before saving an expense.
+
+
+Just log it like a message, and Moneko handles the rest.
+
+
+---
+
+
+# 7. FAQ Section
+
+
+## How do I log an expense in Moneko?
+
+
+Tap the **+** button and enter the expense like a short message, such as **Lunch 18** or **Uber 24**.
+
+
+## Do I need to choose a category when logging an expense?
+
+
+No. You do not need to choose categories while logging. Moneko organizes the expense for you, and you can edit details later if needed.
+
+
+## Can I log expenses with voice?
+
+
+Yes. You can log expenses by voice, such as saying **“Lunch 18 with Sarah.”**
+
+
+## Can I upload receipts in Moneko?
+
+
+Yes. You can upload a receipt, and Moneko will extract details when possible.
+
+
+## How do I log a shared expense?
+
+
+In a shared Space, include words like **split** or **shared**. For example: **Dinner 120 split** or **Groceries 80 shared**.
+
+
+## Does Moneko track who paid and who owes what?
+
+
+Yes. For shared expenses, Moneko tracks who paid and who owes what automatically.
+
+
+## How do I make expense logging faster?
+
+
+Set a press-and-hold quick action for the **+** button. Go to **Moneko → three dots → Settings → Press and hold quick action**.
+
+
+## Can I log expenses with Siri?
+
+
+Yes. Set up the **Log Expense** action in the Shortcuts app, then say **“Hey Siri, log expense.”**
+
+
+## Can I log expenses from the lock screen?
+
+
+Yes. After setting up Siri with the Shortcuts app, you can log expenses from the lock screen.
+
+
+---
+
+
+# 8. Internal Linking Suggestions
+
+
+Add internal links to:
+
+
+- “How to Create Your First Space in Moneko”
+- “How to Import and Export Data in Moneko”
+- “How to Upload Receipts in Moneko”
+- “How Shared Expenses Work in Moneko”
+- “How to Switch Between Spaces”
+- “How to Edit an Expense in Moneko”
+- “What Is Moneko Shared Expense Tracker?”
+
+
+---
+
+
+# 9. CTA Suggestions
+
+
+## First Expense CTA
+
+
+Try logging your first expense with a simple message like **Lunch 18**.
+
+
+## Shared Expense CTA
+
+
+In a shared Space, add **split** or **shared** to your expense so Moneko can help track who paid and who owes what.
+
+
+## Shortcut CTA
+
+
+Set a press-and-hold quick action or Siri shortcut to make everyday expense logging even faster.
+
+
+---
+
+
+# 10. Additional SEO Recommendations
+
+
+## Add Structured Data
+
+
+Implement:
+
+
+- FAQ schema
+- Article schema
+- Breadcrumb schema
+- HowTo schema
+
+
+## Suggested Image Alt Text
+
+
+- “Logging an expense in Moneko with the plus button”
+- “Quick text expense entry in Moneko”
+- “Logging a shared expense in Moneko”
+- “Setting press and hold quick action in Moneko”
+- “Using Siri to log an expense in Moneko”
+- “Uploading a receipt for an expense in Moneko”
+
+
+## Improve Content Engagement
+
+
+Consider adding:
+
+
+- screenshot of the **+** button
+- screenshot of quick text entry
+- screenshot of receipt upload
+- screenshot of press-and-hold quick action settings
+- screenshot of the Shortcuts app setup for Siri
+- examples of good expense entries
+
+
+## Recommended Future Content
+
+
+Create supporting articles for:
+
+
+- “How to Log Shared Expenses in Moneko”
+- “How to Upload Receipts in Moneko”
+- “How to Use Siri with Moneko”
+- “How to Set Press and Hold Quick Action”
+- “How to Edit Expense Details in Moneko”
+- “How to Create Your First Space in Moneko”

@@ -46,6 +46,10 @@ interface ArticleData {
   timeRequired?: string;
   educationalLevel?: string;
   isAccessibleForFree?: boolean;
+  keywords?: string[];
+  articleSection?: string;
+  proficiencyLevel?: string;
+  dependencies?: string;
   speakable?: {
     cssSelector: string[];
   };
@@ -115,6 +119,7 @@ interface StructuredDataProps {
     | "organization"
     | "website"
     | "article"
+    | "techArticle"
     | "breadcrumb"
     | "faq"
     | "howto"
@@ -187,7 +192,43 @@ export function StructuredData({ type, data }: StructuredDataProps) {
           timeRequired: articleData.timeRequired,
           educationalLevel: articleData.educationalLevel,
           isAccessibleForFree: articleData.isAccessibleForFree,
+          keywords: articleData.keywords,
+          articleSection: articleData.articleSection,
           speakable: articleData.speakable,
+        };
+
+      case "techArticle":
+        const techArticleData = data as ArticleData;
+        return {
+          "@context": baseContext,
+          "@type": "TechArticle",
+          headline: techArticleData.title,
+          description: techArticleData.description,
+          url: techArticleData.url,
+          datePublished: techArticleData.datePublished,
+          dateModified:
+            techArticleData.dateModified || techArticleData.datePublished,
+          author: techArticleData.author
+            ? {
+                "@type": "Person",
+                name: techArticleData.author.name,
+                url: techArticleData.author.url,
+                jobTitle: techArticleData.author.jobTitle,
+                image: techArticleData.author.image,
+                sameAs: techArticleData.author.sameAs,
+              }
+            : undefined,
+          image: techArticleData.image,
+          publisher: techArticleData.publisher,
+          wordCount: techArticleData.wordCount,
+          timeRequired: techArticleData.timeRequired,
+          educationalLevel: techArticleData.educationalLevel,
+          isAccessibleForFree: techArticleData.isAccessibleForFree,
+          keywords: techArticleData.keywords,
+          articleSection: techArticleData.articleSection,
+          proficiencyLevel: techArticleData.proficiencyLevel,
+          dependencies: techArticleData.dependencies,
+          speakable: techArticleData.speakable,
         };
 
       case "breadcrumb":

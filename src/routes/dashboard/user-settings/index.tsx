@@ -266,7 +266,7 @@ function UserSettings() {
               </p>
               {emailChangeSuccess && (
                 <div className="text-success dark:text-dark-success text-mobile-sm mt-2 sm:text-sm">
-                  Confirmation email sent. Please check your inbox to finish updating your email.
+                  Confirmation email sent. Please check your inbox to finish updating your email. If you didn't see it, check also the junk/spam folder.
                 </div>
               )}
             </div>

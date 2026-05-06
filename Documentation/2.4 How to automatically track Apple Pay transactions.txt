@@ -1,0 +1,654 @@
+﻿How to automatically track Apple Pay transactions
+You can now automatically track your Apple Pay transactions in Moneko.
+Every purchase shows up automatically. No manual input. No friction.
+Tap. Pay. It is logged.
+How to set it up
+Step 1. Open Apple Pay Integration in Moneko
+* Update Moneko to the latest version
+* Go to Settings
+* Tap Apple Pay Integration
+* Tap Start Setup
+Step 2. Open Shortcuts
+* Tap Open Shortcuts
+* Go to the Automation tab at the bottom
+Step 3. Create a Personal Automation
+* Tap the + button
+* Select Create Personal Automation
+* Choose Wallet as the trigger
+* Tap Next
+Step 4. Add the Moneko action
+* Tap Add Action
+* Search for Moneko
+* Select Capture Wallet Transaction
+Step 5. Map the transaction amount
+* Tap on Amount
+* Select Select Variable
+* Choose Shortcut Input
+* Tap the variable again and select Amount
+Step 6. Map the merchant name
+* Tap on Merchant
+* Select Select Variable
+* Choose Shortcut Input
+* Tap the variable again and select Merchant
+Step 7. Save and enable the automation
+* Tap the check icon to save
+* Open the automation again
+* Turn on Run Immediately
+* Disable Ask Before Running if prompted
+Step 8. Done
+Now every Apple Pay transaction will be logged automatically in Moneko.
+Good to know
+* Your data is stored securely and never shared
+* Moneko does not access your bank or card directly
+* This works using iOS Shortcuts automation
+Set it up once, and your Apple Pay purchases will be tracked automatically in Moneko.
+________________
+# 1. SEO Analysis
+
+
+## Current Strengths
+- Clear feature value: Apple Pay transactions can be logged automatically
+- Strong user benefit:
+  - no manual input
+  - no friction
+  - automatic tracking
+- Includes a complete setup flow using iOS Shortcuts
+- Explains that Moneko does not access the user’s bank or card directly
+- Good step-by-step foundation for a Help Center article
+
+
+## Main SEO Issues
+- Title can better target search queries around Apple Pay transaction tracking
+- Setup steps need clearer formatting for easier scanning
+- The iOS Shortcuts workflow should be broken into smaller sections
+- “Good to know” can be expanded into a clearer support-friendly note section
+- Troubleshooting section is missing
+- FAQ section is missing
+- Internal linking suggestions are not included
+- CTA can be improved for users who want to finish setup successfully
+
+
+## Search Intent Being Targeted
+
+
+This article should target users who want to:
+- automatically track Apple Pay transactions in Moneko
+- connect Apple Pay activity to Moneko using Shortcuts
+- log Apple Pay purchases without manual input
+- set up Wallet automation in iOS Shortcuts
+- map transaction amount and merchant name in Shortcuts
+- understand whether Moneko accesses their bank or card directly
+
+
+---
+
+
+# 2. Suggested SEO Keywords
+
+
+## Primary Keyword
+
+
+- automatically track Apple Pay transactions in Moneko
+
+
+## Secondary Keywords
+
+
+- Moneko Apple Pay integration
+- Apple Pay expense tracking
+- Apple Pay transaction tracker
+- automatic Apple Pay logging
+- Wallet automation Moneko
+- iOS Shortcuts Apple Pay automation
+- Capture Wallet Transaction Moneko
+- track Apple Pay purchases
+
+
+## Semantic Keywords
+
+
+- Apple Pay transactions
+- Wallet trigger
+- Personal Automation
+- Shortcuts app
+- Shortcut Input
+- transaction amount
+- merchant name
+- Run Immediately
+- Ask Before Running
+- automatic expense tracking
+
+
+## Long-Tail Keywords
+
+
+- how to automatically track Apple Pay transactions in Moneko
+- how to set up Apple Pay integration in Moneko
+- how to log Apple Pay purchases automatically
+- how to use iOS Shortcuts with Moneko
+- how to create Wallet automation for Moneko
+- how to map Apple Pay amount and merchant in Shortcuts
+- does Moneko access my bank or card for Apple Pay tracking
+
+
+---
+
+
+# 3. Improved Title Options
+
+
+1. How to Automatically Track Apple Pay Transactions in Moneko
+2. How to Set Up Apple Pay Integration in Moneko
+3. Track Apple Pay Purchases Automatically with Moneko
+4. Moneko Apple Pay Integration Guide
+5. How to Log Apple Pay Transactions Automatically Using iOS Shortcuts
+6. Set Up Automatic Apple Pay Expense Tracking in Moneko
+
+
+---
+
+
+# 4. Optimized Meta Description
+
+
+Learn how to automatically track Apple Pay transactions in Moneko using iOS Shortcuts. Set up Wallet automation, map the amount and merchant, and log purchases automatically.
+
+
+---
+
+
+# 5. Suggested URL Slug
+
+
+`/automatically-track-apple-pay-transactions-moneko`
+
+
+Alternative slugs:
+
+
+- `/moneko-apple-pay-integration`
+- `/apple-pay-transaction-tracking`
+- `/set-up-apple-pay-automation`
+
+
+---
+
+
+# 6. Rewritten Blog Content
+
+
+# How to Automatically Track Apple Pay Transactions in Moneko
+
+
+You can automatically track your **Apple Pay transactions** in Moneko.
+
+
+Once set up, every Apple Pay purchase shows up automatically.
+
+
+No manual input.  
+No extra friction.  
+Just tap, pay, and it is logged.
+
+
+This setup works through **iOS Shortcuts automation**.
+
+
+---
+
+
+## Before You Start
+
+
+Make sure Moneko is updated to the latest version before setting up Apple Pay transaction tracking.
+
+
+You will need to set up the automation once. After that, your Apple Pay purchases will be tracked automatically in Moneko.
+
+
+---
+
+
+## Step 1: Open Apple Pay Integration in Moneko
+
+
+1. Open **Moneko**.
+2. Go to **Settings**.
+3. Tap **Apple Pay Integration**.
+4. Tap **Start Setup**.
+
+
+### Expected Result
+
+
+Moneko opens the Apple Pay setup flow and guides you toward the Shortcuts automation setup.
+
+
+---
+
+
+## Step 2: Open Shortcuts
+
+
+1. Tap **Open Shortcuts**.
+2. Go to the **Automation** tab at the bottom.
+
+
+### Expected Result
+
+
+You are now in the Shortcuts app, ready to create the automation.
+
+
+---
+
+
+## Step 3: Create a Personal Automation
+
+
+1. Tap the **+** button.
+2. Select **Create Personal Automation**.
+3. Choose **Wallet** as the trigger.
+4. Tap **Next**.
+
+
+### Expected Result
+
+
+The automation is now set to run when a Wallet transaction happens.
+
+
+---
+
+
+## Step 4: Add the Moneko Action
+
+
+1. Tap **Add Action**.
+2. Search for **Moneko**.
+3. Select **Capture Wallet Transaction**.
+
+
+### Expected Result
+
+
+The Moneko action is added to your automation.
+
+
+---
+
+
+## Step 5: Map the Transaction Amount
+
+
+1. Tap **Amount**.
+2. Select **Select Variable**.
+3. Choose **Shortcut Input**.
+4. Tap the variable again.
+5. Select **Amount**.
+
+
+### Expected Result
+
+
+The Apple Pay transaction amount is connected to the Moneko action.
+
+
+---
+
+
+## Step 6: Map the Merchant Name
+
+
+1. Tap **Merchant**.
+2. Select **Select Variable**.
+3. Choose **Shortcut Input**.
+4. Tap the variable again.
+5. Select **Merchant**.
+
+
+### Expected Result
+
+
+The Apple Pay merchant name is connected to the Moneko action.
+
+
+---
+
+
+## Step 7: Save and Enable the Automation
+
+
+1. Tap the **check icon** to save.
+2. Open the automation again.
+3. Turn on **Run Immediately**.
+4. Disable **Ask Before Running** if prompted.
+
+
+### Expected Result
+
+
+The automation is saved and allowed to run automatically.
+
+
+---
+
+
+## Step 8: Finish Setup
+
+
+You are done.
+
+
+Now every Apple Pay transaction will be logged automatically in Moneko.
+
+
+### Expected Result
+
+
+When you make a purchase with Apple Pay, Moneko captures the transaction automatically through the Shortcuts automation.
+
+
+---
+
+
+# Good to Know
+
+
+## Your Data Stays Secure
+
+
+Your data is stored securely and never shared.
+
+
+## Moneko Does Not Access Your Bank or Card Directly
+
+
+Moneko does not connect directly to your bank or card for this feature.
+
+
+Apple Pay transaction tracking works using **iOS Shortcuts automation**.
+
+
+## You Only Need to Set It Up Once
+
+
+After the automation is created and enabled, your Apple Pay purchases will be tracked automatically in Moneko.
+
+
+---
+
+
+# Troubleshooting Common Issues
+
+
+## I Cannot Find Apple Pay Integration in Moneko
+
+
+Make sure you have updated Moneko to the latest version.
+
+
+Then go to:
+
+
+**Moneko → Settings → Apple Pay Integration**
+
+
+## I Cannot Find the Automation Tab
+
+
+Open the **Shortcuts** app and look for the **Automation** tab at the bottom.
+
+
+## I Cannot Find Wallet as a Trigger
+
+
+When creating a Personal Automation, choose **Wallet** as the trigger.
+
+
+## I Cannot Find the Moneko Action
+
+
+In Shortcuts, tap **Add Action**, then search for **Moneko**.
+
+
+Choose **Capture Wallet Transaction**.
+
+
+## My Transaction Amount Is Not Being Captured
+
+
+Check that **Amount** is mapped correctly:
+
+
+**Amount → Select Variable → Shortcut Input → Amount**
+
+
+## My Merchant Name Is Not Being Captured
+
+
+Check that **Merchant** is mapped correctly:
+
+
+**Merchant → Select Variable → Shortcut Input → Merchant**
+
+
+## The Automation Asks Before Running
+
+
+Open the automation again and turn on **Run Immediately**.
+
+
+If prompted, disable **Ask Before Running**.
+
+
+## Apple Pay Transactions Are Not Logging Automatically
+
+
+Check that:
+
+
+- Moneko is updated to the latest version
+- the Wallet automation was created
+- the **Capture Wallet Transaction** action was added
+- **Amount** is mapped to **Shortcut Input → Amount**
+- **Merchant** is mapped to **Shortcut Input → Merchant**
+- **Run Immediately** is turned on
+- **Ask Before Running** is disabled if prompted
+
+
+---
+
+
+# In Short
+
+
+To automatically track Apple Pay transactions in Moneko:
+
+
+1. Update Moneko to the latest version.
+2. Open **Settings**.
+3. Tap **Apple Pay Integration**.
+4. Tap **Start Setup**.
+5. Open **Shortcuts**.
+6. Create a **Personal Automation**.
+7. Choose **Wallet** as the trigger.
+8. Add **Capture Wallet Transaction** from Moneko.
+9. Map **Amount** and **Merchant** from **Shortcut Input**.
+10. Turn on **Run Immediately**.
+11. Disable **Ask Before Running** if prompted.
+
+
+Set it up once, and your Apple Pay purchases will be tracked automatically in Moneko.
+
+
+---
+
+
+# 7. FAQ Section
+
+
+## Can Moneko automatically track Apple Pay transactions?
+
+
+Yes. Moneko can automatically track Apple Pay transactions using iOS Shortcuts automation.
+
+
+## How do I set up Apple Pay transaction tracking in Moneko?
+
+
+Open Moneko, go to **Settings**, tap **Apple Pay Integration**, then tap **Start Setup** and follow the Shortcuts automation steps.
+
+
+## Do I need to manually enter Apple Pay transactions?
+
+
+No. Once the automation is set up, Apple Pay purchases are logged automatically in Moneko.
+
+
+## Does Moneko access my bank or card directly?
+
+
+No. Moneko does not access your bank or card directly for this feature.
+
+
+## How does Apple Pay tracking work in Moneko?
+
+
+It works through iOS Shortcuts automation using a Wallet trigger and the Moneko **Capture Wallet Transaction** action.
+
+
+## What action should I choose in Shortcuts?
+
+
+Choose **Capture Wallet Transaction** from Moneko.
+
+
+## What variables do I need to map?
+
+
+Map:
+
+
+- **Amount** to **Shortcut Input → Amount**
+- **Merchant** to **Shortcut Input → Merchant**
+
+
+## Should I enable Run Immediately?
+
+
+Yes. Open the automation again and turn on **Run Immediately**.
+
+
+## Should I disable Ask Before Running?
+
+
+Yes, disable **Ask Before Running** if prompted so the automation can run without extra confirmation.
+
+
+## Do I need to set this up every time?
+
+
+No. Set it up once, and your Apple Pay purchases will be tracked automatically in Moneko.
+
+
+---
+
+
+# 8. Internal Linking Suggestions
+
+
+Add internal links to:
+
+
+- “How to Log an Expense in Moneko”
+- “How to Import and Export Data in Moneko”
+- “How to Create Your First Space in Moneko”
+- “How to Use Siri with Moneko”
+- “How to Log Expenses via WhatsApp and Telegram”
+- “How to Check Your Budget in Moneko”
+- “What Is Moneko Shared Expense Tracker?”
+
+
+---
+
+
+# 9. CTA Suggestions
+
+
+## Setup CTA
+
+
+Set up Apple Pay Integration once to start tracking Apple Pay purchases automatically in Moneko.
+
+
+## Automation CTA
+
+
+After creating the Wallet automation, turn on **Run Immediately** so transactions can be logged without extra steps.
+
+
+## Support CTA
+
+
+If Apple Pay transactions are not appearing, review the Amount, Merchant, and Run Immediately settings in Shortcuts.
+
+
+---
+
+
+# 10. Additional SEO Recommendations
+
+
+## Add Structured Data
+
+
+Implement:
+
+
+- FAQ schema
+- Article schema
+- Breadcrumb schema
+- HowTo schema
+
+
+## Suggested Image Alt Text
+
+
+- “Apple Pay Integration settings in Moneko”
+- “Opening Shortcuts from Moneko Apple Pay setup”
+- “Creating a Wallet personal automation in Shortcuts”
+- “Adding Moneko Capture Wallet Transaction action”
+- “Mapping transaction amount in Shortcuts”
+- “Mapping merchant name in Shortcuts”
+- “Enabling Run Immediately for Apple Pay automation”
+
+
+## Improve Content Engagement
+
+
+Consider adding:
+
+
+- screenshot of **Apple Pay Integration** in Moneko settings
+- screenshot of the Shortcuts **Automation** tab
+- screenshot of the **Wallet** trigger
+- screenshot of the **Capture Wallet Transaction** action
+- screenshot showing **Amount** mapped to **Shortcut Input → Amount**
+- screenshot showing **Merchant** mapped to **Shortcut Input → Merchant**
+- screenshot of **Run Immediately**
+
+
+## Recommended Future Content
+
+
+Create supporting articles for:
+
+
+- “How to Log an Expense in Moneko”
+- “How to Use Siri with Moneko”
+- “How to Import and Export Data in Moneko”
+- “How to Log Expenses via WhatsApp and Telegram”
+- “How to Troubleshoot Apple Pay Automation”
+- “How to Check Your Budget in Moneko”

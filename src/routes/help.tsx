@@ -1,453 +1,526 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Helmet } from "@dr.pogodin/react-helmet";
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+"use client";
+
+import { useDeferredValue, useState } from "react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+  createFileRoute,
+  Link,
+  Outlet,
+  useRouterState,
+} from "@tanstack/react-router";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
-  Rocket,
-  Target,
+  ArrowRight,
   Bot,
-  GraduationCap,
-  Calculator,
-  DollarSign,
-  CreditCard,
-  Shield,
-  User,
-  Wrench,
-  BookOpen,
-  TrendingUp,
-  Home,
-  Briefcase,
-  Heart,
-  FileText,
-  Flame,
-  LifeBuoy,
+  Clock,
+  Mail,
+  MessageSquare,
+  ReceiptText,
+  Rocket,
+  Search,
+  Sparkles,
+  WalletCards,
+  ChevronRight,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  helpCenterData,
-  categoryIndex,
-  questionIndex,
-} from "@/data/help-center-data";
-import { BackgroundBeamsWithCollision } from "@/components/ui/background-beams-with-collision";
-import { DotPattern } from "@/components/ui/dot-pattern";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { StructuredData } from "@/components/seo/structured-data";
+import {
+  getFeaturedHelpArticles,
+  getHelpArticlesByCategory,
+  helpArticles,
+  helpCategories,
+  totalHelpArticles,
+  type HelpArticle,
+  type HelpCategory,
+} from "@/data/help-articles";
 import { cn } from "@/lib/utils";
+import { getCanonicalUrl } from "@/utils/canonical";
+import { seo } from "@/utils/seo";
 
 export const Route = createFileRoute("/help")({
   component: HelpCenterPage,
+  head: () => {
+    const title =
+      "Moneko Help Center | Guides for Budgeting, Expenses, Pockets, and AI Planning";
+    const description =
+      "Learn how to use Moneko with step-by-step help guides for Spaces, expenses, splits, Apple Pay tracking, Pockets, Wallets, recurring expenses, and AI scenario planning.";
+    const pageUrl = getCanonicalUrl("/help");
+
+    return {
+      meta: seo({
+        title,
+        description,
+        keywords:
+          "Moneko help center, budgeting app help, expense tracking guide, envelope budgeting, Pockets, Wallets, AI spending planner",
+        url: pageUrl,
+      }),
+      links: [{ rel: "canonical", href: pageUrl }],
+    };
+  },
 });
 
-// Icon mapping for categories
-const iconMap: Record<string, any> = {
-  Rocket,
-  Target,
-  Bot,
-  GraduationCap,
-  Calculator,
-  DollarSign,
-  CreditCard,
-  Shield,
-  User,
-  Wrench,
-  BookOpen,
-  TrendingUp,
-  Home,
-  Briefcase,
-  Heart,
-  FileText,
-  Flame,
-  LifeBuoy,
-};
-
-// Animation variants following Moneko design system
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      duration: 0.4,
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
+      staggerChildren: 0.1,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
-      ease: [0.25, 0.46, 0.45, 0.94], // Apple-like easing
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
     },
   },
 };
 
 function HelpCenterPage() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Filter questions based on search
-  const filteredData = useMemo(() => {
-    if (!searchQuery && !selectedCategory) return helpCenterData;
-
-    return helpCenterData
-      .map((category) => {
-        if (selectedCategory && category.id !== selectedCategory) {
-          return null;
-        }
-
-        const filteredQuestions = category.questions.filter((q) => {
-          const searchLower = searchQuery.toLowerCase();
-          return (
-            q.question.toLowerCase().includes(searchLower) ||
-            q.answer.toLowerCase().includes(searchLower) ||
-            q.keywords.some((k) => k.toLowerCase().includes(searchLower))
-          );
-        });
-
-        if (filteredQuestions.length === 0) return null;
-
-        return {
-          ...category,
-          questions: filteredQuestions,
-        };
-      })
-      .filter(Boolean);
-  }, [searchQuery, selectedCategory]);
-
-  const totalFilteredQuestions = filteredData.reduce(
-    (acc, cat) => (cat ? acc + cat.questions.length : acc),
-    0,
+  const deferredSearchQuery = useDeferredValue(
+    searchQuery.trim().toLowerCase(),
   );
+  const featuredArticles = getFeaturedHelpArticles();
+  const visibleArticles = filterHelpArticles(deferredSearchQuery);
+  const hasSearchQuery = deferredSearchQuery.length > 0;
+
+  if (pathname !== "/help") {
+    return <Outlet />;
+  }
 
   return (
-    <>
-      <Helmet>
-        <title>Help Center - Moneko Financial Education & AI Advisor</title>
-        <meta
-          name="description"
-          content="Find answers to all your questions about Moneko's AI financial advisor, goal tracking, learning platform, calculators, and financial planning tools. Comprehensive help center with 240+ FAQs."
-        />
-        <meta
-          name="keywords"
-          content="moneko help, financial advisor ai questions, goal tracking help, budget calculator faq, investment learning, debt payoff guide, retirement planning help, financial education support"
-        />
-        <link rel="canonical" href="https://moneko.io/help" />
+    <div className="bg-moneko-background font-poppins selection:bg-primary/20 min-h-screen">
+      <StructuredData
+        type="faq"
+        data={helpArticles.slice(0, 12).map((article) => ({
+          question: article.title,
+          answer: article.description,
+        }))}
+      />
+      <StructuredData
+        type="breadcrumb"
+        data={[{ name: "Help Center", url: getCanonicalUrl("/help") }]}
+      />
 
-        {/* Schema.org structured data for FAQ */}
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: questionIndex.slice(0, 50).map((q) => {
-              const fullQ = helpCenterData
-                .find((cat) => cat.id === q.category)
-                ?.questions.find((fq) => fq.id === q.id);
-              return {
-                "@type": "Question",
-                name: q.question,
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: fullQ?.answer || "",
-                },
-              };
-            }),
-          })}
-        </script>
-      </Helmet>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden pt-20 pb-16 lg:pt-32 lg:pb-24">
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute top-0 left-1/2 h-[1000px] w-[1000px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,hsl(var(--primary)/0.08)_0%,transparent_70%)] opacity-50 blur-3xl" />
+        </div>
 
-      <div className="bg-subtle-background z-50 min-h-screen">
-        {/* Background Beams with Collision - Rotated for meteor effect */}
-        <BackgroundBeamsWithCollision className="fixed inset-0 z-0 h-screen"></BackgroundBeamsWithCollision>
-
-        {/* Dotted grid pattern overlay - exactly like Uninbox */}
-        <DotPattern
-          className={cn(
-            "pointer-events-none fixed inset-0 z-[1] opacity-30 dark:opacity-15",
-            "[mask-image:radial-gradient(1200px_circle_at_center,white,transparent)]",
-          )}
-          cr={1}
-          cx={20}
-          cy={20}
-        />
-
-        {/* Hero Section */}
-        <div className="bg-moneko-background border-border/50 z-50 border-b">
-          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center text-center">
             <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="text-center"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
             >
-              <motion.div
-                variants={itemVariants}
-                className="mb-6 flex justify-center"
+              <Badge
+                variant="secondary"
+                className="mb-6 rounded-full px-4 py-1 text-xs font-medium tracking-wide uppercase"
               >
-                <div className="bg-primary/10 rounded-full p-4">
-                  <LifeBuoy className="text-primary h-12 w-12" />
-                </div>
-              </motion.div>
+                Support Hub
+              </Badge>
+            </motion.div>
 
-              <motion.h1
-                variants={itemVariants}
-                className="text-foreground mb-4 text-5xl font-light"
-              >
-                How can we help you?
-              </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="font-hepta-slab text-foreground text-4xl leading-tight font-bold tracking-tight sm:text-5xl lg:text-7xl"
+            >
+              How can we help?
+            </motion.h1>
 
-              <motion.p
-                variants={itemVariants}
-                className="text-muted-foreground mx-auto mb-12 max-w-2xl text-xl"
-              >
-                Search our comprehensive knowledge base with{" "}
-                {categoryIndex.reduce((acc, cat) => acc + cat.questionCount, 0)}
-                + answers about Moneko's AI financial platform
-              </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="text-muted-foreground mt-6 max-w-2xl text-lg sm:text-xl"
+            >
+              Everything you need to master your money with Moneko.
+            </motion.p>
 
-              {/* Search Bar */}
-              <motion.div variants={itemVariants} className="mx-auto max-w-2xl">
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="mt-10 w-full max-w-2xl"
+            >
+              <div className="group relative">
+                <div className="from-primary/20 via-accent/20 to-primary/20 absolute -inset-1 rounded-[2.5rem] bg-gradient-to-r opacity-0 blur transition duration-500 group-focus-within:opacity-100" />
+                <div className="relative flex items-center">
+                  <Search className="text-muted-foreground group-focus-within:text-primary absolute left-5 h-6 w-6 transition-colors" />
                   <Input
                     type="text"
-                    placeholder="Search for answers... (e.g., 'How do I create a goal?' or 'What can the AI advisor do?')"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-card border-border/50 focus:border-primary rounded-full py-6 pr-4 pl-12 text-lg transition-all duration-200"
+                    placeholder="Search articles, guides, and workflows..."
+                    className="border-border/50 bg-background/80 focus:border-primary/50 focus:ring-primary/10 h-16 w-full rounded-[2rem] pr-6 pl-14 text-lg shadow-sm backdrop-blur-xl transition-all focus:ring-4"
                   />
                 </div>
-              </motion.div>
+              </div>
+              <div className="text-muted-foreground mt-4 flex flex-wrap justify-center gap-2 text-sm">
+                <span>Popular:</span>
+                {["Spaces", "Wallets", "AI Planning", "Pockets"].map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => setSearchQuery(tag)}
+                    className="hover:text-primary transition-colors hover:underline"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             </motion.div>
           </div>
         </div>
+      </section>
 
-        {/* Main Content */}
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-            {/* Category Sidebar */}
-            <motion.aside
+      <main className="mx-auto max-w-7xl px-4 pt-4 pb-24 sm:px-6 lg:px-8">
+        <AnimatePresence mode="wait">
+          {hasSearchQuery ? (
+            <motion.div
+              key="search-results"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <SearchResults articles={visibleArticles} query={searchQuery} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="main-content"
+              variants={containerVariants}
               initial="hidden"
               animate="visible"
-              variants={containerVariants}
-              className="lg:col-span-1"
+              className="space-y-24"
             >
-              <div className="bg-moneko-background sticky top-24 rounded-3xl p-6">
-                <h2 className="text-foreground mb-6 text-lg font-medium">
-                  Categories
-                </h2>
-                <nav className="space-y-2">
-                  <button
-                    onClick={() => setSelectedCategory(null)}
-                    className={`w-full rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
-                      !selectedCategory
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-subtle-background text-muted-foreground"
-                    }`}
+              {/* Category Bento Grid */}
+              <section aria-labelledby="categories-heading">
+                <div className="mb-12">
+                  <h2
+                    id="categories-heading"
+                    className="text-foreground text-3xl font-bold tracking-tight sm:text-4xl"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">All Topics</span>
-                      <Badge variant="secondary" className="ml-2">
-                        {categoryIndex.reduce(
-                          (acc, cat) => acc + cat.questionCount,
-                          0,
-                        )}
-                      </Badge>
-                    </div>
-                  </button>
-
-                  {categoryIndex.map((cat, idx) => {
-                    const category = helpCenterData.find(
-                      (c) => c.id === cat.id,
-                    );
-                    if (!category) return null;
-                    const Icon = iconMap[category.icon] || BookOpen;
-
-                    return (
-                      <motion.button
-                        key={cat.id}
-                        variants={itemVariants}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`w-full rounded-2xl px-4 py-3 text-left transition-all duration-200 ${
-                          selectedCategory === cat.id
-                            ? "bg-primary text-primary-foreground"
-                            : "hover:bg-subtle-background text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className="h-5 w-5 flex-shrink-0" />
-                          <span className="flex-1 text-sm font-medium">
-                            {cat.name}
-                          </span>
-                          <Badge variant="secondary" className="ml-2">
-                            {cat.questionCount}
-                          </Badge>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </nav>
-              </div>
-            </motion.aside>
-
-            {/* Questions & Answers */}
-            <motion.main
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="lg:col-span-3"
-            >
-              {searchQuery && (
-                <motion.div variants={itemVariants} className="mb-8">
-                  <p className="text-muted-foreground">
-                    Found{" "}
-                    <span className="text-foreground font-medium">
-                      {totalFilteredQuestions}
-                    </span>{" "}
-                    {totalFilteredQuestions === 1 ? "result" : "results"} for "
-                    {searchQuery}"
+                    Browse by topic
+                  </h2>
+                  <p className="text-muted-foreground mt-2">
+                    Select a category to explore specialized guides.
                   </p>
-                </motion.div>
-              )}
+                </div>
 
-              <div className="space-y-8">
-                {filteredData.map((category) => {
-                  if (!category) return null;
-                  const Icon = iconMap[category.icon] || BookOpen;
-
-                  return (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-6 md:grid-rows-2">
+                  {helpCategories.map((category, idx) => (
                     <motion.div
                       key={category.id}
                       variants={itemVariants}
-                      className="bg-moneko-background rounded-3xl p-8"
+                      className={cn(
+                        "group border-border/50 bg-card hover:border-primary/30 hover:shadow-primary/5 relative overflow-hidden rounded-3xl border p-8 transition-all hover:shadow-2xl",
+                        idx === 0 && "md:col-span-4 md:row-span-1",
+                        idx === 1 && "md:col-span-2 md:row-span-1",
+                        idx === 2 && "md:col-span-2 md:row-span-1",
+                        idx === 3 && "md:col-span-4 md:row-span-1",
+                      )}
                     >
-                      <div className="mb-8 flex items-center gap-4">
-                        <div className="bg-primary/10 rounded-2xl p-3">
-                          <Icon className="text-primary h-6 w-6" />
+                      <div className="relative z-10 flex h-full flex-col">
+                        <div className="bg-primary/10 text-primary mb-6 flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-hover:scale-110">
+                          {getCategoryIcon(category.iconName)}
                         </div>
-                        <div>
-                          <h2 className="text-foreground text-2xl font-medium">
-                            {category.name}
-                          </h2>
-                          <p className="text-muted-foreground mt-1">
-                            {category.description}
-                          </p>
+                        <Badge
+                          variant="outline"
+                          className="border-primary/20 bg-primary/5 mb-2 w-fit rounded-full text-[10px] tracking-wider uppercase"
+                        >
+                          {category.eyebrow}
+                        </Badge>
+                        <h3 className="text-2xl font-bold tracking-tight">
+                          {category.title}
+                        </h3>
+                        <p className="text-muted-foreground mt-3 max-w-md leading-relaxed">
+                          {category.description}
+                        </p>
+                        <div className="mt-auto pt-8">
+                          <Link
+                            to="/help/$helpId"
+                            params={{
+                              helpId: getHelpArticlesByCategory(category.id)[0]
+                                .slug,
+                            }}
+                            className="text-primary inline-flex items-center font-semibold hover:underline"
+                          >
+                            Explore guides
+                            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                          </Link>
                         </div>
                       </div>
 
-                      <Accordion
-                        type="single"
-                        collapsible
-                        className="space-y-4"
-                      >
-                        {category.questions.map((question, qIdx) => (
-                          <AccordionItem
-                            key={question.id}
-                            value={question.id}
-                            className="border-border/50 bg-card data-[state=open]:bg-subtle-background rounded-2xl border px-6 transition-all duration-200"
-                          >
-                            <AccordionTrigger className="py-6 hover:no-underline">
-                              <div className="flex items-start gap-4 text-left">
-                                <div className="bg-primary/10 mt-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full">
-                                  <span className="text-primary text-sm font-medium">
-                                    Q
-                                  </span>
-                                </div>
-                                <span className="text-foreground pr-4 text-lg font-medium">
-                                  {question.question}
-                                </span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pb-6">
-                              <div className="space-y-4 pl-12">
-                                <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                                  {question.answer}
-                                </div>
-
-                                {question.keywords.length > 0 && (
-                                  <div className="flex flex-wrap gap-2 pt-4">
-                                    {question.keywords
-                                      .slice(0, 5)
-                                      .map((keyword, kidx) => (
-                                        <Badge
-                                          key={kidx}
-                                          variant="outline"
-                                          className="text-xs"
-                                        >
-                                          {keyword}
-                                        </Badge>
-                                      ))}
-                                  </div>
-                                )}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
+                      {/* Decorative elements for bento style */}
+                      <div className="bg-primary/5 absolute -right-8 -bottom-8 -z-0 h-48 w-48 rounded-full blur-3xl transition-opacity group-hover:opacity-100" />
                     </motion.div>
-                  );
-                })}
+                  ))}
+                </div>
+              </section>
 
-                {filteredData.length === 0 && (
-                  <motion.div
-                    variants={itemVariants}
-                    className="bg-moneko-background rounded-3xl p-16 text-center"
-                  >
-                    <Search className="text-muted-foreground mx-auto mb-4 h-16 w-16" />
-                    <h3 className="text-foreground mb-2 text-2xl font-medium">
-                      No results found
-                    </h3>
-                    <p className="text-muted-foreground mx-auto max-w-md">
-                      We couldn't find any questions matching "{searchQuery}".
-                      Try different keywords or browse our categories.
+              {/* Featured Articles Section */}
+              <section aria-labelledby="featured-heading">
+                <div className="mb-12 flex items-end justify-between gap-4">
+                  <div>
+                    <h2
+                      id="featured-heading"
+                      className="text-foreground text-3xl font-bold tracking-tight sm:text-4xl"
+                    >
+                      Featured Guides
+                    </h2>
+                    <p className="text-muted-foreground mt-2">
+                      Hand-picked articles to help you get started quickly.
                     </p>
-                  </motion.div>
-                )}
-              </div>
-            </motion.main>
-          </div>
-        </div>
+                  </div>
+                  <Link
+                    to="/help"
+                    className="text-primary hidden text-sm font-semibold hover:underline sm:block"
+                  >
+                    View all {totalHelpArticles} articles
+                  </Link>
+                </div>
 
-        {/* CTA Section */}
-        <div className="bg-moneko-background border-border/50 mt-20 border-t">
-          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h2 className="text-foreground mb-4 text-3xl font-medium">
-                Still have questions?
-              </h2>
-              <p className="text-muted-foreground mx-auto mb-8 max-w-2xl">
-                Chat with our AI financial advisor for personalized help, or
-                contact our support team
-              </p>
-              <div className="flex flex-col justify-center gap-4 sm:flex-row">
-                <a
-                  href="/questions"
-                  className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-full px-8 py-4 font-medium transition-all duration-200 hover:opacity-90"
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {featuredArticles.slice(0, 6).map((article) => (
+                    <motion.div key={article.id} variants={itemVariants}>
+                      <HelpArticleCard article={article} />
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Additional Support Section */}
+              <section className="from-card/50 rounded-[3rem] bg-gradient-to-b to-transparent p-12 text-center md:p-20">
+                <motion.div
+                  variants={itemVariants}
+                  className="mx-auto max-w-3xl"
                 >
-                  <Bot className="h-5 w-5" />
-                  Ask a question
-                </a>
-                <a
-                  href="mailto:hello@moneko.io"
-                  className="bg-card text-foreground border-border hover:bg-subtle-background inline-flex items-center gap-2 rounded-full border px-8 py-4 font-medium transition-all duration-200"
-                >
-                  <Heart className="h-5 w-5" />
-                  Contact Support
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+                  <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
+                    Still need a hand?
+                  </h2>
+                  <p className="text-muted-foreground mt-6 text-lg leading-relaxed">
+                    If you couldn't find the answer you were looking for, our
+                    support team is here to help you get the most out of Moneko.
+                  </p>
+
+                  <div className="mt-12 flex justify-center">
+                    <SupportActionCard
+                      title="Email Support"
+                      description="Send us a detailed message and we'll get back to you as soon as possible."
+                      icon={<Mail className="h-6 w-6" />}
+                      href="mailto:hello@moneko.io"
+                      actionText="Send email"
+                    />
+                  </div>
+                </motion.div>
+              </section>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
   );
+}
+
+function HelpArticleCard({ article }: { article: HelpArticle }) {
+  const category = helpCategories.find((c) => c.id === article.categoryId);
+
+  return (
+    <Link
+      to="/help/$helpId"
+      params={{ helpId: article.slug }}
+      className="group border-border/50 bg-card hover:border-primary/40 focus:ring-primary/50 relative flex h-full flex-col overflow-hidden rounded-[2rem] border p-6 transition-all hover:shadow-xl focus:ring-2 focus:outline-none"
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <Badge
+          variant="secondary"
+          className="bg-muted text-muted-foreground rounded-lg text-[10px] font-bold tracking-tight"
+        >
+          {article.readTime} MIN READ
+        </Badge>
+        {category && (
+          <span className="text-muted-foreground group-hover:text-primary text-xs font-medium transition-colors">
+            {category.title}
+          </span>
+        )}
+      </div>
+
+      <h3 className="group-hover:text-primary mb-3 text-xl leading-tight font-bold transition-colors">
+        {article.title}
+      </h3>
+
+      <p className="text-muted-foreground mb-6 line-clamp-2 text-sm leading-relaxed">
+        {article.description}
+      </p>
+
+      <div className="mt-auto flex items-center pt-2 text-sm font-bold">
+        <span className="transition-all group-hover:mr-2">Read more</span>
+        <ChevronRight className="h-4 w-4 opacity-0 transition-all group-hover:opacity-100" />
+      </div>
+    </Link>
+  );
+}
+
+function SupportActionCard({
+  title,
+  description,
+  icon,
+  href,
+  actionText,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  href: string;
+  actionText: string;
+}) {
+  const isExternal = href.startsWith("http") || href.startsWith("mailto");
+
+  const content = (
+    <div className="flex h-full flex-col items-center text-center">
+      <div className="bg-primary/5 text-primary group-hover:bg-primary mb-6 flex h-16 w-16 items-center justify-center rounded-2xl transition-colors duration-300 group-hover:text-white">
+        {icon}
+      </div>
+      <h3 className="mb-2 text-xl font-bold">{title}</h3>
+      <p className="text-muted-foreground mb-6 text-sm leading-relaxed">
+        {description}
+      </p>
+      <div className="mt-auto w-full">
+        <Button
+          variant="outline"
+          className="border-primary/20 hover:bg-primary/5 hover:text-primary w-full rounded-2xl font-bold transition-all"
+        >
+          {actionText}
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="group border-border/50 bg-background/50 hover:border-primary/40 rounded-[2.5rem] border p-8 backdrop-blur-sm transition-all hover:shadow-lg">
+      {isExternal ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block h-full"
+        >
+          {content}
+        </a>
+      ) : (
+        <Link to={href as any} className="block h-full">
+          {content}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function SearchResults({
+  articles,
+  query,
+}: {
+  articles: HelpArticle[];
+  query: string;
+}) {
+  return (
+    <div className="space-y-12">
+      <div className="flex flex-col items-center text-center">
+        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          {articles.length} {articles.length === 1 ? "result" : "results"} for{" "}
+          <span className="text-primary">"{query}"</span>
+        </h2>
+        <p className="text-muted-foreground mt-4">
+          {articles.length > 0
+            ? "We found some guides that might match your search."
+            : "No guides found for your current search. Try different keywords."}
+        </p>
+      </div>
+
+      {articles.length > 0 ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {articles.map((article) => (
+            <motion.div
+              key={article.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <HelpArticleCard article={article} />
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <Card className="mx-auto max-w-xl rounded-3xl border-dashed py-12 text-center">
+          <CardHeader>
+            <div className="bg-muted mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full">
+              <Search className="text-muted-foreground h-8 w-8" />
+            </div>
+            <CardTitle>Can't find it?</CardTitle>
+            <CardDescription className="text-base">
+              Try searching for general terms like "budget", "wallet", or
+              "expense". Or reach out to us directly.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="rounded-full">
+              <a href="mailto:hello@moneko.io">Email support</a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function filterHelpArticles(query: string): HelpArticle[] {
+  if (!query) return helpArticles;
+
+  return helpArticles.filter((article) => {
+    const searchableText = [
+      article.title,
+      article.description,
+      article.number,
+      ...article.keywords,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(query);
+  });
+}
+
+function getCategoryIcon(iconName: string) {
+  switch (iconName) {
+    case "rocket":
+      return <Rocket className="h-7 w-7" />;
+    case "receipt":
+      return <ReceiptText className="h-7 w-7" />;
+    case "wallet":
+      return <WalletCards className="h-7 w-7" />;
+    case "sparkles":
+      return <Sparkles className="h-7 w-7" />;
+    default:
+      return <Rocket className="h-7 w-7" />;
+  }
 }

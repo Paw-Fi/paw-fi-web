@@ -1,0 +1,697 @@
+﻿How to create your first Space in Moneko
+If you are new to Moneko, one of the first things to understand is Spaces.
+Spaces are what keep your money organized.
+Instead of putting every expense, budget, and reminder in one place, Moneko lets you separate different parts of your life into different Spaces. That way your personal spending does not get mixed with shared household expenses, trip costs, or group spending.
+Once you understand Spaces, the rest of the app makes a lot more sense.
+What is a Space?
+You can think of a Space like a wallet or a separate money context for a specific part of your life.
+Each Space keeps its own data and does not mix with other Spaces.
+That means every Space has its own:
+* people
+* currency
+* recurring expenses and income
+* budgets and Pockets
+* summaries and insights
+For example, you might use:
+* a Personal Space for your own day to day spending
+* a Couple or Family Space for shared household expenses
+* a Trip Space for travel
+* a Group Space for roommates or friends
+This makes it easier to stay organized because each Space has its own view of money.
+Where Spaces live and how to switch them
+To see your Spaces, tap the Space name or icon in the top left corner of the app.
+There, you will find:
+* a list of all your Spaces
+* an option to create a new Space
+This menu lets you switch between Spaces anytime.
+When you switch Spaces, you are not just changing one screen. You are changing the entire context of the app. It is like moving from one wallet to another.
+How to create a new Space
+Creating a Space is simple.
+1. Tap the top left menu
+2. Tap Create Space
+3. Enter a name for the Space, such as “Living Expenses” or “Japan Trip”
+4. Choose who can see and add expenses
+5. Tap Continue
+When you create a Space, you can make it either private or shared.
+A private Space is only visible to you.
+A shared Space lets you invite other people.
+In a shared Space:
+* everyone sees the same expenses
+* anyone can add expenses
+* everything stays in sync automatically
+There is no need to sync things later, and no one has to manage everything for the group.
+What happens when you switch Spaces?
+This is the part that often confuses new users.
+When you switch Spaces, what you see across the app changes too.
+That includes:
+* recurring payments
+* budgets and Pockets
+* summaries and insights
+Each Space is basically its own mini environment.
+So if you switch from your Personal Space to your Family Space, you are now looking at a completely different set of expenses, budgets, and recurring items.
+This is why switching Spaces changes what you see.
+How to edit a Space
+To edit a Space, first switch to the Space you want to manage.
+Then:
+1. Tap the three dot icon in the top right
+2. Select Manage Shared Space
+This opens the Space Settings screen.
+From there, you can:
+* edit the Space name
+* change the Space image
+* invite new members
+* see who is in the Space and their roles
+* delete the Space if needed
+Any changes you make only apply to that Space. They do not affect your other Spaces.
+If the Space is shared, only the owner or admins can manage members or delete the Space. Personal Spaces can only be edited by you.
+In short
+Spaces help you separate different parts of your money so everything stays organized.
+Use a new Space when you want a different set of people, budgets, recurring expenses, or currency. Once you switch Spaces, the app updates to match that Space automatically.
+If you are just getting started, creating your first Space is the best way to set up Moneko around how you actually manage money.
+________________
+# 1. SEO Analysis
+
+
+## Current Strengths
+- Clearly explains the concept of Spaces
+- Good beginner-friendly positioning
+- Covers important user actions:
+  - creating a Space
+  - switching Spaces
+  - editing a Space
+  - understanding private and shared Spaces
+- Explains why different app data changes when switching Spaces
+- Includes useful examples such as Personal, Family, Trip, and Group Spaces
+
+
+## Main SEO Issues
+- The title can be more search-friendly
+- Headings need stronger structure and clearer hierarchy
+- The article can better match search intent for users asking:
+  - how to create a Space in Moneko
+  - what is a Space in Moneko
+  - how to switch Spaces
+  - how to manage a shared Space
+- Instructions should be easier to scan
+- The article needs a clearer troubleshooting section
+- FAQ section is missing
+- Internal linking opportunities are not included
+- CTA can be stronger and more action-oriented
+
+
+## Search Intent Being Targeted
+
+
+This article should target users who want to:
+- understand what Spaces are in Moneko
+- create their first Space
+- separate personal and shared expenses
+- switch between Spaces
+- manage a private or shared Space
+- understand why budgets, recurring expenses, and summaries change when switching Spaces
+
+
+---
+
+
+# 2. Suggested SEO Keywords
+
+
+## Primary Keyword
+- create Space in Moneko
+
+
+## Secondary Keywords
+- Moneko Spaces
+- shared Space in Moneko
+- private Space in Moneko
+- manage Space in Moneko
+- switch Spaces in Moneko
+- Moneko Space settings
+- Moneko shared expense Space
+
+
+## Semantic Keywords
+- separate expenses
+- personal spending
+- shared household expenses
+- group expenses
+- trip expenses
+- budgets and Pockets
+- recurring expenses and income
+- summaries and insights
+- Space members
+- Space roles
+
+
+## Long-Tail Keywords
+- how to create your first Space in Moneko
+- what is a Space in Moneko
+- how to switch between Spaces in Moneko
+- how to edit a Space in Moneko
+- how to create a shared Space in Moneko
+- why does my Moneko data change when I switch Spaces
+- how to manage members in a Moneko shared Space
+
+
+---
+
+
+# 3. Improved Title Options
+
+
+1. How to Create Your First Space in Moneko
+2. What Are Spaces in Moneko and How Do They Work?
+3. How to Use Spaces in Moneko to Organize Your Money
+4. How to Create, Switch, and Manage Spaces in Moneko
+5. Moneko Spaces Guide: Create Your First Private or Shared Space
+6. How Moneko Spaces Help You Separate Personal and Shared Expenses
+
+
+---
+
+
+# 4. Optimized Meta Description
+
+
+Learn how to create your first Space in Moneko, switch between Spaces, and manage private or shared Spaces for personal spending, household expenses, trips, and group budgets.
+
+
+---
+
+
+# 5. Suggested URL Slug
+
+
+`/how-to-create-space-in-moneko`
+
+
+Alternative slugs:
+- `/moneko-spaces-guide`
+- `/create-your-first-space`
+- `/how-spaces-work-in-moneko`
+
+
+---
+
+
+# 6. Rewritten Blog Content
+
+
+# How to Create Your First Space in Moneko
+
+
+If you are new to Moneko, one of the first things to understand is **Spaces**.
+
+
+Spaces help keep your money organized.
+
+
+Instead of putting every expense, budget, and reminder in one place, Moneko lets you separate different parts of your life into different Spaces.
+
+
+This means your personal spending does not get mixed with:
+- shared household expenses
+- trip costs
+- group spending
+- family or couple expenses
+
+
+Once you understand how Spaces work, the rest of Moneko becomes much easier to use.
+
+
+---
+
+
+## What Is a Space in Moneko?
+
+
+You can think of a Space as a separate wallet or money context for a specific part of your life.
+
+
+Each Space keeps its own data and does not mix with your other Spaces.
+
+
+A Space has its own:
+- people
+- currency
+- recurring expenses and income
+- budgets and Pockets
+- summaries and insights
+
+
+For example, you might create:
+
+
+- **Personal Space** for your own day-to-day spending
+- **Couple or Family Space** for shared household expenses
+- **Trip Space** for travel costs
+- **Group Space** for roommates or friends
+
+
+This helps you keep each part of your money clear and separate.
+
+
+### Expected Result
+
+
+After creating separate Spaces, you can view expenses, budgets, recurring items, and insights based on the specific Space you are using.
+
+
+---
+
+
+## Where to Find Your Spaces
+
+
+You can find your Spaces from the top left corner of the app.
+
+
+To view your Spaces:
+
+
+1. Open Moneko.
+2. Tap the **Space name or icon** in the top left corner.
+3. View your list of Spaces.
+4. Choose a Space to switch into, or create a new one.
+
+
+From this menu, you can:
+- see all your Spaces
+- switch between Spaces
+- create a new Space
+
+
+### Important
+
+
+When you switch Spaces, you are not only changing one screen. You are changing the full money context inside the app.
+
+
+It is like moving from one wallet to another.
+
+
+---
+
+
+## How to Create a New Space
+
+
+Creating a Space only takes a few steps.
+
+
+1. Tap the **top left menu**.
+2. Tap **Create Space**.
+3. Enter a name for the Space.
+
+
+   For example:
+   - Living Expenses
+   - Japan Trip
+   - Family Budget
+   - Personal Spending
+
+
+4. Choose who can see and add expenses.
+5. Tap **Continue**.
+
+
+Your new Space is now ready to use.
+
+
+### Expected Result
+
+
+After creating the Space, Moneko will keep that Space’s expenses, people, currency, recurring expenses and income, budgets, Pockets, summaries, and insights separate from your other Spaces.
+
+
+---
+
+
+## Private Spaces vs Shared Spaces
+
+
+When you create a Space, you can make it either **private** or **shared**.
+
+
+## Private Space
+
+
+A private Space is only visible to you.
+
+
+Use a private Space for:
+- personal spending
+- private budgets
+- individual recurring expenses or income
+- your own financial summaries and insights
+
+
+## Shared Space
+
+
+A shared Space lets you invite other people.
+
+
+In a shared Space:
+- everyone sees the same expenses
+- anyone can add expenses
+- everything stays in sync automatically
+
+
+This is useful for:
+- couples
+- families
+- roommates
+- friends
+- trips
+- group spending
+
+
+There is no need to manually sync things later, and one person does not need to manage everything for the whole group.
+
+
+### Best Practice
+
+
+Use a shared Space when more than one person needs to see or add expenses.
+
+
+Use a private Space when the money context only belongs to you.
+
+
+---
+
+
+## What Happens When You Switch Spaces?
+
+
+Switching Spaces changes what you see across the app.
+
+
+This includes:
+- recurring payments
+- budgets and Pockets
+- summaries and insights
+
+
+Each Space works like its own mini environment.
+
+
+For example, if you switch from your **Personal Space** to your **Family Space**, you are now viewing a completely different set of:
+- expenses
+- budgets
+- recurring items
+- summaries
+- insights
+
+
+This is why the app content changes when you switch Spaces.
+
+
+### Expected Result
+
+
+After switching Spaces, Moneko updates the app to show the data that belongs to the selected Space.
+
+
+### Common Mistake to Avoid
+
+
+Do not assume an expense is missing just because you cannot see it right away.
+
+
+You may simply be viewing a different Space.
+
+
+---
+
+
+## How to Edit a Space
+
+
+To edit a Space, first switch to the Space you want to manage.
+
+
+Then follow these steps:
+
+
+1. Tap the **three dot icon** in the top right.
+2. Select **Manage Shared Space**.
+3. Open the **Space Settings** screen.
+
+
+From Space Settings, you can:
+- edit the Space name
+- change the Space image
+- invite new members
+- see who is in the Space
+- view member roles
+- delete the Space if needed
+
+
+Any changes you make only apply to the Space you are currently managing.
+
+
+They do not affect your other Spaces.
+
+
+---
+
+
+## Who Can Manage a Shared Space?
+
+
+If the Space is shared, only the **owner** or **admins** can manage members or delete the Space.
+
+
+This means owner or admin permissions may be required to:
+- invite new members
+- manage members
+- delete the Space
+
+
+Personal Spaces can only be edited by you.
+
+
+### Expected Result
+
+
+Space management stays controlled, especially when multiple people are using the same shared Space.
+
+
+---
+
+
+# Troubleshooting Common Issues
+
+
+## I Cannot Find an Expense
+
+
+Check whether you are viewing the correct Space.
+
+
+Since each Space has its own data, an expense created in one Space will not appear inside another Space.
+
+
+## My Budgets or Pockets Look Different
+
+
+Budgets and Pockets are separate for each Space.
+
+
+If they look different, you may have switched into another Space.
+
+
+## My Recurring Expenses or Income Changed
+
+
+Recurring expenses and income belong to the Space where they were created.
+
+
+Switch back to the correct Space to view the expected recurring items.
+
+
+## I Cannot Manage Members in a Shared Space
+
+
+Only the owner or admins can manage members or delete a shared Space.
+
+
+If you do not see management options, you may not have the required role.
+
+
+## I Edited a Space but Other Spaces Did Not Change
+
+
+This is expected.
+
+
+Changes only apply to the Space you are currently managing.
+
+
+---
+
+
+# In Short
+
+
+Spaces help you separate different parts of your money so everything stays organized.
+
+
+Use a new Space when you want a different set of:
+- people
+- budgets
+- recurring expenses and income
+- currency
+- summaries and insights
+
+
+Once you switch Spaces, Moneko automatically updates the app to match that Space.
+
+
+If you are just getting started, creating your first Space is the best way to set up Moneko around how you actually manage money.
+
+
+---
+
+
+# 7. FAQ Section
+
+
+## What is a Space in Moneko?
+
+
+A Space is a separate money context in Moneko. Each Space keeps its own people, currency, recurring expenses and income, budgets and Pockets, summaries, and insights.
+
+
+## How do I create a Space in Moneko?
+
+
+Tap the Space name or icon in the top left corner, choose **Create Space**, enter a Space name, choose who can see and add expenses, then tap **Continue**.
+
+
+## What is the difference between a private Space and a shared Space?
+
+
+A private Space is only visible to you. A shared Space lets you invite other people so everyone can see and add expenses in the same Space.
+
+
+## Why does my app content change when I switch Spaces?
+
+
+Each Space has its own expenses, budgets, recurring items, summaries, and insights. When you switch Spaces, Moneko shows the data for the selected Space.
+
+
+## Can I use Spaces for trips?
+
+
+Yes. You can create a Trip Space to keep travel expenses separate from your personal or household spending.
+
+
+## Can I edit a Space after creating it?
+
+
+Yes. Switch to the Space, tap the three dot icon in the top right, then select **Manage Shared Space** to open Space Settings.
+
+
+## Who can manage members in a shared Space?
+
+
+Only the owner or admins can manage members or delete a shared Space.
+
+
+## Can changes in one Space affect another Space?
+
+
+No. Changes only apply to the Space you are currently managing.
+
+
+---
+
+
+# 8. Internal Linking Suggestions
+
+
+Add internal links to:
+- “What Is Moneko Shared Expense Tracker?”
+- “How to Add an Expense in Moneko”
+- “How Shared Spaces Work in Moneko”
+- “How to Manage Budgets and Pockets”
+- “How to Track Recurring Expenses and Income”
+- “How to Invite Members to a Shared Space”
+- “How to Switch Between Spaces”
+
+
+---
+
+
+# 9. CTA Suggestions
+
+
+## Setup CTA
+
+
+Create your first Space to start organizing your expenses, budgets, recurring items, and insights in Moneko.
+
+
+## Shared Space CTA
+
+
+Invite members to a shared Space so everyone can see and add expenses in one place.
+
+
+## Help Center CTA
+
+
+Need help choosing the right Space setup? Learn how private and shared Spaces work before creating your next Space.
+
+
+---
+
+
+# 10. Additional SEO Recommendations
+
+
+## Add Structured Data
+
+
+Implement:
+- FAQ schema
+- Article schema
+- Breadcrumb schema
+- HowTo schema
+
+
+## Suggested Image Alt Text
+
+
+- “Creating a new Space in Moneko”
+- “Moneko Spaces menu in the top left corner”
+- “Managing a shared Space in Moneko”
+- “Private and shared Spaces in Moneko”
+- “Switching between Spaces in Moneko”
+
+
+## Improve Content Engagement
+
+
+Consider adding:
+- screenshots of the Space menu
+- screenshot of the Create Space flow
+- screenshot of the Space Settings screen
+- short visual example comparing Personal Space and Trip Space
+- quick checklist for choosing private vs shared Space
+
+
+## Recommended Future Content
+
+
+Create supporting articles for:
+- “How to Add Your First Expense in Moneko”
+- “How Private and Shared Spaces Work”
+- “How to Manage Members in a Shared Space”
+- “How to Use Budgets and Pockets in Moneko”
+- “How to Track Recurring Expenses and Income”
+- “How to Switch Between Spaces”

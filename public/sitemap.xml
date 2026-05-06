@@ -1314,4 +1314,10 @@
     <changefreq>weekly</changefreq>
     <priority>0.93</priority>
   </url>
+<url>
+    <loc>https://moneko.io/help/shared-expense-tracker-guide</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
 </urlset>
