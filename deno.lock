@@ -8845,6 +8845,7 @@
     "https://esm.sh/safe-buffer@5.2.1?target=deno": "ba5a4ffe4613e6b17aa1074e52be528b0528e59ac546e42b4776005ebd394bb1",
     "https://esm.sh/semver@7.7.4/deno/semver.mjs": "185c3cd5760978357ed9158fe997d72481c446de0368e497e82594a7898cae92",
     "https://esm.sh/semver@7.7.4?target=deno": "3d24faf4227ae250f914ea008178cf294e89f9da1c05278b2033c35122b4ebcb",
+    "https://esm.sh/stripe@13.10.0": "67f702b2494447fe1446c136d206b6767229df21696ec2f33e78bae40f1220ac",
     "https://esm.sh/tr46@0.0.3/denonext/tr46.mjs": "5753ec0a99414f4055f0c1f97691100f13d88e48a8443b00aebb90a512785fa2",
     "https://esm.sh/tr46@0.0.3?target=denonext": "19cb9be0f0d418a0c3abb81f2df31f080e9540a04e43b0f699bce1149cba0cbb",
     "https://esm.sh/utf-8-validate@6.0.5/denonext/utf-8-validate.mjs": "66b8ea532a0c745068f5b96ddb1bae332c3036703243541d2e89e66331974d98",

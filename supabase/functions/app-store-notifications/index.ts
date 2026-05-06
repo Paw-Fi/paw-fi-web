@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
@@ -10,6 +11,9 @@ import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
   hasAppStoreOwnershipConflict,
+  normalizeAppStoreInAppOwnershipType,
+  shouldEnforceAppStoreOwnershipBinding,
+  shouldUseAppStoreOwnershipBindingForNotificationResolution,
 } from "../shared/iap-ownership.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
@@ -520,6 +524,7 @@ async function resolveNotificationUser(params: {
   transactionId: string | null;
   appAccountToken: string | null;
   environment: AppStoreEnvironment;
+  inAppOwnershipType: "FAMILY_SHARED" | "PURCHASED" | null;
 }): Promise<ResolvedNotificationUser> {
   let userId: string | null = null;
   let userIdSource:
@@ -529,7 +534,12 @@ async function resolveNotificationUser(params: {
     | null = null;
   let hasLegacyOwnershipConflict = false;
 
-  if (iapOwnershipBindingEnabled) {
+  const canUseOwnershipBinding =
+    shouldUseAppStoreOwnershipBindingForNotificationResolution(
+      params.inAppOwnershipType,
+    );
+
+  if (iapOwnershipBindingEnabled && canUseOwnershipBinding) {
     const existingBinding = await getAppStoreOwnershipBinding({
       supabase,
       originalTransactionId: params.originalTransactionId,
@@ -567,7 +577,7 @@ async function resolveNotificationUser(params: {
     }
   }
 
-  if (!userId && iapOwnershipLegacyFallbackEnabled) {
+  if (!userId && iapOwnershipLegacyFallbackEnabled && canUseOwnershipBinding) {
     const orFilters = [
       `app_store_original_transaction_id.eq.${params.originalTransactionId}`,
     ];
@@ -613,6 +623,7 @@ async function resolveNotificationUserWithRetry(params: {
   transactionId: string | null;
   appAccountToken: string | null;
   environment: AppStoreEnvironment;
+  inAppOwnershipType: "FAMILY_SHARED" | "PURCHASED" | null;
 }): Promise<ResolvedNotificationUser> {
   const retryDelaysMs = [1500, 3000, 5000];
 
@@ -905,12 +916,16 @@ serve(async (req: Request): Promise<Response> => {
     const storeProductId = asString(transaction.productId);
     const originalTransactionId = asString(transaction.originalTransactionId);
     const transactionId = asString(transaction.transactionId);
+    const inAppOwnershipType = normalizeAppStoreInAppOwnershipType(
+      (transaction as Record<string, unknown>).inAppOwnershipType,
+    );
     notificationLogContext = getAppStoreDiagnosticsContext({
       phase: "decoded_notification",
       environment,
       storeProductId,
       originalTransactionId,
       transactionId,
+      inAppOwnershipType,
     });
 
     console.log("[app-store-notifications] decoded notification", {
@@ -918,6 +933,7 @@ serve(async (req: Request): Promise<Response> => {
       originalTransactionId,
       transactionId,
       environment,
+      inAppOwnershipType,
       offerType: transaction.offerType ?? null,
       offerDiscountType: transaction.offerDiscountType ?? null,
       offerIdentifier: transaction.offerIdentifier ?? null,
@@ -995,6 +1011,7 @@ serve(async (req: Request): Promise<Response> => {
       transactionId,
       appAccountToken,
       environment,
+      inAppOwnershipType,
     });
     const userId = resolvedNotificationUser.userId;
     const userIdSource = resolvedNotificationUser.userIdSource;
@@ -1060,18 +1077,35 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const bindingDecision = iapOwnershipBindingEnabled
-      ? await ensureAppStoreOwnership({
-        supabase,
-        provider: "app_store",
-        originalTransactionId,
-        currentUserId: userId,
-        transactionId,
-        storeProductId,
-        environment,
-        claimSource: "app_store_notification",
-      })
-      : null;
+    const shouldEnforceOwnershipBinding = shouldEnforceAppStoreOwnershipBinding(
+      inAppOwnershipType,
+    );
+
+    const bindingDecision =
+      iapOwnershipBindingEnabled && shouldEnforceOwnershipBinding
+        ? await ensureAppStoreOwnership({
+          supabase,
+          provider: "app_store",
+          originalTransactionId,
+          currentUserId: userId,
+          transactionId,
+          storeProductId,
+          environment,
+          claimSource: "app_store_notification",
+        })
+        : null;
+
+    if (iapOwnershipBindingEnabled && !shouldEnforceOwnershipBinding) {
+      console.log(
+        "Skipping App Store notification ownership binding for family-shared entitlement",
+        {
+          originalTransactionId,
+          transactionId,
+          userId,
+          inAppOwnershipType,
+        },
+      );
+    }
 
     if (bindingDecision?.kind === "owned_by_another_user") {
       console.warn("App Store notification resolved to existing owner", {
@@ -1123,6 +1157,12 @@ serve(async (req: Request): Promise<Response> => {
     let resolvedExpiresIso = asIsoMillisUnknown(
       effectiveTransaction.expiresDate,
     );
+    if (!resolvedExpiresIso && effectiveTransaction.revocationDate) {
+      resolvedExpiresIso =
+        asIsoMillisUnknown(effectiveTransaction.revocationDate) ??
+          new Date().toISOString();
+      periodEndSource = "revocation_date";
+    }
     let resolvedLifecycleStatus: string | null = null;
 
     if (catalogProduct.plan !== "lifetime" && transactionId) {
@@ -1404,6 +1444,7 @@ serve(async (req: Request): Promise<Response> => {
       app_store_transaction_id: transactionId,
       app_store_original_transaction_id: originalTransactionId,
       app_store_environment: toStoredAppStoreEnvironment(resolvedEnvironment),
+      app_store_in_app_ownership_type: inAppOwnershipType,
       updated_at: new Date().toISOString(),
     };
 

@@ -57,7 +57,9 @@ async function deleteBinding(params: {
 
   if (error) {
     throw new Error(
-      `Failed to remove orphaned purchase ownership: ${error.message ?? error.code ?? String(error)}`,
+      `Failed to remove orphaned purchase ownership: ${
+        error.message ?? error.code ?? String(error)
+      }`,
     );
   }
 }
@@ -88,6 +90,30 @@ export function classifyOwnership(params: {
 
 export function purchaseOwnershipConflictMessage(): string {
   return "This App Store purchase is already linked to another Moneko account. Sign in to the original account to restore access.";
+}
+
+export function normalizeAppStoreInAppOwnershipType(
+  value: unknown,
+): "FAMILY_SHARED" | "PURCHASED" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "FAMILY_SHARED") return "FAMILY_SHARED";
+  if (normalized === "PURCHASED") return "PURCHASED";
+  return null;
+}
+
+export function shouldEnforceAppStoreOwnershipBinding(
+  inAppOwnershipType: unknown,
+): boolean {
+  return (
+    normalizeAppStoreInAppOwnershipType(inAppOwnershipType) !== "FAMILY_SHARED"
+  );
+}
+
+export function shouldUseAppStoreOwnershipBindingForNotificationResolution(
+  inAppOwnershipType: unknown,
+): boolean {
+  return shouldEnforceAppStoreOwnershipBinding(inAppOwnershipType);
 }
 
 export async function hasAppStoreOwnershipConflict(params: {
@@ -174,20 +200,20 @@ export async function ensureAppStoreOwnership(
 ): Promise<OwnershipDecision> {
   const now = params.nowIso ?? new Date().toISOString();
 
-  const { data: rawExistingBinding, error: existingBindingError } =
-    await params.supabase
-      .from("iap_account_bindings")
-      .select("*")
-      .eq("provider", params.provider)
-      .eq("original_transaction_id", params.originalTransactionId)
-      .maybeSingle();
+  const { data: rawExistingBinding, error: existingBindingError } = await params
+    .supabase
+    .from("iap_account_bindings")
+    .select("*")
+    .eq("provider", params.provider)
+    .eq("original_transaction_id", params.originalTransactionId)
+    .maybeSingle();
 
   if (existingBindingError) {
     throw new Error(
       `Failed to look up purchase ownership: ${
         existingBindingError.message ??
-        existingBindingError.code ??
-        String(existingBindingError)
+          existingBindingError.code ??
+          String(existingBindingError)
       }`,
     );
   }
@@ -310,8 +336,8 @@ export async function ensureAppStoreOwnership(
     throw new Error(
       `Failed to resolve purchase ownership after conflict: ${
         racedBindingError.message ??
-        racedBindingError.code ??
-        String(racedBindingError)
+          racedBindingError.code ??
+          String(racedBindingError)
       }`,
     );
   }
