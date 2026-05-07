@@ -46,6 +46,16 @@ function resolveErrorCode(status: number): string {
   return "VALIDATION_ERROR";
 }
 
+function normalizeClientMutationKey(body: RequestBody): string | null {
+  const explicitKey = body.idempotencyKey?.trim();
+  if (explicitKey) return explicitKey;
+
+  const mutationId = body.clientMutationId?.trim();
+  if (mutationId) return mutationId;
+
+  return null;
+}
+
 function errorResponse(message: string, status = 400, code?: string): Response {
   return new Response(
     JSON.stringify({
@@ -75,6 +85,9 @@ interface RequestBody {
   isPortfolio?: boolean; // If true, treat as personal even with householdId
   customSplits?: CustomSplits; // Custom split configuration (optional)
   isRecurring?: boolean; // Whether this is a recurring expense (v1.5)
+  clientRecordId?: string; // Optional client-generated optimistic record id
+  clientMutationId?: string; // Optional client-generated mutation id
+  idempotencyKey?: string; // Optional mutation dedupe key
   recurrence_rule?: {
     // Recurrence configuration (v1.5)
     frequency:
@@ -155,6 +168,7 @@ Deno.serve(async (req: Request) => {
       typeof body.merchant === "string" && body.merchant.trim().length > 0
         ? body.merchant.trim()
         : null;
+    const normalizedIdempotencyKey = normalizeClientMutationKey(body);
 
     const normalizedDate = normalizeCalendarDateString(body.date);
     if (!normalizedDate) {
@@ -468,6 +482,54 @@ Deno.serve(async (req: Request) => {
       preliminaryAccountId,
     });
 
+    if (normalizedIdempotencyKey) {
+      let existingExpenseQuery = supabase
+        .from("expenses")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("idempotency_key", normalizedIdempotencyKey)
+        .limit(1);
+
+      existingExpenseQuery = insertScopeHouseholdId
+        ? existingExpenseQuery.eq("household_id", insertScopeHouseholdId)
+        : existingExpenseQuery.is("household_id", null);
+
+      const { data: existingExpenses, error: existingExpenseError } =
+        await existingExpenseQuery;
+
+      if (existingExpenseError) {
+        console.error(
+          "[save-expense] Failed to check idempotency key:",
+          existingExpenseError,
+        );
+        return errorResponse(
+          "Failed to check duplicate expense",
+          500,
+          "SERVER_ERROR",
+        );
+      }
+
+      const existingExpense = existingExpenses?.[0] ?? null;
+      if (existingExpense) {
+        console.log(
+          "[save-expense] Duplicate detected (idempotency), returning existing:",
+          existingExpense.id,
+        );
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: existingExpense,
+            duplicate: true,
+            message: "Expense already exists (idempotency key matched)",
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
     // Insert expense into expenses table
     const { data: expense, error: expenseError } = await supabase
       .from("expenses")
@@ -487,6 +549,7 @@ Deno.serve(async (req: Request) => {
         recurrence_rule: body.recurrence_rule || null, // Don't stringify - Supabase handles JSONB automatically
         household_id: insertScopeHouseholdId,
         account_id: preliminaryAccountId,
+        idempotency_key: normalizedIdempotencyKey,
       })
       .select()
       .single();

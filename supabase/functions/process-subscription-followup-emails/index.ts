@@ -98,6 +98,7 @@ serve(async (req: Request) => {
   const bearerToken = extractBearerToken(authHeader);
   const acceptedKeys = getAcceptedServiceRoleKeys();
 
+
   if (!bearerToken || !isAuthorizedServiceToken(bearerToken)) {
     reportProcessSubscriptionFollowupEmailsError(
       "authorization",
@@ -106,6 +107,7 @@ serve(async (req: Request) => {
         hasBearerToken: Boolean(bearerToken),
         bearerTokenLength: bearerToken?.length ?? 0,
         bearerTokenKind: detectTokenKind(bearerToken),
+        bearerTokenPreview: bearerToken ? bearerToken.substring(0, 15) + "..." + bearerToken.substring(Math.max(0, bearerToken.length - 5)) : null,
         acceptedKeyCount: acceptedKeys.length,
         acceptedKeyLengths: acceptedKeys.map((key) => key.length),
         acceptedKeyKinds: acceptedKeys.map((key) => detectTokenKind(key)),

@@ -17,6 +17,9 @@ interface DeleteExpenseRequest {
   expense_id?: string;
   userId?: string;
   user_id?: string;
+  clientRecordId?: string;
+  clientMutationId?: string;
+  idempotencyKey?: string;
 }
 
 const UUID_REGEX =
@@ -86,6 +89,9 @@ Deno.serve(async (req: Request) => {
     if (expenseIds.length === 0) {
       return errorResponse("expenseIds or expenseId is required");
     }
+    const clientRecordId = body.clientRecordId?.trim() || null;
+    const clientMutationId = body.clientMutationId?.trim() ||
+      body.idempotencyKey?.trim() || null;
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
@@ -186,7 +192,7 @@ Deno.serve(async (req: Request) => {
     const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring",
+        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring, deleted_at",
       )
       .in("id", expenseIds);
 
@@ -361,7 +367,11 @@ Deno.serve(async (req: Request) => {
           failedCount: failedIds.length,
           failedIds,
           resolvedUserId: userId,
-          meta: resolvedIdentityMeta,
+          meta: {
+            ...(resolvedIdentityMeta ?? {}),
+            clientRecordId,
+            clientMutationId,
+          },
         }),
         {
           status: 200,
@@ -370,10 +380,13 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Delete the expenses
+    // Soft-delete the expenses so mobile delta sync can return tombstones.
     const { error: delError } = await supabase
       .from("expenses")
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .in("id", allowedExpenseIds);
 
     if (delError) return errorResponse("Failed to delete expense", 500);
@@ -388,9 +401,12 @@ Deno.serve(async (req: Request) => {
       const deletedExpenses = allowedExpenseIds
         .map((id) => expenseById.get(id))
         .filter(Boolean) as any[];
+      const notificationExpenses = deletedExpenses.filter((expense) =>
+        !expense.deleted_at
+      );
 
       const sharedCounts = new Map<string, number>();
-      for (const expense of deletedExpenses) {
+      for (const expense of notificationExpenses) {
         const householdId = expense.household_id as string | null | undefined;
         if (!householdId) continue;
         if (householdPortfolioMap.get(householdId) === true) continue;
@@ -414,8 +430,10 @@ Deno.serve(async (req: Request) => {
           }
         } catch (_) {}
 
-        if (allowedExpenseIds.length === 1 && deletedExpenses.length === 1) {
-          const expense = deletedExpenses[0];
+        if (
+          allowedExpenseIds.length === 1 && notificationExpenses.length === 1
+        ) {
+          const expense = notificationExpenses[0];
           const householdId = expense.household_id as string | null | undefined;
           if (householdId && householdPortfolioMap.get(householdId) !== true) {
             console.log(
@@ -465,6 +483,7 @@ Deno.serve(async (req: Request) => {
               batch_count: count,
               recurring_count: deletedExpenses.filter(
                 (expense) =>
+                  !expense.deleted_at &&
                   expense.household_id === householdId &&
                   expense.is_recurring === true,
               ).length,
@@ -500,7 +519,11 @@ Deno.serve(async (req: Request) => {
       failedCount: failedIds.length,
       failedIds,
       resolvedUserId: userId,
-      meta: resolvedIdentityMeta,
+      meta: {
+        ...(resolvedIdentityMeta ?? {}),
+        clientRecordId,
+        clientMutationId,
+      },
     };
 
     // For non-GPT requests, include shared flag
