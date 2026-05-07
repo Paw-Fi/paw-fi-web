@@ -2,8 +2,16 @@
 
 import { Suspense, lazy } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, FileText } from "lucide-react";
+import { Clock, FileText,ArrowRight } from "lucide-react";
 import { StructuredData } from "@/components/seo/structured-data";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import {
   findHelpArticleBySlug,
   getHelpCategory,
@@ -158,14 +166,30 @@ function HelpArticlePage() {
 
       <div className="min-w-0 flex-1">
         <header className="mb-10">
-          <div className="mb-4 flex items-center gap-3 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
-            {category && <span>{category.title}</span>}
-            {category && <span className="h-1 w-1 rounded-full bg-border" />}
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {article.readTime} min read
-            </span>
-          </div>
+          <Breadcrumb className="mb-4">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/help">Help Center</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {category && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to="/help">{category.title}</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                </>
+              )}
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{article.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          
           <h1
             id="help-article-title"
             className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl"
@@ -204,13 +228,13 @@ function HelpArticlePage() {
         </footer>
       </div>
 
-      <aside className="order-first w-full shrink-0 lg:order-last lg:w-64 lg:sticky lg:top-32" aria-label="Related help">
+      <aside className="order-last mt-10 lg:mt-0 w-full shrink-0 lg:order-last lg:w-64 lg:sticky lg:top-32" aria-label="Related help">
         <div className="space-y-12 pb-12 lg:pb-0">
           <section>
             <h2 className="mb-4 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
               In this category
             </h2>
-            <nav className="space-y-5" aria-label="Related articles">
+            <nav className="space-y-5 flex flex-col-reverse lg:flex-col" aria-label="Related articles">
               {relatedArticles.map((relatedArticle) => (
                 <Link
                   key={relatedArticle.id}

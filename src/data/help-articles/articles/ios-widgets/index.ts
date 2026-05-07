@@ -6,7 +6,7 @@ export const iosWidgetsArticle: HelpArticle = {
   slug: "ios-home-screen-widgets",
   title: "How to Add Moneko Widgets to Your iOS Home Screen",
   description:
-    "Learn how to add Moneko widgets to your iOS home screen to view your budget envelopes, spending progress, and top categories at a glance. Widgets display data for your selected Space in a configurable currency (defaults to USD).",
+    "Learn how to add Moneko widgets to your iOS home screen to view your budget envelopes, spending progress, and top categories at a glance. Widgets display data for your selected Space in your selected currency.",
   categoryId: "getting-started",
   readTime: 3,
   keywords: [

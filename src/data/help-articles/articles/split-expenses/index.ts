@@ -23,7 +23,7 @@ export const splitExpensesArticle: HelpArticle = {
   faqItems: [
     {
       question: "How does Moneko split expenses?",
-      answer: "When you log an expense in a shared Space, Moneko splits it evenly by default.",
+      answer: "When you log an expense in a shared Space, Moneko splits it according to your Auto Split setting in household settings. You can configure the default split type (equal, percentage, or shares) for your Space.",
     },
     {
       question: "Can I split an expense unevenly?",
@@ -32,7 +32,7 @@ export const splitExpensesArticle: HelpArticle = {
     },
     {
       question: "What happens if I do not specify a split?",
-      answer: "If you do not specify a custom split, Moneko keeps the expense evenly split.",
+      answer: "If you do not specify a custom split while logging, Moneko applies the default split configured in your household Auto Split settings.",
     },
     {
       question: "Can I edit a split after logging an expense?",
@@ -87,21 +87,36 @@ You do not need spreadsheets, manual calculations, or a separate bill-splitting 
 
 ## Automatic Splitting in a Shared Space
 
-When you log an expense in a shared Space, Moneko splits it evenly by default.
+When you log an expense in a shared Space, Moneko splits it according to your Auto Split settings.
 
-For example, if you enter:
+### Configuring Default Split Behavior
 
-- Dinner 120
+To set how expenses are split by default for your Space:
 
-and there are two people in the Space, Moneko splits it as:
+1. Open your shared Space
+2. Go to **Settings**
+3. Find the **Auto Split** section
+4. Toggle **Auto split** on
+5. Choose your default split type:
+   - **Equal** - Split evenly among all members
+   - **Percentage** - Split by percentage for each member
+   - **Shares** - Split by shares for each member
+6. Configure the split for each member
+7. Save your settings
+
+![Auto Split Settings](/help/split-expenses/01.png)
+
+For example, if you have Auto Split set to **Equal** and there are two people in the Space, entering "Dinner 120" splits it as:
 
 - 60 / 60
 
-You do not need to calculate anything yourself.
+If you have Auto Split set to **Percentage** with 70% for you and 30% for Bob, entering "Dinner 120" splits it as:
+
+- 84 / 36
 
 ### Expected Result
 
-The expense is added to the shared Space and split evenly between members by default.
+The expense is added to the shared Space and split according to your configured Auto Split settings.
 
 ---
 
