@@ -6,6 +6,7 @@ import { createFirstSpaceArticle } from "./create-first-space";
 import { emailReceiptsArticle } from "./email-receipts";
 import { envelopeBudgetingArticle } from "./envelope-budgeting";
 import { importExportDataArticle } from "./import-export-data";
+import { iosWidgetsArticle } from "./ios-widgets";
 import { logExpenseArticle } from "./log-expense";
 import { pocketsArticle } from "./pockets";
 import { quickActionsSiriArticle } from "./quick-actions-siri";
@@ -21,6 +22,7 @@ export const helpArticles: HelpArticle[] = [
   sharedExpenseTrackerGuideArticle,
   createFirstSpaceArticle,
   importExportDataArticle,
+  iosWidgetsArticle,
   logExpenseArticle,
   splitExpensesArticle,
   whatsappTelegramArticle,
