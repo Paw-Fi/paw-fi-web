@@ -166,7 +166,7 @@ function HelpCenterPage() {
           </aside>
 
           {/* Content Area */}
-          <main className="min-w-0 flex-1 py-12 lg:pl-12">
+          <main className="min-w-0 flex-1 pt-3 pb-12 lg:pl-12">
             {isIndex ? (
               <div className="space-y-16">
                 {/* Hero & Search */}
