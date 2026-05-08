@@ -192,7 +192,7 @@ Deno.serve(async (req: Request) => {
     const { data: expenses, error } = await supabase
       .from("expenses")
       .select(
-        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring, deleted_at",
+        "id, user_id, contact_id, household_id, amount_cents, currency, raw_text, category, date, type, is_recurring",
       )
       .in("id", expenseIds);
 
@@ -380,13 +380,35 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Soft-delete the expenses so mobile delta sync can return tombstones.
+    const deletedAt = new Date().toISOString();
+    const tombstones = allowedExpenseIds
+      .map((id) => expenseById.get(id))
+      .filter(Boolean)
+      .map((expense: any) => ({
+        id: expense.id,
+        user_id: expense.user_id ?? null,
+        contact_id: expense.contact_id ?? null,
+        household_id: expense.household_id ?? null,
+        deleted_at: deletedAt,
+      }));
+
+    if (tombstones.length > 0) {
+      const { error: tombstoneError } = await supabase
+        .from("mobile_expense_tombstones")
+        .upsert(tombstones, { onConflict: "id" });
+
+      if (tombstoneError) {
+        console.error(
+          "[delete-expense] Failed to record mobile tombstones:",
+          tombstoneError,
+        );
+        return errorResponse("Failed to delete expense", 500);
+      }
+    }
+
     const { error: delError } = await supabase
       .from("expenses")
-      .update({
-        deleted_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .delete()
       .in("id", allowedExpenseIds);
 
     if (delError) return errorResponse("Failed to delete expense", 500);
@@ -401,9 +423,7 @@ Deno.serve(async (req: Request) => {
       const deletedExpenses = allowedExpenseIds
         .map((id) => expenseById.get(id))
         .filter(Boolean) as any[];
-      const notificationExpenses = deletedExpenses.filter((expense) =>
-        !expense.deleted_at
-      );
+      const notificationExpenses = deletedExpenses;
 
       const sharedCounts = new Map<string, number>();
       for (const expense of notificationExpenses) {
@@ -483,7 +503,6 @@ Deno.serve(async (req: Request) => {
               batch_count: count,
               recurring_count: deletedExpenses.filter(
                 (expense) =>
-                  !expense.deleted_at &&
                   expense.household_id === householdId &&
                   expense.is_recurring === true,
               ).length,

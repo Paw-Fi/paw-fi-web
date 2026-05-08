@@ -1,3 +1,20 @@
+CREATE TABLE IF NOT EXISTS public.mobile_expense_tombstones (
+  id UUID PRIMARY KEY,
+  user_id UUID,
+  contact_id UUID,
+  household_id UUID,
+  deleted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_mobile_expense_tombstones_user_deleted
+  ON public.mobile_expense_tombstones(user_id, deleted_at);
+
+CREATE INDEX IF NOT EXISTS idx_mobile_expense_tombstones_contact_deleted
+  ON public.mobile_expense_tombstones(contact_id, deleted_at);
+
+CREATE INDEX IF NOT EXISTS idx_mobile_expense_tombstones_household_deleted
+  ON public.mobile_expense_tombstones(household_id, deleted_at);
+
 CREATE OR REPLACE FUNCTION public.get_mobile_delta_v1(
   p_user_id UUID,
   p_since TIMESTAMPTZ DEFAULT NULL,
@@ -25,21 +42,71 @@ BEGIN
     FROM public.household_members
     WHERE user_id = p_user_id
   ),
-  visible_expenses AS (
+  visible_changes AS (
     SELECT
-      e.*,
-      GREATEST(
-        COALESCE(e.updated_at, e.created_at, '-infinity'::timestamptz),
-        COALESCE(e.deleted_at, '-infinity'::timestamptz)
-      ) AS mobile_changed_at
+      'transaction'::TEXT AS change_kind,
+      e.id,
+      COALESCE(e.updated_at, e.created_at, '-infinity'::timestamptz)
+        AS mobile_changed_at,
+      jsonb_build_object(
+        'id', e.id,
+        'contact_id', e.contact_id,
+        'user_id', e.user_id,
+        'household_id', e.household_id,
+        'date', e.date,
+        'amount_cents', e.amount_cents,
+        'currency', e.currency,
+        'category', e.category,
+        'created_at', e.created_at,
+        'updated_at', e.updated_at,
+        'raw_text', e.raw_text,
+        'merchant', e.merchant,
+        'breakdown', e.breakdown,
+        'receipt_image_url', e.receipt_image_url,
+        'split_group_id', e.split_group_id,
+        'account_id', e.account_id,
+        'type', e.type,
+        'is_recurring', e.is_recurring,
+        'mobile_changed_at',
+        COALESCE(e.updated_at, e.created_at, '-infinity'::timestamptz)
+      ) AS transaction_payload,
+      NULL::UUID AS deleted_transaction_id
     FROM public.expenses e
-    WHERE e.user_id = p_user_id
-       OR e.contact_id IN (SELECT id FROM visible_contacts)
-       OR e.household_id IN (SELECT household_id FROM visible_households)
+    WHERE e.deleted_at IS NULL
+      AND (
+        e.user_id = p_user_id
+        OR e.contact_id IN (SELECT id FROM visible_contacts)
+        OR e.household_id IN (SELECT household_id FROM visible_households)
+      )
+    UNION ALL
+    SELECT
+      'deleted'::TEXT AS change_kind,
+      e.id,
+      COALESCE(e.deleted_at, e.updated_at, e.created_at) AS mobile_changed_at,
+      NULL::JSONB AS transaction_payload,
+      e.id AS deleted_transaction_id
+    FROM public.expenses e
+    WHERE e.deleted_at IS NOT NULL
+      AND (
+        e.user_id = p_user_id
+        OR e.contact_id IN (SELECT id FROM visible_contacts)
+        OR e.household_id IN (SELECT household_id FROM visible_households)
+      )
+    UNION ALL
+    SELECT
+      'deleted'::TEXT AS change_kind,
+      t.id,
+      t.deleted_at AS mobile_changed_at,
+      NULL::JSONB AS transaction_payload,
+      t.id AS deleted_transaction_id
+    FROM public.mobile_expense_tombstones t
+    WHERE t.user_id = p_user_id
+       OR t.contact_id IN (SELECT id FROM visible_contacts)
+       OR t.household_id IN (SELECT household_id FROM visible_households)
   ),
   changed AS (
     SELECT *
-    FROM visible_expenses
+    FROM visible_changes
     WHERE p_since IS NULL OR mobile_changed_at > p_since
     ORDER BY mobile_changed_at ASC, id ASC
     LIMIT v_limit + 1
@@ -53,34 +120,16 @@ BEGIN
   SELECT
     COALESCE(
       jsonb_agg(
-        jsonb_build_object(
-          'id', p.id,
-          'contact_id', p.contact_id,
-          'user_id', p.user_id,
-          'household_id', p.household_id,
-          'date', p.date,
-          'amount_cents', p.amount_cents,
-          'currency', p.currency,
-          'category', p.category,
-          'created_at', p.created_at,
-          'updated_at', p.updated_at,
-          'raw_text', p.raw_text,
-          'merchant', p.merchant,
-          'breakdown', p.breakdown,
-          'receipt_image_url', p.receipt_image_url,
-          'split_group_id', p.split_group_id,
-          'account_id', p.account_id,
-          'type', p.type,
-          'is_recurring', p.is_recurring,
-          'mobile_changed_at', p.mobile_changed_at
-        )
+        p.transaction_payload
         ORDER BY p.mobile_changed_at ASC, p.id ASC
-      ) FILTER (WHERE p.deleted_at IS NULL),
+      ) FILTER (WHERE p.change_kind = 'transaction'),
       '[]'::JSONB
     ),
     COALESCE(
-      jsonb_agg(to_jsonb(p.id) ORDER BY p.mobile_changed_at ASC, p.id ASC)
-        FILTER (WHERE p.deleted_at IS NOT NULL),
+      jsonb_agg(
+        to_jsonb(p.deleted_transaction_id)
+        ORDER BY p.mobile_changed_at ASC, p.id ASC
+      ) FILTER (WHERE p.change_kind = 'deleted'),
       '[]'::JSONB
     ),
     MAX(p.mobile_changed_at),
