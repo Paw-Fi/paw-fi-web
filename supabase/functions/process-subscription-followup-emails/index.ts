@@ -31,6 +31,10 @@ const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") ?? "").trim();
 const SUPABASE_SERVICE_ROLE_KEY =
   (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
 const SERVICE_ROLE_KEY = (Deno.env.get("SERVICE_ROLE_KEY") ?? "").trim();
+const SECRET_SUPABASE_SERVICE_ROLE_API_KEY =
+  (Deno.env.get("SECRET_SUPABASE_SERVICE_ROLE_API_KEY") ?? "").trim();
+const ALLOW_SERVICE_TOKEN_FALLBACK =
+  (Deno.env.get("ALLOW_SERVICE_TOKEN_FALLBACK") ?? "").trim().toLowerCase() === "true";
 
 const QUEUE_TABLE = "subscription_followup_email_queue";
 const FOUNDER_FROM = "Yifan from Moneko <yifan.lim@moneko.io>";
@@ -96,33 +100,67 @@ serve(async (req: Request) => {
 
   const authHeader = req.headers.get("Authorization") ?? "";
   const bearerToken = extractBearerToken(authHeader);
+  const apikeyHeader = (req.headers.get("apikey") ?? "").trim();
+  const internalKeyHeader = (req.headers.get("X-Moneko-Internal-Key") ?? "").trim();
   const acceptedKeys = getAcceptedServiceRoleKeys();
+  const presentedTokens = getPresentedServiceTokens({
+    bearerToken,
+    apikeyHeader,
+  });
+  const authResult = resolveServiceAuthorization({
+    internalKeyHeader,
+    presentedTokens,
+  });
 
-  if (!bearerToken || !isAuthorizedServiceToken(bearerToken)) {
+
+  if (!authResult.authorized) {
     reportProcessSubscriptionFollowupEmailsError(
       "authorization",
       new Error("Unauthorized"),
       {
+        authPath: authResult.path,
+        hasInternalKeyHeader: internalKeyHeader.length > 0,
+        internalKeyLength: internalKeyHeader.length,
+        internalKeyKind: detectTokenKind(internalKeyHeader || null),
         hasBearerToken: Boolean(bearerToken),
         bearerTokenLength: bearerToken?.length ?? 0,
         bearerTokenKind: detectTokenKind(bearerToken),
+        hasApikeyHeader: apikeyHeader.length > 0,
+        apikeyLength: apikeyHeader.length,
+        apikeyKind: detectTokenKind(apikeyHeader || null),
+        presentedTokenCount: presentedTokens.length,
+        presentedTokenKinds: presentedTokens.map((token) => detectTokenKind(token)),
+        bearerTokenPreview: bearerToken ? bearerToken.substring(0, 15) + "..." + bearerToken.substring(Math.max(0, bearerToken.length - 5)) : null,
         acceptedKeyCount: acceptedKeys.length,
         acceptedKeyLengths: acceptedKeys.map((key) => key.length),
         acceptedKeyKinds: acceptedKeys.map((key) => detectTokenKind(key)),
         hasSupabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY.length > 0,
         hasServiceRoleKey: SERVICE_ROLE_KEY.length > 0,
+        hasSecretSupabaseServiceRoleApiKey: SECRET_SUPABASE_SERVICE_ROLE_API_KEY.length > 0,
+        allowServiceTokenFallback: ALLOW_SERVICE_TOKEN_FALLBACK,
       },
     );
 
     console.error("[process-subscription-followup-emails] unauthorized request", {
+      authPath: authResult.path,
+      hasInternalKeyHeader: internalKeyHeader.length > 0,
+      internalKeyLength: internalKeyHeader.length,
+      internalKeyKind: detectTokenKind(internalKeyHeader || null),
       hasBearerToken: Boolean(bearerToken),
       bearerTokenLength: bearerToken?.length ?? 0,
       bearerTokenKind: detectTokenKind(bearerToken),
+      hasApikeyHeader: apikeyHeader.length > 0,
+      apikeyLength: apikeyHeader.length,
+      apikeyKind: detectTokenKind(apikeyHeader || null),
+      presentedTokenCount: presentedTokens.length,
+      presentedTokenKinds: presentedTokens.map((token) => detectTokenKind(token)),
       acceptedKeyCount: acceptedKeys.length,
       acceptedKeyLengths: acceptedKeys.map((key) => key.length),
       acceptedKeyKinds: acceptedKeys.map((key) => detectTokenKind(key)),
       hasSupabaseServiceRoleKey: SUPABASE_SERVICE_ROLE_KEY.length > 0,
       hasServiceRoleKey: SERVICE_ROLE_KEY.length > 0,
+      hasSecretSupabaseServiceRoleApiKey: SECRET_SUPABASE_SERVICE_ROLE_API_KEY.length > 0,
+      allowServiceTokenFallback: ALLOW_SERVICE_TOKEN_FALLBACK,
       projectRefHeader: req.headers.get("x-forwarded-host") ?? null,
     });
     return jsonResponse(
@@ -344,7 +382,11 @@ function extractBearerToken(authHeader: string): string | null {
 }
 
 function getAcceptedServiceRoleKeys(): string[] {
-  return [SUPABASE_SERVICE_ROLE_KEY, SERVICE_ROLE_KEY].filter((key) => key.length > 0);
+  return [
+    SUPABASE_SERVICE_ROLE_KEY,
+    SERVICE_ROLE_KEY,
+    SECRET_SUPABASE_SERVICE_ROLE_API_KEY,
+  ].filter((key) => key.length > 0);
 }
 
 function hasConfiguredServiceRoleKey(): boolean {
@@ -353,7 +395,60 @@ function hasConfiguredServiceRoleKey(): boolean {
 
 function isAuthorizedServiceToken(token: string): boolean {
   const normalized = token.trim();
-  return getAcceptedServiceRoleKeys().some((key) => key === normalized);
+  if (!normalized) return false;
+  return getAcceptedServiceRoleKeys().some((key) => constantTimeCompare(key, normalized));
+}
+
+function isAuthorizedServiceRequest(tokens: string[]): boolean {
+  if (tokens.length === 0) {
+    return false;
+  }
+
+  return tokens.some((token) => isAuthorizedServiceToken(token));
+}
+
+function resolveServiceAuthorization(params: {
+  internalKeyHeader: string;
+  presentedTokens: string[];
+}): {
+  authorized: boolean;
+  path: "internal_header" | "service_token_fallback" | "none";
+} {
+  if (params.internalKeyHeader && isAuthorizedServiceToken(params.internalKeyHeader)) {
+    return {
+      authorized: true,
+      path: "internal_header",
+    };
+  }
+
+  if (ALLOW_SERVICE_TOKEN_FALLBACK && isAuthorizedServiceRequest(params.presentedTokens)) {
+    return {
+      authorized: true,
+      path: "service_token_fallback",
+    };
+  }
+
+  return {
+    authorized: false,
+    path: "none",
+  };
+}
+
+function getPresentedServiceTokens(params: {
+  bearerToken: string | null;
+  apikeyHeader: string;
+}): string[] {
+  const tokens: string[] = [];
+
+  if (params.bearerToken && params.bearerToken.length > 0) {
+    tokens.push(params.bearerToken.trim());
+  }
+
+  if (params.apikeyHeader.length > 0) {
+    tokens.push(params.apikeyHeader);
+  }
+
+  return [...new Set(tokens)];
 }
 
 function detectTokenKind(token: string | null): "jwt" | "sb_secret" | "other" | "missing" {
@@ -370,6 +465,19 @@ function detectTokenKind(token: string | null): "jwt" | "sb_secret" | "other" | 
   }
 
   return "other";
+}
+
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+
+  return result === 0;
 }
 
 function jsonResponse(
