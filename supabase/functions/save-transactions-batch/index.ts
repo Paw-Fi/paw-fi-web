@@ -66,6 +66,9 @@ interface TransactionItem {
   customSplits?: CustomSplits;
   payerUserId?: string;
   accountId?: string;
+  clientRecordId?: string;
+  clientMutationId?: string;
+  idempotencyKey?: string;
   // Income-specific fields
   ownerType?: "me" | "partner" | "household";
   privacyScope?: "private" | "balances_only" | "full";
@@ -669,6 +672,12 @@ export async function saveTransactionsBatchInternal(
 
     const accountIdForRecord = resolvedAccountId || null;
     const householdIdForRecord = scopeHouseholdId;
+    const idempotencyKey =
+      typeof tx.idempotencyKey === "string"
+        ? tx.idempotencyKey.trim() || null
+        : typeof tx.clientMutationId === "string"
+          ? tx.clientMutationId.trim() || null
+          : null;
     const importRequestKey = buildImportRequestKey(body.debugTraceId, i);
     const importSemanticKey = buildImportSemanticKey({
       userId,
@@ -702,6 +711,7 @@ export async function saveTransactionsBatchInternal(
       is_recurring: tx.isRecurring === true,
       recurrence_rule:
         tx.isRecurring === true ? tx.recurrence_rule || null : null,
+      idempotency_key: idempotencyKey,
       import_request_key: importRequestKey,
       import_semantic_key: importSemanticKey,
     };
