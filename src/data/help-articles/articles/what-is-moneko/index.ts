@@ -46,6 +46,7 @@ export const whatIsMonekoArticle: HelpArticle = {
       answer: "Yes. Separate Spaces allow you to manage different types of budgets independently.",
     },
   ],
+  videoId: "i1-91JNt87o",
   content: `# What is Moneko?
 
 Moneko is a mobile-first budgeting and expense tracking app designed to help you capture spending quickly, organize money into monthly pockets, manage personal or household finances, and plan your financial future with AI.

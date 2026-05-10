@@ -96,6 +96,7 @@ export const walletsArticle: HelpArticle = {
       text: "Use the Transfer feature to move funds between Wallets within the same Space.",
     },
   ],
+  videoId: "8LSJN9ka6a8",
   content: `# How to Use Wallets in Moneko
 
 Wallets let you track your actual money, balances, and net worth in Moneko.

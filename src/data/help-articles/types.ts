@@ -31,4 +31,5 @@ export interface HelpArticle {
   faqItems?: HelpArticleFaqItem[];
   howToSteps?: HelpArticleHowToStep[];
   content: string;
+  videoId?: string;
 }

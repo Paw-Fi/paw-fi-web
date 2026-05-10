@@ -78,6 +78,7 @@ export const logExpenseArticle: HelpArticle = {
       text: "Moneko will extract the amount and details and save it to your current Space.",
     },
   ],
+  videoId: "ZhCPEVZzk0U",
   content: `# How to Log an Expense in Moneko
 
 Logging an expense in Moneko only takes a few seconds.

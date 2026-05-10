@@ -80,6 +80,7 @@ export const envelopeBudgetingArticle: HelpArticle = {
       text: "Always know how much you have left in each category before you spend.",
     },
   ],
+  videoId: "YDXWBoVWpsw",
   content: `# How to Use Envelope Budgeting in Moneko
 
 Envelope budgeting is a simple way to manage your money by giving every part of your spending a clear limit.

@@ -74,6 +74,7 @@ export const createFirstSpaceArticle: HelpArticle = {
       text: "Enter a name, choose visibility (private or shared), and tap Continue.",
     },
   ],
+  videoId: "4uwY05JGXBE",
   content: `# How to Create Your First Space in Moneko
 
 If you are new to Moneko, one of the first things to understand is **Spaces**.

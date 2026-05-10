@@ -79,6 +79,7 @@ export const recurringExpensesIncomeArticle: HelpArticle = {
       text: "Choose how often the item repeats (e.g., monthly, weekly) and save.",
     },
   ],
+  videoId: "iXiYPbVd2uU",
   content: `# How to Set Up Recurring Expenses and Income in Moneko
 
 Recurring lets you automate expenses and income that happen regularly.

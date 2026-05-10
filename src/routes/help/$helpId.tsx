@@ -20,6 +20,7 @@ import {
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
 import { FaqSection } from "@/components/ui/faq-section";
+import { YouTubeEmbed } from "@/components/ui/youtube-embed";
 
 const Markdown = lazy(() =>
   import("@/components/ui/markdown").then((module) => ({
@@ -189,7 +190,7 @@ function HelpArticlePage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          
+
           <h1
             id="help-article-title"
             className="text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl"
@@ -200,6 +201,10 @@ function HelpArticlePage() {
             {article.description}
           </p>
         </header>
+
+        {article.videoId && (
+          <YouTubeEmbed videoId={article.videoId} title={article.title} />
+        )}
 
         <section aria-label="Article content" className="border-t border-border pt-10">
           <div className="max-w-none">
