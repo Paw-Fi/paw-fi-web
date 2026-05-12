@@ -52,6 +52,19 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function summarizeCustomSplits(customSplits?: CustomSplits | null) {
+  if (!customSplits) return null;
+  return {
+    splitType: customSplits.splitType,
+    memberSplits: customSplits.memberSplits?.map((split) => ({
+      userId: split.userId,
+      amount: split.amount,
+      percentage: split.percentage,
+      shares: split.shares,
+    })),
+  };
+}
+
 interface TransactionItem {
   type: "expense" | "income";
   amount: number;
@@ -465,6 +478,11 @@ export async function saveTransactionsBatchInternal(
       hasDefaultConfig: householdAutoSplitSettings.defaultConfig != null,
       hasRequestCustomSplits: meta.customSplits != null,
       decision: effective.kind,
+      requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+      effectiveCustomSplits:
+        effective.kind === "skip"
+          ? null
+          : summarizeCustomSplits(effective.customSplits),
     });
     if (effective.kind === "skip") {
       return expense;
@@ -1177,6 +1195,11 @@ export async function saveTransactionsBatchInternal(
                 householdAutoSplitSettings.defaultConfig != null,
               hasRequestCustomSplits: meta.customSplits != null,
               decision: effective.kind,
+              requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+              effectiveCustomSplits:
+                effective.kind === "skip"
+                  ? null
+                  : summarizeCustomSplits(effective.customSplits),
             });
             if (effective.kind === "skip") {
               // Household opted out of auto-split: log expense against the
@@ -1582,6 +1605,14 @@ if (import.meta.main) {
       progressOffset: body.progressOffset,
       progressTotal: body.progressTotal,
       stream: isStreamMode,
+      splitFields: body.transactions?.map((transaction, index) => ({
+        index,
+        type: transaction.type,
+        amount: transaction.amount,
+        category: transaction.category,
+        payerUserId: transaction.payerUserId,
+        customSplits: summarizeCustomSplits(transaction.customSplits),
+      })),
     });
 
     if (!Array.isArray(body.transactions) || body.transactions.length === 0) {

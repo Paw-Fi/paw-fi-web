@@ -5,8 +5,9 @@
 // 20260420140000_add_household_ai_default_split.sql).
 //
 // When `ai_use_default_split` is FALSE the household opts out of automatic
-// splitting: expenses still log against the household but no
-// `expense_split_groups` row is created.
+// default splitting: expenses still log against the household, and no
+// `expense_split_groups` row is created unless the request carries an explicit
+// custom-splits payload from the user's input.
 //
 // When `ai_use_default_split` is TRUE and the request does not carry an
 // explicit custom-splits payload, we fall back to `ai_default_split_config`
@@ -223,9 +224,8 @@ export async function fetchHouseholdAutoSplitSettings(
  * Given the request's explicit customSplits (if any) and the household auto-
  * split settings, resolve the effective split behaviour.
  *
- * - If autoSplitEnabled is false → skip splitting, even when a stale client
- *   sends explicit customSplits.
  * - If caller provided non-equal customSplits → honour them verbatim.
+ * - If autoSplitEnabled is false → skip automatic/default splitting.
  * - If autoSplitEnabled is true and a stored default template exists → use it.
  * - Otherwise → fall back to equal split (null customSplits payload).
  */
@@ -233,22 +233,26 @@ export function resolveEffectiveSplit(
   explicit: unknown,
   settings: HouseholdAutoSplitSettings,
 ): EffectiveSplit {
-  if (!settings.autoSplitEnabled) {
-    return { kind: "skip" };
-  }
-
   if (hasExplicitCustomSplits(explicit)) {
     const coerced = coerceCustomSplits(explicit);
     if (!coerced) {
-      return { kind: "customSplits", customSplits: settings.defaultConfig };
+      return settings.autoSplitEnabled
+        ? { kind: "customSplits", customSplits: settings.defaultConfig }
+        : { kind: "skip" };
     }
     if (isSemanticallyEqualSplit(coerced)) {
       console.log(
         "[household-auto-split] Ignoring equal-like explicit custom splits; using household default when available",
       );
-      return { kind: "customSplits", customSplits: settings.defaultConfig };
+      return settings.autoSplitEnabled
+        ? { kind: "customSplits", customSplits: settings.defaultConfig }
+        : { kind: "skip" };
     }
     return { kind: "customSplits", customSplits: coerced };
+  }
+
+  if (!settings.autoSplitEnabled) {
+    return { kind: "skip" };
   }
 
   return { kind: "customSplits", customSplits: settings.defaultConfig };
