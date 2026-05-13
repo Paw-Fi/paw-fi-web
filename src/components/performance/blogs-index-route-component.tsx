@@ -19,29 +19,29 @@ export function BlogsIndexRouteComponent() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    let isMounted = true;
+  // useEffect(() => {
+  //   let isMounted = true;
 
-    void fetchSubredditBlogs()
-      .then((redditBlogs) => {
-        if (!isMounted) {
-          return;
-        }
+  //   void fetchSubredditBlogs()
+  //     .then((redditBlogs) => {
+  //       if (!isMounted) {
+  //         return;
+  //       }
 
-        setBlogs([...redditBlogs, ...initialBlogs]);
-      })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
+  //       setBlogs([...redditBlogs, ...initialBlogs]);
+  //     })
+  //     .catch(() => {
+  //       if (!isMounted) {
+  //         return;
+  //       }
 
-        setBlogs(initialBlogs);
-      });
+  //       setBlogs(initialBlogs);
+  //     });
 
-    return () => {
-      isMounted = false;
-    };
-  }, [initialBlogs]);
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, [initialBlogs]);
 
   const availableTags = useMemo(() => getUniqueTagsFromBlogs(blogs), [blogs]);
 

@@ -5,7 +5,7 @@ let staticBlogsPromise: Promise<Blog[]> | null = null;
 export async function loadStaticBlogs(): Promise<Blog[]> {
   if (!staticBlogsPromise) {
     staticBlogsPromise = import("@/data/blogs/blogs").then(
-      (module) => module.blogs,
+      (module) => module.blogs.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()),
     );
   }
 

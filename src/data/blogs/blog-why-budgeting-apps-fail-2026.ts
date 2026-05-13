@@ -168,6 +168,9 @@ Moneko reduces repetitive work through:
 
 This keeps budgeting manageable during normal life instead of only during highly organized weeks.
 
+<youtube-embed video-id="i1-91JNt87o" title="Simple Expense Tracking with Moneko"></youtube-embed>
+
+
 ## Budgeting App FAQs
 
 ### Why do most people stop using budgeting apps?

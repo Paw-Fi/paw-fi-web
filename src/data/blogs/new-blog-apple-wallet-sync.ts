@@ -10,7 +10,7 @@ const newBlog: Blog = {
   slug: "apple-wallet-sync-2026",
   excerpt:
     "Learn how to sync Apple Wallet with your budget in 2026 with this complete guide for iPhone users, featuring Moneko for frictionless envelope budgeting without bank logins.",
-  coverImage: "https://placekitten.com/800/400",
+  coverImage: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle:

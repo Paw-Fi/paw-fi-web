@@ -39,6 +39,10 @@ That is why Moneko focuses heavily on fast expense capture. Instead of manually 
 
 The app automatically organizes the details afterward, including categorization, shared splits, budget updates, recurring expenses, and spending summaries. This reduces most of the repetitive work that usually makes budgeting feel exhausting over time.
 
+Embed Video: **How Quick Expense Logging Works in Moneko**
+
+<youtube-embed video-id="ZhCPEVZzk0U" title="How Quick Expense Logging Works in Moneko"></youtube-embed>
+
 ## Shared Expenses Make Manual Tracking Worse
 
 Expense tracking becomes harder once multiple people are involved. This is especially true for couples, roommates, families, and travel groups where spending constantly overlaps across different accounts and payment methods.
@@ -48,6 +52,8 @@ Shared expenses create operational problems quickly. One person pays dinner, ano
 Moneko simplifies this through Spaces. Instead of mixing everything into one budget, you create separate Spaces for household spending, personal budgets, travel expenses, or group activities. Each Space includes shared members, wallets, budgets, recurring expenses, and spending summaries.
 
 You also set automatic splits and track settlements automatically, which removes much of the manual work that usually makes shared budgeting frustrating over time.
+
+<youtube-embed video-id="4uwY05JGXBE" title="How Shared Spaces Work in Moneko"></youtube-embed>
 
 ## Automation Reduces Budgeting Fatigue
 

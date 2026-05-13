@@ -12,7 +12,6 @@ import { BLOG_STOP_PAYCHECK_TO_PAYCHECK_2026 } from "./blog-stop-paycheck-to-pay
 import { BLOG_AI_BUDGETING_APPS_2026 } from "./blog-ai-budgeting-apps-2026";
 import { BLOG_EASIEST_EXPENSE_TRACKING_2026 } from "./blog-easiest-expense-tracking-2026";
 import { BLOG_WHY_BUDGETING_APPS_FAIL_2026 } from "./blog-why-budgeting-apps-fail-2026";
-import { BLOG_AI_PROMPT_HUMANIZE_2026 } from "./blog-ai-prompt-humanize-2026";
 import { old_blogs } from "./old_blogs";
 
 
@@ -33,5 +32,4 @@ appleWalletSyncBlog,
   ...BLOG_AI_BUDGETING_APPS_2026,
   ...BLOG_EASIEST_EXPENSE_TRACKING_2026,
   ...BLOG_WHY_BUDGETING_APPS_FAIL_2026,
-  ...BLOG_AI_PROMPT_HUMANIZE_2026,
 ];

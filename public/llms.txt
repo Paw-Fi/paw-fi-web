@@ -206,7 +206,6 @@ Use these pages when citing public Moneko information:
 - How to Use AI Budgeting Apps in 2026: https://moneko.io/blogs/how-to-use-ai-budgeting-apps-in-2026
 - The Easiest Way to Keep Track of Your Spending in 2026: https://moneko.io/blogs/the-easiest-way-to-keep-track-of-your-spending-in-2026
 - Why Budgeting Apps Fail Most People in 2026: https://moneko.io/blogs/why-budgeting-apps-fail-most-people-in-2026
-- AI Prompt to Humanize AI Writing: https://moneko.io/blogs/ai-prompt-to-humanize-ai-writing
 - Couple budgeting: https://moneko.io/couple-budgeting
 
 Feature pages:

@@ -82,12 +82,6 @@ const resources = [
     icon: Calculator,
   },
   {
-    title: "Guides",
-    href: "/guides/how-to-calculate-net-worth",
-    description: "Practical, step-by-step personal finance guides.",
-    icon: BookOpen,
-  },
-  {
     title: "Pricing",
     href: "/pricing",
     description: "Simple plans for powerful tools.",

@@ -8,7 +8,7 @@ const newBlog: Blog = {
   title: 'Best YNAB Alternatives in 2026 — Cheaper, Simpler, and Lower Friction',
   slug: 'ynab-alternatives-2026',
   excerpt: 'Explore the best YNAB alternatives in 2026, including Moneko for low-friction envelope budgeting, Monarch Money for all-in-one financial tracking, and more affordable, simpler options.',
-  coverImage: 'https://placekitten.com/800/400',
+  coverImage: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=1600&h=800&fit=crop',
   readTime: 8,
   seo: {
     metaTitle: 'Best YNAB Alternatives in 2026 — Cheaper, Simpler, and Lower Friction',

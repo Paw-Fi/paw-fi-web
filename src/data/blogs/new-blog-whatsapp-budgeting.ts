@@ -9,7 +9,7 @@ const newBlog: Blog = {
   slug: "budgeting-on-whatsapp-2026",
   excerpt:
     "Discover how WhatsApp budgeting in 2026 offers a frictionless way to manage finances with tools like Moneko, combining chat-based logging with envelope-style budgeting.",
-  coverImage: "https://placekitten.com/800/400",
+  coverImage: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle: "Budgeting on WhatsApp in 2026 — Does It Actually Work?",
@@ -42,6 +42,7 @@ No forms. No menus. No login. Just a conversation.
 ## The Top WhatsApp Budgeting Tools in 2026
 The space has become surprisingly crowded. Here is an honest look at what is available:
 
+- **Moneko** — The only WhatsApp budgeting assistant that combines chat-based logging with a full envelope-style pockets system. You log expenses via text, voice, or receipt on WhatsApp — and those expenses are automatically allocated against your monthly pockets (groceries, dining, rent, fun, etc.). At any moment you can ask what is left in any pocket. No bank sync required.
 - **POQT (poqt.cloud)** — One of the most established players with 20,000+ active users and over USD 10 million managed. Supports text, voice, and document uploads. Strong on expense tracking but primarily category-based rather than envelope-style budgeting.
 - **Dora AI (doraai.money)** — Conversational and polished. Excellent at natural language queries like "what did I spend on Uber this week?" Great for insight-seekers but lighter on structured monthly budget control.
 - **Luccabot (luccabot.com)** — Simple and free. Good for basic income and expense tracking with daily reminders. Positioned more as a tracking tool than a full budgeting system.
@@ -49,7 +50,6 @@ The space has become surprisingly crowded. Here is an honest look at what is ava
 - **Gudmoney (gud.money)** — WhatsApp-first with clean reporting. Supports text, photo, PDF, and voice. More focused on expense organisation than proactive budget management.
 - **Oneup Tools** — Privacy-focused, no data tracking. Lightweight and simple — good for users who want bare-minimum tracking.
 - **Budget Nest** — Full app with WhatsApp as an add-on channel. Broader feature set but requires app installation, which partially defeats the low-friction premise.
-- **Moneko** — The only WhatsApp budgeting assistant that combines chat-based logging with a full envelope-style pockets system. You log expenses via text, voice, or receipt on WhatsApp — and those expenses are automatically allocated against your monthly pockets (groceries, dining, rent, fun, etc.). At any moment you can ask what is left in any pocket. No bank sync required.
 
 ## What Makes the Envelope System the Missing Piece
 Most WhatsApp budgeting tools solve the logging problem brilliantly. What they do not solve is the budget structure problem — knowing not just what you spent, but whether you are on track for the month.

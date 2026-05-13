@@ -9,7 +9,7 @@ const newBlog: Blog = {
   slug: "whatsapp-vs-apps-2026",
   excerpt:
     "Compare WhatsApp budgeting with traditional apps in 2026, focusing on ease of logging, budget structure, privacy, setup, habit formation, features, and cost, with Moneko as a standout option.",
-  coverImage: "https://placekitten.com/800/400",
+  coverImage: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle:
