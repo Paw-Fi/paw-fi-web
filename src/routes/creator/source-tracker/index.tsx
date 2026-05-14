@@ -197,7 +197,7 @@ function SourceTrackerPage() {
                           className="inline-flex items-center gap-2 rounded-md border border-white/10 px-3 py-1 text-xs text-white/75 transition hover:bg-white/10 hover:text-white"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          View rows
+                          View Details
                         </Link>
                       </TableCell>
                     </TableRow>

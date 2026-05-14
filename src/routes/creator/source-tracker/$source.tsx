@@ -3,6 +3,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Download,
+  FileText,
   MousePointerClick,
   RefreshCw,
   Search,
@@ -20,6 +21,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   getAttributionSource,
   matchesAttributionSearch,
@@ -74,14 +83,25 @@ function SourceTrackerDetailPage() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            className="border-primary/30 text-primary hover:bg-primary/10 gap-2 bg-transparent"
-            onClick={() => setRefreshKey((key) => key + 1)}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              variant="outline"
+              className="gap-2 border-white/20 bg-transparent text-white hover:bg-white/10"
+              disabled={isLoading || sourceRows.length === 0}
+              onClick={() => exportInfluencerReportPdf(sourceName, sourceRows)}
+            >
+              <FileText className="h-4 w-4" />
+              Export PDF
+            </Button>
+            <Button
+              variant="outline"
+              className="border-primary/30 text-primary hover:bg-primary/10 gap-2 bg-transparent"
+              onClick={() => setRefreshKey((key) => key + 1)}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -156,11 +176,9 @@ function SourceTrackerDetailPage() {
               No rows matched this source and search.
             </p>
           )}
-          <div className="grid gap-4">
-            {filteredRows.map((row) => (
-              <AttributionRowCard key={row.id} row={row} />
-            ))}
-          </div>
+          {filteredRows.length > 0 && (
+            <VirtualizedAttributionRowsTable rows={filteredRows} />
+          )}
         </section>
       </div>
     </div>
@@ -193,127 +211,138 @@ function MetricCard({
   );
 }
 
-function AttributionRowCard({ row }: { row: DownloadAttributionSession }) {
+function VirtualizedAttributionRowsTable({
+  rows,
+}: {
+  rows: DownloadAttributionSession[];
+}) {
+  const rowHeight = 64;
+  const viewportHeight = 640;
+  const overscan = 8;
+  const [scrollTop, setScrollTop] = useState(0);
+  const visibleRange = useMemo(() => {
+    const startIndex = Math.max(
+      0,
+      Math.floor(scrollTop / rowHeight) - overscan,
+    );
+    const visibleCount = Math.ceil(viewportHeight / rowHeight) + overscan * 2;
+    const endIndex = Math.min(rows.length, startIndex + visibleCount);
+
+    return { startIndex, endIndex };
+  }, [rows.length, scrollTop]);
+  const visibleRows = rows.slice(
+    visibleRange.startIndex,
+    visibleRange.endIndex,
+  );
+  const topPadding = visibleRange.startIndex * rowHeight;
+  const bottomPadding = Math.max(
+    0,
+    (rows.length - visibleRange.endIndex) * rowHeight,
+  );
+
   return (
     <Card className="border-white/10 bg-slate-900/50">
-      <CardHeader className="gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 space-y-1">
-          <CardDescription className="text-xs tracking-[0.25em] text-white/60 uppercase">
-            Session
-          </CardDescription>
-          <CardTitle className="truncate font-mono text-base text-white">
-            {row.session_id}
-          </CardTitle>
-          <p className="truncate text-sm text-white/45">
-            Visitor: {row.visitor_id || "-"}
-          </p>
+      <CardContent className="pt-6">
+        <div
+          className="max-h-[640px] overflow-auto rounded-lg border border-white/10"
+          onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
+        >
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-slate-900">
+              <TableRow className="border-white/10 hover:bg-transparent">
+                <TableHead className="min-w-[130px] text-white/60">
+                  Platforms
+                </TableHead>
+                <TableHead className="min-w-[160px] text-white/60">
+                  Created
+                </TableHead>
+                <TableHead className="min-w-[120px] text-right text-white/60">
+                  Views
+                </TableHead>
+                <TableHead className="min-w-[140px] text-white/60">
+                  Downloaded
+                </TableHead>
+                <TableHead className="min-w-[150px] text-white/60">
+                  Timezone
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {topPadding > 0 && (
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableCell
+                    colSpan={5}
+                    style={{ height: topPadding, padding: 0 }}
+                  />
+                </TableRow>
+              )}
+              {visibleRows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="h-16 border-white/10 hover:bg-white/5"
+                >
+                  <TableCell>
+                    <PlatformBadges row={row} />
+                  </TableCell>
+                  <TableCell className="text-white/70">
+                    {formatDate(row.created_at)}
+                  </TableCell>
+                  <TableCell className="text-right text-white/75">
+                    {row.page_view_count.toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        row.downloaded
+                          ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+                          : "border-white/10 text-white/70"
+                      }
+                    >
+                      {row.downloaded ? "Yes" : "No"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[180px] truncate text-white/65">
+                    {row.timezone || "-"}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {bottomPadding > 0 && (
+                <TableRow className="border-0 hover:bg-transparent">
+                  <TableCell
+                    colSpan={5}
+                    style={{ height: bottomPadding, padding: 0 }}
+                  />
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="border-white/10 text-white/75">
-            {row.downloaded ? "Downloaded" : "No download"}
-          </Badge>
-          {row.clicked_platforms.map((platform) => (
-            <Badge
-              key={platform}
-              variant="outline"
-              className="border-white/10 text-white/75"
-            >
-              {platform}
-            </Badge>
-          ))}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <DetailItem label="First source" value={row.first_source} />
-          <DetailItem label="Last source" value={row.last_source} />
-          <DetailItem
-            label="Page views"
-            value={row.page_view_count.toLocaleString()}
-          />
-          <DetailItem
-            label="Download clicks"
-            value={row.download_click_count.toLocaleString()}
-          />
-          <DetailItem label="First path" value={row.first_path} />
-          <DetailItem label="Last path" value={row.last_path} />
-          <DetailItem label="Referrer domain" value={row.referrer_domain} />
-          <DetailItem label="Timezone" value={row.timezone} />
-          <DetailItem label="Language" value={row.language} />
-          <DetailItem label="Viewport" value={row.viewport} />
-          <DetailItem label="Created" value={formatDate(row.created_at)} />
-          <DetailItem label="Updated" value={formatDate(row.updated_at)} />
-          <DetailItem
-            label="iOS clicked"
-            value={formatDate(row.ios_clicked_at)}
-          />
-          <DetailItem
-            label="Android clicked"
-            value={formatDate(row.android_clicked_at)}
-          />
-          <DetailItem
-            label="First downloaded"
-            value={formatDate(row.first_downloaded_at)}
-          />
-          <DetailItem
-            label="Last downloaded"
-            value={formatDate(row.last_downloaded_at)}
-          />
-        </div>
-        <div className="grid gap-3 lg:grid-cols-2">
-          <DetailBlock
-            label="First landing URL"
-            value={row.first_landing_url}
-          />
-          <DetailBlock label="Last URL" value={row.last_url} />
-          <DetailBlock label="Referrer" value={row.referrer} />
-          <DetailBlock label="User agent" value={row.user_agent} />
-          <DetailBlock
-            label="First query params"
-            value={stringifyJson(row.first_query_params)}
-          />
-          <DetailBlock
-            label="Last query params"
-            value={stringifyJson(row.last_query_params)}
-          />
-          <DetailBlock
-            label="All query params"
-            value={stringifyJson(row.all_query_params)}
-          />
-        </div>
+        <p className="mt-3 text-xs text-white/40">
+          Showing rows {visibleRange.startIndex + 1}-{visibleRange.endIndex} of{" "}
+          {rows.length.toLocaleString()}
+        </p>
       </CardContent>
     </Card>
   );
 }
 
-function DetailItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | null;
-}) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3">
-      <p className="text-xs text-white/40">{label}</p>
-      <p className="mt-1 truncate text-sm text-white/80">{value || "-"}</p>
-    </div>
-  );
-}
+function PlatformBadges({ row }: { row: DownloadAttributionSession }) {
+  if (row.clicked_platforms.length === 0) {
+    return <span className="text-white/35">-</span>;
+  }
 
-function DetailBlock({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null;
-}) {
   return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/40 p-3">
-      <p className="text-xs text-white/40">{label}</p>
-      <p className="mt-1 font-mono text-xs leading-5 break-words text-white/75">
-        {value || "-"}
-      </p>
+    <div className="flex flex-wrap gap-1">
+      {row.clicked_platforms.map((platform) => (
+        <Badge
+          key={platform}
+          variant="outline"
+          className="border-white/10 text-white/70"
+        >
+          {platform}
+        </Badge>
+      ))}
     </div>
   );
 }
@@ -326,8 +355,155 @@ function safelyDecodeSource(value: string): string {
   }
 }
 
-function stringifyJson(value: Record<string, any>): string {
-  return JSON.stringify(value, null, 2);
+function exportInfluencerReportPdf(
+  sourceName: string,
+  rows: DownloadAttributionSession[],
+) {
+  const reportWindow = window.open("", "_blank");
+
+  if (!reportWindow) {
+    return;
+  }
+
+  reportWindow.opener = null;
+  reportWindow.document.write(buildInfluencerReportHtml(sourceName, rows));
+  reportWindow.document.close();
+  reportWindow.setTimeout(() => {
+    reportWindow.focus();
+    reportWindow.print();
+  }, 250);
+}
+
+function buildInfluencerReportHtml(
+  sourceName: string,
+  rows: DownloadAttributionSession[],
+): string {
+  const summary = summarizeDownloadAttributionRows(rows)[0];
+  const conversionRate =
+    summary && summary.sessionCount > 0
+      ? (summary.downloadedCount / summary.sessionCount) * 100
+      : 0;
+  const clicksPerSession =
+    summary && summary.sessionCount > 0
+      ? summary.downloadClickCount / summary.sessionCount
+      : 0;
+  const generatedAt = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date());
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(sourceName)} - Moneko Attribution Report</title>
+  <style>
+    @page { margin: 18mm; }
+    * { box-sizing: border-box; }
+    body { color: #111827; font-family: Inter, Arial, sans-serif; margin: 0; }
+    h1, h2, h3, p { margin: 0; }
+    .report { max-width: 1100px; margin: 0 auto; padding: 32px; }
+    .header { border-bottom: 2px solid #111827; display: flex; justify-content: space-between; gap: 24px; padding-bottom: 24px; }
+    .eyebrow { color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+    .title { font-size: 32px; line-height: 1.15; margin-top: 8px; }
+    .subtitle { color: #475569; font-size: 13px; margin-top: 10px; max-width: 650px; }
+    .brand { text-align: right; white-space: nowrap; }
+    .logo { border-radius: 14px; height: 56px; margin-bottom: 10px; width: 56px; }
+    .brand-name { font-size: 22px; font-weight: 800; }
+    .date { color: #64748b; font-size: 12px; margin-top: 8px; }
+    .section { margin-top: 28px; page-break-inside: avoid; }
+    .section-title { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+    .metrics { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .metric { border: 1px solid #d1d5db; border-radius: 12px; padding: 14px; }
+    .metric-label { color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+    .metric-value { font-size: 26px; font-weight: 800; margin-top: 8px; }
+    table { border-collapse: collapse; font-size: 12px; width: 100%; }
+    th { background: #f1f5f9; color: #334155; font-size: 10px; letter-spacing: 0.08em; text-align: left; text-transform: uppercase; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px; vertical-align: top; }
+    td.number, th.number { text-align: right; }
+    .note { color: #64748b; font-size: 11px; line-height: 1.6; margin-top: 12px; }
+    .footer { border-top: 1px solid #d1d5db; color: #64748b; font-size: 11px; margin-top: 32px; padding-top: 14px; }
+    @media print { .report { padding: 0; } }
+  </style>
+</head>
+<body>
+  <main class="report">
+    <header class="header">
+      <div>
+        <p class="eyebrow">Influencer Attribution Report</p>
+        <h1 class="title">${escapeHtml(sourceName)}</h1>
+        <p class="subtitle">Formal performance report for dedicated Moneko download links attributed to this source.</p>
+      </div>
+      <div class="brand">
+        <img class="logo" src="/logo192.png" alt="Moneko logo" />
+        <div class="brand-name">Moneko</div>
+        <div class="date">Generated ${escapeHtml(generatedAt)}</div>
+      </div>
+    </header>
+
+    <section class="section">
+      <h2 class="section-title">Executive Summary</h2>
+      <div class="metrics">
+        ${metricHtml("Sessions", summary?.sessionCount ?? 0)}
+        ${metricHtml("Download Sessions", summary?.downloadedCount ?? 0)}
+        ${metricHtml("Download Clicks", summary?.downloadClickCount ?? 0)}
+        ${metricHtml("Page Views", summary?.pageViewCount ?? 0)}
+        ${metricHtml("Conversion Rate", `${conversionRate.toFixed(1)}%`)}
+        ${metricHtml("Clicks / Session", clicksPerSession.toFixed(2))}
+        ${metricHtml("iOS Clicks", summary?.iosClickCount ?? 0)}
+        ${metricHtml("Android Clicks", summary?.androidClickCount ?? 0)}
+      </div>
+      <p class="note">Conversion rate is calculated as downloaded sessions divided by tracked sessions. Clicks per session is calculated as total download clicks divided by tracked sessions.</p>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Session Activity</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Platforms</th>
+            <th>Created</th>
+            <th class="number">Views</th>
+            <th>Downloaded</th>
+            <th>Timezone</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(sessionRowHtml).join("")}
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="footer">This report is generated from anonymous attribution sessions and excludes visitor identifiers and device user-agent details from the influencer-facing export.</footer>
+  </main>
+</body>
+</html>`;
+}
+
+function metricHtml(label: string, value: string | number): string {
+  return `<div class="metric"><div class="metric-label">${escapeHtml(label)}</div><div class="metric-value">${escapeHtml(String(value))}</div></div>`;
+}
+
+function sessionRowHtml(row: DownloadAttributionSession): string {
+  return `<tr>
+    <td>${escapeHtml(row.clicked_platforms.join(", ") || "-")}</td>
+    <td>${escapeHtml(formatDate(row.created_at))}</td>
+    <td class="number">${row.page_view_count.toLocaleString()}</td>
+    <td>${row.downloaded ? "Yes" : "No"}</td>
+    <td>${escapeHtml(row.timezone || "-")}</td>
+  </tr>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function formatDate(value: string | null): string {
