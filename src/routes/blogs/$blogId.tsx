@@ -4,7 +4,12 @@ import { Suspense, lazy, useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft, faClock, faTag, faX } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowLeft,
+  faClock,
+  faTag,
+  faX,
+} from "@fortawesome/free-solid-svg-icons";
 import {
   faTwitter,
   faFacebook,
@@ -13,8 +18,17 @@ import {
 import { formatDate } from "@/utils/date-utils";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
+import { HomeHeader } from "@/components/index/header";
 import { OptimizedImage } from "@/components/seo/optimized-image";
 import { StructuredData } from "@/components/seo/structured-data";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/Breadcrumb";
 import { findStaticBlogBySlug, loadStaticBlogs } from "@/lib/static-blogs";
 import {
   fetchSubredditBlogBySlug,
@@ -94,6 +108,7 @@ export const Route = createFileRoute("/blogs/$blogId")({
 function BlogDetailPage() {
   const { blog, allBlogs } = Route.useLoaderData();
   const navigate = useNavigate();
+  const pageUrl = getCanonicalUrl(`/blogs/${blog.slug}`);
   const relatedBlogs = useMemo(() => {
     const tagIds = blog.tags?.map((tag) => tag.id) || [];
     return allBlogs
@@ -137,7 +152,8 @@ function BlogDetailPage() {
 
   return (
     <div className="bg-moneko-background h-full w-full">
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      <HomeHeader />
+      <div className="mx-auto max-w-4xl px-4 pt-28 pb-12 sm:px-6 lg:px-8">
         {/* Enhanced Article Schema with Financial Expert Knowledge */}
         <StructuredData
           type="article"
@@ -356,6 +372,14 @@ function BlogDetailPage() {
           ]}
         />
 
+        <StructuredData
+          type="breadcrumb"
+          data={[
+            { name: "Blog", url: getCanonicalUrl("/blogs") },
+            { name: blog.title, url: pageUrl },
+          ]}
+        />
+
         {/* HowTo Schema for Financial Guides */}
         {blog.title.toLowerCase().includes("how") && (
           <StructuredData
@@ -441,18 +465,26 @@ function BlogDetailPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <button
-            onClick={() => navigate({ to: "/blogs" })}
-            className="text-primary hover:text-primary/80 mb-8 flex items-center gap-2 transition-colors"
-          >
-            <FontAwesomeIcon
-              icon={faArrowLeft}
-              className="h-4 w-4"
-              aria-hidden="true"
-            />
-            <span>Back to blogs</span>
-          </button>
-
+          <Breadcrumb className="mb-4">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/">Home</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/blogs">Blog</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{blog.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        
           <div className="mb-8 flex flex-wrap gap-2">
             {blog.tags?.map((tag) => (
               <Link
@@ -510,14 +542,16 @@ function BlogDetailPage() {
               alt={`Cover image for ${blog.title}`}
               className="h-full w-full object-cover"
             />
-           {!blog.hideCreditLabel&& <a
-              href={blog.coverImage}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-background/80 text-muted-foreground border-border absolute right-2 bottom-2 rounded-sm border px-2 py-1 text-xs backdrop-blur-sm"
-            >
-              Image from Unsplash
-            </a>}
+            {!blog.hideCreditLabel && (
+              <a
+                href={blog.coverImage}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-background/80 text-muted-foreground border-border absolute right-2 bottom-2 rounded-sm border px-2 py-1 text-xs backdrop-blur-sm"
+              >
+                Image from Unsplash
+              </a>
+            )}
           </div>
 
           <article className="mx-auto max-w-none">

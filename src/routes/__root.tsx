@@ -33,6 +33,7 @@ import { ThemeInitScript } from "@/components/theme/theme-init-script";
 import ThemeSystemListener from "@/components/theme/theme-system-listener";
 import { PublicQueryShell } from "@/providers/public-query-shell";
 import { GoogleTagManager } from "@/components/google-tag-manager";
+import { DownloadAttributionTracker } from "@/components/download-attribution-tracker";
 
 export const Route = createRootRoute({
   head: () => {
@@ -165,6 +166,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
                   <ClientOnly>
                     <GoogleTagManager gtmId="G-KBNN5QXD4G" />
+                  </ClientOnly>
+
+                  <ClientOnly>
+                    <DownloadAttributionTracker />
                   </ClientOnly>
 
                   {/* Use ClientOnly wrapper to prevent hydration mismatches */}
