@@ -17,6 +17,9 @@ interface DeleteExpenseRequest {
   expense_id?: string;
   userId?: string;
   user_id?: string;
+  clientRecordId?: string;
+  clientMutationId?: string;
+  idempotencyKey?: string;
 }
 
 const UUID_REGEX =
@@ -29,8 +32,8 @@ function sanitizeUuid(value?: string | null): string | null {
 }
 
 function parseExpenseIds(body: DeleteExpenseRequest): string[] {
-  const raw = body.expenseIds ?? body.expense_ids ?? body.expenseId ??
-    body.expense_id;
+  const raw =
+    body.expenseIds ?? body.expense_ids ?? body.expenseId ?? body.expense_id;
   if (!raw) return [];
   const rawString = Array.isArray(raw) ? raw.join(",") : String(raw);
   const parts = rawString
@@ -86,6 +89,9 @@ Deno.serve(async (req: Request) => {
     if (expenseIds.length === 0) {
       return errorResponse("expenseIds or expenseId is required");
     }
+    const clientRecordId = body.clientRecordId?.trim() || null;
+    const clientMutationId =
+      body.clientMutationId?.trim() || body.idempotencyKey?.trim() || null;
 
     const detection = detectGptRequest(req);
     const conversationId = detection.conversationId ?? null;
@@ -217,20 +223,20 @@ Deno.serve(async (req: Request) => {
 
     const expenseContactIds = shouldResolveOwnersViaContacts
       ? Array.from(
-        new Set(
-          expenses
-            .map((expense) => expense.contact_id as string | null | undefined)
-            .filter((id): id is string => !!id),
-        ),
-      )
+          new Set(
+            expenses
+              .map((expense) => expense.contact_id as string | null | undefined)
+              .filter((id): id is string => !!id),
+          ),
+        )
       : [];
 
     const { data: contactOwnerRows, error: contactOwnerError } =
       expenseContactIds.length
         ? await supabase
-          .from("user_contacts")
-          .select("id, user_id")
-          .in("id", expenseContactIds)
+            .from("user_contacts")
+            .select("id, user_id")
+            .in("id", expenseContactIds)
         : { data: [] as { id: string; user_id: string | null }[] };
 
     if (contactOwnerError) {
@@ -253,9 +259,9 @@ Deno.serve(async (req: Request) => {
 
     const { data: householdRows } = householdIds.length
       ? await supabase
-        .from("households")
-        .select("id, is_portfolio")
-        .in("id", householdIds)
+          .from("households")
+          .select("id, is_portfolio")
+          .in("id", householdIds)
       : { data: [] as { id: string; is_portfolio: boolean | null }[] };
 
     const householdPortfolioMap = new Map(
@@ -266,13 +272,14 @@ Deno.serve(async (req: Request) => {
       (id) => householdPortfolioMap.get(id) !== true,
     );
 
-    const { data: membershipRows } = nonPortfolioHouseholdIds.length > 0
-      ? await supabase
-        .from("household_members")
-        .select("household_id")
-        .eq("user_id", userId)
-        .in("household_id", nonPortfolioHouseholdIds)
-      : { data: [] as { household_id: string }[] };
+    const { data: membershipRows } =
+      nonPortfolioHouseholdIds.length > 0
+        ? await supabase
+            .from("household_members")
+            .select("household_id")
+            .eq("user_id", userId)
+            .in("household_id", nonPortfolioHouseholdIds)
+        : { data: [] as { household_id: string }[] };
 
     const membershipSet = new Set(
       (membershipRows || []).map((row) => row.household_id),
@@ -296,7 +303,8 @@ Deno.serve(async (req: Request) => {
         | string
         | null
         | undefined;
-      const expenseUserId = rawExpenseUserId ||
+      const expenseUserId =
+        rawExpenseUserId ||
         (expenseContactId ? ownerByContactId.get(expenseContactId) : undefined);
 
       if (!expenseUserId) {
@@ -361,7 +369,11 @@ Deno.serve(async (req: Request) => {
           failedCount: failedIds.length,
           failedIds,
           resolvedUserId: userId,
-          meta: resolvedIdentityMeta,
+          meta: {
+            ...(resolvedIdentityMeta ?? {}),
+            clientRecordId,
+            clientMutationId,
+          },
         }),
         {
           status: 200,
@@ -370,7 +382,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Delete the expenses
     const { error: delError } = await supabase
       .from("expenses")
       .delete()
@@ -388,9 +399,10 @@ Deno.serve(async (req: Request) => {
       const deletedExpenses = allowedExpenseIds
         .map((id) => expenseById.get(id))
         .filter(Boolean) as any[];
+      const notificationExpenses = deletedExpenses;
 
       const sharedCounts = new Map<string, number>();
-      for (const expense of deletedExpenses) {
+      for (const expense of notificationExpenses) {
         const householdId = expense.household_id as string | null | undefined;
         if (!householdId) continue;
         if (householdPortfolioMap.get(householdId) === true) continue;
@@ -414,8 +426,11 @@ Deno.serve(async (req: Request) => {
           }
         } catch (_) {}
 
-        if (allowedExpenseIds.length === 1 && deletedExpenses.length === 1) {
-          const expense = deletedExpenses[0];
+        if (
+          allowedExpenseIds.length === 1 &&
+          notificationExpenses.length === 1
+        ) {
+          const expense = notificationExpenses[0];
           const householdId = expense.household_id as string | null | undefined;
           if (householdId && householdPortfolioMap.get(householdId) !== true) {
             console.log(
@@ -500,7 +515,11 @@ Deno.serve(async (req: Request) => {
       failedCount: failedIds.length,
       failedIds,
       resolvedUserId: userId,
-      meta: resolvedIdentityMeta,
+      meta: {
+        ...(resolvedIdentityMeta ?? {}),
+        clientRecordId,
+        clientMutationId,
+      },
     };
 
     // For non-GPT requests, include shared flag

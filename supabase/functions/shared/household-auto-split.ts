@@ -5,8 +5,9 @@
 // 20260420140000_add_household_ai_default_split.sql).
 //
 // When `ai_use_default_split` is FALSE the household opts out of automatic
-// splitting: expenses still log against the household but no
-// `expense_split_groups` row is created.
+// default splitting: expenses still log against the household, and no
+// `expense_split_groups` row is created unless the request carries an explicit
+// custom-splits payload from the user's input.
 //
 // When `ai_use_default_split` is TRUE and the request does not carry an
 // explicit custom-splits payload, we fall back to `ai_default_split_config`
@@ -94,7 +95,9 @@ function isSemanticallyEqualSplit(customSplits: CustomSplits): boolean {
   if (customSplits.splitType === "amount") {
     const amounts = customSplits.memberSplits.map((split) => split.amount);
     if (
-      amounts.some((value) => typeof value !== "number" || !Number.isFinite(value))
+      amounts.some(
+        (value) => typeof value !== "number" || !Number.isFinite(value),
+      )
     ) {
       return false;
     }
@@ -102,12 +105,12 @@ function isSemanticallyEqualSplit(customSplits: CustomSplits): boolean {
   }
 
   if (customSplits.splitType === "percentage") {
-    const percentages = customSplits.memberSplits.map((split) =>
-      split.percentage
+    const percentages = customSplits.memberSplits.map(
+      (split) => split.percentage,
     );
     if (
-      percentages.some((value) =>
-        typeof value !== "number" || !Number.isFinite(value)
+      percentages.some(
+        (value) => typeof value !== "number" || !Number.isFinite(value),
       )
     ) {
       return false;
@@ -118,7 +121,9 @@ function isSemanticallyEqualSplit(customSplits: CustomSplits): boolean {
   if (customSplits.splitType === "shares") {
     const shares = customSplits.memberSplits.map((split) => split.shares);
     if (
-      shares.some((value) => typeof value !== "number" || !Number.isFinite(value))
+      shares.some(
+        (value) => typeof value !== "number" || !Number.isFinite(value),
+      )
     ) {
       return false;
     }
@@ -169,9 +174,7 @@ function coerceCustomSplits(raw: unknown): CustomSplits | null {
   };
 }
 
-export function hasExplicitCustomSplits(
-  raw: unknown,
-): boolean {
+export function hasExplicitCustomSplits(raw: unknown): boolean {
   if (!raw || typeof raw !== "object") return false;
   const obj = raw as Record<string, unknown>;
   const rawType = typeof obj.splitType === "string"
@@ -221,9 +224,8 @@ export async function fetchHouseholdAutoSplitSettings(
  * Given the request's explicit customSplits (if any) and the household auto-
  * split settings, resolve the effective split behaviour.
  *
- * - If autoSplitEnabled is false → skip splitting, even when a stale client
- *   sends explicit customSplits.
  * - If caller provided non-equal customSplits → honour them verbatim.
+ * - If autoSplitEnabled is false → skip automatic/default splitting.
  * - If autoSplitEnabled is true and a stored default template exists → use it.
  * - Otherwise → fall back to equal split (null customSplits payload).
  */
@@ -231,22 +233,26 @@ export function resolveEffectiveSplit(
   explicit: unknown,
   settings: HouseholdAutoSplitSettings,
 ): EffectiveSplit {
-  if (!settings.autoSplitEnabled) {
-    return { kind: "skip" };
-  }
-
   if (hasExplicitCustomSplits(explicit)) {
     const coerced = coerceCustomSplits(explicit);
     if (!coerced) {
-      return { kind: "customSplits", customSplits: settings.defaultConfig };
+      return settings.autoSplitEnabled
+        ? { kind: "customSplits", customSplits: settings.defaultConfig }
+        : { kind: "skip" };
     }
     if (isSemanticallyEqualSplit(coerced)) {
       console.log(
         "[household-auto-split] Ignoring equal-like explicit custom splits; using household default when available",
       );
-      return { kind: "customSplits", customSplits: settings.defaultConfig };
+      return settings.autoSplitEnabled
+        ? { kind: "customSplits", customSplits: settings.defaultConfig }
+        : { kind: "skip" };
     }
     return { kind: "customSplits", customSplits: coerced };
+  }
+
+  if (!settings.autoSplitEnabled) {
+    return { kind: "skip" };
   }
 
   return { kind: "customSplits", customSplits: settings.defaultConfig };
@@ -281,10 +287,12 @@ function allocateCentsByWeights(
   const floorValues = raw.map((value) => Math.floor(value));
   let remainder = totalCents -
     floorValues.reduce((sum, value) => sum + value, 0);
-  const order = raw.map((value, index) => ({
-    index,
-    fraction: value - Math.floor(value),
-  })).sort((a, b) => b.fraction - a.fraction);
+  const order = raw
+    .map((value, index) => ({
+      index,
+      fraction: value - Math.floor(value),
+    }))
+    .sort((a, b) => b.fraction - a.fraction);
 
   for (let i = 0; remainder > 0 && order.length > 0; i++, remainder--) {
     floorValues[order[i % order.length].index] += 1;
@@ -311,6 +319,86 @@ function sameMembers(
     .filter((userId) => typeof userId === "string" && userId.length > 0)
     .sort();
   return JSON.stringify(expected) === JSON.stringify(actual);
+}
+
+function normalizePercentWeights(weights: number[]): number[] {
+  const total = weights.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return weights;
+
+  const percentages = weights.map(
+    (value) => (Math.max(0, value) * 100) / total,
+  );
+  const rounded = percentages.map((value) => Math.round(value * 100) / 100);
+  const diff = 100 - rounded.reduce((sum, value) => sum + value, 0);
+  if (Math.abs(diff) >= 0.01 && rounded.length > 0) {
+    rounded[rounded.length - 1] =
+      Math.round((rounded[rounded.length - 1] + diff) * 100) / 100;
+  }
+
+  return rounded;
+}
+
+function reconcileCustomSplitsForMembers(
+  customSplits: CustomSplits | null,
+  members: HouseholdMemberRow[],
+  amountCents: number,
+): CustomSplits | null {
+  if (!customSplits) return null;
+  if (isSemanticallyEqualSplit(customSplits)) return null;
+
+  const memberIds = memberIdsFromRows(members);
+  if (memberIds.length === 0) return null;
+
+  const byUserId = new Map(
+    customSplits.memberSplits.map((split) => [split.userId, split]),
+  );
+
+  if (customSplits.splitType === "amount") {
+    const weights = memberIds.map(
+      (userId) => normalizeAmount(byUserId.get(userId)?.amount) ?? 0,
+    );
+    if (weights.reduce((sum, value) => sum + value, 0) <= 0) return null;
+    const cents = allocateCentsByWeights(amountCents, weights);
+
+    return {
+      splitType: "amount",
+      memberSplits: memberIds.map((userId, index) => ({
+        userId,
+        amount: (cents[index] ?? 0) / 100,
+      })),
+    };
+  }
+
+  if (customSplits.splitType === "percentage") {
+    const weights = memberIds.map(
+      (userId) => normalizePercentage(byUserId.get(userId)?.percentage) ?? 0,
+    );
+    if (weights.reduce((sum, value) => sum + value, 0) <= 0) return null;
+    const percentages = normalizePercentWeights(weights);
+
+    return {
+      splitType: "percentage",
+      memberSplits: memberIds.map((userId, index) => ({
+        userId,
+        percentage: percentages[index] ?? 0,
+      })),
+    };
+  }
+
+  const memberSplits = memberIds.map((userId) => ({
+    userId,
+    shares: normalizeShares(byUserId.get(userId)?.shares),
+  }));
+  const totalShares = memberSplits.reduce(
+    (sum, split) => sum + (split.shares ?? 0),
+    0,
+  );
+  if (totalShares <= 0) return null;
+
+  return {
+    splitType: "shares",
+    memberSplits,
+  };
 }
 
 export function buildHouseholdSplitRecords({
@@ -352,8 +440,15 @@ export function buildHouseholdSplitRecords({
     };
   }
 
-  const splitType = customSplits ? customSplits.splitType : "equal";
-  if (customSplits && !sameMembers(members, customSplits)) {
+  const reconciledCustomSplits = reconcileCustomSplitsForMembers(
+    customSplits,
+    members,
+    amountCents,
+  );
+  const splitType = reconciledCustomSplits
+    ? reconciledCustomSplits.splitType
+    : "equal";
+  if (reconciledCustomSplits && !sameMembers(members, reconciledCustomSplits)) {
     return {
       ok: false,
       code: "MEMBER_MISMATCH",
@@ -368,7 +463,7 @@ export function buildHouseholdSplitRecords({
     shares?: number;
   }>;
 
-  if (splitType === "equal" || !customSplits) {
+  if (splitType === "equal" || !reconciledCustomSplits) {
     const amountPerMember = Math.floor(amountCents / memberIds.length);
     const remainder = amountCents - amountPerMember * memberIds.length;
     lines = memberIds.map((userId, index) => ({
@@ -376,7 +471,7 @@ export function buildHouseholdSplitRecords({
       amount_cents: amountPerMember + (index === 0 ? remainder : 0),
     }));
   } else if (splitType === "amount") {
-    const cents = customSplits.memberSplits.map((split) =>
+    const cents = reconciledCustomSplits.memberSplits.map((split) =>
       Math.max(0, Math.round((normalizeAmount(split.amount) || 0) * 100))
     );
     const sumCents = cents.reduce((sum, value) => sum + value, 0);
@@ -400,13 +495,13 @@ export function buildHouseholdSplitRecords({
       }
       cents[targetIndex] += diff;
     }
-    lines = customSplits.memberSplits.map((split, index) => ({
+    lines = reconciledCustomSplits.memberSplits.map((split, index) => ({
       user_id: split.userId,
       amount_cents: cents[index] ?? 0,
     }));
   } else if (splitType === "percentage") {
-    const weights = customSplits.memberSplits.map((split) =>
-      normalizePercentage(split.percentage) || 0
+    const weights = reconciledCustomSplits.memberSplits.map(
+      (split) => normalizePercentage(split.percentage) || 0,
     );
     const totalPercent = weights.reduce((sum, value) => sum + value, 0);
     if (Math.abs(totalPercent - 100) > 0.01) {
@@ -417,14 +512,14 @@ export function buildHouseholdSplitRecords({
       };
     }
     const allocatedCents = allocateCentsByWeights(amountCents, weights);
-    lines = customSplits.memberSplits.map((split, index) => ({
+    lines = reconciledCustomSplits.memberSplits.map((split, index) => ({
       user_id: split.userId,
       amount_cents: allocatedCents[index] ?? 0,
       percentage: normalizePercentage(split.percentage),
     }));
   } else {
-    const weights = customSplits.memberSplits.map((split) =>
-      normalizeShares(split.shares) || 0
+    const weights = reconciledCustomSplits.memberSplits.map(
+      (split) => normalizeShares(split.shares) || 0,
     );
     const totalShares = weights.reduce((sum, value) => sum + value, 0);
     if (totalShares <= 0) {
@@ -435,7 +530,7 @@ export function buildHouseholdSplitRecords({
       };
     }
     const allocatedCents = allocateCentsByWeights(amountCents, weights);
-    lines = customSplits.memberSplits.map((split, index) => ({
+    lines = reconciledCustomSplits.memberSplits.map((split, index) => ({
       user_id: split.userId,
       amount_cents: allocatedCents[index] ?? 0,
       shares: normalizeShares(split.shares),

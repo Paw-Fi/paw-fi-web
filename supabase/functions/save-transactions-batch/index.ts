@@ -52,6 +52,19 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function summarizeCustomSplits(customSplits?: CustomSplits | null) {
+  if (!customSplits) return null;
+  return {
+    splitType: customSplits.splitType,
+    memberSplits: customSplits.memberSplits?.map((split) => ({
+      userId: split.userId,
+      amount: split.amount,
+      percentage: split.percentage,
+      shares: split.shares,
+    })),
+  };
+}
+
 interface TransactionItem {
   type: "expense" | "income";
   amount: number;
@@ -66,6 +79,9 @@ interface TransactionItem {
   customSplits?: CustomSplits;
   payerUserId?: string;
   accountId?: string;
+  clientRecordId?: string;
+  clientMutationId?: string;
+  idempotencyKey?: string;
   // Income-specific fields
   ownerType?: "me" | "partner" | "household";
   privacyScope?: "private" | "balances_only" | "full";
@@ -462,6 +478,11 @@ export async function saveTransactionsBatchInternal(
       hasDefaultConfig: householdAutoSplitSettings.defaultConfig != null,
       hasRequestCustomSplits: meta.customSplits != null,
       decision: effective.kind,
+      requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+      effectiveCustomSplits:
+        effective.kind === "skip"
+          ? null
+          : summarizeCustomSplits(effective.customSplits),
     });
     if (effective.kind === "skip") {
       return expense;
@@ -669,6 +690,12 @@ export async function saveTransactionsBatchInternal(
 
     const accountIdForRecord = resolvedAccountId || null;
     const householdIdForRecord = scopeHouseholdId;
+    const idempotencyKey =
+      typeof tx.idempotencyKey === "string"
+        ? tx.idempotencyKey.trim() || null
+        : typeof tx.clientMutationId === "string"
+          ? tx.clientMutationId.trim() || null
+          : null;
     const importRequestKey = buildImportRequestKey(body.debugTraceId, i);
     const importSemanticKey = buildImportSemanticKey({
       userId,
@@ -702,6 +729,7 @@ export async function saveTransactionsBatchInternal(
       is_recurring: tx.isRecurring === true,
       recurrence_rule:
         tx.isRecurring === true ? tx.recurrence_rule || null : null,
+      idempotency_key: idempotencyKey,
       import_request_key: importRequestKey,
       import_semantic_key: importSemanticKey,
     };
@@ -1167,6 +1195,11 @@ export async function saveTransactionsBatchInternal(
                 householdAutoSplitSettings.defaultConfig != null,
               hasRequestCustomSplits: meta.customSplits != null,
               decision: effective.kind,
+              requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+              effectiveCustomSplits:
+                effective.kind === "skip"
+                  ? null
+                  : summarizeCustomSplits(effective.customSplits),
             });
             if (effective.kind === "skip") {
               // Household opted out of auto-split: log expense against the
@@ -1572,6 +1605,14 @@ if (import.meta.main) {
       progressOffset: body.progressOffset,
       progressTotal: body.progressTotal,
       stream: isStreamMode,
+      splitFields: body.transactions?.map((transaction, index) => ({
+        index,
+        type: transaction.type,
+        amount: transaction.amount,
+        category: transaction.category,
+        payerUserId: transaction.payerUserId,
+        customSplits: summarizeCustomSplits(transaction.customSplits),
+      })),
     });
 
     if (!Array.isArray(body.transactions) || body.transactions.length === 0) {
