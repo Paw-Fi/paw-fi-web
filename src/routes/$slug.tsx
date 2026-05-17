@@ -16,8 +16,11 @@ import {
 import {
   createMonekoFreeOffer,
   monekoAggregateRating,
+  monekoAlternateNames,
   monekoAvailableLanguages,
   monekoFeaturedReview,
+  monekoKnowsAbout,
+  monekoSameAs,
 } from "@/utils/app-schema";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { seo } from "@/utils/seo";
@@ -55,28 +58,97 @@ export const Route = createFileRoute("/$slug")({
       "@context": "https://schema.org",
       "@graph": [
         {
+          "@type": "Organization",
+          "@id": "https://moneko.io/#organization",
+          name: "Moneko",
+          alternateName: monekoAlternateNames,
+          url: "https://moneko.io",
+          logo: "https://moneko.io/logo192.png",
+          sameAs: monekoSameAs,
+          knowsAbout: monekoKnowsAbout,
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://moneko.io/#website",
+          name: "Moneko",
+          alternateName: monekoAlternateNames,
+          url: "https://moneko.io",
+          publisher: { "@id": "https://moneko.io/#organization" },
+        },
+        {
           "@type": "WebPage",
           "@id": pageUrl,
           url: pageUrl,
           name: loaderData.title,
           description: loaderData.description,
+          isPartOf: { "@id": "https://moneko.io/#website" },
+          about: { "@id": "https://moneko.io/#software" },
+          datePublished: loaderData.sitemapLastmod,
+          dateModified: loaderData.sitemapLastmod,
           inLanguage: "en-US",
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": `${pageUrl}#breadcrumb`,
+          itemListElement: [
+            {
+              "@type": "ListItem",
+              position: 1,
+              name: "Moneko",
+              item: "https://moneko.io",
+            },
+            {
+              "@type": "ListItem",
+              position: 2,
+              name: loaderData.title,
+              item: pageUrl,
+            },
+          ],
         },
         {
           "@type": "SoftwareApplication",
           "@id": "https://moneko.io/#software",
           name: "Moneko",
-          alternateName: ["Moneko budgeting app", "Moneko expense tracker"],
+          alternateName: monekoAlternateNames,
           operatingSystem: "Android, iOS, Web",
           applicationCategory: "FinanceApplication",
           applicationSubCategory: "BudgetingApplication",
           description: loaderData.description,
           url: "https://moneko.io",
           availableLanguage: monekoAvailableLanguages,
+          keywords: loaderData.keywords,
+          knowsAbout: monekoKnowsAbout,
           offers: createMonekoFreeOffer(pageUrl),
           aggregateRating: monekoAggregateRating,
           review: monekoFeaturedReview,
         },
+        {
+          "@type": "ItemList",
+          "@id": `${pageUrl}#takeaways`,
+          name: `${loaderData.title} takeaways`,
+          itemListElement: (loaderData.keyTakeaways ?? []).map(
+            (item, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: item,
+            }),
+          ),
+        },
+        ...(loaderData.comparisonRows?.length
+          ? [
+              {
+                "@type": "Table",
+                "@id": `${pageUrl}#comparison`,
+                name: loaderData.comparisonTitle ?? "Moneko comparison",
+                description: loaderData.comparisonRows
+                  .map(
+                    (row) =>
+                      `${row.label}: Moneko - ${row.moneko} ${loaderData.alternativeLabel ?? "Alternative"} - ${row.alternative}`,
+                  )
+                  .join(" "),
+              },
+            ]
+          : []),
         {
           "@type": "FAQPage",
           "@id": `${pageUrl}#faq`,

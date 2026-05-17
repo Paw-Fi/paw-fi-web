@@ -1,17 +1,25 @@
-import classNames from 'classnames';
+import classNames from "classnames";
 import { faGooglePlay } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { trackDownloadClick } from "@/lib/download-attribution";
 
-export const AndroidDownloadButton = (props: { className?: string }) => {
+export const AndroidDownloadButton = (props: {
+  className?: string;
+  onClick?: () => void;
+}) => {
   return (
     <div className="flex items-center justify-center">
       <a
         href="https://play.google.com/store/apps/details?id=com.moneko.mobile"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => {
+          trackDownloadClick("android");
+          props.onClick?.();
+        }}
         className={classNames(
-          "flex items-center justify-center px-4 h-14 bg-black text-white rounded-lg transition-opacity hover:opacity-90 dark:bg-white dark:text-black",
-          props.className
+          "flex h-14 items-center justify-center rounded-lg bg-black px-4 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black",
+          props.className,
         )}
       >
         <div className="mr-3">

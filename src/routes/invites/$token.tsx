@@ -250,27 +250,35 @@ function InvitePage() {
   const tryOpenApp = () => {
     setAttemptedAppOpen(true);
 
-    const deepLink = `moneko://households/join?token=${token}`;
+    const deepLink = `moneko://households/join?token=${encodeURIComponent(token)}`;
 
-    // Create an invisible iframe to attempt opening the app
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.src = deepLink;
-    document.body.appendChild(iframe);
-
-    // Track if page becomes hidden (app opened)
+    // Track whether browser was backgrounded (strong signal app was opened)
     let appOpened = false;
     const onVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
       }
     };
+    const onPageHide = () => {
+      appOpened = true;
+    };
+    const onBlur = () => {
+      appOpened = true;
+    };
+
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("blur", onBlur);
+
+    // iframe scheme open is blocked in many modern mobile browsers.
+    // Direct navigation in a user-gesture path is more reliable.
+    window.location.href = deepLink;
 
     // Fallback: Check if app opened after 2 seconds
     setTimeout(() => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      document.body.removeChild(iframe);
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("blur", onBlur);
 
       // If app didn't open and we're still on mobile, show continue button
       if (!appOpened && !document.hidden) {

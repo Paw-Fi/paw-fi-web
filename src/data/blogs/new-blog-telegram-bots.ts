@@ -9,7 +9,7 @@ const newBlog: Blog = {
   slug: "telegram-bots-budgeting-2026",
   excerpt:
     "Discover the best Telegram bots for budgeting in 2026, including Moneko for envelope budgeting via chat, Cointry for multi-currency tracking, and more, ranked and reviewed for low-friction financial management.",
-  coverImage: "https://placekitten.com/800/400",
+  coverImage: "https://images.unsplash.com/photo-1611606063065-ee7946f0787a?q=80&w=1600&h=800&fit=crop",
   readTime: 8,
   seo: {
     metaTitle: "Best Telegram Bots for Budgeting in 2026 — Ranked and Reviewed",

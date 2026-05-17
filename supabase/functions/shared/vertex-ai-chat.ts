@@ -49,9 +49,15 @@ type VertexChatResponse = {
   raw: unknown;
 };
 
+type VertexSendMessageOptions = {
+  toolConfig?: Record<string, unknown>;
+  generationConfig?: Record<string, unknown>;
+};
+
 type VertexChatSession = {
   sendMessage: (
     content: unknown,
+    options?: VertexSendMessageOptions,
   ) => Promise<{ response: Promise<VertexChatResponse> }>;
   getHistory: () => VertexContent[];
 };
@@ -344,7 +350,10 @@ export function createVertexChatSession(
   const tools = normalizeTools(options.tools);
 
   return {
-    async sendMessage(content: unknown) {
+    async sendMessage(
+      content: unknown,
+      perCallOptions?: VertexSendMessageOptions,
+    ) {
       const nextContent = normalizeSendMessageInput(content);
       const requestContents = [
         ...history.map(cloneContent),
@@ -370,6 +379,12 @@ export function createVertexChatSession(
               }
               : {}),
             ...(tools ? { tools } : {}),
+            ...(perCallOptions?.toolConfig
+              ? { toolConfig: perCallOptions.toolConfig }
+              : {}),
+            ...(perCallOptions?.generationConfig
+              ? { generationConfig: perCallOptions.generationConfig }
+              : {}),
           }),
           signal: AbortSignal.timeout(options.timeoutMs ?? 30000),
         },

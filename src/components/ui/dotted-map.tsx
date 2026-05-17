@@ -36,6 +36,13 @@ export interface DottedMapProps<
     y: number
     r: number
   }) => React.ReactNode
+  onMarkerClick?: (args: {
+    marker: MapMarker<M>
+    index: number
+    x: number
+    y: number
+    r: number
+  }) => void
 }
 
 export function DottedMap<M extends Marker = Marker>({
@@ -49,6 +56,7 @@ export function DottedMap<M extends Marker = Marker>({
   stagger = true,
   pulse = false,
   renderMarkerOverlay,
+  onMarkerClick,
   className,
   style,
   ...svgProps
@@ -118,8 +126,18 @@ export function DottedMap<M extends Marker = Marker>({
           : marker.pulse === true
         const pulseTo = r * 2.8
 
+        const markerWithPosition = { ...marker, x, y }
+
         return (
-          <g key={`${marker.x}-${marker.y}-${index}`}>
+          <g
+            key={`${marker.x}-${marker.y}-${index}`}
+            onClick={
+              onMarkerClick
+                ? () => onMarkerClick({ marker: markerWithPosition, index, x, y, r })
+                : undefined
+            }
+            className={onMarkerClick ? "cursor-pointer" : undefined}
+          >
             <circle cx={x} cy={y} r={r} fill={markerColor} />
 
             {shouldPulse ? (
@@ -174,7 +192,7 @@ export function DottedMap<M extends Marker = Marker>({
             ) : null}
 
             {renderMarkerOverlay?.({
-              marker: { ...marker, x, y },
+              marker: markerWithPosition,
               index,
               x,
               y,

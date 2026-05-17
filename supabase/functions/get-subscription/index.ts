@@ -92,9 +92,17 @@ serve(async (req: Request) => {
         stripe_subscription_id: directSubscription.stripe_subscription_id,
         stripe_customer_id: directSubscription.stripe_customer_id,
         store_product_id: directSubscription.store_product_id,
+        app_store_in_app_ownership_type:
+          directSubscription.app_store_in_app_ownership_type,
         created_at: directSubscription.created_at,
         updated_at: directSubscription.updated_at,
       };
+    } else if (finalSubscription && directSubscription) {
+      finalSubscription.provider ??= directSubscription.provider;
+      finalSubscription.store_product_id ??=
+        directSubscription.store_product_id;
+      finalSubscription.app_store_in_app_ownership_type ??=
+        directSubscription.app_store_in_app_ownership_type;
     }
 
     // If no subscription found, return free tier info
@@ -167,12 +175,12 @@ serve(async (req: Request) => {
             const pm = stripeSubscription.default_payment_method;
             paymentMethod = pm.card
               ? {
-                  id: pm.id,
-                  brand: pm.card.brand,
-                  last4: pm.card.last4,
-                  exp_month: pm.card.exp_month,
-                  exp_year: pm.card.exp_year,
-                }
+                id: pm.id,
+                brand: pm.card.brand,
+                last4: pm.card.last4,
+                exp_month: pm.card.exp_month,
+                exp_year: pm.card.exp_year,
+              }
               : null;
           }
         }
@@ -185,7 +193,7 @@ serve(async (req: Request) => {
     // Calculate days until next payment
     // Lifetime plan: No next payment (one-time purchase)
     const now = new Date();
-    let daysUntilNextPayment = null;
+    let daysUntilNextPayment: number | null = null;
 
     if (finalSubscription.plan === "lifetime") {
       // Lifetime never has a next payment

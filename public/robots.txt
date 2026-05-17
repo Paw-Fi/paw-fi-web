@@ -3,6 +3,22 @@
 
 User-agent: *
 
+# AI-readable public product files and GEO pages
+Allow: /llms.txt
+Allow: /.well-known/ai.txt
+Allow: /geo
+Allow: /best-budgeting-app
+Allow: /budgeting-app-2026
+Allow: /free-budgeting-app
+Allow: /email-based-budgeting
+Allow: /ai-budgeting-app
+Allow: /expense-tracker-for-couples
+Allow: /shared-expense-tracker
+Allow: /help/
+Allow: /early-access
+Allow: /referral$
+Allow: /referral/$
+
 # Non-public app routes and flows
 Disallow: /dashboard/
 Disallow: /auth/
@@ -15,7 +31,7 @@ Disallow: /payment-status
 Disallow: /billing/
 Disallow: /unsubscribe
 Disallow: /onboarding/
-Disallow: /referral/
+Disallow: /referral/*
 Disallow: /invites/
 Disallow: /creator/
 Disallow: /plaid/
@@ -25,7 +41,6 @@ Disallow: /verify-whatsapp
 Disallow: /avatar-customizer
 Disallow: /health
 Disallow: /test/
-Disallow: /early-access
 Disallow: /promo
 
 Sitemap: https://moneko.io/sitemap.xml

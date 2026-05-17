@@ -1,6 +1,11 @@
-import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertStringIncludes,
+} from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
+  buildCategoryPreferenceGuidance,
+  inferAttachmentFallbackCurrency,
   inferPayerFromText,
   inferSplitAmountsFromText,
   normalizeCustomSplits,
@@ -8,6 +13,46 @@ import {
   parseTransactionsJsonToItems,
   resolveHouseholdContext,
 } from "../shared/analyze-core.ts";
+
+Deno.test(
+  "analyze-core: category guidance passes allowed user preferences without schema enums",
+  () => {
+    const guidance = buildCategoryPreferenceGuidance({
+      expenseCategories: ["restaurants", "takeout & delivery", "other"],
+      incomeCategories: ["salary", "refund"],
+      preferences: [
+        {
+          transaction_type: "expense",
+          match_key: "uber eats",
+          category_name: "takeout & delivery",
+          use_count: 8,
+          last_used_at: "2026-04-01T00:00:00Z",
+        },
+        {
+          transaction_type: "expense",
+          match_key: "ignored",
+          category_name: "not allowed",
+          use_count: 99,
+          last_used_at: "2026-04-02T00:00:00Z",
+        },
+      ],
+      remaps: [
+        {
+          transaction_type: "expense",
+          from_category_name: "dining",
+          to_category_name: "restaurants",
+          use_count: 3,
+          last_used_at: "2026-04-01T00:00:00Z",
+        },
+      ],
+    });
+
+    const text = guidance.join("\n");
+    assertStringIncludes(text, '"uber eats" -> takeout & delivery');
+    assertStringIncludes(text, "dining -> restaurants");
+    assertEquals(text.includes("not allowed"), false);
+  },
+);
 
 Deno.test("analyze-core: payer + split pronoun heuristic", () => {
   const callerId = "11111111-1111-4111-8111-111111111111";
@@ -107,3 +152,42 @@ Deno.test("analyze-core: transaction JSON fallback preserves merchant", () => {
 
   assertEquals(item.merchant, "Blue Bottle Coffee");
 });
+
+Deno.test(
+  "analyze-core: attachment fallback currency prefers unambiguous document evidence",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "USD",
+      rawText: "Statement currency: eur\nTotal amount 45.90",
+      parsedItems: [{ currency: "" }, { currency: undefined }],
+    });
+
+    assertEquals(inferred, "EUR");
+  },
+);
+
+Deno.test(
+  "analyze-core: attachment fallback currency keeps caller currency when evidence is mixed",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "USD",
+      rawText: "Totals shown in EUR and USD",
+      parsedItems: [{ currency: "EUR" }, { currency: "USD" }],
+    });
+
+    assertEquals(inferred, "USD");
+  },
+);
+
+Deno.test(
+  "analyze-core: attachment fallback can override caller-defaulted item currency using raw text evidence",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "USD",
+      rawText: "Account currency EUR\nStatement total €157.65",
+      parsedItems: [{ currency: "USD" }, { currency: "USD" }],
+    });
+
+    assertEquals(inferred, "EUR");
+  },
+);

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { fetchLatestUserContact } from "../shared/user-contacts.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -153,11 +154,8 @@ serve(async (req) => {
 
     const inviterUserId = invite.inviter_user_id ?? invite.inviter_id ?? null;
 
-    const { data: inviteeContact, error: inviteeContactError } = await supabase
-      .from("user_contacts")
-      .select("id, preferred_currency")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const { data: inviteeContact, error: inviteeContactError } =
+      await fetchLatestUserContact(supabase, user.id);
 
     if (inviteeContactError) {
       console.error(
@@ -184,11 +182,11 @@ serve(async (req) => {
       inviterUserId
     ) {
       const { data: inviterContact, error: inviterContactError } =
-        await supabase
-          .from("user_contacts")
-          .select("preferred_currency")
-          .eq("user_id", inviterUserId)
-          .maybeSingle();
+        await fetchLatestUserContact<{ preferred_currency: string | null }>(
+          supabase,
+          inviterUserId,
+          "preferred_currency",
+        );
 
       if (inviterContactError) {
         console.error(
@@ -580,7 +578,9 @@ serve(async (req) => {
         // Don't fail the invite acceptance, but log the error for investigation
       } else {
         console.log(
-          `[accept-invite] ✅ Successfully inserted ${insertedEvents?.length || 0} notification events`,
+          `[accept-invite] ✅ Successfully inserted ${
+            insertedEvents?.length || 0
+          } notification events`,
         );
         console.log(
           "[accept-invite] Inserted events:",

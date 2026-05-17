@@ -13,10 +13,13 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'CHF': 'CHF',
   'CLP': 'CLP$',
   'CNY': '¥',
+  'COP': 'COP$',
   'CZK': 'Kč',
   'DKK': 'kr',
   'DOP': 'RD$',
+  'DZD': 'د.ج',
   'EGP': 'E£',
+  'ETB': 'Br',
   'EUR': '€',
   'GBP': '£',
   'GHS': '₵',
@@ -60,6 +63,9 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'JOD': 'د.أ',
   'SYP': '£S',
   'ZMW': 'ZK',
+  'XOF': 'CFA',
+  'CRC': '₡',
+  'XAF': 'FCFA',
 };
 
 export function getCurrencySymbolBasedOnTimeZone(): string {
@@ -112,6 +118,7 @@ export function getCurrencySymbolBasedOnTimeZone(): string {
     'Europe/Sofia': 'BGN',
     'Europe/Bucharest': 'RON',
     'Europe/Zagreb': 'HRK',
+    'Europe/Istanbul': 'TRY',
     
     // Asia
     'Asia/Tokyo': 'JPY',
@@ -213,6 +220,7 @@ export function getCurrencySymbolBasedOnTimeZone(): string {
     // Africa
     'Africa/Johannesburg': 'ZAR',
     'Africa/Cairo': 'EGP',
+    'Africa/Accra': 'GHS',
     'Africa/Lagos': 'NGN',
     'Africa/Nairobi': 'KES',
     'Africa/Casablanca': 'MAD',

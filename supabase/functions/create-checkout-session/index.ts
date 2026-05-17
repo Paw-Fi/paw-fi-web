@@ -33,7 +33,6 @@ import {
   BillingInterval,
   isValidPlan,
   isValidInterval,
-  TRIAL_PERIOD_DAYS,
 } from "../shared/subscription-constants.ts";
 
 // Validate environment on startup
@@ -756,7 +755,6 @@ serve(async (req: Request) => {
         );
         sessionConfig.payment_method_collection = "if_required"; // Don't require payment method for first-time trials
         sessionConfig.subscription_data!.payment_behavior = "allow_incomplete"; // Checkout Sessions require 'allow_incomplete' (not 'default_incomplete')
-        sessionConfig.subscription_data!.trial_period_days = TRIAL_PERIOD_DAYS;
         // Configure what happens when trial ends without payment method
         sessionConfig.subscription_data!.trial_settings = {
           end_behavior: {

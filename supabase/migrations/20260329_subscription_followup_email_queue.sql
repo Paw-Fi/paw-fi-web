@@ -64,6 +64,8 @@ SELECT cron.schedule(
             || '/functions/v1/process-subscription-followup-emails',
           headers := jsonb_build_object(
             'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'secret_key' LIMIT 1),
+            'apikey', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'secret_key' LIMIT 1),
+            'X-Moneko-Internal-Key', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'secret_key' LIMIT 1),
             'Content-Type', 'application/json'
           ),
           body := '{}'::jsonb

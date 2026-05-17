@@ -4,6 +4,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface RequestBody {
   phone?: string;
@@ -118,6 +119,15 @@ Deno.serve(async (req: Request) => {
 
   if (contactErr) {
     console.error("contact select error", contactErr);
+    await reportEdgeFunctionError({
+      functionName: "update-preferred-platform",
+      error: contactErr,
+      context: {
+        operation: "user_contacts.select",
+        hasPhone: Boolean(effectivePhone),
+        hasUserId: Boolean(userId),
+      },
+    });
     return error("Failed to fetch contact", 500);
   }
 
@@ -133,19 +143,43 @@ Deno.serve(async (req: Request) => {
             platform: preferredPlatform,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "phone_e164" },
+          { onConflict: userId ? "user_id" : "phone_e164" },
         )
         .select("id")
         .single();
-      if (upsertErr) return error("Failed to create contact", 500, upsertErr);
+      if (upsertErr) {
+        await reportEdgeFunctionError({
+          functionName: "update-preferred-platform",
+          error: upsertErr,
+          context: {
+            operation: "user_contacts.upsert_by_phone",
+            hasUserId: Boolean(userId),
+          },
+        });
+        return error("Failed to create contact", 500, upsertErr);
+      }
       contactId = upserted.id;
     } else if (userId) {
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, platform: preferredPlatform })
+        .upsert(
+          {
+            user_id: userId,
+            platform: preferredPlatform,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        )
         .select("id")
         .single();
-      if (insertErr) return error("Failed to create contact", 500, insertErr);
+      if (insertErr) {
+        await reportEdgeFunctionError({
+          functionName: "update-preferred-platform",
+          error: insertErr,
+          context: { operation: "user_contacts.upsert_by_user_id", userId },
+        });
+        return error("Failed to create contact", 500, insertErr);
+      }
       contactId = inserted.id;
     }
   }
@@ -156,7 +190,18 @@ Deno.serve(async (req: Request) => {
   const { error: updateErr } = userId && !effectivePhone
     ? await updateQuery.eq("user_id", userId)
     : await updateQuery.eq("id", contactId!);
-  if (updateErr) return error("Failed to update contact", 500, updateErr);
+  if (updateErr) {
+    await reportEdgeFunctionError({
+      functionName: "update-preferred-platform",
+      error: updateErr,
+      context: {
+        operation: "user_contacts.update_platform",
+        contactId,
+        userId,
+      },
+    });
+    return error("Failed to update contact", 500, updateErr);
+  }
 
   return json({
     ok: true,

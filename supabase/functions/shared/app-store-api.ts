@@ -339,6 +339,61 @@ export async function fetchLatestAppStoreTransactionByOriginalId(params: {
   } while (true);
 }
 
+export async function fetchAppStoreTransactionHistoryByOriginalId(params: {
+  config: AppStoreApiConfig;
+  originalTransactionId: string;
+  environment: Environment;
+  revoked?: boolean;
+  limit?: number;
+  fetchImpl?: typeof fetch;
+}): Promise<JWSTransactionDecodedPayload[]> {
+  const maxItems = Math.max(1, Math.min(params.limit ?? 20, 100));
+  const transactions: JWSTransactionDecodedPayload[] = [];
+  let revision: string | null = null;
+  let pagesChecked = 0;
+
+  do {
+    pagesChecked += 1;
+    if (pagesChecked > APP_STORE_HISTORY_MAX_PAGES) {
+      return transactions;
+    }
+
+    const historyResponse = await makeAppStoreApiRequest<{
+      signedTransactions?: string[];
+      hasMore?: boolean;
+      revision?: string | null;
+    }>({
+      config: params.config,
+      path: `/inApps/${GetTransactionHistoryVersion.V2}/history/${params.originalTransactionId}`,
+      environment: params.environment,
+      query: {
+        sort: Order.DESCENDING,
+        revoked: String(params.revoked ?? false),
+        productType: [ProductType.AUTO_RENEWABLE, ProductType.NON_CONSUMABLE],
+        revision,
+      },
+      userAgent: "moneko-creator-user-lookup",
+      fetchImpl: params.fetchImpl,
+    });
+
+    for (const signedTransaction of historyResponse.signedTransactions ?? []) {
+      transactions.push(
+        decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction),
+      );
+
+      if (transactions.length >= maxItems) {
+        return transactions;
+      }
+    }
+
+    if (!historyResponse.hasMore || !historyResponse.revision) {
+      return transactions;
+    }
+
+    revision = historyResponse.revision;
+  } while (true);
+}
+
 export async function fetchAppStoreSubscriptionStatusByTransactionId(params: {
   config: AppStoreApiConfig;
   transactionId: string;

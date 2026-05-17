@@ -20,6 +20,66 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
+    title: "A New Era — Faster, Smarter, Works Offline",
+    date: "2026-05-15",
+    version: "2.0.0",
+    tags: ["Performance", "Offline", "Speed", "UI"],
+    description:
+      "Our biggest update yet. Everything saves instantly, works offline, and loads faster. We rebuilt the engine so you spend less time waiting and more time tracking your money.",
+    items: [
+      "Everything saves instantly — it’s that fast",
+      "Your data stays available offline and syncs automatically when you're back online",
+      "App loads faster and feels snappier across every screen",
+      "New number pad makes entering amounts faster and easier",
+    ],
+  },
+  {
+    title: "New Currencies, Apple Family Sharing & Help Center",
+    date: "2026-05-06",
+    version: "1.6.1",
+    tags: ["Feature", "Currency", "Family", "Support"],
+    description:
+      "This release adds multiple new currencies, introduces Apple Family Sharing support for shared subscriptions, and brings help center access directly in settings.",
+    items: [
+      "Added Costa Rican Colón (CRC) and CFA Franc BEAC (XAF) to supported currencies",
+      "Apple Family Sharing support for shared plan subscriptions",
+      "Help center link now available in Settings for direct support access",
+      "General stability and performance improvements",
+    ],
+  },
+  {
+    title: "New Currencies, CSV Import Enhancements & Calendar Improvements",
+    date: "2026-04-30",
+    version: "1.6.0",
+    tags: ["Feature", "Currency", "Import", "Widget"],
+    description:
+      "This release adds support for three new currencies, enhances CSV import with automatic language detection, improves the calendar widget with more details, and fixes various display issues.",
+    items: [
+      "Added currency support for COP, ETB, and XOF",
+      "You can now replace receipt photos on your transactions",
+      "CSV import now automatically detects and supports different languages",
+      "Calendar widget now shows more detailed information",
+      "Fixed home screen widget calculation issues on both iOS and Android",
+      "Fixed pie chart display issues",
+      "Minor UI refinements and stability improvements",
+    ],
+  },
+  {
+    title: "Algerian Dinar Support & Apple Pay Offline",
+    date: "2026-04-27",
+    version: "1.5.9",
+    tags: ["Feature", "Currency", "Wallet"],
+    description:
+      "This release adds new currency support and enhances Apple Pay functionality",
+    items: [
+      "Added Algerian Dinar (DZD) to supported currencies",
+      "Apple Pay now works in offline mode for faster transactions",
+      "Improved import page with better transaction handling",
+      "Merchant information is now captured for bank transactions",
+      "General stability and performance improvements",
+    ],
+  },
+  {
     title: "Email Capture, Export Date Range & Category Insights",
     date: "2026-04-22",
     version: "1.5.8",

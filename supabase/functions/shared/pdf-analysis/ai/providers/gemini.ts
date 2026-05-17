@@ -25,6 +25,14 @@ interface GeminiPdfProviderOptions {
   modelNames?: string[];
 }
 
+function getMaxOutputTokens(): number {
+  try {
+    return Number(Deno.env.get("PDF_ANALYSIS_MAX_OUTPUT_TOKENS") || 32768);
+  } catch {
+    return 32768;
+  }
+}
+
 function getGeminiModelNames(): string[] {
   try {
     const configured = Deno.env.get("PDF_ANALYSIS_GEMINI_MODELS")?.trim();
@@ -36,9 +44,9 @@ function getGeminiModelNames(): string[] {
       if (models.length > 0) return models;
     }
 
-    return ["gemini-3.1-flash", "gemini-2.5-flash", "gemini-2.5-pro"];
+    return ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-2.5-pro"];
   } catch {
-    return ["gemini-3.1-flash", "gemini-2.5-flash", "gemini-2.5-pro"];
+    return ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-2.5-pro"];
   }
 }
 
@@ -90,7 +98,17 @@ export function createGeminiPdfAnalysisProvider(
       let lastError: unknown;
 
       for (const modelName of modelNames) {
+        const modelStartedAt = Date.now();
         try {
+          const parts = buildGeminiParts(userPrompt, content);
+          console.log("[pdf-analysis] gemini provider request start", {
+            model: modelName,
+            textLength: userPrompt.length,
+            partCount: parts.length,
+            documentCount: content.documents?.length ?? 0,
+            imageCount: content.images?.length ?? 0,
+            maxOutputTokens: getMaxOutputTokens(),
+          });
           const model = genAI.getGenerativeModel({
             model: modelName,
             systemInstruction: systemPrompt,
@@ -98,25 +116,38 @@ export function createGeminiPdfAnalysisProvider(
 
           const response = await model.generateContent({
             contents: [
-              { role: "user", parts: buildGeminiParts(userPrompt, content) },
+              { role: "user", parts },
             ],
             generationConfig: {
-              maxOutputTokens: 8192,
+              maxOutputTokens: getMaxOutputTokens(),
               responseMimeType: "application/json",
             },
           });
 
           const raw = (response.response as any)?.raw || {};
           const usage = raw?.usageMetadata || {};
+          const text = response.response.text();
+          console.log("[pdf-analysis] gemini provider request complete", {
+            model: modelName,
+            inputTokens: Number(usage.promptTokenCount || 0) || null,
+            outputTokens: Number(usage.candidatesTokenCount || 0) || null,
+            responseTextLength: text.length,
+            latencyMs: Date.now() - modelStartedAt,
+          });
 
           return {
-            text: response.response.text(),
+            text,
             model: modelName,
             inputTokens: Number(usage.promptTokenCount || 0) || undefined,
             outputTokens: Number(usage.candidatesTokenCount || 0) || undefined,
             latencyMs: Date.now() - startedAt,
           };
         } catch (error) {
+          console.error("[pdf-analysis] gemini provider request failed", {
+            model: modelName,
+            latencyMs: Date.now() - modelStartedAt,
+            error: error instanceof Error ? error.message : String(error),
+          });
           lastError = error;
         }
       }

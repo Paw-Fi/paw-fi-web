@@ -14,7 +14,9 @@ import {
   buildCategoryGuide,
   CATEGORY_GUIDE,
   formatInvokeError,
+  formatInvokeErrorWithResponseBody,
   normalizeExpensesForTool,
+  readInvokeErrorResponseDetails,
 } from "../shared/formatting-helpers.ts";
 import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
@@ -65,6 +67,21 @@ import {
   createVertexBotChatSession,
   getVertexAiConfigFromEnv,
 } from "../shared/vertex-ai-chat.ts";
+import {
+  normalizeAiToolAmount,
+  normalizeAiToolMoneyCents,
+  normalizeAiToolPercentage,
+  normalizeAiToolTransactionFields,
+  normalizeAiToolTransactionType,
+  normalizeRequiredAiToolString,
+} from "../shared/bot/ai-tool-validation.ts";
+import {
+  buildUnsafeMutationClaimFallback,
+  detectWriteIntentFromUserText,
+  diagnoseUnsafeTransactionMutationClaim,
+  isWriteMutationToolName,
+  WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
+} from "../shared/bot/mutation-claim-guard.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 const FALLBACK_MODEL_NAME = "gemini-2.5-flash";
@@ -73,6 +90,8 @@ Your goal is to help users track expenses, manage budgets, and view their financ
 You can handle personal finances and shared spaces.
 
 **LANGUAGE RULE (HIGHEST PRIORITY):** Always reply in {{LANGUAGE}}. This value is resolved by the backend before your prompt is built. Do not choose the reply language yourself and do not infer it from the user's latest message.
+
+**TOOL-USE RULE (NON-NEGOTIABLE):** NEVER claim an action was performed unless you actually called the corresponding tool on this turn. Phrases like "I've added", "I've saved", "I've logged", "I've recorded", "I've updated", "I've deleted" are FORBIDDEN unless a tool call accompanies the turn. If the user asks to add/save/log/record a transaction and you have enough details, you MUST call \`add_transaction\` (or \`add_transactions_batch\`). If details are missing, ask one short clarification question instead — do not pretend the save happened. The backend enforces this and will replace any false success claim with an error message to the user.
 
 CRITICAL RULES:
 1.  **Currency**: Always use the user's preferred currency or the currency detected in the text. If ambiguous, ask.
@@ -1628,6 +1647,7 @@ async function reportTelegramToolInvokeFailure(params: {
   context?: Record<string, unknown>;
 }) {
   try {
+    const responseDetails = await readInvokeErrorResponseDetails(params.error);
     await reportEdgeFunctionError({
       functionName: "telegram-ai-bot",
       error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
@@ -1636,7 +1656,17 @@ async function reportTelegramToolInvokeFailure(params: {
         step: `tool:${params.toolName}`,
         toolName: params.toolName,
         targetFunction: params.targetFunction,
-        httpStatus: getInvokeHttpStatus(params.error),
+        httpStatus:
+          responseDetails?.status ?? getInvokeHttpStatus(params.error),
+        ...(responseDetails?.statusText
+          ? { targetStatusText: responseDetails.statusText }
+          : {}),
+        ...(responseDetails?.contentType
+          ? { targetContentType: responseDetails.contentType }
+          : {}),
+        ...(responseDetails?.body
+          ? { targetResponseBody: responseDetails.body }
+          : {}),
         ...params.context,
       },
     });
@@ -2136,7 +2166,7 @@ Deno.serve(async (req: Request) => {
             TELEGRAM_BOT_TOKEN,
             chatId,
             nonSubscriberMessage,
-               {
+            {
               inline_keyboard: [
                 [
                   {
@@ -2955,7 +2985,85 @@ Deno.serve(async (req: Request) => {
           });
         }
 
+        // Layered defense against AI hallucinating a save without a tool call.
+        // Same strategy as twilio-whatsapp-ai-bot.
+        if (!functionCalls || functionCalls.length === 0) {
+          const writeIntentDetected =
+            detectWriteIntentFromUserText(incomingText);
+          const claimDiag = diagnoseUnsafeTransactionMutationClaim({
+            responseText: finalResponseText,
+            writeMutationSucceeded: false,
+          });
+          const shouldForceWriteToolCall =
+            claimDiag.blocked || writeIntentDetected;
+
+          console.log(
+            "[telegram-ai-bot] initial-response tool-call guard",
+            {
+              traceId,
+              userMessage: incomingText,
+              writeIntentDetected,
+              claimBlocked: claimDiag.blocked,
+              claimReason: claimDiag.reason,
+              willForceToolCall: shouldForceWriteToolCall,
+            },
+          );
+
+          if (shouldForceWriteToolCall) {
+            try {
+              const repairPrompt =
+                `Your previous response did not call a save tool. ` +
+                `The user's message ("${incomingText}") requires a write action. ` +
+                `Call add_transaction now with the details you can extract. ` +
+                `Do not reply with text claiming a save happened.`;
+              const repairResult = await (activeChat as any).sendMessage(
+                repairPrompt,
+                {
+                  toolConfig: {
+                    functionCallingConfig:
+                      WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
+                  },
+                },
+              );
+              response = await repairResult.response;
+              functionCalls = (response.functionCalls() as any[]) || [];
+              const repairText = response.text();
+              console.log(
+                "[telegram-ai-bot] forced-tool-call retry result",
+                {
+                  traceId,
+                  forcedCallCount: functionCalls.length,
+                  forcedCallNames: functionCalls.map((c: any) => c?.name),
+                  hadTextFallback: !!repairText,
+                },
+              );
+              if (functionCalls.length > 0) {
+                finalResponseText = "";
+              } else {
+                const repairDiag = diagnoseUnsafeTransactionMutationClaim({
+                  responseText: repairText,
+                  writeMutationSucceeded: false,
+                });
+                finalResponseText = repairDiag.blocked
+                  ? buildUnsafeMutationClaimFallback()
+                  : (repairText || buildUnsafeMutationClaimFallback());
+              }
+            } catch (error) {
+              console.error(
+                "[telegram-ai-bot] forced-tool-call retry failed:",
+                error,
+              );
+              debugNotes.push(
+                `forced-tool-call-retry-error: ${String(error)}`,
+              );
+              finalResponseText = buildUnsafeMutationClaimFallback();
+              functionCalls = [];
+            }
+          }
+        }
+
         let toolSucceededAny = false;
+        let writeMutationSucceededAny = false;
         let lastToolResult: any = null;
         let lastToolCallName: string | null = null;
         let lastGeneratedChartUrl: string | null = null;
@@ -3346,7 +3454,18 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: formatInvokeError(error) };
                 }
               } else if (call.name === "add_transaction") {
-                const amount = Number(call.args.amount || 0);
+                const transactionResult = normalizeAiToolTransactionFields(
+                  call.args,
+                );
+                if (!transactionResult.ok) {
+                  toolResult = { error: transactionResult.error };
+                  lastToolResult = toolResult;
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
+                const amount = transactionResult.amount;
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
                   .toString()
@@ -3376,7 +3495,7 @@ Deno.serve(async (req: Request) => {
                   continue;
                 }
                 const isHouseholdExpense =
-                  !!householdId && (call.args.type || "expense") === "expense";
+                  !!householdId && transactionResult.type === "expense";
                 const splitConfig =
                   isHouseholdExpense && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
@@ -3415,7 +3534,7 @@ Deno.serve(async (req: Request) => {
                           )
                         : undefined,
                     amount: amount,
-                    category: call.args.category,
+                    category: transactionResult.category,
                     description: call.args.description || "",
                     merchant:
                       typeof call.args.merchant === "string"
@@ -3423,7 +3542,7 @@ Deno.serve(async (req: Request) => {
                         : undefined,
                     date: call.args.date || formatDateInTimeZone(userTimezone),
                     currency: call.args.currency || userCurrency,
-                    type: call.args.type || "expense",
+                    type: transactionResult.type,
                     householdId,
                     isPortfolio:
                       spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
@@ -3439,8 +3558,9 @@ Deno.serve(async (req: Request) => {
                 const success = !error && data?.success === true;
                 const formatted = success
                   ? ""
-                  : formatInvokeError(error ?? data?.error) ||
-                    "Failed to save transaction";
+                  : (await formatInvokeErrorWithResponseBody(
+                      error ?? data?.error,
+                    )) || "Failed to save transaction";
                 toolResult = success
                   ? { success: true, data: data?.data ?? data }
                   : { error: formatted };
@@ -3449,15 +3569,14 @@ Deno.serve(async (req: Request) => {
                     traceId,
                     toolName: "add_transaction",
                     targetFunction:
-                      String(call.args.type || "expense").toLowerCase() ===
-                      "income"
+                      transactionResult.type === "income"
                         ? "save-income"
                         : "save-expense",
                     formatted,
                     error: error ?? data?.error,
                     context: {
                       amount,
-                      category: call.args.category,
+                      category: transactionResult.category,
                       householdId,
                     },
                   });
@@ -3466,6 +3585,14 @@ Deno.serve(async (req: Request) => {
                 const rows = Array.isArray(call.args.transactions)
                   ? call.args.transactions
                   : [];
+                if (rows.length === 0) {
+                  toolResult = { error: "No transactions provided" };
+                  lastToolResult = toolResult;
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
                   .toString()
@@ -3497,9 +3624,24 @@ Deno.serve(async (req: Request) => {
                 const isPortfolio =
                   spaceMeta?.isPortfolio ?? call.args.is_portfolio === true;
                 const batchTransactions: any[] = [];
+                let batchBuildError: string | null = null;
 
-                for (const row of rows) {
-                  const amount = Number(row.amount || 0);
+                for (const [index, row] of rows.entries()) {
+                  if (!row || typeof row !== "object") {
+                    batchBuildError = `Transaction ${
+                      index + 1
+                    }: Invalid transaction row.`;
+                    break;
+                  }
+                  const transactionResult =
+                    normalizeAiToolTransactionFields(row);
+                  if (!transactionResult.ok) {
+                    batchBuildError = `Transaction ${
+                      index + 1
+                    }: ${transactionResult.error}`;
+                    break;
+                  }
+                  const amount = transactionResult.amount;
                   const requestedWallet = await resolveWalletIdInScope(
                     supabase,
                     userId,
@@ -3507,11 +3649,15 @@ Deno.serve(async (req: Request) => {
                     row.wallet_name,
                   );
                   if (requestedWallet.error) {
-                    toolResult = { error: requestedWallet.error };
+                    batchBuildError = `Transaction ${
+                      index + 1
+                    }: ${requestedWallet.error}`;
                     break;
                   }
                   const splitConfig =
-                    householdId && !isPortfolio && row.type !== "income"
+                    householdId &&
+                    !isPortfolio &&
+                    transactionResult.type !== "income"
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
@@ -3522,9 +3668,9 @@ Deno.serve(async (req: Request) => {
                       : {};
 
                   batchTransactions.push({
-                    type: row.type || "expense",
+                    type: transactionResult.type,
                     amount,
-                    category: row.category,
+                    category: transactionResult.category,
                     description: row.description || "",
                     merchant:
                       typeof row.merchant === "string"
@@ -3547,6 +3693,15 @@ Deno.serve(async (req: Request) => {
                           )
                         : undefined,
                   });
+                }
+
+                if (batchBuildError) {
+                  toolResult = { error: batchBuildError };
+                  lastToolResult = toolResult;
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
                 }
 
                 const { data, error } = await supabase.functions.invoke(
@@ -3636,6 +3791,40 @@ Deno.serve(async (req: Request) => {
                   });
                 }
               } else if (call.name === "create_wallet") {
+                const walletNameResult = normalizeRequiredAiToolString(
+                  call.args.name,
+                  "wallet name",
+                );
+                const openingBalanceResult = normalizeAiToolMoneyCents(
+                  call.args.opening_balance,
+                  "opening_balance",
+                );
+                const goalAmountResult = normalizeAiToolMoneyCents(
+                  call.args.goal_amount,
+                  "goal_amount",
+                  { allowNegative: false },
+                );
+                if (!walletNameResult.ok) {
+                  toolResult = { error: walletNameResult.error };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
+                if (!openingBalanceResult.ok) {
+                  toolResult = { error: openingBalanceResult.error };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
+                if (!goalAmountResult.ok) {
+                  toolResult = { error: goalAmountResult.error };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
                   .toString()
@@ -3657,17 +3846,11 @@ Deno.serve(async (req: Request) => {
                     body: {
                       userId,
                       householdId,
-                      name: call.args.name,
+                      name: walletNameResult.value,
                       icon: call.args.icon,
                       color: call.args.color,
-                      openingBalanceCents: Number.isFinite(
-                        call.args.opening_balance,
-                      )
-                        ? Math.round(Number(call.args.opening_balance) * 100)
-                        : undefined,
-                      goalAmountCents: Number.isFinite(call.args.goal_amount)
-                        ? Math.round(Number(call.args.goal_amount) * 100)
-                        : undefined,
+                      openingBalanceCents: openingBalanceResult.cents,
+                      goalAmountCents: goalAmountResult.cents,
                       isDefault: call.args.is_default === true,
                     },
                     headers: buildInternalInvokeHeaders(internalFunctionKey),
@@ -3688,7 +3871,7 @@ Deno.serve(async (req: Request) => {
                     targetFunction: "save-wallet",
                     formatted,
                     error: error ?? data?.error,
-                    context: { householdId, name: call.args.name },
+                    context: { householdId, name: walletNameResult.value },
                   });
                 }
               } else if (call.name === "update_wallet") {
@@ -3720,18 +3903,66 @@ Deno.serve(async (req: Request) => {
                       "Wallet was not found in the selected scope.",
                   };
                 } else {
+                  const newNameResult =
+                    call.args.new_name != null
+                      ? normalizeRequiredAiToolString(
+                          call.args.new_name,
+                          "new_name",
+                        )
+                      : { ok: true as const, value: undefined };
+                  const goalAmountResult = normalizeAiToolMoneyCents(
+                    call.args.goal_amount,
+                    "goal_amount",
+                    { allowNegative: false },
+                  );
+                  if (!newNameResult.ok) {
+                    toolResult = { error: newNameResult.error };
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
+                  if (!goalAmountResult.ok) {
+                    toolResult = { error: goalAmountResult.error };
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
+                  const hasUpdate =
+                    newNameResult.value !== undefined ||
+                    typeof call.args.icon === "string" ||
+                    typeof call.args.color === "string" ||
+                    goalAmountResult.cents !== undefined ||
+                    typeof call.args.is_default === "boolean";
+                  if (!hasUpdate) {
+                    toolResult = {
+                      error: "At least one wallet update is required.",
+                    };
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
                   const { data, error } = await supabase.functions.invoke(
                     "update-wallet",
                     {
                       body: {
                         userId,
                         accountId: requestedWallet.accountId,
-                        name: call.args.new_name,
+                        name: newNameResult.value,
                         icon: call.args.icon,
                         color: call.args.color,
-                        goalAmountCents: Number.isFinite(call.args.goal_amount)
-                          ? Math.round(Number(call.args.goal_amount) * 100)
-                          : undefined,
+                        goalAmountCents: goalAmountResult.cents,
                         isDefault:
                           typeof call.args.is_default === "boolean"
                             ? call.args.is_default
@@ -3763,6 +3994,14 @@ Deno.serve(async (req: Request) => {
                   }
                 }
               } else if (call.name === "create_wallet_transfer") {
+                const amountResult = normalizeAiToolAmount(call.args.amount);
+                if (!amountResult.ok) {
+                  toolResult = { error: amountResult.error };
+                  toolResponses.push({
+                    functionResponse: { name: call.name, response: toolResult },
+                  });
+                  continue;
+                }
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
                   .toString()
@@ -3810,9 +4049,7 @@ Deno.serve(async (req: Request) => {
                         userId,
                         fromAccountId: fromWallet.accountId,
                         toAccountId: toWallet.accountId,
-                        amountCents: Math.round(
-                          Number(call.args.amount || 0) * 100,
-                        ),
+                        amountCents: Math.round(amountResult.amount * 100),
                         currency: call.args.currency || userCurrency,
                         date:
                           call.args.date || formatDateInTimeZone(userTimezone),
@@ -4439,10 +4676,11 @@ Deno.serve(async (req: Request) => {
                 ) {
                   toolResult = { error: "Confirmation required" };
                 } else {
-                  const amount = Number(call.args.amount || 0);
-                  if (!Number.isFinite(amount) || amount <= 0) {
-                    toolResult = { error: "amount is required" };
+                  const amountResult = normalizeAiToolAmount(call.args.amount);
+                  if (!amountResult.ok) {
+                    toolResult = { error: amountResult.error };
                   } else {
+                    const amount = amountResult.amount;
                     let householdId = call.args.household_id || null;
                     const householdName = (call.args.household_name || "")
                       .toString()
@@ -4528,13 +4766,21 @@ Deno.serve(async (req: Request) => {
                           name: string;
                           percentage: number;
                         }> = [];
+                        let pocketBuildError: string | null = null;
                         for (const pocket of pockets) {
                           const pocketName = (pocket?.name || "")
                             .toString()
                             .trim();
                           if (!pocketName) continue;
-                          const pct = Number(pocket?.percentage || 0);
-                          const clampedPct = Math.max(0, Math.min(100, pct));
+                          const pctResult = normalizeAiToolPercentage(
+                            pocket?.percentage,
+                            "percentage",
+                          );
+                          if (!pctResult.ok) {
+                            pocketBuildError = `${pocketName}: ${pctResult.error}`;
+                            break;
+                          }
+                          const clampedPct = pctResult.percentage;
                           const canonical = envelopeNameMap.get(
                             normalizeEnvelopeName(pocketName),
                           );
@@ -4577,12 +4823,14 @@ Deno.serve(async (req: Request) => {
                             );
                           }
                         }
-                        toolResult = {
-                          success: true,
-                          budget: budgetRes.data,
-                          envelopes,
-                          updated_pockets: updatedPockets,
-                        };
+                        toolResult = pocketBuildError
+                          ? { error: pocketBuildError }
+                          : {
+                              success: true,
+                              budget: budgetRes.data,
+                              envelopes,
+                              updated_pockets: updatedPockets,
+                            };
                       }
                     }
                   }
@@ -4803,7 +5051,11 @@ Deno.serve(async (req: Request) => {
                 const action = (call.args.action || "")
                   .toString()
                   .toLowerCase();
-                if (action === "delete") {
+                if (!["add", "update", "delete"].includes(action)) {
+                  toolResult = {
+                    error: "action must be add, update, or delete.",
+                  };
+                } else if (action === "delete") {
                   const expenseIdDirect =
                     typeof call.args.expense_id === "string"
                       ? call.args.expense_id.trim()
@@ -4916,8 +5168,21 @@ Deno.serve(async (req: Request) => {
                         recurrence_rule: recurrenceRule,
                       };
                       if (call.args.amount != null) {
+                        const amountResult = normalizeAiToolAmount(
+                          call.args.amount,
+                        );
+                        if (!amountResult.ok) {
+                          toolResult = { error: amountResult.error };
+                          toolResponses.push({
+                            functionResponse: {
+                              name: call.name,
+                              response: toolResult,
+                            },
+                          });
+                          continue;
+                        }
                         updates.amount_cents = Math.round(
-                          Number(call.args.amount) * 100,
+                          amountResult.amount * 100,
                         );
                       }
                       if (call.args.category != null) {
@@ -4985,7 +5250,20 @@ Deno.serve(async (req: Request) => {
                     interval: 1,
                     anchor_date: dateValue,
                   };
-                  const amount = Number(call.args.amount || 0);
+                  const transactionResult = normalizeAiToolTransactionFields(
+                    call.args,
+                  );
+                  if (!transactionResult.ok) {
+                    toolResult = { error: transactionResult.error };
+                    toolResponses.push({
+                      functionResponse: {
+                        name: call.name,
+                        response: toolResult,
+                      },
+                    });
+                    continue;
+                  }
+                  const amount = transactionResult.amount;
                   let householdId = call.args.household_id || null;
                   const householdName = (call.args.household_name || "")
                     .toString()
@@ -5004,7 +5282,7 @@ Deno.serve(async (req: Request) => {
                   const splitConfig =
                     householdId &&
                     !spaceMeta?.isPortfolio &&
-                    call.args.type !== "income"
+                    transactionResult.type !== "income"
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
@@ -5028,7 +5306,7 @@ Deno.serve(async (req: Request) => {
                       userId,
                       {
                         amount,
-                        category: call.args.category,
+                        category: transactionResult.category,
                         description: call.args.description || "",
                         merchant:
                           typeof call.args.merchant === "string"
@@ -5036,7 +5314,7 @@ Deno.serve(async (req: Request) => {
                             : undefined,
                         date: dateValue,
                         currency: call.args.currency || userCurrency,
-                        type: call.args.type || "expense",
+                        type: transactionResult.type,
                         householdId,
                         isPortfolio:
                           spaceMeta?.isPortfolio ??
@@ -5052,14 +5330,15 @@ Deno.serve(async (req: Request) => {
                       },
                     );
                     const targetFunction =
-                      (call.args.type || "expense") === "income"
+                      transactionResult.type === "income"
                         ? "save-income"
                         : "save-expense";
                     const success = !error && data?.success === true;
                     const formatted = success
                       ? ""
-                      : formatInvokeError(error ?? data?.error) ||
-                        "Failed to save recurring transaction";
+                      : (await formatInvokeErrorWithResponseBody(
+                          error ?? data?.error,
+                        )) || "Failed to save recurring transaction";
                     toolResult = success
                       ? { success: true, data: data?.data ?? data }
                       : { error: formatted };
@@ -5072,9 +5351,9 @@ Deno.serve(async (req: Request) => {
                         error: error ?? data?.error,
                         context: {
                           action,
-                          type: call.args.type || "expense",
+                          type: transactionResult.type,
                           amount,
-                          category: call.args.category,
+                          category: transactionResult.category,
                           householdId,
                         },
                       });
@@ -5106,6 +5385,9 @@ Deno.serve(async (req: Request) => {
               (!!toolResult?.data && !toolResult?.error);
             if (succeeded) {
               toolSucceededAny = true;
+              if (isWriteMutationToolName(call.name)) {
+                writeMutationSucceededAny = true;
+              }
               if (
                 call.name === "confirm_budget" ||
                 call.name === "set_budget"
@@ -5224,6 +5506,25 @@ Deno.serve(async (req: Request) => {
         ) {
           const errorSnippet = lastToolResult.error.trim().slice(0, 180);
           finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
+        }
+        {
+          const finalDiag = diagnoseUnsafeTransactionMutationClaim({
+            responseText: finalResponseText,
+            writeMutationSucceeded: writeMutationSucceededAny,
+          });
+          if (finalDiag.blocked) {
+            console.log(
+              "[telegram-ai-bot] final-response mutation-claim blocked",
+              {
+                traceId,
+                lastToolCallName,
+                writeMutationSucceededAny,
+                reason: finalDiag.reason,
+                responseTextPreview: finalResponseText.slice(0, 200),
+              },
+            );
+            finalResponseText = buildUnsafeMutationClaimFallback();
+          }
         }
         if (!finalResponseText || !finalResponseText.trim()) {
           finalResponseText =

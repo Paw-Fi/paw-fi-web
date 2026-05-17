@@ -1,79 +1,86 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { supabase } from '@/lib/supabase';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
 export const Route = createFileRoute('/auth/confirm')({
   component: AuthConfirm,
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown> = {}) => {
     return {
       token_hash: (search.token_hash as string) || undefined,
+      token: (search.token as string) || undefined,
       type: (search.type as EmailOtpType) || undefined,
-      next: (search.next as string) || undefined,
+      next: (search.next as string) || '/dashboard',
     };
-  },
-  loader: async ({ search }) => {
-    const { token_hash, type, next } = search;
-
-    if (token_hash && type) {
-      try {
-        const { error } = await supabase.auth.verifyOtp({
-          type,
-          token_hash,
-        });
-
-        if (!error) {
-          // Successfully verified, check if user needs to create avatar
-          const { data: { user } } = await supabase.auth.getUser();
-          
-          if (user) {
-            // Check if user has avatar_url
-            const { data: userData } = await supabase
-              .from('users')
-              .select('avatar_url')
-              .eq('id', user.id)
-              .single();
-            
-            // If no avatar, redirect to avatar customizer and PRESERVE intended destination
-            if (!userData?.avatar_url) {
-              throw redirect({
-                to: '/avatar-customizer',
-                search: next ? { redirect: next } : undefined,
-                replace: true,
-              });
-            }
-            
-            // Otherwise go to intended destination (or dashboard)
-            throw redirect({
-              to: next || '/dashboard',
-              replace: true,
-            });
-          } else {
-            // Fallback if no user data
-            throw redirect({
-              to: next || '/dashboard',
-              replace: true,
-            });
-          }
-        }
-      } catch (error) {
-        // If it's a redirect, re-throw it
-        if (error && typeof error === 'object' && 'href' in error) {
-          throw error;
-        }
-        console.error('Email verification error:', error);
-      }
-    }
-
-    // If verification failed or no token provided, redirect to error page
-    throw redirect({
-      to: '/auth/error',
-      replace: true,
-    });
   },
 });
 
 function AuthConfirm() {
-  // This component should never render as the loader handles all cases
+  const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    if (isProcessing) {
+      return;
+    }
+
+    const handleConfirmation = async () => {
+      setIsProcessing(true);
+
+      try {
+        const url = new URL(window.location.href);
+        const tokenHash =
+          url.searchParams.get('token_hash') ?? url.searchParams.get('token');
+        const type = url.searchParams.get('type') as EmailOtpType | null;
+        const code = url.searchParams.get('code');
+        const error = url.searchParams.get('error');
+
+        if (error) {
+          navigate({ to: '/auth/error' });
+          return;
+        }
+
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+            code,
+          );
+
+          if (exchangeError) {
+            console.error('Auth code exchange error:', exchangeError);
+          }
+        }
+
+        if (tokenHash && type) {
+          const { error: verifyError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type,
+          });
+
+          if (verifyError) {
+            console.error('Email verification error:', verifyError);
+          }
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          navigate({ to: next });
+          return;
+        }
+
+        navigate({ to: '/auth/error' });
+      } catch (confirmationError) {
+        console.error('Email confirmation processing error:', confirmationError);
+        navigate({ to: '/auth/error' });
+      }
+    };
+
+    void handleConfirmation();
+  }, [isProcessing, navigate, next]);
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">

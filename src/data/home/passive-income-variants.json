@@ -3286,6 +3286,161 @@
       "body": "The best budgeting app in 2026 is the one you will actually use. That sounds obvious, but most people quit because logging is annoying, categories drift, or the system is too complex for real life.\n\nWhen you compare budget apps, start with capture: can you log spending quickly via text, receipts, or automation? Next look for clarity: pockets or envelopes that show what is left, plus goals that connect day-to-day decisions to progress. Finally, if you share money, make sure the app supports shared budgets and splits without awkward workarounds.\n\nMoneko is built around those principles: low-friction capture (including WhatsApp and iOS wallet automations), pocket-style budgeting, and calculators that connect your month to bigger outcomes like net worth and retirement. Use the checklist above to pick the right tool, then stick with a system you can maintain."
     }
   },
+  "email-based-budgeting": {
+    "meta": {
+      "title": "Email-Based Budgeting App: Forward Receipts to Moneko",
+      "description": "Forward online receipts and PDF, CSV, XLS, or XLSX attachments to Moneko so purchases are logged automatically in your budget.",
+      "keywords": "email based budgeting, email receipt capture, forward receipts to budgeting app, receipt tracking app, automatic expense logging, PDF receipt tracker, CSV expense import, online purchase tracker"
+    },
+    "hero": {
+      "title": "Email-Based Budgeting for Online Receipts",
+      "subtitle": "Forward receipts and supported attachments to Moneko. The app reads the useful details, logs the expense, and notifies you when it is ready.",
+      "ctaText": "Set Up Receipt Capture",
+      "ctaRoute": "/download",
+      "chatSuggestions": [
+        "How do I forward receipts to Moneko?",
+        "Can Moneko log PDF receipts automatically?",
+        "What email attachments can Moneko process?",
+        "How do approved senders protect my account?"
+      ]
+    },
+    "howItWorks": {
+      "steps": [
+        {
+          "title": "Enable Email Receipt Capture",
+          "description": "Open Profile Settings, switch on Email receipt capture, and choose the default space for automatically captured expenses."
+        },
+        {
+          "title": "Choose a Default Wallet",
+          "description": "Pick the wallet Moneko should use for forwarded receipts, such as your main card, current account, or spending wallet."
+        },
+        {
+          "title": "Forward Receipts",
+          "description": "Send receipt emails or supported attachments to files@inbound.moneko.io from an approved sender address."
+        }
+      ]
+    },
+    "landing": {
+      "type": "email-receipt-capture",
+      "supportedFiles": [
+        "PDF receipts",
+        "CSV files",
+        "XLS files",
+        "XLSX files"
+      ],
+      "steps": [
+        {
+          "title": "Turn the feature on",
+          "description": "Enable Email receipt capture in Profile Settings so Moneko is ready to accept receipts from approved senders."
+        },
+        {
+          "title": "Set default routing",
+          "description": "Choose the personal or household space and the wallet where captured transactions should be saved."
+        },
+        {
+          "title": "Approve sender emails",
+          "description": "Keep your account protected by allowing only trusted email addresses to forward receipts for processing."
+        }
+      ],
+      "useCases": [
+        {
+          "title": "Online shopping",
+          "description": "Forward order confirmations and store receipts before they disappear in your inbox."
+        },
+        {
+          "title": "Subscriptions",
+          "description": "Log recurring invoices and app store receipts without manually copying totals."
+        },
+        {
+          "title": "Travel bookings",
+          "description": "Capture flights, hotels, ride receipts, and booking confirmations in the right wallet."
+        },
+        {
+          "title": "Spreadsheets and bills",
+          "description": "Send PDF, CSV, XLS, or XLSX attachments when the receipt is stored as a file."
+        }
+      ],
+      "securityPoints": [
+        "Your account email is approved by default, and you can add secondary shopping or household inboxes.",
+        "Receipts from unapproved sender addresses are not processed.",
+        "The default space and wallet keep captured expenses organized before review."
+      ],
+      "faq": [
+        {
+          "question": "What is email-based budgeting?",
+          "answer": "Email-based budgeting lets you forward receipts to a budgeting app so purchases can be extracted and logged without typing every detail by hand."
+        },
+        {
+          "question": "What address do I forward receipts to?",
+          "answer": "Forward receipts to files@inbound.moneko.io from an approved sender email address."
+        },
+        {
+          "question": "Which attachment types does Moneko support?",
+          "answer": "Moneko supports PDF, CSV, XLS, and XLSX attachments for email receipt capture."
+        },
+        {
+          "question": "Where are captured receipts saved?",
+          "answer": "Captured expenses are saved to the default space and wallet you choose during setup, and you can edit the transaction later."
+        },
+        {
+          "question": "How does Moneko protect my account?",
+          "answer": "Moneko only processes receipts from approved sender email addresses, so random forwarded emails cannot log expenses to your account."
+        }
+      ]
+    },
+    "videoSection": {
+      "title": "Forward Receipts Instead of Retyping Them",
+      "subtitle": "Use your inbox as a simple transaction source for online purchases, subscriptions, travel, and digital bills."
+    },
+    "features": [
+      {
+        "title": "Email Receipt Capture",
+        "description": "Forward receipts to files@inbound.moneko.io and let Moneko extract the useful transaction details.",
+        "icon": "mail",
+        "route": "/budgeting-app/email-based-budgeting"
+      },
+      {
+        "title": "Approved Senders",
+        "description": "Control which email addresses can send receipts for processing.",
+        "icon": "shield",
+        "route": "/download"
+      },
+      {
+        "title": "Default Space and Wallet",
+        "description": "Automatically route captured expenses to the right personal or household budget.",
+        "icon": "wallet",
+        "route": "/budgeting-app/best-budgeting-app-2026"
+      }
+    ],
+    "lessons": [
+      {
+        "title": "Capture First, Categorize Later",
+        "description": "Learn why reducing logging friction is the easiest way to keep a budget current.",
+        "icon": "capture"
+      },
+      {
+        "title": "Budgeting From Your Inbox",
+        "description": "Turn online receipts, subscriptions, and digital bills into a repeatable expense tracking workflow.",
+        "icon": "inbox"
+      }
+    ],
+    "benefits": [
+      "Forward receipts from any approved inbox",
+      "Supports PDF, CSV, XLS, and XLSX attachments",
+      "Routes expenses to a default space and wallet",
+      "Sends confirmation when processing is complete"
+    ],
+    "article": {
+      "title": "Email-Based Budgeting: How Receipt Forwarding Keeps Your Budget Current",
+      "tags": [
+        "email-based budgeting",
+        "email receipt capture",
+        "automatic expense logging",
+        "receipt tracking"
+      ],
+      "body": "Email-based budgeting is a faster way to keep online purchases in your budget. Instead of opening an app and typing the merchant, date, amount, category, and wallet, you forward a receipt email to Moneko and let the app extract the useful details.\n\nThis matters because online spending is easy to miss. Shopping receipts, subscription invoices, app store charges, travel bookings, and digital bills often sit across different inboxes and file formats. Moneko closes that gap by accepting forwarded receipts and supported PDF, CSV, XLS, and XLSX attachments from approved sender addresses.\n\nThe setup is intentionally simple: enable Email receipt capture, choose the default space and wallet, copy files@inbound.moneko.io, and approve the email addresses allowed to send receipts. After a receipt is processed, Moneko saves the transaction and sends a confirmation email and phone notification so you know it is ready to review."
+    }
+  },
   "best-net-worth-tracker-2026": {
     "meta": {
       "title": "Best Net Worth Tracker in 2026: How to Choose the Right Tool | Moneko",

@@ -74,6 +74,9 @@ interface UpdateExpenseRequest {
   clientTimezoneOffsetMinutes?: number;
   // Optional IANA timezone (e.g., "Asia/Singapore"). Used if offset is not provided.
   clientTimezone?: string;
+  clientRecordId?: string;
+  clientMutationId?: string;
+  idempotencyKey?: string;
 
   // Optional user-confirmed category remap preference (mapping-only mode supported)
   categoryRemap?: {
@@ -291,6 +294,9 @@ Deno.serve(async (req: Request) => {
     } = await req.json();
     const expenseId = body.expenseId ?? body.expense_id;
     const updates = (body as any).updates ?? {};
+    const clientRecordId = body.clientRecordId?.trim() || null;
+    const clientMutationId = body.clientMutationId?.trim() ||
+      body.idempotencyKey?.trim() || null;
 
     const categoryRemapRaw = (body as any).categoryRemap ??
       (body as any).category_remap;
@@ -2076,7 +2082,11 @@ Deno.serve(async (req: Request) => {
       success: true,
       data: updatedExpense,
       resolvedUserId: userId,
-      meta: resolvedIdentityMeta,
+      meta: {
+        ...(resolvedIdentityMeta ?? {}),
+        clientRecordId,
+        clientMutationId,
+      },
     };
 
     // For non-GPT requests, include shared flag

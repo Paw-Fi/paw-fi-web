@@ -1,6 +1,14 @@
 import * as React from "react";
 
 import { DottedMap, Marker } from "@/components/ui/dotted-map";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useUsersByTimezones } from "@/hooks/use-users-by-timezones";
 import { UsersByTimezone } from "@/hooks/use-users-by-timezone";
 import {
   getCountryCodeFromTimezone,
@@ -9,6 +17,7 @@ import {
 
 interface UserGeoMapProps {
   data: UsersByTimezone[];
+  dailyOnly?: boolean;
 }
 
 type UserMarker = Marker & {
@@ -19,8 +28,9 @@ type UserMarker = Marker & {
   };
 };
 
-export function UserGeoMap({ data }: UserGeoMapProps) {
+export function UserGeoMap({ data, dailyOnly = false }: UserGeoMapProps) {
   const id = React.useId();
+  const [selectedCountryCode, setSelectedCountryCode] = React.useState<string | null>(null);
 
   // Build markers with lat/lng for DottedMap
   const markers = React.useMemo(() => {
@@ -67,6 +77,52 @@ export function UserGeoMap({ data }: UserGeoMapProps) {
   const coveragePercent =
     totalUsers > 0 ? Math.round((mappedUsers / totalUsers) * 100) : 0;
 
+  const selectedCountry = React.useMemo(() => {
+    if (!selectedCountryCode) {
+      return null;
+    }
+
+    const matchingMarkers = markers.filter(
+      (marker) => marker.overlay.countryCode === selectedCountryCode,
+    );
+
+    if (matchingMarkers.length === 0) {
+      return null;
+    }
+
+    const timezoneBuckets = Array.from(
+      new Set(matchingMarkers.map((marker) => marker.overlay.timezone)),
+    );
+
+    return {
+      countryCode: selectedCountryCode,
+      timezoneBuckets,
+      totalUsers: matchingMarkers.reduce(
+        (sum, marker) => sum + marker.overlay.userCount,
+        0,
+      ),
+    };
+  }, [markers, selectedCountryCode]);
+
+  const { users: countryUsers, isLoading: isCountryUsersLoading } = useUsersByTimezones(
+    selectedCountry?.timezoneBuckets ?? [],
+    dailyOnly,
+    Boolean(selectedCountry),
+  );
+
+  const countryName = React.useMemo(() => {
+    if (!selectedCountry?.countryCode) {
+      return null;
+    }
+
+    try {
+      const formatter = new Intl.DisplayNames(["en"], { type: "region" });
+      return formatter.of(selectedCountry.countryCode) ?? selectedCountry.countryCode;
+    } catch {
+      return selectedCountry.countryCode;
+    }
+  }, [selectedCountry?.countryCode]);
+
   return (
     <div className="relative w-full">
       <div
@@ -84,6 +140,13 @@ export function UserGeoMap({ data }: UserGeoMapProps) {
           dotRadius={0.35}
           stagger
           pulse
+          onMarkerClick={({ marker }) => {
+            if (!marker.overlay.countryCode) {
+              return;
+            }
+
+            setSelectedCountryCode(marker.overlay.countryCode);
+          }}
           renderMarkerOverlay={({ marker, x, y, r, index }) => {
             const { countryCode, userCount } = marker.overlay;
             const clipId = `${id}-flag-clip-${index}`.replace(/:/g, "-");
@@ -159,6 +222,78 @@ export function UserGeoMap({ data }: UserGeoMapProps) {
           </span>
         </div>
       </div>
+
+      <Dialog
+        open={Boolean(selectedCountry)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedCountryCode(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-2xl border-white/10 bg-slate-900 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {countryName ?? "Country"} Users
+            </DialogTitle>
+            <DialogDescription className="text-white/60">
+              {selectedCountry?.totalUsers.toLocaleString() ?? 0} users across {selectedCountry?.timezoneBuckets.length ?? 0}{" "}
+              timezone{(selectedCountry?.timezoneBuckets.length ?? 0) === 1 ? "" : "s"}
+              {dailyOnly ? " (today only)" : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-white/10 bg-slate-950/70 p-3 text-sm sm:grid-cols-3">
+            <div>
+              <p className="text-xs text-white/50">Map Count</p>
+              <p className="mt-1 text-base font-semibold text-emerald-400">
+                {selectedCountry?.totalUsers.toLocaleString() ?? 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-white/50">Fetched Users</p>
+              <p className="mt-1 text-base font-semibold text-white">
+                {countryUsers.length.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-white/50">Timezone Buckets</p>
+              <p className="mt-1 text-base font-semibold text-white">
+                {selectedCountry?.timezoneBuckets.length ?? 0}
+              </p>
+            </div>
+          </div>
+
+          <div className="max-h-[45vh] space-y-2 overflow-y-auto pr-1">
+            {isCountryUsersLoading ? (
+              <div className="rounded-lg border border-white/10 bg-slate-950/60 p-3 text-sm text-white/70">
+                Loading users...
+              </div>
+            ) : countryUsers.length === 0 ? (
+              <div className="rounded-lg border border-white/10 bg-slate-950/60 p-3 text-sm text-white/70">
+                No users found for this country.
+              </div>
+            ) : (
+              countryUsers.map((user) => (
+                <div
+                  key={user.userId}
+                  className="rounded-lg border border-white/10 bg-slate-950/60 px-3 py-2"
+                >
+                  <p className="text-sm font-medium text-white">
+                    {user.fullName || user.email || user.userId}
+                  </p>
+                  <p className="text-xs text-white/60">{user.email || "No email"}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/50">
+                    <span>{user.preferredTimezone}</span>
+                    <span>•</span>
+                    <span>{new Date(user.createdAt).toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -7,6 +7,7 @@ export interface PdfPromptContext {
   incomeCategories: string[];
   typeHint?: string;
   householdPrompt?: string;
+  categoryPreferenceGuidance?: string[];
 }
 
 export function buildPdfSystemPrompt(context: PdfPromptContext): string {
@@ -42,6 +43,7 @@ export function buildPdfSystemPrompt(context: PdfPromptContext): string {
     `- category must be chosen from this income list when type=income: ${
       context.incomeCategories.join(", ")
     }`,
+    ...(context.categoryPreferenceGuidance ?? []),
     "- amount must be a positive number",
     "- date must be ISO YYYY-MM-DD when possible",
     "- description should be short and human-readable",

@@ -51,7 +51,8 @@ interface QueueEnqueueResult {
 }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY =
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const QUEUE_TABLE = "subscription_followup_email_queue";
 const DEFAULT_SEND_DELAY_MINUTES = 60;
 const SEND_DELAY_MINUTES = readPositiveIntegerEnv(
@@ -104,13 +105,19 @@ serve(async (req: Request) => {
       new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY"),
     );
     return jsonResponse(
-      { success: false, error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" },
+      {
+        success: false,
+        error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      },
       500,
       corsHeaders,
     );
   }
 
-  let payload: InsertWebhookPayload | UpdateWebhookPayload | DeleteWebhookPayload;
+  let payload:
+    | InsertWebhookPayload
+    | UpdateWebhookPayload
+    | DeleteWebhookPayload;
 
   try {
     payload = (await req.json()) as
@@ -127,7 +134,11 @@ serve(async (req: Request) => {
 
   if (!isSubscriptionsWebhook(payload)) {
     return jsonResponse(
-      { success: true, status: "ignored", reason: "Not a subscriptions webhook payload" },
+      {
+        success: true,
+        status: "ignored",
+        reason: "Not a subscriptions webhook payload",
+      },
       200,
       corsHeaders,
     );
@@ -187,7 +198,11 @@ async function handleInsert(
 
   if (!shouldSendWelcomeOnInsert(subscription)) {
     return jsonResponse(
-      { success: true, status: "ignored", reason: "Insert did not match welcome criteria" },
+      {
+        success: true,
+        status: "ignored",
+        reason: "Insert did not match welcome criteria",
+      },
       200,
       corsHeaders,
     );
@@ -196,7 +211,11 @@ async function handleInsert(
   const userId = asNonEmptyString(subscription.user_id);
   if (!userId) {
     return jsonResponse(
-      { success: true, status: "ignored", reason: "Missing user_id on subscription insert" },
+      {
+        success: true,
+        status: "ignored",
+        reason: "Missing user_id on subscription insert",
+      },
       200,
       corsHeaders,
     );
@@ -211,13 +230,14 @@ async function handleInsert(
     );
   }
 
-  const recipientName = resolveRecipientName(user.full_name, user.email);
+  const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(subscription);
-const text = buildWelcomeEmailText(
-  recipientName,
-  planLabel,
-  subscription.status as "trialing" | "active",
-);  const subject = buildWelcomeEmailSubject(user.full_name);
+  const text = buildWelcomeEmailText(
+    recipientName,
+    planLabel,
+    subscription.status as "trialing" | "active",
+  );
+  const subject = buildWelcomeEmailSubject(recipientName);
   const dedupeKey = buildInsertDedupeKey(subscription);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -250,7 +270,11 @@ async function handleUpdate(
 ): Promise<Response> {
   if (!didTransitionToCanceled(payload.record, payload.old_record)) {
     return jsonResponse(
-      { success: true, status: "ignored", reason: "No cancellation transition detected" },
+      {
+        success: true,
+        status: "ignored",
+        reason: "No cancellation transition detected",
+      },
       200,
       corsHeaders,
     );
@@ -259,7 +283,11 @@ async function handleUpdate(
   const userId = asNonEmptyString(payload.record.user_id);
   if (!userId) {
     return jsonResponse(
-      { success: true, status: "ignored", reason: "Missing user_id on subscription update" },
+      {
+        success: true,
+        status: "ignored",
+        reason: "Missing user_id on subscription update",
+      },
       200,
       corsHeaders,
     );
@@ -274,10 +302,10 @@ async function handleUpdate(
     );
   }
 
-  const recipientName = resolveRecipientName(user.full_name, user.email);
+  const recipientName = resolveRecipientName(user.full_name);
   const planLabel = resolvePlanLabel(payload.record);
   const text = buildCancellationEmailText(recipientName);
-  const subject = buildCancellationEmailSubject(user.full_name);
+  const subject = buildCancellationEmailSubject(recipientName);
   const dedupeKey = buildCancellationDedupeKey(payload.record);
 
   const queueResult = await enqueueFounderFollowupEmail({
@@ -315,14 +343,55 @@ async function loadUserContact(userId: string): Promise<UserContact | null> {
     throw new Error(`Failed to load user contact: ${error.message}`);
   }
 
-  if (!data?.email) {
+  const email = asNonEmptyString(data?.email);
+  if (!email) {
     return null;
   }
 
+  const fullName =
+    asNonEmptyString(data?.full_name) ?? (await loadAuthUserName(userId));
+
   return {
-    email: data.email,
-    full_name: data.full_name ?? null,
+    email,
+    full_name: fullName,
   };
+}
+
+async function loadAuthUserName(userId: string): Promise<string | null> {
+  const { data, error } = await supabase.auth.admin.getUserById(userId);
+
+  if (error) {
+    reportSubscriptionFounderFollowupError("load_auth_user", error, { userId });
+    return null;
+  }
+
+  const user = data?.user;
+  if (!user) {
+    return null;
+  }
+
+  const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const identityData = (user.identities?.[0]?.identity_data ?? {}) as Record<
+    string,
+    unknown
+  >;
+
+  return (
+    asNonEmptyString(metadata.full_name) ??
+    asNonEmptyString(metadata.fullName) ??
+    asNonEmptyString(metadata.display_name) ??
+    asNonEmptyString(metadata.displayName) ??
+    asNonEmptyString(metadata.name) ??
+    asNonEmptyString(metadata.first_name) ??
+    asNonEmptyString(metadata.given_name) ??
+    asNonEmptyString(identityData.full_name) ??
+    asNonEmptyString(identityData.display_name) ??
+    asNonEmptyString(identityData.displayName) ??
+    asNonEmptyString(identityData.name) ??
+    asNonEmptyString(identityData.first_name) ??
+    asNonEmptyString(identityData.given_name) ??
+    null
+  );
 }
 
 function shouldSendWelcomeOnInsert(subscription: SubscriptionRecord): boolean {
@@ -333,7 +402,8 @@ function shouldSendWelcomeOnInsert(subscription: SubscriptionRecord): boolean {
     return false;
   }
 
-  const shouldDisplayWelcomeStatus = status === "active" || status === "trialing";
+  const shouldDisplayWelcomeStatus =
+    status === "active" || status === "trialing";
   const isPaidPlan = plan !== "free";
 
   return shouldDisplayWelcomeStatus && isPaidPlan;
@@ -344,7 +414,8 @@ function didTransitionToCanceled(
   previousRecord: SubscriptionRecord,
 ): boolean {
   const nextStatus = asNonEmptyString(nextRecord.status)?.toLowerCase() ?? "";
-  const previousStatus = asNonEmptyString(previousRecord.status)?.toLowerCase() ?? "";
+  const previousStatus =
+    asNonEmptyString(previousRecord.status)?.toLowerCase() ?? "";
 
   if (nextStatus === "canceled" && previousStatus !== "canceled") {
     return true;
@@ -367,32 +438,26 @@ function didTransitionToCanceled(
   return false;
 }
 
-function resolveRecipientName(fullName: string | null, email: string): string {
+function resolveRecipientName(fullName: string | null): string {
   const name = asNonEmptyString(fullName);
-  if (name) {
-    const [firstSegment] = name.trim().split(/\s+/);
-    return firstSegment || "there";
+  if (!name) {
+    return "";
   }
 
-  const [emailPrefix] = email.split("@");
-  if (!emailPrefix) {
-    return "there";
-  }
+  const [firstSegment] = name.trim().split(/\s+/);
+  return firstSegment ?? "";
+}
 
-  const cleaned = emailPrefix
-    .replace(/[._-]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-
-  return cleaned || "there";
+function buildGreeting(name: string): string {
+  const trimmed = asNonEmptyString(name);
+  return trimmed ? `Hi ${trimmed},` : "Hi,";
 }
 
 function resolvePlanLabel(subscription: SubscriptionRecord): string {
   const plan = asNonEmptyString(subscription.plan)?.toLowerCase();
-  const billingInterval = asNonEmptyString(subscription.billing_interval)?.toLowerCase();
+  const billingInterval = asNonEmptyString(
+    subscription.billing_interval,
+  )?.toLowerCase();
 
   if (plan === "lifetime") {
     return "lifetime plan";
@@ -421,7 +486,7 @@ function buildWelcomeEmailText(
   // Trialing → onboarding / friction discovery
   if (status === "trialing") {
     return [
-      `Hi ${name},`,
+      buildGreeting(name),
       "",
       "Yifan here, one of the co-founders at Moneko.",
       "",
@@ -440,7 +505,7 @@ function buildWelcomeEmailText(
 
   // Active → paid confirmation (your original tone)
   return [
-    `Hi ${name},`,
+    buildGreeting(name),
     "",
     `Really appreciate you choosing the ${planLabel}. That means a lot to us.`,
     "",
@@ -459,19 +524,23 @@ function buildWelcomeEmailText(
   ].join("\n");
 }
 
-function buildWelcomeEmailSubject(fullName: string | null): string {
-  const name = asNonEmptyString(fullName) ?? "";
-  return name ? `${name} — We appreciate your support` : "We appreciate your support";
+function buildWelcomeEmailSubject(firstName: string): string {
+  const name = asNonEmptyString(firstName) ?? "";
+  return name
+    ? `${name} — We appreciate your support`
+    : "We appreciate your support";
 }
 
-function buildCancellationEmailSubject(fullName: string | null): string {
-  const name = asNonEmptyString(fullName) ?? "";
-  return name ? `${name} — I’d love your feedback on Moneko` : "I’d love your feedback on Moneko";
+function buildCancellationEmailSubject(firstName: string): string {
+  const name = asNonEmptyString(firstName) ?? "";
+  return name
+    ? `${name} — I’d love your feedback on Moneko`
+    : "I’d love your feedback on Moneko";
 }
 
 function buildCancellationEmailText(name: string): string {
   return [
-    `Hi ${name},`,
+    buildGreeting(name),
     "",
     "Yifan here, one of the co-founders at Moneko.",
     "",
@@ -502,20 +571,18 @@ async function enqueueFounderFollowupEmail(params: {
 }): Promise<QueueEnqueueResult> {
   const sendAfter = new Date(Date.now() + SEND_DELAY_MS).toISOString();
 
-  const { error } = await supabase
-    .from(QUEUE_TABLE)
-    .insert({
-      user_id: params.userId,
-      subscription_id: params.subscriptionId,
-      event_type: params.eventType,
-      recipient_email: params.recipientEmail,
-      recipient_name: params.recipientName,
-      plan_label: params.planLabel,
-      subject: params.subject,
-      body_text: params.bodyText,
-      send_after: sendAfter,
-      dedupe_key: params.dedupeKey,
-    });
+  const { error } = await supabase.from(QUEUE_TABLE).insert({
+    user_id: params.userId,
+    subscription_id: params.subscriptionId,
+    event_type: params.eventType,
+    recipient_email: params.recipientEmail,
+    recipient_name: params.recipientName,
+    plan_label: params.planLabel,
+    subject: params.subject,
+    body_text: params.bodyText,
+    send_after: sendAfter,
+    dedupe_key: params.dedupeKey,
+  });
 
   if (!error) {
     return {

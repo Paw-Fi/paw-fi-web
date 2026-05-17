@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { reportEdgeFunctionError } from "./edge-error-alert.ts";
 
 export interface GptDetectionResult {
   isGpt: boolean;
@@ -31,18 +32,16 @@ function normalizeId(value: string | null): string | undefined {
 export function detectGptRequest(req: Request): GptDetectionResult {
   const headers = req.headers;
 
-  const headerConversation =
-    headers.get("openai-conversation-id") ??
+  const headerConversation = headers.get("openai-conversation-id") ??
     headers.get("OpenAI-Conversation-Id") ??
     null;
 
-  const headerEphemeral =
-    headers.get("openai-ephemeral-user-id") ??
+  const headerEphemeral = headers.get("openai-ephemeral-user-id") ??
     headers.get("OpenAI-Ephemeral-User-Id") ??
     null;
 
-  const conversationId =
-    normalizeId(headerConversation) ?? normalizeId(headerEphemeral);
+  const conversationId = normalizeId(headerConversation) ??
+    normalizeId(headerEphemeral);
 
   const isGpt = Boolean(conversationId);
 
@@ -70,6 +69,14 @@ export async function ensureGuestIdentity(
     .maybeSingle();
 
   if (contactLookupError) {
+    await reportEdgeFunctionError({
+      functionName: "shared/gpt-guests",
+      error: contactLookupError,
+      context: {
+        operation: "user_contacts.select_guest_contact",
+        conversationId,
+      },
+    });
     throw new Error(
       `Failed to look up guest contact: ${contactLookupError.message}`,
     );
@@ -85,8 +92,8 @@ export async function ensureGuestIdentity(
       const guestId = `gpt-${conversationId}`;
 
       // Check if auth user already exists by looking for users with this conversation_id in metadata
-      const { data: existingUsers, error: authUserError } =
-        await supabase.auth.admin.listUsers({
+      const { data: existingUsers, error: authUserError } = await supabase.auth
+        .admin.listUsers({
           page: 1,
           perPage: 1000,
         });
@@ -106,8 +113,8 @@ export async function ensureGuestIdentity(
         );
       } else {
         // Create auth user for GPT guest with conversationId as the primary identifier
-        const { data: createdAuthUser, error: createAuthError } =
-          await supabase.auth.admin.createUser({
+        const { data: createdAuthUser, error: createAuthError } = await supabase
+          .auth.admin.createUser({
             email: `${guestId}@guest.moneko`, // Required field but not used for authentication
             email_confirm: true,
             user_metadata: {
@@ -135,8 +142,9 @@ export async function ensureGuestIdentity(
         `[ensureGuestIdentity] Auth operation failed for conversation ${conversationId}:`,
         authError,
       );
-      const message =
-        authError instanceof Error ? authError.message : String(authError);
+      const message = authError instanceof Error
+        ? authError.message
+        : String(authError);
       throw new Error(`Auth system error: ${message}`);
     }
   }
@@ -146,17 +154,29 @@ export async function ensureGuestIdentity(
   if (!contactId) {
     const { data: newContact, error: createContactError } = await supabase
       .from("user_contacts")
-      .insert({
-        phone_e164: guestPhone,
-        whatsapp_user_id: guestPhone,
-        user_id: userId,
-        verified: false,
-        preferred_currency: currency,
-      })
+      .upsert(
+        {
+          phone_e164: guestPhone,
+          whatsapp_user_id: guestPhone,
+          user_id: userId,
+          verified: false,
+          preferred_currency: currency,
+        },
+        { onConflict: "user_id" },
+      )
       .select("id")
       .single();
 
     if (createContactError) {
+      await reportEdgeFunctionError({
+        functionName: "shared/gpt-guests",
+        error: createContactError,
+        context: {
+          operation: "user_contacts.upsert_guest_contact",
+          conversationId,
+          userId,
+        },
+      });
       throw new Error(
         `Failed to create guest contact: ${createContactError.message}`,
       );
@@ -165,15 +185,76 @@ export async function ensureGuestIdentity(
     contactId = newContact.id;
     createdContact = true;
   } else if (!existingContact?.user_id) {
-    const { error: updateContactError } = await supabase
-      .from("user_contacts")
-      .update({ user_id: userId })
-      .eq("id", contactId);
+    const { data: existingUserContact, error: userContactLookupError } =
+      await supabase
+        .from("user_contacts")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (updateContactError) {
+    if (userContactLookupError) {
+      await reportEdgeFunctionError({
+        functionName: "shared/gpt-guests",
+        error: userContactLookupError,
+        context: {
+          operation: "user_contacts.select_existing_user_contact",
+          conversationId,
+          userId,
+        },
+      });
       throw new Error(
-        `Failed to attach user to guest contact: ${updateContactError.message}`,
+        `Failed to look up guest user contact: ${userContactLookupError.message}`,
       );
+    }
+
+    if (existingUserContact?.id && existingUserContact.id !== contactId) {
+      const { data: mergeResult, error: mergeError } = await supabase.rpc(
+        "merge_user_contacts",
+        {
+          p_primary_contact_id: contactId,
+          p_secondary_contact_id: existingUserContact.id,
+        },
+      );
+
+      if (mergeError || mergeResult?.success === false) {
+        await reportEdgeFunctionError({
+          functionName: "shared/gpt-guests",
+          error: mergeError ?? mergeResult,
+          context: {
+            operation: "user_contacts.merge_guest_contact",
+            conversationId,
+            userId,
+            contactId,
+            existingUserContactId: existingUserContact.id,
+          },
+        });
+        throw new Error(
+          `Failed to merge guest contact: ${
+            mergeError?.message ?? mergeResult?.error ?? "unknown error"
+          }`,
+        );
+      }
+    } else {
+      const { error: updateContactError } = await supabase
+        .from("user_contacts")
+        .update({ user_id: userId })
+        .eq("id", contactId);
+
+      if (updateContactError) {
+        await reportEdgeFunctionError({
+          functionName: "shared/gpt-guests",
+          error: updateContactError,
+          context: {
+            operation: "user_contacts.attach_guest_user",
+            conversationId,
+            userId,
+            contactId,
+          },
+        });
+        throw new Error(
+          `Failed to attach user to guest contact: ${updateContactError.message}`,
+        );
+      }
     }
   } else if (currency && existingContact.preferred_currency !== currency) {
     const { error: updateCurrencyError } = await supabase
@@ -182,6 +263,16 @@ export async function ensureGuestIdentity(
       .eq("id", contactId);
 
     if (updateCurrencyError) {
+      await reportEdgeFunctionError({
+        functionName: "shared/gpt-guests",
+        error: updateCurrencyError,
+        context: {
+          operation: "user_contacts.update_guest_currency",
+          conversationId,
+          userId,
+          contactId,
+        },
+      });
       throw new Error(
         `Failed to update guest currency: ${updateCurrencyError.message}`,
       );

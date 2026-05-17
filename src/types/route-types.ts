@@ -66,6 +66,12 @@ declare module '@tanstack/react-router' {
     '/blogs/$blogId': {
       parentRoute: RegisteredRoutes['/']
     }
+    '/resources': {
+      parentRoute: RegisteredRoutes['/']
+    }
+    '/resources/$resourceId': {
+      parentRoute: RegisteredRoutes['/']
+    }
     '/author/import': {
       parentRoute: RegisteredRoutes['/']
     }

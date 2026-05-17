@@ -7,18 +7,21 @@ import { corsHeaders } from "../shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { validateCurrency } from "../shared/currency-validator.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
-import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
-  normalizeCategoryForStorage,
-  sanitizeCategoryName,
-} from "../shared/category-colors.ts";
-import {
-  applyCategoryRemap,
   ensureUserCategory,
-  fetchUserCategoryRemaps,
   learnUserCategoryPreference,
+  mergeAllowedCategories,
 } from "../shared/user-categories.ts";
+import {
+  type CategoryContext,
+  loadCategoryContext,
+} from "../shared/category-resolution.ts";
+import {
+  normalizeBatchDateInput,
+  normalizeBatchTransactionInput,
+  resolveBatchCategoryForStorage,
+} from "./request-normalization.ts";
 import {
   assertAccountInScope,
   resolveDefaultAccountId,
@@ -49,6 +52,19 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function summarizeCustomSplits(customSplits?: CustomSplits | null) {
+  if (!customSplits) return null;
+  return {
+    splitType: customSplits.splitType,
+    memberSplits: customSplits.memberSplits?.map((split) => ({
+      userId: split.userId,
+      amount: split.amount,
+      percentage: split.percentage,
+      shares: split.shares,
+    })),
+  };
+}
+
 interface TransactionItem {
   type: "expense" | "income";
   amount: number;
@@ -63,6 +79,9 @@ interface TransactionItem {
   customSplits?: CustomSplits;
   payerUserId?: string;
   accountId?: string;
+  clientRecordId?: string;
+  clientMutationId?: string;
+  idempotencyKey?: string;
   // Income-specific fields
   ownerType?: "me" | "partner" | "household";
   privacyScope?: "private" | "balances_only" | "full";
@@ -148,6 +167,16 @@ class SaveTransactionsBatchError extends Error {
     this.status = status;
     this.code = code ?? resolveErrorCode(status);
   }
+}
+
+function createFallbackCategoryContext(): CategoryContext {
+  const merged = mergeAllowedCategories({ customCategories: [] });
+  return {
+    allowedExpenseSet: merged.allowedExpenseSet,
+    allowedIncomeSet: merged.allowedIncomeSet,
+    preferences: [],
+    remaps: [],
+  };
 }
 
 function resolveErrorCode(status: number): string {
@@ -449,6 +478,11 @@ export async function saveTransactionsBatchInternal(
       hasDefaultConfig: householdAutoSplitSettings.defaultConfig != null,
       hasRequestCustomSplits: meta.customSplits != null,
       decision: effective.kind,
+      requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+      effectiveCustomSplits:
+        effective.kind === "skip"
+          ? null
+          : summarizeCustomSplits(effective.customSplits),
     });
     if (effective.kind === "skip") {
       return expense;
@@ -513,40 +547,36 @@ export async function saveTransactionsBatchInternal(
   const preparedRecords: PreparedTransactionRecord[] = [];
   const validationErrors: { index: number; error: string }[] = [];
 
-  let categoryRemaps: Awaited<ReturnType<typeof fetchUserCategoryRemaps>> = [];
+  let categoryContext = createFallbackCategoryContext();
   try {
-    categoryRemaps = await fetchUserCategoryRemaps({
+    categoryContext = await loadCategoryContext({
       supabase,
       userId,
-      limit: 120,
     });
   } catch (error) {
     console.error(
-      "[save-transactions-batch] Failed to load category remaps:",
+      "[save-transactions-batch] Failed to load category context:",
       error,
     );
   }
 
   emitProgress("validating", "Checking transactions...", 0);
+  const shouldRecoverManualImportDates = body.manualImportMode === true;
 
   for (let i = 0; i < body.transactions.length; i++) {
     const tx = body.transactions[i];
 
     // Basic validation
-    if (!tx.type || !["expense", "income"].includes(tx.type)) {
-      validationErrors.push({ index: i, error: "Invalid or missing type" });
+    const normalizedInput = normalizeBatchTransactionInput({
+      type: tx.type,
+      amount: tx.amount,
+    });
+    if (!normalizedInput.ok) {
+      validationErrors.push({ index: i, error: normalizedInput.error });
       continue;
     }
-
-    if (!tx.amount || tx.amount <= 0) {
-      validationErrors.push({ index: i, error: "Invalid amount" });
-      continue;
-    }
-
-    if (!tx.category) {
-      validationErrors.push({ index: i, error: "Missing category" });
-      continue;
-    }
+    tx.type = normalizedInput.type;
+    tx.amount = normalizedInput.amount;
 
     if (tx.merchant !== undefined && tx.merchant !== null) {
       if (typeof tx.merchant !== "string") {
@@ -567,7 +597,10 @@ export async function saveTransactionsBatchInternal(
       continue;
     }
 
-    const normalizedDate = normalizeCalendarDateString(tx.date);
+    const normalizedDate = normalizeBatchDateInput({
+      value: tx.date,
+      manualImportMode: shouldRecoverManualImportDates,
+    });
     if (!normalizedDate) {
       validationErrors.push({
         index: i,
@@ -578,9 +611,10 @@ export async function saveTransactionsBatchInternal(
     tx.date = normalizedDate;
 
     if (tx.recurrence_rule) {
-      const normalizedAnchorDate = normalizeCalendarDateString(
-        tx.recurrence_rule.anchor_date,
-      );
+      const normalizedAnchorDate = normalizeBatchDateInput({
+        value: tx.recurrence_rule.anchor_date,
+        manualImportMode: shouldRecoverManualImportDates,
+      });
       if (!normalizedAnchorDate) {
         validationErrors.push({
           index: i,
@@ -592,7 +626,10 @@ export async function saveTransactionsBatchInternal(
       const normalizedEndDate =
         tx.recurrence_rule.end_date == null
           ? undefined
-          : normalizeCalendarDateString(tx.recurrence_rule.end_date);
+          : normalizeBatchDateInput({
+              value: tx.recurrence_rule.end_date,
+              manualImportMode: shouldRecoverManualImportDates,
+            });
 
       if (tx.recurrence_rule.end_date != null && !normalizedEndDate) {
         validationErrors.push({
@@ -612,22 +649,15 @@ export async function saveTransactionsBatchInternal(
     const currency = validateCurrency(tx.currency || "USD");
     const amountCents = Math.round(tx.amount * 100);
     const rawCategory = String(tx.category ?? "");
-    const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    if (!authResult.isInternalService && !sanitizedCategory) {
-      validationErrors.push({
-        index: i,
-        error: "Invalid category",
-      });
-      continue;
-    }
-    const resolvedCategory =
-      sanitizedCategory ?? normalizeCategoryForStorage(tx.category);
-    const effectiveCategory = applyCategoryRemap({
-      categoryName: resolvedCategory,
+    const resolvedCategory = resolveBatchCategoryForStorage({
+      rawCategory: tx.category,
+      description: tx.description,
+      merchant: tx.merchant,
       transactionType: tx.type === "income" ? "income" : "expense",
-      remaps: categoryRemaps,
+      ctx: categoryContext,
     });
-    if (!sanitizedCategory && rawCategory.trim().length > 0) {
+    const effectiveCategory = resolvedCategory.category;
+    if (resolvedCategory.usedFallback && rawCategory.trim().length > 0) {
       void reportEdgeFunctionError({
         functionName: "save-transactions-batch",
         error: new Error("CATEGORY_SANITIZE_FALLBACK"),
@@ -660,6 +690,12 @@ export async function saveTransactionsBatchInternal(
 
     const accountIdForRecord = resolvedAccountId || null;
     const householdIdForRecord = scopeHouseholdId;
+    const idempotencyKey =
+      typeof tx.idempotencyKey === "string"
+        ? tx.idempotencyKey.trim() || null
+        : typeof tx.clientMutationId === "string"
+          ? tx.clientMutationId.trim() || null
+          : null;
     const importRequestKey = buildImportRequestKey(body.debugTraceId, i);
     const importSemanticKey = buildImportSemanticKey({
       userId,
@@ -693,6 +729,7 @@ export async function saveTransactionsBatchInternal(
       is_recurring: tx.isRecurring === true,
       recurrence_rule:
         tx.isRecurring === true ? tx.recurrence_rule || null : null,
+      idempotency_key: idempotencyKey,
       import_request_key: importRequestKey,
       import_semantic_key: importSemanticKey,
     };
@@ -743,6 +780,13 @@ export async function saveTransactionsBatchInternal(
     uniqueRequestedAccountIds: [...uniqueRequestedAccountIds],
     cachedAccountResolutions: accountResolutionCache.size,
     validationErrorCount: validationErrors.length,
+    validationErrorSummary: validationErrors.reduce<Record<string, number>>(
+      (summary, err) => {
+        summary[err.error] = (summary[err.error] ?? 0) + 1;
+        return summary;
+      },
+      {},
+    ),
   });
 
   const results: SavedTransaction[] = [];
@@ -760,7 +804,7 @@ export async function saveTransactionsBatchInternal(
   }
 
   const duplicateRequestKeys = new Map<string, Record<string, unknown>>();
-  const duplicateSemanticKeys = new Set<string>();
+  const duplicateSemanticKeyCounts = new Map<string, number>();
   const requestKeys = preparedRecords
     .map((record) => record.importRequestKey)
     .filter((key): key is string => !!key);
@@ -821,7 +865,10 @@ export async function saveTransactionsBatchInternal(
             ? existingRow.import_semantic_key
             : null;
         if (semanticKey) {
-          duplicateSemanticKeys.add(semanticKey);
+          duplicateSemanticKeyCounts.set(
+            semanticKey,
+            (duplicateSemanticKeyCounts.get(semanticKey) || 0) + 1,
+          );
         }
       }
     }
@@ -840,7 +887,7 @@ export async function saveTransactionsBatchInternal(
     customSplits?: CustomSplits | null;
     payerUserId?: string | null;
   }> = [];
-  const seenSemanticKeys = new Set<string>();
+  const seenSemanticKeyCounts = new Map<string, number>();
 
   for (const prepared of preparedRecords) {
     const requestKey = prepared.importRequestKey;
@@ -866,10 +913,15 @@ export async function saveTransactionsBatchInternal(
       continue;
     }
 
+    const semanticOccurrence =
+      (seenSemanticKeyCounts.get(prepared.importSemanticKey) || 0) + 1;
+    seenSemanticKeyCounts.set(prepared.importSemanticKey, semanticOccurrence);
+    const existingSemanticCount =
+      duplicateSemanticKeyCounts.get(prepared.importSemanticKey) || 0;
+
     if (
       body.skipSemanticDuplicates === true &&
-      (duplicateSemanticKeys.has(prepared.importSemanticKey) ||
-        seenSemanticKeys.has(prepared.importSemanticKey))
+      semanticOccurrence <= existingSemanticCount
     ) {
       results.push({
         id: "",
@@ -884,8 +936,6 @@ export async function saveTransactionsBatchInternal(
       processedCount += 1;
       continue;
     }
-
-    seenSemanticKeys.add(prepared.importSemanticKey);
 
     if (prepared.type === "income") {
       incomeRecords.push(prepared.record);
@@ -1145,6 +1195,11 @@ export async function saveTransactionsBatchInternal(
                 householdAutoSplitSettings.defaultConfig != null,
               hasRequestCustomSplits: meta.customSplits != null,
               decision: effective.kind,
+              requestCustomSplits: summarizeCustomSplits(meta.customSplits),
+              effectiveCustomSplits:
+                effective.kind === "skip"
+                  ? null
+                  : summarizeCustomSplits(effective.customSplits),
             });
             if (effective.kind === "skip") {
               // Household opted out of auto-split: log expense against the
@@ -1550,6 +1605,14 @@ if (import.meta.main) {
       progressOffset: body.progressOffset,
       progressTotal: body.progressTotal,
       stream: isStreamMode,
+      splitFields: body.transactions?.map((transaction, index) => ({
+        index,
+        type: transaction.type,
+        amount: transaction.amount,
+        category: transaction.category,
+        payerUserId: transaction.payerUserId,
+        customSplits: summarizeCustomSplits(transaction.customSplits),
+      })),
     });
 
     if (!Array.isArray(body.transactions) || body.transactions.length === 0) {

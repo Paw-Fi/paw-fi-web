@@ -18,6 +18,16 @@
     <priority>0.8</priority>
   </url>
 <url>
+    <loc>https://moneko.io/early-access</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/referral</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+<url>
     <loc>https://moneko.io/cookie-policy</loc>
     <lastmod>2025-09-08</lastmod>
     <changefreq>yearly</changefreq>
@@ -337,6 +347,42 @@
 <url>
     <loc>https://moneko.io/blogs/how-to-set-up-email-receipt-capture-in-moneko</loc>
     <lastmod>2026-04-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/blogs/7-best-ynab-alternatives-for-simpler-budgeting-in-2026</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/blogs/how-to-split-expenses-and-budget-as-a-couple-in-2026</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/blogs/how-to-stop-living-paycheck-to-paycheck-in-2026</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/blogs/how-to-use-ai-budgeting-apps-in-2026</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/blogs/the-easiest-way-to-keep-track-of-your-spending-in-2026</loc>
+    <lastmod>2026-05-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/blogs/why-budgeting-apps-fail-most-people-in-2026</loc>
+    <lastmod>2026-05-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -1280,5 +1326,124 @@
     <loc>https://moneko.io/budgeting-app/best-net-worth-tracker-2026</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/budgeting-app/email-based-budgeting</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/free-budgeting-app</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/budgeting-app-2026</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.94</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/email-based-budgeting</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.93</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/shared-expense-tracker-guide</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/what-is-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-create-your-first-space</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-import-and-export-data-in-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-log-expense-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-split-expenses-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/log-expenses-via-whatsapp-telegram-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/automatically-track-apple-pay-transactions-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-track-email-receipts-and-online-purchases</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/quick-actions-siri-shortcuts-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/envelope-budgeting-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-use-pockets-to-organize-your-spending</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-categories-work-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/how-to-use-wallets-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/recurring-expenses-income-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+<url>
+    <loc>https://moneko.io/help/ai-scenario-planning-moneko</loc>
+    <lastmod>2026-05-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

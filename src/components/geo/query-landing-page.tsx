@@ -93,8 +93,8 @@ export function QueryLandingPage({
             <h2 className="text-foreground mt-3 text-2xl font-bold tracking-tight md:text-3xl">
               {comparisonTitle}
             </h2>
-            <div className="border-border/50 mt-8 overflow-hidden rounded-3xl border">
-              <table className="w-full border-collapse text-left">
+            <div className="border-border/50 mt-8 overflow-x-auto rounded-3xl border">
+              <table className="w-full min-w-[720px] border-collapse text-left">
                 <thead>
                   <tr className="bg-muted/40">
                     <th className="text-foreground px-4 py-4 text-sm font-semibold">

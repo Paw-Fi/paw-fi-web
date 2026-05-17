@@ -2,6 +2,7 @@ import {
   createClient,
   type SupabaseClient as SupabaseJsClient,
 } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { reportEdgeFunctionError } from "./edge-error-alert.ts";
 
 export type SupabaseClient = SupabaseJsClient;
 
@@ -10,7 +11,7 @@ export async function updatePreferredCurrency(
   contactId: string,
   currency: string,
 ) {
-  return supabase
+  const result = await supabase
     .from("user_contacts")
     .update({
       preferred_currency: currency,
@@ -19,6 +20,20 @@ export async function updatePreferredCurrency(
     .eq("id", contactId)
     .select("preferred_currency")
     .single();
+
+  if (result.error) {
+    await reportEdgeFunctionError({
+      functionName: "shared/currency-helpers",
+      error: result.error,
+      context: {
+        operation: "user_contacts.update_preferred_currency",
+        contactId,
+        currency,
+      },
+    });
+  }
+
+  return result;
 }
 
 const LANGUAGE_NAME_TO_CODE: Record<string, string> = {
@@ -95,7 +110,7 @@ export async function updatePreferredLanguage(
       error: { message: "Invalid language" },
     };
   }
-  return supabase
+  const result = await supabase
     .from("user_contacts")
     .update({
       preferred_language: preferredLanguage,
@@ -104,4 +119,18 @@ export async function updatePreferredLanguage(
     .eq("id", contactId)
     .select("preferred_language")
     .single();
+
+  if (result.error) {
+    await reportEdgeFunctionError({
+      functionName: "shared/currency-helpers",
+      error: result.error,
+      context: {
+        operation: "user_contacts.update_preferred_language",
+        contactId,
+        preferredLanguage,
+      },
+    });
+  }
+
+  return result;
 }

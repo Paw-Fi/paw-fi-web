@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { assertAccountInScope } from "../shared/accounts.ts";
 import { normalizeEmailAddress } from "../shared/email-import.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -51,6 +52,11 @@ async function resolveUserSettings(params: {
     .maybeSingle();
 
   if (contactError) {
+    await reportEdgeFunctionError({
+      functionName: "email-import-settings",
+      error: contactError,
+      context: { operation: "user_contacts.select_settings", userId },
+    });
     throw new Error(
       `Failed to load email import settings: ${contactError.message}`,
     );
@@ -204,6 +210,11 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
 
   if (contactSelectError) {
+    await reportEdgeFunctionError({
+      functionName: "email-import-settings",
+      error: contactSelectError,
+      context: { operation: "user_contacts.select_existing", userId },
+    });
     return errorResponse("Failed to load contact", 500, "SERVER_ERROR");
   }
 
@@ -285,13 +296,37 @@ Deno.serve(async (req: Request) => {
         .update(updateValues)
         .eq("id", existingContact.id);
       if (updateError) {
+        await reportEdgeFunctionError({
+          functionName: "email-import-settings",
+          error: updateError,
+          context: {
+            operation: "user_contacts.update_email_import_settings",
+            userId,
+            contactId: existingContact.id,
+          },
+        });
         return errorResponse("Failed to update settings", 500, "SERVER_ERROR");
       }
     } else {
       const { error: insertError } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, ...updateValues });
+        .upsert(
+          {
+            user_id: userId,
+            ...updateValues,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        );
       if (insertError) {
+        await reportEdgeFunctionError({
+          functionName: "email-import-settings",
+          error: insertError,
+          context: {
+            operation: "user_contacts.upsert_email_import_settings",
+            userId,
+          },
+        });
         return errorResponse("Failed to create settings", 500, "SERVER_ERROR");
       }
     }

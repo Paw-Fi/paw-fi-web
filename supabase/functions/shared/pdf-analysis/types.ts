@@ -64,6 +64,12 @@ export interface PdfAnalysisMetadata {
   output_tokens?: number;
   latency_ms?: number;
   request_id?: string;
+  chunk_count?: number;
+  chunk_item_counts?: number[];
+  merged_item_count?: number;
+  synthesis_item_count?: number;
+  estimated_statement_rows?: number;
+  completeness_suspect?: boolean;
 }
 
 export interface PdfAnalysisResult {

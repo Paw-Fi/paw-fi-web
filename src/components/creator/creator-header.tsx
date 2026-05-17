@@ -1,5 +1,11 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { BarChart3, Ticket,Activity } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  MousePointerClick,
+  Ticket,
+  UserSearch,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function CreatorHeader() {
@@ -21,6 +27,16 @@ export function CreatorHeader() {
       label: "Performance",
       icon: <Activity className="h-4 w-4" />,
     },
+    {
+      href: "/creator/source-tracker" as const,
+      label: "Sources",
+      icon: <MousePointerClick className="h-4 w-4" />,
+    },
+    {
+      href: "/creator/user-lookup" as const,
+      label: "User Lookup",
+      icon: <UserSearch className="h-4 w-4" />,
+    },
   ];
 
   return (
@@ -36,9 +52,10 @@ export function CreatorHeader() {
                 to={link.href}
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors",
-                  location.pathname ===link.href
+                  location.pathname === link.href ||
+                    location.pathname.startsWith(`${link.href}/`)
                     ? "bg-white/10 text-white"
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                    : "text-white/60 hover:bg-white/5 hover:text-white",
                 )}
               >
                 {link.icon}

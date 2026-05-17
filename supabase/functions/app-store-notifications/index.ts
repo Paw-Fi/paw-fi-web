@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
@@ -10,14 +11,23 @@ import {
   ensureAppStoreOwnership,
   getAppStoreOwnershipBinding,
   hasAppStoreOwnershipConflict,
+  normalizeAppStoreInAppOwnershipType,
+  shouldEnforceAppStoreOwnershipBinding,
+  shouldUseAppStoreOwnershipBindingForNotificationResolution,
 } from "../shared/iap-ownership.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import {
+  findAppStoreSubscriptionStatusWithEnvironmentFallback,
   findAppStoreTransactionWithEnvironmentFallback,
   getValidatedAppStorePrivateKey as getValidatedSharedAppStorePrivateKey,
   isAppStoreServerApiConfigured as isSharedAppStoreServerApiConfigured,
   matchesVerifiedAppStoreTransaction,
 } from "../shared/app-store-api.ts";
+import { resolveAppStoreSubscriptionLifecycle } from "../shared/app-store-subscription-state.ts";
+import {
+  type AppStoreCandidateUserSource,
+  shouldReportMissingCandidateUser,
+} from "../shared/app-store-user-resolution.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
@@ -220,6 +230,23 @@ function asString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function appStoreSubscriptionStatusMatchesProduct(
+  subscriptionStatus: {
+    transaction?: { productId?: string } | null;
+    renewalInfo?: {
+      productId?: string;
+      autoRenewProductId?: string;
+    } | null;
+  },
+  storeProductId: string,
+): boolean {
+  return [
+    asString(subscriptionStatus.transaction?.productId),
+    asString(subscriptionStatus.renewalInfo?.productId),
+    asString(subscriptionStatus.renewalInfo?.autoRenewProductId),
+  ].includes(storeProductId);
+}
+
 function asIsoMillis(value: string | null): string | null {
   if (!value) return null;
   const n = Number(value);
@@ -324,10 +351,7 @@ async function authUserExists(userId: string): Promise<boolean> {
 
 async function resolveVerifiedUserId(params: {
   candidateUserId: string | null;
-  candidateSource:
-    | "ownership_binding"
-    | "app_account_token"
-    | "legacy_subscription";
+  candidateSource: AppStoreCandidateUserSource;
   originalTransactionId: string;
   transactionId: string | null;
   environment: AppStoreEnvironment;
@@ -340,23 +364,34 @@ async function resolveVerifiedUserId(params: {
       return params.candidateUserId;
     }
 
-    void reportEdgeFunctionError({
-      functionName: "app-store-notifications",
-      error: new Error("Candidate App Store user does not exist in auth.users"),
-      context: getAppStoreDiagnosticsContext({
-        phase: "candidate_user_not_found",
-        candidateUserId: params.candidateUserId,
-        candidateUserSource: params.candidateSource,
-        originalTransactionId: params.originalTransactionId,
-        transactionId: params.transactionId,
-        environment: params.environment,
-      }),
-    }).catch((reportError) => {
-      console.error(
-        "Failed to report missing candidate App Store user:",
-        reportError,
-      );
+    const context = getAppStoreDiagnosticsContext({
+      phase: "candidate_user_not_found",
+      candidateUserId: params.candidateUserId,
+      candidateUserSource: params.candidateSource,
+      originalTransactionId: params.originalTransactionId,
+      transactionId: params.transactionId,
+      environment: params.environment,
     });
+
+    if (shouldReportMissingCandidateUser(params.candidateSource)) {
+      void reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: new Error(
+          "Candidate App Store user does not exist in public.users",
+        ),
+        context,
+      }).catch((reportError) => {
+        console.error(
+          "Failed to report missing candidate App Store user:",
+          reportError,
+        );
+      });
+    } else {
+      console.warn(
+        "Ignoring App Store notification candidate for deleted app account",
+        context,
+      );
+    }
     return null;
   } catch (error) {
     await reportEdgeFunctionError({
@@ -543,6 +578,7 @@ async function resolveNotificationUser(params: {
   transactionId: string | null;
   appAccountToken: string | null;
   environment: AppStoreEnvironment;
+  inAppOwnershipType: "FAMILY_SHARED" | "PURCHASED" | null;
 }): Promise<ResolvedNotificationUser> {
   let userId: string | null = null;
   let userIdSource:
@@ -552,7 +588,12 @@ async function resolveNotificationUser(params: {
     | null = null;
   let hasLegacyOwnershipConflict = false;
 
-  if (iapOwnershipBindingEnabled) {
+  const canUseOwnershipBinding =
+    shouldUseAppStoreOwnershipBindingForNotificationResolution(
+      params.inAppOwnershipType,
+    );
+
+  if (iapOwnershipBindingEnabled && canUseOwnershipBinding) {
     const existingBinding = await getAppStoreOwnershipBinding({
       supabase,
       originalTransactionId: params.originalTransactionId,
@@ -590,7 +631,7 @@ async function resolveNotificationUser(params: {
     }
   }
 
-  if (!userId && iapOwnershipLegacyFallbackEnabled) {
+  if (!userId && iapOwnershipLegacyFallbackEnabled && canUseOwnershipBinding) {
     const orFilters = [
       `app_store_original_transaction_id.eq.${params.originalTransactionId}`,
     ];
@@ -636,6 +677,7 @@ async function resolveNotificationUserWithRetry(params: {
   transactionId: string | null;
   appAccountToken: string | null;
   environment: AppStoreEnvironment;
+  inAppOwnershipType: "FAMILY_SHARED" | "PURCHASED" | null;
 }): Promise<ResolvedNotificationUser> {
   const retryDelaysMs = [1500, 3000, 5000];
 
@@ -928,12 +970,16 @@ serve(async (req: Request): Promise<Response> => {
     const storeProductId = asString(transaction.productId);
     const originalTransactionId = asString(transaction.originalTransactionId);
     const transactionId = asString(transaction.transactionId);
+    const inAppOwnershipType = normalizeAppStoreInAppOwnershipType(
+      (transaction as Record<string, unknown>).inAppOwnershipType,
+    );
     notificationLogContext = getAppStoreDiagnosticsContext({
       phase: "decoded_notification",
       environment,
       storeProductId,
       originalTransactionId,
       transactionId,
+      inAppOwnershipType,
     });
 
     console.log("[app-store-notifications] decoded notification", {
@@ -941,6 +987,7 @@ serve(async (req: Request): Promise<Response> => {
       originalTransactionId,
       transactionId,
       environment,
+      inAppOwnershipType,
       offerType: transaction.offerType ?? null,
       offerDiscountType: transaction.offerDiscountType ?? null,
       offerIdentifier: transaction.offerIdentifier ?? null,
@@ -1018,6 +1065,7 @@ serve(async (req: Request): Promise<Response> => {
       transactionId,
       appAccountToken,
       environment,
+      inAppOwnershipType,
     });
     const userId = resolvedNotificationUser.userId;
     const userIdSource = resolvedNotificationUser.userIdSource;
@@ -1083,18 +1131,35 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const bindingDecision = iapOwnershipBindingEnabled
-      ? await ensureAppStoreOwnership({
-        supabase,
-        provider: "app_store",
-        originalTransactionId,
-        currentUserId: userId,
-        transactionId,
-        storeProductId,
-        environment,
-        claimSource: "app_store_notification",
-      })
-      : null;
+    const shouldEnforceOwnershipBinding = shouldEnforceAppStoreOwnershipBinding(
+      inAppOwnershipType,
+    );
+
+    const bindingDecision =
+      iapOwnershipBindingEnabled && shouldEnforceOwnershipBinding
+        ? await ensureAppStoreOwnership({
+          supabase,
+          provider: "app_store",
+          originalTransactionId,
+          currentUserId: userId,
+          transactionId,
+          storeProductId,
+          environment,
+          claimSource: "app_store_notification",
+        })
+        : null;
+
+    if (iapOwnershipBindingEnabled && !shouldEnforceOwnershipBinding) {
+      console.log(
+        "Skipping App Store notification ownership binding for family-shared entitlement",
+        {
+          originalTransactionId,
+          transactionId,
+          userId,
+          inAppOwnershipType,
+        },
+      );
+    }
 
     if (bindingDecision?.kind === "owned_by_another_user") {
       console.warn("App Store notification resolved to existing owner", {
@@ -1146,6 +1211,86 @@ serve(async (req: Request): Promise<Response> => {
     let resolvedExpiresIso = asIsoMillisUnknown(
       effectiveTransaction.expiresDate,
     );
+    if (!resolvedExpiresIso && effectiveTransaction.revocationDate) {
+      resolvedExpiresIso =
+        asIsoMillisUnknown(effectiveTransaction.revocationDate) ??
+          new Date().toISOString();
+      periodEndSource = "revocation_date";
+    }
+    let resolvedLifecycleStatus: string | null = null;
+
+    if (catalogProduct.plan !== "lifetime" && transactionId) {
+      try {
+        const subscriptionStatusLookup =
+          await findAppStoreSubscriptionStatusWithEnvironmentFallback({
+            config: {
+              ...appStoreApiConfig,
+              privateKey: getValidatedApplePrivateKey(),
+            },
+            environmentHint: toAppleEnvironment(environment),
+            transactionId,
+            originalTransactionId,
+            productId: storeProductId,
+          });
+
+        const subscriptionStatus = subscriptionStatusLookup.subscription;
+        if (
+          subscriptionStatus &&
+          appStoreSubscriptionStatusMatchesProduct(
+            subscriptionStatus,
+            storeProductId,
+          )
+        ) {
+          const lifecycle = resolveAppStoreSubscriptionLifecycle({
+            transaction: effectiveTransaction,
+            statusTransaction: subscriptionStatus.transaction,
+            renewalInfo: subscriptionStatus.renewalInfo,
+            subscriptionStatus: subscriptionStatus.status,
+            nowMs: Date.now(),
+          });
+
+          resolvedLifecycleStatus = lifecycle.status;
+          if (lifecycle.currentPeriodEnd) {
+            resolvedExpiresIso = lifecycle.currentPeriodEnd;
+            periodEndSource = "subscription_status";
+          }
+          if (subscriptionStatus.transaction) {
+            effectiveTransaction = subscriptionStatus.transaction;
+          }
+          resolvedEnvironment =
+            subscriptionStatusLookup.environment === Environment.SANDBOX
+              ? "sandbox"
+              : "production";
+        } else if (subscriptionStatus) {
+          console.warn(
+            "[app-store-notifications] ignoring subscription status for different product",
+            {
+              userId: resolvedUserId,
+              storeProductId,
+              statusTransactionProductId:
+                subscriptionStatus.transaction?.productId ?? null,
+              renewalProductId: subscriptionStatus.renewalInfo?.productId ??
+                null,
+              autoRenewProductId:
+                subscriptionStatus.renewalInfo?.autoRenewProductId ?? null,
+            },
+          );
+        }
+      } catch (error) {
+        await reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error,
+          context: getAppStoreDiagnosticsContext({
+            phase: "resolve_subscription_status_lifecycle",
+            userId: resolvedUserId,
+            storeProductId,
+            originalTransactionId,
+            transactionId,
+            environment,
+          }),
+        });
+      }
+    }
 
     if (catalogProduct.plan !== "lifetime" && !resolvedExpiresIso) {
       try {
@@ -1254,7 +1399,8 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    const status = deriveLifecycleStatus(effectiveTransaction);
+    const status = resolvedLifecycleStatus ??
+      deriveLifecycleStatus(effectiveTransaction);
     const existingTrialStart = asString(existingSubscription?.trial_start);
     const existingTrialEnd = asString(existingSubscription?.trial_end);
     let trialStartIso = status === "trialing"
@@ -1342,6 +1488,7 @@ serve(async (req: Request): Promise<Response> => {
         : resolvedExpiresIso,
       trial_start: trialStartIso,
       trial_end: trialEndIso,
+      ended_at: status === "canceled" ? new Date().toISOString() : null,
       cancel_at_period_end: false,
       stripe_customer_id: null,
       stripe_subscription_id: null,
@@ -1351,6 +1498,7 @@ serve(async (req: Request): Promise<Response> => {
       app_store_transaction_id: transactionId,
       app_store_original_transaction_id: originalTransactionId,
       app_store_environment: toStoredAppStoreEnvironment(resolvedEnvironment),
+      app_store_in_app_ownership_type: inAppOwnershipType,
       updated_at: new Date().toISOString(),
     };
 

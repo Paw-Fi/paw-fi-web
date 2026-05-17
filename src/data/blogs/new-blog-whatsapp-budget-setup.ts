@@ -8,7 +8,7 @@ const newBlog: Blog = {
   title: 'How to Set Up a Monthly Budget Using Only WhatsApp — Step by Step (2026)',
   slug: 'whatsapp-budget-setup-2026',
   excerpt: 'Learn how to set up a monthly budget using only WhatsApp in 2026 with this step-by-step guide, leveraging Moneko for frictionless envelope budgeting directly in your chat app.',
-  coverImage: 'https://placekitten.com/800/400',
+  coverImage: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?q=80&w=1600&h=800&fit=crop',
   readTime: 8,
   seo: {
     metaTitle: 'How to Set Up a Monthly Budget Using Only WhatsApp — Step by Step (2026)',

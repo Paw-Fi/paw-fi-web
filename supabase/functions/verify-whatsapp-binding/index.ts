@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { getCorsHeaders } from "../shared/cors.ts";
 import { TWILIO_TEMPLATES } from "../shared/twilio-templates.ts";
 import { isFreeUser } from "../shared/is-free-user.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 interface UserContactRow {
   id: string;
@@ -38,6 +39,11 @@ async function selectBestContactForUser(
       "[verify-whatsapp-binding] contact select error",
       preferred.error,
     );
+    await reportEdgeFunctionError({
+      functionName: "verify-whatsapp-binding",
+      error: preferred.error,
+      context: { operation: "user_contacts.select_preferred", userId },
+    });
     return null;
   }
   if (preferred.data) return preferred.data as UserContactRow;
@@ -58,6 +64,11 @@ async function selectBestContactForUser(
       "[verify-whatsapp-binding] contact select error",
       fallback.error,
     );
+    await reportEdgeFunctionError({
+      functionName: "verify-whatsapp-binding",
+      error: fallback.error,
+      context: { operation: "user_contacts.select_fallback", userId },
+    });
     return null;
   }
   return (fallback.data as UserContactRow) ?? null;
@@ -75,6 +86,15 @@ async function mergeContacts(
 
   if (error) {
     console.error("[verify-whatsapp-binding] merge_user_contacts error", error);
+    await reportEdgeFunctionError({
+      functionName: "verify-whatsapp-binding",
+      error,
+      context: {
+        operation: "user_contacts.merge",
+        primaryContactId,
+        secondaryContactId,
+      },
+    });
     return false;
   }
 
@@ -83,6 +103,15 @@ async function mergeContacts(
       "[verify-whatsapp-binding] merge_user_contacts failed",
       (data as any).error,
     );
+    await reportEdgeFunctionError({
+      functionName: "verify-whatsapp-binding",
+      error: data,
+      context: {
+        operation: "user_contacts.merge_result",
+        primaryContactId,
+        secondaryContactId,
+      },
+    });
     return false;
   }
 
@@ -262,8 +291,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Bind phone to user in user_contacts
-    const phone =
-      (claimedVerification.phone_e164 as string | null) ||
+    const phone = (claimedVerification.phone_e164 as string | null) ||
       (claimedVerification.subject as string | null) ||
       (verification.phone_e164 as string | null) ||
       (verification.subject as string | null);
@@ -285,6 +313,14 @@ Deno.serve(async (req: Request) => {
 
     if (phoneContactError) {
       console.error("Failed to look up phone contact:", phoneContactError);
+      await reportEdgeFunctionError({
+        functionName: "verify-whatsapp-binding",
+        error: phoneContactError,
+        context: {
+          operation: "user_contacts.select_by_phone",
+          userId: user.id,
+        },
+      });
       return new Response(
         JSON.stringify({ error: "Failed to bind WhatsApp" }),
         {
@@ -298,10 +334,13 @@ Deno.serve(async (req: Request) => {
 
     // Prefer the phone-bound row as primary (avoids unique phone conflict).
     if (phoneContact?.id) {
+      const shouldMergeUserContact = Boolean(
+        userContact?.id && userContact.id !== phoneContact.id,
+      );
       const updatePhone = await supabase
         .from("user_contacts")
         .update({
-          user_id: user.id,
+          ...(shouldMergeUserContact ? {} : { user_id: user.id }),
           verified: true,
           whatsapp_user_id: phone,
           updated_at: nowIso,
@@ -310,6 +349,16 @@ Deno.serve(async (req: Request) => {
 
       if (updatePhone.error) {
         console.error("Failed to bind phone:", updatePhone.error);
+        await reportEdgeFunctionError({
+          functionName: "verify-whatsapp-binding",
+          error: updatePhone.error,
+          context: {
+            operation: "user_contacts.update_phone_contact",
+            userId: user.id,
+            contactId: phoneContact.id,
+            shouldMergeUserContact,
+          },
+        });
         return new Response(
           JSON.stringify({ error: "Failed to bind WhatsApp number" }),
           {
@@ -319,18 +368,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      if (userContact?.id && userContact.id !== phoneContact.id) {
-        // Copy Telegram identifiers to the phone row if needed.
-        if (!phoneContact.telegram_chat_id && userContact.telegram_chat_id) {
-          await supabase
-            .from("user_contacts")
-            .update({
-              telegram_chat_id: userContact.telegram_chat_id,
-              updated_at: nowIso,
-            })
-            .eq("id", phoneContact.id);
-        }
-
+      if (shouldMergeUserContact && userContact?.id) {
         const merged = await mergeContacts(
           supabase,
           phoneContact.id,
@@ -360,6 +398,15 @@ Deno.serve(async (req: Request) => {
 
       if (res.error) {
         console.error("Failed to bind phone:", res.error);
+        await reportEdgeFunctionError({
+          functionName: "verify-whatsapp-binding",
+          error: res.error,
+          context: {
+            operation: "user_contacts.update_existing_user_contact",
+            userId: user.id,
+            contactId: userContact.id,
+          },
+        });
         return new Response(
           JSON.stringify({ error: "Failed to bind WhatsApp number" }),
           {
@@ -372,15 +419,26 @@ Deno.serve(async (req: Request) => {
       // First channel being verified.
       const { error: insertError } = await supabase
         .from("user_contacts")
-        .insert({
-          phone_e164: phone,
-          whatsapp_user_id: phone,
-          user_id: user.id,
-          verified: true,
-          updated_at: nowIso,
-        });
+        .upsert(
+          {
+            phone_e164: phone,
+            whatsapp_user_id: phone,
+            user_id: user.id,
+            verified: true,
+            updated_at: nowIso,
+          },
+          { onConflict: "user_id" },
+        );
       if (insertError) {
         console.error("Failed to bind phone:", insertError);
+        await reportEdgeFunctionError({
+          functionName: "verify-whatsapp-binding",
+          error: insertError,
+          context: {
+            operation: "user_contacts.upsert_first_whatsapp_binding",
+            userId: user.id,
+          },
+        });
         return new Response(
           JSON.stringify({ error: "Failed to bind WhatsApp number" }),
           {
@@ -398,7 +456,8 @@ Deno.serve(async (req: Request) => {
       );
     } else {
       try {
-        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
+        const twilioUrl =
+          `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
         const twilioAuth = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
 
         // Send onboarding message using Twilio Content Template

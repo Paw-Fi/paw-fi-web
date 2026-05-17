@@ -28,6 +28,8 @@ import {
   PlanType,
 } from "../shared/subscription-constants.ts";
 import { getPlanFromPriceId } from "../shared/stripe-subscription-prices.ts";
+import { resolveStripeCurrentPeriodEnd } from "../shared/stripe-subscription-period.ts";
+import { resolveStripeSubscriptionUserCandidate } from "../shared/stripe-subscription-user.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
 
@@ -889,20 +891,125 @@ async function getUserByCustomerId(customerId: string) {
   return userData;
 }
 
+async function getUserForStripeSubscription(
+  subscription: Stripe.Subscription,
+  customerId: string,
+) {
+  const { data: mappingData, error: mappingError } = await supabase
+    .from("user_stripe_mapping")
+    .select("user_id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (mappingError) {
+    throw new Error(
+      `user_stripe_mapping lookup by customer_id failed: ${mappingError.message}`,
+    );
+  }
+
+  const candidate = resolveStripeSubscriptionUserCandidate({
+    mappedUserId: mappingData?.user_id ?? null,
+    metadata: subscription.metadata ?? null,
+  });
+
+  if (candidate.hasConflict && candidate.metadataUserId) {
+    reportStripeWebhookError(
+      "stripe_subscription_metadata_user_conflict",
+      new Error(
+        "Stripe subscription metadata user_id conflicts with customer mapping",
+      ),
+      {
+        subscriptionId: subscription.id,
+        customerId,
+        mappedUserId: candidate.userId,
+        metadataUserId: candidate.metadataUserId,
+      },
+    );
+    console.error(
+      "Stripe subscription metadata user_id conflicts with mapping",
+      {
+        subscriptionId: subscription.id,
+        customerId,
+        mappedUserId: candidate.userId ? redactUserId(candidate.userId) : null,
+        metadataUserId: redactUserId(candidate.metadataUserId),
+      },
+    );
+  }
+
+  if (!candidate.userId) {
+    return null;
+  }
+
+  const { data: userData, error: userError } = await supabase
+    .from("users")
+    .select("id, email, full_name")
+    .eq("id", candidate.userId)
+    .maybeSingle();
+
+  if (userError) {
+    throw new Error(`users lookup failed: ${userError.message}`);
+  }
+
+  if (!userData) {
+    console.error("Stripe subscription resolved to missing user", {
+      subscriptionId: subscription.id,
+      customerId,
+      userId: redactUserId(candidate.userId),
+      source: candidate.source,
+    });
+    return null;
+  }
+
+  if (candidate.source === "subscription_metadata" && !mappingData?.user_id) {
+    const { error: mappingUpsertError } = await supabase
+      .from("user_stripe_mapping")
+      .upsert(
+        {
+          user_id: candidate.userId,
+          stripe_customer_id: customerId,
+        },
+        { onConflict: "user_id" },
+      );
+
+    if (mappingUpsertError) {
+      if (mappingUpsertError.code === "23505") {
+        throw new PermanentWebhookError(
+          "CUSTOMER_ALREADY_MAPPED",
+          `stripe_customer_id ${customerId} is already mapped to another user`,
+        );
+      }
+      throw new Error(
+        `user_stripe_mapping metadata backfill failed: ${mappingUpsertError.message}`,
+      );
+    }
+
+    console.log(
+      "Backfilled Stripe customer mapping from subscription metadata",
+      {
+        subscriptionId: subscription.id,
+        customerId,
+        userId: redactUserId(candidate.userId),
+      },
+    );
+  }
+
+  return userData;
+}
+
 // Helper function to get plan name from product ID
 async function getPlanNameFromProductId(productId: string | null | undefined) {
-  if (!productId) return "Premium";
+  if (!productId) return "Plus";
 
   try {
     // Try to get product name from Stripe
     const product = await stripe.products.retrieve(productId);
-    return product.name || "Premium";
+    return product.name || "Plus";
   } catch (error: any) {
     reportStripeWebhookError("get_plan_name_from_product_id", error, {
       productId,
     });
     console.error("Error getting product name:", error);
-    return "Premium";
+    return "Plus";
   }
 }
 
@@ -1075,6 +1182,7 @@ async function handleSubscriptionUpdated(
   subscription: Stripe.Subscription,
   eventId: string,
   enqueueUserEmail: EnqueueUserEmail,
+  relatedInvoice?: Stripe.Invoice,
 ) {
   try {
     console.log("Processing subscription update:", subscription.id);
@@ -1088,9 +1196,12 @@ async function handleSubscriptionUpdated(
       return;
     }
 
-    const user = await getUserByCustomerId(customerId);
+    const user = await getUserForStripeSubscription(subscription, customerId);
     if (!user) {
-      console.error("No user found with customer ID:", customerId);
+      console.error("No user found for subscription customer:", {
+        customerId,
+        subscriptionId: subscription.id,
+      });
       return;
     }
 
@@ -1106,7 +1217,7 @@ async function handleSubscriptionUpdated(
     const { data: previousSub } = await supabase
       .from("subscriptions")
       .select(
-        "plan, billing_interval, status, stripe_subscription_id, cancel_at_period_end, ended_at",
+        "plan, billing_interval, status, stripe_subscription_id, cancel_at_period_end, current_period_end, ended_at",
       )
       .eq("user_id", userId)
       .maybeSingle();
@@ -1355,12 +1466,73 @@ async function handleSubscriptionUpdated(
       | BillingInterval
       | null;
     const storedStatus = mapStripeStatusToStoredStatus(status);
+    let periodResolution = resolveStripeCurrentPeriodEnd({
+      subscription,
+      invoice: relatedInvoice,
+      status,
+      plan: finalPlan,
+    });
+
+    if (
+      periodResolution.source === "missing" &&
+      isAccessGrantingStatus(storedStatus) &&
+      finalPlan !== "lifetime"
+    ) {
+      try {
+        const expandedSubscription = await stripe.subscriptions.retrieve(
+          subscription.id,
+          { expand: ["latest_invoice"] },
+        );
+        periodResolution = resolveStripeCurrentPeriodEnd({
+          subscription: expandedSubscription,
+          invoice: relatedInvoice,
+          status,
+          plan: finalPlan,
+        });
+      } catch (periodEndError) {
+        reportStripeWebhookError(
+          "handle_subscription_updated_fetch_period_end_fallback",
+          periodEndError,
+          {
+            userId,
+            subscriptionId: subscription.id,
+            status,
+            plan: finalPlan,
+          },
+        );
+      }
+    }
+
+    if (
+      periodResolution.source === "missing" &&
+      isAccessGrantingStatus(storedStatus) &&
+      finalPlan !== "lifetime"
+    ) {
+      reportStripeWebhookError(
+        "handle_subscription_updated_missing_period_end",
+        new Error("Access-granting Stripe subscription missing period end"),
+        {
+          userId,
+          subscriptionId: subscription.id,
+          status,
+          plan: finalPlan,
+          hasRelatedInvoice: Boolean(relatedInvoice),
+        },
+      );
+      throw new Error(
+        `Access-granting Stripe subscription ${subscription.id} is missing current_period_end`,
+      );
+    }
+
+    const currentPeriodEnd = periodResolution.currentPeriodEnd;
+    const subscriptionPeriodEnd = periodResolution.unixSeconds;
 
     console.log("Updating subscription for user:", userId, {
       plan: finalPlan,
       billingInterval: finalInterval,
       status: storedStatus,
       currentPeriodEnd,
+      currentPeriodEndSource: periodResolution.source,
       cancelAtPeriodEnd,
       previousPlan,
       previousInterval,
@@ -1661,7 +1833,12 @@ async function handleInvoicePaymentSucceeded(
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 
       // Update subscription in our database
-      await handleSubscriptionUpdated(subscription, eventId, enqueueUserEmail);
+      await handleSubscriptionUpdated(
+        subscription,
+        eventId,
+        enqueueUserEmail,
+        invoice,
+      );
 
       // SEND INVOICE RECEIPT EMAIL WITH PDF
       // Get customer ID safely

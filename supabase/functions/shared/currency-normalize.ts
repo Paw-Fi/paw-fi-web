@@ -29,6 +29,10 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     // Dirham (UAE)
     "د.إ": "AED",
 
+    // Dinar (Algeria)
+    "د.ج": "DZD",
+    "DA": "DZD",
+
     // Pound, Euro, Yen signs
     "£": "GBP",
     "€": "EUR",

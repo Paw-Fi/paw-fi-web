@@ -29,6 +29,10 @@ export type AuthContextType = {
     email: string,
     redirectUrl?: string,
   ) => Promise<{ success: boolean; data?: any }>;
+  changeEmail: (
+    email: string,
+    redirectUrl?: string,
+  ) => Promise<{ success: boolean; data?: any }>;
   deleteAccount: () => Promise<{ success: boolean }>;
 };
 
@@ -62,6 +66,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(nextSession);
       setUser(transformUser(nextSession?.user ?? null));
       setIsLoading(false);
+    };
+
+    const syncUserEmailToProfileTable = (userId: string, email?: string | null) => {
+      if (!email) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        void supabase
+          .from("users")
+          .update({ email, updated_at: new Date().toISOString() })
+          .eq("id", userId)
+          .then(({ error }) => {
+            if (error) {
+              console.error("Error syncing profile email:", error);
+            }
+          })
+          .catch((error) => {
+            console.error("Error syncing profile email:", error);
+          });
+      }, 0);
     };
 
     const updateLastLogin = (userId: string) => {
@@ -123,6 +148,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (event === "SIGNED_IN" && session?.user) {
             updateLastLogin(session.user.id);
+            syncUserEmailToProfileTable(session.user.id, session.user.email);
+          }
+
+          if (event === "USER_UPDATED" && session?.user) {
+            syncUserEmailToProfileTable(session.user.id, session.user.email);
           }
         }).data.subscription;
       } catch (error) {
@@ -256,6 +286,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const changeEmail = async (email: string, redirectUrl?: string) => {
+    try {
+      const { error, data } = await supabase.auth.updateUser(
+        {
+          email,
+        },
+        {
+          emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(redirectUrl || "/dashboard/user-settings")}`,
+        },
+      );
+
+      if (error) throw error;
+
+      return { success: true, data };
+    } catch (error) {
+      console.error("Error changing email:", error);
+      throw error;
+    }
+  };
+
   const deleteAccount = async () => {
     if (!user) {
       throw new Error("No user is currently logged in");
@@ -293,6 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         resetPassword,
+        changeEmail,
         deleteAccount,
       }}
     >
@@ -318,6 +369,7 @@ export const useAuth = () => {
       signIn: async () => ({ success: false, data: null }),
       signOut: async () => ({ success: false }),
       resetPassword: async () => ({ success: false }),
+      changeEmail: async () => ({ success: false }),
       deleteAccount: async () => ({ success: false }),
     } as AuthContextType;
   }

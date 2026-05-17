@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
   getExpenseCategories,
   getIncomeCategories,
@@ -6,6 +5,10 @@ import {
   normalizePreferenceMatchKey,
   sanitizeCategoryName,
 } from "./category-colors.ts";
+
+type SupabaseClient = {
+  from: (table: string) => any;
+};
 
 export type CategoryTransactionType = "expense" | "income";
 

@@ -22,12 +22,16 @@ export function formatInvokeError(err: unknown): string {
     if (e.name) parts.push(`name=${e.name}`);
     if (e.message) parts.push(`message=${e.message}`);
     if (e.context) {
+      const contextIsResponse = isResponseLike(e.context);
       const ctx = e.context as Record<string, any>;
       const ctxParts: string[] = [];
       if (ctx.status) ctxParts.push(`status=${ctx.status}`);
-      if (ctx.body) ctxParts.push(`body=${JSON.stringify(ctx.body)}`);
-      if (ctx.response) {
-        const resp = ctx.response as Record<string, any>;
+      if (ctx.body && !contextIsResponse) {
+        ctxParts.push(`body=${JSON.stringify(ctx.body)}`);
+      }
+      const response = ctx.response;
+      if (response) {
+        const resp = response as Record<string, any>;
         if (resp.status) ctxParts.push(`respStatus=${resp.status}`);
         if (resp.statusText) ctxParts.push(`respStatusText=${resp.statusText}`);
       }
@@ -38,6 +42,88 @@ export function formatInvokeError(err: unknown): string {
   } catch {
     return String(err);
   }
+}
+
+export interface InvokeErrorResponseDetails {
+  status?: number;
+  statusText?: string;
+  contentType?: string;
+  body?: string;
+}
+
+function isResponseLike(value: unknown): value is Response {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.text === "function" &&
+    typeof candidate.status === "number";
+}
+
+function truncateInvokeBody(value: string, maxLength = 1200): string {
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength)}...`;
+}
+
+function normalizeInvokeBodyText(text: string, contentType: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  if (!contentType.toLowerCase().includes("json")) {
+    return truncateInvokeBody(trimmed);
+  }
+  try {
+    return truncateInvokeBody(JSON.stringify(JSON.parse(trimmed)));
+  } catch {
+    return truncateInvokeBody(trimmed);
+  }
+}
+
+function getInvokeErrorResponse(err: unknown): Response | null {
+  const context = (err as Record<string, any> | null | undefined)?.context;
+  if (isResponseLike(context)) return context;
+  if (isResponseLike(context?.response)) return context.response;
+  return null;
+}
+
+export async function readInvokeErrorResponseDetails(
+  err: unknown,
+): Promise<InvokeErrorResponseDetails | null> {
+  const response = getInvokeErrorResponse(err);
+  if (!response) return null;
+
+  const contentType = response.headers?.get("Content-Type") ?? "";
+  const details: InvokeErrorResponseDetails = {
+    status: response.status,
+    statusText: response.statusText || undefined,
+    contentType: contentType || undefined,
+  };
+
+  try {
+    const text = await response.clone().text();
+    const body = normalizeInvokeBodyText(text, contentType);
+    if (body) details.body = body;
+  } catch {
+    // The response body may already be consumed by another formatter.
+  }
+
+  return details;
+}
+
+export async function formatInvokeErrorWithResponseBody(
+  err: unknown,
+): Promise<string> {
+  const base = formatInvokeError(err);
+  const responseDetails = await readInvokeErrorResponseDetails(err);
+  if (!responseDetails) return base;
+
+  const parts = [base];
+  if (responseDetails.statusText) {
+    parts.push(`responseStatusText=${responseDetails.statusText}`);
+  }
+  if (responseDetails.contentType) {
+    parts.push(`responseContentType=${responseDetails.contentType}`);
+  }
+  if (responseDetails.body) {
+    parts.push(`responseBody=${responseDetails.body}`);
+  }
+  return parts.join(" | ");
 }
 
 export function asCurrencySymbol(iso?: string | null): string {

@@ -13,7 +13,6 @@
  *  5. Coerce final category to the user's allowed category set
  */
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import {
   type UserCategoryPreferenceRow,
   type UserCategoryRemapRow,
@@ -27,6 +26,10 @@ import {
   normalizeStoredUserCategory,
 } from "./user-categories.ts";
 import { coerceCategoryToAllowed } from "./category-colors.ts";
+
+type SupabaseClient = {
+  from: (table: string) => any;
+};
 
 export interface CategoryContext {
   allowedExpenseSet: Set<string>;

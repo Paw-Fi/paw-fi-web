@@ -245,7 +245,9 @@ function mergeBudgetingAppVariants(xmlContent, variants) {
 
 function mergeFixedPublicUrls(xmlContent) {
   const existingUrls = new Set(
-    [...xmlContent.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]),
+    [...xmlContent.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) =>
+      normalizeSitemapUrl(match[1]),
+    ),
   );
 
   const fixedPages = [
@@ -256,16 +258,44 @@ function mergeFixedPublicUrls(xmlContent) {
         priority: "0.8",
       },
     },
+    {
+      url: "https://moneko.io/early-access",
+      page: {
+        changefreq: "weekly",
+        priority: "0.8",
+      },
+    },
+    {
+      url: "https://moneko.io/referral",
+      page: {
+        changefreq: "weekly",
+        priority: "0.7",
+      },
+    },
   ];
 
   const entries = fixedPages
-    .filter((item) => !existingUrls.has(item.url))
+    .filter((item) => !existingUrls.has(normalizeSitemapUrl(item.url)))
     .map((item) => buildUrlEntry(item.url, item.page));
 
   if (entries.length === 0) return xmlContent;
 
   console.log(`➕ Adding ${entries.length} fixed public URLs`);
   return xmlContent.replace("</urlset>", `${entries.join("\n")}</urlset>`);
+}
+
+function normalizeSitemapUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+
+    if (url.pathname.length > 1) {
+      url.pathname = url.pathname.replace(/\/+$/, "");
+    }
+
+    return url.toString();
+  } catch {
+    return rawUrl;
+  }
 }
 
 function buildUrlEntry(url, page) {
@@ -296,11 +326,10 @@ function filterNonPublicUrls(xmlContent) {
     /^\/payment-status(?:\/|$)/,
     /^\/billing(?:\/|$)/,
     /^\/unsubscribe(?:\/|$)/,
-    /^\/early-access(?:\/|$)/,
     /^\/promo(?:\/|$)/,
     /^\/onboarding(?:\/|$)/,
     /^\/invites(?:\/|$)/,
-    /^\/referral(?:\/|$)/,
+    /^\/referral\/.+/,
     /^\/creator(?:\/|$)/,
     /^\/plaid(?:\/|$)/,
     /^\/oauth(?:\/|$)/,

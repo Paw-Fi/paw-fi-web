@@ -508,7 +508,7 @@ export function Dashboard() {
 
         // 3. CRITICAL FIX: Navigate FIRST, then clear cache
         // This prevents race condition where new route tries to fetch cleared queries
-        await navigate({ to: "/login" });
+        await navigate({ to: "/" });
 
         // 4. Clear query cache AFTER navigation completes
         // Use setTimeout to ensure navigation finishes before cache clear
@@ -714,14 +714,7 @@ export function Dashboard() {
                           <Link
                             to="/dashboard/user-settings"
                             className="block"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setUserMenuOpen(false);
-                              setMobileMenuOpen(false);
-                              toast.info(
-                                "Coming soon! This feature is under development.",
-                              );
-                            }}
+                           
                           >
                             <motion.div
                               className="hover:bg-muted/50 dark:hover:bg-muted/50 active:bg-muted/70 dark:active:bg-muted/70 flex min-h-[44px] items-center gap-2.5 px-3 py-3 transition-colors duration-200 sm:gap-3 sm:px-4"

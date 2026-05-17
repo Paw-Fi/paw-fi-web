@@ -7,6 +7,7 @@ import { corsHeaders } from "../shared/cors.ts";
 import { parse } from "https://esm.sh/partial-json@0.1.7";
 import { getCurrencySymbol } from "../shared/currency-symbols.ts";
 import { normalizeCurrencyCode } from "../shared/currency-normalize.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 
 // Types
 interface UpdateRequest {
@@ -134,20 +135,22 @@ async function findEffectiveBudget(
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS")
+  if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
   const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    if (DEBUG)
+    if (DEBUG) {
       console.error("config error", {
         hasGemini: !!GEMINI_API_KEY,
         hasUrl: !!SUPABASE_URL,
         hasKey: !!SUPABASE_SERVICE_ROLE_KEY,
       });
+    }
     return errorResponse("Server not configured", 500);
   }
 
@@ -193,12 +196,11 @@ Deno.serve(async (req: Request) => {
   // 3. preferred_currency from user_contacts table
   // 4. 'USD' as final fallback
   // Canonicalize provided currency (may be symbol/alias)
-  const providedCurrency =
-    (
-      normalizeCurrencyCode(inputCurrency) ||
-      inputCurrency ||
-      ""
-    ).toUpperCase() || null;
+  const providedCurrency = (
+    normalizeCurrencyCode(inputCurrency) ||
+    inputCurrency ||
+    ""
+  ).toUpperCase() || null;
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
@@ -238,6 +240,15 @@ Deno.serve(async (req: Request) => {
   let contactId: string | null = contact?.id ?? null;
   if (contactErr) {
     console.error("contact select error", contactErr);
+    await reportEdgeFunctionError({
+      functionName: "finance-update",
+      error: contactErr,
+      context: {
+        operation: "user_contacts.select",
+        hasPhone: Boolean(phone),
+        hasUserId: Boolean(userId),
+      },
+    });
     return errorResponse("Failed to fetch contact", 500);
   }
 
@@ -245,8 +256,7 @@ Deno.serve(async (req: Request) => {
   // Layer 2: User's selected currency (from request)
   // Layer 3: User's preferred_currency (from database)
   // Layer 4: 'USD' (final fallback)
-  const dbPreferred =
-    normalizeCurrencyCode(contact?.preferred_currency) ||
+  const dbPreferred = normalizeCurrencyCode(contact?.preferred_currency) ||
     contact?.preferred_currency ||
     null;
   const preferredCurrency = (
@@ -259,8 +269,8 @@ Deno.serve(async (req: Request) => {
     layer: providedCurrency
       ? "2-inputCurrency"
       : contact?.preferred_currency
-        ? "3-preferred_currency"
-        : "4-USD",
+      ? "3-preferred_currency"
+      : "4-USD",
     value: preferredCurrency,
     providedCurrency,
     dbPreferredCurrency: contact?.preferred_currency,
@@ -279,24 +289,44 @@ Deno.serve(async (req: Request) => {
             preferred_currency: preferredCurrency,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "phone_e164" },
+          { onConflict: userId ? "user_id" : "phone_e164" },
         )
         .select("id")
         .single();
       if (upsertErr) {
         console.error("contact upsert error", upsertErr);
+        await reportEdgeFunctionError({
+          functionName: "finance-update",
+          error: upsertErr,
+          context: {
+            operation: "user_contacts.upsert_by_phone",
+            hasUserId: Boolean(userId),
+          },
+        });
         return errorResponse("Failed to create contact", 500);
       }
       contactId = upserted.id;
     } else if (userId) {
-      // If only userId provided, insert contact (no unique constraint on user_id, but query fix prevents duplicates)
+      // If only userId provided, upsert on user_id to prevent duplicate contacts.
       const { data: inserted, error: insertErr } = await supabase
         .from("user_contacts")
-        .insert({ user_id: userId, preferred_currency: preferredCurrency })
+        .upsert(
+          {
+            user_id: userId,
+            preferred_currency: preferredCurrency,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        )
         .select("id")
         .single();
       if (insertErr) {
         console.error("contact insert error", insertErr);
+        await reportEdgeFunctionError({
+          functionName: "finance-update",
+          error: insertErr,
+          context: { operation: "user_contacts.upsert_by_user_id", userId },
+        });
         return errorResponse("Failed to create contact", 500);
       }
       contactId = inserted.id;
@@ -332,7 +362,8 @@ Rules:
           role: "user",
           parts: [
             {
-              text: `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}`,
+              text:
+                `${systemPrompt}\n\nCaller Currency: ${preferredCurrency}\nCaller Date: ${dateStr}\n\nUser Text:\n${userText}`,
             },
           ],
         },
@@ -390,20 +421,18 @@ Rules:
       normalizeCurrencyCode(actions.set_budget.currency) || preferredCurrency
     ).toUpperCase();
 
-    const { error: upsertErr } = await supabase
-      .from("daily_budgets")
-      .upsert(
-        [
-          {
-            contact_id: contactId,
-            date: budgetDate,
-            amount_cents: budgetCents,
-            currency: budgetCurrency,
-            updated_at: new Date().toISOString(),
-          },
-        ],
-        { onConflict: "contact_id,date,currency" },
-      ); // Updated: now includes currency
+    const { error: upsertErr } = await supabase.from("daily_budgets").upsert(
+      [
+        {
+          contact_id: contactId,
+          date: budgetDate,
+          amount_cents: budgetCents,
+          currency: budgetCurrency,
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      { onConflict: "contact_id,date,currency" },
+    ); // Updated: now includes currency
 
     if (upsertErr) {
       console.error("budget upsert error", upsertErr);
@@ -441,8 +470,7 @@ Rules:
 
         // Ensure user_id is set so RLS policies (which rely on user_id) include this row
         // Prefer contact.user_id (from DB); fallback to provided userId when available
-        const expenseUserId =
-          (contact?.user_id as string | null) ||
+        const expenseUserId = (contact?.user_id as string | null) ||
           (userId as string | null) ||
           null;
 
@@ -483,10 +511,10 @@ Rules:
         currencies: insertedExpenses?.map((e: any) => e.currency),
         firstExpense: insertedExpenses?.[0]
           ? {
-              id: insertedExpenses[0].id,
-              currency: insertedExpenses[0].currency,
-              amount_cents: insertedExpenses[0].amount_cents,
-            }
+            id: insertedExpenses[0].id,
+            currency: insertedExpenses[0].currency,
+            amount_cents: insertedExpenses[0].amount_cents,
+          }
           : null,
       });
     }
@@ -502,7 +530,7 @@ Rules:
     if (Array.isArray(results.expenses) && results.expenses.length > 0) {
       const expenseCurrencies = new Set(
         results.expenses.map((e: any) =>
-          (e.currency || preferredCurrency).toUpperCase(),
+          (e.currency || preferredCurrency).toUpperCase()
         ),
       );
 
@@ -595,7 +623,7 @@ Rules:
     if (Array.isArray(results.expenses) && results.expenses.length > 0) {
       const expenseCurrencies = new Set(
         results.expenses.map((e: any) =>
-          (e.currency || preferredCurrency).toUpperCase(),
+          (e.currency || preferredCurrency).toUpperCase()
         ),
       );
       if (expenseCurrencies.size === 1) {
@@ -668,8 +696,8 @@ Rules:
       : "";
 
     // Check if budget is zero due to currency mismatch
-    const budgetMismatch =
-      results.totals.budget_cents === 0 && results.totals.spent_cents > 0;
+    const budgetMismatch = results.totals.budget_cents === 0 &&
+      results.totals.spent_cents > 0;
 
     if (budgetMismatch) {
       // Check if we found budget in another currency
@@ -677,18 +705,33 @@ Rules:
         const otherCode = results.otherCurrencyBudget.currency;
         const otherSym = getCurrencySymbol(otherCode);
         const otherAmount = toMoney(results.otherCurrencyBudget.amount_cents);
-        reply =
-          `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)}.\n\n` +
+        reply = `${setPart}${added}${dateLabel}: spent ${sym}${
+          toMoney(
+            results.totals.spent_cents,
+          )
+        }.\n\n` +
           `💡 Your currency is set to *${code}* but you don't have a budget in ${code} yet.\n\n` +
           `You have a budget in *${otherCode}* (${otherSym}${otherAmount}).\n\n` +
           `• Use */setCurrency ${otherCode}* to switch back\n` +
           `• Or use */setBudget <amount>* to create a budget in ${code}`;
       } else {
         // No budget in any currency
-        reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
+        reply = `${setPart}${added}${dateLabel}: spent ${sym}${
+          toMoney(
+            results.totals.spent_cents,
+          )
+        } (no budget set in ${code}). Set budget: /setBudget <amount> or change currency: /setCurrency <code>`;
       }
     } else {
-      reply = `${setPart}${added}${dateLabel}: spent ${sym}${toMoney(results.totals.spent_cents)} / budget ${sym}${toMoney(results.totals.budget_cents)}. Remaining: ${sym}${toMoney(results.totals.remaining_cents)}.`;
+      reply = `${setPart}${added}${dateLabel}: spent ${sym}${
+        toMoney(
+          results.totals.spent_cents,
+        )
+      } / budget ${sym}${
+        toMoney(
+          results.totals.budget_cents,
+        )
+      }. Remaining: ${sym}${toMoney(results.totals.remaining_cents)}.`;
     }
   } else {
     reply = "Update recorded.";

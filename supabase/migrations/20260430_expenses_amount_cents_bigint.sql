@@ -3,17 +3,41 @@
 
 drop view if exists public.v_envelope_monthly_spend;
 
+create temporary table if not exists pg_temp._amount_cents_bigint_object_backup (
+  object_name text primary key
+) on commit drop;
+
+insert into pg_temp._amount_cents_bigint_object_backup (object_name)
+select 'trg_set_expense_import_semantic_key'
+where exists (
+  select 1
+  from pg_trigger t
+  join pg_class c on c.oid = t.tgrelid
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relname = 'expenses'
+    and t.tgname = 'trg_set_expense_import_semantic_key'
+    and not t.tgisinternal
+)
+on conflict (object_name) do nothing;
+
+drop trigger if exists trg_set_expense_import_semantic_key on public.expenses;
+
 alter table if exists public.expenses
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 alter table if exists public.daily_budgets
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 alter table if exists public.envelope_allocations
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 alter table if exists public.goal_contributions
-  alter column amount_cents type bigint;
+  alter column amount_cents type bigint
+  using amount_cents::bigint;
 
 create or replace view public.v_envelope_monthly_spend as
 select
@@ -32,6 +56,22 @@ group by e.id, date_trunc('month', ex.date)::date;
 
 comment on view public.v_envelope_monthly_spend is
   'Aggregated monthly spend per envelope using user_id, category links and expenses';
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_temp._amount_cents_bigint_object_backup
+    where object_name = 'trg_set_expense_import_semantic_key'
+  ) then
+    create trigger trg_set_expense_import_semantic_key
+    before insert or update of user_id, household_id, account_id, type, date, amount_cents, currency, category, raw_text
+    on public.expenses
+    for each row
+    execute function public.set_expense_import_semantic_key();
+  end if;
+end;
+$$;
 
 -- Ensure normalize_goal_amount uses BIGINT for p_amount_cents
 create or replace function normalize_goal_amount(

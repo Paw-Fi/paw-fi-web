@@ -162,13 +162,7 @@ export const Route = createFileRoute("/early-access")({
     };
 
     return {
-      meta: [
-        ...meta,
-        {
-          name: "robots",
-          content: "noindex, nofollow",
-        },
-      ],
+      meta,
       links: [
         {
           rel: "canonical",

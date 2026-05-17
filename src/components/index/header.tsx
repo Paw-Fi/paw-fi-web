@@ -19,6 +19,7 @@ import {
   Calculator,
   DollarSign,
   History,
+  LifeBuoy,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -81,16 +82,16 @@ const resources = [
     icon: Calculator,
   },
   {
-    title: "Guides",
-    href: "/guides/how-to-calculate-net-worth",
-    description: "Practical, step-by-step personal finance guides.",
-    icon: BookOpen,
-  },
-  {
     title: "Pricing",
     href: "/pricing",
     description: "Simple plans for powerful tools.",
     icon: DollarSign,
+  },
+  {
+    title: "Help Center",
+    href: "/help",
+    description: "Guides, tutorials, and support resources.",
+    icon: LifeBuoy,
   },
 ];
 
