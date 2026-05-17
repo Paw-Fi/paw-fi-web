@@ -20,20 +20,6 @@ interface ChangelogEntry {
 
 const changelogs: ChangelogEntry[] = [
   {
-    title: "A New Era — Faster, Smarter, Works Offline",
-    date: "2026-05-15",
-    version: "2.0.0",
-    tags: ["Performance", "Offline", "Speed", "UI"],
-    description:
-      "Our biggest update yet. Everything saves instantly, works offline, and loads faster. We rebuilt the engine so you spend less time waiting and more time tracking your money.",
-    items: [
-      "Everything saves instantly — it’s that fast",
-      "Your data stays available offline and syncs automatically when you're back online",
-      "App loads faster and feels snappier across every screen",
-      "New number pad makes entering amounts faster and easier",
-    ],
-  },
-  {
     title: "New Currencies, Apple Family Sharing & Help Center",
     date: "2026-05-06",
     version: "1.6.1",
