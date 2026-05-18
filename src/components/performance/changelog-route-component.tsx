@@ -67,10 +67,11 @@ const changelogs: ChangelogEntry[] = [
     description:
       "Our biggest update yet. Everything saves instantly, works offline, and loads faster. We rebuilt the engine so you spend less time waiting and more time tracking your money.",
     items: [
-      "Everything saves instantly — it’s that fast",
+      "Everything saves instantly — it's that fast",
       "Your data stays available offline and syncs automatically when you're back online",
       "App loads faster and feels snappier across every screen",
       "New number pad makes entering amounts faster and easier",
+      "Monthly Health Report for spending pace, budget safety, bill coverage, and month-end buffer",
     ],
   },
   {
