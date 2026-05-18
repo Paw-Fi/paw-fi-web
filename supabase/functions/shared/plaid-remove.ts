@@ -3,6 +3,7 @@ import { PLAID_PROVIDER, PlaidError, removePlaidItem } from "./plaid-client.ts";
 
 export interface PlaidRemovableConnection {
   id: string;
+  user_id?: string | null;
   access_token_encrypted?: string | null;
   plaid_access_token_encrypted?: string | null;
 }
@@ -14,7 +15,8 @@ export async function removePlaidConnection(params: {
   connection: PlaidRemovableConnection;
   removalReason: string;
 }): Promise<void> {
-  const encryptedToken = params.connection.access_token_encrypted ||
+  const encryptedToken =
+    params.connection.access_token_encrypted ||
     params.connection.plaid_access_token_encrypted;
 
   if (encryptedToken) {
@@ -30,6 +32,23 @@ export async function removePlaidConnection(params: {
       );
     } catch (error) {
       if (!(error instanceof PlaidError && error.code === "ITEM_NOT_FOUND")) {
+        if (params.connection.user_id) {
+          const { error: jobError } = await params.supabase
+            .from("plaid_offboarding_jobs")
+            .insert({
+              user_id: params.connection.user_id,
+              connection_id: params.connection.id,
+              access_token_encrypted:
+                params.connection.access_token_encrypted ?? null,
+              plaid_access_token_encrypted:
+                params.connection.plaid_access_token_encrypted ?? null,
+              reason: params.removalReason,
+            });
+
+          if (jobError && jobError.code !== "23505") {
+            throw jobError;
+          }
+        }
         throw error;
       }
 

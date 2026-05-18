@@ -118,6 +118,8 @@ export interface CreateLinkTokenParams {
   countryCodes?: string[];
   transactionsDaysRequested?: number;
   platform?: "android" | "ios" | string;
+  omitProducts?: boolean;
+  omitTransactions?: boolean;
   update?: {
     accountSelectionEnabled?: boolean;
   };
@@ -145,10 +147,13 @@ export async function createPlaidLinkToken(
     client_name: config.clientName,
     country_codes: countryCodes,
     language: params.language || "en",
-    products: params.products && params.products.length > 0
-      ? params.products
-      : config.products,
   };
+
+  if (!params.omitProducts) {
+    request.products = params.products && params.products.length > 0
+      ? params.products
+      : config.products;
+  }
 
   if (platform === "android") {
     request.android_package_name = config.androidPackageName;
@@ -168,7 +173,7 @@ export async function createPlaidLinkToken(
   const transactionsDaysRequested = normalizeTransactionsDaysRequested(
     params.transactionsDaysRequested,
   );
-  if (transactionsDaysRequested != null) {
+  if (!params.omitTransactions && transactionsDaysRequested != null) {
     request.transactions = { days_requested: transactionsDaysRequested };
   }
 

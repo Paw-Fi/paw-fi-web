@@ -51,6 +51,30 @@ interface SubscriptionRow {
   created_at: string | null;
 }
 
+const SUBSCRIPTION_PLAID_GRACE_DAYS = Number.parseInt(
+  Deno.env.get("PLAID_SUBSCRIPTION_GRACE_DAYS") || "7",
+  10,
+);
+
+function isSubscriptionPastPlaidGrace(
+  subscription: SubscriptionRow | undefined,
+  now: Date,
+): boolean {
+  if (!subscription?.current_period_end) {
+    return subscription?.status !== "active";
+  }
+
+  const periodEnd = new Date(subscription.current_period_end);
+  if (Number.isNaN(periodEnd.getTime())) {
+    return subscription.status !== "active";
+  }
+
+  const graceDays = Number.isFinite(SUBSCRIPTION_PLAID_GRACE_DAYS)
+    ? Math.max(0, SUBSCRIPTION_PLAID_GRACE_DAYS)
+    : 7;
+  return now.getTime() > periodEnd.getTime() + graceDays * 24 * 60 * 60 * 1000;
+}
+
 function isSupportedAction(value: unknown): value is PlaidMaintenanceAction {
   return (
     value === "reconcile_stale" ||
@@ -222,75 +246,101 @@ async function enforceLifecyclePolicies(
 
   let removed = 0;
   let warned = 0;
+  let failed = 0;
 
   for (const connection of (connections || []) as PlaidConnectionRow[]) {
-    const subscription = subscriptionsByUserId.get(connection.user_id);
-    const keepBeyondSecondMonth = shouldKeepPlaidItemBeyondSecondMonth({
-      subscriptionStatus: subscription?.status ?? null,
-      subscriptionPlan: subscription?.plan ?? null,
-      itemHealthState: connection.item_health_state,
-      billingKeepReason: connection.billing_keep_reason,
-      lastFinancialFeatureUsedAt: connection.last_financial_feature_used_at,
-      now,
-    });
-
-    const scheduledRemovalAt = connection.scheduled_removal_at
-      ? new Date(connection.scheduled_removal_at)
-      : null;
-    const updatedAt = connection.updated_at
-      ? new Date(connection.updated_at)
-      : null;
-    const shouldRemoveForTrialInactivity =
-      subscription?.status !== "active" &&
-      (!connection.last_financial_feature_used_at ||
-        new Date(connection.last_financial_feature_used_at) <
-          trialInactivityThreshold);
-    const shouldRemoveForRelinkTimeout =
-      connection.status === "needs_reauth" &&
-      updatedAt != null &&
-      updatedAt.getTime() < trialInactivityThreshold.getTime();
-    const shouldRemoveForBilling =
-      scheduledRemovalAt != null &&
-      scheduledRemovalAt.getTime() <= now.getTime() &&
-      !keepBeyondSecondMonth;
-
-    if (
-      shouldRemoveForTrialInactivity ||
-      shouldRemoveForRelinkTimeout ||
-      shouldRemoveForBilling
-    ) {
-      await removePlaidConnection({
-        supabase,
-        connection,
-        removalReason: shouldRemoveForBilling
-          ? "billing_deadline"
-          : shouldRemoveForRelinkTimeout
-            ? "relink_timeout"
-            : "trial_inactive",
+    try {
+      const subscription = subscriptionsByUserId.get(connection.user_id);
+      const keepBeyondSecondMonth = shouldKeepPlaidItemBeyondSecondMonth({
+        subscriptionStatus: subscription?.status ?? null,
+        subscriptionPlan: subscription?.plan ?? null,
+        itemHealthState: connection.item_health_state,
+        billingKeepReason: connection.billing_keep_reason,
+        lastFinancialFeatureUsedAt: connection.last_financial_feature_used_at,
+        now,
       });
-      removed += 1;
-      continue;
-    }
 
-    if (
-      scheduledRemovalAt != null &&
-      scheduledRemovalAt.getTime() <= warningBefore.getTime() &&
-      !connection.warning_sent_at &&
-      !keepBeyondSecondMonth
-    ) {
-      await supabase
-        .from("bank_connections")
-        .update({
-          warning_sent_at: now.toISOString(),
-          item_status: "pending_removal",
-          updated_at: now.toISOString(),
-        })
-        .eq("id", connection.id);
-      warned += 1;
+      const scheduledRemovalAt = connection.scheduled_removal_at
+        ? new Date(connection.scheduled_removal_at)
+        : null;
+      const updatedAt = connection.updated_at
+        ? new Date(connection.updated_at)
+        : null;
+      const shouldRemoveForTrialInactivity =
+        subscription?.status !== "active" &&
+        (!connection.last_financial_feature_used_at ||
+          new Date(connection.last_financial_feature_used_at) <
+            trialInactivityThreshold);
+      const shouldRemoveForRelinkTimeout =
+        connection.status === "needs_reauth" &&
+        updatedAt != null &&
+        updatedAt.getTime() < trialInactivityThreshold.getTime();
+      const shouldRemoveForBilling =
+        scheduledRemovalAt != null &&
+        scheduledRemovalAt.getTime() <= now.getTime() &&
+        !keepBeyondSecondMonth;
+      const shouldRemoveForExpiredSubscription = isSubscriptionPastPlaidGrace(
+        subscription,
+        now,
+      );
+
+      if (
+        shouldRemoveForTrialInactivity ||
+        shouldRemoveForRelinkTimeout ||
+        shouldRemoveForBilling ||
+        shouldRemoveForExpiredSubscription
+      ) {
+        await removePlaidConnection({
+          supabase,
+          connection,
+          removalReason: shouldRemoveForExpiredSubscription
+            ? "subscription_grace_expired"
+            : shouldRemoveForBilling
+              ? "billing_deadline"
+              : shouldRemoveForRelinkTimeout
+                ? "relink_timeout"
+                : "trial_inactive",
+        });
+        removed += 1;
+        continue;
+      }
+
+      if (
+        scheduledRemovalAt != null &&
+        scheduledRemovalAt.getTime() <= warningBefore.getTime() &&
+        !connection.warning_sent_at &&
+        !keepBeyondSecondMonth
+      ) {
+        await supabase
+          .from("bank_connections")
+          .update({
+            warning_sent_at: now.toISOString(),
+            item_status: "pending_removal",
+            updated_at: now.toISOString(),
+          })
+          .eq("id", connection.id);
+        warned += 1;
+      }
+    } catch (error) {
+      failed += 1;
+      await reportEdgeFunctionError({
+        functionName: "plaid-maintenance",
+        error,
+        context: {
+          phase: "enforce_lifecycle_connection",
+          connection_id: connection.id,
+          user_id: connection.user_id,
+        },
+      });
+      console.error("[plaid-maintenance] Failed lifecycle enforcement", {
+        connectionId: connection.id,
+        userId: connection.user_id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
-  return { removed, warned };
+  return { removed, warned, failed };
 }
 
 async function cleanupRetentionData(

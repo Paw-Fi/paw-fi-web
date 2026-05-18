@@ -215,10 +215,27 @@ Deno.serve(async (req) => {
       transactionsDaysRequested: body.transactionsDaysRequested,
       countryCodes: countryCode ? [countryCode] : undefined,
       platform: body.platform,
+      omitProducts: accessToken != null,
+      omitTransactions: accessToken != null,
       update: {
         accountSelectionEnabled,
       },
     });
+
+    const linkCompletionNonce = crypto.randomUUID();
+    const { error: sessionError } = await supabase
+      .from("plaid_link_update_sessions")
+      .insert({
+        user_id: authResult.userId,
+        connection_id: resolvedConnectionId ?? null,
+        nonce: linkCompletionNonce,
+        mode: modeUsed,
+        expires_at: response.expiration,
+      });
+
+    if (sessionError) {
+      throw sessionError;
+    }
 
     return new Response(
       JSON.stringify({
@@ -229,6 +246,10 @@ Deno.serve(async (req) => {
         connectionId: resolvedConnectionId,
         updateReason: relinkState || null,
         modeUsed,
+        linkCompletionNonce,
+        updateCompletionNonce: accessToken && resolvedConnectionId
+          ? linkCompletionNonce
+          : null,
       }),
       {
         status: 200,

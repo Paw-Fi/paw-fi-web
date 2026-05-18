@@ -6,7 +6,9 @@ import {
   normalizePlaidSelectedAccountIds,
   PLAID_NEW_ACCOUNTS_RELINK_STATE,
   PLAID_REQUIRED_RELINK_STATE,
+  requiresPlaidPublicTokenExchange,
   shouldEnablePlaidAccountSelection,
+  shouldRunPlaidNewLinkDuplicateChecks,
 } from "../shared/plaid-update-mode.ts";
 
 Deno.test(
@@ -85,6 +87,36 @@ Deno.test(
         selectedAccountIds,
       }),
       "plaid:ins_123:acc-1,acc-2",
+    );
+  },
+);
+
+Deno.test(
+  "plaid update completion does not require public token exchange",
+  () => {
+    assertEquals(
+      requiresPlaidPublicTokenExchange({ connectionId: "existing-connection" }),
+      false,
+    );
+    assertEquals(
+      shouldRunPlaidNewLinkDuplicateChecks({
+        connectionId: "existing-connection",
+      }),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "plaid new item link still requires exchange and duplicate checks",
+  () => {
+    assertEquals(
+      requiresPlaidPublicTokenExchange({ connectionId: null }),
+      true,
+    );
+    assertEquals(
+      shouldRunPlaidNewLinkDuplicateChecks({ connectionId: "" }),
+      true,
     );
   },
 );

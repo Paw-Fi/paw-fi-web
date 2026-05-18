@@ -62,8 +62,8 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, {
-    httpClient: Stripe.createFetchHttpClient(),
-  })
+      httpClient: Stripe.createFetchHttpClient(),
+    })
   : null;
 
 function readBooleanEnv(name: string, defaultValue: boolean): boolean {
@@ -135,14 +135,14 @@ function normalizePrivateKey(value: string): string {
     const beginMarker = normalized.includes("-----BEGIN PRIVATE KEY-----")
       ? "-----BEGIN PRIVATE KEY-----"
       : normalized.includes("-----BEGIN EC PRIVATE KEY-----")
-      ? "-----BEGIN EC PRIVATE KEY-----"
-      : null;
+        ? "-----BEGIN EC PRIVATE KEY-----"
+        : null;
 
     const endMarker = normalized.includes("-----END PRIVATE KEY-----")
       ? "-----END PRIVATE KEY-----"
       : normalized.includes("-----END EC PRIVATE KEY-----")
-      ? "-----END EC PRIVATE KEY-----"
-      : null;
+        ? "-----END EC PRIVATE KEY-----"
+        : null;
 
     if (beginMarker && endMarker) {
       const beginIndex = normalized.indexOf(beginMarker);
@@ -170,9 +170,8 @@ function summarizePrivateKeyMaterial(
     normalizedHasEnd: normalized.includes("-----END"),
     normalizedHasPrivateKeyMarker: normalized.includes("PRIVATE KEY"),
     rawHasEscapedNewline: raw.includes("\\n"),
-    normalizedLineCount: normalized.length > 0
-      ? normalized.split("\n").length
-      : 0,
+    normalizedLineCount:
+      normalized.length > 0 ? normalized.split("\n").length : 0,
   };
 }
 
@@ -294,13 +293,15 @@ function deriveLifecycleStatus(
   const baseStatus = deriveStatus(transaction);
   if (baseStatus === "canceled") return "canceled";
 
-  const offerDiscountType = typeof transaction.offerDiscountType === "string"
-    ? transaction.offerDiscountType.toUpperCase()
-    : "";
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
-  const isTrialLike = offerDiscountType === "FREE_TRIAL" ||
+  const isTrialLike =
+    offerDiscountType === "FREE_TRIAL" ||
     (offerType === 1 && offerIdentifier.includes("trial"));
 
   return isTrialLike ? "trialing" : "active";
@@ -312,9 +313,10 @@ function isFreeTrialTransaction(
     "offerDiscountType" | "offerType" | "offerIdentifier"
   >,
 ): boolean {
-  const offerDiscountType = typeof transaction.offerDiscountType === "string"
-    ? transaction.offerDiscountType.toUpperCase()
-    : "";
+  const offerDiscountType =
+    typeof transaction.offerDiscountType === "string"
+      ? transaction.offerDiscountType.toUpperCase()
+      : "";
   const offerIdentifier =
     asString(transaction.offerIdentifier)?.toLowerCase() ?? "";
   const offerType = Number(transaction.offerType);
@@ -433,12 +435,12 @@ async function cancelStripeSubscriptionIfPresent(
     return;
   }
 
-  const provider = typeof existing?.provider === "string"
-    ? existing.provider
-    : null;
+  const provider =
+    typeof existing?.provider === "string" ? existing.provider : null;
   const stripeSubscriptionId = existing?.stripe_subscription_id;
 
-  const shouldCancelStripe = provider === "stripe" ||
+  const shouldCancelStripe =
+    provider === "stripe" ||
     (provider == null && looksLikeStripeSubscriptionId(stripeSubscriptionId));
 
   if (!shouldCancelStripe) return;
@@ -475,7 +477,7 @@ async function offboardPlaidItemsForInactiveSubscription(params: {
 }): Promise<void> {
   const { data: plaidConnections, error: fetchError } = await supabase
     .from("bank_connections")
-    .select("id, access_token_encrypted, plaid_access_token_encrypted")
+    .select("id, user_id, access_token_encrypted, plaid_access_token_encrypted")
     .eq("user_id", params.userId)
     .eq("provider", PLAID_PROVIDER)
     .is("removed_at", null)
@@ -489,13 +491,13 @@ async function offboardPlaidItemsForInactiveSubscription(params: {
     );
   }
 
-  const connections = (plaidConnections as
-    | Array<{
+  const connections =
+    (plaidConnections as Array<{
       id: string;
+      user_id?: string | null;
       access_token_encrypted?: string | null;
       plaid_access_token_encrypted?: string | null;
-    }>
-    | null) ?? [];
+    }> | null) ?? [];
 
   if (connections.length === 0) {
     return;
@@ -726,16 +728,16 @@ async function resolveNotificationUserWithRetry(params: {
 
 async function decodeNotification(signedPayload: string): Promise<
   | {
-    kind: "test";
-    notificationType: string;
-    subtype: string | null;
-    environment: AppStoreEnvironment;
-  }
+      kind: "test";
+      notificationType: string;
+      subtype: string | null;
+      environment: AppStoreEnvironment;
+    }
   | {
-    kind: "transaction";
-    transaction: JWSTransactionDecodedPayload;
-    environment: AppStoreEnvironment;
-  }
+      kind: "transaction";
+      transaction: JWSTransactionDecodedPayload;
+      environment: AppStoreEnvironment;
+    }
 > {
   if (!isAppleServerApiConfigured()) {
     throw new Error(
@@ -763,9 +765,8 @@ async function decodeNotification(signedPayload: string): Promise<
     throw error;
   }
 
-  const decoded = decodeJwsPayload<AppStoreNotificationDecodedPayload>(
-    signedPayload,
-  );
+  const decoded =
+    decodeJwsPayload<AppStoreNotificationDecodedPayload>(signedPayload);
 
   const notificationType = asString(decoded.notificationType) ?? "UNKNOWN";
   const subtype = asString(decoded.subtype);
@@ -786,9 +787,8 @@ async function decodeNotification(signedPayload: string): Promise<
     throw new Error("Notification missing signedTransactionInfo");
   }
 
-  const transactionHint = decodeJwsPayload<JWSTransactionDecodedPayload>(
-    signedTransaction,
-  );
+  const transactionHint =
+    decodeJwsPayload<JWSTransactionDecodedPayload>(signedTransaction);
   const envHint = toAppleEnvironment(
     asString(transactionHint.environment) ??
       asString(decoded.data?.environment),
@@ -842,8 +842,8 @@ async function decodeNotification(signedPayload: string): Promise<
       },
       verified: {
         transactionId: verifiedTransaction.transactionId,
-        originalTransactionId: verifiedTransaction.originalTransactionId ??
-          undefined,
+        originalTransactionId:
+          verifiedTransaction.originalTransactionId ?? undefined,
         bundleId: verifiedTransaction.bundleId,
       },
     })
@@ -1110,9 +1110,8 @@ serve(async (req: Request): Promise<Response> => {
         transactionId,
         storeProductId,
         environment,
-        appAccountToken: appAccountToken && isUuid(appAccountToken)
-          ? appAccountToken
-          : null,
+        appAccountToken:
+          appAccountToken && isUuid(appAccountToken) ? appAccountToken : null,
         userIdSource,
         lastError: "unknown_user_mapping",
       });
@@ -1131,22 +1130,21 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    const shouldEnforceOwnershipBinding = shouldEnforceAppStoreOwnershipBinding(
-      inAppOwnershipType,
-    );
+    const shouldEnforceOwnershipBinding =
+      shouldEnforceAppStoreOwnershipBinding(inAppOwnershipType);
 
     const bindingDecision =
       iapOwnershipBindingEnabled && shouldEnforceOwnershipBinding
         ? await ensureAppStoreOwnership({
-          supabase,
-          provider: "app_store",
-          originalTransactionId,
-          currentUserId: userId,
-          transactionId,
-          storeProductId,
-          environment,
-          claimSource: "app_store_notification",
-        })
+            supabase,
+            provider: "app_store",
+            originalTransactionId,
+            currentUserId: userId,
+            transactionId,
+            storeProductId,
+            environment,
+            claimSource: "app_store_notification",
+          })
         : null;
 
     if (iapOwnershipBindingEnabled && !shouldEnforceOwnershipBinding) {
@@ -1214,7 +1212,7 @@ serve(async (req: Request): Promise<Response> => {
     if (!resolvedExpiresIso && effectiveTransaction.revocationDate) {
       resolvedExpiresIso =
         asIsoMillisUnknown(effectiveTransaction.revocationDate) ??
-          new Date().toISOString();
+        new Date().toISOString();
       periodEndSource = "revocation_date";
     }
     let resolvedLifecycleStatus: string | null = null;
@@ -1269,8 +1267,8 @@ serve(async (req: Request): Promise<Response> => {
               storeProductId,
               statusTransactionProductId:
                 subscriptionStatus.transaction?.productId ?? null,
-              renewalProductId: subscriptionStatus.renewalInfo?.productId ??
-                null,
+              renewalProductId:
+                subscriptionStatus.renewalInfo?.productId ?? null,
               autoRenewProductId:
                 subscriptionStatus.renewalInfo?.autoRenewProductId ?? null,
             },
@@ -1399,16 +1397,16 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    const status = resolvedLifecycleStatus ??
-      deriveLifecycleStatus(effectiveTransaction);
+    const status =
+      resolvedLifecycleStatus ?? deriveLifecycleStatus(effectiveTransaction);
     const existingTrialStart = asString(existingSubscription?.trial_start);
     const existingTrialEnd = asString(existingSubscription?.trial_end);
-    let trialStartIso = status === "trialing"
-      ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
-      : existingTrialStart;
-    let trialEndIso = status === "trialing"
-      ? resolvedExpiresIso
-      : existingTrialEnd;
+    let trialStartIso =
+      status === "trialing"
+        ? asIsoMillisUnknown(effectiveTransaction.purchaseDate)
+        : existingTrialStart;
+    let trialEndIso =
+      status === "trialing" ? resolvedExpiresIso : existingTrialEnd;
 
     if (
       status !== "trialing" &&
@@ -1483,9 +1481,8 @@ serve(async (req: Request): Promise<Response> => {
       plan: catalogProduct.plan,
       status,
       billing_interval: catalogProduct.billing_interval,
-      current_period_end: catalogProduct.plan === "lifetime"
-        ? null
-        : resolvedExpiresIso,
+      current_period_end:
+        catalogProduct.plan === "lifetime" ? null : resolvedExpiresIso,
       trial_start: trialStartIso,
       trial_end: trialEndIso,
       ended_at: status === "canceled" ? new Date().toISOString() : null,

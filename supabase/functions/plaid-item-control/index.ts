@@ -1,29 +1,53 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
 import { canRequestPlaidManualRefresh } from "../shared/plaid-lifecycle.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import {
+  getPlaidAccounts,
   PLAID_PROVIDER,
   requestPlaidTransactionsRefresh,
 } from "../shared/plaid-client.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
+import { normalizePlaidSelectedAccountIds } from "../shared/plaid-update-mode.ts";
+import {
+  loadLinkedWalletsForBankAccounts,
+  sanitizeOptionalUuid,
+  upsertPlaidAccounts,
+} from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-type PlaidItemAction = "request_refresh" | "remove_item";
+type PlaidItemAction =
+  | "request_refresh"
+  | "remove_item"
+  | "update_mode_complete";
 
 interface PlaidItemControlBody {
   action?: PlaidItemAction;
   connectionId?: string;
   reason?: string;
+  linkRequestId?: string;
+  linkSessionId?: string;
+  institutionId?: string;
+  institutionName?: string;
+  selectedAccounts?: unknown;
+  targetHouseholdId?: string;
+  updateCompletionNonce?: string;
+  mode?: string;
 }
 
 function isSupportedAction(value: unknown): value is PlaidItemAction {
-  return value === "request_refresh" || value === "remove_item";
+  return (
+    value === "request_refresh" ||
+    value === "remove_item" ||
+    value === "update_mode_complete"
+  );
 }
 
 Deno.serve(async (req) => {
@@ -56,7 +80,8 @@ Deno.serve(async (req) => {
     if (!isSupportedAction(body.action)) {
       return new Response(
         JSON.stringify({
-          error: "action must be one of: request_refresh, remove_item",
+          error:
+            "action must be one of: request_refresh, remove_item, update_mode_complete",
         }),
         {
           status: 400,
@@ -104,7 +129,7 @@ Deno.serve(async (req) => {
     const { data: connection, error: connectionError } = await supabase
       .from("bank_connections")
       .select(
-        "id, user_id, provider, status, item_status, item_health_state, metadata, access_token_encrypted, plaid_access_token_encrypted, last_successful_sync_at, next_manual_refresh_eligible_at, removed_at",
+        "id, user_id, provider, household_id, status, item_status, item_health_state, relink_state, metadata, access_token_encrypted, plaid_access_token_encrypted, last_successful_sync_at, next_manual_refresh_eligible_at, removed_at",
       )
       .eq("id", body.connectionId)
       .eq("provider", PLAID_PROVIDER)
@@ -146,6 +171,256 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           action: body.action,
+        }),
+        {
+          status: 200,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (body.action === "update_mode_complete") {
+      const updateCompletionNonce = body.updateCompletionNonce?.trim();
+      if (!updateCompletionNonce) {
+        return new Response(
+          JSON.stringify({ error: "updateCompletionNonce is required" }),
+          {
+            status: 400,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+      if (body.targetHouseholdId && !targetHouseholdId) {
+        return new Response(
+          JSON.stringify({ error: "Invalid targetHouseholdId" }),
+          {
+            status: 400,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (
+        targetHouseholdId &&
+        !(await assertScopeAccess(
+          supabase,
+          authResult.userId,
+          targetHouseholdId,
+        ))
+      ) {
+        return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+          status: 403,
+          headers: { ...headers, "Content-Type": "application/json" },
+        });
+      }
+
+      const selectedAccountIds = normalizePlaidSelectedAccountIds(
+        body.selectedAccounts,
+      );
+      const requiresAccountSelection =
+        connection.relink_state === "new_accounts_available";
+      if (requiresAccountSelection && selectedAccountIds.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "selectedAccounts is required" }),
+          {
+            status: 400,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const nowIso = new Date().toISOString();
+      const { data: claimedUpdateSessions, error: updateSessionError } =
+        await supabase.rpc("claim_plaid_link_completion_session", {
+          p_user_id: authResult.userId,
+          p_connection_id: connection.id,
+          p_nonce: updateCompletionNonce,
+          p_mode: body.mode === "reconnect" ? "reconnect" : "update",
+        });
+
+      if (updateSessionError) {
+        throw updateSessionError;
+      }
+
+      const updateSession = Array.isArray(claimedUpdateSessions)
+        ? claimedUpdateSessions[0]
+        : null;
+      if (!updateSession?.id) {
+        return new Response(
+          JSON.stringify({
+            error: "Invalid, busy, consumed, or expired update completion",
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const metadata =
+        connection.metadata && typeof connection.metadata === "object"
+          ? (connection.metadata as Record<string, unknown>)
+          : {};
+      let effectiveSelectedAccountIds = selectedAccountIds;
+      if (
+        !requiresAccountSelection &&
+        effectiveSelectedAccountIds.length === 0
+      ) {
+        const metadataAccountIds = Array.isArray(
+            metadata.plaid_selected_account_ids,
+          )
+          ? metadata.plaid_selected_account_ids
+            .map((value) => String(value || "").trim())
+            .filter(Boolean)
+          : [];
+        if (metadataAccountIds.length > 0) {
+          effectiveSelectedAccountIds = Array.from(
+            new Set(metadataAccountIds),
+          ).sort();
+        } else {
+          const { data: existingBankAccounts, error: existingAccountsError } =
+            await supabase
+              .from("bank_accounts")
+              .select("provider_account_id, plaid_account_id")
+              .eq("bank_connection_id", connection.id)
+              .eq("provider", PLAID_PROVIDER);
+
+          if (existingAccountsError) {
+            throw existingAccountsError;
+          }
+
+          effectiveSelectedAccountIds = Array.from(
+            new Set(
+              ((existingBankAccounts || []) as Array<Record<string, unknown>>)
+                .map((account) =>
+                  String(
+                    account.provider_account_id ||
+                      account.plaid_account_id ||
+                      "",
+                  ).trim()
+                )
+                .filter(Boolean),
+            ),
+          ).sort();
+        }
+      }
+
+      const encryptedToken = connection.access_token_encrypted ||
+        connection.plaid_access_token_encrypted;
+      if (!encryptedToken) {
+        return new Response(
+          JSON.stringify({ error: "Missing Plaid access token" }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const accessToken = await decryptSecret(encryptedToken);
+      const accounts = await getPlaidAccounts(accessToken);
+      const accountsToUpsert = effectiveSelectedAccountIds.length > 0
+        ? accounts.filter((account) =>
+          effectiveSelectedAccountIds.includes(account.account_id)
+        )
+        : accounts;
+      if (
+        effectiveSelectedAccountIds.length > 0 &&
+        accountsToUpsert.length === 0
+      ) {
+        return new Response(
+          JSON.stringify({ error: "No selected Plaid accounts were returned" }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+      const upsertAccountsResult = await upsertPlaidAccounts({
+        supabase,
+        userId: authResult.userId,
+        bankConnectionId: connection.id,
+        accounts: accountsToUpsert,
+      });
+      const nextMetadata = {
+        ...metadata,
+        plaid_last_link_request_id: body.linkRequestId || null,
+        plaid_last_link_session_id: body.linkSessionId || null,
+        plaid_selected_account_ids: effectiveSelectedAccountIds,
+        institution_id: body.institutionId || metadata.institution_id || null,
+        institution_name: body.institutionName || metadata.institution_name ||
+          null,
+      };
+      const { error: updateError } = await supabase
+        .from("bank_connections")
+        .update({
+          household_id: targetHouseholdId ?? connection.household_id ?? null,
+          status: "active",
+          item_status: requiresAccountSelection
+            ? "accounts_updated"
+            : "reconnected",
+          item_health_state: "healthy",
+          relink_state: null,
+          error_code: null,
+          error_message: null,
+          metadata: nextMetadata,
+          updated_at: nowIso,
+        })
+        .eq("id", connection.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const completionIso = new Date().toISOString();
+      const { error: linkCompletionError } = await supabase
+        .from("plaid_link_update_sessions")
+        .update({
+          consumed_at: completionIso,
+          completed_at: completionIso,
+          processing_started_at: null,
+          updated_at: completionIso,
+        })
+        .eq("id", updateSession.id);
+
+      if (linkCompletionError) {
+        throw linkCompletionError;
+      }
+
+      const linkedWallets = await loadLinkedWalletsForBankAccounts({
+        supabase,
+        userId: authResult.userId,
+        targetHouseholdId: targetHouseholdId ?? connection.household_id ?? null,
+        bankAccountIds: upsertAccountsResult.records.map((record) => record.id),
+      });
+
+      const enqueueResult = await enqueuePlaidSyncJob({
+        supabase,
+        connectionId: connection.id,
+        triggerSource: requiresAccountSelection
+          ? "new_accounts_update"
+          : "reconnect",
+        payload: {
+          updateModeComplete: true,
+          targetHouseholdId: targetHouseholdId ?? connection.household_id ??
+            null,
+        },
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          action: body.action,
+          connectionId: connection.id,
+          targetHouseholdId: targetHouseholdId ?? connection.household_id ??
+            null,
+          accounts: upsertAccountsResult.records.map((record) => ({
+            ...record,
+            linkedWallet: linkedWallets.get(record.id) || null,
+          })),
+          initialSyncQueued: enqueueResult.enqueued || enqueueResult.duplicate,
         }),
         {
           status: 200,

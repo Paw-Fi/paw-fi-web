@@ -64,10 +64,10 @@ Deno.serve(async (req) => {
 
   // Get raw body for signature verification
   const rawBody = await req.text();
+  const plaidVerificationHeader = req.headers.get("Plaid-Verification");
 
   // Verify webhook signature (required by default, can be disabled via SKIP_WEBHOOK_VERIFICATION=true)
   if (!SKIP_WEBHOOK_VERIFICATION) {
-    const plaidVerificationHeader = req.headers.get("Plaid-Verification");
     const verificationResult = await verifyPlaidWebhook(
       rawBody,
       plaidVerificationHeader,
@@ -128,6 +128,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    const verificationReplayKey = await sha256Hex(
+      `${plaidVerificationHeader || "no-verification-header"}.${rawBody}`,
+    );
+
+    let webhookEventId: string | null = null;
     const { data: insertedWebhookEvent, error: webhookInsertError } =
       await supabase
         .from("bank_webhook_events")
@@ -138,12 +143,42 @@ Deno.serve(async (req) => {
           provider_item_id: payload.item_id,
           bank_connection_id: connection?.id || null,
           payload,
+          verification_replay_key: verificationReplayKey,
+          processing_error: null,
         })
-        .select("id")
+        .select("id, processed_at")
         .single();
 
     if (webhookInsertError) {
-      throw webhookInsertError;
+      if (webhookInsertError.code === "23505") {
+        const { data: existingWebhookEvent, error: existingWebhookError } =
+          await supabase
+            .from("bank_webhook_events")
+            .select("id, processed_at")
+            .eq("provider", PLAID_PROVIDER)
+            .eq("verification_replay_key", verificationReplayKey)
+            .maybeSingle();
+
+        if (existingWebhookError) {
+          throw existingWebhookError;
+        }
+
+        if (existingWebhookEvent?.processed_at) {
+          return new Response(
+            JSON.stringify({ received: true, duplicate: true }),
+            {
+              status: 200,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        webhookEventId = existingWebhookEvent?.id || null;
+      } else {
+        throw webhookInsertError;
+      }
+    } else {
+      webhookEventId = insertedWebhookEvent?.id || null;
     }
 
     if (connection?.id && payload.webhook_type === "TRANSACTIONS") {
@@ -170,7 +205,7 @@ Deno.serve(async (req) => {
           initialUpdateComplete: payload.initial_update_complete ?? null,
           historicalUpdateComplete: payload.historical_update_complete ?? null,
         },
-        webhookEventId: insertedWebhookEvent?.id || null,
+        webhookEventId,
       });
 
       console.log(
@@ -181,7 +216,7 @@ Deno.serve(async (req) => {
           enqueued: enqueueResult.enqueued,
           itemId: payload.item_id || null,
           webhookCode: payload.webhook_code || null,
-          webhookEventId: insertedWebhookEvent?.id || null,
+          webhookEventId,
         }),
       );
     }
@@ -234,10 +269,20 @@ Deno.serve(async (req) => {
             payload: {
               webhookCode: payload.webhook_code || null,
             },
-            webhookEventId: insertedWebhookEvent?.id || null,
+            webhookEventId,
           });
         }
       }
+    }
+
+    if (webhookEventId) {
+      await supabase
+        .from("bank_webhook_events")
+        .update({
+          processed_at: new Date().toISOString(),
+          processing_error: null,
+        })
+        .eq("id", webhookEventId);
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -246,6 +291,38 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("[plaid-webhook] Failed to handle webhook", error);
+    try {
+      const parsed = JSON.parse(rawBody) as PlaidWebhookPayload;
+      const replayKey = await sha256Hex(
+        `${
+          req.headers.get("Plaid-Verification") || "no-verification-header"
+        }.${rawBody}`,
+      );
+      if (parsed.item_id) {
+        const supabase = createClient(
+          SUPABASE_URL!,
+          SUPABASE_SERVICE_ROLE_KEY!,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+          },
+        );
+        await supabase
+          .from("bank_webhook_events")
+          .update({
+            processing_error: error instanceof Error
+              ? error.message
+              : String(error),
+          })
+          .eq("provider", PLAID_PROVIDER)
+          .eq("verification_replay_key", replayKey);
+      }
+    } catch {
+      // Best-effort failure annotation only.
+    }
     await reportEdgeFunctionError({
       functionName: "plaid-webhook",
       error,
@@ -269,3 +346,13 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function sha256Hex(value: string): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}

@@ -5,6 +5,7 @@ import {
   buildInternalInvokeHeaders,
   resolveAnyInternalFunctionKey,
 } from "../shared/auth.ts";
+import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
@@ -119,11 +120,11 @@ Deno.serve(async (req) => {
       global: { headers: { "X-Client-Info": "moneko-bank-sync-processor" } },
     });
 
-    // Release stuck jobs before fetching new ones (TTL: 15 minutes)
+    // Release stuck jobs before fetching new ones (TTL: 60 minutes)
     // Must match or exceed sync endpoint lock durations to avoid requeueing in-flight jobs
     const { data: releasedCount, error: releaseError } = await supabase.rpc(
       "release_stuck_sync_jobs",
-      { p_ttl_minutes: 15 },
+      { p_ttl_minutes: 60 },
     );
 
     if (releaseError) {
@@ -233,7 +234,7 @@ Deno.serve(async (req) => {
         }
 
         // Mark job as completed (clear processing_started_at)
-        await supabase
+        const { data: completedRows, error: completeError } = await supabase
           .from("bank_sync_jobs")
           .update({
             status: "completed",
@@ -243,7 +244,18 @@ Deno.serve(async (req) => {
             last_error_code: null,
             last_error_at: null,
           })
-          .eq("id", job.id);
+          .eq("id", job.id)
+          .eq("status", "processing")
+          .contains("payload", { processor_id: processorId })
+          .select("id");
+
+        if (completeError) {
+          throw completeError;
+        }
+
+        if (!completedRows?.length) {
+          throw new Error("Lost sync job ownership before completion update");
+        }
 
         results.succeeded++;
       } catch (error) {
@@ -251,6 +263,29 @@ Deno.serve(async (req) => {
         const errorMessage = error instanceof Error
           ? error.message
           : String(error);
+        const failureUpdate = buildBankSyncJobFailureUpdate({
+          attemptCount: job.attempt_count ?? 0,
+          errorMessage,
+        });
+
+        const { data: failedRows, error: failureUpdateError } = await supabase
+          .from("bank_sync_jobs")
+          .update(failureUpdate)
+          .eq("id", job.id)
+          .eq("status", "processing")
+          .contains("payload", { processor_id: processorId })
+          .select("id");
+
+        if (failureUpdateError) {
+          console.error(
+            `[bank-sync-processor] Failed to update retry state for job ${job.id}`,
+            failureUpdateError,
+          );
+        } else if (!failedRows?.length) {
+          console.warn(
+            `[bank-sync-processor] Skipped retry update for job ${job.id}; processor ownership was lost`,
+          );
+        }
 
         results.failed++;
         results.errors.push({ jobId: job.id, error: errorMessage });

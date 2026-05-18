@@ -35,7 +35,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 interface ExchangeRequest {
-  publicToken: string;
+  publicToken?: string;
   connectionId?: string;
   institutionId?: string;
   institutionName?: string;
@@ -46,6 +46,7 @@ interface ExchangeRequest {
   linkSessionId?: string;
   selectedAccounts?: unknown;
   targetHouseholdId?: string;
+  linkCompletionNonce?: string;
 }
 
 Deno.serve(async (req) => {
@@ -72,13 +73,40 @@ Deno.serve(async (req) => {
     );
   }
 
-  let body: ExchangeRequest = { publicToken: "" };
+  let body: ExchangeRequest = {};
 
   try {
     body = (await req.json()) as ExchangeRequest;
+    const requestedConnectionId = body.connectionId?.trim() || null;
+
+    if (requestedConnectionId) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Update-mode Link completion must use plaid-item-control without public token exchange",
+          errorCode: "update_mode_exchange_not_allowed",
+        }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     if (!body?.publicToken) {
       return new Response(
         JSON.stringify({ error: "publicToken is required" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+    const publicToken = body.publicToken;
+    const linkCompletionNonce = body.linkCompletionNonce?.trim();
+    if (!linkCompletionNonce) {
+      return new Response(
+        JSON.stringify({ error: "linkCompletionNonce is required" }),
         {
           status: 400,
           headers: { ...headers, "Content-Type": "application/json" },
@@ -118,12 +146,19 @@ Deno.serve(async (req) => {
     const selectedAccountIds = normalizePlaidSelectedAccountIds(
       body.selectedAccounts,
     );
+    if (selectedAccountIds.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "selectedAccounts is required" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
     const duplicateGroupKey = buildPlaidDuplicateGroupKey({
       institutionId: body.institutionId,
       selectedAccountIds,
     });
-    const requestedConnectionId = body.connectionId?.trim() || null;
-
     const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
     if (body.targetHouseholdId && !targetHouseholdId) {
       return new Response(
@@ -248,53 +283,111 @@ Deno.serve(async (req) => {
       }
     }
 
-    const plaidResponse = await exchangePublicToken(body.publicToken);
-    const encryptedToken = await encryptSecret(plaidResponse.access_token);
-    const { data: existingConnectionForItem, error: existingItemError } =
-      await supabase
-        .from("bank_connections")
-        .select("id")
-        .eq("user_id", authResult.userId)
-        .eq("provider", PLAID_PROVIDER)
-        .eq("provider_item_id", plaidResponse.item_id)
-        .maybeSingle();
+    const { data: claimedLinkSessions, error: linkSessionError } =
+      await supabase.rpc("claim_plaid_link_completion_session", {
+        p_user_id: authResult.userId,
+        p_connection_id: null,
+        p_nonce: linkCompletionNonce,
+        p_mode: "new",
+      });
 
-    if (existingItemError) {
-      throw existingItemError;
+    if (linkSessionError) {
+      throw linkSessionError;
     }
 
-    const shouldCompensateOrphanItem = !existingConnectionForItem?.id;
+    const linkSession = Array.isArray(claimedLinkSessions)
+      ? claimedLinkSessions[0]
+      : null;
+    if (!linkSession?.id) {
+      return new Response(
+        JSON.stringify({
+          error: "Invalid, busy, consumed, or expired Link session",
+        }),
+        {
+          status: 409,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
 
-    if (!accessState.isConvertedPaidUser && shouldCompensateOrphanItem) {
-      const { count, error: connectionCountError } = await supabase
-        .from("bank_connections")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", authResult.userId)
-        .eq("provider", PLAID_PROVIDER)
-        .is("removed_at", null)
-        .in("status", ["pending", "active", "needs_reauth", "error"]);
+    const plaidResponse = await exchangePublicToken(publicToken);
+    let encryptedToken = "";
+    let shouldCompensateOrphanItem = true;
 
-      if (connectionCountError) {
-        throw connectionCountError;
+    try {
+      encryptedToken = await encryptSecret(plaidResponse.access_token);
+      const { data: existingConnectionForItem, error: existingItemError } =
+        await supabase
+          .from("bank_connections")
+          .select("id")
+          .eq("user_id", authResult.userId)
+          .eq("provider", PLAID_PROVIDER)
+          .eq("provider_item_id", plaidResponse.item_id)
+          .maybeSingle();
+
+      if (existingItemError) {
+        throw existingItemError;
       }
 
-      if ((count ?? 0) >= 1) {
-        await cleanupOrphanPlaidItem({
+      shouldCompensateOrphanItem = !existingConnectionForItem?.id;
+
+      if (!accessState.isConvertedPaidUser && shouldCompensateOrphanItem) {
+        const { count, error: connectionCountError } = await supabase
+          .from("bank_connections")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", authResult.userId)
+          .eq("provider", PLAID_PROVIDER)
+          .is("removed_at", null)
+          .in("status", ["pending", "active", "needs_reauth", "error"]);
+
+        if (connectionCountError) {
+          throw connectionCountError;
+        }
+
+        if ((count ?? 0) >= 1) {
+          const cleanedUp = await cleanupOrphanPlaidItem({
+            accessToken: plaidResponse.access_token,
+            itemId: plaidResponse.item_id,
+            stage: "connection_limit_guard",
+          });
+          if (!cleanedUp) {
+            await persistOrphanPlaidRemovalJob({
+              supabase,
+              userId: authResult.userId,
+              encryptedToken,
+              stage: "connection_limit_guard",
+            });
+          }
+          shouldCompensateOrphanItem = false;
+          return new Response(
+            JSON.stringify({
+              error:
+                "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
+            }),
+            {
+              status: 403,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+    } catch (postExchangeSetupError) {
+      if (shouldCompensateOrphanItem) {
+        const cleanedUp = await cleanupOrphanPlaidItem({
           accessToken: plaidResponse.access_token,
           itemId: plaidResponse.item_id,
-          stage: "connection_limit_guard",
+          stage: "post_exchange_setup_failure",
         });
-        return new Response(
-          JSON.stringify({
-            error:
-              "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
-          }),
-          {
-            status: 403,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
+        if (!cleanedUp && encryptedToken) {
+          await persistOrphanPlaidRemovalJob({
+            supabase,
+            userId: authResult.userId,
+            encryptedToken,
+            stage: "post_exchange_setup_failure",
+          });
+        }
       }
+      throw postExchangeSetupError;
     }
 
     let connectionId = "";
@@ -404,11 +497,19 @@ Deno.serve(async (req) => {
       }
 
       const accounts = await getPlaidAccounts(plaidResponse.access_token);
+      const accountsToUpsert = selectedAccountIds.length > 0
+        ? accounts.filter((account) =>
+          selectedAccountIds.includes(account.account_id)
+        )
+        : accounts;
+      if (accountsToUpsert.length === 0) {
+        throw new Error("No selected Plaid accounts were returned by Plaid");
+      }
       const upsertAccountsResult = await upsertPlaidAccounts({
         supabase,
         userId: authResult.userId,
         bankConnectionId: connectionId,
-        accounts,
+        accounts: accountsToUpsert,
       });
 
       const linkedWallets = await loadLinkedWalletsForBankAccounts({
@@ -489,14 +590,39 @@ Deno.serve(async (req) => {
             supabase,
           });
         }
-        await cleanupOrphanPlaidItem({
+        const cleanedUp = await cleanupOrphanPlaidItem({
           accessToken: plaidResponse.access_token,
           itemId: plaidResponse.item_id,
           stage: "post_exchange_failure",
         });
+        if (!cleanedUp && encryptedToken) {
+          await persistOrphanPlaidRemovalJob({
+            supabase,
+            userId: authResult.userId,
+            encryptedToken,
+            stage: "post_exchange_failure",
+          });
+        }
       }
 
       throw postExchangeError;
+    }
+
+    const completionIso = new Date().toISOString();
+    const { error: linkCompletionError } = await supabase
+      .from("plaid_link_update_sessions")
+      .update({
+        consumed_at: completionIso,
+        completed_at: completionIso,
+        processing_started_at: null,
+        link_request_id: body.linkRequestId || null,
+        link_session_id: body.linkSessionId || null,
+        updated_at: completionIso,
+      })
+      .eq("id", linkSession.id);
+
+    if (linkCompletionError) {
+      throw linkCompletionError;
     }
 
     return new Response(
@@ -585,7 +711,7 @@ async function cleanupOrphanPlaidItem(params: {
   accessToken: string;
   itemId: string;
   stage: string;
-}): Promise<void> {
+}): Promise<boolean> {
   try {
     const response = await removePlaidItem(params.accessToken);
     console.log(
@@ -596,6 +722,7 @@ async function cleanupOrphanPlaidItem(params: {
         stage: params.stage,
       }),
     );
+    return true;
   } catch (cleanupError) {
     console.error(
       "[plaid-exchange] Failed to remove orphan Plaid item",
@@ -607,6 +734,26 @@ async function cleanupOrphanPlaidItem(params: {
           : String(cleanupError),
       }),
     );
+    return false;
+  }
+}
+
+async function persistOrphanPlaidRemovalJob(params: {
+  supabase: any;
+  userId: string;
+  encryptedToken: string;
+  stage: string;
+}): Promise<void> {
+  const { error } = await params.supabase
+    .from("plaid_offboarding_jobs")
+    .insert({
+      user_id: params.userId,
+      access_token_encrypted: params.encryptedToken,
+      reason: `orphan_${params.stage}`,
+    });
+
+  if (error) {
+    throw error;
   }
 }
 

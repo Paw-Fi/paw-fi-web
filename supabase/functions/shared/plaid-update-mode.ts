@@ -74,6 +74,18 @@ export function buildPlaidDuplicateGroupKey(params: {
   return `plaid:${institutionId}:${selectedAccountIds.join(",")}`;
 }
 
+export function requiresPlaidPublicTokenExchange(params: {
+  connectionId?: string | null;
+}): boolean {
+  return normalizeOptionalString(params.connectionId) == null;
+}
+
+export function shouldRunPlaidNewLinkDuplicateChecks(params: {
+  connectionId?: string | null;
+}): boolean {
+  return requiresPlaidPublicTokenExchange(params);
+}
+
 export function shouldEnablePlaidAccountSelection(params: {
   countryCode?: string | null;
   relinkState?: string | null;
