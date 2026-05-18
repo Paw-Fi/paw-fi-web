@@ -13,7 +13,11 @@ import {
   requestPlaidTransactionsRefresh,
 } from "../shared/plaid-client.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
-import { normalizePlaidSelectedAccountIds } from "../shared/plaid-update-mode.ts";
+import {
+  findMissingPlaidSelectedAccountIds,
+  normalizePlaidSelectedAccountIds,
+  resolvePlaidAccountsToDisableAfterUpdate,
+} from "../shared/plaid-update-mode.ts";
 import {
   loadLinkedWalletsForBankAccounts,
   sanitizeOptionalUuid,
@@ -320,12 +324,55 @@ Deno.serve(async (req) => {
       }
 
       const accessToken = await decryptSecret(encryptedToken);
+      const { data: existingBankAccounts, error: existingBankAccountsError } =
+        await supabase
+          .from("bank_accounts")
+          .select("provider_account_id, plaid_account_id")
+          .eq("bank_connection_id", connection.id)
+          .eq("provider", PLAID_PROVIDER);
+
+      if (existingBankAccountsError) {
+        throw existingBankAccountsError;
+      }
+
+      const existingAccountIds = ((existingBankAccounts || []) as Array<
+        Record<string, unknown>
+      >)
+        .map((account) =>
+          String(account.provider_account_id || account.plaid_account_id || "")
+            .trim()
+        )
+        .filter(Boolean);
       const accounts = await getPlaidAccounts(accessToken);
       const accountsToUpsert = effectiveSelectedAccountIds.length > 0
         ? accounts.filter((account) =>
           effectiveSelectedAccountIds.includes(account.account_id)
         )
         : accounts;
+      const returnedAccountIds = accountsToUpsert
+        .map((account) => account.account_id?.trim())
+        .filter((accountId): accountId is string => Boolean(accountId));
+      const missingSelectedAccountIds = requiresAccountSelection
+        ? findMissingPlaidSelectedAccountIds({
+          selectedAccountIds: effectiveSelectedAccountIds,
+          returnedAccountIds,
+        })
+        : [];
+
+      if (missingSelectedAccountIds.length > 0) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Plaid did not return every selected account. Please reopen Plaid and try again.",
+            missingSelectedAccountIds,
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       if (
         effectiveSelectedAccountIds.length > 0 &&
         accountsToUpsert.length === 0
@@ -344,11 +391,46 @@ Deno.serve(async (req) => {
         bankConnectionId: connection.id,
         accounts: accountsToUpsert,
       });
+      const accountIdsToDisable = resolvePlaidAccountsToDisableAfterUpdate({
+        requiresAccountSelection,
+        existingAccountIds,
+        returnedAccountIds,
+      });
+
+      if (accountIdsToDisable.length > 0) {
+        const disableAccountUpdate = {
+          status: "disabled",
+          updated_at: nowIso,
+        };
+        const { error: disableByProviderAccountIdError } = await supabase
+          .from("bank_accounts")
+          .update(disableAccountUpdate)
+          .eq("bank_connection_id", connection.id)
+          .eq("provider", PLAID_PROVIDER)
+          .in("provider_account_id", accountIdsToDisable);
+
+        if (disableByProviderAccountIdError) {
+          throw disableByProviderAccountIdError;
+        }
+
+        const { error: disableByPlaidAccountIdError } = await supabase
+          .from("bank_accounts")
+          .update(disableAccountUpdate)
+          .eq("bank_connection_id", connection.id)
+          .eq("provider", PLAID_PROVIDER)
+          .in("plaid_account_id", accountIdsToDisable);
+
+        if (disableByPlaidAccountIdError) {
+          throw disableByPlaidAccountIdError;
+        }
+      }
+
       const nextMetadata = {
         ...metadata,
         plaid_last_link_request_id: body.linkRequestId || null,
         plaid_last_link_session_id: body.linkSessionId || null,
         plaid_selected_account_ids: effectiveSelectedAccountIds,
+        plaid_disabled_account_ids: accountIdsToDisable,
         institution_id: body.institutionId || metadata.institution_id || null,
         institution_name: body.institutionName || metadata.institution_name ||
           null,

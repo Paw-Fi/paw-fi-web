@@ -56,6 +56,48 @@ export function normalizePlaidSelectedAccountIds(value: unknown): string[] {
   ).sort();
 }
 
+export function findMissingPlaidSelectedAccountIds(params: {
+  selectedAccountIds: string[];
+  returnedAccountIds: string[];
+}): string[] {
+  const returnedAccountIds = new Set(
+    params.returnedAccountIds.map((value) => value.trim()).filter(Boolean),
+  );
+
+  return Array.from(
+    new Set(
+      params.selectedAccountIds.map((value) => value.trim()).filter(Boolean),
+    ),
+  )
+    .filter((accountId) => !returnedAccountIds.has(accountId))
+    .sort();
+}
+
+export function resolvePlaidAccountsToDisableAfterUpdate(params: {
+  requiresAccountSelection: boolean;
+  existingAccountIds: string[];
+  returnedAccountIds: string[];
+}): string[] {
+  if (!params.requiresAccountSelection) {
+    return [];
+  }
+
+  const returnedAccountIds = new Set(
+    params.returnedAccountIds.map((value) => value.trim()).filter(Boolean),
+  );
+  if (returnedAccountIds.size === 0) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      params.existingAccountIds.map((value) => value.trim()).filter(Boolean),
+    ),
+  )
+    .filter((accountId) => !returnedAccountIds.has(accountId))
+    .sort();
+}
+
 export function buildPlaidDuplicateGroupKey(params: {
   institutionId?: string | null;
   selectedAccountIds?: string[];

@@ -173,8 +173,7 @@ async function reconcileStaleItems(
 
   let enqueued = 0;
   for (const connection of connections || []) {
-    const shouldEnqueue =
-      connection.needs_resync === true ||
+    const shouldEnqueue = connection.needs_resync === true ||
       !connection.last_successful_sync_at ||
       connection.last_successful_sync_at < staleBefore ||
       !connection.last_webhook_received_at ||
@@ -226,9 +225,9 @@ async function enforceLifecyclePolicies(
   );
   const { data: subscriptionRows, error: subscriptionError } = userIds.length
     ? await supabase
-        .from("subscriptions")
-        .select("user_id, plan, status, current_period_end, created_at")
-        .in("user_id", userIds)
+      .from("subscriptions")
+      .select("user_id, plan, status, current_period_end, created_at")
+      .in("user_id", userIds)
     : { data: [], error: null };
 
   if (subscriptionError) {
@@ -275,8 +274,7 @@ async function enforceLifecyclePolicies(
         connection.status === "needs_reauth" &&
         updatedAt != null &&
         updatedAt.getTime() < trialInactivityThreshold.getTime();
-      const shouldRemoveForBilling =
-        scheduledRemovalAt != null &&
+      const shouldRemoveForBilling = scheduledRemovalAt != null &&
         scheduledRemovalAt.getTime() <= now.getTime() &&
         !keepBeyondSecondMonth;
       const shouldRemoveForExpiredSubscription = isSubscriptionPastPlaidGrace(
@@ -296,10 +294,10 @@ async function enforceLifecyclePolicies(
           removalReason: shouldRemoveForExpiredSubscription
             ? "subscription_grace_expired"
             : shouldRemoveForBilling
-              ? "billing_deadline"
-              : shouldRemoveForRelinkTimeout
-                ? "relink_timeout"
-                : "trial_inactive",
+            ? "billing_deadline"
+            : shouldRemoveForRelinkTimeout
+            ? "relink_timeout"
+            : "trial_inactive",
         });
         removed += 1;
         continue;
@@ -355,6 +353,12 @@ async function cleanupRetentionData(
   const auditCutoff = new Date(
     Date.now() - 180 * 24 * 60 * 60 * 1000,
   ).toISOString();
+  const expiredLinkSessionCutoff = new Date(
+    Date.now() - 7 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+  const staleLinkSessionLeaseCutoff = new Date(
+    Date.now() - 15 * 60 * 1000,
+  ).toISOString();
 
   const { error: webhookError } = await supabase
     .from("bank_webhook_events")
@@ -372,6 +376,40 @@ async function cleanupRetentionData(
 
   if (auditError) {
     throw auditError;
+  }
+
+  const { error: staleLinkSessionLeaseError } = await supabase
+    .from("plaid_link_update_sessions")
+    .update({
+      processing_started_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .is("completed_at", null)
+    .is("consumed_at", null)
+    .lt("processing_started_at", staleLinkSessionLeaseCutoff);
+
+  if (staleLinkSessionLeaseError) {
+    throw staleLinkSessionLeaseError;
+  }
+
+  const { error: abandonedLinkSessionError } = await supabase
+    .from("plaid_link_update_sessions")
+    .delete()
+    .is("completed_at", null)
+    .lt("expires_at", expiredLinkSessionCutoff);
+
+  if (abandonedLinkSessionError) {
+    throw abandonedLinkSessionError;
+  }
+
+  const { error: completedLinkSessionError } = await supabase
+    .from("plaid_link_update_sessions")
+    .delete()
+    .not("completed_at", "is", null)
+    .lt("updated_at", auditCutoff);
+
+  if (completedLinkSessionError) {
+    throw completedLinkSessionError;
   }
 
   const { error: rawTransactionsError } = await supabase

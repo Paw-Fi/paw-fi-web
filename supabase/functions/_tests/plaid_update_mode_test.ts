@@ -3,10 +3,12 @@ import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 import {
   buildPlaidDuplicateGroupKey,
   classifyPlaidItemWebhook,
+  findMissingPlaidSelectedAccountIds,
   normalizePlaidSelectedAccountIds,
   PLAID_NEW_ACCOUNTS_RELINK_STATE,
   PLAID_REQUIRED_RELINK_STATE,
   requiresPlaidPublicTokenExchange,
+  resolvePlaidAccountsToDisableAfterUpdate,
   shouldEnablePlaidAccountSelection,
   shouldRunPlaidNewLinkDuplicateChecks,
 } from "../shared/plaid-update-mode.ts";
@@ -117,6 +119,42 @@ Deno.test(
     assertEquals(
       shouldRunPlaidNewLinkDuplicateChecks({ connectionId: "" }),
       true,
+    );
+  },
+);
+
+Deno.test(
+  "plaid new-account update detects selected accounts Plaid did not return",
+  () => {
+    assertEquals(
+      findMissingPlaidSelectedAccountIds({
+        selectedAccountIds: ["acc-1", "acc-2", "acc-3"],
+        returnedAccountIds: ["acc-3", "acc-1"],
+      }),
+      ["acc-2"],
+    );
+  },
+);
+
+Deno.test(
+  "plaid new-account update disables accounts no longer shared by the user",
+  () => {
+    assertEquals(
+      resolvePlaidAccountsToDisableAfterUpdate({
+        requiresAccountSelection: true,
+        existingAccountIds: ["old-1", "kept-1", "old-2"],
+        returnedAccountIds: ["kept-1", "new-1"],
+      }),
+      ["old-1", "old-2"],
+    );
+
+    assertEquals(
+      resolvePlaidAccountsToDisableAfterUpdate({
+        requiresAccountSelection: false,
+        existingAccountIds: ["old-1"],
+        returnedAccountIds: [],
+      }),
+      [],
     );
   },
 );

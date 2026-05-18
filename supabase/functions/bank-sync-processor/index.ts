@@ -18,7 +18,7 @@ const INTERNAL_FUNCTION_KEY = Deno.env.get(
 const RESOLVED_INTERNAL_FUNCTION_KEY = INTERNAL_FUNCTION_KEY ||
   resolveAnyInternalFunctionKey();
 const AUTO_BANK_SYNC_ENABLED =
-  Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() === "true";
+  Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false";
 
 // Fixed batch size to prevent DoS attacks
 const BATCH_SIZE = 10;

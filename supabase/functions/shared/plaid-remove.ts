@@ -15,8 +15,7 @@ export async function removePlaidConnection(params: {
   connection: PlaidRemovableConnection;
   removalReason: string;
 }): Promise<void> {
-  const encryptedToken =
-    params.connection.access_token_encrypted ||
+  const encryptedToken = params.connection.access_token_encrypted ||
     params.connection.plaid_access_token_encrypted;
 
   if (encryptedToken) {
@@ -99,6 +98,15 @@ export async function removePlaidConnection(params: {
 
   if (rawCleanupError) {
     throw rawCleanupError;
+  }
+
+  const { error: webhookCleanupError } = await params.supabase
+    .from("bank_webhook_events")
+    .delete()
+    .eq("bank_connection_id", params.connection.id);
+
+  if (webhookCleanupError) {
+    throw webhookCleanupError;
   }
 
   const { error: bankAccountCleanupError } = await params.supabase

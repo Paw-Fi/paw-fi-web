@@ -221,3 +221,47 @@ Deno.test(
     assertStringIncludes(source, "shouldProcessInboundToConfiguredInboxes");
   },
 );
+
+Deno.test(
+  "import contract: Plaid processor is enabled unless explicitly disabled",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../bank-sync-processor/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(
+      source,
+      'Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false"',
+    );
+  },
+);
+
+Deno.test(
+  "import contract: Plaid maintenance cleans abandoned Link update sessions",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../plaid-maintenance/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, 'from("plaid_link_update_sessions")');
+    assertStringIncludes(source, "completed_at");
+    assertStringIncludes(source, "expires_at");
+    assertStringIncludes(source, "processing_started_at");
+  },
+);
+
+Deno.test(
+  "import contract: Plaid webhook persists event then enqueues transaction sync",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../plaid-webhook/index.ts", import.meta.url),
+    );
+    const insertIndex = source.indexOf('from("bank_webhook_events")');
+    const enqueueIndex = source.indexOf("enqueuePlaidSyncJob", insertIndex);
+
+    assertEquals(insertIndex >= 0, true);
+    assertEquals(enqueueIndex > insertIndex, true);
+    assertStringIncludes(source, 'triggerSource: "plaid_transactions_webhook"');
+    assertStringIncludes(source, "webhookEventId");
+  },
+);
