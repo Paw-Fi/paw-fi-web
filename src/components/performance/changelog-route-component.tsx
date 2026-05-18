@@ -8,6 +8,46 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { HomeHeader } from "@/components/index/header";
 import { Timeline } from "@/components/ui/timeline";
+import { 
+  Coins, 
+  Landmark, 
+  Layers, 
+  Rocket, 
+  ArrowRight,
+  Loader2
+} from "lucide-react";
+
+interface InProgressItem {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  status: string;
+  color: string;
+}
+
+const inProgressItems: InProgressItem[] = [
+  {
+    title: "Multi-Currency Intelligence",
+    description: "Convert and view transactions in multiple currencies at once. Perfect for frequent travelers and global accounts.",
+    icon: Coins,
+    status: "In Development",
+    color: "from-amber-500/20 to-orange-500/20"
+  },
+  {
+    title: "North America Bank Sync",
+    description: "Secure, automatic transaction syncing for US and Canadian banks via Plaid. Real-time updates without the manual effort.",
+    icon: Landmark,
+    status: "Beta Testing",
+    color: "from-blue-500/20 to-indigo-500/20"
+  },
+  {
+    title: "Advanced Category Engine",
+    description: "Deep customization with sub-categories, custom rules, and smart auto-categorization for better spending insights.",
+    icon: Layers,
+    status: "In Design",
+    color: "from-emerald-500/20 to-teal-500/20"
+  }
+];
 
 interface ChangelogEntry {
   title: string;
@@ -606,7 +646,7 @@ export function ChangelogRouteComponent() {
 
       <HomeHeader />
 
-      <div className="bg-background selection:bg-primary/20 relative min-h-screen">
+      <div className="bg-background selection:bg-primary/20 relative min-h-screen overflow-x-hidden">
         <div className="pointer-events-none fixed inset-0 z-0">
           <div className="absolute top-[-220px] left-1/2 h-[520px] w-[980px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--primary)/0.14),transparent_62%)]" />
           <div className="absolute right-[-180px] bottom-[-240px] h-[460px] w-[460px] rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--foreground)/0.08),transparent_70%)] blur-2xl" />
@@ -620,11 +660,11 @@ export function ChangelogRouteComponent() {
               duration: prefersReducedMotion ? 0 : 0.75,
               ease: "easeOut",
             }}
-            className="mb-8 space-y-6 px-5 sm:px-8 md:mb-12 lg:px-10"
+            className="mb-12 space-y-6 px-5 sm:px-8 lg:px-10"
           >
             <div className="mb-2 flex items-center gap-2.5">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-500/70" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/70" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
               <span className="text-muted-foreground text-xs font-semibold tracking-[0.2em] uppercase">
@@ -638,6 +678,65 @@ export function ChangelogRouteComponent() {
               We're constantly improving Moneko. Here's a timeline of our latest
               features, fixes, and improvements.
             </p>
+          </motion.div>
+
+          {/* In Progress Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="space-y-8"
+          >
+            <div className="flex items-center justify-between px-5 sm:px-8 lg:px-10">
+              <div className="flex items-center gap-3">
+                
+                <div>
+                  <h2 className="text-foreground text-xl font-semibold tracking-tight">In the Works</h2>
+                  <p className="text-muted-foreground text-sm">What we're building right now</p>
+                </div>
+              </div>
+             
+            </div>
+
+            <div className="no-scrollbar flex w-full gap-5 overflow-x-auto snap-x snap-mandatory px-5 sm:px-8 lg:px-10">
+              {inProgressItems.map((item, index) => (
+                <motion.div
+                  key={item.title}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                  className="min-w-[280px] sm:min-w-[340px] snap-start"
+                >
+                  <Card className="group border-border/40 bg-card/40 relative h-full overflow-hidden p-6 shadow-sm backdrop-blur-xl transition-all duration-300 hover:border-primary/30 hover:shadow-md">
+                    <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${item.color} blur-2xl transition-opacity group-hover:opacity-100`} />
+                    
+                    <div className="relative z-10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="bg-background/80 flex h-12 w-12 items-center justify-center rounded-2xl border border-border/50 shadow-sm transition-transform group-hover:scale-110">
+                          <item.icon className="text-foreground h-6 w-6" />
+                        </div>
+                        <Badge variant="outline" className="border-border/60 bg-background/50 text-[10px] font-medium uppercase tracking-wider backdrop-blur-md">
+                          <Loader2 className="mr-1.5 h-3 w-3 animate-spin text-primary" />
+                          {item.status}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h3 className="text-foreground/70 font-semibold tracking-tight sm:text-lg transition-colors group-hover:text-foreground">
+                          {item.title}
+                        </h3>
+                        <p className="text-muted-foreground/70 text-sm leading-relaxed sm:text-[15px] transition-colors group-hover:text-muted-foreground">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+              
+              {/* Spacer for horizontal scroll padding on mobile */}
+              <div className="min-w-[20px] sm:hidden" />
+            </div>
           </motion.div>
 
           {/* New Clean Timeline Component */}
