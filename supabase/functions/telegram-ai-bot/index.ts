@@ -71,10 +71,13 @@ import {
   normalizeAiToolAmount,
   normalizeAiToolMoneyCents,
   normalizeAiToolPercentage,
-  normalizeAiToolTransactionFields,
-  normalizeAiToolTransactionType,
   normalizeRequiredAiToolString,
 } from "../shared/bot/ai-tool-validation.ts";
+import {
+  buildTransactionMutationFailureText,
+  invokeTransactionSave,
+  normalizeTransactionToolArgs,
+} from "../shared/bot/transaction-tool.ts";
 import {
   buildUnsafeMutationClaimFallback,
   detectWriteIntentFromUserText,
@@ -1548,88 +1551,6 @@ function buildRecurrenceRule(args: any, fallbackAnchor: string) {
   return rule;
 }
 
-async function invokeTransactionSave(
-  supabase: SupabaseJsClient,
-  internalKey: string,
-  userId: string,
-  params: {
-    type?: string;
-    amount: number;
-    category: string;
-    currency: string;
-    date: string;
-    description?: string;
-    merchant?: string;
-    householdId?: string | null;
-    isPortfolio?: boolean;
-    payerUserId?: string;
-    customSplits?: CustomSplits;
-    isRecurring?: boolean;
-    recurrence_rule?: Record<string, unknown> | null;
-    source?: string;
-    ownerType?: string;
-    privacyScope?: string;
-    accountId?: string;
-  },
-) {
-  const type =
-    (params.type || "expense").toLowerCase() === "income"
-      ? "income"
-      : "expense";
-
-  const body =
-    type === "income"
-      ? {
-          userId,
-          amount: params.amount,
-          category: params.category,
-          currency: params.currency,
-          date: params.date,
-          description: params.description,
-          merchant: params.merchant,
-          source: params.source,
-          ownerType: params.ownerType || "me",
-          privacyScope: params.privacyScope || "full",
-          accountId: params.accountId,
-          householdId: params.householdId,
-          isPortfolio: params.isPortfolio === true,
-          isRecurring: params.isRecurring === true,
-          recurrence_rule:
-            params.isRecurring === true
-              ? params.recurrence_rule || null
-              : undefined,
-          clientCreatedAt: new Date().toISOString(),
-        }
-      : {
-          userId,
-          amount: params.amount,
-          category: params.category,
-          currency: params.currency,
-          date: params.date,
-          description: params.description,
-          merchant: params.merchant,
-          accountId: params.accountId,
-          householdId: params.householdId,
-          isPortfolio: params.isPortfolio === true,
-          payerUserId: params.payerUserId,
-          customSplits: params.customSplits,
-          isRecurring: params.isRecurring === true,
-          recurrence_rule:
-            params.isRecurring === true
-              ? params.recurrence_rule || null
-              : undefined,
-          clientCreatedAt: new Date().toISOString(),
-        };
-
-  return await supabase.functions.invoke(
-    type === "income" ? "save-income" : "save-expense",
-    {
-      body,
-      headers: buildInternalInvokeHeaders(internalKey),
-    },
-  );
-}
-
 function getInvokeHttpStatus(error: unknown): number | undefined {
   const candidate = error as Record<string, any> | null | undefined;
   const contextStatus = candidate?.context?.status;
@@ -1684,21 +1605,8 @@ function buildMutationFailureText(
   toolName: string | null,
   toolResult: unknown,
 ): string | null {
-  const error =
-    typeof (toolResult as Record<string, any> | null)?.error === "string"
-      ? (toolResult as Record<string, string>).error.trim()
-      : "";
-  if (!error) return null;
-
-  if (toolName === "add_transaction") {
-    return "I couldn't save that transaction right now. Please try again in a moment.";
-  }
-  if (toolName === "add_transactions_batch") {
-    return "I couldn't save those transactions right now. Please try again in a moment.";
-  }
-  if (toolName === "manage_recurring") {
-    return "I couldn't save that recurring transaction right now. Please try again in a moment.";
-  }
+  const sharedText = buildTransactionMutationFailureText(toolName, toolResult);
+  if (sharedText) return sharedText;
   if (toolName === "delete_transaction") {
     return "I couldn't delete that transaction right now. Please try again in a moment.";
   }
@@ -2997,17 +2905,14 @@ Deno.serve(async (req: Request) => {
           const shouldForceWriteToolCall =
             claimDiag.blocked || writeIntentDetected;
 
-          console.log(
-            "[telegram-ai-bot] initial-response tool-call guard",
-            {
-              traceId,
-              userMessage: incomingText,
-              writeIntentDetected,
-              claimBlocked: claimDiag.blocked,
-              claimReason: claimDiag.reason,
-              willForceToolCall: shouldForceWriteToolCall,
-            },
-          );
+          console.log("[telegram-ai-bot] initial-response tool-call guard", {
+            traceId,
+            userMessage: incomingText,
+            writeIntentDetected,
+            claimBlocked: claimDiag.blocked,
+            claimReason: claimDiag.reason,
+            willForceToolCall: shouldForceWriteToolCall,
+          });
 
           if (shouldForceWriteToolCall) {
             try {
@@ -3028,15 +2933,12 @@ Deno.serve(async (req: Request) => {
               response = await repairResult.response;
               functionCalls = (response.functionCalls() as any[]) || [];
               const repairText = response.text();
-              console.log(
-                "[telegram-ai-bot] forced-tool-call retry result",
-                {
-                  traceId,
-                  forcedCallCount: functionCalls.length,
-                  forcedCallNames: functionCalls.map((c: any) => c?.name),
-                  hadTextFallback: !!repairText,
-                },
-              );
+              console.log("[telegram-ai-bot] forced-tool-call retry result", {
+                traceId,
+                forcedCallCount: functionCalls.length,
+                forcedCallNames: functionCalls.map((c: any) => c?.name),
+                hadTextFallback: !!repairText,
+              });
               if (functionCalls.length > 0) {
                 finalResponseText = "";
               } else {
@@ -3046,16 +2948,14 @@ Deno.serve(async (req: Request) => {
                 });
                 finalResponseText = repairDiag.blocked
                   ? buildUnsafeMutationClaimFallback()
-                  : (repairText || buildUnsafeMutationClaimFallback());
+                  : repairText || buildUnsafeMutationClaimFallback();
               }
             } catch (error) {
               console.error(
                 "[telegram-ai-bot] forced-tool-call retry failed:",
                 error,
               );
-              debugNotes.push(
-                `forced-tool-call-retry-error: ${String(error)}`,
-              );
+              debugNotes.push(`forced-tool-call-retry-error: ${String(error)}`);
               finalResponseText = buildUnsafeMutationClaimFallback();
               functionCalls = [];
             }
@@ -3454,8 +3354,12 @@ Deno.serve(async (req: Request) => {
                   toolResult = { error: formatInvokeError(error) };
                 }
               } else if (call.name === "add_transaction") {
-                const transactionResult = normalizeAiToolTransactionFields(
+                const transactionResult = normalizeTransactionToolArgs(
                   call.args,
+                  {
+                    date: call.args.date || formatDateInTimeZone(userTimezone),
+                    currency: userCurrency,
+                  },
                 );
                 if (!transactionResult.ok) {
                   toolResult = { error: transactionResult.error };
@@ -3465,7 +3369,7 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                const amount = transactionResult.amount;
+                const transaction = transactionResult.transaction;
                 let householdId = call.args.household_id || null;
                 const householdName = (call.args.household_name || "")
                   .toString()
@@ -3495,14 +3399,14 @@ Deno.serve(async (req: Request) => {
                   continue;
                 }
                 const isHouseholdExpense =
-                  !!householdId && transactionResult.type === "expense";
+                  !!householdId && transaction.type === "expense";
                 const splitConfig =
                   isHouseholdExpense && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
                         supabase,
                         householdId!,
                         userId,
-                        amount,
+                        transaction.amount,
                         call.args,
                       )
                     : {};
@@ -3527,22 +3431,15 @@ Deno.serve(async (req: Request) => {
                   {
                     recurrence_rule:
                       call.args.is_recurring === true
-                        ? buildRecurrenceRule(
-                            call.args,
-                            call.args.date ||
-                              formatDateInTimeZone(userTimezone),
-                          )
+                        ? buildRecurrenceRule(call.args, transaction.date!)
                         : undefined,
-                    amount: amount,
-                    category: transactionResult.category,
-                    description: call.args.description || "",
-                    merchant:
-                      typeof call.args.merchant === "string"
-                        ? call.args.merchant
-                        : undefined,
-                    date: call.args.date || formatDateInTimeZone(userTimezone),
-                    currency: call.args.currency || userCurrency,
-                    type: transactionResult.type,
+                    amount: transaction.amount,
+                    category: transaction.category,
+                    description: transaction.description,
+                    merchant: transaction.merchant,
+                    date: transaction.date!,
+                    currency: transaction.currency || userCurrency,
+                    type: transaction.type,
                     householdId,
                     isPortfolio:
                       spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
@@ -3569,14 +3466,14 @@ Deno.serve(async (req: Request) => {
                     traceId,
                     toolName: "add_transaction",
                     targetFunction:
-                      transactionResult.type === "income"
+                      transaction.type === "income"
                         ? "save-income"
                         : "save-expense",
                     formatted,
                     error: error ?? data?.error,
                     context: {
-                      amount,
-                      category: transactionResult.category,
+                      amount: transaction.amount,
+                      category: transaction.category,
                       householdId,
                     },
                   });
@@ -3633,15 +3530,17 @@ Deno.serve(async (req: Request) => {
                     }: Invalid transaction row.`;
                     break;
                   }
-                  const transactionResult =
-                    normalizeAiToolTransactionFields(row);
+                  const transactionResult = normalizeTransactionToolArgs(row, {
+                    date: row.date || formatDateInTimeZone(userTimezone),
+                    currency: userCurrency,
+                  });
                   if (!transactionResult.ok) {
                     batchBuildError = `Transaction ${
                       index + 1
                     }: ${transactionResult.error}`;
                     break;
                   }
-                  const amount = transactionResult.amount;
+                  const transaction = transactionResult.transaction;
                   const requestedWallet = await resolveWalletIdInScope(
                     supabase,
                     userId,
@@ -3655,29 +3554,24 @@ Deno.serve(async (req: Request) => {
                     break;
                   }
                   const splitConfig =
-                    householdId &&
-                    !isPortfolio &&
-                    transactionResult.type !== "income"
+                    householdId && !isPortfolio && transaction.type !== "income"
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
                           userId,
-                          amount,
+                          transaction.amount,
                           row,
                         )
                       : {};
 
                   batchTransactions.push({
-                    type: transactionResult.type,
-                    amount,
-                    category: transactionResult.category,
-                    description: row.description || "",
-                    merchant:
-                      typeof row.merchant === "string"
-                        ? row.merchant
-                        : undefined,
-                    date: row.date || formatDateInTimeZone(userTimezone),
-                    currency: row.currency || userCurrency,
+                    type: transaction.type,
+                    amount: transaction.amount,
+                    category: transaction.category,
+                    description: transaction.description || "",
+                    merchant: transaction.merchant,
+                    date: transaction.date!,
+                    currency: transaction.currency || userCurrency,
                     accountId: requestedWallet.accountId ?? undefined,
                     source: row.source,
                     ownerType: row.owner_type || "me",
@@ -3687,10 +3581,7 @@ Deno.serve(async (req: Request) => {
                     isRecurring: row.is_recurring === true,
                     recurrence_rule:
                       row.is_recurring === true
-                        ? buildRecurrenceRule(
-                            row,
-                            row.date || formatDateInTimeZone(userTimezone),
-                          )
+                        ? buildRecurrenceRule(row, transaction.date!)
                         : undefined,
                   });
                 }
@@ -5250,8 +5141,9 @@ Deno.serve(async (req: Request) => {
                     interval: 1,
                     anchor_date: dateValue,
                   };
-                  const transactionResult = normalizeAiToolTransactionFields(
+                  const transactionResult = normalizeTransactionToolArgs(
                     call.args,
+                    { date: dateValue, currency: userCurrency },
                   );
                   if (!transactionResult.ok) {
                     toolResult = { error: transactionResult.error };
@@ -5263,7 +5155,7 @@ Deno.serve(async (req: Request) => {
                     });
                     continue;
                   }
-                  const amount = transactionResult.amount;
+                  const transaction = transactionResult.transaction;
                   let householdId = call.args.household_id || null;
                   const householdName = (call.args.household_name || "")
                     .toString()
@@ -5282,12 +5174,12 @@ Deno.serve(async (req: Request) => {
                   const splitConfig =
                     householdId &&
                     !spaceMeta?.isPortfolio &&
-                    transactionResult.type !== "income"
+                    transaction.type !== "income"
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
                           userId,
-                          amount,
+                          transaction.amount,
                           call.args,
                         )
                       : {};
@@ -5305,16 +5197,13 @@ Deno.serve(async (req: Request) => {
                       internalFunctionKey,
                       userId,
                       {
-                        amount,
-                        category: transactionResult.category,
-                        description: call.args.description || "",
-                        merchant:
-                          typeof call.args.merchant === "string"
-                            ? call.args.merchant
-                            : undefined,
-                        date: dateValue,
-                        currency: call.args.currency || userCurrency,
-                        type: transactionResult.type,
+                        amount: transaction.amount,
+                        category: transaction.category,
+                        description: transaction.description,
+                        merchant: transaction.merchant,
+                        date: transaction.date || dateValue,
+                        currency: transaction.currency || userCurrency,
+                        type: transaction.type,
                         householdId,
                         isPortfolio:
                           spaceMeta?.isPortfolio ??
@@ -5330,7 +5219,7 @@ Deno.serve(async (req: Request) => {
                       },
                     );
                     const targetFunction =
-                      transactionResult.type === "income"
+                      transaction.type === "income"
                         ? "save-income"
                         : "save-expense";
                     const success = !error && data?.success === true;
@@ -5351,9 +5240,9 @@ Deno.serve(async (req: Request) => {
                         error: error ?? data?.error,
                         context: {
                           action,
-                          type: transactionResult.type,
-                          amount,
-                          category: transactionResult.category,
+                          type: transaction.type,
+                          amount: transaction.amount,
+                          category: transaction.category,
                           householdId,
                         },
                       });

@@ -67,11 +67,10 @@ import {
 } from "../shared/auth.ts";
 import { normalizeCalendarDateString } from "../shared/date-normalization.ts";
 import {
-  normalizeAiToolAmount,
-  normalizeAiToolMoneyCents,
-  normalizeAiToolTransactionType,
-  normalizeRequiredAiToolString,
-} from "../shared/bot/ai-tool-validation.ts";
+  buildTransactionMutationFailureText,
+  invokeTransactionSave,
+  normalizeTransactionToolArgs,
+} from "../shared/bot/transaction-tool.ts";
 import {
   buildUnsafeMutationClaimFallback,
   detectWriteIntentFromUserText,
@@ -170,8 +169,6 @@ const GEMINI_PRE_REQUEST_DELAY_MS = 1200;
 const GEMINI_MAX_RETRIES = 1;
 const GEMINI_REQUEST_TIMEOUT_MS = 30000;
 const WHATSAPP_CHUNK_TARGET_CHARS = 1450;
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DELIVERY_FAILURE_MESSAGE =
   "I wasn’t able to deliver the full response just now. Could you please try again with a smaller request?";
 
@@ -938,88 +935,6 @@ function normalizeDateInput(value: unknown, fallback: string): string {
   return trimmed.length >= 10 ? trimmed.slice(0, 10) : trimmed;
 }
 
-function normalizeAddTransactionToolArgs(
-  args: Record<string, any> | null | undefined,
-  fallback: { date: string; currency: string },
-):
-  | {
-      ok: true;
-      type: "expense" | "income";
-      amount: number;
-      category: string;
-      date: string;
-      currency: string;
-      description?: string;
-      merchant?: string;
-    }
-  | { ok: false; error: string } {
-  const input = args && typeof args === "object" ? args : {};
-
-  const typeResult = normalizeAiToolTransactionType(input.type);
-  if (!typeResult.ok) return typeResult;
-
-  const amountResult = normalizeAiToolMoneyCents(input.amount, "amount", {
-    required: true,
-    allowZero: false,
-    allowNegative: true,
-    invalidError: "Invalid amount. Ask the user for a value greater than 0.",
-  });
-  if (!amountResult.ok) return amountResult;
-  const amount = Math.abs((amountResult.cents ?? 0) / 100);
-
-  const categoryResult = normalizeRequiredAiToolString(
-    input.category,
-    "category",
-  );
-  if (!categoryResult.ok) return categoryResult;
-
-  const dateCandidate = normalizeDateInput(input.date, fallback.date);
-  const normalizedDate = normalizeCalendarDateString(dateCandidate);
-  if (!normalizedDate) {
-    return {
-      ok: false,
-      error: "Invalid date. Ask the user for a valid calendar date.",
-    };
-  }
-
-  let description: string | undefined;
-  if (input.description !== undefined && input.description !== null) {
-    if (typeof input.description !== "string") {
-      return { ok: false, error: "description must be a string." };
-    }
-    description = input.description.trim() || undefined;
-  }
-
-  let merchant: string | undefined;
-  if (input.merchant !== undefined && input.merchant !== null) {
-    if (typeof input.merchant !== "string") {
-      return { ok: false, error: "merchant must be a string." };
-    }
-    const trimmedMerchant = input.merchant.trim();
-    if (trimmedMerchant.length > 255) {
-      return {
-        ok: false,
-        error: "merchant must be less than 256 characters.",
-      };
-    }
-    merchant = trimmedMerchant || undefined;
-  }
-
-  const rawCurrency =
-    typeof input.currency === "string" ? input.currency.trim() : "";
-
-  return {
-    ok: true,
-    type: (amountResult.cents ?? 0) < 0 ? "expense" : typeResult.type,
-    amount,
-    category: categoryResult.value,
-    date: normalizedDate,
-    currency: rawCurrency || fallback.currency,
-    description,
-    merchant,
-  };
-}
-
 const BUDGET_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 type PendingBudgetDraft = {
@@ -1564,159 +1479,6 @@ function buildRecurrenceRule(args: any, fallbackAnchor: string) {
   return rule;
 }
 
-async function invokeTransactionSave(
-  supabase: SupabaseJsClient,
-  internalKey: string,
-  userId: string,
-  params: {
-    type?: string;
-    amount: number;
-    category: string;
-    currency: string;
-    date: string;
-    description?: string;
-    merchant?: string;
-    householdId?: string | null;
-    isPortfolio?: boolean;
-    payerUserId?: string;
-    customSplits?: CustomSplits;
-    isRecurring?: boolean;
-    recurrence_rule?: Record<string, unknown> | null;
-    source?: string;
-    ownerType?: string;
-    privacyScope?: string;
-    accountId?: string;
-  },
-) {
-  const requestedType =
-    (params.type || "expense").toLowerCase() === "income"
-      ? "income"
-      : "expense";
-  const amountResult = normalizeAiToolMoneyCents(params.amount, "amount", {
-    required: true,
-    allowZero: false,
-    allowNegative: true,
-    invalidError: "Invalid amount. Ask the user for a value greater than 0.",
-  });
-  if (!amountResult.ok) return { data: null, error: amountResult.error };
-  const amount = Math.abs((amountResult.cents ?? 0) / 100);
-  const type = (amountResult.cents ?? 0) < 0 ? "expense" : requestedType;
-
-  const categoryResult = normalizeRequiredAiToolString(
-    params.category,
-    "category",
-  );
-  if (!categoryResult.ok) return { data: null, error: categoryResult.error };
-
-  const normalizedDate = normalizeCalendarDateString(params.date);
-  if (!normalizedDate) {
-    return {
-      data: null,
-      error: "Invalid date. Ask the user for a valid calendar date.",
-    };
-  }
-
-  const normalizedHouseholdId =
-    typeof params.householdId === "string" && params.householdId.trim()
-      ? params.householdId.trim()
-      : null;
-  if (normalizedHouseholdId && !UUID_REGEX.test(normalizedHouseholdId)) {
-    return { data: null, error: "You do not have access to that space." };
-  }
-
-  let description: string | undefined;
-  if (params.description !== undefined && params.description !== null) {
-    if (typeof params.description !== "string") {
-      return { data: null, error: "description must be a string." };
-    }
-    description = params.description.trim() || undefined;
-  }
-
-  let merchant: string | undefined;
-  if (params.merchant !== undefined && params.merchant !== null) {
-    if (typeof params.merchant !== "string") {
-      return { data: null, error: "merchant must be a string." };
-    }
-    const trimmedMerchant = params.merchant.trim();
-    if (trimmedMerchant.length > 255) {
-      return {
-        data: null,
-        error: "merchant must be less than 256 characters.",
-      };
-    }
-    merchant = trimmedMerchant || undefined;
-  }
-
-  const body =
-    type === "income"
-      ? {
-          userId,
-          amount,
-          category: categoryResult.value,
-          currency: params.currency,
-          date: normalizedDate,
-          description,
-          merchant,
-          source: params.source,
-          ownerType: params.ownerType || "me",
-          privacyScope: params.privacyScope || "full",
-          accountId: params.accountId,
-          householdId: normalizedHouseholdId,
-          isPortfolio: params.isPortfolio === true,
-          isRecurring: params.isRecurring === true,
-          recurrence_rule:
-            params.isRecurring === true
-              ? params.recurrence_rule || null
-              : undefined,
-          clientCreatedAt: new Date().toISOString(),
-        }
-      : {
-          userId,
-          amount,
-          category: categoryResult.value,
-          currency: params.currency,
-          date: normalizedDate,
-          description,
-          merchant,
-          accountId: params.accountId,
-          householdId: normalizedHouseholdId,
-          isPortfolio: params.isPortfolio === true,
-          payerUserId: params.payerUserId,
-          customSplits: params.customSplits,
-          isRecurring: params.isRecurring === true,
-          recurrence_rule:
-            params.isRecurring === true
-              ? params.recurrence_rule || null
-              : undefined,
-          clientCreatedAt: new Date().toISOString(),
-        };
-
-  const targetFunction = type === "income" ? "save-income" : "save-expense";
-  console.log("[twilio-whatsapp-ai-bot] invokeTransactionSave: calling", {
-    targetFunction,
-    userId,
-    type,
-    amount,
-    category: categoryResult.value,
-    currency: params.currency,
-    householdId: normalizedHouseholdId,
-  });
-
-  const result = await supabase.functions.invoke(targetFunction, {
-    body,
-    headers: buildInternalInvokeHeaders(internalKey),
-  });
-
-  console.log("[twilio-whatsapp-ai-bot] invokeTransactionSave: result", {
-    targetFunction,
-    success: !result.error && result.data?.success === true,
-    hasData: !!result.data,
-    error: result.error ? String(result.error) : null,
-  });
-
-  return result;
-}
-
 function getInvokeHttpStatus(error: unknown): number | undefined {
   const candidate = error as Record<string, any> | null | undefined;
   const contextStatus = candidate?.context?.status;
@@ -1757,44 +1519,7 @@ function buildMutationFailureText(
   toolName: string | null,
   toolResult: unknown,
 ): string | null {
-  const error =
-    typeof (toolResult as Record<string, any> | null)?.error === "string"
-      ? (toolResult as Record<string, string>).error.trim()
-      : "";
-  if (!error) return null;
-
-  if (toolName === "add_transaction") {
-    if (error.startsWith("Invalid amount")) {
-      return "I need an amount greater than 0 before I can save that. What amount should I use?";
-    }
-    if (error === "category is required.") {
-      return "Which category should I use for that transaction?";
-    }
-    if (error === "type must be expense or income.") {
-      return "Should I save that as an expense or income?";
-    }
-    if (error.startsWith("Invalid date")) {
-      return "Which date should I use for that transaction?";
-    }
-    if (
-      error === "merchant must be a string." ||
-      error === "description must be a string." ||
-      error === "merchant must be less than 256 characters."
-    ) {
-      return "I couldn't understand one of the transaction details. Please resend it with the amount, category, and date.";
-    }
-    if (error === "You do not have access to that space.") {
-      return error;
-    }
-    return "I couldn't save that transaction right now. Please try again in a moment.";
-  }
-  if (toolName === "add_transactions_batch") {
-    return "I couldn't save those transactions right now. Please try again in a moment.";
-  }
-  if (toolName === "manage_recurring") {
-    return "I couldn't save that recurring transaction right now. Please try again in a moment.";
-  }
-  return null;
+  return buildTransactionMutationFailureText(toolName, toolResult);
 }
 
 function fingerprintSecret(secret: string): string {
@@ -3447,14 +3172,22 @@ Deno.serve(async (req: Request) => {
             const spaceMeta = householdId
               ? spaceMap.get(householdId)
               : undefined;
+            const transactionResult = normalizeTransactionToolArgs(call.args, {
+              date: call.args.date || formatDateInTimeZone(userTimezone),
+              currency: userCurrency,
+            });
+            const transaction = transactionResult.ok
+              ? transactionResult.transaction
+              : null;
             const isHouseholdExpense =
-              !!householdId && (call.args.type || "expense") === "expense";
+              !!householdId &&
+              (transaction?.type ?? call.args.type ?? "expense") === "expense";
             const splitConfig = isHouseholdExpense
               ? await resolveHouseholdSplitConfig(
                   supabase,
                   householdId!,
                   userId,
-                  Number(call.args.amount || 0),
+                  transaction?.amount ?? Number(call.args.amount || 0),
                   call.args,
                 )
               : {};
@@ -3483,13 +3216,17 @@ Deno.serve(async (req: Request) => {
               INTERNAL_FUNCTION_KEY,
               userId,
               {
-                type: call.args.type || "expense",
-                amount: call.args.amount,
-                category: call.args.category,
-                date: call.args.date || formatDateInTimeZone(userTimezone),
-                currency: call.args.currency || userCurrency,
-                description: call.args.description,
-                merchant: call.args.merchant,
+                type: transaction?.type ?? call.args.type ?? "expense",
+                amount: transaction?.amount ?? call.args.amount,
+                category: transaction?.category ?? call.args.category,
+                date:
+                  transaction?.date ??
+                  call.args.date ??
+                  formatDateInTimeZone(userTimezone),
+                currency:
+                  transaction?.currency ?? call.args.currency ?? userCurrency,
+                description: transaction?.description ?? call.args.description,
+                merchant: transaction?.merchant ?? call.args.merchant,
                 householdId,
                 isPortfolio:
                   spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
@@ -5586,7 +5323,7 @@ Deno.serve(async (req: Request) => {
               call.args.date,
               formatDateInTimeZone(userTimezone),
             );
-            const normalizedTransaction = normalizeAddTransactionToolArgs(
+            const normalizedTransaction = normalizeTransactionToolArgs(
               call.args,
               { date: dateStr, currency: userCurrency },
             );
@@ -5597,150 +5334,84 @@ Deno.serve(async (req: Request) => {
               });
               continue;
             }
+            const transaction = normalizedTransaction.transaction;
             const recurrenceRule = call.args.is_recurring
-              ? buildRecurrenceRule(call.args, normalizedTransaction.date) || {
+              ? buildRecurrenceRule(call.args, transaction.date!) || {
                   frequency: "monthly",
                   interval: 1,
-                  anchor_date: normalizedTransaction.date,
+                  anchor_date: transaction.date!,
                 }
               : null;
-            const type = normalizedTransaction.type;
-
-            if (type === "income") {
-              const invokeHeaders = buildInternalInvokeHeaders(
-                INTERNAL_FUNCTION_KEY,
-              );
-              if (WHATSAPP_DEBUG) {
-                const invokeAuthMeta = decodeJwtPayloadMeta(
-                  invokeHeaders.Authorization,
-                );
-              }
-
-              const payload = {
-                userId,
-                amount: normalizedTransaction.amount,
-                category: normalizedTransaction.category,
-                currency: normalizedTransaction.currency,
-                date: normalizedTransaction.date,
-                description: normalizedTransaction.description,
-                source: call.args.source,
-                merchant: normalizedTransaction.merchant,
-                ownerType: call.args.owner_type || "me",
-                privacyScope: call.args.privacy_scope || "full",
-                accountId: requestedAccount.accountId ?? undefined,
-                householdId,
-                isRecurring: !!call.args.is_recurring,
-                recurrence_rule: recurrenceRule || undefined,
-                clientCreatedAt: new Date().toISOString(),
-              };
-              const { data, error } = await supabase.functions.invoke(
-                "save-income",
-                {
-                  body: payload,
-                  headers: invokeHeaders,
-                },
-              );
-              const success = !error && data?.success === true;
-              const formatted = success
-                ? ""
-                : formatInvokeError(error ?? data?.error) ||
-                  "Failed to save income";
-              toolResult = success
-                ? { success: true, data: data?.data ?? data }
-                : { error: formatted };
-              if (!success) {
-                if (WHATSAPP_DEBUG) {
-                  debugNotes.push(`add-income error: ${formatted}`);
-                }
-                console.error("[twilio-whatsapp-ai-bot] add-income error", {
-                  error,
-                  formatted,
-                });
-                await reportTwilioToolInvokeFailure({
-                  toolName: "add_transaction",
-                  targetFunction: "save-income",
-                  formatted,
-                  error: error ?? data?.error,
-                  context: {
-                    type,
-                    amount: normalizedTransaction.amount,
-                    category: normalizedTransaction.category,
-                    householdId,
-                  },
-                });
-              }
-            } else {
-              const isHouseholdExpense = !!householdId && type === "expense";
-              const splitConfig = isHouseholdExpense
-                ? await resolveHouseholdSplitConfig(
-                    supabase,
-                    householdId!,
-                    userId,
-                    normalizedTransaction.amount,
-                    call.args,
-                  )
-                : {};
-
-              const payload = {
-                userId,
-                amount: normalizedTransaction.amount,
-                category: normalizedTransaction.category,
-                currency: normalizedTransaction.currency,
-                date: normalizedTransaction.date,
-                description: normalizedTransaction.description,
-                merchant: normalizedTransaction.merchant,
-                accountId: requestedAccount.accountId ?? undefined,
+            const type = transaction.type;
+            const isHouseholdExpense = !!householdId && type === "expense";
+            const splitConfig = isHouseholdExpense
+              ? await resolveHouseholdSplitConfig(
+                  supabase,
+                  householdId!,
+                  userId,
+                  transaction.amount,
+                  call.args,
+                )
+              : {};
+            const { data, error } = await invokeTransactionSave(
+              supabase,
+              INTERNAL_FUNCTION_KEY,
+              userId,
+              {
+                amount: transaction.amount,
+                category: transaction.category,
+                currency: transaction.currency || userCurrency,
+                date: transaction.date!,
+                description: transaction.description,
+                merchant: transaction.merchant,
+                type,
                 householdId,
                 isPortfolio: spaceMeta?.isPortfolio ?? false,
+                accountId: requestedAccount.accountId ?? undefined,
                 payerUserId: splitConfig.payerUserId,
                 customSplits: splitConfig.customSplits,
                 isRecurring: !!call.args.is_recurring,
                 recurrence_rule: recurrenceRule || undefined,
-                clientCreatedAt: new Date().toISOString(),
-                type: "expense",
-              };
-              const { data, error } = await supabase.functions.invoke(
-                "save-expense",
-                {
-                  body: payload,
-                  headers: buildInternalInvokeHeaders(INTERNAL_FUNCTION_KEY),
-                },
-              );
-              const success = !error && data?.success === true;
-              const formatted = success
-                ? ""
-                : formatInvokeError(error ?? data?.error) ||
-                  "Failed to save expense";
-              toolResult = success
-                ? { success: true, data: data?.data ?? data }
-                : { error: formatted };
-              if (!success) {
-                if (WHATSAPP_DEBUG) {
-                  debugNotes.push(`add-expense error: ${formatted}`);
-                }
-                console.error("[twilio-whatsapp-ai-bot] add-expense error", {
-                  error,
-                  formatted,
-                  internalAuth: {
-                    source: internalKeyMeta.source,
-                    fingerprint: fingerprintSecret(INTERNAL_FUNCTION_KEY),
-                    keyLength: INTERNAL_FUNCTION_KEY.length,
-                    httpStatus: getInvokeHttpStatus(error),
-                  },
-                });
-                await reportTwilioToolInvokeFailure({
-                  toolName: "add_transaction",
-                  targetFunction: "save-expense",
-                  formatted,
-                  error: error ?? data?.error,
-                  context: {
-                    type,
-                    amount: normalizedTransaction.amount,
-                    category: normalizedTransaction.category,
-                    householdId,
-                  },
-                });
+                source: call.args.source,
+                ownerType: call.args.owner_type,
+                privacyScope: call.args.privacy_scope,
+              },
+            );
+            const success = !error && data?.success === true;
+            const formatted = success
+              ? ""
+              : formatInvokeError(error ?? data?.error) ||
+                "Failed to save transaction";
+            toolResult = success
+              ? { success: true, data: data?.data ?? data }
+              : { error: formatted };
+            if (!success) {
+              if (WHATSAPP_DEBUG) {
+                debugNotes.push(`add-transaction error: ${formatted}`);
               }
+              console.error("[twilio-whatsapp-ai-bot] add-transaction error", {
+                error,
+                formatted,
+                internalAuth: {
+                  source: internalKeyMeta.source,
+                  fingerprint: fingerprintSecret(INTERNAL_FUNCTION_KEY),
+                  keyLength: INTERNAL_FUNCTION_KEY.length,
+                  httpStatus: getInvokeHttpStatus(error),
+                },
+              });
+              await reportTwilioToolInvokeFailure({
+                toolName: "add_transaction",
+                targetFunction:
+                  type === "income" ? "save-income" : "save-expense",
+                formatted,
+                error: error ?? data?.error,
+                context: {
+                  type,
+                  amount: transaction.amount,
+                  category: transaction.category,
+                  householdId,
+                },
+              });
             }
           } else if (call.name === "add_transactions_batch") {
             // Batch save for multiple transactions (from receipts, bank statements, etc.)
