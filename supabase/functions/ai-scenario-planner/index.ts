@@ -30,6 +30,14 @@ interface ScenarioRequestBody {
   householdId?: string;
 }
 
+interface CurrencyTotals {
+  income: number;
+  spent: number;
+  budget: number;
+  netCashflow: number;
+  budgetRemaining: number;
+}
+
 function normalizeCurrencyCode(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const code = value.trim().toUpperCase();
@@ -45,6 +53,30 @@ function normalizeCurrencyList(value: unknown, fallbackCurrency: string) {
   return unique.length > 0 ? unique : [fallbackCurrency];
 }
 
+function createCurrencyTotals(): CurrencyTotals {
+  return {
+    income: 0,
+    spent: 0,
+    budget: 0,
+    netCashflow: 0,
+    budgetRemaining: 0,
+  };
+}
+
+function addCurrencyAmount(
+  totals: Record<string, CurrencyTotals>,
+  currency: string,
+  field: "income" | "spent" | "budget",
+  amount: number,
+) {
+  totals[currency] ??= createCurrencyTotals();
+  totals[currency][field] += amount;
+  totals[currency].netCashflow =
+    totals[currency].income - totals[currency].spent;
+  totals[currency].budgetRemaining =
+    totals[currency].budget - totals[currency].spent;
+}
+
 function convertAmount(
   amount: number,
   fromCurrency: string,
@@ -54,7 +86,7 @@ function convertAmount(
   if (fromCurrency === toCurrency) return amount;
   const fromRate = rates[fromCurrency];
   const toRate = rates[toCurrency];
-  if (!fromRate || !toRate) return amount;
+  if (!fromRate || !toRate) return null;
   return (amount / fromRate) * toRate;
 }
 
@@ -247,9 +279,12 @@ serve(async (req: Request): Promise<Response> => {
     const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageRaw)
       ? languageRaw
       : "en";
-    const currency = normalizeCurrencyCode(body.currency) || "USD";
-    const selectedCurrencies = normalizeCurrencyList(body.currencies, currency);
-    const currencySymbol = getCurrencySymbol(currency);
+    const displayCurrency = normalizeCurrencyCode(body.currency) || "USD";
+    const selectedCurrencies = normalizeCurrencyList(
+      body.currencies,
+      displayCurrency,
+    );
+    const currencySymbol = getCurrencySymbol(displayCurrency);
     const mode: "personal" | "household" =
       body.mode === "household" ? "household" : "personal";
     const householdId =
@@ -303,11 +338,29 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Build date range: last 6 months of data for context
+    if (mode === "household") {
+      const { data: membership, error: membershipError } = await supabaseClient
+        .from("household_members")
+        .select("user_id")
+        .eq("household_id", householdId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (membershipError || !membership) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: {
+            ...getCorsHeaders(req.headers.get("Origin") || undefined),
+            "Content-Type": "application/json",
+          },
+        });
+      }
+    }
+
+    // Build date range: last 12 months of data for seasonal context.
     const today = new Date();
     const fromDate = new Date(
       today.getFullYear(),
-      today.getMonth() - 6,
+      today.getMonth() - 12,
       today.getDate(),
     );
     const fromStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
@@ -316,11 +369,10 @@ serve(async (req: Request): Promise<Response> => {
     // Build base queries for expenses and budgets (select only fields actually used)
     let expensesQuery = supabaseClient
       .from("expenses")
-      .select("user_id,date,amount_cents,currency,category,owner_type")
+      .select("user_id,date,amount_cents,currency,category,owner_type,type")
       .gte("date", fromStr)
       .lte("date", toStr)
-      .eq("type", "expense")
-      .in("currency", selectedCurrencies);
+      .in("type", ["expense", "income"]);
 
     if (mode === "household") {
       expensesQuery = expensesQuery.eq("household_id", householdId);
@@ -334,7 +386,6 @@ serve(async (req: Request): Promise<Response> => {
     let budgetsQuery = supabaseClient
       .from("budgets")
       .select("period_month,total_budget_cents,currency")
-      .in("currency", selectedCurrencies)
       .gte("period_month", fromStr)
       .lte("period_month", toStr);
 
@@ -356,22 +407,28 @@ serve(async (req: Request): Promise<Response> => {
         .is("household_id", null);
     }
 
-    // Run expenses, budgets, goals, and financial profiles queries in parallel
+    let accountsQuery = supabaseClient
+      .from("accounts")
+      .select("name, opening_balance_cents, is_default, is_system")
+      .eq("is_archived", false);
+    if (mode === "household") {
+      accountsQuery = accountsQuery.eq("household_id", householdId);
+    } else {
+      accountsQuery = accountsQuery
+        .eq("user_id", userId)
+        .is("household_id", null);
+    }
+
+    // Run expenses, budgets, accounts, and financial profiles queries in parallel
     const [
       { data: expenses, error: expensesError },
       { data: budgets, error: budgetsError },
-      { data: goals },
+      { data: accounts },
       { data: finProfiles },
     ] = await Promise.all([
       expensesQuery.order("date", { ascending: true }),
       budgetsQuery.order("period_month", { ascending: true }),
-      supabaseClient
-        .from("financial_goals")
-        .select(
-          "id, name, target_amount, current_amount, start_date, target_date, is_on_track",
-        )
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false }),
+      accountsQuery.order("is_default", { ascending: false }),
       supabaseClient
         .from("financial_health_profiles")
         .select("*")
@@ -390,45 +447,90 @@ serve(async (req: Request): Promise<Response> => {
       return (x || 0) / 100.0;
     }
 
-    const daily: Record<string, { spent: number; budget: number }> = {};
-    const memberTotalsByUser: Record<
+    const daily: Record<
       string,
-      { spent: number; currency: string }
+      { spent: number; budget: number; income: number }
     > = {};
-    const ownerTypeTotals: Record<string, { spent: number; currency: string }> =
-      {};
+    const memberTotalsByUser: Record<string, CurrencyTotals> = {};
+    const ownerTypeTotals: Record<string, CurrencyTotals> = {};
     const categoryTotals: Record<string, number> = {};
-    const monthly: Record<
-      string,
-      { spent: number; budget: number; net: number }
-    > = {};
+    const monthly: Record<string, CurrencyTotals> = {};
+    const nativeCurrencyTotals: Record<string, CurrencyTotals> = {};
+    const observedCurrencies = new Set<string>();
+    const missingRateCurrencies = new Set<string>();
 
-    // Aggregate spending per day, and in household mode per member / owner_type
-    for (const e of expenses || []) {
-      const dateStr = (e.date as string).slice(0, 10);
-      const rowCurrency = normalizeCurrencyCode(e.currency) || currency;
-      const amt = convertAmount(
-        centsToAmount(e.amount_cents as number),
-        rowCurrency,
-        currency,
+    function convertToDisplayCurrency(amount: number, fromCurrency: string) {
+      const converted = convertAmount(
+        amount,
+        fromCurrency,
+        displayCurrency,
         currencyRates,
       );
+      if (converted == null) {
+        missingRateCurrencies.add(fromCurrency);
+        missingRateCurrencies.add(displayCurrency);
+      }
+      return converted;
+    }
 
-      daily[dateStr] ??= { spent: 0, budget: 0 };
-      daily[dateStr].spent += amt;
+    function ensureDaily(dateStr: string) {
+      daily[dateStr] ??= { spent: 0, budget: 0, income: 0 };
+      return daily[dateStr];
+    }
+
+    // Aggregate transactions in both native currencies and display currency.
+    for (const e of expenses || []) {
+      const dateStr = (e.date as string).slice(0, 10);
+      const dt = new Date(e.date as string);
+      const ym = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+      const rowCurrency = normalizeCurrencyCode(e.currency) || displayCurrency;
+      const amount = centsToAmount(Math.abs(e.amount_cents as number));
+      const transactionType = String(e.type || "expense").toLowerCase();
+      const isIncome = transactionType === "income";
+      observedCurrencies.add(rowCurrency);
+      addCurrencyAmount(
+        nativeCurrencyTotals,
+        rowCurrency,
+        isIncome ? "income" : "spent",
+        amount,
+      );
+
+      const converted = convertToDisplayCurrency(amount, rowCurrency);
+      if (converted == null) continue;
+
+      const day = ensureDaily(dateStr);
+      monthly[ym] ??= createCurrencyTotals();
+      addCurrencyAmount(monthly, ym, isIncome ? "income" : "spent", converted);
+      if (isIncome) {
+        day.income += converted;
+      } else {
+        day.spent += converted;
+        if (e.category) {
+          const key = String(e.category).toLowerCase();
+          const ninetyDaysAgo = new Date(
+            today.getTime() - 90 * 24 * 60 * 60 * 1000,
+          );
+          if (dt >= ninetyDaysAgo) {
+            categoryTotals[key] = (categoryTotals[key] || 0) + converted;
+          }
+        }
+      }
 
       if (mode === "household") {
         const uid = (e.user_id as string) || "unknown";
         const ownerType = (e.owner_type as string) || "unknown";
-        if (!memberTotalsByUser[uid]) {
-          memberTotalsByUser[uid] = { spent: 0, currency };
-        }
-        memberTotalsByUser[uid].spent += amt;
-
-        if (!ownerTypeTotals[ownerType]) {
-          ownerTypeTotals[ownerType] = { spent: 0, currency };
-        }
-        ownerTypeTotals[ownerType].spent += amt;
+        addCurrencyAmount(
+          memberTotalsByUser,
+          uid,
+          isIncome ? "income" : "spent",
+          converted,
+        );
+        addCurrencyAmount(
+          ownerTypeTotals,
+          ownerType,
+          isIncome ? "income" : "spent",
+          converted,
+        );
       }
     }
 
@@ -438,16 +540,15 @@ serve(async (req: Request): Promise<Response> => {
     for (const b of budgets || []) {
       const period = (b.period_month as string).slice(0, 10); // YYYY-MM-DD
       const ym = period.slice(0, 7); // YYYY-MM
-      const rowCurrency = normalizeCurrencyCode(b.currency) || currency;
-      const amt = convertAmount(
-        centsToAmount(b.total_budget_cents as number),
-        rowCurrency,
-        currency,
-        currencyRates,
-      );
+      const rowCurrency = normalizeCurrencyCode(b.currency) || displayCurrency;
+      const amount = centsToAmount(Math.abs(b.total_budget_cents as number));
+      observedCurrencies.add(rowCurrency);
+      addCurrencyAmount(nativeCurrencyTotals, rowCurrency, "budget", amount);
+      const amt = convertToDisplayCurrency(amount, rowCurrency);
+      if (amt == null) continue;
 
-      monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
-      monthly[ym].budget += amt;
+      monthly[ym] ??= createCurrencyTotals();
+      addCurrencyAmount(monthly, ym, "budget", amt);
       monthlyBudgetTotals[ym] = (monthlyBudgetTotals[ym] || 0) + amt;
     }
 
@@ -465,54 +566,40 @@ serve(async (req: Request): Promise<Response> => {
       for (let day = 1; day <= daysInMonth; day++) {
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         if (dateStr < fromStr || dateStr > toStr) continue;
-        daily[dateStr] ??= { spent: 0, budget: 0 };
-        daily[dateStr].budget += perDay;
+        ensureDaily(dateStr).budget += perDay;
       }
     }
 
     const sortedDates = Object.keys(daily).sort();
-    let running = 0;
+    let budgetRemainingToDate = 0;
+    let netCashflowToDate = 0;
     let totalSpent = 0;
     let totalBudget = 0;
-    const deltas: number[] = [];
+    let totalIncome = 0;
+    const budgetDeltas: number[] = [];
+    const cashflowDeltas: number[] = [];
     for (const d of sortedDates) {
-      const net = (daily[d].budget || 0) - (daily[d].spent || 0);
-      deltas.push(net);
-      running += net;
+      const budgetRemaining = (daily[d].budget || 0) - (daily[d].spent || 0);
+      const netCashflow = (daily[d].income || 0) - (daily[d].spent || 0);
+      budgetDeltas.push(budgetRemaining);
+      cashflowDeltas.push(netCashflow);
+      budgetRemainingToDate += budgetRemaining;
+      netCashflowToDate += netCashflow;
       totalSpent += daily[d].spent || 0;
       totalBudget += daily[d].budget || 0;
+      totalIncome += daily[d].income || 0;
     }
 
     const days = sortedDates.length || 1;
     const avgDailySpent = totalSpent / days;
     const avgDailyBudget = totalBudget / days;
-    const avgNetPerDay = deltas.length
-      ? deltas.reduce((a, b) => a + b, 0) / deltas.length
+    const avgDailyIncome = totalIncome / days;
+    const avgDailyBudgetRemaining = budgetDeltas.length
+      ? budgetDeltas.reduce((a, b) => a + b, 0) / budgetDeltas.length
       : 0;
-
-    // Monthly summaries and top categories (last 90 days)
-    const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-
-    for (const e of expenses || []) {
-      const dt = new Date(e.date as string);
-      const ym = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-      monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
-      const rowCurrency = normalizeCurrencyCode(e.currency) || currency;
-      const amt = convertAmount(
-        centsToAmount(e.amount_cents as number),
-        rowCurrency,
-        currency,
-        currencyRates,
-      );
-      monthly[ym].spent += amt;
-      if (e.category) {
-        const key = String(e.category).toLowerCase();
-        if (dt >= ninetyDaysAgo)
-          categoryTotals[key] = (categoryTotals[key] || 0) + amt;
-      }
-    }
-    for (const k in monthly)
-      monthly[k].net = monthly[k].budget - monthly[k].spent;
+    const avgDailyNetCashflow = cashflowDeltas.length
+      ? cashflowDeltas.reduce((a, b) => a + b, 0) / cashflowDeltas.length
+      : 0;
 
     const topCategories = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])
@@ -535,7 +622,10 @@ serve(async (req: Request): Promise<Response> => {
           (1000 * 60 * 60 * 24),
       ),
     );
-    const projectedNoScenario = running + avgNetPerDay * daysUntilTarget;
+    const projectedBudgetRemainingByTarget =
+      budgetRemainingToDate + avgDailyBudgetRemaining * daysUntilTarget;
+    const projectedNetCashflowByTarget =
+      netCashflowToDate + avgDailyNetCashflow * daysUntilTarget;
 
     // Prepare prompt for Gemini
     const perspective =
@@ -546,58 +636,98 @@ serve(async (req: Request): Promise<Response> => {
     const householdMembersSummary =
       mode === "household"
         ? {
-            byUserId: memberTotalsByUser,
+            byMember: Object.fromEntries(
+              Object.values(memberTotalsByUser).map((totals, index) => [
+                `member_${index + 1}`,
+                totals,
+              ]),
+            ),
             byOwnerType: ownerTypeTotals,
           }
         : null;
+    const allCurrenciesInData = Array.from(observedCurrencies).sort();
+    const missingRates = Array.from(missingRateCurrencies).sort();
+    const accountsForPrompt = (accounts || []).map((account) => ({
+      name: account.name ?? null,
+      openingBalance: centsToAmount(account.opening_balance_cents as number),
+      assumedCurrency: displayCurrency,
+      isDefault: account.is_default === true,
+      isSystem: account.is_system === true,
+    }));
+    const rawFinancialProfile = (finProfiles && finProfiles[0]) as Record<
+      string,
+      unknown
+    > | null;
+    const financialHealthProfile = rawFinancialProfile
+      ? Object.fromEntries(
+          Object.entries(rawFinancialProfile).filter(
+            ([key]) =>
+              !["id", "user_id", "created_at", "updated_at"].includes(key),
+          ),
+        )
+      : null;
 
-    const advisoryPrompt = `You are a "Zero-Based Budgeting" Coach for Moneko. Your job is to tell the user the brutal truth about their affordability based ONLY on the provided data.
+    const advisoryPrompt = `You are Moneko's financial scenario coach. Help the user make a practical budgeting decision using ONLY the provided data. Be direct, calm, and useful for real financial stress, not harsh or moralizing.
 
 SCOPE:
 - "we/our/family" -> use Household data.
 - "I/my" -> use Personal data.
+- Current request context: ${actorLabel} asking about ${perspective}.
+- The data may include multiple currencies. Use displayCurrency for comparable math, but never ignore native currency totals.
+- If exchange rates are missing for any native currency, say the affected math is incomplete instead of pretending it is exact.
 
 HARD OUTPUT RULES (violating = failure):
 1. Output MUST be Markdown.
-2. Output MUST be exactly 10–12 visible lines.
+2. Keep the answer concise: 8–14 visible lines.
 3. Header MUST be translated to ${language}: "# YES", "# NO", or "# CAUTION" (e.g. "# OUI").
-4. Tone: Direct, non-judgmental, purely mathematical.
-5. Use ${currencySymbol} for amounts.
+4. Tone: supportive, concrete, non-judgmental.
+5. Use ${currencySymbol} for display-currency amounts and include currency codes when useful.
 
-RECIPES FOR ANALYSIS:
-- Use 'avgNetPerDay' to calculate "Time to Recover" (Cost / DailySurplus).
-- If 'projectedNoScenario' < Cost, the answer is usually NO.
-- Identify what *trade-off* is required (e.g., "This equals 2 weeks of groceries").
+ANALYSIS RULES:
+- First answer the user's actual question, not only affordability.
+- Use net cashflow (income - spending), budget remaining (budget - spending), top categories, accounts, and financial health profile when relevant.
+- For purchase questions, compare the cost against projectedBudgetRemainingByTarget and projectedNetCashflowByTarget.
+- For anxiety, debt, savings, or budget-control questions, give a small next action and one guardrail metric.
+- If data is sparse or missing, state the assumption and give a safer recommendation.
 
 REQUIRED FORMAT (Strictly follow this structure):
 
 # [Translated YES / NO / CAUTION]
-**Verdict:** [Direct answer. e.g. "Safe to buy." or "This exceeds your surplus."]
-**The Math:** [Show the trade-off. e.g. "This cost (${currencySymbol}X) requires Y days of your average daily surplus to pay off."]
-**Trade-off:** [What suffers? e.g. "This eats into your [TopCategory] budget" or "Reduces projected savings by X%".]
+**Verdict:** [Direct answer with confidence level.]
+**Why:** [Use the most relevant numbers, not every number.]
+**Currency note:** [Mention multi-currency context only if it changes confidence.]
+**Trade-off:** [What category, account, or cashflow is affected.]
 **Path to Yes:**
-- [Step 1: Specific trade-off, e.g. "Cut Dining Out by 50% for 1 month"]
-- [Step 2: Timing, e.g. "Wait until [Date] to have cash"]
-- [Optional Step 3]
-**Critical Number:** [The 1 number to watch. e.g. "Daily spending must stay under ${currencySymbol}X"]
+- [One immediate action]
+- [One timing or spending guardrail]
+**Watch:** [The 1 number/category to monitor next.]
 
 USER_QUESTION: ${question}
 TARGET_DATE: ${targetDateStr || "Not specified"}
 
 USER_DATA:
-- Context: ${JSON.stringify({ userId, mode, householdId: mode === "household" ? householdId : null, currency: currencySymbol })}
-- Trends: ${JSON.stringify({
+- Context: ${JSON.stringify({ mode, householdScope: mode === "household", displayCurrency, displayCurrencySymbol: currencySymbol, selectedCurrenciesFromUi: selectedCurrencies, allCurrenciesInData, missingRates })}
+- DisplayCurrencyTrends: ${JSON.stringify({
       daysAnalyzed: days,
+      totalIncomeInPeriod: totalIncome,
       totalSpentInPeriod: totalSpent,
+      totalBudgetInPeriod: totalBudget,
       avgDailySpend: avgDailySpent,
-      avgDailyNetSurplus: avgNetPerDay, // Critical for "Time to Recover"
-      currentCash: running,
-      projectedBalanceAtTarget: projectedNoScenario,
+      avgDailyIncome,
+      avgDailyBudget,
+      avgDailyNetCashflow,
+      avgDailyBudgetRemaining,
+      netCashflowToDate,
+      budgetRemainingToDate,
+      projectedNetCashflowByTarget,
+      projectedBudgetRemainingByTarget,
     })}
-- Monthly: ${JSON.stringify(monthly)}
-- TopSpendCategories: ${JSON.stringify(topCategories)}
-- Goals: ${JSON.stringify(goals || [])}
-- FinancialHealthProfile: ${JSON.stringify((finProfiles && finProfiles[0]) || null)}
+- NativeCurrencyTotals: ${JSON.stringify(nativeCurrencyTotals)}
+- MonthlyDisplayCurrency: ${JSON.stringify(monthly)}
+- TopSpendCategoriesInDisplayCurrency: ${JSON.stringify(topCategories)}
+- Accounts: ${JSON.stringify(accountsForPrompt)}
+- AccountBalanceNote: ${JSON.stringify("Account rows include opening balances only; do not treat them as current cash unless supported by cashflow data.")}
+- FinancialHealthProfile: ${JSON.stringify(financialHealthProfile)}
 ${mode === "household" ? `- HouseholdMembers: ${JSON.stringify(householdMembersSummary)}` : ""}
 
 LANGUAGE:
@@ -615,18 +745,26 @@ LANGUAGE:
     const encoder = new TextEncoder();
 
     const metaPayload = {
-      currency,
+      currency: displayCurrency,
       targetDate: targetDateStr,
       language,
       mode,
       householdId: mode === "household" ? householdId : null,
+      currencies: {
+        selected: selectedCurrencies,
+        observed: allCurrenciesInData,
+        missingRates,
+      },
       stats: {
         windowFrom: fromStr,
         windowTo: toStr,
         daysWithData: days,
-        avgNetPerDay,
-        currentRunningBalance: running,
-        projectedNoScenarioByTarget: projectedNoScenario,
+        avgDailyNetCashflow,
+        avgDailyBudgetRemaining,
+        netCashflowToDate,
+        budgetRemainingToDate,
+        projectedNetCashflowByTarget,
+        projectedBudgetRemainingByTarget,
       },
     };
 
