@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
         supabase,
         userId: authResult.userId,
         selectedAccountIds,
+        targetHouseholdId,
       });
 
       if (duplicateConnections.length) {
@@ -207,12 +208,26 @@ Deno.serve(async (req) => {
     if (body.idempotencyKey) {
       const { data: existingConnection } = await supabase
         .from("bank_connections")
-        .select("id")
+        .select("id, household_id")
         .eq("user_id", authResult.userId)
         .eq("idempotency_key", body.idempotencyKey)
         .maybeSingle();
 
       if (existingConnection) {
+        const existingHouseholdId = existingConnection.household_id ?? null;
+        if (existingHouseholdId !== targetHouseholdId) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "This bank connection attempt belongs to a different wallet space. Please restart bank connection from the current space.",
+              errorCode: "idempotency_scope_mismatch",
+            }),
+            {
+              status: 409,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
         // Fetch accounts for the existing connection
         const { data: existingAccounts } = await supabase
           .from("bank_accounts")
@@ -235,7 +250,7 @@ Deno.serve(async (req) => {
             userId: authResult.userId,
             targetHouseholdId,
             bankAccountIds: (existingAccounts || []).map((account: any) =>
-              String(account.id || "")
+              String(account.id || ""),
             ),
           });
 
@@ -246,8 +261,8 @@ Deno.serve(async (req) => {
               targetHouseholdId: targetHouseholdId,
               accounts: (existingAccounts || []).map((account: any) => ({
                 ...account,
-                linkedWallet: linkedWallets.get(String(account.id || "")) ||
-                  null,
+                linkedWallet:
+                  linkedWallets.get(String(account.id || "")) || null,
               })),
               idempotent: true,
             }),
@@ -265,6 +280,7 @@ Deno.serve(async (req) => {
         supabase,
         institutionId: body.institutionId,
         userId: authResult.userId,
+        targetHouseholdId,
       });
 
       if (duplicateConnections.length) {
@@ -472,10 +488,10 @@ Deno.serve(async (req) => {
       const { error: connectionUpdateError } = await supabase
         .from("bank_connections")
         .update({
-          household_id: targetHouseholdId ?? connectionState.household_id ??
-            null,
-          item_created_at: connectionState.item_created_at ||
-            new Date().toISOString(),
+          household_id:
+            targetHouseholdId ?? connectionState.household_id ?? null,
+          item_created_at:
+            connectionState.item_created_at || new Date().toISOString(),
           first_billing_month_start: billingWindow.firstBillingMonthStart,
           second_billing_month_start: billingWindow.secondBillingMonthStart,
           third_billing_month_start: billingWindow.thirdBillingMonthStart,
@@ -497,11 +513,12 @@ Deno.serve(async (req) => {
       }
 
       const accounts = await getPlaidAccounts(plaidResponse.access_token);
-      const accountsToUpsert = selectedAccountIds.length > 0
-        ? accounts.filter((account) =>
-          selectedAccountIds.includes(account.account_id)
-        )
-        : accounts;
+      const accountsToUpsert =
+        selectedAccountIds.length > 0
+          ? accounts.filter((account) =>
+              selectedAccountIds.includes(account.account_id),
+            )
+          : accounts;
       if (accountsToUpsert.length === 0) {
         throw new Error("No selected Plaid accounts were returned by Plaid");
       }
@@ -535,8 +552,8 @@ Deno.serve(async (req) => {
       });
 
       initialSyncQueued = enqueueResult.enqueued || enqueueResult.duplicate;
-      const shouldKickProcessorNow = enqueueResult.enqueued ||
-        enqueueResult.duplicate;
+      const shouldKickProcessorNow =
+        enqueueResult.enqueued || enqueueResult.duplicate;
       if (shouldKickProcessorNow && SUPABASE_URL && INTERNAL_SERVICE_SECRET) {
         try {
           console.log(
@@ -645,17 +662,23 @@ Deno.serve(async (req) => {
       error,
       context: {
         link_session_id: body.linkSessionId || null,
-        plaid_request_id: error instanceof Error && "requestId" in error
-          ? (error as { requestId?: string }).requestId || null
-          : null,
+        plaid_request_id:
+          error instanceof Error && "requestId" in error
+            ? (error as { requestId?: string }).requestId || null
+            : null,
       },
     });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isScopeMismatch = errorMessage.includes("different space");
     return new Response(
       JSON.stringify({
-        error: "Failed to exchange public token",
+        error: isScopeMismatch
+          ? "Bank connection belongs to a different wallet space"
+          : "Failed to exchange public token",
+        errorCode: isScopeMismatch ? "connection_scope_mismatch" : undefined,
       }),
       {
-        status: 500,
+        status: isScopeMismatch ? 409 : 500,
         headers: { ...headers, "Content-Type": "application/json" },
       },
     );
@@ -666,6 +689,7 @@ async function findDuplicatePlaidConnections(params: {
   supabase: any;
   userId: string;
   selectedAccountIds: string[];
+  targetHouseholdId: string | null;
 }): Promise<string[]> {
   const { data: bankAccounts, error: bankAccountsError } = await params.supabase
     .from("bank_accounts")
@@ -689,7 +713,7 @@ async function findDuplicatePlaidConnections(params: {
     return [];
   }
 
-  const { data: connections, error: connectionsError } = await params.supabase
+  let connectionsQuery = params.supabase
     .from("bank_connections")
     .select("id")
     .eq("user_id", params.userId)
@@ -697,6 +721,12 @@ async function findDuplicatePlaidConnections(params: {
     .is("removed_at", null)
     .in("status", ["pending", "active", "needs_reauth", "error"])
     .in("id", candidateConnectionIds);
+
+  connectionsQuery = params.targetHouseholdId
+    ? connectionsQuery.eq("household_id", params.targetHouseholdId)
+    : connectionsQuery.is("household_id", null);
+
+  const { data: connections, error: connectionsError } = await connectionsQuery;
 
   if (connectionsError) {
     throw connectionsError;
@@ -729,9 +759,10 @@ async function cleanupOrphanPlaidItem(params: {
       JSON.stringify({
         itemId: params.itemId,
         stage: params.stage,
-        error: cleanupError instanceof Error
-          ? cleanupError.message
-          : String(cleanupError),
+        error:
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(cleanupError),
       }),
     );
     return false;
@@ -761,13 +792,14 @@ async function findInstitutionDuplicateConnections(params: {
   supabase: any;
   institutionId: string;
   userId: string;
+  targetHouseholdId: string | null;
 }): Promise<string[]> {
   const institutionId = params.institutionId.trim();
   if (!institutionId) {
     return [];
   }
 
-  const { data: connections, error } = await params.supabase
+  let query = params.supabase
     .from("bank_connections")
     .select("id")
     .eq("user_id", params.userId)
@@ -775,6 +807,12 @@ async function findInstitutionDuplicateConnections(params: {
     .is("removed_at", null)
     .in("status", ["pending", "active", "needs_reauth", "error"])
     .eq("metadata->>institution_id", institutionId);
+
+  query = params.targetHouseholdId
+    ? query.eq("household_id", params.targetHouseholdId)
+    : query.is("household_id", null);
+
+  const { data: connections, error } = await query;
 
   if (error) {
     throw error;

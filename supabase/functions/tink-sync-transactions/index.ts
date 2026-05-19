@@ -1,10 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import { decryptSecret, encryptSecret } from "../shared/token-encryption.ts";
 import {
   type ExpensePreview,
-  type LinkedWalletRecord,
   loadLinkedWalletsForBankAccounts,
   persistTinkTransactions,
   sanitizeOptionalUuid,
@@ -108,6 +108,30 @@ Deno.serve(async (req) => {
     let resolvedTargetHouseholdId = sanitizeOptionalUuid(
       body.targetHouseholdId,
     );
+    if (body.targetHouseholdId && !resolvedTargetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      resolvedTargetHouseholdId &&
+      !authResult.isInternalService &&
+      !(await assertScopeAccess(
+        supabase,
+        authResult.userId,
+        resolvedTargetHouseholdId,
+      ))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
 
     // Handle credentialsId from Tink Link callback
     // When user completes bank connection in Tink Link, we receive credentialsId and state
@@ -154,11 +178,28 @@ Deno.serve(async (req) => {
         `[tink-sync] Validated callback for user ${stateRecord.external_user_id} in market ${stateRecord.market}`,
       );
 
-      const stateTargetHouseholdId = stateRecord.target_household_id == null
-        ? null
-        : String(stateRecord.target_household_id);
-      resolvedTargetHouseholdId = resolvedTargetHouseholdId ??
-        sanitizeOptionalUuid(stateTargetHouseholdId);
+      const stateTargetHouseholdId =
+        stateRecord.target_household_id == null
+          ? null
+          : String(stateRecord.target_household_id);
+      const resolvedStateHouseholdId = sanitizeOptionalUuid(
+        stateTargetHouseholdId,
+      );
+      if (
+        resolvedTargetHouseholdId &&
+        resolvedStateHouseholdId !== resolvedTargetHouseholdId
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "Bank link state belongs to a different wallet space",
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+      resolvedTargetHouseholdId = resolvedStateHouseholdId;
 
       // Persist credentialsId immediately (even if token exchange fails later).
       // This prevents the user from being forced into ADD mode (duplicate credentials) on retry.
@@ -236,8 +277,8 @@ Deno.serve(async (req) => {
               name: matched.providerName,
               accessToken: tokenResponse.access_token,
             });
-            institutionLogo = provider?.images?.icon ||
-              provider?.images?.banner || null;
+            institutionLogo =
+              provider?.images?.icon || provider?.images?.banner || null;
           } catch (error) {
             console.warn(
               "[tink-sync] Unable to resolve provider image",
@@ -261,10 +302,9 @@ Deno.serve(async (req) => {
         ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
         : null;
 
-      // Use external_user_id as provider_item_id for stable identifier
-      // This ensures reconnections UPDATE the same connection instead of creating duplicates
-      // Format: tink_4f42e85a-4637-41fb-8fc5-f81933c83861-ie
-      const providerItemId = `tink_${stateRecord.external_user_id}`;
+      const providerItemId = resolvedTargetHouseholdId
+        ? `tink_${stateRecord.external_user_id}_${resolvedTargetHouseholdId}`
+        : `tink_${stateRecord.external_user_id}`;
 
       let upsertResult;
       try {
@@ -278,6 +318,7 @@ Deno.serve(async (req) => {
           expiresAt,
           countryCode: stateRecord.market,
           idempotencyKey: null,
+          householdId: resolvedTargetHouseholdId,
           metadata: {
             scope: tokenResponse.scope || null,
             credentials_id: body.credentialsId,
@@ -287,6 +328,11 @@ Deno.serve(async (req) => {
           },
         });
       } catch (upsertError) {
+        const upsertMessage =
+          upsertError instanceof Error
+            ? upsertError.message
+            : String(upsertError);
+        const isScopeMismatch = upsertMessage.includes("different space");
         console.error("[tink-sync] Failed to create connection", {
           error: upsertError,
           params: {
@@ -298,13 +344,13 @@ Deno.serve(async (req) => {
         });
         return new Response(
           JSON.stringify({
-            error: "Failed to create bank connection",
-            details: upsertError instanceof Error
-              ? upsertError.message
-              : String(upsertError),
+            error: isScopeMismatch
+              ? "Bank connection belongs to a different wallet space"
+              : "Failed to create bank connection",
+            details: upsertMessage,
           }),
           {
-            status: 500,
+            status: isScopeMismatch ? 409 : 500,
             headers: { ...headers, "Content-Type": "application/json" },
           },
         );
@@ -482,17 +528,6 @@ Deno.serve(async (req) => {
       accountMap.set(key, account);
     });
 
-    const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
-      {
-        supabase: supabase as any,
-        userId: authResult.userId,
-        targetHouseholdId: resolvedTargetHouseholdId,
-        bankAccountIds: (bankAccounts || []).map(
-          (account: BankAccountRow) => account.id,
-        ),
-      },
-    );
-
     const summaries: SyncSummary[] = [];
     let totalInserted = 0;
     let totalUpdated = 0;
@@ -504,7 +539,6 @@ Deno.serve(async (req) => {
       const summary = await syncConnection({
         connection,
         accountMap,
-        linkedWalletsByBankAccountId,
         supabase: supabase as any,
         userId: authResult.userId,
         accountFilter,
@@ -539,9 +573,10 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    const errorObject = error instanceof Error
-      ? { message: error.message, name: error.name, stack: error.stack }
-      : error;
+    const errorObject =
+      error instanceof Error
+        ? { message: error.message, name: error.name, stack: error.stack }
+        : error;
     console.error("[tink-sync] Unexpected error", errorObject);
     try {
       console.error(
@@ -567,7 +602,6 @@ Deno.serve(async (req) => {
 async function syncConnection(params: {
   connection: BankConnectionRow;
   accountMap: Map<string, BankAccountRow>;
-  linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
   // Avoid coupling to generated SupabaseClient schema types in Deno.
   supabase: any;
   userId: string;
@@ -631,7 +665,8 @@ async function syncConnection(params: {
       .update({ last_sync_attempt_at: new Date().toISOString() })
       .eq("id", params.connection.id);
 
-    const accessTokenEncryptedRaw = params.connection.access_token_encrypted ||
+    const accessTokenEncryptedRaw =
+      params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
     if (!accessTokenEncryptedRaw) {
       throw new Error("Missing Tink access token");
@@ -648,7 +683,8 @@ async function syncConnection(params: {
     ) {
       const expiresAt = new Date(params.connection.expires_at);
       // Refresh if expired or expiring within 5 minutes
-      const shouldRefresh = Number.isFinite(expiresAt.getTime()) &&
+      const shouldRefresh =
+        Number.isFinite(expiresAt.getTime()) &&
         expiresAt.getTime() <= Date.now() + 5 * 60 * 1000;
 
       if (shouldRefresh) {
@@ -686,8 +722,8 @@ async function syncConnection(params: {
               .from("bank_connections")
               .update({
                 access_token_encrypted: encryptedAccess,
-                refresh_token_encrypted: encryptedRefresh ||
-                  params.connection.refresh_token_encrypted,
+                refresh_token_encrypted:
+                  encryptedRefresh || params.connection.refresh_token_encrypted,
                 expires_at: expiresAtNext,
               })
               .eq("id", params.connection.id);
@@ -701,12 +737,12 @@ async function syncConnection(params: {
               },
               ...(encryptedRefresh
                 ? [
-                  {
-                    bank_connection_id: params.connection.id,
-                    token_type: "refresh",
-                    token_encrypted: encryptedRefresh,
-                  },
-                ]
+                    {
+                      bank_connection_id: params.connection.id,
+                      token_type: "refresh",
+                      token_encrypted: encryptedRefresh,
+                    },
+                  ]
                 : []),
             ]);
 
@@ -764,16 +800,40 @@ async function syncConnection(params: {
       });
     }
 
-    let cursor: string | undefined = params.cursorOverride === "reset"
-      ? undefined
-      : params.cursorOverride ||
-        params.connection.cursor ||
-        params.connection.plaid_cursor ||
-        undefined ||
-        undefined;
+    let cursor: string | undefined =
+      params.cursorOverride === "reset"
+        ? undefined
+        : params.cursorOverride ||
+          params.connection.cursor ||
+          params.connection.plaid_cursor ||
+          undefined ||
+          undefined;
     const processedAccounts = new Set<string>();
     let nextPage = cursor;
     let didLogSample = false;
+    const connectionHouseholdId = params.connection.household_id ?? null;
+    if (
+      params.targetHouseholdId &&
+      params.targetHouseholdId !== connectionHouseholdId
+    ) {
+      throw new Error("Bank connection belongs to a different space");
+    }
+    const effectiveTargetHouseholdId = connectionHouseholdId;
+    const connectionBankAccountIds = Array.from(params.accountMap.values())
+      .filter(
+        (account) =>
+          account.bank_connection_id === params.connection.id &&
+          (!params.accountFilter || params.accountFilter.id === account.id),
+      )
+      .map((account) => account.id);
+    const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
+      {
+        supabase: params.supabase,
+        userId: params.userId,
+        targetHouseholdId: effectiveTargetHouseholdId,
+        bankAccountIds: connectionBankAccountIds,
+      },
+    );
 
     do {
       const response = await syncTinkTransactions(accessToken, nextPage);
@@ -802,11 +862,9 @@ async function syncConnection(params: {
           continue;
         }
 
-        const linkedWallet = params.linkedWalletsByBankAccountId.get(
-          account.id,
-        );
-        const resolvedHouseholdId = linkedWallet?.household_id ??
-          params.targetHouseholdId ?? null;
+        const linkedWallet = linkedWalletsByBankAccountId.get(account.id);
+        const resolvedHouseholdId =
+          linkedWallet?.household_id ?? effectiveTargetHouseholdId;
 
         await params.supabase
           .from("expenses")

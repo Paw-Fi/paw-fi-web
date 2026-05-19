@@ -117,12 +117,78 @@ Deno.serve(async (req: Request) => {
     }
 
     const linkedBankAccountId = sanitizeUuid(body.linkedBankAccountId ?? null);
+    if (linkedBankAccountId != null) {
+      const { data: bankAccount, error: bankAccountError } = await supabase
+        .from("bank_accounts")
+        .select("id, user_id, bank_connection_id")
+        .eq("id", linkedBankAccountId)
+        .maybeSingle();
+
+      if (bankAccountError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to load linked bank account",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      if (!bankAccount || bankAccount.user_id !== userId) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Linked bank account not found",
+            code: "VALIDATION_ERROR",
+          },
+          404,
+        );
+      }
+
+      const { data: bankConnection, error: bankConnectionError } =
+        await supabase
+          .from("bank_connections")
+          .select("id, user_id, household_id, removed_at, status")
+          .eq("id", bankAccount.bank_connection_id)
+          .maybeSingle();
+
+      if (bankConnectionError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to load bank connection",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      const connectionHouseholdId = bankConnection?.household_id ?? null;
+      if (
+        !bankConnection ||
+        bankConnection.user_id !== userId ||
+        bankConnection.removed_at != null ||
+        bankConnection.status === "disabled" ||
+        connectionHouseholdId !== householdId
+      ) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Linked bank account belongs to a different wallet space",
+            code: "VALIDATION_ERROR",
+          },
+          409,
+        );
+      }
+    }
     const openingBalanceCents = Number.isFinite(body.openingBalanceCents)
       ? Math.round(Number(body.openingBalanceCents))
       : 0;
-    const goalAmountCents = body.goalAmountCents == null
-      ? null
-      : Math.round(Number(body.goalAmountCents));
+    const goalAmountCents =
+      body.goalAmountCents == null
+        ? null
+        : Math.round(Number(body.goalAmountCents));
 
     const shouldSetDefault = body.isDefault === true;
 

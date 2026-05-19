@@ -220,6 +220,23 @@ Deno.serve(async (req) => {
         });
       }
 
+      const connectionHouseholdId = connection.household_id ?? null;
+      if (
+        body.targetHouseholdId &&
+        targetHouseholdId !== connectionHouseholdId
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "Bank connection belongs to a different wallet space",
+            errorCode: "connection_scope_mismatch",
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       const selectedAccountIds = normalizePlaidSelectedAccountIds(
         body.selectedAccounts,
       );
@@ -273,11 +290,11 @@ Deno.serve(async (req) => {
         effectiveSelectedAccountIds.length === 0
       ) {
         const metadataAccountIds = Array.isArray(
-            metadata.plaid_selected_account_ids,
-          )
+          metadata.plaid_selected_account_ids,
+        )
           ? metadata.plaid_selected_account_ids
-            .map((value) => String(value || "").trim())
-            .filter(Boolean)
+              .map((value) => String(value || "").trim())
+              .filter(Boolean)
           : [];
         if (metadataAccountIds.length > 0) {
           effectiveSelectedAccountIds = Array.from(
@@ -303,7 +320,7 @@ Deno.serve(async (req) => {
                     account.provider_account_id ||
                       account.plaid_account_id ||
                       "",
-                  ).trim()
+                  ).trim(),
                 )
                 .filter(Boolean),
             ),
@@ -311,7 +328,8 @@ Deno.serve(async (req) => {
         }
       }
 
-      const encryptedToken = connection.access_token_encrypted ||
+      const encryptedToken =
+        connection.access_token_encrypted ||
         connection.plaid_access_token_encrypted;
       if (!encryptedToken) {
         return new Response(
@@ -335,28 +353,30 @@ Deno.serve(async (req) => {
         throw existingBankAccountsError;
       }
 
-      const existingAccountIds = ((existingBankAccounts || []) as Array<
-        Record<string, unknown>
-      >)
+      const existingAccountIds = (
+        (existingBankAccounts || []) as Array<Record<string, unknown>>
+      )
         .map((account) =>
-          String(account.provider_account_id || account.plaid_account_id || "")
-            .trim()
+          String(
+            account.provider_account_id || account.plaid_account_id || "",
+          ).trim(),
         )
         .filter(Boolean);
       const accounts = await getPlaidAccounts(accessToken);
-      const accountsToUpsert = effectiveSelectedAccountIds.length > 0
-        ? accounts.filter((account) =>
-          effectiveSelectedAccountIds.includes(account.account_id)
-        )
-        : accounts;
+      const accountsToUpsert =
+        effectiveSelectedAccountIds.length > 0
+          ? accounts.filter((account) =>
+              effectiveSelectedAccountIds.includes(account.account_id),
+            )
+          : accounts;
       const returnedAccountIds = accountsToUpsert
         .map((account) => account.account_id?.trim())
         .filter((accountId): accountId is string => Boolean(accountId));
       const missingSelectedAccountIds = requiresAccountSelection
         ? findMissingPlaidSelectedAccountIds({
-          selectedAccountIds: effectiveSelectedAccountIds,
-          returnedAccountIds,
-        })
+            selectedAccountIds: effectiveSelectedAccountIds,
+            returnedAccountIds,
+          })
         : [];
 
       if (missingSelectedAccountIds.length > 0) {
@@ -432,13 +452,13 @@ Deno.serve(async (req) => {
         plaid_selected_account_ids: effectiveSelectedAccountIds,
         plaid_disabled_account_ids: accountIdsToDisable,
         institution_id: body.institutionId || metadata.institution_id || null,
-        institution_name: body.institutionName || metadata.institution_name ||
-          null,
+        institution_name:
+          body.institutionName || metadata.institution_name || null,
       };
       const { error: updateError } = await supabase
         .from("bank_connections")
         .update({
-          household_id: targetHouseholdId ?? connection.household_id ?? null,
+          household_id: connectionHouseholdId,
           status: "active",
           item_status: requiresAccountSelection
             ? "accounts_updated"
@@ -474,7 +494,7 @@ Deno.serve(async (req) => {
       const linkedWallets = await loadLinkedWalletsForBankAccounts({
         supabase,
         userId: authResult.userId,
-        targetHouseholdId: targetHouseholdId ?? connection.household_id ?? null,
+        targetHouseholdId: connectionHouseholdId,
         bankAccountIds: upsertAccountsResult.records.map((record) => record.id),
       });
 
@@ -486,8 +506,7 @@ Deno.serve(async (req) => {
           : "reconnect",
         payload: {
           updateModeComplete: true,
-          targetHouseholdId: targetHouseholdId ?? connection.household_id ??
-            null,
+          targetHouseholdId: connectionHouseholdId,
         },
       });
 
@@ -496,8 +515,7 @@ Deno.serve(async (req) => {
           success: true,
           action: body.action,
           connectionId: connection.id,
-          targetHouseholdId: targetHouseholdId ?? connection.household_id ??
-            null,
+          targetHouseholdId: connectionHouseholdId,
           accounts: upsertAccountsResult.records.map((record) => ({
             ...record,
             linkedWallet: linkedWallets.get(record.id) || null,
@@ -580,7 +598,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const encryptedToken = connection.access_token_encrypted ||
+    const encryptedToken =
+      connection.access_token_encrypted ||
       connection.plaid_access_token_encrypted;
     if (!encryptedToken) {
       return new Response(

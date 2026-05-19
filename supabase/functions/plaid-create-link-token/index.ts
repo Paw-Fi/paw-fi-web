@@ -1,10 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
 import { derivePlaidLinkProducts } from "../shared/plaid-lifecycle.ts";
 import { resolvePlaidCountryCode } from "../shared/plaid-country.ts";
+import { sanitizeOptionalUuid } from "../shared/bank-sync.ts";
 import {
   createPlaidLinkToken,
   getPlaidConfig,
@@ -29,6 +31,7 @@ interface CreateLinkTokenRequest {
   countryCode?: string;
   platform?: string;
   institutionId?: string;
+  targetHouseholdId?: string;
   updateReason?: string;
   mode?: "new" | "update" | "reconnect" | "duplicate_blocked";
 }
@@ -85,27 +88,53 @@ Deno.serve(async (req) => {
       supabase,
       authResult.userId,
     );
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    if (body.targetHouseholdId && !targetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      targetHouseholdId &&
+      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
 
     let accessToken: string | undefined;
     let connectionCountryCode: string | undefined;
     let resolvedConnectionId = body.connectionId?.trim() || undefined;
-    let modeUsed = body.mode ??
-      (resolvedConnectionId != null ? "update" : "new");
+    let modeUsed =
+      body.mode ?? (resolvedConnectionId != null ? "update" : "new");
     let relinkState = body.updateReason?.trim() || undefined;
 
     const requestedInstitutionId = body.institutionId?.trim();
     if (!resolvedConnectionId && (requestedInstitutionId?.length ?? 0) > 0) {
+      let duplicateQuery = supabase
+        .from("bank_connections")
+        .select(
+          "id, user_id, provider, status, relink_state, country_code, access_token_encrypted, plaid_access_token_encrypted",
+        )
+        .eq("user_id", authResult.userId)
+        .eq("provider", PLAID_PROVIDER)
+        .eq("metadata->>institution_id", requestedInstitutionId!)
+        .is("removed_at", null)
+        .in("status", ["active", "needs_reauth"]);
+
+      duplicateQuery = targetHouseholdId
+        ? duplicateQuery.eq("household_id", targetHouseholdId)
+        : duplicateQuery.is("household_id", null);
+
       const { data: duplicateConnection, error: duplicateError } =
-        await supabase
-          .from("bank_connections")
-          .select(
-            "id, user_id, provider, status, relink_state, country_code, access_token_encrypted, plaid_access_token_encrypted",
-          )
-          .eq("user_id", authResult.userId)
-          .eq("provider", PLAID_PROVIDER)
-          .eq("metadata->>institution_id", requestedInstitutionId!)
-          .is("removed_at", null)
-          .in("status", ["active", "needs_reauth"])
+        await duplicateQuery
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -117,9 +146,10 @@ Deno.serve(async (req) => {
       if (duplicateConnection?.id) {
         resolvedConnectionId = duplicateConnection.id;
         relinkState = duplicateConnection.relink_state?.trim() || relinkState;
-        modeUsed = duplicateConnection.status === "needs_reauth"
-          ? "reconnect"
-          : "update";
+        modeUsed =
+          duplicateConnection.status === "needs_reauth"
+            ? "reconnect"
+            : "update";
       }
     }
 
@@ -154,7 +184,7 @@ Deno.serve(async (req) => {
       const { data: connection, error: connectionError } = await supabase
         .from("bank_connections")
         .select(
-          "id, user_id, provider, country_code, relink_state, access_token_encrypted, plaid_access_token_encrypted",
+          "id, user_id, provider, household_id, country_code, relink_state, access_token_encrypted, plaid_access_token_encrypted",
         )
         .eq("id", resolvedConnectionId)
         .eq("provider", PLAID_PROVIDER)
@@ -181,14 +211,31 @@ Deno.serve(async (req) => {
         });
       }
 
-      const encryptedToken = connection.access_token_encrypted ||
+      if (
+        body.targetHouseholdId &&
+        targetHouseholdId !== (connection.household_id ?? null)
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "Bank connection belongs to a different wallet space",
+            errorCode: "connection_scope_mismatch",
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const encryptedToken =
+        connection.access_token_encrypted ||
         connection.plaid_access_token_encrypted;
       if (encryptedToken) {
         accessToken = await decryptSecret(encryptedToken);
       }
 
-      connectionCountryCode = connection.country_code?.trim().toUpperCase() ||
-        undefined;
+      connectionCountryCode =
+        connection.country_code?.trim().toUpperCase() || undefined;
       relinkState = connection.relink_state?.trim() || relinkState;
     }
 
@@ -196,7 +243,7 @@ Deno.serve(async (req) => {
       isConvertedPaidUser: accessState.isConvertedPaidUser,
       enableRecurringTransactionsProduct:
         Deno.env.get("PLAID_ENABLE_RECURRING_FOR_PAID")?.toLowerCase() ===
-          "true",
+        "true",
     });
 
     const countryCode = resolvePlaidCountryCode({
@@ -247,9 +294,8 @@ Deno.serve(async (req) => {
         updateReason: relinkState || null,
         modeUsed,
         linkCompletionNonce,
-        updateCompletionNonce: accessToken && resolvedConnectionId
-          ? linkCompletionNonce
-          : null,
+        updateCompletionNonce:
+          accessToken && resolvedConnectionId ? linkCompletionNonce : null,
       }),
       {
         status: 200,

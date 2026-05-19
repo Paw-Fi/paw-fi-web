@@ -147,14 +147,15 @@ export async function upsertBankConnection(params: {
   householdId?: string | null;
   metadata?: Record<string, unknown> | null;
 }): Promise<{ connectionId: string; isNewConnection: boolean }> {
-  const normalizedCountryCode = resolvePlaidCountryCode({
-    requestedCountryCode: params.countryCode,
-  }) ?? null;
+  const normalizedCountryCode =
+    resolvePlaidCountryCode({
+      requestedCountryCode: params.countryCode,
+    }) ?? null;
 
   const selectExisting = async () => {
     const { data, error } = await params.supabase
       .from("bank_connections")
-      .select("id, metadata, country_code")
+      .select("id, metadata, country_code, household_id")
       .eq("user_id", params.userId)
       .eq("provider", params.provider)
       .eq("provider_item_id", params.providerItemId)
@@ -167,12 +168,19 @@ export async function upsertBankConnection(params: {
     return data as {
       id: string;
       country_code?: string | null;
+      household_id?: string | null;
       metadata?: Record<string, unknown> | null;
     } | null;
   };
 
   const existing = await selectExisting();
   if (existing?.id) {
+    const existingHouseholdId = existing.household_id ?? null;
+    const requestedHouseholdId = params.householdId ?? null;
+    if (existingHouseholdId !== requestedHouseholdId) {
+      throw new Error("Bank connection already belongs to a different space");
+    }
+
     const mergedMetadata = {
       ...(existing.metadata || {}),
       ...(params.metadata || {}),
@@ -183,21 +191,19 @@ export async function upsertBankConnection(params: {
       .update({
         access_token_encrypted: params.accessTokenEncrypted,
         plaid_access_token_encrypted: params.accessTokenEncrypted,
-        refresh_token_encrypted: params.refreshTokenEncrypted === undefined
-          ? undefined
-          : params.refreshTokenEncrypted,
-        expires_at: params.expiresAt === undefined
-          ? undefined
-          : params.expiresAt,
-        country_code: resolvePlaidCountryCode({
-          requestedCountryCode: normalizedCountryCode,
-          connectionCountryCode: existing.country_code,
-        }) ?? null,
+        refresh_token_encrypted:
+          params.refreshTokenEncrypted === undefined
+            ? undefined
+            : params.refreshTokenEncrypted,
+        expires_at:
+          params.expiresAt === undefined ? undefined : params.expiresAt,
+        country_code:
+          resolvePlaidCountryCode({
+            requestedCountryCode: normalizedCountryCode,
+            connectionCountryCode: existing.country_code,
+          }) ?? null,
         duplicate_group_key: params.duplicateGroupKey || undefined,
         idempotency_key: params.idempotencyKey || undefined,
-        household_id: params.householdId === undefined
-          ? undefined
-          : params.householdId,
         status: "active",
         metadata: mergedMetadata,
         updated_at: new Date().toISOString(),
@@ -249,6 +255,12 @@ export async function upsertBankConnection(params: {
     throw error;
   }
 
+  const retryHouseholdId = retry.household_id ?? null;
+  const requestedHouseholdId = params.householdId ?? null;
+  if (retryHouseholdId !== requestedHouseholdId) {
+    throw new Error("Bank connection already belongs to a different space");
+  }
+
   const mergedMetadata = {
     ...(retry.metadata || {}),
     ...(params.metadata || {}),
@@ -259,19 +271,18 @@ export async function upsertBankConnection(params: {
     .update({
       access_token_encrypted: params.accessTokenEncrypted,
       plaid_access_token_encrypted: params.accessTokenEncrypted,
-      refresh_token_encrypted: params.refreshTokenEncrypted === undefined
-        ? undefined
-        : params.refreshTokenEncrypted,
+      refresh_token_encrypted:
+        params.refreshTokenEncrypted === undefined
+          ? undefined
+          : params.refreshTokenEncrypted,
       expires_at: params.expiresAt === undefined ? undefined : params.expiresAt,
-      country_code: resolvePlaidCountryCode({
-        requestedCountryCode: normalizedCountryCode,
-        connectionCountryCode: retry.country_code,
-      }) ?? null,
+      country_code:
+        resolvePlaidCountryCode({
+          requestedCountryCode: normalizedCountryCode,
+          connectionCountryCode: retry.country_code,
+        }) ?? null,
       duplicate_group_key: params.duplicateGroupKey || undefined,
       idempotency_key: params.idempotencyKey || undefined,
-      household_id: params.householdId === undefined
-        ? undefined
-        : params.householdId,
       status: "active",
       metadata: mergedMetadata,
       updated_at: new Date().toISOString(),
@@ -393,7 +404,9 @@ function inferPlaidRecurringRules(params: {
 
   const groups = new Map<string, RecurrenceCandidateRow[]>();
   for (const row of rows.values()) {
-    const merchantKey = normalizeRecurringMerchant(row.merchant || row.raw_text);
+    const merchantKey = normalizeRecurringMerchant(
+      row.merchant || row.raw_text,
+    );
     if (!merchantKey) continue;
     const key = [
       row.bank_account_id,
@@ -409,7 +422,7 @@ function inferPlaidRecurringRules(params: {
   const rules = new Map<string, Record<string, unknown>>();
   for (const group of groups.values()) {
     const currentRows = group.filter((row) =>
-      currentTransactionById.has(row.provider_transaction_id)
+      currentTransactionById.has(row.provider_transaction_id),
     );
     if (!currentRows.length) continue;
 
@@ -425,7 +438,9 @@ function inferPlaidRecurringRules(params: {
 
     for (const row of currentRows) {
       if (!amountCluster.includes(row)) continue;
-      const transaction = currentTransactionById.get(row.provider_transaction_id);
+      const transaction = currentTransactionById.get(
+        row.provider_transaction_id,
+      );
       const providerHint = buildPlaidRecurringProviderHint(transaction);
       rules.set(row.provider_transaction_id, {
         frequency: pattern.frequency,
@@ -487,7 +502,7 @@ function largestAmountCluster(
 
   for (const seed of sorted) {
     const cluster = sorted.filter((row) =>
-      amountsCloseEnough(row.amount_cents, seed.amount_cents)
+      amountsCloseEnough(row.amount_cents, seed.amount_cents),
     );
     if (cluster.length > best.length) {
       best = cluster;
@@ -506,8 +521,9 @@ function amountsCloseEnough(a: number, b: number): boolean {
 function detectRecurrencePattern(
   rows: RecurrenceCandidateRow[],
 ): RecurrencePattern | null {
-  const dates = Array.from(new Set(rows.map((row) => row.date.slice(0, 10))))
-    .sort();
+  const dates = Array.from(
+    new Set(rows.map((row) => row.date.slice(0, 10))),
+  ).sort();
   if (dates.length < 2) return null;
 
   const dayGaps: number[] = [];
@@ -543,8 +559,8 @@ function detectRecurrencePattern(
   ];
 
   for (const candidate of candidates) {
-    const matches = dayGaps.filter((gap) =>
-      gap >= candidate.min && gap <= candidate.max
+    const matches = dayGaps.filter(
+      (gap) => gap >= candidate.min && gap <= candidate.max,
     );
     if (matches.length >= candidate.needsIntervals) {
       const averageGap = Math.round(
@@ -581,8 +597,8 @@ function buildPlaidRecurringProviderHint(
 ): Record<string, unknown> | null {
   if (!transaction) return null;
   const raw = transaction as PlaidTransaction & Record<string, unknown>;
-  const streamId = raw.recurring_stream_id || raw.stream_id ||
-    raw.recurring_transaction_id;
+  const streamId =
+    raw.recurring_stream_id || raw.stream_id || raw.recurring_transaction_id;
   if (!streamId) return null;
   return {
     plaid_stream_id: streamId,
@@ -594,8 +610,8 @@ function buildPlaidRecurringRuleFromProviderHint(
   transaction: PlaidTransaction,
 ): Record<string, unknown> | null {
   const raw = transaction as PlaidTransaction & Record<string, unknown>;
-  const streamId = raw.recurring_stream_id || raw.stream_id ||
-    raw.recurring_transaction_id;
+  const streamId =
+    raw.recurring_stream_id || raw.stream_id || raw.recurring_transaction_id;
   if (!streamId) return null;
   const frequency = mapPlaidFrequencyToRecurrence(raw.frequency);
   if (!frequency) return null;
@@ -618,7 +634,11 @@ function mapPlaidFrequencyToRecurrence(value: unknown): {
   frequency: RecurrencePattern["frequency"];
   interval?: number;
 } | null {
-  switch (String(value || "").trim().toUpperCase()) {
+  switch (
+    String(value || "")
+      .trim()
+      .toUpperCase()
+  ) {
     case "DAILY":
       return { frequency: "daily" };
     case "WEEKLY":
@@ -660,11 +680,12 @@ export async function upsertPlaidAccounts(
     provider: PLAID_PROVIDER,
     plaid_account_id: account.account_id,
     provider_account_id: account.account_id,
-    name: account.name || account.official_name ||
-      `Account ${account.account_id}`,
+    name:
+      account.name || account.official_name || `Account ${account.account_id}`,
     official_name: account.official_name || null,
     mask: account.mask || null,
-    currency: account.balances?.iso_currency_code ||
+    currency:
+      account.balances?.iso_currency_code ||
       account.balances?.unofficial_currency_code ||
       "USD",
     type: account.type || null,
@@ -675,7 +696,9 @@ export async function upsertPlaidAccounts(
 
   const { data, error } = await params.supabase
     .from("bank_accounts")
-    .upsert(payload, { onConflict: "provider,provider_account_id" })
+    .upsert(payload, {
+      onConflict: "bank_connection_id,provider,provider_account_id",
+    })
     .select(
       "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype",
     );
@@ -780,7 +803,7 @@ export async function persistPlaidTransactions(
     }));
 
   const normalized = mapped.map((record) =>
-    normalizeCurrency(record, params.accountCurrency)
+    normalizeCurrency(record, params.accountCurrency),
   );
   const currencyMismatches = normalized.filter(
     (entry) => entry.mismatch,
@@ -814,6 +837,7 @@ export async function persistPlaidTransactions(
     )
     .eq("user_id", params.userId)
     .eq("provider", PLAID_PROVIDER)
+    .eq("bank_account_id", params.bankAccountId)
     .in("provider_transaction_id", lookupIds);
 
   if (selectError) {
@@ -911,7 +935,8 @@ export async function upsertTinkAccounts(
     name: account.name || `Account ${account.id}`,
     official_name: null,
     mask: account.accountNumber?.iban || null,
-    currency: account.balances?.booked?.currencyCode ||
+    currency:
+      account.balances?.booked?.currencyCode ||
       account.balances?.available?.currencyCode ||
       "USD",
     type: account.type?.name || null,
@@ -922,7 +947,9 @@ export async function upsertTinkAccounts(
 
   const { data, error } = await params.supabase
     .from("bank_accounts")
-    .upsert(payload, { onConflict: "provider,provider_account_id" })
+    .upsert(payload, {
+      onConflict: "bank_connection_id,provider,provider_account_id",
+    })
     .select(
       "id, plaid_account_id, provider_account_id, name, currency, mask, type, subtype",
     );
@@ -966,7 +993,7 @@ export async function persistTinkTransactions(
     }));
 
   const normalized = mapped.map((record) =>
-    normalizeCurrency(record, params.accountCurrency)
+    normalizeCurrency(record, params.accountCurrency),
   );
   const currencyMismatches = normalized.filter(
     (entry) => entry.mismatch,
@@ -992,6 +1019,7 @@ export async function persistTinkTransactions(
     .select("id, provider_transaction_id")
     .eq("user_id", params.userId)
     .eq("provider", TINK_PROVIDER)
+    .eq("bank_account_id", params.bankAccountId)
     .in("provider_transaction_id", providerIds);
 
   if (selectError) {

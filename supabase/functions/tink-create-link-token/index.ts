@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import {
   createTinkLinkUrl,
   createTinkUserAuthorizationCode,
@@ -81,6 +82,29 @@ Deno.serve(async (req) => {
     const marketSuffix = market.toLowerCase();
     const externalUserId = `${authResult.userId}-${marketSuffix}`;
     const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    if (body.targetHouseholdId && !targetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      targetHouseholdId &&
+      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
+    const expectedProviderItemId = targetHouseholdId
+      ? `tink_${externalUserId}_${targetHouseholdId}`
+      : `tink_${externalUserId}`;
 
     const intent = body.intent || "auto";
 
@@ -117,7 +141,6 @@ Deno.serve(async (req) => {
         if (!existingCredentialsId) {
           // Prefer exact provider_item_id match (stable: tink_{external_user_id}).
           // This works even if country_code wasn't persisted on older rows.
-          const expectedProviderItemId = `tink_${externalUserId}`;
           const { data: byProviderItem } = await supabase
             .from("bank_connections")
             .select("id, status, country_code, metadata")
@@ -158,13 +181,19 @@ Deno.serve(async (req) => {
         }
 
         if (!existingCredentialsId) {
-          const { data: latest } = await supabase
+          let latestQuery = supabase
             .from("bank_connections")
             .select("id, status, country_code, metadata")
             .eq("user_id", authResult.userId)
             .eq("provider", TINK_PROVIDER)
             .eq("country_code", market.toUpperCase())
-            .neq("status", "disabled")
+            .neq("status", "disabled");
+
+          latestQuery = targetHouseholdId
+            ? latestQuery.eq("household_id", targetHouseholdId)
+            : latestQuery.is("household_id", null);
+
+          const { data: latest } = await latestQuery
             .order("updated_at", { ascending: false })
             .limit(1);
 

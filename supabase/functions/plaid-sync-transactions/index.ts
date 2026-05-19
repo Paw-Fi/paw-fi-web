@@ -188,6 +188,34 @@ Deno.serve(async (req) => {
       );
     }
 
+    const requestedTargetHouseholdId = sanitizeOptionalUuid(
+      body.targetHouseholdId,
+    );
+    if (body.targetHouseholdId && !requestedTargetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      requestedTargetHouseholdId &&
+      !authResult.isInternalService &&
+      !(await assertScopeAccess(
+        supabase as any,
+        authResult.userId,
+        requestedTargetHouseholdId,
+      ))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
     const connectionIds = connections.map((conn) => conn.id);
     const { data: bankAccounts, error: bankAccountError } = await supabase
       .from("bank_accounts")
@@ -231,7 +259,7 @@ Deno.serve(async (req) => {
         userId: authResult.userId,
         accountFilter,
         cursorOverride: body.cursorOverride,
-        targetHouseholdId: sanitizeOptionalUuid(body.targetHouseholdId),
+        targetHouseholdId: requestedTargetHouseholdId,
         enforceManualCooldown,
       });
       summaries.push(summary);
@@ -242,7 +270,8 @@ Deno.serve(async (req) => {
       allAdded.push(...summary.addedTransactions);
     }
 
-    const manualCooldownOnly = enforceManualCooldown &&
+    const manualCooldownOnly =
+      enforceManualCooldown &&
       summaries.length > 0 &&
       summaries.every(
         (summary) => summary.errorCode === "MANUAL_SYNC_COOLDOWN",
@@ -281,9 +310,10 @@ Deno.serve(async (req) => {
         },
         connections: summaries,
         addedTransactions: allAdded,
-        syncStatus: body.connectionId && summaries.length == 1
-          ? (summaries[0].syncStatus ?? null)
-          : null,
+        syncStatus:
+          body.connectionId && summaries.length == 1
+            ? (summaries[0].syncStatus ?? null)
+            : null,
       }),
       {
         status: 200,
@@ -399,89 +429,21 @@ async function syncConnection(params: {
       })
       .eq("id", params.connection.id);
 
-    const encryptedToken = params.connection.access_token_encrypted ||
+    const encryptedToken =
+      params.connection.access_token_encrypted ||
       params.connection.plaid_access_token_encrypted;
     if (!encryptedToken) {
       throw new Error("Missing Plaid access token");
     }
     const accessToken = await decryptSecret(encryptedToken);
 
-    let householdId = params.connection.household_id || null;
-    if (!householdId) {
-      const providerItemId = params.connection.provider_item_id;
-      if (!providerItemId) {
-        console.warn(
-          "[plaid-sync] Missing provider_item_id; skipping household ensure",
-        );
-      } else {
-        const rawMeta = params.connection.metadata;
-        const connectionMeta = typeof rawMeta === "object" && rawMeta !== null
-          ? (rawMeta as Record<string, unknown>)
-          : {};
-        const institutionName =
-          (connectionMeta["institution_name"] as string | undefined) ||
-          "Bank Account";
-        const institutionLogo =
-          (connectionMeta["institution_logo"] as string | undefined) || null;
-        const ensureMeta = {
-          ...connectionMeta,
-          institution_name: institutionName,
-          institution_logo: institutionLogo,
-        };
-        try {
-          const { data: ensureResult, error: ensureError } = await params
-            .supabase.rpc("upsert_bank_connection_with_household", {
-              p_user_id: params.userId,
-              p_provider: PLAID_PROVIDER,
-              p_provider_item_id: providerItemId,
-              p_access_token_encrypted: encryptedToken,
-              p_refresh_token_encrypted: null,
-              p_expires_at: null,
-              p_country_code: params.connection.country_code || null,
-              p_idempotency_key: null,
-              p_institution_name: institutionName,
-              p_institution_logo: institutionLogo,
-              p_metadata: ensureMeta,
-            });
-
-          if (ensureError) {
-            console.error(
-              "[plaid-sync] Failed to ensure household",
-              ensureError,
-            );
-          } else {
-            const ensureRows = Array.isArray(ensureResult)
-              ? (ensureResult as Array<{ household_id?: string | null }>)
-              : [];
-            if (ensureRows.length > 0) {
-              householdId = ensureRows[0].household_id || null;
-              console.log(
-                "[plaid-sync] Ensured household for connection",
-                params.connection.id,
-                householdId,
-              );
-            }
-          }
-        } catch (error) {
-          console.error(
-            "[plaid-sync] Failed to refresh accounts, continuing with cached mapping",
-            params.connection.id,
-            error,
-          );
-        }
-      }
-    }
-
-    if (!householdId) {
-      throw new Error("Missing household_id for bank connection");
-    }
-
-    let cursor: string | undefined = params.cursorOverride === "reset"
-      ? undefined
-      : params.cursorOverride ||
-        params.connection.cursor ||
-        params.connection.plaid_cursor ||
-        undefined;
+    let cursor: string | undefined =
+      params.cursorOverride === "reset"
+        ? undefined
+        : params.cursorOverride ||
+          params.connection.cursor ||
+          params.connection.plaid_cursor ||
+          undefined;
     const processedAccounts = new Set<string>();
     const connectionBankAccountIds = Array.from(params.accountMap.values())
       .filter(
@@ -490,8 +452,14 @@ async function syncConnection(params: {
           (!params.accountFilter || params.accountFilter.id === account.id),
       )
       .map((account) => account.id);
-    const effectiveTargetHouseholdId = params.targetHouseholdId ??
-      params.connection.household_id ?? null;
+    const connectionHouseholdId = params.connection.household_id || null;
+    if (
+      params.targetHouseholdId &&
+      params.targetHouseholdId !== connectionHouseholdId
+    ) {
+      throw new Error("Bank connection belongs to a different space");
+    }
+    const effectiveTargetHouseholdId = connectionHouseholdId;
     const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
       {
         supabase: params.supabase,
@@ -561,8 +529,8 @@ async function syncConnection(params: {
         }
 
         const linkedWallet = linkedWalletsByBankAccountId.get(account.id);
-        const resolvedHouseholdId = linkedWallet?.household_id ??
-          effectiveTargetHouseholdId;
+        const resolvedHouseholdId =
+          linkedWallet?.household_id ?? effectiveTargetHouseholdId;
 
         await stagePlaidTransactions({
           supabase: params.supabase,
@@ -622,16 +590,17 @@ async function syncConnection(params: {
         last_successful_sync_at: new Date().toISOString(),
         last_synced_at: new Date().toISOString(),
         status: "active",
-        item_status: params.connection.item_status === "pending_relink"
-          ? "active"
-          : (params.connection.item_status ?? "active"),
+        item_status:
+          params.connection.item_status === "pending_relink"
+            ? "active"
+            : (params.connection.item_status ?? "active"),
         item_health_state: "healthy",
         relink_state:
           params.connection.relink_state === PLAID_REQUIRED_RELINK_STATE
             ? null
             : params.connection.relink_state === PLAID_NEW_ACCOUNTS_RELINK_STATE
-            ? PLAID_NEW_ACCOUNTS_RELINK_STATE
-            : null,
+              ? PLAID_NEW_ACCOUNTS_RELINK_STATE
+              : null,
         error_code: null,
         error_message: null,
       })
@@ -771,8 +740,8 @@ async function syncConnection(params: {
 function shouldLogPlaidTransactionSample(): boolean {
   const explicitFlag =
     Deno.env.get("PLAID_DEBUG_LOG_TRANSACTIONS")?.toLowerCase() === "true";
-  const plaidEnv = Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() ||
-    "sandbox";
+  const plaidEnv =
+    Deno.env.get("PLAID_ENV")?.trim()?.toLowerCase() || "sandbox";
   return explicitFlag || plaidEnv === "sandbox";
 }
 
@@ -792,7 +761,8 @@ function logPlaidTransactionSample(params: {
   const summarizedSample = params.sample.map((transaction) => ({
     transactionId: transaction.transaction_id,
     accountId: transaction.account_id,
-    currency: transaction.iso_currency_code ??
+    currency:
+      transaction.iso_currency_code ??
       transaction.unofficial_currency_code ??
       null,
     pending: transaction.pending ?? false,
