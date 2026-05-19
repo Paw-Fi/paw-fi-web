@@ -22,12 +22,12 @@ interface IdleCallbackDeadline {
   timeRemaining: () => number;
 }
 
-interface WindowWithIdleCallback extends Window {
+type WindowWithIdleCallback = Omit<Window, "requestIdleCallback"> & {
   requestIdleCallback?: (
     callback: (deadline: IdleCallbackDeadline) => void,
     options?: { timeout?: number },
   ) => number;
-}
+};
 
 const VISITOR_ID_KEY = "moneko-attribution-visitor-id";
 const SESSION_ID_KEY = "moneko-attribution-session-id";
@@ -49,7 +49,6 @@ const blockedPathPrefixes = [
   "/verify-telegram",
   "/verify-whatsapp",
   "/unsubscribe",
-  "/avatar-customizer",
   "/invites",
 ];
 

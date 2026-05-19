@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useAvatar } from "@/hooks/use-avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -26,7 +25,6 @@ export function SignUpForm({ redirectUrl }: SignUpFormProps) {
   const [otpCode, setOtpCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const { signUp, isLoading } = useAuth();
-  const { checkUserHasAvatar } = useAvatar();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {

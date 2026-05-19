@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { seo } from "@/utils/seo";
 import { getCanonicalUrl } from "@/utils/canonical";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -12,7 +12,6 @@ import {
   faChevronRight,
   faCog,
   faUser,
-  faPen,
 } from "@fortawesome/free-solid-svg-icons";
 import { UserAvatar } from "@/components/ui/user-avatar";
 
@@ -182,7 +181,7 @@ function UserSettings() {
           {/* Avatar Section - Compact Mobile */}
           <div className="border-subtle-border dark:border-dark-subtle-border mb-4 border-b pb-4 sm:mb-6 sm:pb-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 <UserAvatar
                   size="lg"
                   showPremiumBorder={true}
@@ -196,20 +195,6 @@ function UserSettings() {
                 <p className="text-mobile-xs text-muted-foreground dark:text-dark-muted-foreground mb-2 sm:mb-3 sm:text-xs">
                   Customize your avatar
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    navigate({
-                      to: "/avatar-customizer",
-                      search: { redirect: undefined },
-                    })
-                  }
-                  className="text-mobile-sm flex min-h-[44px] items-center gap-2 sm:text-sm"
-                >
-                  <FontAwesomeIcon icon={faPen} className="size-3" />
-                  <span>Edit Avatar</span>
-                </Button>
               </div>
             </div>
           </div>

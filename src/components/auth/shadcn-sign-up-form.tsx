@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/contexts/auth-context";
-import { useAvatar } from "@/hooks/use-avatar";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
 
@@ -129,7 +128,6 @@ export function ShadcnSignUpForm({
   const [lastResendTime, setLastResendTime] = useState<number | null>(null);
 
   const { signUp, isLoading } = useAuth();
-  const { checkUserHasAvatar } = useAvatar();
   const navigate = useNavigate();
 
   // Helper function to grant onboarding trial
@@ -176,17 +174,8 @@ export function ShadcnSignUpForm({
       return;
     }
 
-    // Standard flow
-    const hasAvatar = await checkUserHasAvatar();
-    if (!hasAvatar) {
-      navigate({
-        to: "/avatar-customizer",
-        search: { redirect: redirectUrl },
-      });
-    } else {
-      const redirectParams = parseRedirectUrl(redirectUrl);
-      navigate(redirectParams);
-    }
+    const redirectParams = parseRedirectUrl(redirectUrl);
+    navigate(redirectParams);
   };
 
   const signUpForm = useForm<SignUpForm>({
