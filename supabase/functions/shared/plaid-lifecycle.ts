@@ -47,6 +47,21 @@ export interface PlaidKeepPolicyParams {
   now?: Date;
 }
 
+export interface PlaidSubscriptionGraceParams {
+  subscriptionStatus: string | null | undefined;
+  currentPeriodEnd: string | null | undefined;
+  graceDays?: number;
+  now?: Date;
+}
+
+export interface PlaidNonPayingInactivityParams {
+  subscriptionStatus: string | null | undefined;
+  currentPeriodEnd: string | null | undefined;
+  lastFinancialFeatureUsedAt: string | null | undefined;
+  inactivityDays?: number;
+  now?: Date;
+}
+
 function toDate(value: string | Date): Date {
   return value instanceof Date ? new Date(value.getTime()) : new Date(value);
 }
@@ -174,4 +189,50 @@ export function shouldKeepPlaidItemBeyondSecondMonth(
   }
 
   return now.getTime() - lastUsedAt.getTime() <= THIRTY_DAYS_MS;
+}
+
+export function isPlaidSubscriptionPastGrace(
+  params: PlaidSubscriptionGraceParams,
+): boolean {
+  if (!params.currentPeriodEnd) {
+    return params.subscriptionStatus !== "active";
+  }
+
+  const periodEnd = new Date(params.currentPeriodEnd);
+  if (Number.isNaN(periodEnd.getTime())) {
+    return params.subscriptionStatus !== "active";
+  }
+
+  const now = params.now ?? new Date();
+  const graceDays = Number.isFinite(params.graceDays)
+    ? Math.max(0, params.graceDays ?? 0)
+    : 7;
+  return now.getTime() > periodEnd.getTime() + graceDays * ONE_DAY_MS;
+}
+
+export function shouldRemovePlaidItemForNonPayingInactivity(
+  params: PlaidNonPayingInactivityParams,
+): boolean {
+  if (params.subscriptionStatus === "active") {
+    return false;
+  }
+
+  if (params.currentPeriodEnd) {
+    return false;
+  }
+
+  if (!params.lastFinancialFeatureUsedAt) {
+    return true;
+  }
+
+  const lastUsedAt = new Date(params.lastFinancialFeatureUsedAt);
+  if (Number.isNaN(lastUsedAt.getTime())) {
+    return true;
+  }
+
+  const now = params.now ?? new Date();
+  const inactivityDays = Number.isFinite(params.inactivityDays)
+    ? Math.max(1, params.inactivityDays ?? 7)
+    : 7;
+  return now.getTime() - lastUsedAt.getTime() > inactivityDays * ONE_DAY_MS;
 }

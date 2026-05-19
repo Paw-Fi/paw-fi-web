@@ -1,12 +1,12 @@
-import {
-  assertEquals,
-} from "https://deno.land/std@0.168.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
 
 import {
   canRequestPlaidManualRefresh,
   computePlaidBillingWindow,
   derivePlaidLinkProducts,
+  isPlaidSubscriptionPastGrace,
   shouldKeepPlaidItemBeyondSecondMonth,
+  shouldRemovePlaidItemForNonPayingInactivity,
 } from "../shared/plaid-lifecycle.ts";
 
 Deno.test("plaid lifecycle computes billing windows for month-end items", () => {
@@ -88,6 +88,70 @@ Deno.test("plaid lifecycle keeps active paid items only with explicit keep polic
       billingKeepReason: "active_paid_use",
       lastFinancialFeatureUsedAt: "2026-04-01T10:00:00.000Z",
       now: new Date("2026-04-10T12:00:00.000Z"),
+    }),
+    false,
+  );
+});
+
+Deno.test(
+  "plaid lifecycle honors paid subscription grace before inactivity removal",
+  () => {
+    const now = new Date("2026-05-19T12:00:00.000Z");
+
+    assertEquals(
+      isPlaidSubscriptionPastGrace({
+        subscriptionStatus: "canceled",
+        currentPeriodEnd: "2026-05-20T00:00:00.000Z",
+        graceDays: 7,
+        now,
+      }),
+      false,
+    );
+
+    assertEquals(
+      shouldRemovePlaidItemForNonPayingInactivity({
+        subscriptionStatus: "canceled",
+        currentPeriodEnd: "2026-05-20T00:00:00.000Z",
+        lastFinancialFeatureUsedAt: null,
+        inactivityDays: 7,
+        now,
+      }),
+      false,
+    );
+
+    assertEquals(
+      isPlaidSubscriptionPastGrace({
+        subscriptionStatus: "canceled",
+        currentPeriodEnd: "2026-05-01T00:00:00.000Z",
+        graceDays: 7,
+        now,
+      }),
+      true,
+    );
+  },
+);
+
+Deno.test("plaid lifecycle removes non-paying inactive items after inactivity", () => {
+  const now = new Date("2026-05-19T12:00:00.000Z");
+
+  assertEquals(
+    shouldRemovePlaidItemForNonPayingInactivity({
+      subscriptionStatus: "trialing",
+      currentPeriodEnd: null,
+      lastFinancialFeatureUsedAt: "2026-05-01T00:00:00.000Z",
+      inactivityDays: 7,
+      now,
+    }),
+    true,
+  );
+
+  assertEquals(
+    shouldRemovePlaidItemForNonPayingInactivity({
+      subscriptionStatus: "trialing",
+      currentPeriodEnd: null,
+      lastFinancialFeatureUsedAt: "2026-05-18T00:00:00.000Z",
+      inactivityDays: 7,
+      now,
     }),
     false,
   );

@@ -45,6 +45,9 @@ interface BankConnection {
   user_id: string;
   provider: string;
   needs_resync?: boolean;
+  removed_at?: string | null;
+  status?: string | null;
+  item_status?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -187,7 +190,9 @@ Deno.serve(async (req) => {
         // Load bank connection
         const { data: connection, error: connectionError } = await supabase
           .from("bank_connections")
-          .select("id, user_id, provider, needs_resync")
+          .select(
+            "id, user_id, provider, needs_resync, removed_at, status, item_status",
+          )
           .eq("id", job.bank_connection_id)
           .maybeSingle();
 
@@ -195,6 +200,43 @@ Deno.serve(async (req) => {
           throw new Error(
             `Bank connection not found: ${job.bank_connection_id}`,
           );
+        }
+
+        if (
+          connection.removed_at != null ||
+          connection.status === "disabled" ||
+          connection.status === "disconnected" ||
+          connection.item_status === "pending_removal"
+        ) {
+          console.log(
+            `[bank-sync-processor] Skipping inactive bank connection for job ${job.id}`,
+          );
+          const { data: skippedRows, error: skipCompleteError } = await supabase
+            .from("bank_sync_jobs")
+            .update({
+              status: "completed",
+              processing_started_at: null,
+              updated_at: new Date().toISOString(),
+              processed_at: new Date().toISOString(),
+              last_error_code: null,
+              last_error_at: null,
+            })
+            .eq("id", job.id)
+            .eq("status", "processing")
+            .contains("payload", { processor_id: processorId })
+            .select("id");
+
+          if (skipCompleteError) {
+            throw skipCompleteError;
+          }
+
+          if (!skippedRows?.length) {
+            throw new Error("Lost sync job ownership before skip completion");
+          }
+
+          results.succeeded++;
+          results.processed++;
+          continue;
         }
 
         // Process based on provider
@@ -414,7 +456,12 @@ async function processPlaidJob(
 
   const syncPayload = (await response.json().catch(() => null)) as {
     status?: string;
-    connections?: { connectionId: string; status: string; error?: string }[];
+    connections?: {
+      connectionId: string;
+      status: string;
+      error?: string;
+      errorCode?: string;
+    }[];
   } | null;
 
   console.log(
@@ -434,8 +481,26 @@ async function processPlaidJob(
       (item) =>
         item.connectionId === connection.id && item.status !== "succeeded",
     );
+    if (
+      failedConnection?.errorCode &&
+      isPlaidSyncTerminalHandoffError(failedConnection.errorCode)
+    ) {
+      console.log(
+        `[bank-sync-processor] Plaid sync handed off terminal state for job ${job.id}`,
+        JSON.stringify({
+          connectionId: connection.id,
+          errorCode: failedConnection.errorCode,
+        }),
+      );
+      return;
+    }
+
     throw new Error(
       failedConnection?.error || "Plaid sync completed with an error summary",
     );
   }
+}
+
+function isPlaidSyncTerminalHandoffError(errorCode: string): boolean {
+  return errorCode === "ITEM_LOGIN_REQUIRED" || errorCode === "INVALID_CURSOR";
 }

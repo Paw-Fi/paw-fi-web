@@ -4,7 +4,10 @@ import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
-import { classifyPlaidItemWebhook } from "../shared/plaid-update-mode.ts";
+import {
+  classifyPlaidItemWebhook,
+  PLAID_NEW_ACCOUNTS_RELINK_STATE,
+} from "../shared/plaid-update-mode.ts";
 import { verifyPlaidWebhook } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -29,6 +32,7 @@ interface PlaidWebhookPayload {
   webhook_type?: string;
   webhook_code?: string;
   item_id?: string;
+  account_id?: string;
   initial_update_complete?: boolean;
   historical_update_complete?: boolean;
   error?: {
@@ -222,6 +226,17 @@ Deno.serve(async (req) => {
     }
 
     if (payload.webhook_type === "ITEM") {
+      if (
+        payload.webhook_code === "USER_ACCOUNT_REVOKED" &&
+        connection?.id
+      ) {
+        await applyPlaidAccountRevokedWebhook({
+          supabase,
+          connection,
+          accountId: payload.account_id || null,
+        });
+      }
+
       const action = classifyPlaidItemWebhook({
         webhookCode: payload.webhook_code,
         errorCode: payload.error?.error_code,
@@ -346,6 +361,118 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function applyPlaidAccountRevokedWebhook(params: {
+  supabase: {
+    from: (table: string) => any;
+  };
+  connection: {
+    id: string;
+    metadata?: unknown;
+  };
+  accountId?: string | null;
+}): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const accountId = String(params.accountId || "").trim();
+  const metadata = params.connection.metadata &&
+      typeof params.connection.metadata === "object"
+    ? params.connection.metadata as Record<string, unknown>
+    : {};
+  const revokedAccountIds = Array.isArray(metadata.plaid_revoked_account_ids)
+    ? metadata.plaid_revoked_account_ids
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+    : [];
+  const nextRevokedAccountIds = accountId
+    ? Array.from(new Set([...revokedAccountIds, accountId])).sort()
+    : revokedAccountIds;
+
+  if (accountId) {
+    const bankAccountIds = new Set<string>();
+    for (
+      const matchColumn of ["provider_account_id", "plaid_account_id"] as const
+    ) {
+      const { data: accounts, error: accountsError } = await params.supabase
+        .from("bank_accounts")
+        .select("id")
+        .eq("bank_connection_id", params.connection.id)
+        .eq("provider", PLAID_PROVIDER)
+        .eq(matchColumn, accountId);
+
+      if (accountsError) {
+        throw accountsError;
+      }
+
+      for (const account of (accounts || []) as { id?: string | null }[]) {
+        if (account.id) {
+          bankAccountIds.add(account.id);
+        }
+      }
+    }
+
+    const matchedBankAccountIds = Array.from(bankAccountIds);
+    if (matchedBankAccountIds.length > 0) {
+      const { error: accountUpdateError } = await params.supabase
+        .from("bank_accounts")
+        .update({
+          status: "disabled",
+          updated_at: nowIso,
+        })
+        .in("id", matchedBankAccountIds);
+
+      if (accountUpdateError) {
+        throw accountUpdateError;
+      }
+
+      const { error: rawDeleteError } = await params.supabase
+        .from("bank_transaction_raw")
+        .delete()
+        .in("bank_account_id", matchedBankAccountIds);
+
+      if (rawDeleteError) {
+        throw rawDeleteError;
+      }
+
+      const { error: expenseUpdateError } = await params.supabase
+        .from("expenses")
+        .update({
+          bank_account_id: null,
+          raw_provider_payload: null,
+          updated_at: nowIso,
+        })
+        .eq("provider", PLAID_PROVIDER)
+        .in("bank_account_id", matchedBankAccountIds);
+
+      if (expenseUpdateError) {
+        throw expenseUpdateError;
+      }
+    }
+  }
+
+  const { error: connectionUpdateError } = await params.supabase
+    .from("bank_connections")
+    .update({
+      status: "active",
+      item_status: "account_revoked",
+      item_health_state: "degraded",
+      relink_state: PLAID_NEW_ACCOUNTS_RELINK_STATE,
+      error_code: "USER_ACCOUNT_REVOKED",
+      error_message: accountId
+        ? "Plaid account access was revoked by the user."
+        : "Plaid account access was revoked by the user, but no account id was supplied.",
+      metadata: {
+        ...metadata,
+        plaid_revoked_account_ids: nextRevokedAccountIds,
+      },
+      last_webhook_received_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq("id", params.connection.id);
+
+  if (connectionUpdateError) {
+    throw connectionUpdateError;
+  }
+}
 
 async function sha256Hex(value: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest(

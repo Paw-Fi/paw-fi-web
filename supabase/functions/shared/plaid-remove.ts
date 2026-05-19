@@ -8,6 +8,34 @@ export interface PlaidRemovableConnection {
   plaid_access_token_encrypted?: string | null;
 }
 
+export async function markPlaidConnectionRemovalPending(params: {
+  supabase: {
+    from: (table: string) => any;
+  };
+  connectionId: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+}): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const { error } = await params.supabase
+    .from("bank_connections")
+    .update({
+      item_status: "pending_removal",
+      item_health_state: "removal_pending",
+      scheduled_removal_at: nowIso,
+      error_code: params.errorCode || "PLAID_REMOVE_RETRY_PENDING",
+      error_message: params.errorMessage ||
+        "Plaid item removal is queued for retry.",
+      updated_at: nowIso,
+    })
+    .eq("id", params.connectionId)
+    .is("removed_at", null);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function removePlaidConnection(params: {
   supabase: {
     from: (table: string) => any;
@@ -47,6 +75,15 @@ export async function removePlaidConnection(params: {
           if (jobError && jobError.code !== "23505") {
             throw jobError;
           }
+
+          await markPlaidConnectionRemovalPending({
+            supabase: params.supabase,
+            connectionId: params.connection.id,
+            errorCode: error instanceof PlaidError
+              ? error.code
+              : "PLAID_REMOVE_RETRY_PENDING",
+            errorMessage: error instanceof Error ? error.message : null,
+          });
         }
         throw error;
       }
@@ -61,11 +98,25 @@ export async function removePlaidConnection(params: {
     }
   }
 
+  await cleanupRemovedPlaidConnection({
+    supabase: params.supabase,
+    connectionId: params.connection.id,
+    removalReason: params.removalReason,
+  });
+}
+
+export async function cleanupRemovedPlaidConnection(params: {
+  supabase: {
+    from: (table: string) => any;
+  };
+  connectionId: string;
+  removalReason: string;
+}): Promise<void> {
   const nowIso = new Date().toISOString();
   const { data: bankAccounts, error: bankAccountsError } = await params.supabase
     .from("bank_accounts")
     .select("id")
-    .eq("bank_connection_id", params.connection.id);
+    .eq("bank_connection_id", params.connectionId);
 
   if (bankAccountsError) {
     throw bankAccountsError;
@@ -94,7 +145,7 @@ export async function removePlaidConnection(params: {
   const { error: rawCleanupError } = await params.supabase
     .from("bank_transaction_raw")
     .delete()
-    .eq("bank_connection_id", params.connection.id);
+    .eq("bank_connection_id", params.connectionId);
 
   if (rawCleanupError) {
     throw rawCleanupError;
@@ -103,7 +154,7 @@ export async function removePlaidConnection(params: {
   const { error: webhookCleanupError } = await params.supabase
     .from("bank_webhook_events")
     .delete()
-    .eq("bank_connection_id", params.connection.id);
+    .eq("bank_connection_id", params.connectionId);
 
   if (webhookCleanupError) {
     throw webhookCleanupError;
@@ -112,7 +163,7 @@ export async function removePlaidConnection(params: {
   const { error: bankAccountCleanupError } = await params.supabase
     .from("bank_accounts")
     .delete()
-    .eq("bank_connection_id", params.connection.id);
+    .eq("bank_connection_id", params.connectionId);
 
   if (bankAccountCleanupError) {
     throw bankAccountCleanupError;
@@ -133,7 +184,7 @@ export async function removePlaidConnection(params: {
       error_message: null,
       updated_at: nowIso,
     })
-    .eq("id", params.connection.id);
+    .eq("id", params.connectionId);
 
   if (connectionUpdateError) {
     throw connectionUpdateError;
@@ -142,7 +193,7 @@ export async function removePlaidConnection(params: {
   const { error: tokenDeleteError } = await params.supabase
     .from("bank_connection_tokens")
     .delete()
-    .eq("bank_connection_id", params.connection.id);
+    .eq("bank_connection_id", params.connectionId);
 
   if (tokenDeleteError) {
     throw tokenDeleteError;
@@ -160,7 +211,7 @@ export async function removePlaidConnection(params: {
         error: "item_removed",
       },
     })
-    .eq("bank_connection_id", params.connection.id)
+    .eq("bank_connection_id", params.connectionId)
     .in("status", ["pending", "processing"]);
 
   if (jobUpdateError) {

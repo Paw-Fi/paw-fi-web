@@ -4,6 +4,7 @@ import { authenticateInternalSecret } from "../shared/auth.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 import { PlaidError, removePlaidItem } from "../shared/plaid-client.ts";
+import { cleanupRemovedPlaidConnection } from "../shared/plaid-remove.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -28,6 +29,7 @@ interface PlaidOffboardingJob extends OffboardingConnectionPayload {
   attempt_count?: number;
   max_attempts?: number;
   alerted_at?: string | null;
+  reason?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -114,6 +116,51 @@ Deno.serve(async (req) => {
         });
 
         if (result.success) {
+          if (job.connection_id || job.connectionId) {
+            try {
+              await cleanupRemovedPlaidConnection({
+                supabase,
+                connectionId: job.connection_id || job.connectionId!,
+                removalReason: job.reason || "offboarding_cleanup",
+              });
+            } catch (cleanupError) {
+              failed += 1;
+              const update = buildOffboardingFailureUpdate({
+                attemptCount: job.attempt_count ?? 0,
+                maxAttempts: job.max_attempts ?? 8,
+                error: cleanupError instanceof Error
+                  ? cleanupError.message
+                  : String(cleanupError),
+              });
+              const shouldAlert = update.should_alert === true &&
+                !job.alerted_at;
+              delete update.should_alert;
+              if (shouldAlert) {
+                update.alerted_at = new Date().toISOString();
+              }
+              const { error: failureUpdateError } = await supabase
+                .from("plaid_offboarding_jobs")
+                .update(update)
+                .eq("id", job.id);
+              if (failureUpdateError) {
+                throw failureUpdateError;
+              }
+
+              if (shouldAlert) {
+                await reportEdgeFunctionError({
+                  functionName: "plaid-user-offboarding-cleanup",
+                  error: cleanupError,
+                  context: {
+                    connection_id: job.connection_id || job.connectionId ||
+                      null,
+                    user_id: job.user_id || body.userId || null,
+                  },
+                });
+              }
+              continue;
+            }
+          }
+
           removed += result.removed ? 1 : 0;
           const { error: completeError } = await supabase
             .from("plaid_offboarding_jobs")
