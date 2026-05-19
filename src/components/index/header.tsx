@@ -95,13 +95,95 @@ const resources = [
   },
 ];
 
+type PreservedSearchParams = Record<
+  string,
+  string | string[] | boolean | undefined
+>;
+
+const appendSearchString = (path: string, searchStr: string) => {
+  const normalizedSearch = searchStr.startsWith("?")
+    ? searchStr.slice(1)
+    : searchStr;
+
+  if (!normalizedSearch) return path;
+
+  const hashIndex = path.indexOf("#");
+  const pathWithoutHash = hashIndex === -1 ? path : path.slice(0, hashIndex);
+  const hash = hashIndex === -1 ? "" : path.slice(hashIndex);
+  const separator = pathWithoutHash.includes("?") ? "&" : "?";
+
+  return `${pathWithoutHash}${separator}${normalizedSearch}${hash}`;
+};
+
+const buildPathWithSearch = (path: string, search: PreservedSearchParams) => {
+  const params = new URLSearchParams();
+
+  Object.entries(search).forEach(([key, value]) => {
+    if (value === undefined) return;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => params.append(key, item));
+      return;
+    }
+
+    params.set(key, String(value));
+  });
+
+  return appendSearchString(path, params.toString());
+};
+
+const parseSearchString = (searchStr: string): PreservedSearchParams => {
+  const params = new URLSearchParams(
+    searchStr.startsWith("?") ? searchStr.slice(1) : searchStr,
+  );
+  const search: PreservedSearchParams = {};
+
+  params.forEach((value, key) => {
+    const currentValue = search[key];
+
+    if (currentValue === undefined) {
+      search[key] = value;
+      return;
+    }
+
+    if (Array.isArray(currentValue)) {
+      search[key] = [...currentValue, value];
+      return;
+    }
+
+    search[key] = [String(currentValue), value];
+  });
+
+  return search;
+};
+
 export const HomeHeader = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = React.useState(false);
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+  const location = useRouterState({
+    select: (state) => state.location,
   });
+  const pathname = location.pathname;
+  const preservedSearchStr = location.searchStr || "";
+  const preservedSearch = React.useMemo(
+    () => parseSearchString(preservedSearchStr),
+    [preservedSearchStr],
+  );
+  const buildPreservedPath = React.useCallback(
+    (path: string) => appendSearchString(path, preservedSearchStr),
+    [preservedSearchStr],
+  );
+  const registerTrialPath = React.useMemo(
+    () =>
+      buildPathWithSearch("/register", {
+        ...preservedSearch,
+        trial: true,
+        redirect: undefined,
+        code: undefined,
+      }),
+    [preservedSearch],
+  );
   const isPathActive = React.useCallback(
     (href: string) => pathname === href || pathname.startsWith(`${href}/`),
     [pathname],
@@ -115,9 +197,7 @@ export const HomeHeader = () => {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
         <div className="flex items-center gap-8">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <MonekoIcon />
-          </Link>
+          <MonekoIcon href={buildPreservedPath("/")} />
 
           {/* Desktop Navigation */}
           <NavigationMenu className="hidden md:flex">
@@ -139,7 +219,7 @@ export const HomeHeader = () => {
                       <ListItem
                         key={feature.title}
                         title={feature.title}
-                        href={feature.href}
+                        href={buildPreservedPath(feature.href)}
                         icon={feature.icon}
                         isActive={isPathActive(feature.href)}
                       >
@@ -153,6 +233,7 @@ export const HomeHeader = () => {
               <NavigationMenuItem>
                 <Link
                   to="/how-it-works"
+                  href={buildPreservedPath("/how-it-works")}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
@@ -168,6 +249,7 @@ export const HomeHeader = () => {
               <NavigationMenuItem>
                 <Link
                   to="/changelog"
+                  href={buildPreservedPath("/changelog")}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
@@ -197,7 +279,7 @@ export const HomeHeader = () => {
                       <ListItem
                         key={resource.title}
                         title={resource.title}
-                        href={resource.href}
+                        href={buildPreservedPath(resource.href)}
                         icon={resource.icon}
                         isActive={isPathActive(resource.href)}
                       >
@@ -206,7 +288,7 @@ export const HomeHeader = () => {
                     ))}
                     <ListItem
                       title="Blog"
-                      href="/blogs"
+                      href={buildPreservedPath("/blogs")}
                       icon={BookOpen}
                       isActive={isPathActive("/blogs")}
                     >
@@ -237,6 +319,7 @@ export const HomeHeader = () => {
               <NavigationMenuItem>
                 <Link
                   to="/pricing"
+                  href={buildPreservedPath("/pricing")}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
@@ -252,6 +335,7 @@ export const HomeHeader = () => {
               <NavigationMenuItem>
                 <Link
                   to="/download"
+                  href={buildPreservedPath("/download")}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     "hover:text-foreground bg-transparent",
@@ -280,7 +364,7 @@ export const HomeHeader = () => {
             className="z-[100] w-[300px] overflow-y-auto rounded-r-3xl p-0 sm:w-[350px]"
           >
             <SheetHeader className="p-6 pb-2 text-left">
-              <MonekoIcon />
+              <MonekoIcon href={buildPreservedPath("/")} />
             </SheetHeader>
             <nav className="flex flex-col px-4 pb-8">
               <Accordion type="single" collapsible className="w-full">
@@ -298,7 +382,7 @@ export const HomeHeader = () => {
                       {features.map((item) => (
                         <MobileLink
                           key={item.href}
-                          to={item.href}
+                          href={buildPreservedPath(item.href)}
                           setIsOpen={setIsOpen}
                           className={cn(
                             isPathActive(item.href) && "bg-accent text-primary",
@@ -332,7 +416,7 @@ export const HomeHeader = () => {
                       {resources.map((item) => (
                         <MobileLink
                           key={item.href}
-                          to={item.href}
+                          href={buildPreservedPath(item.href)}
                           setIsOpen={setIsOpen}
                           className={cn(
                             isPathActive(item.href) && "bg-accent text-primary",
@@ -366,7 +450,7 @@ export const HomeHeader = () => {
               <div className="bg-border mx-2 my-2 h-px" />
 
               <MobileLink
-                to="/how-it-works"
+                href={buildPreservedPath("/how-it-works")}
                 setIsOpen={setIsOpen}
                 className={cn(
                   "px-2 py-3 text-base",
@@ -376,7 +460,7 @@ export const HomeHeader = () => {
                 How it Works
               </MobileLink>
               <MobileLink
-                to="/changelog"
+                href={buildPreservedPath("/changelog")}
                 setIsOpen={setIsOpen}
                 className={cn(
                   "px-2 py-3 text-base",
@@ -386,7 +470,7 @@ export const HomeHeader = () => {
                 Changelog
               </MobileLink>
               <MobileLink
-                to="/pricing"
+                href={buildPreservedPath("/pricing")}
                 setIsOpen={setIsOpen}
                 className={cn(
                   "px-2 py-3 text-base",
@@ -396,7 +480,7 @@ export const HomeHeader = () => {
                 Pricing
               </MobileLink>
               <MobileLink
-                to="/download"
+                href={buildPreservedPath("/download")}
                 setIsOpen={setIsOpen}
                 className={cn(
                   "px-2 py-3 text-base",
@@ -415,7 +499,7 @@ export const HomeHeader = () => {
                   <Button
                     onClick={() => {
                       setIsOpen(false);
-                      navigate({ to: "/dashboard" });
+                      navigate({ href: buildPreservedPath("/dashboard") });
                     }}
                     className="w-full rounded-xl"
                     size="lg"
@@ -426,7 +510,7 @@ export const HomeHeader = () => {
                   <Button
                     onClick={() => {
                       setIsOpen(false);
-                      navigate({ to: "/register", search: { trial: true, redirect: undefined, code: undefined } });
+                      navigate({ href: registerTrialPath });
                     }}
                     className="w-full rounded-xl dark:text-white"
                     size="lg"
@@ -457,14 +541,18 @@ export const HomeHeader = () => {
             <div className="flex items-center gap-3">
               <UserAvatar
                 size="sm"
-                onClick={() => navigate({ to: "/dashboard" })}
+                onClick={() =>
+                  navigate({ href: buildPreservedPath("/dashboard") })
+                }
                 className="ring-background cursor-pointer ring-2 transition-transform hover:scale-105"
               />            
             </div>
           ) : (
             <div className="flex items-center gap-3">              
               <Button
-                onClick={() => navigate({ to: "/register", search: { trial: true, redirect: undefined, code: undefined } })}
+                onClick={() =>
+                  navigate({ href: registerTrialPath })
+                }
                 className="rounded-full px-5 font-medium dark:text-white"
               >
                 Try it Free — No Credit Card
@@ -479,8 +567,9 @@ export const HomeHeader = () => {
 
 const ListItem = React.forwardRef<
   React.ElementRef<typeof Link>,
-  React.ComponentPropsWithoutRef<typeof Link> & {
+  Omit<React.ComponentPropsWithoutRef<typeof Link>, "children"> & {
     title: string;
+    children: React.ReactNode;
     icon?: any;
     isActive?: boolean;
   }
@@ -524,24 +613,22 @@ const ListItem = React.forwardRef<
 ListItem.displayName = "ListItem";
 
 function MobileLink({
-  to,
+  href,
   setIsOpen,
   children,
   className,
 }: {
-  to: string;
+  href: string;
   setIsOpen: (v: boolean) => void;
   children: React.ReactNode;
   className?: string;
 }) {
-  const navigate = useNavigate();
   return (
-    <a
-      href={to}
-      onClick={(e) => {
-        e.preventDefault();
+    <Link
+      to={href}
+      href={href}
+      onClick={() => {
         setIsOpen(false);
-        navigate({ to });
       }}
       className={cn(
         "text-muted-foreground hover:text-primary hover:bg-accent flex w-full cursor-pointer items-center rounded-md p-2 text-sm font-medium transition-colors",
@@ -549,6 +636,6 @@ function MobileLink({
       )}
     >
       {children}
-    </a>
+    </Link>
   );
 }
