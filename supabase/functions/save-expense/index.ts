@@ -143,7 +143,12 @@ Deno.serve(async (req: Request) => {
     // For non-GPT requests, derive user from JWT OR allow internal callers.
     // NEVER trust userId from body unless the request is authenticated as internal.
 
-    if (!body.amount || body.amount <= 0) {
+    if (typeof body.amount !== "number" || !Number.isFinite(body.amount)) {
+      return errorResponse("Valid amount is required", 400);
+    }
+
+    const normalizedAmount = Math.abs(body.amount);
+    if (normalizedAmount <= 0) {
       return errorResponse("Valid amount is required", 400);
     }
 
@@ -187,9 +192,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -233,8 +239,8 @@ Deno.serve(async (req: Request) => {
     if (!detection.isGpt && !sanitizedCategory) {
       return errorResponse("Invalid category", 400, "VALIDATION_ERROR");
     }
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -249,7 +255,7 @@ Deno.serve(async (req: Request) => {
 
     console.log("[save-expense] Saving expense:", {
       userId,
-      amount: body.amount,
+      amount: normalizedAmount,
       category: resolvedCategory,
       currency,
       householdId: requestedHouseholdId,
@@ -393,7 +399,7 @@ Deno.serve(async (req: Request) => {
     });
 
     // Convert amount to cents
-    const amountCents = Math.round(body.amount * 100);
+    const amountCents = Math.round(normalizedAmount * 100);
 
     async function resolveScopedAccountId(
       scopeHouseholdId: string | null,
