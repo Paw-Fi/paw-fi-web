@@ -4,7 +4,11 @@ import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
-import { shouldKeepPlaidItemBeyondSecondMonth } from "../shared/plaid-lifecycle.ts";
+import {
+  isPlaidSubscriptionPastGrace,
+  shouldKeepPlaidItemBeyondSecondMonth,
+  shouldRemovePlaidItemForNonPayingInactivity,
+} from "../shared/plaid-lifecycle.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -55,25 +59,6 @@ const SUBSCRIPTION_PLAID_GRACE_DAYS = Number.parseInt(
   Deno.env.get("PLAID_SUBSCRIPTION_GRACE_DAYS") || "7",
   10,
 );
-
-function isSubscriptionPastPlaidGrace(
-  subscription: SubscriptionRow | undefined,
-  now: Date,
-): boolean {
-  if (!subscription?.current_period_end) {
-    return subscription?.status !== "active";
-  }
-
-  const periodEnd = new Date(subscription.current_period_end);
-  if (Number.isNaN(periodEnd.getTime())) {
-    return subscription.status !== "active";
-  }
-
-  const graceDays = Number.isFinite(SUBSCRIPTION_PLAID_GRACE_DAYS)
-    ? Math.max(0, SUBSCRIPTION_PLAID_GRACE_DAYS)
-    : 7;
-  return now.getTime() > periodEnd.getTime() + graceDays * 24 * 60 * 60 * 1000;
-}
 
 function isSupportedAction(value: unknown): value is PlaidMaintenanceAction {
   return (
@@ -266,10 +251,13 @@ async function enforceLifecyclePolicies(
         ? new Date(connection.updated_at)
         : null;
       const shouldRemoveForTrialInactivity =
-        subscription?.status !== "active" &&
-        (!connection.last_financial_feature_used_at ||
-          new Date(connection.last_financial_feature_used_at) <
-            trialInactivityThreshold);
+        shouldRemovePlaidItemForNonPayingInactivity({
+          subscriptionStatus: subscription?.status ?? null,
+          currentPeriodEnd: subscription?.current_period_end ?? null,
+          lastFinancialFeatureUsedAt: connection.last_financial_feature_used_at,
+          inactivityDays: 7,
+          now,
+        });
       const shouldRemoveForRelinkTimeout =
         connection.status === "needs_reauth" &&
         updatedAt != null &&
@@ -277,10 +265,12 @@ async function enforceLifecyclePolicies(
       const shouldRemoveForBilling = scheduledRemovalAt != null &&
         scheduledRemovalAt.getTime() <= now.getTime() &&
         !keepBeyondSecondMonth;
-      const shouldRemoveForExpiredSubscription = isSubscriptionPastPlaidGrace(
-        subscription,
+      const shouldRemoveForExpiredSubscription = isPlaidSubscriptionPastGrace({
+        subscriptionStatus: subscription?.status ?? null,
+        currentPeriodEnd: subscription?.current_period_end ?? null,
+        graceDays: SUBSCRIPTION_PLAID_GRACE_DAYS,
         now,
-      );
+      });
 
       if (
         shouldRemoveForTrialInactivity ||

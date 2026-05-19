@@ -150,10 +150,12 @@ Deno.serve(async (req) => {
     let connectionsQuery = supabase
       .from("bank_connections")
       .select(
-        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, cursor_generation, status, item_status, item_health_state, relink_state, last_successful_sync_at",
+        "id, user_id, household_id, provider_item_id, country_code, metadata, access_token_encrypted, plaid_access_token_encrypted, cursor, plaid_cursor, cursor_generation, status, item_status, item_health_state, relink_state, last_successful_sync_at, removed_at",
       )
       .eq("user_id", authResult.userId)
       .eq("provider", PLAID_PROVIDER)
+      .is("removed_at", null)
+      .or("item_status.is.null,item_status.neq.pending_removal")
       .neq("status", "disabled");
 
     if (body.connectionId) {
@@ -883,4 +885,5 @@ interface BankConnectionRow {
   item_status?: string | null;
   item_health_state?: string | null;
   relink_state?: string | null;
+  removed_at?: string | null;
 }
