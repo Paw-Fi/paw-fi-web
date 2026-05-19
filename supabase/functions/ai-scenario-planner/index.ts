@@ -25,8 +25,37 @@ interface ScenarioRequestBody {
   userId?: string; // ignored for auth, we derive from JWT
   language?: string; // ISO 639-1 or language tag, e.g., "en" or "zh-CN"
   currency?: string; // e.g., "USD", "EUR"
+  currencies?: string[];
   mode?: "personal" | "household";
   householdId?: string;
+}
+
+function normalizeCurrencyCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const code = value.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : null;
+}
+
+function normalizeCurrencyList(value: unknown, fallbackCurrency: string) {
+  const values = Array.isArray(value) ? value : [];
+  const normalized = values
+    .map((item) => normalizeCurrencyCode(item))
+    .filter((item): item is string => Boolean(item));
+  const unique = Array.from(new Set([fallbackCurrency, ...normalized]));
+  return unique.length > 0 ? unique : [fallbackCurrency];
+}
+
+function convertAmount(
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>,
+) {
+  if (fromCurrency === toCurrency) return amount;
+  const fromRate = rates[fromCurrency];
+  const toRate = rates[toCurrency];
+  if (!fromRate || !toRate) return amount;
+  return (amount / fromRate) * toRate;
 }
 
 // Convert locale-specific digits (Arabic-Indic, Eastern-Arabic, Thai, etc.) to ASCII
@@ -218,8 +247,8 @@ serve(async (req: Request): Promise<Response> => {
     const language = /^[a-z]{2}(-[A-Z]{2})?$/.test(languageRaw)
       ? languageRaw
       : "en";
-    const currencyRaw = (body.currency || "").trim();
-    const currency = currencyRaw || "USD";
+    const currency = normalizeCurrencyCode(body.currency) || "USD";
+    const selectedCurrencies = normalizeCurrencyList(body.currencies, currency);
     const currencySymbol = getCurrencySymbol(currency);
     const mode: "personal" | "household" =
       body.mode === "household" ? "household" : "personal";
@@ -290,7 +319,8 @@ serve(async (req: Request): Promise<Response> => {
       .select("user_id,date,amount_cents,currency,category,owner_type")
       .gte("date", fromStr)
       .lte("date", toStr)
-      .eq("type", "expense");
+      .eq("type", "expense")
+      .in("currency", selectedCurrencies);
 
     if (mode === "household") {
       expensesQuery = expensesQuery.eq("household_id", householdId);
@@ -304,9 +334,19 @@ serve(async (req: Request): Promise<Response> => {
     let budgetsQuery = supabaseClient
       .from("budgets")
       .select("period_month,total_budget_cents,currency")
-      .eq("currency", currency)
+      .in("currency", selectedCurrencies)
       .gte("period_month", fromStr)
       .lte("period_month", toStr);
+
+    const { data: rateSnapshot } = await supabaseClient
+      .from("currency_rate_snapshots")
+      .select("rates")
+      .eq("base_currency", "USD")
+      .maybeSingle();
+    const currencyRates =
+      rateSnapshot?.rates && typeof rateSnapshot.rates === "object"
+        ? (rateSnapshot.rates as Record<string, number>)
+        : { USD: 1 };
 
     if (mode === "household") {
       budgetsQuery = budgetsQuery.eq("household_id", householdId);
@@ -366,7 +406,13 @@ serve(async (req: Request): Promise<Response> => {
     // Aggregate spending per day, and in household mode per member / owner_type
     for (const e of expenses || []) {
       const dateStr = (e.date as string).slice(0, 10);
-      const amt = centsToAmount(e.amount_cents as number);
+      const rowCurrency = normalizeCurrencyCode(e.currency) || currency;
+      const amt = convertAmount(
+        centsToAmount(e.amount_cents as number),
+        rowCurrency,
+        currency,
+        currencyRates,
+      );
 
       daily[dateStr] ??= { spent: 0, budget: 0 };
       daily[dateStr].spent += amt;
@@ -374,15 +420,13 @@ serve(async (req: Request): Promise<Response> => {
       if (mode === "household") {
         const uid = (e.user_id as string) || "unknown";
         const ownerType = (e.owner_type as string) || "unknown";
-        const rowCurrency = (e.currency as string) || currency;
-
         if (!memberTotalsByUser[uid]) {
-          memberTotalsByUser[uid] = { spent: 0, currency: rowCurrency };
+          memberTotalsByUser[uid] = { spent: 0, currency };
         }
         memberTotalsByUser[uid].spent += amt;
 
         if (!ownerTypeTotals[ownerType]) {
-          ownerTypeTotals[ownerType] = { spent: 0, currency: rowCurrency };
+          ownerTypeTotals[ownerType] = { spent: 0, currency };
         }
         ownerTypeTotals[ownerType].spent += amt;
       }
@@ -394,7 +438,13 @@ serve(async (req: Request): Promise<Response> => {
     for (const b of budgets || []) {
       const period = (b.period_month as string).slice(0, 10); // YYYY-MM-DD
       const ym = period.slice(0, 7); // YYYY-MM
-      const amt = centsToAmount(b.total_budget_cents as number);
+      const rowCurrency = normalizeCurrencyCode(b.currency) || currency;
+      const amt = convertAmount(
+        centsToAmount(b.total_budget_cents as number),
+        rowCurrency,
+        currency,
+        currencyRates,
+      );
 
       monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
       monthly[ym].budget += amt;
@@ -447,7 +497,13 @@ serve(async (req: Request): Promise<Response> => {
       const dt = new Date(e.date as string);
       const ym = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
       monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
-      const amt = centsToAmount(e.amount_cents as number);
+      const rowCurrency = normalizeCurrencyCode(e.currency) || currency;
+      const amt = convertAmount(
+        centsToAmount(e.amount_cents as number),
+        rowCurrency,
+        currency,
+        currencyRates,
+      );
       monthly[ym].spent += amt;
       if (e.category) {
         const key = String(e.category).toLowerCase();
@@ -585,12 +641,10 @@ LANGUAGE:
           );
 
           // 2) Stream Gemini content chunks as they arrive.
-          const result = await model.generateContentStream(
-            {
-              contents: [{ role: "user", parts: [{ text: advisoryPrompt }] }],
-            },
+          const result = await model.generateContentStream({
+            contents: [{ role: "user", parts: [{ text: advisoryPrompt }] }],
             generationConfig,
-          );
+          });
 
           for await (const chunk of result.stream) {
             const text = chunk.text();
