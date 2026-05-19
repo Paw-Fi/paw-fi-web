@@ -103,6 +103,27 @@ export interface ExpensePreview {
   contact_id?: string | null;
 }
 
+interface RecurrenceCandidateRow {
+  provider_transaction_id: string;
+  bank_account_id: string;
+  amount_cents: number;
+  currency: string | null;
+  date: string;
+  type: "expense" | "income";
+  merchant: string | null;
+  raw_text: string | null;
+  is_recurring?: boolean | null;
+  recurrence_rule?: Record<string, unknown> | null;
+}
+
+interface RecurrencePattern {
+  frequency: "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
+  interval?: number;
+  confidence: "medium" | "high";
+  matchCount: number;
+  cadenceDays: number;
+}
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -336,6 +357,289 @@ function normalizeCurrency(
   };
 }
 
+function inferPlaidRecurringRules(params: {
+  records: ExpenseUpsertRecord[];
+  transactions: PlaidTransaction[];
+  existingRows: ExistingExpenseProjectionRow[];
+}): Map<string, Record<string, unknown>> {
+  const rows = new Map<string, RecurrenceCandidateRow>();
+  const currentTransactionById = new Map<string, PlaidTransaction>();
+
+  for (const transaction of params.transactions) {
+    currentTransactionById.set(transaction.transaction_id, transaction);
+  }
+
+  for (const row of params.existingRows) {
+    const candidate = normalizeExistingRecurrenceCandidate(row);
+    if (candidate) {
+      rows.set(candidate.provider_transaction_id, candidate);
+    }
+  }
+
+  for (const record of params.records) {
+    rows.set(record.provider_transaction_id, {
+      provider_transaction_id: record.provider_transaction_id,
+      bank_account_id: record.bank_account_id,
+      amount_cents: record.amount_cents,
+      currency: record.currency,
+      date: record.date,
+      type: record.type,
+      merchant: record.merchant,
+      raw_text: record.raw_text,
+      is_recurring: record.is_recurring,
+      recurrence_rule: record.recurrence_rule,
+    });
+  }
+
+  const groups = new Map<string, RecurrenceCandidateRow[]>();
+  for (const row of rows.values()) {
+    const merchantKey = normalizeRecurringMerchant(row.merchant || row.raw_text);
+    if (!merchantKey) continue;
+    const key = [
+      row.bank_account_id,
+      row.type,
+      (row.currency || "").toUpperCase(),
+      merchantKey,
+    ].join("|");
+    const list = groups.get(key) || [];
+    list.push(row);
+    groups.set(key, list);
+  }
+
+  const rules = new Map<string, Record<string, unknown>>();
+  for (const group of groups.values()) {
+    const currentRows = group.filter((row) =>
+      currentTransactionById.has(row.provider_transaction_id)
+    );
+    if (!currentRows.length) continue;
+
+    const amountCluster = largestAmountCluster(group);
+    const pattern = detectRecurrencePattern(amountCluster);
+    if (!pattern) continue;
+
+    const sorted = amountCluster
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const anchorDate = sorted[0]?.date;
+    if (!anchorDate) continue;
+
+    for (const row of currentRows) {
+      if (!amountCluster.includes(row)) continue;
+      const transaction = currentTransactionById.get(row.provider_transaction_id);
+      const providerHint = buildPlaidRecurringProviderHint(transaction);
+      rules.set(row.provider_transaction_id, {
+        frequency: pattern.frequency,
+        anchor_date: anchorDate,
+        ...(pattern.interval && pattern.interval > 1
+          ? { interval: pattern.interval }
+          : {}),
+        provider_hint: {
+          source: providerHint ? "plaid_or_pattern" : "pattern",
+          confidence: pattern.confidence,
+          match_count: pattern.matchCount,
+          cadence_days: pattern.cadenceDays,
+          ...(providerHint || {}),
+        },
+      });
+    }
+  }
+
+  for (const transaction of params.transactions) {
+    const providerRule = buildPlaidRecurringRuleFromProviderHint(transaction);
+    if (providerRule) {
+      rules.set(transaction.transaction_id, providerRule);
+    }
+  }
+
+  return rules;
+}
+
+function normalizeExistingRecurrenceCandidate(
+  row: ExistingExpenseProjectionRow,
+): RecurrenceCandidateRow | null {
+  const record = row as ExistingExpenseProjectionRow &
+    Partial<RecurrenceCandidateRow>;
+  if (!record.provider_transaction_id || !record.date || !record.amount_cents) {
+    return null;
+  }
+  const type = record.type === "income" ? "income" : "expense";
+  return {
+    provider_transaction_id: record.provider_transaction_id,
+    bank_account_id: record.bank_account_id || "",
+    amount_cents: Number(record.amount_cents || 0),
+    currency: record.currency || null,
+    date: String(record.date).slice(0, 10),
+    type,
+    merchant: record.merchant || null,
+    raw_text: record.raw_text || null,
+    is_recurring: record.is_recurring,
+    recurrence_rule: record.recurrence_rule,
+  };
+}
+
+function largestAmountCluster(
+  rows: RecurrenceCandidateRow[],
+): RecurrenceCandidateRow[] {
+  const sorted = rows
+    .filter((row) => row.date && row.amount_cents > 0)
+    .sort((a, b) => a.amount_cents - b.amount_cents);
+  let best: RecurrenceCandidateRow[] = [];
+
+  for (const seed of sorted) {
+    const cluster = sorted.filter((row) =>
+      amountsCloseEnough(row.amount_cents, seed.amount_cents)
+    );
+    if (cluster.length > best.length) {
+      best = cluster;
+    }
+  }
+
+  return best;
+}
+
+function amountsCloseEnough(a: number, b: number): boolean {
+  const delta = Math.abs(a - b);
+  const larger = Math.max(Math.abs(a), Math.abs(b), 1);
+  return delta <= 500 || delta / larger <= 0.15;
+}
+
+function detectRecurrencePattern(
+  rows: RecurrenceCandidateRow[],
+): RecurrencePattern | null {
+  const dates = Array.from(new Set(rows.map((row) => row.date.slice(0, 10))))
+    .sort();
+  if (dates.length < 2) return null;
+
+  const dayGaps: number[] = [];
+  for (let i = 1; i < dates.length; i += 1) {
+    const previous = Date.parse(`${dates[i - 1]}T00:00:00Z`);
+    const current = Date.parse(`${dates[i]}T00:00:00Z`);
+    if (Number.isFinite(previous) && Number.isFinite(current)) {
+      dayGaps.push(Math.round((current - previous) / 86400000));
+    }
+  }
+  if (!dayGaps.length) return null;
+
+  const candidates: Array<{
+    frequency: RecurrencePattern["frequency"];
+    interval?: number;
+    min: number;
+    max: number;
+    needsIntervals: number;
+  }> = [
+    { frequency: "daily", min: 1, max: 1, needsIntervals: 2 },
+    { frequency: "weekly", min: 6, max: 8, needsIntervals: 2 },
+    { frequency: "biweekly", min: 13, max: 16, needsIntervals: 2 },
+    { frequency: "monthly", min: 27, max: 34, needsIntervals: 2 },
+    { frequency: "monthly", interval: 3, min: 84, max: 98, needsIntervals: 1 },
+    {
+      frequency: "monthly",
+      interval: 6,
+      min: 175,
+      max: 190,
+      needsIntervals: 1,
+    },
+    { frequency: "yearly", min: 350, max: 380, needsIntervals: 1 },
+  ];
+
+  for (const candidate of candidates) {
+    const matches = dayGaps.filter((gap) =>
+      gap >= candidate.min && gap <= candidate.max
+    );
+    if (matches.length >= candidate.needsIntervals) {
+      const averageGap = Math.round(
+        matches.reduce((sum, gap) => sum + gap, 0) / matches.length,
+      );
+      return {
+        frequency: candidate.frequency,
+        interval: candidate.interval,
+        confidence: matches.length >= 2 ? "high" : "medium",
+        matchCount: matches.length,
+        cadenceDays: averageGap,
+      };
+    }
+  }
+
+  return null;
+}
+
+function normalizeRecurringMerchant(value?: string | null): string | null {
+  const normalized = String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\b\d{2,}\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalized.length < 3) {
+    return null;
+  }
+  return normalized;
+}
+
+function buildPlaidRecurringProviderHint(
+  transaction?: PlaidTransaction,
+): Record<string, unknown> | null {
+  if (!transaction) return null;
+  const raw = transaction as PlaidTransaction & Record<string, unknown>;
+  const streamId = raw.recurring_stream_id || raw.stream_id ||
+    raw.recurring_transaction_id;
+  if (!streamId) return null;
+  return {
+    plaid_stream_id: streamId,
+    category: transaction.personal_finance_category || null,
+  };
+}
+
+function buildPlaidRecurringRuleFromProviderHint(
+  transaction: PlaidTransaction,
+): Record<string, unknown> | null {
+  const raw = transaction as PlaidTransaction & Record<string, unknown>;
+  const streamId = raw.recurring_stream_id || raw.stream_id ||
+    raw.recurring_transaction_id;
+  if (!streamId) return null;
+  const frequency = mapPlaidFrequencyToRecurrence(raw.frequency);
+  if (!frequency) return null;
+  return {
+    frequency: frequency.frequency,
+    anchor_date: transaction.date || transaction.authorized_date,
+    ...(frequency.interval && frequency.interval > 1
+      ? { interval: frequency.interval }
+      : {}),
+    provider_hint: {
+      source: "plaid",
+      plaid_stream_id: streamId,
+      plaid_frequency: raw.frequency || null,
+      category: transaction.personal_finance_category || null,
+    },
+  };
+}
+
+function mapPlaidFrequencyToRecurrence(value: unknown): {
+  frequency: RecurrencePattern["frequency"];
+  interval?: number;
+} | null {
+  switch (String(value || "").trim().toUpperCase()) {
+    case "DAILY":
+      return { frequency: "daily" };
+    case "WEEKLY":
+      return { frequency: "weekly" };
+    case "BIWEEKLY":
+      return { frequency: "biweekly" };
+    case "MONTHLY":
+      return { frequency: "monthly" };
+    case "QUARTERLY":
+      return { frequency: "monthly", interval: 3 };
+    case "SEMI_ANNUALLY":
+    case "SEMIANNUALLY":
+      return { frequency: "monthly", interval: 6 };
+    case "ANNUALLY":
+    case "YEARLY":
+      return { frequency: "yearly" };
+    default:
+      return null;
+  }
+}
+
 export interface UpsertTinkAccountsParams {
   supabase: SupabaseClient;
   userId: string;
@@ -506,7 +810,7 @@ export async function persistPlaidTransactions(
   const { data: existingRows, error: selectError } = await params.supabase
     .from("expenses")
     .select(
-      "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides",
+      "id, provider_transaction_id, deleted_at, deleted_reason, provider_deleted_at, sync_version, user_overrides, amount_cents, currency, date, type, merchant, raw_text, bank_account_id, is_recurring, recurrence_rule",
     )
     .eq("user_id", params.userId)
     .eq("provider", PLAID_PROVIDER)
@@ -526,8 +830,27 @@ export async function persistPlaidTransactions(
     }
   }
 
-  const mutationPlan = buildBankExpenseMutationPlan({
+  const recurringByProviderTransactionId = inferPlaidRecurringRules({
     records: normalizedRecords,
+    transactions: params.transactions,
+    existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
+  });
+  const recurrenceAwareRecords = normalizedRecords.map((record) => {
+    const recurrence = recurringByProviderTransactionId.get(
+      record.provider_transaction_id,
+    );
+    if (!recurrence) {
+      return record;
+    }
+    return {
+      ...record,
+      is_recurring: true,
+      recurrence_rule: recurrence,
+    };
+  });
+
+  const mutationPlan = buildBankExpenseMutationPlan({
+    records: recurrenceAwareRecords,
     transactions: params.transactions,
     existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
     providerPendingTransactionIds,

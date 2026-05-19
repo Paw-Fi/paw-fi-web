@@ -3,6 +3,15 @@ import type { ExpenseUpsertInput, PlaidTransaction } from "./plaid-client.ts";
 export interface ExistingExpenseProjectionRow {
   id: string;
   provider_transaction_id: string | null;
+  bank_account_id?: string | null;
+  amount_cents?: number | null;
+  currency?: string | null;
+  date?: string | null;
+  type?: "expense" | "income" | string | null;
+  merchant?: string | null;
+  raw_text?: string | null;
+  is_recurring?: boolean | null;
+  recurrence_rule?: Record<string, unknown> | null;
   deleted_at?: string | null;
   deleted_reason?: string | null;
   provider_deleted_at?: string | null;
