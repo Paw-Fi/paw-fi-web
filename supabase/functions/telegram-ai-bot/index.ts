@@ -18,7 +18,6 @@ import {
   normalizeExpensesForTool,
 } from "../shared/formatting-helpers.ts";
 import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
-import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
@@ -96,6 +95,11 @@ import {
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
+import {
+  buildAddTransactionsBatchTool,
+  buildAddTransactionTool,
+  buildCreateCustomCategoryTool,
+} from "../shared/bot/tool-definitions.ts";
 import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
   buildUnsafeMutationClaimFallback,
@@ -110,14 +114,24 @@ import {
   normalizeEnvelopeName,
 } from "../shared/bot/budget-utils.ts";
 import {
+  ensureHouseholdMember,
+  resolveHouseholdSplitConfig,
+} from "../shared/bot/household-utils.ts";
+import {
+  hasExpiredSubscriptionAccess,
+  jsonResponse,
+} from "../shared/bot/http-utils.ts";
+import {
   buildChoiceSummary,
   clearLastListedTransactions,
   type LastListedTransaction,
+  loadSessionState,
   normalizeLastListedTransactionFromRow,
   normalizeMatchString,
   normalizeSessionState,
   readLastListedTransactions,
   resolveLastListedSelection,
+  saveSessionState,
   type SessionState,
   setLastListedTransactions,
 } from "../shared/bot/session-state.ts";
@@ -266,13 +280,6 @@ type TelegramMessage = {
   voice?: { file_id: string; mime_type?: string; file_size?: number };
   audio?: { file_id: string; mime_type?: string; file_size?: number };
 };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
 
 function pickProcessingMessage(seed?: string | null) {
   if (!PROCESSING_ACK_MESSAGES.length) {
@@ -529,25 +536,6 @@ function isStartVerification(text: string) {
   return normalizeText(text).toLowerCase() === "start verification";
 }
 
-function hasExpiredSubscriptionAccess(
-  subscription?: {
-    status?: string | null;
-    currentPeriodEnd?: string | Date | null;
-  } | null,
-): boolean {
-  if (!subscription) return false;
-
-  const normalizedStatus = String(subscription.status ?? "").toLowerCase();
-  if (normalizedStatus !== "trialing" && normalizedStatus !== "active") {
-    return false;
-  }
-
-  if (subscription.currentPeriodEnd == null) return false;
-  const periodEnd = new Date(subscription.currentPeriodEnd);
-  if (Number.isNaN(periodEnd.getTime())) return false;
-  return periodEnd.getTime() <= Date.now();
-}
-
 function extractNumberedOptions(text: string): TelegramChoiceOption[] {
   const options: TelegramChoiceOption[] = [];
   for (const rawLine of text.split("\n")) {
@@ -589,10 +577,6 @@ function resolveTextFromCallbackChoice(
   const option = options.find((item) => item.index === index);
   if (!option) return null;
   return `${option.index}. ${option.label}`;
-}
-
-function normalizeNameForMatch(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function detectListTypeFromText(
@@ -723,67 +707,6 @@ function shouldForceListExpensesCall(text: string): boolean {
   return !hasMutationIntent;
 }
 
-async function loadSessionState(
-  supabase: SupabaseJsClient,
-  sessionId: string,
-  debugNotes: string[],
-): Promise<SessionState> {
-  const { data, error } = await supabase
-    .from("chat_sessions")
-    .select("system_prompt")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (error) {
-    debugNotes.push(
-      `chat_sessions load state error: ${formatInvokeError(error)}`,
-    );
-    return {};
-  }
-  return normalizeSessionState((data as any)?.system_prompt);
-}
-
-async function saveSessionState(
-  supabase: SupabaseJsClient,
-  sessionId: string,
-  state: SessionState,
-  debugNotes: string[],
-): Promise<void> {
-  const { error } = await supabase
-    .from("chat_sessions")
-    .update({ system_prompt: state, updated_at: new Date().toISOString() })
-    .eq("id", sessionId);
-  if (error) {
-    debugNotes.push(
-      `chat_sessions save state error: ${formatInvokeError(error)}`,
-    );
-  }
-}
-
-function resolveMemberIdByName(
-  members: Array<{
-    user_id: string;
-    users?: { full_name?: string; email?: string };
-  }>,
-  query: string,
-): string | null {
-  const q = normalizeNameForMatch(query);
-  if (!q) return null;
-
-  const matches: string[] = [];
-  for (const member of members) {
-    const name = normalizeNameForMatch(member.users?.full_name || "");
-    const email = normalizeNameForMatch(member.users?.email || "");
-    if (!member.user_id) continue;
-    if (name === q || email === q) matches.push(member.user_id);
-    else if (name.includes(q) || email.includes(q)) {
-      matches.push(member.user_id);
-    }
-  }
-  const unique = Array.from(new Set(matches));
-  if (unique.length !== 1) return null;
-  return unique[0];
-}
-
 async function reportTelegramToolInvokeFailure(params: {
   traceId: string;
   toolName: string;
@@ -808,149 +731,6 @@ function buildMutationFailureText(
     return "I couldn't delete that transaction right now. Please try again in a moment.";
   }
   return null;
-}
-
-async function ensureHouseholdMember(
-  supabase: SupabaseJsClient,
-  householdId: string,
-  userId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("household_members")
-    .select("id")
-    .eq("household_id", householdId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) return false;
-  return !!data;
-}
-
-async function resolveHouseholdSplitConfig(
-  supabase: SupabaseJsClient,
-  householdId: string,
-  actorUserId: string,
-  totalAmount: number,
-  args: any,
-): Promise<{ payerUserId?: string; customSplits?: CustomSplits }> {
-  const payerName = (args.payer_name || args.paid_by || "").toString().trim();
-  const splitTypeHint = (args.split_type || "").toString().trim().toLowerCase();
-  const memberSplitsRaw = Array.isArray(args.member_splits)
-    ? args.member_splits
-    : [];
-
-  const { data: members, error } = await supabase
-    .from("household_members")
-    .select("user_id, users(full_name, email)")
-    .eq("household_id", householdId);
-  if (error || !members || members.length === 0) return {};
-
-  const memberIds = members
-    .map((m: any) => m.user_id as string)
-    .filter(Boolean);
-  if (memberIds.length === 0) return {};
-
-  const payerUserId = payerName
-    ? resolveMemberIdByName(members as any, payerName) || actorUserId
-    : actorUserId;
-
-  if (!memberSplitsRaw.length) {
-    return { payerUserId };
-  }
-
-  const inferredType = (() => {
-    if (["equal", "amount", "percentage", "shares"].includes(splitTypeHint)) {
-      return splitTypeHint;
-    }
-    const hasPct = memberSplitsRaw.some(
-      (split: any) => typeof split?.percentage === "number",
-    );
-    const hasShares = memberSplitsRaw.some(
-      (split: any) => typeof split?.shares === "number",
-    );
-    return hasPct ? "percentage" : hasShares ? "shares" : "amount";
-  })();
-
-  const byId = new Map<string, any>();
-  for (const split of memberSplitsRaw) {
-    const memberName = (
-      split?.member_name ||
-      split?.member ||
-      split?.name ||
-      ""
-    )
-      .toString()
-      .trim();
-    if (!memberName) continue;
-    const memberId = resolveMemberIdByName(members as any, memberName);
-    if (!memberId) continue;
-    byId.set(memberId, split);
-  }
-
-  const total = Number.isFinite(totalAmount) ? Math.max(0, totalAmount) : 0;
-  const fullSplits: MemberSplit[] = [];
-
-  if (inferredType === "amount") {
-    let specifiedSum = 0;
-    const missing: string[] = [];
-    for (const id of memberIds) {
-      const split = byId.get(id);
-      const amount =
-        typeof split?.amount === "number" ? Math.max(0, split.amount) : null;
-      if (amount == null) missing.push(id);
-      else specifiedSum += amount;
-    }
-    const remaining = Math.max(0, total - specifiedSum);
-    const perMissing = missing.length ? remaining / missing.length : 0;
-
-    for (const id of memberIds) {
-      const split = byId.get(id);
-      const amount =
-        typeof split?.amount === "number"
-          ? Math.max(0, split.amount)
-          : perMissing;
-      fullSplits.push({ userId: id, amount });
-    }
-  } else if (inferredType === "percentage") {
-    let specifiedSum = 0;
-    const missing: string[] = [];
-    for (const id of memberIds) {
-      const split = byId.get(id);
-      const percentage =
-        typeof split?.percentage === "number"
-          ? Math.max(0, Math.min(100, split.percentage))
-          : null;
-      if (percentage == null) missing.push(id);
-      else specifiedSum += percentage;
-    }
-    const remaining = Math.max(0, 100 - specifiedSum);
-    const perMissing = missing.length ? remaining / missing.length : 0;
-
-    for (const id of memberIds) {
-      const split = byId.get(id);
-      const percentage =
-        typeof split?.percentage === "number"
-          ? Math.max(0, Math.min(100, split.percentage))
-          : perMissing;
-      fullSplits.push({ userId: id, percentage });
-    }
-  } else if (inferredType === "shares") {
-    for (const id of memberIds) {
-      const split = byId.get(id);
-      const shares =
-        typeof split?.shares === "number"
-          ? Math.max(1, Math.trunc(split.shares))
-          : 1;
-      fullSplits.push({ userId: id, shares });
-    }
-  }
-
-  return {
-    payerUserId,
-    customSplits: {
-      splitType: inferredType as CustomSplits["splitType"],
-      memberSplits: fullSplits,
-    },
-  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -1503,143 +1283,9 @@ Deno.serve(async (req: Request) => {
               },
             },
           },
-          {
-            name: "create_custom_category",
-            description:
-              "Create or update a custom transaction category for this user so it can be reused later.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                name: { type: "STRING" },
-                transaction_type: {
-                  type: "STRING",
-                  enum: ["expense", "income"],
-                },
-                color_argb: { type: "NUMBER" },
-                icon_key: { type: "STRING" },
-              },
-              required: ["name", "transaction_type"],
-            },
-          },
-          {
-            name: "add_transaction",
-            description:
-              "Add an expense or income transaction. Use this for both personal and shared spaces.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                type: { type: "STRING", enum: ["expense", "income"] },
-                amount: { type: "NUMBER" },
-                category: { type: "STRING" },
-                description: { type: "STRING" },
-                merchant: { type: "STRING" },
-                date: { type: "STRING" },
-                currency: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                wallet_name: { type: "STRING" },
-                payer_name: { type: "STRING" },
-                split_type: {
-                  type: "STRING",
-                  enum: ["equal", "amount", "percentage", "shares"],
-                },
-                member_splits: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      member_name: { type: "STRING" },
-                      amount: { type: "NUMBER" },
-                      percentage: { type: "NUMBER" },
-                      shares: { type: "NUMBER" },
-                    },
-                    required: ["member_name"],
-                  },
-                },
-                owner_type: {
-                  type: "STRING",
-                  enum: ["me", "partner", "household"],
-                },
-                privacy_scope: {
-                  type: "STRING",
-                  enum: ["private", "balances_only", "full"],
-                },
-                source: { type: "STRING" },
-                is_recurring: { type: "BOOLEAN" },
-                frequency: { type: "STRING" },
-                recurrence_rule: {
-                  type: "OBJECT",
-                  description: "Optional explicit recurrence rule payload",
-                },
-              },
-              required: ["type", "amount", "category"],
-            },
-          },
-          {
-            name: "add_transactions_batch",
-            description: "Add multiple transactions at once.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                transactions: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      type: { type: "STRING", enum: ["expense", "income"] },
-                      amount: { type: "NUMBER" },
-                      category: { type: "STRING" },
-                      description: { type: "STRING" },
-                      merchant: { type: "STRING" },
-                      date: { type: "STRING" },
-                      currency: { type: "STRING" },
-                      wallet_name: { type: "STRING" },
-                      payer_name: { type: "STRING" },
-                      split_type: {
-                        type: "STRING",
-                        enum: ["equal", "amount", "percentage", "shares"],
-                      },
-                      member_splits: {
-                        type: "ARRAY",
-                        items: {
-                          type: "OBJECT",
-                          properties: {
-                            member_name: { type: "STRING" },
-                            amount: { type: "NUMBER" },
-                            percentage: { type: "NUMBER" },
-                            shares: { type: "NUMBER" },
-                          },
-                          required: ["member_name"],
-                        },
-                      },
-                      source: { type: "STRING" },
-                      owner_type: {
-                        type: "STRING",
-                        enum: ["me", "partner", "household"],
-                      },
-                      privacy_scope: {
-                        type: "STRING",
-                        enum: ["private", "balances_only", "full"],
-                      },
-                      is_recurring: { type: "BOOLEAN" },
-                      frequency: { type: "STRING" },
-                      recurrence_rule: {
-                        type: "OBJECT",
-                        description:
-                          "Optional explicit recurrence rule payload",
-                      },
-                    },
-                    required: ["type", "amount", "category"],
-                  },
-                },
-              },
-              required: ["transactions"],
-            },
-          },
+          buildCreateCustomCategoryTool(),
+          buildAddTransactionTool({ includeMerchant: true }),
+          buildAddTransactionsBatchTool({ includeMerchant: true }),
           {
             name: "list_wallets",
             description:

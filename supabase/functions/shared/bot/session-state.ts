@@ -57,6 +57,22 @@ export type TransactionMatch = {
 
 const LAST_LISTED_TTL_MS = 2 * 60 * 60 * 1000;
 
+type SessionStatePersistenceOptions =
+  | boolean
+  | { debugEnabled?: boolean; logPrefix?: string };
+
+function normalizePersistenceOptions(
+  options: SessionStatePersistenceOptions = {},
+): { debugEnabled: boolean; logPrefix?: string } {
+  if (typeof options === "boolean") {
+    return { debugEnabled: options };
+  }
+  return {
+    debugEnabled: options.debugEnabled ?? true,
+    logPrefix: options.logPrefix,
+  };
+}
+
 export function normalizeSessionState(raw: unknown): SessionState {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
     return raw as SessionState;
@@ -78,8 +94,9 @@ export async function loadSessionState(
   supabase: SupabaseLike,
   sessionId: string,
   debugNotes: string[],
-  options: { debugEnabled?: boolean; logPrefix?: string } = {},
+  options: SessionStatePersistenceOptions = {},
 ): Promise<SessionState> {
+  const persistenceOptions = normalizePersistenceOptions(options);
   const { data, error } = await supabase
     .from("chat_sessions")
     .select("system_prompt")
@@ -87,14 +104,17 @@ export async function loadSessionState(
     .maybeSingle();
   if (error) {
     const formatted = formatInvokeError(error);
-    if (options.debugEnabled ?? true) {
+    if (persistenceOptions.debugEnabled) {
       debugNotes.push(`chat_sessions load state error: ${formatted}`);
     }
-    if (options.logPrefix) {
-      console.error(`[${options.logPrefix}] chat_sessions state load error`, {
-        error,
-        formatted,
-      });
+    if (persistenceOptions.logPrefix) {
+      console.error(
+        `[${persistenceOptions.logPrefix}] chat_sessions state load error`,
+        {
+          error,
+          formatted,
+        },
+      );
     }
     return {};
   }
@@ -106,8 +126,9 @@ export async function saveSessionState(
   sessionId: string,
   state: SessionState,
   debugNotes: string[],
-  options: { debugEnabled?: boolean; logPrefix?: string } = {},
+  options: SessionStatePersistenceOptions = {},
 ): Promise<void> {
+  const persistenceOptions = normalizePersistenceOptions(options);
   const { error } = await supabase
     .from("chat_sessions")
     .update({
@@ -117,14 +138,17 @@ export async function saveSessionState(
     .eq("id", sessionId);
   if (error) {
     const formatted = formatInvokeError(error);
-    if (options.debugEnabled ?? true) {
+    if (persistenceOptions.debugEnabled) {
       debugNotes.push(`chat_sessions save state error: ${formatted}`);
     }
-    if (options.logPrefix) {
-      console.error(`[${options.logPrefix}] chat_sessions state save error`, {
-        error,
-        formatted,
-      });
+    if (persistenceOptions.logPrefix) {
+      console.error(
+        `[${persistenceOptions.logPrefix}] chat_sessions state save error`,
+        {
+          error,
+          formatted,
+        },
+      );
     }
   }
 }

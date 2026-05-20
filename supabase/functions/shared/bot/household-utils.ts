@@ -13,6 +13,7 @@ export function normalizeNameForMatch(value: string): string {
   return (value || "")
     .toLowerCase()
     .replace(/@.*/, "")
+    .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
 }
