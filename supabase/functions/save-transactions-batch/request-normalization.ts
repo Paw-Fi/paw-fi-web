@@ -9,14 +9,14 @@ export type BatchTransactionType = "expense" | "income";
 
 export type NormalizedBatchTransactionInput =
   | {
-    ok: true;
-    type: BatchTransactionType;
-    amount: number;
-  }
+      ok: true;
+      type: BatchTransactionType;
+      amount: number;
+    }
   | {
-    ok: false;
-    error: "Invalid or missing type" | "Invalid amount";
-  };
+      ok: false;
+      error: "Invalid or missing type" | "Invalid amount";
+    };
 
 export function normalizeBatchTransactionInput(input: {
   type?: unknown;
@@ -27,13 +27,13 @@ export function normalizeBatchTransactionInput(input: {
     return { ok: false, error: "Invalid amount" };
   }
 
+  if (amount < 0) {
+    return { ok: true, type: "expense", amount: Math.abs(amount) };
+  }
+
   const explicitType = normalizeExplicitTransactionType(input.type);
   if (explicitType != null) {
     return { ok: true, type: explicitType, amount: Math.abs(amount) };
-  }
-
-  if (amount < 0) {
-    return { ok: true, type: "expense", amount: Math.abs(amount) };
   }
 
   return { ok: false, error: "Invalid or missing type" };
@@ -141,8 +141,8 @@ function resolvePreferenceSourceText(input: {
   const description = normalizeOptionalText(input.description);
   const merchant = normalizeOptionalText(input.merchant);
   return input.transactionType === "income"
-    ? merchant ?? description
-    : description ?? merchant;
+    ? (merchant ?? description)
+    : (description ?? merchant);
 }
 
 function isGenericBatchCategory(category: string): boolean {
@@ -168,9 +168,7 @@ function recoverZeroPaddedTwoDigitYearDate(
   value: string,
   referenceYear?: number,
 ): string | null {
-  const match = /^00(\d{2})-(\d{2})-(\d{2})(?:[Tt\s].*)?$/.exec(
-    value.trim(),
-  );
+  const match = /^00(\d{2})-(\d{2})-(\d{2})(?:[Tt\s].*)?$/.exec(value.trim());
   if (!match) return null;
 
   const year = expandTwoDigitYear(Number(match[1]), referenceYear);
@@ -178,12 +176,13 @@ function recoverZeroPaddedTwoDigitYearDate(
 }
 
 function expandTwoDigitYear(year: number, referenceYear?: number): number {
-  const safeReferenceYear = Number.isInteger(referenceYear) &&
-      referenceYear != null &&
-      referenceYear >= 1900 &&
-      referenceYear <= 9999
-    ? referenceYear
-    : new Date().getUTCFullYear();
+  const safeReferenceYear =
+    Number.isInteger(referenceYear) &&
+    referenceYear != null &&
+    referenceYear >= 1900 &&
+    referenceYear <= 9999
+      ? referenceYear
+      : new Date().getUTCFullYear();
   const century = Math.floor(safeReferenceYear / 100) * 100;
   let expanded = century + year;
 

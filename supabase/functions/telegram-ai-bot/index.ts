@@ -16,7 +16,6 @@ import {
   formatInvokeError,
   formatInvokeErrorWithResponseBody,
   normalizeExpensesForTool,
-  readInvokeErrorResponseDetails,
 } from "../shared/formatting-helpers.ts";
 import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import type { CustomSplits, MemberSplit } from "../shared/expenses-helpers.ts";
@@ -30,7 +29,6 @@ import {
 } from "../shared/budgets-helpers.ts";
 import { insertChatMessage } from "../shared/chat-helpers.ts";
 import { updatePreferredCurrency } from "../shared/currency-helpers.ts";
-import { runAnalyzeExpense } from "../shared/analyze-core.ts";
 import {
   isRetryableGeminiError,
   sendGeminiMessageWithRetry,
@@ -44,7 +42,6 @@ import {
   buildTelegramVerificationUrl,
   REQUIRED_TELEGRAM_TOOL_NAMES,
 } from "../shared/telegram-parity.ts";
-import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { reportVertexAiFailure } from "../shared/report-vertex-ai-failure.ts";
 import {
   fetchUserCategoryPreferences,
@@ -74,10 +71,32 @@ import {
   normalizeRequiredAiToolString,
 } from "../shared/bot/ai-tool-validation.ts";
 import {
+  buildRecurrenceRule,
+  formatDateInTimeZone,
+} from "../shared/bot/date-utils.ts";
+import {
+  reportBotBackendError,
+  reportBotToolInvokeFailure,
+} from "../shared/bot/error-reporting.ts";
+import {
+  buildGeminiHighDemandMessage as buildGeminiBusyMessage,
+  buildProcessingFailureMessage,
+  createQuickChartShortUrl,
+  decodeBase64,
+  extractChartMediaUrlFromToolResult,
+  extractQuickChartUrl,
+  normalizeQuickChartMediaUrl,
+  runAnalyzeExpenseWithTimeout,
+  runBackgroundTask,
+  truncateTextByCodePoints,
+  uint8ToBase64,
+} from "../shared/bot/media-utils.ts";
+import {
   buildTransactionMutationFailureText,
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
+import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
   buildUnsafeMutationClaimFallback,
   detectWriteIntentFromUserText,
@@ -85,6 +104,23 @@ import {
   isWriteMutationToolName,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
+import {
+  buildBudgetDoneText,
+  consolidateDuplicateEnvelopesForBudget,
+  normalizeEnvelopeName,
+} from "../shared/bot/budget-utils.ts";
+import {
+  buildChoiceSummary,
+  clearLastListedTransactions,
+  type LastListedTransaction,
+  normalizeLastListedTransactionFromRow,
+  normalizeMatchString,
+  normalizeSessionState,
+  readLastListedTransactions,
+  resolveLastListedSelection,
+  type SessionState,
+  setLastListedTransactions,
+} from "../shared/bot/session-state.ts";
 
 const MODEL_NAME = "gemini-3.1-flash-lite-preview";
 const FALLBACK_MODEL_NAME = "gemini-2.5-flash";
@@ -238,43 +274,6 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function buildGeminiBusyMessage(language?: string | null) {
-  const normalized = String(language || "en")
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, "_");
-  if (normalized === "zh") {
-    return "Moneko 当前请求量较高。请稍后再试。";
-  }
-  if (normalized === "zh_tw") {
-    return "Moneko 當前請求量較高。請稍後再試。";
-  }
-  return "We’re experiencing high demand right now. Please try again shortly.";
-}
-
-function buildProcessingFailureMessage(language?: string | null) {
-  const normalized = String(language || "en")
-    .trim()
-    .toLowerCase()
-    .replace(/-/g, "_");
-  if (normalized === "zh") {
-    return "我刚刚处理你的消息时遇到了临时问题。请过几秒再试一次。";
-  }
-  if (normalized === "zh_tw") {
-    return "我剛剛處理你的訊息時遇到了臨時問題。請過幾秒再試一次。";
-  }
-  return "I hit a temporary issue while processing your message. Please try again in a few seconds.";
-}
-
-function runBackgroundTask(task: Promise<unknown>) {
-  const edgeRuntime = (globalThis as any)?.EdgeRuntime;
-  if (edgeRuntime?.waitUntil) {
-    edgeRuntime.waitUntil(task);
-    return;
-  }
-  void task;
-}
-
 function pickProcessingMessage(seed?: string | null) {
   if (!PROCESSING_ACK_MESSAGES.length) {
     return "Processing your request now. ⏳";
@@ -290,62 +289,6 @@ function pickProcessingMessage(seed?: string | null) {
   }
   const idx = Math.abs(hash) % PROCESSING_ACK_MESSAGES.length;
   return PROCESSING_ACK_MESSAGES[idx];
-}
-
-function decodeBase64(data: string): Uint8Array {
-  const cleaned = data.replace(/^data:.*;base64,/, "");
-  const bin = atob(cleaned);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return arr;
-}
-
-function uint8ToBase64(buf: Uint8Array): string {
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let i = 0; i < buf.length; i += chunkSize) {
-    const subarray = buf.subarray(i, Math.min(i + chunkSize, buf.length));
-    binary += String.fromCharCode.apply(null, Array.from(subarray));
-  }
-  return btoa(binary);
-}
-
-function formatDateInTimeZone(
-  tz: string | null | undefined,
-  date = new Date(),
-) {
-  const timezone = (tz || "UTC").trim();
-  try {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(date);
-    const map = new Map(parts.map((p) => [p.type, p.value]));
-    return `${map.get("year")}-${map.get("month")}-${map.get("day")}`;
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
-
-async function runAnalyzeExpenseWithTimeout(
-  payload: any,
-  apiKey: string | undefined,
-  timeoutMs: number,
-  timeoutError: string,
-): Promise<any> {
-  try {
-    const analysisPromise = runAnalyzeExpense(payload, apiKey || "");
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("timeout")), timeoutMs);
-    });
-
-    return await Promise.race([analysisPromise, timeoutPromise]);
-  } catch (error) {
-    console.error("[telegram-ai-bot] analyze-expense timeout/error:", error);
-    return { success: false, error: timeoutError, language: "en" };
-  }
 }
 
 async function getTelegramFile(
@@ -457,117 +400,10 @@ async function sendTelegramPhoto(
   return true;
 }
 
-function truncateTextByCodePoints(input: string, max: number): string {
-  const arr = Array.from((input || "").trim());
-  if (arr.length <= max) return arr.join("");
-  return arr.slice(0, Math.max(0, max - 1)).join("") + "…";
-}
-
-function extractQuickChartUrl(text: string): {
-  url: string | null;
-  cleanedText: string;
-} {
-  const input = (text || "").trim();
-  if (!input) return { url: null, cleanedText: "" };
-
-  // Keep this intentionally narrow so we don't strip other URLs users might need.
-  const regex = /(https?:\/\/quickchart\.io\/chart[^\s<>"]+)/gi;
-  const matches = input.match(regex) || [];
-  const raw = matches[0] || "";
-  const url = raw ? raw.replace(/[)\].,!?;:]+$/g, "") : null;
-
-  if (!url) return { url: null, cleanedText: input };
-
-  const withoutUrl = input.replace(raw, "");
-  const cleanedText = withoutUrl
-    .replace(/\s+\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-
-  return { url, cleanedText };
-}
-
-function parseQuickChartConfigFromUrl(url: string): unknown | null {
-  try {
-    const u = new URL(url);
-    if (!/quickchart\.io$/i.test(u.hostname)) return null;
-    if (!u.pathname.startsWith("/chart")) return null;
-    if (u.pathname.startsWith("/chart/render/")) return null;
-    const c = u.searchParams.get("c");
-    if (!c) return null;
-    const decoded = decodeURIComponent(c);
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-}
-
-async function createQuickChartShortUrl(
-  chartConfig: unknown,
-): Promise<string | null> {
-  try {
-    const res = await fetch("https://quickchart.io/chart/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chart: chartConfig,
-        format: "png",
-        width: 720,
-        height: 480,
-        devicePixelRatio: 2,
-        backgroundColor: "white",
-      }),
-    });
-    if (!res.ok) return null;
-    const json = (await res.json().catch(() => null)) as any;
-    if (!json?.success || typeof json?.url !== "string") return null;
-    return json.url;
-  } catch {
-    return null;
-  }
-}
-
-async function normalizeQuickChartMediaUrl(url: string): Promise<string> {
-  const input = (url || "").trim();
-  if (!input) return input;
-  if (/^https?:\/\/quickchart\.io\/chart\/render\//i.test(input)) {
-    return input;
-  }
-  const cfg = parseQuickChartConfigFromUrl(input);
-  if (!cfg) return input;
-  return (await createQuickChartShortUrl(cfg)) || input;
-}
-
-function extractChartMediaUrlFromToolResult(
-  toolResult: unknown,
-): string | null {
-  if (!toolResult || typeof toolResult !== "object") return null;
-
-  // Keep this aligned with tool response fields that may contain chart URLs.
-  // We cannot depend on model text because prompts explicitly discourage URL echoing.
-  const candidateValues = [
-    (toolResult as Record<string, unknown>).url,
-    (toolResult as Record<string, unknown>).chart_url,
-    (toolResult as Record<string, any>).snapshot?.chart_url,
-    (toolResult as Record<string, any>).data?.chart_url,
-  ];
-
-  for (const value of candidateValues) {
-    if (typeof value !== "string") continue;
-    const cleaned = value.trim();
-    if (!cleaned) continue;
-    if (!/^https?:\/\/quickchart\.io\/chart/i.test(cleaned)) continue;
-    return cleaned;
-  }
-
-  return null;
-}
-
 async function sendTelegramChatAction(
   token: string,
   chatId: number,
-  action: "typing" = "typing",
+  action: "typing" | "upload_photo" = "typing",
 ) {
   try {
     const url = `https://api.telegram.org/bot${token}/sendChatAction`;
@@ -759,369 +595,6 @@ function normalizeNameForMatch(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function normalizeWalletName(value: unknown) {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
-async function listWalletRowsForScope(
-  supabase: SupabaseJsClient,
-  userId: string,
-  householdId: string | null,
-  includeArchived = false,
-) {
-  let query = supabase
-    .from("accounts")
-    .select(
-      "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
-    )
-    .order("is_default", { ascending: false })
-    .order("is_system", { ascending: false })
-    .order("name", { ascending: true });
-
-  if (!includeArchived) {
-    query = query.eq("is_archived", false);
-  }
-
-  if (householdId) {
-    query = query.eq("household_id", householdId);
-  } else {
-    query = query.eq("user_id", userId).is("household_id", null);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    console.error("[telegram-ai-bot] Failed to load wallets for scope", {
-      userId,
-      householdId,
-      error,
-    });
-    return [];
-  }
-
-  return (data || []) as Array<{
-    id: string;
-    user_id: string;
-    household_id: string | null;
-    name: string;
-    icon: string | null;
-    color: string | null;
-    opening_balance_cents: number | null;
-    goal_amount_cents: number | null;
-    is_default: boolean;
-    is_system: boolean;
-    is_archived: boolean;
-    linked_bank_account_id: string | null;
-    created_at: string;
-    updated_at: string;
-  }>;
-}
-
-async function resolveWalletIdInScope(
-  supabase: SupabaseJsClient,
-  userId: string,
-  householdId: string | null,
-  walletName: unknown,
-): Promise<{ accountId?: string; error?: string }> {
-  const normalizedName = normalizeWalletName(walletName);
-  if (!normalizedName) return {};
-
-  const wallets = await listWalletRowsForScope(supabase, userId, householdId);
-  const matches = wallets.filter(
-    (wallet) => normalizeWalletName(wallet.name) === normalizedName,
-  );
-
-  if (matches.length === 0) {
-    return {
-      error: `Wallet '${String(
-        walletName,
-      ).trim()}' was not found in the selected scope.`,
-    };
-  }
-
-  if (matches.length > 1) {
-    return {
-      error: `More than one wallet named '${String(
-        walletName,
-      ).trim()}' exists in the selected scope. Please rename one of them or be more specific.`,
-    };
-  }
-
-  return { accountId: matches[0].id };
-}
-
-type LastListedTransaction = {
-  id: string;
-  amountMajor: number;
-  currency: string;
-  date: string;
-  category: string;
-  description: string;
-  type?: "expense" | "income";
-  household_id?: string | null;
-};
-
-type LastListedTransactionsMemory = {
-  items: LastListedTransaction[];
-  saved_at: string;
-};
-
-type SessionState = {
-  moneko_state?: {
-    last_listed_transactions?: LastListedTransactionsMemory;
-  };
-};
-
-const LAST_LISTED_TTL_MS = 2 * 60 * 60 * 1000;
-
-function normalizeSessionState(raw: unknown): SessionState {
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    return raw as SessionState;
-  }
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        return parsed as SessionState;
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return {};
-}
-
-function normalizeLastListedTransactionFromRow(
-  row: any,
-): LastListedTransaction | null {
-  if (!row || typeof row !== "object") return null;
-  const idRaw = (row as any).id;
-  const id = typeof idRaw === "string" ? idRaw : String(idRaw || "");
-  if (!id) return null;
-
-  const cents = (row as any).amount_cents;
-  const amountMajor =
-    typeof cents === "number" && Number.isFinite(cents)
-      ? cents / 100
-      : Number((row as any).amount) || 0;
-
-  const currency = String((row as any).currency || "").toUpperCase();
-  const date = String((row as any).date || "").slice(0, 10);
-  const category = String((row as any).category || "").trim();
-  const description = String(
-    (row as any).raw_text ?? (row as any).description ?? "",
-  ).trim();
-  const typeRaw = String((row as any).type || "expense").toLowerCase();
-  const type = typeRaw === "income" ? "income" : "expense";
-  const householdIdRaw = (row as any).household_id;
-  const household_id =
-    householdIdRaw == null ? null : String(householdIdRaw || "") || null;
-
-  return {
-    id,
-    amountMajor,
-    currency,
-    date,
-    category,
-    description,
-    type,
-    household_id,
-  };
-}
-
-function readLastListedTransactions(state: SessionState | null): {
-  items: LastListedTransaction[] | null;
-  expired: boolean;
-} {
-  const memory = state?.moneko_state?.last_listed_transactions;
-  if (!memory || typeof memory !== "object") {
-    return { items: null, expired: false };
-  }
-  const savedAt = (memory as any).saved_at;
-  const savedAtMs = typeof savedAt === "string" ? Date.parse(savedAt) : NaN;
-  if (!Number.isFinite(savedAtMs)) {
-    return { items: null, expired: true };
-  }
-  if (Date.now() - savedAtMs > LAST_LISTED_TTL_MS) {
-    return { items: null, expired: true };
-  }
-  const rawItems = Array.isArray((memory as any).items)
-    ? ((memory as any).items as any[])
-    : [];
-  const items = rawItems
-    .map((item) => (item && typeof item === "object" ? item : null))
-    .filter(Boolean) as LastListedTransaction[];
-  return { items: items.slice(0, 25), expired: false };
-}
-
-function setLastListedTransactions(
-  state: SessionState | null,
-  items: LastListedTransaction[],
-): SessionState {
-  const base = normalizeSessionState(state);
-  return {
-    ...base,
-    moneko_state: {
-      ...(base.moneko_state || {}),
-      last_listed_transactions: {
-        items: (items || []).slice(0, 25),
-        saved_at: new Date().toISOString(),
-      },
-    },
-  };
-}
-
-function clearLastListedTransactions(state: SessionState | null): SessionState {
-  const base = normalizeSessionState(state);
-  if (!base.moneko_state?.last_listed_transactions) return base;
-  const { last_listed_transactions: _last, ...rest } = base.moneko_state;
-  if (Object.keys(rest).length === 0) {
-    const { moneko_state: _state, ...withoutState } = base;
-    return withoutState;
-  }
-  return { ...base, moneko_state: rest };
-}
-
-type TransactionMatch = {
-  amount?: number;
-  date?: string;
-  description_contains?: string;
-  category?: string;
-  currency?: string;
-  type?: "expense" | "income";
-};
-
-function normalizeMatchString(value: unknown): string {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
-function matchesTransaction(
-  item: LastListedTransaction,
-  match: TransactionMatch,
-) {
-  if (match.amount != null) {
-    const amt = Number(match.amount);
-    if (!Number.isFinite(amt)) return false;
-    if (Math.abs((item.amountMajor || 0) - amt) > 0.009) return false;
-  }
-  if (match.date) {
-    const d = String(match.date || "").slice(0, 10);
-    if (d && item.date !== d) return false;
-  }
-  if (match.currency) {
-    const cur = String(match.currency || "")
-      .trim()
-      .toUpperCase();
-    if (cur && item.currency.toUpperCase() !== cur) return false;
-  }
-  if (match.type) {
-    const t =
-      String(match.type).toLowerCase() === "income" ? "income" : "expense";
-    if ((item.type || "expense") !== t) return false;
-  }
-  if (match.category) {
-    const cat = normalizeMatchString(match.category);
-    if (cat && normalizeMatchString(item.category) !== cat) return false;
-  }
-  if (match.description_contains) {
-    const needle = normalizeMatchString(match.description_contains);
-    if (needle && !normalizeMatchString(item.description).includes(needle)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function buildChoiceSummary(
-  item: LastListedTransaction,
-  spaceName?: string | null,
-): string {
-  const amountText = `${item.amountMajor || 0} ${item.currency || "USD"}`;
-  const pieces = [
-    item.date,
-    amountText,
-    item.category || "",
-    item.description || "",
-    spaceName ? `(${spaceName})` : "",
-  ].filter((p) => String(p || "").trim().length > 0);
-  return pieces.join(" - ");
-}
-
-function resolveLastListedSelection(
-  items: LastListedTransaction[],
-  args: { selection_index?: unknown; match?: unknown },
-  spaceNameByHouseholdId?: (
-    householdId: string | null | undefined,
-  ) => string | null,
-):
-  | { candidate: LastListedTransaction }
-  | {
-      needs_disambiguation: true;
-      choices: Array<{ index: number; summary: string }>;
-    }
-  | { error: string } {
-  const list = Array.isArray(items) ? items : [];
-  if (list.length === 0) {
-    return {
-      error:
-        "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-    };
-  }
-
-  const rawIndex = Number((args as any).selection_index);
-  if (Number.isFinite(rawIndex)) {
-    const idx = Math.trunc(rawIndex);
-    if (idx >= 1 && idx <= list.length) {
-      return { candidate: list[idx - 1] };
-    }
-    return {
-      error: `Invalid selection_index. Ask the user to reply with a number from the last list (1..${list.length}).`,
-    };
-  }
-
-  const matchRaw = (args as any).match;
-  const match: TransactionMatch =
-    matchRaw && typeof matchRaw === "object" && !Array.isArray(matchRaw)
-      ? (matchRaw as TransactionMatch)
-      : {};
-
-  const filtered = Object.keys(match).length
-    ? list.filter((item) => matchesTransaction(item, match))
-    : [];
-
-  if (filtered.length === 1) {
-    return { candidate: filtered[0] };
-  }
-
-  const choicesSource = filtered.length ? filtered : list;
-  const choices = choicesSource
-    .slice(0, 10)
-    .map((item) => {
-      const index = list.findIndex((x) => x.id === item.id) + 1;
-      const spaceName = spaceNameByHouseholdId
-        ? spaceNameByHouseholdId(item.household_id)
-        : null;
-      return {
-        index: index > 0 ? index : 0,
-        summary: buildChoiceSummary(item, spaceName),
-      };
-    })
-    .filter((c) => c.index > 0);
-
-  if (choices.length === 1) {
-    const only = list[choices[0].index - 1];
-    if (only) return { candidate: only };
-  }
-
-  if (choices.length > 1) {
-    return { needs_disambiguation: true, choices };
-  }
-
-  return {
-    error:
-      "No matching transaction found. Ask user to list recent transactions first or provide more details.",
-  };
-}
-
 function detectListTypeFromText(
   text: string,
 ): "expense" | "income" | undefined {
@@ -1286,213 +759,6 @@ async function saveSessionState(
   }
 }
 
-type BudgetEnvelopeRowLite = {
-  id: string;
-  name: string;
-  updated_at: string | null;
-  budget_percentage: number | null;
-};
-
-function normalizeEnvelopeName(value: string): string {
-  return (value || "").trim().toLowerCase();
-}
-
-function normalizePeriodMonth(value: string): string {
-  const trimmed = (value || "").trim();
-  if (trimmed.length >= 7) return `${trimmed.slice(0, 7)}-01`;
-  return trimmed;
-}
-
-function isNewerIso(
-  a: string | null | undefined,
-  b: string | null | undefined,
-) {
-  const ta = a ? Date.parse(a) : Number.NEGATIVE_INFINITY;
-  const tb = b ? Date.parse(b) : Number.NEGATIVE_INFINITY;
-  return ta > tb;
-}
-
-function formatPct(value: number): string {
-  if (!Number.isFinite(value)) return "0%";
-  const rounded = Math.round(value * 100) / 100;
-  const isInt = Math.abs(rounded - Math.round(rounded)) < 1e-9;
-  return `${isInt ? Math.round(rounded) : rounded}%`;
-}
-
-function buildBudgetDoneText(
-  pockets: Array<{ name: string; percentage: number }>,
-): string {
-  const cleaned = pockets
-    .map((p) => ({
-      name: (p.name || "").trim(),
-      percentage: Number(p.percentage) || 0,
-    }))
-    .filter((p) => p.name.length > 0);
-  if (!cleaned.length) return "Done — budget updated.";
-  const list = cleaned
-    .map((p) => `${p.name} ${formatPct(p.percentage)}`)
-    .join(", ");
-  return `Done — updated pockets: ${list}.`;
-}
-
-async function consolidateDuplicateEnvelopesForBudget(
-  supabase: SupabaseJsClient,
-  budgetId: string,
-  periodMonth: string,
-  debugNotes: string[],
-): Promise<Map<string, BudgetEnvelopeRowLite>> {
-  const normalizedPeriod = normalizePeriodMonth(periodMonth);
-  const { data: envRowsRaw, error: envErr } = await supabase
-    .from("budget_envelopes")
-    .select("id, name, updated_at, budget_percentage")
-    .eq("budget_id", budgetId);
-
-  const envRows = (envRowsRaw || []) as BudgetEnvelopeRowLite[];
-  if (envErr) {
-    debugNotes.push(
-      `budget_envelopes load error: ${formatInvokeError(envErr)}`,
-    );
-    return new Map();
-  }
-
-  const byNorm = new Map<string, BudgetEnvelopeRowLite[]>();
-  for (const row of envRows) {
-    const norm = normalizeEnvelopeName(row?.name || "");
-    if (!norm) continue;
-    const list = byNorm.get(norm) || [];
-    list.push(row);
-    byNorm.set(norm, list);
-  }
-
-  const duplicateGroups = Array.from(byNorm.entries()).filter(
-    ([, rows]) => rows.length > 1,
-  );
-  if (!duplicateGroups.length) {
-    const map = new Map<string, BudgetEnvelopeRowLite>();
-    for (const [norm, rows] of byNorm.entries()) {
-      const chosen = rows.reduce((acc, cur) =>
-        isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc,
-      );
-      map.set(norm, chosen);
-    }
-    return map;
-  }
-
-  for (const [norm, group] of duplicateGroups) {
-    const ids = group.map((r) => r.id).filter(Boolean);
-    if (ids.length < 2) continue;
-
-    const { data: linksRaw, error: linksErr } = await supabase
-      .from("envelope_category_links")
-      .select("envelope_id, category")
-      .in("envelope_id", ids);
-    if (linksErr) {
-      debugNotes.push(
-        `envelope_category_links load error (${norm}): ${formatInvokeError(
-          linksErr,
-        )}`,
-      );
-    }
-    const links = (linksRaw || []) as Array<{
-      envelope_id: string;
-      category: string;
-    }>;
-
-    const linkCounts = new Map<string, number>();
-    for (const l of links) {
-      const id = String((l as any)?.envelope_id || "");
-      if (!id) continue;
-      linkCounts.set(id, (linkCounts.get(id) || 0) + 1);
-    }
-
-    const canonical = group.reduce((acc, cur) => {
-      const accCount = linkCounts.get(acc.id) || 0;
-      const curCount = linkCounts.get(cur.id) || 0;
-      if (curCount !== accCount) return curCount > accCount ? cur : acc;
-      return isNewerIso(cur.updated_at, acc.updated_at) ? cur : acc;
-    });
-    const canonicalId = canonical.id;
-    const dupIds = ids.filter((id) => id !== canonicalId);
-    if (!canonicalId || dupIds.length === 0) continue;
-
-    const categoriesToUpsert = new Set<string>();
-    for (const l of links) {
-      const envId = String((l as any)?.envelope_id || "");
-      if (!dupIds.includes(envId)) continue;
-      const cat = String((l as any)?.category || "");
-      if (!cat) continue;
-      categoriesToUpsert.add(cat);
-    }
-    for (const cat of categoriesToUpsert) {
-      await upsertEnvelopeCategoryLink(supabase, canonicalId, cat);
-    }
-
-    await supabase
-      .from("envelope_category_links")
-      .delete()
-      .in("envelope_id", dupIds);
-
-    const { data: canonicalAlloc } = await supabase
-      .from("envelope_allocations")
-      .select("envelope_id")
-      .eq("envelope_id", canonicalId)
-      .eq("period_month", normalizedPeriod)
-      .maybeSingle();
-
-    if (!canonicalAlloc) {
-      const { data: dupAllocs } = await supabase
-        .from("envelope_allocations")
-        .select("amount_cents")
-        .in("envelope_id", dupIds)
-        .eq("period_month", normalizedPeriod);
-      const sum = (dupAllocs || []).reduce((acc: number, row: any) => {
-        const v = Number(row?.amount_cents) || 0;
-        return acc + v;
-      }, 0);
-      if (sum > 0) {
-        await upsertEnvelopeAllocation(
-          supabase,
-          canonicalId,
-          normalizedPeriod,
-          sum,
-        );
-      }
-    }
-
-    await supabase
-      .from("envelope_allocations")
-      .delete()
-      .in("envelope_id", dupIds);
-    const { error: deleteEnvErr } = await supabase
-      .from("budget_envelopes")
-      .delete()
-      .in("id", dupIds);
-    if (deleteEnvErr) {
-      debugNotes.push(
-        `duplicate envelope delete error (${norm}): ${formatInvokeError(
-          deleteEnvErr,
-        )}`,
-      );
-    }
-  }
-
-  const { data: finalRowsRaw } = await supabase
-    .from("budget_envelopes")
-    .select("id, name, updated_at, budget_percentage")
-    .eq("budget_id", budgetId);
-  const finalRows = (finalRowsRaw || []) as BudgetEnvelopeRowLite[];
-  const map = new Map<string, BudgetEnvelopeRowLite>();
-  for (const row of finalRows) {
-    const norm = normalizeEnvelopeName(row?.name || "");
-    if (!norm) continue;
-    const existing = map.get(norm);
-    if (!existing || isNewerIso(row.updated_at, existing.updated_at)) {
-      map.set(norm, row);
-    }
-  }
-  return map;
-}
-
 function resolveMemberIdByName(
   members: Array<{
     user_id: string;
@@ -1518,47 +784,6 @@ function resolveMemberIdByName(
   return unique[0];
 }
 
-function buildRecurrenceRule(args: any, fallbackAnchor: string) {
-  const provided = args?.recurrence_rule;
-  if (provided && typeof provided === "object" && !Array.isArray(provided)) {
-    return provided as Record<string, unknown>;
-  }
-
-  const frequency =
-    typeof args?.frequency === "string" && args.frequency.trim()
-      ? args.frequency.trim().toLowerCase()
-      : null;
-  const interval = Number.isFinite(args?.interval)
-    ? Math.trunc(args.interval)
-    : null;
-  const anchor_date =
-    typeof args?.anchor_date === "string" && args.anchor_date.trim()
-      ? args.anchor_date.trim().slice(0, 10)
-      : fallbackAnchor;
-  const end_date =
-    typeof args?.end_date === "string" && args.end_date.trim()
-      ? args.end_date.trim().slice(0, 10)
-      : "";
-
-  if (!frequency) return null;
-
-  const rule: Record<string, unknown> = { frequency, anchor_date };
-  if (interval && interval > 0) rule.interval = interval;
-  if (end_date) rule.end_date = end_date;
-  if (args?.reminder && typeof args.reminder === "object") {
-    rule.reminder = args.reminder;
-  }
-  return rule;
-}
-
-function getInvokeHttpStatus(error: unknown): number | undefined {
-  const candidate = error as Record<string, any> | null | undefined;
-  const contextStatus = candidate?.context?.status;
-  if (typeof contextStatus === "number") return contextStatus;
-  const status = candidate?.status;
-  return typeof status === "number" ? status : undefined;
-}
-
 async function reportTelegramToolInvokeFailure(params: {
   traceId: string;
   toolName: string;
@@ -1567,38 +792,10 @@ async function reportTelegramToolInvokeFailure(params: {
   error?: unknown;
   context?: Record<string, unknown>;
 }) {
-  try {
-    const responseDetails = await readInvokeErrorResponseDetails(params.error);
-    await reportEdgeFunctionError({
-      functionName: "telegram-ai-bot",
-      error: new Error(`${params.targetFunction} failed: ${params.formatted}`),
-      context: {
-        traceId: params.traceId,
-        step: `tool:${params.toolName}`,
-        toolName: params.toolName,
-        targetFunction: params.targetFunction,
-        httpStatus:
-          responseDetails?.status ?? getInvokeHttpStatus(params.error),
-        ...(responseDetails?.statusText
-          ? { targetStatusText: responseDetails.statusText }
-          : {}),
-        ...(responseDetails?.contentType
-          ? { targetContentType: responseDetails.contentType }
-          : {}),
-        ...(responseDetails?.body
-          ? { targetResponseBody: responseDetails.body }
-          : {}),
-        ...params.context,
-      },
-    });
-  } catch (reportError) {
-    console.error("[telegram-ai-bot] reportEdgeFunctionError failed", {
-      traceId: params.traceId,
-      toolName: params.toolName,
-      targetFunction: params.targetFunction,
-      error: String(reportError),
-    });
-  }
+  await reportBotToolInvokeFailure({
+    functionName: "telegram-ai-bot",
+    ...params,
+  });
 }
 
 function buildMutationFailureText(
@@ -1784,6 +981,18 @@ Deno.serve(async (req: Request) => {
         ", ",
       )}`,
     );
+    await reportBotBackendError({
+      functionName: "telegram-ai-bot",
+      phase: "missing_environment",
+      error: new Error("Missing required environment variables"),
+      context: {
+        missingEnv,
+        hasTelegramBotToken: !!TELEGRAM_BOT_TOKEN,
+        hasWebhookSecret: !!TELEGRAM_WEBHOOK_SECRET,
+        hasSupabaseUrl: !!SUPABASE_URL,
+        hasServiceRoleKey: !!SUPABASE_SERVICE_ROLE_KEY,
+      },
+    });
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
@@ -1791,6 +1000,11 @@ Deno.serve(async (req: Request) => {
     vertexConfig = getVertexAiConfigFromEnv();
   } catch (error) {
     console.error("[telegram-ai-bot] Vertex AI config error", error);
+    await reportBotBackendError({
+      functionName: "telegram-ai-bot",
+      phase: "vertex_config",
+      error,
+    });
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
@@ -1798,6 +1012,11 @@ Deno.serve(async (req: Request) => {
     console.warn(
       "[telegram-ai-bot] INTERNAL_FUNCTION_KEY not configured; internal tool calls will fail",
     );
+    await reportBotBackendError({
+      functionName: "telegram-ai-bot",
+      phase: "missing_internal_function_key",
+      error: new Error("INTERNAL_FUNCTION_KEY not configured"),
+    });
   }
 
   const secretHeader =
@@ -1851,6 +1070,11 @@ Deno.serve(async (req: Request) => {
       });
       const choiceKeyboard = buildChoiceKeyboard(cached.response_text);
       if (cached.media_url) {
+        await sendTelegramChatAction(
+          TELEGRAM_BOT_TOKEN,
+          chatId,
+          "upload_photo",
+        );
         const sentPhoto = await sendTelegramPhoto(
           TELEGRAM_BOT_TOKEN,
           chatId,
@@ -4382,33 +3606,21 @@ Deno.serve(async (req: Request) => {
                             internalKeyConfigured: false,
                           },
                         );
-                        try {
-                          await reportEdgeFunctionError({
-                            functionName: "telegram-ai-bot",
-                            error: new Error(
-                              "update-expense skipped: missing internal key",
-                            ),
-                            context: {
-                              step: "tool:update_transaction",
-                              traceId,
-                              tool: "update-expense",
-                              internalKeyConfigured: false,
-                              updatesKeys: Object.keys(updates),
-                              candidateSummary,
-                              expenseId,
-                            },
-                          });
-                        } catch (error) {
-                          console.error(
-                            "[telegram-ai-bot] reportEdgeFunctionError failed",
-                            {
-                              traceId,
-                              step: "tool:update_transaction",
-                              tool: "update-expense",
-                              error: String(error),
-                            },
-                          );
-                        }
+                        await reportBotBackendError({
+                          functionName: "telegram-ai-bot",
+                          phase: "tool:update_transaction",
+                          traceId,
+                          error: new Error(
+                            "update-expense skipped: missing internal key",
+                          ),
+                          context: {
+                            tool: "update-expense",
+                            internalKeyConfigured: false,
+                            updatesKeys: Object.keys(updates),
+                            candidateSummary,
+                            expenseId,
+                          },
+                        });
                         toolResult = { error: "Internal key not configured" };
                       } else {
                         const { data, error } = await supabase.functions.invoke(
@@ -4466,37 +3678,25 @@ Deno.serve(async (req: Request) => {
                               httpStatus ?? status ?? "unknown"
                             }, code: ${code ?? "none"})`,
                           );
-                          try {
-                            await reportEdgeFunctionError({
-                              functionName: "telegram-ai-bot",
-                              error: new Error(
-                                `update-expense failed: ${formatted}`,
-                              ),
-                              context: {
-                                step: "tool:update_transaction",
-                                traceId,
-                                tool: "update-expense",
-                                internalKeyConfigured:
-                                  Boolean(internalFunctionKey),
-                                httpStatus,
-                                status,
-                                code,
-                                updatesKeys: Object.keys(updates),
-                                candidateSummary,
-                                expenseId,
-                              },
-                            });
-                          } catch (error) {
-                            console.error(
-                              "[telegram-ai-bot] reportEdgeFunctionError failed",
-                              {
-                                traceId,
-                                step: "tool:update_transaction",
-                                tool: "update-expense",
-                                error: String(error),
-                              },
-                            );
-                          }
+                          await reportBotToolInvokeFailure({
+                            functionName: "telegram-ai-bot",
+                            traceId,
+                            toolName: "update_transaction",
+                            targetFunction: "update-expense",
+                            formatted,
+                            error: error ?? data?.error,
+                            context: {
+                              tool: "update-expense",
+                              internalKeyConfigured:
+                                Boolean(internalFunctionKey),
+                              httpStatus,
+                              status,
+                              code,
+                              updatesKeys: Object.keys(updates),
+                              candidateSummary,
+                              expenseId,
+                            },
+                          });
                           toolResult = { error: formatted };
                         }
                       }
@@ -5459,6 +4659,11 @@ Deno.serve(async (req: Request) => {
 
         const caption = truncateTextByCodePoints(cleanedText, 900);
         if (mediaUrl) {
+          await sendTelegramChatAction(
+            TELEGRAM_BOT_TOKEN,
+            chatId,
+            "upload_photo",
+          );
           const sentPhoto = await sendTelegramPhoto(
             TELEGRAM_BOT_TOKEN,
             chatId,
@@ -5498,12 +4703,11 @@ Deno.serve(async (req: Request) => {
         });
       } catch (error) {
         console.error("[telegram-ai-bot] Handler error:", error);
-        await reportEdgeFunctionError({
+        await reportBotBackendError({
           functionName: "telegram-ai-bot",
+          phase: "process_message",
           error,
-          context: {
-            step: "process_message",
-          },
+          traceId,
         });
         if (!telegramResponseSent) {
           try {
