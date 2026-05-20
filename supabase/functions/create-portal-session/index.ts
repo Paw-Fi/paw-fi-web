@@ -99,7 +99,9 @@ serve(async (req: Request): Promise<Response> => {
     // Get user's subscription and customer ID
     const { data: subscription, error: subError } = await supabase
       .from("subscriptions")
-      .select("stripe_customer_id, stripe_subscription_id, user_id, status")
+      .select(
+        "stripe_customer_id, stripe_subscription_id, user_id, status, bound_to_user_id",
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -111,6 +113,20 @@ serve(async (req: Request): Promise<Response> => {
         JSON.stringify({ error: "Failed to fetch subscription details" }),
         {
           status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (subscription?.bound_to_user_id) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Household shared members cannot manage the owner's billing details.",
+          code: "BOUND_TO_HOUSEHOLD",
+        }),
+        {
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );

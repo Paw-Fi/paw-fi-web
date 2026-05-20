@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
+import { authenticateUser } from "../shared/auth.ts";
 
 // Initialize Stripe with your secret key - using latest API version
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -30,13 +31,33 @@ serve(async (req) => {
       });
     }
 
+    const authResult = await authenticateUser(req, supabase);
+
+    if (!authResult.success) {
+      return new Response(JSON.stringify({ error: authResult.error }), {
+        status: authResult.statusCode || 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = authResult.userId!;
+
     // Parse the request body ONCE
     requestBody = await req.json();
-    const { userId, action, paymentMethodId } = requestBody;
+    const { action, paymentMethodId } = requestBody;
+    const requestUserId =
+      typeof requestBody?.userId === "string" ? requestBody.userId : null;
 
-    if (!userId || !action) {
+    if (requestUserId && requestUserId !== userId) {
+      return new Response(JSON.stringify({ error: "User ID mismatch" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!action) {
       return new Response(
-        JSON.stringify({ error: "User ID and action are required" }),
+        JSON.stringify({ error: "Action is required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,7 +85,31 @@ serve(async (req) => {
       );
     }
 
-    if (!subscription || !subscription.stripe_customer_id) {
+    if (!subscription) {
+      return new Response(
+        JSON.stringify({ error: "No subscription or Stripe customer found" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (subscription.bound_to_user_id) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Household shared members cannot manage the owner's billing details.",
+          code: "BOUND_TO_HOUSEHOLD",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (!subscription.stripe_customer_id) {
       return new Response(
         JSON.stringify({ error: "No subscription or Stripe customer found" }),
         {

@@ -33,6 +33,7 @@ interface PlanSelectorProps {
   previewError: Error | null;
   mutationError: Error | null;
   resetPreview: () => void;
+  isSharedHouseholdAccess?: boolean;
 }
 
 // Using PlanOption interface from shared pricing-plans.ts
@@ -48,6 +49,7 @@ export function PlanSelector({
   previewError,
   mutationError,
   resetPreview,
+  isSharedHouseholdAccess = false,
 }: PlanSelectorProps) {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -101,6 +103,13 @@ export function PlanSelector({
   }, [previewData, previewError, showConfirmDialog]);
 
   const handleSelectPlan = (planId: string) => {
+    if (isSharedHouseholdAccess) {
+      toast.info(
+        "You are currently using a household shared subscription. Leave the household before managing your own plan.",
+      );
+      return;
+    }
+
     // Premium is coming soon
     if (planId === "premium") {
       toast.info(

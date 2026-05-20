@@ -199,6 +199,23 @@ serve(async (req) => {
       );
     }
 
+    if (
+      subscription?.bound_to_user_id &&
+      ["change_plan", "cancel", "cancel_immediately", "resume"].includes(action)
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Household shared members cannot manage the owner's subscription.",
+          code: "BOUND_TO_HOUSEHOLD",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Handle different subscription actions
     switch (action) {
       case "change_plan": {

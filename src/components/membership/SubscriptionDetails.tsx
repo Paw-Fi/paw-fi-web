@@ -37,7 +37,9 @@ interface SubscriptionDetailsProps {
     next_payment_date: string | null;
     cancel_at_period_end: boolean;
     stripe_subscription_id: string | null; // Null for lifetime plans (one-time payment)
-    stripe_customer_id: string;
+    stripe_customer_id: string | null;
+    bound_to_user_id?: string | null;
+    bound_to_household_id?: string | null;
     created_at: string;
     updated_at: string;
     days_until_next_payment: number | null;
@@ -61,6 +63,7 @@ export function SubscriptionDetails({
   isActive = false,
 }: SubscriptionDetailsProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const isSharedHouseholdAccess = Boolean(subscription?.bound_to_user_id);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -289,8 +292,8 @@ export function SubscriptionDetails({
                   </div>
                 )}
 
-                {/* Cancel Subscription Button - Only for recurring plans (not lifetime) */}
-                {isActive && subscription?.plan !== "lifetime" && (
+                {/* Cancel Subscription Button - Only for direct recurring plans */}
+                {isActive && !isSharedHouseholdAccess && subscription?.plan !== "lifetime" && (
                   <>
                     <Separator className="my-6" />
                     <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/20 dark:bg-red-950/10">

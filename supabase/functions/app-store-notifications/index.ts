@@ -1436,6 +1436,8 @@ serve(async (req: Request): Promise<Response> => {
       trial_end: trialEndIso,
       ended_at: status === "canceled" ? new Date().toISOString() : null,
       cancel_at_period_end: false,
+      bound_to_user_id: null,
+      bound_to_household_id: null,
       stripe_customer_id: null,
       stripe_subscription_id: null,
       play_purchase_token: null,
@@ -1476,6 +1478,60 @@ serve(async (req: Request): Promise<Response> => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
+    }
+
+    try {
+      const rpcName = status === "canceled"
+        ? "cascade_subscription_cancellation"
+        : "cascade_subscription_upgrade";
+      const rpcParams = status === "canceled"
+        ? { p_owner_user_id: resolvedUserId }
+        : {
+          p_owner_user_id: resolvedUserId,
+          p_new_plan: catalogProduct.plan,
+          p_new_status: status,
+        };
+      const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
+        rpcName,
+        rpcParams,
+      );
+
+      if (cascadeError) {
+        await reportEdgeFunctionError({
+          functionName: "app-store-notifications",
+          error: cascadeError,
+          context: getAppStoreDiagnosticsContext({
+            phase: "cascade_household_subscription_update",
+            userId: resolvedUserId,
+            storeProductId,
+            originalTransactionId,
+            transactionId,
+            environment: resolvedEnvironment,
+          }),
+        });
+      } else if (cascadeResult && cascadeResult > 0) {
+        console.log(
+          `[app-store-notifications] cascaded subscription update to ${cascadeResult} household members`,
+          {
+            userId: resolvedUserId,
+            status,
+            plan: catalogProduct.plan,
+          },
+        );
+      }
+    } catch (cascadeError) {
+      await reportEdgeFunctionError({
+        functionName: "app-store-notifications",
+        error: cascadeError,
+        context: getAppStoreDiagnosticsContext({
+          phase: "cascade_household_subscription_update_unexpected",
+          userId: resolvedUserId,
+          storeProductId,
+          originalTransactionId,
+          transactionId,
+          environment: resolvedEnvironment,
+        }),
+      });
     }
 
     return new Response(JSON.stringify({ status: "ok" }), {

@@ -9,8 +9,10 @@ interface Subscription {
   current_period_end: string;
   next_payment_date: string | null;
   cancel_at_period_end: boolean;  
-  stripe_subscription_id: string;
-  stripe_customer_id: string;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  bound_to_user_id?: string | null;
+  bound_to_household_id?: string | null;
   created_at: string;
   updated_at: string;
   days_until_next_payment: number | null;

@@ -91,6 +91,8 @@ serve(async (req: Request) => {
         cancel_at_period_end: directSubscription.cancel_at_period_end,
         stripe_subscription_id: directSubscription.stripe_subscription_id,
         stripe_customer_id: directSubscription.stripe_customer_id,
+        bound_to_user_id: directSubscription.bound_to_user_id,
+        bound_to_household_id: directSubscription.bound_to_household_id,
         store_product_id: directSubscription.store_product_id,
         app_store_in_app_ownership_type:
           directSubscription.app_store_in_app_ownership_type,
@@ -103,6 +105,9 @@ serve(async (req: Request) => {
         directSubscription.store_product_id;
       finalSubscription.app_store_in_app_ownership_type ??=
         directSubscription.app_store_in_app_ownership_type;
+      finalSubscription.bound_to_user_id ??= directSubscription.bound_to_user_id;
+      finalSubscription.bound_to_household_id ??=
+        directSubscription.bound_to_household_id;
     }
 
     // If no subscription found, return free tier info
@@ -141,9 +146,24 @@ serve(async (req: Request) => {
     let invoices: any[] = [];
 
     const provider = (finalSubscription as any).provider || "stripe";
+    const isBorrowedHouseholdSubscription =
+      Boolean((finalSubscription as any).bound_to_user_id);
+    const responseSubscription = isBorrowedHouseholdSubscription
+      ? {
+        ...finalSubscription,
+        stripe_subscription_id: null,
+        stripe_customer_id: null,
+      }
+      : finalSubscription;
 
-    // Only Stripe subscriptions have Stripe invoices/payment method
-    if (provider === "stripe" && finalSubscription.stripe_customer_id) {
+    // Only direct Stripe subscriptions expose Stripe invoices/payment method.
+    // Bound household members may have legacy rows with the owner's copied
+    // customer ID, but they must not see the owner's billing artifacts.
+    if (
+      provider === "stripe" &&
+      finalSubscription.stripe_customer_id &&
+      !isBorrowedHouseholdSubscription
+    ) {
       try {
         // Get all invoices for the customer (works for both Lifetime and recurring)
         // Lifetime: invoice_creation enabled in checkout creates official invoices
@@ -214,7 +234,7 @@ serve(async (req: Request) => {
     // Return the subscription details
     return new Response(
       JSON.stringify({
-        subscription: finalSubscription,
+        subscription: responseSubscription,
         features,
         payment_method: paymentMethod,
         invoices,

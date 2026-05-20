@@ -95,6 +95,7 @@ export function MembershipDashboard() {
       default: return "secondary";
     }
   };
+  const isSharedHouseholdAccess = Boolean(subscription?.bound_to_user_id);
 
   return (
     <motion.div 
@@ -270,7 +271,7 @@ export function MembershipDashboard() {
                         </p>
                       </CardContent>
                     </Card>
-                  ) : subscription && subscription.stripe_customer_id && user?.id && subscription.plan !== "lifetime" ? (
+                  ) : subscription && !subscription.bound_to_user_id && subscription.stripe_customer_id && user?.id && subscription.plan !== "lifetime" ? (
                     /* Recurring Plans: Show payment method manager */
                     <PaymentMethodManager
                       paymentMethod={paymentMethod}
@@ -308,6 +309,7 @@ export function MembershipDashboard() {
                     previewError={previewError}
                     mutationError={mutationError}
                     resetPreview={resetPreview}
+                    isSharedHouseholdAccess={isSharedHouseholdAccess}
                   />
                 </motion.div>
               </TabsContent>

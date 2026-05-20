@@ -119,6 +119,21 @@ serve(async (req) => {
     // Get current plan
     const currentPlan = subscription?.plan || "free";
 
+    if (subscription?.bound_to_user_id) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Household shared members cannot manage the owner's subscription.",
+          code: "BOUND_TO_HOUSEHOLD",
+          action: "no_change",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // IMPORTANT: Lifetime users cannot preview plan changes (one-time purchase, permanent)
     if (currentPlan === "lifetime") {
       return new Response(

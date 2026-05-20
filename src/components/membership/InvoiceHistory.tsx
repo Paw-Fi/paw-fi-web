@@ -12,8 +12,8 @@ interface Invoice {
   currency: string;
   status: string;
   created: string;
-  hosted_invoice_url: string;
-  pdf: string;
+  hosted_invoice_url: string | null;
+  pdf: string | null;
 }
 
 interface InvoiceHistoryProps {

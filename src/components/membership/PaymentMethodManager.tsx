@@ -245,7 +245,7 @@ export function PaymentMethodManager({
                   animate={{ opacity: 1 }}
                 >
                   <AlertCircle className="mx-auto h-6 w-6 text-red-500 dark:text-red-400" />
-                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{methodsError}</p>
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{methodsError.message}</p>
                 </motion.div>
               </div>
             ) : paymentMethods && paymentMethods.length > 0 ? (
