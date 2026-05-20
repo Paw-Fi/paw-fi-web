@@ -212,7 +212,10 @@ export async function cleanupRemovedPlaidConnection(params: {
       relink_state: null,
       removed_at: nowIso,
       access_token_encrypted: null,
-      plaid_access_token_encrypted: null,
+      // Legacy deployments created this provider-specific column as NOT NULL.
+      // Use a non-secret sentinel so cleanup can finish even before the
+      // nullable-column migration has reached every environment.
+      plaid_access_token_encrypted: "",
       next_manual_refresh_eligible_at: null,
       error_code: null,
       error_message: null,

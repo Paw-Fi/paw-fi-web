@@ -19,11 +19,13 @@ import {
 } from "../shared/plaid-update-mode.ts";
 import {
   type ExpensePreview,
+  type LinkedWalletRecord,
   loadLinkedWalletsForBankAccounts,
   persistPlaidTransactions,
   sanitizeOptionalUuid,
   stagePlaidTransactions,
 } from "../shared/bank-sync.ts";
+import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -361,7 +363,17 @@ async function syncConnection(params: {
     syncStatus: readPlaidSyncStatusMetadata(params.connection.metadata),
   };
 
-  if (params.enforceManualCooldown) {
+  const cooldownExemptItemStatuses = new Set([
+    "newly_connected",
+    "initial_sync_in_progress",
+    "reconnected",
+    "accounts_updated",
+  ]);
+  const isInitialOrUserRepairSync = cooldownExemptItemStatuses.has(
+    params.connection.item_status ?? "",
+  );
+
+  if (params.enforceManualCooldown && !isInitialOrUserRepairSync) {
     const lastSuccessfulSyncAt = params.connection.last_successful_sync_at
       ? new Date(params.connection.last_successful_sync_at)
       : null;
@@ -468,6 +480,12 @@ async function syncConnection(params: {
         bankAccountIds: connectionBankAccountIds,
       },
     );
+    await rebindLinkedPlaidExpensesForConnection({
+      supabase: params.supabase,
+      userId: params.userId,
+      connectionId: params.connection.id,
+      linkedWalletsByBankAccountId,
+    });
     let hasMore = true;
     const originalCursor = cursor;
     let paginationRestartCount = 0;
@@ -590,10 +608,11 @@ async function syncConnection(params: {
         last_successful_sync_at: new Date().toISOString(),
         last_synced_at: new Date().toISOString(),
         status: "active",
-        item_status:
-          params.connection.item_status === "pending_relink"
-            ? "active"
-            : (params.connection.item_status ?? "active"),
+        item_status: cooldownExemptItemStatuses.has(
+            params.connection.item_status ?? "",
+          ) || params.connection.item_status === "pending_relink"
+          ? "active"
+          : (params.connection.item_status ?? "active"),
         item_health_state: "healthy",
         relink_state:
           params.connection.relink_state === PLAID_REQUIRED_RELINK_STATE
@@ -814,6 +833,38 @@ function logPlaidAccountMappingDebug(params: {
       unmatchedAccounts: unmatched,
     }),
   );
+}
+
+async function rebindLinkedPlaidExpensesForConnection(params: {
+  supabase: ReturnType<typeof createClient>;
+  userId: string;
+  connectionId: string;
+  linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
+}) {
+  for (
+    const [bankAccountId, linkedWallet] of params.linkedWalletsByBankAccountId
+  ) {
+    const result = await rebindBankAccountExpensesToWallet({
+      supabase: params.supabase,
+      userId: params.userId,
+      bankAccountId,
+      walletId: linkedWallet.id,
+      householdId: linkedWallet.household_id ?? null,
+      provider: PLAID_PROVIDER,
+    });
+    if (result.updated > 0) {
+      console.log(
+        "[plaid-sync] Rebound Plaid expenses to linked wallet",
+        JSON.stringify({
+          connectionId: params.connectionId,
+          bankAccountId,
+          walletId: linkedWallet.id,
+          scanned: result.scanned,
+          updated: result.updated,
+        }),
+      );
+    }
+  }
 }
 
 function groupByAccount(

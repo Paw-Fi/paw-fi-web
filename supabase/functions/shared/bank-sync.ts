@@ -888,7 +888,7 @@ export async function persistPlaidTransactions(
       .from("expenses")
       .insert(mutationPlan.inserts)
       .select(
-        "id, provider_transaction_id, amount_cents, currency, date, type, category, raw_text, merchant, is_recurring, recurrence_rule, created_at, updated_at, bank_account_id, user_id, household_id, contact_id",
+        "id, provider_transaction_id, amount_cents, currency, date, type, category, raw_text, merchant, is_recurring, recurrence_rule, created_at, updated_at, bank_account_id, account_id, user_id, household_id, contact_id",
       );
     if (insertError) {
       throw insertError;
@@ -1054,7 +1054,7 @@ export async function persistTinkTransactions(
       .from("expenses")
       .insert(inserts)
       .select(
-        "id, provider_transaction_id, amount_cents, currency, date, type, category, raw_text, merchant, is_recurring, recurrence_rule, created_at, updated_at, bank_account_id, user_id, household_id, contact_id",
+        "id, provider_transaction_id, amount_cents, currency, date, type, category, raw_text, merchant, is_recurring, recurrence_rule, created_at, updated_at, bank_account_id, account_id, user_id, household_id, contact_id",
       );
     if (insertError) {
       throw insertError;

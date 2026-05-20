@@ -6,6 +6,7 @@ import {
   resolveDefaultAccountId,
   sanitizeUuid,
 } from "../shared/accounts.ts";
+import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
 
 interface RequestBody {
   householdId?: string;
@@ -117,6 +118,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const linkedBankAccountId = sanitizeUuid(body.linkedBankAccountId ?? null);
+    let linkedBankProvider: string | null = null;
     if (linkedBankAccountId != null) {
       const { data: bankAccount, error: bankAccountError } = await supabase
         .from("bank_accounts")
@@ -149,7 +151,7 @@ Deno.serve(async (req: Request) => {
       const { data: bankConnection, error: bankConnectionError } =
         await supabase
           .from("bank_connections")
-          .select("id, user_id, household_id, removed_at, status")
+          .select("id, user_id, household_id, provider, removed_at, status")
           .eq("id", bankAccount.bank_connection_id)
           .maybeSingle();
 
@@ -181,6 +183,7 @@ Deno.serve(async (req: Request) => {
           409,
         );
       }
+      linkedBankProvider = String(bankConnection.provider || "plaid");
     }
     const openingBalanceCents = Number.isFinite(body.openingBalanceCents)
       ? Math.round(Number(body.openingBalanceCents))
@@ -226,6 +229,25 @@ Deno.serve(async (req: Request) => {
       }
 
       if (existingLinkedWallet != null) {
+        const rebindResult = await rebindBankAccountExpensesToWallet({
+          supabase,
+          userId,
+          bankAccountId: linkedBankAccountId,
+          walletId: existingLinkedWallet.id,
+          householdId: existingLinkedWallet.household_id ?? null,
+          provider: linkedBankProvider ?? "plaid",
+        });
+        if (rebindResult.updated > 0) {
+          console.log(
+            "[save-account] rebound bank expenses to existing linked wallet",
+            JSON.stringify({
+              provider: linkedBankProvider ?? "plaid",
+              bankAccountId: linkedBankAccountId,
+              walletId: existingLinkedWallet.id,
+              updated: rebindResult.updated,
+            }),
+          );
+        }
         return jsonResponse({ success: true, data: existingLinkedWallet });
       }
     }
@@ -294,6 +316,28 @@ Deno.serve(async (req: Request) => {
         .update({ is_default: true })
         .eq("id", data.id);
       data.is_default = true;
+    }
+
+    if (linkedBankAccountId != null) {
+      const rebindResult = await rebindBankAccountExpensesToWallet({
+        supabase,
+        userId,
+        bankAccountId: linkedBankAccountId,
+        walletId: data.id,
+        householdId: data.household_id ?? null,
+        provider: linkedBankProvider ?? "plaid",
+      });
+      if (rebindResult.updated > 0) {
+        console.log(
+          "[save-account] rebound bank expenses to linked wallet",
+          JSON.stringify({
+            provider: linkedBankProvider ?? "plaid",
+            bankAccountId: linkedBankAccountId,
+            walletId: data.id,
+            updated: rebindResult.updated,
+          }),
+        );
+      }
     }
 
     return jsonResponse({ success: true, data });

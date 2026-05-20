@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
               scheduledRemovalAt: removalState.scheduled_removal_at ?? null,
               errorCode: removalState.error_code ?? "PLAID_REMOVE_RETRY_PENDING",
               message:
-                "Bank disconnect is queued. Moneko will retry removing Plaid access automatically.",
+                "Bank disconnect is queued. Plaid removal is usually immediate once accepted; if cleanup is still pending, Moneko retries about every 15 minutes.",
             }),
             {
               status: 202,
