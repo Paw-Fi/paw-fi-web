@@ -124,8 +124,36 @@ interface RecurrencePattern {
   cadenceDays: number;
 }
 
+interface RecurrenceGroup {
+  bankAccountId: string;
+  type: "expense" | "income";
+  currency: string;
+  merchantKey: string;
+  rows: RecurrenceCandidateRow[];
+}
+
+interface PlaidRecurringTemplateCandidate {
+  idempotencyKey: string;
+  userId: string;
+  householdId: string | null;
+  accountId: string | null;
+  bankAccountId: string;
+  amountCents: number;
+  currency: string;
+  date: string;
+  type: "expense" | "income";
+  category: string | null;
+  rawText: string | null;
+  merchant: string | null;
+  recurrenceRule: Record<string, unknown>;
+  providerFields: Record<string, unknown>;
+}
+
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RECURRING_AMOUNT_RELATIVE_TOLERANCE = 0.01;
+const RECURRING_DESCRIPTION_EDIT_TOLERANCE = 0.1;
+const RECURRING_DESCRIPTION_TOKEN_SIMILARITY = 0.9;
 
 export function sanitizeOptionalUuid(value?: string | null): string | null {
   if (!value) return null;
@@ -349,6 +377,10 @@ interface ProviderRow {
   provider_transaction_id: string | null;
 }
 
+interface SupabaseErrorLike {
+  code?: string | null;
+}
+
 function normalizeCurrency(
   record: ExpenseUpsertRecord,
   accountCurrency: string | null,
@@ -402,31 +434,42 @@ function inferPlaidRecurringRules(params: {
     });
   }
 
-  const groups = new Map<string, RecurrenceCandidateRow[]>();
+  const groups: RecurrenceGroup[] = [];
   for (const row of rows.values()) {
     const merchantKey = normalizeRecurringMerchant(
       row.merchant || row.raw_text,
     );
     if (!merchantKey) continue;
-    const key = [
-      row.bank_account_id,
-      row.type,
-      (row.currency || "").toUpperCase(),
+    const bankAccountId = row.bank_account_id;
+    const currency = (row.currency || "").toUpperCase();
+    const existingGroup = groups.find(
+      (group) =>
+        group.bankAccountId === bankAccountId &&
+        group.type === row.type &&
+        group.currency === currency &&
+        merchantKeysAreSimilar(group.merchantKey, merchantKey),
+    );
+    if (existingGroup) {
+      existingGroup.rows.push(row);
+      continue;
+    }
+    groups.push({
+      bankAccountId,
+      type: row.type,
+      currency,
       merchantKey,
-    ].join("|");
-    const list = groups.get(key) || [];
-    list.push(row);
-    groups.set(key, list);
+      rows: [row],
+    });
   }
 
   const rules = new Map<string, Record<string, unknown>>();
-  for (const group of groups.values()) {
-    const currentRows = group.filter((row) =>
+  for (const group of groups) {
+    const currentRows = group.rows.filter((row) =>
       currentTransactionById.has(row.provider_transaction_id),
     );
     if (!currentRows.length) continue;
 
-    const amountCluster = largestAmountCluster(group);
+    const amountCluster = largestAmountCluster(group.rows);
     const pattern = detectRecurrencePattern(amountCluster);
     if (!pattern) continue;
 
@@ -453,6 +496,7 @@ function inferPlaidRecurringRules(params: {
           confidence: pattern.confidence,
           match_count: pattern.matchCount,
           cadence_days: pattern.cadenceDays,
+          template_identity: group.merchantKey,
           ...(providerHint || {}),
         },
       });
@@ -467,6 +511,204 @@ function inferPlaidRecurringRules(params: {
   }
 
   return rules;
+}
+
+function buildPlaidRecurringTemplateCandidates(params: {
+  userId: string;
+  householdId?: string | null;
+  bankAccountId: string;
+  accountId?: string | null;
+  records: ExpenseUpsertRecord[];
+  recurringByProviderTransactionId: Map<string, Record<string, unknown>>;
+}): PlaidRecurringTemplateCandidate[] {
+  const byTemplateKey = new Map<string, PlaidRecurringTemplateCandidate>();
+
+  for (const record of params.records) {
+    const recurrence = params.recurringByProviderTransactionId.get(
+      record.provider_transaction_id,
+    );
+    if (!recurrence) continue;
+
+    const frequency = String(recurrence.frequency || "")
+      .trim()
+      .toLowerCase();
+    if (!frequency) continue;
+
+    const intervalValue = Number(recurrence.interval || 1);
+    const interval =
+      Number.isFinite(intervalValue) && intervalValue > 1
+        ? Math.round(intervalValue)
+        : 1;
+    const providerHint =
+      recurrence.provider_hint && typeof recurrence.provider_hint === "object"
+        ? (recurrence.provider_hint as Record<string, unknown>)
+        : null;
+    const streamId = providerHint?.plaid_stream_id
+      ? String(providerHint.plaid_stream_id).trim()
+      : "";
+    const patternIdentity = providerHint?.template_identity
+      ? String(providerHint.template_identity).trim()
+      : "";
+    const merchantKey = normalizeRecurringMerchant(
+      record.merchant || record.raw_text,
+    );
+    const identity = streamId || patternIdentity || merchantKey;
+    if (!identity) continue;
+
+    const normalizedCategory = (record.category || "uncategorized")
+      .trim()
+      .toLowerCase();
+    const normalizedCurrency = (record.currency || "USD").trim().toUpperCase();
+    const keyParts = [
+      PLAID_PROVIDER,
+      params.bankAccountId,
+      record.type,
+      normalizedCurrency,
+      frequency,
+      String(interval),
+      normalizedCategory,
+      identity,
+    ];
+    const idempotencyKey = `bank-recurring:v1:${keyParts.join(":")}`;
+    const anchorDate = String(recurrence.anchor_date || record.date).slice(
+      0,
+      10,
+    );
+    const recurrenceRule = {
+      ...recurrence,
+      frequency,
+      anchor_date: anchorDate,
+      ...(interval > 1 ? { interval } : {}),
+    };
+    const existing = byTemplateKey.get(idempotencyKey);
+    const shouldReplace = !existing || record.date > existing.date;
+    const date =
+      existing && existing.date < anchorDate ? existing.date : anchorDate;
+    const candidate: PlaidRecurringTemplateCandidate = {
+      idempotencyKey,
+      userId: params.userId,
+      householdId: params.householdId ?? null,
+      accountId: params.accountId ?? null,
+      bankAccountId: params.bankAccountId,
+      amountCents: shouldReplace ? record.amount_cents : existing!.amountCents,
+      currency: shouldReplace ? normalizedCurrency : existing!.currency,
+      date,
+      type: shouldReplace ? record.type : existing!.type,
+      category: shouldReplace ? record.category : existing!.category,
+      rawText: shouldReplace ? record.raw_text : existing!.rawText,
+      merchant: shouldReplace ? record.merchant : existing!.merchant,
+      recurrenceRule: {
+        ...(shouldReplace ? recurrenceRule : existing!.recurrenceRule),
+        anchor_date: date,
+      },
+      providerFields: {
+        source: "plaid_recurring_template",
+        provider: PLAID_PROVIDER,
+        bank_account_id: params.bankAccountId,
+        account_id: params.accountId ?? null,
+        provider_transaction_id: record.provider_transaction_id,
+        template_identity: identity,
+        template_key: idempotencyKey,
+      },
+    };
+    byTemplateKey.set(idempotencyKey, candidate);
+  }
+
+  return Array.from(byTemplateKey.values());
+}
+
+async function upsertPlaidRecurringTemplates(params: {
+  supabase: SupabaseClient;
+  candidates: PlaidRecurringTemplateCandidate[];
+}): Promise<void> {
+  const selectExistingTemplate = async (
+    candidate: PlaidRecurringTemplateCandidate,
+  ) => {
+    let existingQuery = params.supabase
+      .from("expenses")
+      .select("id, date, account_id")
+      .eq("user_id", candidate.userId)
+      .eq("idempotency_key", candidate.idempotencyKey)
+      .limit(1);
+
+    existingQuery = candidate.householdId
+      ? existingQuery.eq("household_id", candidate.householdId)
+      : existingQuery.is("household_id", null);
+
+    const { data, error } = await existingQuery;
+    if (error) throw error;
+    return data?.[0] as
+      | { id: string; date?: string | null; account_id?: string | null }
+      | undefined;
+  };
+
+  const updateExistingTemplate = async (
+    existing: { id: string; date?: string | null; account_id?: string | null },
+    payload: Record<string, unknown>,
+  ) => {
+    const { error } = await params.supabase
+      .from("expenses")
+      .update(payload)
+      .eq("id", existing.id);
+    if (error) throw error;
+  };
+
+  for (const candidate of params.candidates) {
+    const existing = await selectExistingTemplate(candidate);
+    const existingDate = existing?.date
+      ? String(existing.date).slice(0, 10)
+      : null;
+    const date =
+      existingDate && existingDate < candidate.date
+        ? existingDate
+        : candidate.date;
+    const accountId = candidate.accountId || existing?.account_id || null;
+    const recurrenceRule = {
+      ...candidate.recurrenceRule,
+      anchor_date: date,
+    };
+    const payload = {
+      user_id: candidate.userId,
+      household_id: candidate.householdId,
+      account_id: accountId,
+      contact_id: null,
+      amount_cents: candidate.amountCents,
+      currency: candidate.currency,
+      category: candidate.category,
+      date,
+      raw_text: candidate.rawText,
+      merchant: candidate.merchant,
+      source: candidate.merchant || candidate.rawText,
+      type: candidate.type,
+      is_recurring: true,
+      recurrence_rule: recurrenceRule,
+      provider: null,
+      bank_account_id: null,
+      provider_transaction_id: null,
+      idempotency_key: candidate.idempotencyKey,
+      provider_fields: {
+        ...candidate.providerFields,
+        account_id: accountId,
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    if (existing?.id) {
+      await updateExistingTemplate(existing, payload);
+      continue;
+    }
+
+    const { error } = await params.supabase.from("expenses").insert({
+      ...payload,
+      created_at: new Date().toISOString(),
+    });
+    if (error) {
+      if ((error as SupabaseErrorLike).code !== "23505") throw error;
+      const racedExisting = await selectExistingTemplate(candidate);
+      if (!racedExisting?.id) throw error;
+      await updateExistingTemplate(racedExisting, payload);
+    }
+  }
 }
 
 function normalizeExistingRecurrenceCandidate(
@@ -515,7 +757,11 @@ function largestAmountCluster(
 function amountsCloseEnough(a: number, b: number): boolean {
   const delta = Math.abs(a - b);
   const larger = Math.max(Math.abs(a), Math.abs(b), 1);
-  return delta <= 500 || delta / larger <= 0.15;
+  const tolerance = Math.max(
+    1,
+    Math.round(larger * RECURRING_AMOUNT_RELATIVE_TOLERANCE),
+  );
+  return delta <= tolerance;
 }
 
 function detectRecurrencePattern(
@@ -543,19 +789,19 @@ function detectRecurrencePattern(
     max: number;
     needsIntervals: number;
   }> = [
-    { frequency: "daily", min: 1, max: 1, needsIntervals: 2 },
-    { frequency: "weekly", min: 6, max: 8, needsIntervals: 2 },
-    { frequency: "biweekly", min: 13, max: 16, needsIntervals: 2 },
-    { frequency: "monthly", min: 27, max: 34, needsIntervals: 2 },
-    { frequency: "monthly", interval: 3, min: 84, max: 98, needsIntervals: 1 },
+    { frequency: "daily", min: 1, max: 2, needsIntervals: 2 },
+    { frequency: "weekly", min: 4, max: 10, needsIntervals: 2 },
+    { frequency: "biweekly", min: 11, max: 17, needsIntervals: 2 },
+    { frequency: "monthly", min: 24, max: 37, needsIntervals: 2 },
+    { frequency: "monthly", interval: 3, min: 81, max: 101, needsIntervals: 1 },
     {
       frequency: "monthly",
       interval: 6,
-      min: 175,
-      max: 190,
+      min: 172,
+      max: 193,
       needsIntervals: 1,
     },
-    { frequency: "yearly", min: 350, max: 380, needsIntervals: 1 },
+    { frequency: "yearly", min: 347, max: 383, needsIntervals: 1 },
   ];
 
   for (const candidate of candidates) {
@@ -590,6 +836,66 @@ function normalizeRecurringMerchant(value?: string | null): string | null {
     return null;
   }
   return normalized;
+}
+
+function merchantKeysAreSimilar(left: string, right: string): boolean {
+  if (left === right) return true;
+
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+  if (shorter.length >= 6 && longer.startsWith(shorter)) return true;
+
+  const leftTokens = merchantTokens(left);
+  const rightTokens = merchantTokens(right);
+  if (!leftTokens.size || !rightTokens.size) {
+    return editDistance(left, right) <= allowedNameDistance(left, right);
+  }
+
+  const shared = [...leftTokens].filter((token) =>
+    rightTokens.has(token),
+  ).length;
+  const union = new Set([...leftTokens, ...rightTokens]).size;
+  if (union > 0 && shared / union >= RECURRING_DESCRIPTION_TOKEN_SIMILARITY) {
+    return true;
+  }
+
+  return editDistance(left, right) <= allowedNameDistance(left, right);
+}
+
+function merchantTokens(value: string): Set<string> {
+  return new Set(value.split(" ").filter((token) => token.length >= 3));
+}
+
+function allowedNameDistance(left: string, right: string): number {
+  const maxLength = Math.max(left.length, right.length);
+  if (maxLength < 6) return 0;
+  return Math.max(
+    1,
+    Math.round(maxLength * RECURRING_DESCRIPTION_EDIT_TOLERANCE),
+  );
+}
+
+function editDistance(left: string, right: string): number {
+  if (left === right) return 0;
+  if (!left) return right.length;
+  if (!right) return left.length;
+
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 0; i < left.length; i += 1) {
+    const current = new Array<number>(right.length + 1).fill(0);
+    current[0] = i + 1;
+    for (let j = 0; j < right.length; j += 1) {
+      const cost = left[i] === right[j] ? 0 : 1;
+      current[j + 1] = Math.min(
+        previous[j + 1] + 1,
+        current[j] + 1,
+        previous[j] + cost,
+      );
+    }
+    previous = current;
+  }
+
+  return previous[right.length];
 }
 
 function buildPlaidRecurringProviderHint(
@@ -859,22 +1165,22 @@ export async function persistPlaidTransactions(
     transactions: params.transactions,
     existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
   });
-  const recurrenceAwareRecords = normalizedRecords.map((record) => {
-    const recurrence = recurringByProviderTransactionId.get(
-      record.provider_transaction_id,
-    );
-    if (!recurrence) {
-      return record;
-    }
-    return {
-      ...record,
-      is_recurring: true,
-      recurrence_rule: recurrence,
-    };
+  const recurringTemplateCandidates = buildPlaidRecurringTemplateCandidates({
+    userId: params.userId,
+    householdId: params.householdId ?? null,
+    bankAccountId: params.bankAccountId,
+    accountId: params.accountId ?? null,
+    records: normalizedRecords,
+    recurringByProviderTransactionId,
   });
+  const postedOccurrenceRecords = normalizedRecords.map((record) => ({
+    ...record,
+    is_recurring: false,
+    recurrence_rule: null,
+  }));
 
   const mutationPlan = buildBankExpenseMutationPlan({
-    records: recurrenceAwareRecords,
+    records: postedOccurrenceRecords,
     transactions: params.transactions,
     existingRows: (existingRows || []) as ExistingExpenseProjectionRow[],
     providerPendingTransactionIds,
@@ -905,6 +1211,11 @@ export async function persistPlaidTransactions(
       throw updateError;
     }
   }
+
+  await upsertPlaidRecurringTemplates({
+    supabase: params.supabase,
+    candidates: recurringTemplateCandidates,
+  });
 
   return {
     inserted: mutationPlan.inserts.length,

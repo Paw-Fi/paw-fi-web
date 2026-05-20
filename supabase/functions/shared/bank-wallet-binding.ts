@@ -40,10 +40,12 @@ function hasUserAccountOverride(
 }
 
 function isMissingRebindRpcError(error: SupabaseErrorLike): boolean {
-  return error.code === "PGRST202" ||
+  return (
+    error.code === "PGRST202" ||
     String(error.message || "").includes(
       "rebind_bank_account_expenses_to_wallet",
-    );
+    )
+  );
 }
 
 export async function rebindBankAccountExpensesToWallet(
@@ -62,9 +64,10 @@ export async function rebindBankAccountExpensesToWallet(
   );
 
   if (!rpcError) {
+    const templateUpdated = await rebindBankRecurringTemplatesToWallet(params);
     return {
       scanned: 0,
-      updated: Number(rpcUpdated || 0),
+      updated: Number(rpcUpdated || 0) + templateUpdated,
     };
   }
 
@@ -75,9 +78,10 @@ export async function rebindBankAccountExpensesToWallet(
   let scanned = 0;
   let updated = 0;
   let offset = 0;
-  const needsBindingFilter = targetHouseholdId == null
-    ? `account_id.is.null,account_id.neq.${params.walletId},household_id.not.is.null`
-    : `account_id.is.null,account_id.neq.${params.walletId},household_id.is.null,household_id.neq.${targetHouseholdId}`;
+  const needsBindingFilter =
+    targetHouseholdId == null
+      ? `account_id.is.null,account_id.neq.${params.walletId},household_id.not.is.null`
+      : `account_id.is.null,account_id.neq.${params.walletId},household_id.is.null,household_id.neq.${targetHouseholdId}`;
 
   const { data: candidateRows, error: candidateError } = await params.supabase
     .from("expenses")
@@ -94,7 +98,8 @@ export async function rebindBankAccountExpensesToWallet(
   }
 
   if (!candidateRows?.length) {
-    return { scanned: 0, updated: 0 };
+    const templateUpdated = await rebindBankRecurringTemplatesToWallet(params);
+    return { scanned: 0, updated: templateUpdated };
   }
 
   while (true) {
@@ -116,9 +121,10 @@ export async function rebindBankAccountExpensesToWallet(
     scanned += rows.length;
     const idsToRebind = rows
       .filter((row) => !hasUserAccountOverride(row.user_overrides))
-      .filter((row) =>
-        row.account_id !== params.walletId ||
-        (row.household_id ?? null) !== targetHouseholdId
+      .filter(
+        (row) =>
+          row.account_id !== params.walletId ||
+          (row.household_id ?? null) !== targetHouseholdId,
       )
       .map((row) => row.id);
 
@@ -139,8 +145,52 @@ export async function rebindBankAccountExpensesToWallet(
     }
 
     if (rows.length < REBIND_BATCH_SIZE) {
+      updated += await rebindBankRecurringTemplatesToWallet(params);
       return { scanned, updated };
     }
     offset += REBIND_BATCH_SIZE;
   }
+}
+
+async function rebindBankRecurringTemplatesToWallet(
+  params: RebindBankAccountExpensesParams,
+): Promise<number> {
+  const targetHouseholdId = params.householdId ?? null;
+  let query = params.supabase
+    .from("expenses")
+    .select("id, account_id, household_id, user_overrides")
+    .eq("user_id", params.userId)
+    .is("provider", null)
+    .is("bank_account_id", null)
+    .like(
+      "idempotency_key",
+      `bank-recurring:v1:${params.provider}:${params.bankAccountId}:%`,
+    )
+    .is("deleted_at", null);
+
+  query =
+    targetHouseholdId == null
+      ? query.is("household_id", null)
+      : query.eq("household_id", targetHouseholdId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const idsToRebind = ((data || []) as ExpenseWalletBindingRow[])
+    .filter((row) => !hasUserAccountOverride(row.user_overrides))
+    .filter((row) => row.account_id !== params.walletId)
+    .map((row) => row.id);
+
+  if (!idsToRebind.length) return 0;
+
+  const { error: updateError } = await params.supabase
+    .from("expenses")
+    .update({
+      account_id: params.walletId,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", idsToRebind);
+
+  if (updateError) throw updateError;
+  return idsToRebind.length;
 }
