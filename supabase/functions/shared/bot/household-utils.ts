@@ -9,6 +9,28 @@ type HouseholdMemberLite = {
   users?: { full_name?: string | null; email?: string | null } | null;
 };
 
+export type BotSpaceMeta = {
+  id: string;
+  name: string;
+  isPortfolio: boolean;
+};
+
+export function resolveBotSpaceScope(
+  args: Record<string, unknown> | null | undefined,
+  spaceMap: Map<string, BotSpaceMeta>,
+): { householdId: string | null; spaceMeta?: BotSpaceMeta } {
+  let householdId = (args?.household_id || null) as string | null;
+  const householdName = (args?.household_name || args?.householdName || "")
+    .toString()
+    .toLowerCase();
+  let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
+  if (!spaceMeta && householdName && spaceMap.has(householdName)) {
+    spaceMeta = spaceMap.get(householdName);
+    householdId = spaceMeta?.id ?? null;
+  }
+  return { householdId, spaceMeta };
+}
+
 export function normalizeNameForMatch(value: string): string {
   return (value || "")
     .toLowerCase()

@@ -240,6 +240,8 @@ export async function invokeTransactionSave(
           source: params.source,
           ownerType: params.ownerType || "me",
           privacyScope: params.privacyScope || "full",
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
         }
       : {
           ...commonBody,

@@ -98,7 +98,26 @@ import {
 import {
   buildAddTransactionsBatchTool,
   buildAddTransactionTool,
+  buildConfirmBudgetTool,
+  buildCreateWalletTool,
+  buildCreateWalletTransferTool,
   buildCreateCustomCategoryTool,
+  buildDeletePocketTool,
+  buildDeleteTransactionTool,
+  buildDraftBudgetTool,
+  buildFinancialInsightTool,
+  buildGenerateChartUrlTool,
+  buildGetBudgetTool,
+  buildListExpensesTool,
+  buildListWalletsTool,
+  buildManageRecurringTool,
+  buildSetBudgetTool,
+  buildSetCurrencyTool,
+  buildSetLanguageTool,
+  buildSetPocketTool,
+  buildUpdateTransactionTool,
+  buildUpdateWalletTool,
+  cloneBotToolDeclarations,
 } from "../shared/bot/tool-definitions.ts";
 import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
@@ -114,6 +133,7 @@ import {
   normalizeEnvelopeName,
 } from "../shared/bot/budget-utils.ts";
 import {
+  resolveBotSpaceScope,
   ensureHouseholdMember,
   resolveHouseholdSplitConfig,
 } from "../shared/bot/household-utils.ts";
@@ -1284,373 +1304,42 @@ Deno.serve(async (req: Request) => {
             },
           },
           buildCreateCustomCategoryTool(),
-          buildAddTransactionTool({ includeMerchant: true }),
-          buildAddTransactionsBatchTool({ includeMerchant: true }),
-          {
-            name: "list_wallets",
-            description:
-              "List wallets in personal scope or in a selected space, including balances and the default wallet.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                include_archived: { type: "BOOLEAN" },
-              },
-            },
-          },
-          {
-            name: "create_wallet",
-            description:
-              "Create a new wallet in personal scope or in a selected space.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                name: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                icon: { type: "STRING" },
-                color: { type: "STRING" },
-                opening_balance: { type: "NUMBER" },
-                goal_amount: { type: "NUMBER" },
-                is_default: { type: "BOOLEAN" },
-              },
-              required: ["name"],
-            },
-          },
-          {
-            name: "update_wallet",
-            description:
-              "Rename or update a wallet in the selected scope. Use wallet_name to choose which wallet to edit.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                wallet_name: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                new_name: { type: "STRING" },
-                icon: { type: "STRING" },
-                color: { type: "STRING" },
-                goal_amount: { type: "NUMBER" },
-                is_default: { type: "BOOLEAN" },
-              },
-              required: ["wallet_name"],
-            },
-          },
-          {
-            name: "create_wallet_transfer",
-            description: "Move money between two wallets in the same scope.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                from_wallet_name: { type: "STRING" },
-                to_wallet_name: { type: "STRING" },
-                amount: { type: "NUMBER" },
-                currency: { type: "STRING" },
-                date: { type: "STRING" },
-                note: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-              },
-              required: ["from_wallet_name", "to_wallet_name", "amount"],
-            },
-          },
-          {
-            name: "update_transaction",
-            description:
-              "Update a previously listed transaction (no transaction IDs).",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                selection_index: { type: "NUMBER" },
-                match: {
-                  type: "OBJECT",
-                  properties: {
-                    amount: { type: "NUMBER" },
-                    date: { type: "STRING", description: "YYYY-MM-DD" },
-                    description_contains: { type: "STRING" },
-                    category: { type: "STRING" },
-                    currency: { type: "STRING" },
-                    type: { type: "STRING", enum: ["expense", "income"] },
-                  },
-                },
-                updates: {
-                  type: "OBJECT",
-                  properties: {
-                    amount: { type: "NUMBER" },
-                    category: { type: "STRING" },
-                    description: { type: "STRING" },
-                    merchant: { type: "STRING" },
-                    date: { type: "STRING", description: "YYYY-MM-DD" },
-                    currency: { type: "STRING" },
-                    source: { type: "STRING" },
-                    is_recurring: { type: "BOOLEAN" },
-                    frequency: { type: "STRING" },
-                    recurrence_rule: {
-                      type: "OBJECT",
-                      description: "Optional explicit recurrence rule payload",
-                    },
-                  },
-                },
-              },
-              required: ["updates"],
-            },
-          },
-          {
-            name: "delete_transaction",
-            description:
-              "Delete a previously listed transaction (no transaction IDs).",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                selection_index: { type: "NUMBER" },
-                match: {
-                  type: "OBJECT",
-                  properties: {
-                    amount: { type: "NUMBER" },
-                    date: { type: "STRING", description: "YYYY-MM-DD" },
-                    description_contains: { type: "STRING" },
-                    category: { type: "STRING" },
-                    currency: { type: "STRING" },
-                    type: { type: "STRING", enum: ["expense", "income"] },
-                  },
-                },
-              },
-            },
-          },
-          {
-            name: "list_expenses",
-            description: "List recent transactions (expenses or income).",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                type: { type: "STRING", enum: ["expense", "income"] },
-                currency: { type: "STRING" },
-                limit: { type: "NUMBER" },
-                start_date: { type: "STRING" },
-                end_date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                space_scope: {
-                  type: "STRING",
-                  enum: [
-                    "personal",
-                    "personal_account",
-                    "portfolio",
-                    "private_space",
-                    "shared",
-                    "shared_space",
-                    "household",
-                  ],
-                  description:
-                    "Optional high-level scope hint: personal (household_id null), portfolio/private space, or shared household.",
-                },
-              },
-            },
-          },
-          {
-            name: "generate_chart_url",
-            description: "Generate a URL for a chart.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                chart_type: {
-                  type: "STRING",
-                  enum: ["bar", "pie", "donut", "radar"],
-                },
-                labels: { type: "ARRAY", items: { type: "STRING" } },
-                data: { type: "ARRAY", items: { type: "NUMBER" } },
-                title: { type: "STRING" },
-              },
-              required: ["chart_type", "labels", "data"],
-            },
-          },
-          {
-            name: "financial_insight",
-            description: "Generate a financial health snapshot.",
-            parameters: {
-              type: "OBJECT",
-              properties: { scope: { type: "STRING" } },
-            },
-          },
-          {
-            name: "get_budget",
-            description: "Get current budget status.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-              },
-            },
-          },
-          {
-            name: "draft_budget",
-            description: "Draft a budget proposal for confirmation.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                amount: { type: "NUMBER" },
-                date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                pockets: { type: "ARRAY", items: { type: "OBJECT" } },
-              },
-              required: ["amount"],
-            },
-          },
-          {
-            name: "confirm_budget",
-            description: "Confirm and apply a budget draft.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                confirm: { type: "BOOLEAN" },
-                amount: { type: "NUMBER" },
-                date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                pockets: { type: "ARRAY", items: { type: "OBJECT" } },
-              },
-            },
-          },
-          {
-            name: "set_budget",
-            description: "Set budget amount for a month.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                amount: { type: "NUMBER" },
-                date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                pockets: { type: "ARRAY", items: { type: "OBJECT" } },
-              },
-              required: ["amount"],
-            },
-          },
-          {
-            name: "set_pocket",
-            description: "Create or update a budget pocket.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                name: { type: "STRING" },
-                percentage: { type: "NUMBER" },
-                categories: { type: "ARRAY", items: { type: "STRING" } },
-                date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-              },
-              required: ["name"],
-            },
-          },
-          {
-            name: "delete_pocket",
-            description: "Delete a budget pocket by name.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                name: { type: "STRING" },
-                date: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-              },
-              required: ["name"],
-            },
-          },
-          {
-            name: "set_currency",
-            description: "Update preferred currency.",
-            parameters: {
-              type: "OBJECT",
-              properties: { currency: { type: "STRING" } },
-              required: ["currency"],
-            },
-          },
-          {
-            name: "set_language",
-            description: "Update preferred language.",
-            parameters: {
-              type: "OBJECT",
-              properties: { language: { type: "STRING" } },
-              required: ["language"],
-            },
-          },
-          {
-            name: "manage_recurring",
-            description: "Add, update, or delete recurring transactions.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                action: { type: "STRING", enum: ["add", "update", "delete"] },
-                expense_id: { type: "STRING" },
-                selection_index: { type: "NUMBER" },
-                match: {
-                  type: "OBJECT",
-                  properties: {
-                    amount: { type: "NUMBER" },
-                    date: { type: "STRING", description: "YYYY-MM-DD" },
-                    description_contains: { type: "STRING" },
-                    category: { type: "STRING" },
-                    currency: { type: "STRING" },
-                    type: { type: "STRING", enum: ["expense", "income"] },
-                  },
-                },
-                amount: { type: "NUMBER" },
-                category: { type: "STRING" },
-                description: { type: "STRING" },
-                merchant: { type: "STRING" },
-                date: { type: "STRING" },
-                currency: { type: "STRING" },
-                household_id: { type: "STRING" },
-                household_name: { type: "STRING" },
-                is_portfolio: { type: "BOOLEAN" },
-                payer_name: { type: "STRING" },
-                split_type: {
-                  type: "STRING",
-                  enum: ["equal", "amount", "percentage", "shares"],
-                },
-                member_splits: {
-                  type: "ARRAY",
-                  items: {
-                    type: "OBJECT",
-                    properties: {
-                      member_name: { type: "STRING" },
-                      amount: { type: "NUMBER" },
-                      percentage: { type: "NUMBER" },
-                      shares: { type: "NUMBER" },
-                    },
-                    required: ["member_name"],
-                  },
-                },
-                frequency: { type: "STRING" },
-                recurrence_rule: {
-                  type: "OBJECT",
-                  description: "Optional explicit recurrence rule payload",
-                },
-                source: { type: "STRING" },
-                owner_type: {
-                  type: "STRING",
-                  enum: ["me", "partner", "household"],
-                },
-                privacy_scope: {
-                  type: "STRING",
-                  enum: ["private", "balances_only", "full"],
-                },
-                type: { type: "STRING", enum: ["expense", "income"] },
-              },
-              required: ["action"],
-            },
-          },
+          buildAddTransactionTool({
+            descriptionMode: "minimal",
+            includeMerchant: true,
+          }),
+          buildAddTransactionsBatchTool({
+            descriptionMode: "minimal",
+            includeMerchant: true,
+          }),
+          buildListWalletsTool({ descriptionMode: "minimal" }),
+          buildCreateWalletTool(),
+          buildUpdateWalletTool(),
+          buildCreateWalletTransferTool({ descriptionMode: "minimal" }),
+          buildUpdateTransactionTool({
+            descriptionMode: "minimal",
+            includeMerchant: true,
+          }),
+          buildDeleteTransactionTool({ descriptionMode: "minimal" }),
+          buildListExpensesTool({
+            descriptionMode: "minimal",
+            includeSpaceScope: true,
+          }),
+          buildGenerateChartUrlTool({ descriptionMode: "minimal" }),
+          buildFinancialInsightTool({ descriptionMode: "minimal" }),
+          buildGetBudgetTool({ descriptionMode: "minimal" }),
+          buildDraftBudgetTool({ descriptionMode: "minimal" }),
+          buildConfirmBudgetTool({ descriptionMode: "minimal" }),
+          buildSetBudgetTool({ descriptionMode: "minimal" }),
+          buildSetPocketTool({ descriptionMode: "minimal" }),
+          buildDeletePocketTool({ descriptionMode: "minimal" }),
+          buildSetCurrencyTool({ descriptionMode: "minimal" }),
+          buildSetLanguageTool({ descriptionMode: "minimal" }),
+          buildManageRecurringTool({
+            descriptionMode: "minimal",
+            includeDateField: true,
+            includeRecurrenceRule: true,
+          }),
         ];
 
         if (REQUIRED_TELEGRAM_TOOL_NAMES.length > tools.length) {
@@ -1661,7 +1350,9 @@ Deno.serve(async (req: Request) => {
           modelName: MODEL_NAME,
           systemInstruction: telegramSystemInstruction,
           history: rawHistory as any,
-          tools: [{ function_declarations: tools }] as any,
+          tools: [
+            { function_declarations: cloneBotToolDeclarations(tools) },
+          ] as any,
           timeoutMs: GEMINI_REQUEST_TIMEOUT_MS,
           vertexConfig,
         });
@@ -1683,7 +1374,9 @@ Deno.serve(async (req: Request) => {
                   modelName,
                   systemInstruction: telegramSystemInstruction,
                   history,
-                  tools: [{ function_declarations: tools }] as any,
+                  tools: [
+                    { function_declarations: cloneBotToolDeclarations(tools) },
+                  ] as any,
                   timeoutMs: GEMINI_REQUEST_TIMEOUT_MS,
                   vertexConfig,
                 }) as any;
@@ -2079,21 +1772,10 @@ Deno.serve(async (req: Request) => {
                   }
                 }
               } else if (call.name === "list_expenses") {
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId, spaceMeta } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 if (
                   householdId &&
                   !(await ensureHouseholdMember(supabase, householdId, userId))
@@ -2240,21 +1922,10 @@ Deno.serve(async (req: Request) => {
                   continue;
                 }
                 const transaction = transactionResult.transaction;
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId, spaceMeta } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 if (
                   householdId &&
                   !(await ensureHouseholdMember(supabase, householdId, userId))
@@ -2268,10 +1939,8 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                const isHouseholdExpense =
-                  !!householdId && transaction.type === "expense";
                 const splitConfig =
-                  isHouseholdExpense && !spaceMeta?.isPortfolio
+                  householdId && !spaceMeta?.isPortfolio
                     ? await resolveHouseholdSplitConfig(
                         supabase,
                         householdId!,
@@ -2360,21 +2029,10 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId, spaceMeta } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 if (
                   householdId &&
                   !(await ensureHouseholdMember(supabase, householdId, userId))
@@ -2424,7 +2082,7 @@ Deno.serve(async (req: Request) => {
                     break;
                   }
                   const splitConfig =
-                    householdId && !isPortfolio && transaction.type !== "income"
+                    householdId && !isPortfolio
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
@@ -2507,21 +2165,10 @@ Deno.serve(async (req: Request) => {
                   });
                 }
               } else if (call.name === "list_wallets") {
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 const { data, error } = await supabase.functions.invoke(
                   "list-wallets",
                   {
@@ -2586,21 +2233,10 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 const { data, error } = await supabase.functions.invoke(
                   "save-wallet",
                   {
@@ -2636,21 +2272,10 @@ Deno.serve(async (req: Request) => {
                   });
                 }
               } else if (call.name === "update_wallet") {
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 const requestedWallet = await resolveWalletIdInScope(
                   supabase,
                   userId,
@@ -2763,21 +2388,10 @@ Deno.serve(async (req: Request) => {
                   });
                   continue;
                 }
-                let householdId = call.args.household_id || null;
-                const householdName = (call.args.household_name || "")
-                  .toString()
-                  .toLowerCase();
-                let spaceMeta = householdId
-                  ? spaceMap.get(householdId)
-                  : undefined;
-                if (
-                  !spaceMeta &&
-                  householdName &&
-                  spaceMap.has(householdName)
-                ) {
-                  spaceMeta = spaceMap.get(householdName);
-                  householdId = spaceMeta?.id ?? null;
-                }
+                const { householdId } = resolveBotSpaceScope(
+                  call.args,
+                  spaceMap,
+                );
                 const fromWallet = await resolveWalletIdInScope(
                   supabase,
                   userId,
@@ -4018,9 +3632,7 @@ Deno.serve(async (req: Request) => {
                     householdId = spaceMeta?.id ?? null;
                   }
                   const splitConfig =
-                    householdId &&
-                    !spaceMeta?.isPortfolio &&
-                    transaction.type !== "income"
+                    householdId && !spaceMeta?.isPortfolio
                       ? await resolveHouseholdSplitConfig(
                           supabase,
                           householdId,
@@ -4166,7 +3778,11 @@ Deno.serve(async (req: Request) => {
                     modelName,
                     systemInstruction: telegramSystemInstruction,
                     history,
-                    tools: [{ function_declarations: tools }] as any,
+                    tools: [
+                      {
+                        function_declarations: cloneBotToolDeclarations(tools),
+                      },
+                    ] as any,
                     timeoutMs: GEMINI_REQUEST_TIMEOUT_MS,
                     vertexConfig,
                   }) as any;

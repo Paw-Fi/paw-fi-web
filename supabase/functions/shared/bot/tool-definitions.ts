@@ -1,7 +1,42 @@
 export type BotToolDeclaration = Record<string, unknown>;
 
-type TransactionToolOptions = {
+export function cloneBotToolDeclarations(
+  declarations: BotToolDeclaration[],
+): BotToolDeclaration[] {
+  return JSON.parse(JSON.stringify(declarations)) as BotToolDeclaration[];
+}
+
+type TransactionToolOptions = ToolDescriptionOptions & {
   includeMerchant?: boolean;
+};
+
+type DescriptionMode = "rich" | "minimal";
+
+type ToolDescriptionOptions = {
+  descriptionMode?: DescriptionMode;
+};
+
+type ListExpensesToolOptions = ToolDescriptionOptions & {
+  includeSpaceScope?: boolean;
+};
+
+type UpdateTransactionToolOptions = ToolDescriptionOptions & {
+  includeMerchant?: boolean;
+};
+
+type BudgetToolOptions = ToolDescriptionOptions & {
+  includePocketDetails?: boolean;
+};
+
+type SetPocketToolOptions = ToolDescriptionOptions & {
+  includeNewName?: boolean;
+  includeColorIcon?: boolean;
+};
+
+type RecurringToolOptions = ToolDescriptionOptions & {
+  includeDateField?: boolean;
+  includeRecurrenceRule?: boolean;
+  includeScheduleFields?: boolean;
 };
 
 const stringSchema = { type: "STRING" };
@@ -21,18 +56,27 @@ const privacyScopeSchema = {
   enum: ["private", "balances_only", "full"],
 };
 
-function buildMemberSplitsSchema(): BotToolDeclaration {
+function buildMemberSplitsSchema(
+  mode: DescriptionMode = "rich",
+): BotToolDeclaration {
   return {
     type: "ARRAY",
-    description:
-      "Shared space only: per-member split instructions (by name/email).",
+    ...(mode === "rich"
+      ? {
+          description:
+            "Shared space only: per-member split instructions (by name/email).",
+        }
+      : {}),
     items: {
       type: "OBJECT",
       properties: {
-        member_name: {
-          type: "STRING",
-          description: "Member name/email reference",
-        },
+        member_name:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description: "Member name/email reference",
+              }
+            : stringSchema,
         amount: numberSchema,
         percentage: numberSchema,
         shares: numberSchema,
@@ -45,72 +89,124 @@ function buildMemberSplitsSchema(): BotToolDeclaration {
 function buildTransactionProperties(
   options: TransactionToolOptions = {},
 ): Record<string, unknown> {
+  const mode = options.descriptionMode ?? "rich";
   return {
     type: transactionTypeSchema,
-    amount: {
-      type: "NUMBER",
-      description: "Amount in major units (e.g. 10.50)",
-    },
-    category: { type: "STRING", description: "Category name" },
-    description: { type: "STRING", description: "Description/Note" },
+    amount:
+      mode === "rich"
+        ? {
+            type: "NUMBER",
+            description: "Amount in major units (e.g. 10.50)",
+          }
+        : numberSchema,
+    category:
+      mode === "rich"
+        ? { type: "STRING", description: "Category name" }
+        : stringSchema,
+    description:
+      mode === "rich"
+        ? { type: "STRING", description: "Description/Note" }
+        : stringSchema,
     ...(options.includeMerchant
       ? {
-          merchant: {
-            type: "STRING",
-            description: "Optional merchant/store/payee name",
-          },
+          merchant:
+            mode === "rich"
+              ? {
+                  type: "STRING",
+                  description: "Optional merchant/store/payee name",
+                }
+              : stringSchema,
         }
       : {}),
-    date: { type: "STRING", description: "YYYY-MM-DD" },
-    currency: { type: "STRING", description: "ISO Currency Code" },
-    household_id: {
-      type: "STRING",
-      description: "Optional: Space ID if it is a shared transaction",
-    },
-    household_name: {
-      type: "STRING",
-      description: "Optional: Space name if user provided it",
-    },
-    is_portfolio: {
-      type: "BOOLEAN",
-      description: "Optional: Whether the target space is a portfolio",
-    },
-    wallet_name: {
-      type: "STRING",
-      description:
-        "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
-    },
-    payer_name: {
-      type: "STRING",
-      description:
-        "Shared space only: who paid (member name/email). Example: 'paid by B'.",
-    },
-    split_type: {
-      ...splitTypeSchema,
-      description:
-        "Shared space only: how to split. If omitted, infer from member_splits fields.",
-    },
-    member_splits: buildMemberSplitsSchema(),
-    owner_type: {
-      ...ownerTypeSchema,
-      description: "Income only: owner type",
-    },
-    privacy_scope: {
-      ...privacyScopeSchema,
-      description: "Income only: privacy scope",
-    },
-    source: {
-      type: "STRING",
-      description: "Income only: source label",
-    },
-    is_recurring: {
-      type: "BOOLEAN",
-      description: "True if this is a recurring transaction",
-    },
-    frequency: {
-      type: "STRING",
-      description: "Frequency for recurring (monthly, weekly, etc.)",
-    },
+    date:
+      mode === "rich"
+        ? { type: "STRING", description: "YYYY-MM-DD" }
+        : stringSchema,
+    currency:
+      mode === "rich"
+        ? { type: "STRING", description: "ISO Currency Code" }
+        : stringSchema,
+    household_id:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            description: "Optional: Space ID if it is a shared transaction",
+          }
+        : stringSchema,
+    household_name:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            description: "Optional: Space name if user provided it",
+          }
+        : stringSchema,
+    is_portfolio:
+      mode === "rich"
+        ? {
+            type: "BOOLEAN",
+            description: "Optional: Whether the target space is a portfolio",
+          }
+        : booleanSchema,
+    wallet_name:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            description:
+              "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
+          }
+        : stringSchema,
+    payer_name:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            description:
+              "Shared space only: who paid (member name/email). Example: 'paid by B'.",
+          }
+        : stringSchema,
+    split_type:
+      mode === "rich"
+        ? {
+            ...splitTypeSchema,
+            description:
+              "Shared space only: how to split. If omitted, infer from member_splits fields.",
+          }
+        : splitTypeSchema,
+    member_splits: buildMemberSplitsSchema(mode),
+    owner_type:
+      mode === "rich"
+        ? {
+            ...ownerTypeSchema,
+            description: "Income only: owner type",
+          }
+        : ownerTypeSchema,
+    privacy_scope:
+      mode === "rich"
+        ? {
+            ...privacyScopeSchema,
+            description: "Income only: privacy scope",
+          }
+        : privacyScopeSchema,
+    source:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            description: "Income only: source label",
+          }
+        : stringSchema,
+    is_recurring:
+      mode === "rich"
+        ? {
+            type: "BOOLEAN",
+            description: "True if this is a recurring transaction",
+          }
+        : booleanSchema,
+    frequency:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            description: "Frequency for recurring (monthly, weekly, etc.)",
+          }
+        : stringSchema,
     recurrence_rule: {
       type: "OBJECT",
       description: "Optional explicit recurrence rule payload",
@@ -157,25 +253,40 @@ export function buildAddTransactionsBatchTool(
   return {
     name: "add_transactions_batch",
     description:
-      "Add multiple transactions at once. Use this when the user uploads a receipt/statement with multiple transactions or explicitly lists several transactions to save. More efficient than calling add_transaction multiple times.",
+      (options.descriptionMode ?? "rich") === "rich"
+        ? "Add multiple transactions at once. Use this when the user uploads a receipt/statement with multiple transactions or explicitly lists several transactions to save. More efficient than calling add_transaction multiple times."
+        : "Add multiple transactions at once.",
     parameters: {
       type: "OBJECT",
       properties: {
-        household_id: {
-          type: "STRING",
-          description: "Optional: Space ID if these are shared transactions",
-        },
-        household_name: {
-          type: "STRING",
-          description: "Optional: Space name if user provided it",
-        },
-        is_portfolio: {
-          type: "BOOLEAN",
-          description: "Optional: Whether the target space is a portfolio",
-        },
+        household_id:
+          (options.descriptionMode ?? "rich") === "rich"
+            ? {
+                type: "STRING",
+                description:
+                  "Optional: Space ID if these are shared transactions",
+              }
+            : stringSchema,
+        household_name:
+          (options.descriptionMode ?? "rich") === "rich"
+            ? {
+                type: "STRING",
+                description: "Optional: Space name if user provided it",
+              }
+            : stringSchema,
+        is_portfolio:
+          (options.descriptionMode ?? "rich") === "rich"
+            ? {
+                type: "BOOLEAN",
+                description:
+                  "Optional: Whether the target space is a portfolio",
+              }
+            : booleanSchema,
         transactions: {
           type: "ARRAY",
-          description: "Array of transactions to save",
+          ...((options.descriptionMode ?? "rich") === "rich"
+            ? { description: "Array of transactions to save" }
+            : {}),
           items: {
             type: "OBJECT",
             properties: buildTransactionProperties(options),
@@ -184,6 +295,647 @@ export function buildAddTransactionsBatchTool(
         },
       },
       required: ["transactions"],
+    },
+  };
+}
+
+function buildSelectionIndexSchema(mode: DescriptionMode): BotToolDeclaration {
+  return mode === "rich"
+    ? {
+        type: "NUMBER",
+        description: "1-based index into the last listed transactions",
+      }
+    : numberSchema;
+}
+
+function buildTransactionMatchSchema(
+  mode: DescriptionMode,
+): BotToolDeclaration {
+  return {
+    type: "OBJECT",
+    properties: {
+      amount: numberSchema,
+      date: { type: "STRING", description: "YYYY-MM-DD" },
+      description_contains: stringSchema,
+      category: stringSchema,
+      currency: stringSchema,
+      type: transactionTypeSchema,
+    },
+  };
+}
+
+export function buildListWalletsTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "list_wallets",
+    description:
+      mode === "rich"
+        ? "List wallets in personal scope or in a selected space, including current balances and which one is the default."
+        : "List wallets in personal scope or in a selected space, including balances and the default wallet.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        household_id: stringSchema,
+        household_name: stringSchema,
+        include_archived: booleanSchema,
+      },
+    },
+  };
+}
+
+export function buildCreateWalletTool(): BotToolDeclaration {
+  return {
+    name: "create_wallet",
+    description:
+      "Create a new wallet in personal scope or in a selected space.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name: stringSchema,
+        household_id: stringSchema,
+        household_name: stringSchema,
+        icon: stringSchema,
+        color: stringSchema,
+        opening_balance: numberSchema,
+        goal_amount: numberSchema,
+        is_default: booleanSchema,
+      },
+      required: ["name"],
+    },
+  };
+}
+
+export function buildUpdateWalletTool(): BotToolDeclaration {
+  return {
+    name: "update_wallet",
+    description:
+      "Rename or update a wallet in the selected scope. Use wallet_name to choose which wallet to edit.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        wallet_name: stringSchema,
+        household_id: stringSchema,
+        household_name: stringSchema,
+        new_name: stringSchema,
+        icon: stringSchema,
+        color: stringSchema,
+        goal_amount: numberSchema,
+        is_default: booleanSchema,
+      },
+      required: ["wallet_name"],
+    },
+  };
+}
+
+export function buildCreateWalletTransferTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "create_wallet_transfer",
+    description: "Move money between two wallets in the same scope.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        from_wallet_name: stringSchema,
+        to_wallet_name: stringSchema,
+        amount: numberSchema,
+        currency: stringSchema,
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        note: stringSchema,
+        household_id: stringSchema,
+        household_name: stringSchema,
+      },
+      required: ["from_wallet_name", "to_wallet_name", "amount"],
+    },
+  };
+}
+
+export function buildUpdateTransactionTool(
+  options: UpdateTransactionToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "update_transaction",
+    description: "Update a previously listed transaction (no transaction IDs).",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        selection_index: buildSelectionIndexSchema(mode),
+        match: buildTransactionMatchSchema(mode),
+        updates: {
+          type: "OBJECT",
+          properties: {
+            amount: numberSchema,
+            category: stringSchema,
+            description: stringSchema,
+            ...(options.includeMerchant ? { merchant: stringSchema } : {}),
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            currency: stringSchema,
+            source: stringSchema,
+            is_recurring: booleanSchema,
+            frequency: stringSchema,
+            recurrence_rule: {
+              type: "OBJECT",
+              description: "Optional explicit recurrence rule payload",
+            },
+          },
+        },
+      },
+      required: ["updates"],
+    },
+  };
+}
+
+export function buildDeleteTransactionTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "delete_transaction",
+    description: "Delete a previously listed transaction (no transaction IDs).",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        selection_index: buildSelectionIndexSchema(mode),
+        match: buildTransactionMatchSchema(mode),
+      },
+    },
+  };
+}
+
+export function buildListExpensesTool(
+  options: ListExpensesToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "list_expenses",
+    description: "List recent transactions (expenses or income).",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        type: transactionTypeSchema,
+        currency:
+          mode === "rich"
+            ? { type: "STRING", description: "Optional: filter by currency" }
+            : stringSchema,
+        limit: numberSchema,
+        start_date: stringSchema,
+        end_date: stringSchema,
+        household_id:
+          mode === "rich"
+            ? { type: "STRING", description: "Optional: Filter by space" }
+            : stringSchema,
+        household_name:
+          mode === "rich"
+            ? { type: "STRING", description: "Optional: Space name filter" }
+            : stringSchema,
+        is_portfolio:
+          mode === "rich"
+            ? {
+                type: "BOOLEAN",
+                description:
+                  "Optional: Whether the target space is a portfolio",
+              }
+            : booleanSchema,
+        ...(options.includeSpaceScope
+          ? {
+              space_scope: {
+                type: "STRING",
+                enum: [
+                  "personal",
+                  "personal_account",
+                  "portfolio",
+                  "private_space",
+                  "shared",
+                  "shared_space",
+                  "household",
+                ],
+                description:
+                  "Optional high-level scope hint: personal (household_id null), portfolio/private space, or shared household.",
+              },
+            }
+          : {}),
+      },
+    },
+  };
+}
+
+export function buildGenerateChartUrlTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "generate_chart_url",
+    description:
+      mode === "rich"
+        ? "Generate a URL for a chart (bar/pie/donut/radar) to visualize expenses."
+        : "Generate a URL for a chart.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        chart_type: { type: "STRING", enum: ["bar", "pie", "donut", "radar"] },
+        labels: { type: "ARRAY", items: stringSchema },
+        data: { type: "ARRAY", items: numberSchema },
+        title: stringSchema,
+      },
+      required: ["chart_type", "labels", "data"],
+    },
+  };
+}
+
+export function buildFinancialInsightTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "financial_insight",
+    description:
+      mode === "rich"
+        ? "Generate a financial health snapshot with verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Use when the user asks about financial situation/health/status."
+        : "Generate a financial health snapshot.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        scope:
+          mode === "rich"
+            ? { type: "STRING", description: "Optional scope (e.g., month)" }
+            : stringSchema,
+      },
+    },
+  };
+}
+
+function buildScopeProperties(mode: DescriptionMode): Record<string, unknown> {
+  return {
+    household_id:
+      mode === "rich"
+        ? { type: "STRING", description: "Optional: space scope" }
+        : stringSchema,
+    household_name:
+      mode === "rich"
+        ? { type: "STRING", description: "Optional: space name" }
+        : stringSchema,
+    is_portfolio:
+      mode === "rich"
+        ? {
+            type: "BOOLEAN",
+            description: "Optional: Whether the target space is a portfolio",
+          }
+        : booleanSchema,
+  };
+}
+
+function buildBudgetPocketsSchema(
+  options: BudgetToolOptions,
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  if (!options.includePocketDetails) {
+    return { type: "ARRAY", items: { type: "OBJECT" } };
+  }
+  return {
+    type: "ARRAY",
+    items: {
+      type: "OBJECT",
+      properties: {
+        name: stringSchema,
+        percentage: numberSchema,
+        categories: { type: "ARRAY", items: stringSchema },
+        color: stringSchema,
+        icon: stringSchema,
+      },
+      required: ["name", "percentage"],
+    },
+    ...(mode === "rich"
+      ? {
+          description:
+            "Optional: envelope splits with percentages and categories",
+        }
+      : {}),
+  };
+}
+
+export function buildGetBudgetTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "get_budget",
+    description:
+      mode === "rich"
+        ? "Get budget status for the current month (includes envelopes/pockets)."
+        : "Get current budget status.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        household_id:
+          mode === "rich"
+            ? { type: "STRING", description: "Optional: Check space budget" }
+            : stringSchema,
+        household_name:
+          mode === "rich"
+            ? { type: "STRING", description: "Optional: Space name" }
+            : stringSchema,
+        is_portfolio:
+          mode === "rich"
+            ? {
+                type: "BOOLEAN",
+                description:
+                  "Optional: Whether the target space is a portfolio",
+              }
+            : booleanSchema,
+      },
+    },
+  };
+}
+
+export function buildDraftBudgetTool(
+  options: BudgetToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "draft_budget",
+    description:
+      mode === "rich"
+        ? "Draft a budget proposal (amount and pockets) and store it for confirmation."
+        : "Draft a budget proposal for confirmation.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        amount: numberSchema,
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        ...buildScopeProperties(mode),
+        pockets: buildBudgetPocketsSchema(options),
+      },
+      required: ["amount"],
+    },
+  };
+}
+
+export function buildConfirmBudgetTool(
+  options: BudgetToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "confirm_budget",
+    description:
+      mode === "rich"
+        ? "Confirm and apply the last drafted budget (can include overrides)."
+        : "Confirm and apply a budget draft.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        confirm:
+          mode === "rich"
+            ? { type: "BOOLEAN", description: "Set true to confirm" }
+            : booleanSchema,
+        amount: numberSchema,
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        ...buildScopeProperties(mode),
+        pockets: buildBudgetPocketsSchema(options),
+      },
+    },
+  };
+}
+
+export function buildSetBudgetTool(
+  options: BudgetToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "set_budget",
+    description:
+      mode === "rich"
+        ? "Set the budget amount for the month (supports pockets/envelopes split)."
+        : "Set budget amount for a month.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        amount: numberSchema,
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        ...buildScopeProperties(mode),
+        pockets: buildBudgetPocketsSchema(options),
+      },
+      required: ["amount"],
+    },
+  };
+}
+
+export function buildSetPocketTool(
+  options: SetPocketToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "set_pocket",
+    description:
+      mode === "rich"
+        ? "Create or update a pocket/envelope for the current budget."
+        : "Create or update a budget pocket.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name:
+          mode === "rich"
+            ? { type: "STRING", description: "Pocket name to create/update" }
+            : stringSchema,
+        ...(options.includeNewName
+          ? { new_name: { type: "STRING", description: "Optional new name" } }
+          : {}),
+        percentage:
+          mode === "rich"
+            ? { type: "NUMBER", description: "Allocation percentage (0-100)" }
+            : numberSchema,
+        categories: { type: "ARRAY", items: stringSchema },
+        ...(options.includeColorIcon
+          ? {
+              color: {
+                type: "STRING",
+                description: "Hex color (e.g. #FF0000)",
+              },
+              icon: { type: "STRING", description: "Material icon name" },
+            }
+          : {}),
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        ...buildScopeProperties(mode),
+      },
+      required: ["name"],
+    },
+  };
+}
+
+export function buildDeletePocketTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "delete_pocket",
+    description:
+      mode === "rich"
+        ? "Delete a pocket/envelope by name."
+        : "Delete a budget pocket by name.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name:
+          mode === "rich"
+            ? { type: "STRING", description: "Pocket name to delete" }
+            : stringSchema,
+        date:
+          mode === "rich"
+            ? { type: "STRING", description: "YYYY-MM-DD" }
+            : stringSchema,
+        ...buildScopeProperties(mode),
+      },
+      required: ["name"],
+    },
+  };
+}
+
+export function buildSetCurrencyTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "set_currency",
+    description:
+      mode === "rich"
+        ? "Update the user's preferred currency (user_contacts.preferred_currency)."
+        : "Update preferred currency.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        currency:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description: "ISO currency code, e.g. USD, EUR, GBP",
+              }
+            : stringSchema,
+      },
+      required: ["currency"],
+    },
+  };
+}
+
+export function buildSetLanguageTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "set_language",
+    description:
+      mode === "rich"
+        ? "Update the user's preferred language (user_contacts.preferred_language). Use this when the user asks you to speak in a specific language in the future."
+        : "Update preferred language.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        language:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description:
+                  "Language code or language name, e.g. en, es, English, Spanish, zh, Chinese",
+              }
+            : stringSchema,
+      },
+      required: ["language"],
+    },
+  };
+}
+
+export function buildManageRecurringTool(
+  options: RecurringToolOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "manage_recurring",
+    description:
+      mode === "rich"
+        ? "Add or modify a recurring transaction."
+        : "Add, update, or delete recurring transactions.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        action: { type: "STRING", enum: ["add", "update", "delete"] },
+        expense_id:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description:
+                  "Optional: internal transaction id (avoid asking user; prefer selection_index/match)",
+              }
+            : stringSchema,
+        selection_index: buildSelectionIndexSchema(mode),
+        match: buildTransactionMatchSchema(mode),
+        amount: numberSchema,
+        category: stringSchema,
+        currency: stringSchema,
+        description: stringSchema,
+        merchant: stringSchema,
+        ...(options.includeDateField ? { date: stringSchema } : {}),
+        source:
+          mode === "rich"
+            ? { type: "STRING", description: "Income only: source" }
+            : stringSchema,
+        frequency:
+          mode === "rich"
+            ? { type: "STRING", enum: ["weekly", "monthly", "yearly"] }
+            : stringSchema,
+        ...(options.includeRecurrenceRule
+          ? {
+              recurrence_rule: {
+                type: "OBJECT",
+                description: "Optional explicit recurrence rule payload",
+              },
+            }
+          : {}),
+        ...(options.includeScheduleFields
+          ? {
+              interval: numberSchema,
+              anchor_date: { type: "STRING", description: "YYYY-MM-DD" },
+              end_date: { type: "STRING", description: "YYYY-MM-DD" },
+              reminder_value: numberSchema,
+              reminder_unit: { type: "STRING", enum: ["days", "hours"] },
+            }
+          : {}),
+        owner_type: ownerTypeSchema,
+        privacy_scope: privacyScopeSchema,
+        household_id: stringSchema,
+        household_name: stringSchema,
+        is_portfolio: booleanSchema,
+        payer_name: stringSchema,
+        split_type: splitTypeSchema,
+        member_splits: buildMemberSplitsSchema(mode),
+        type: {
+          ...transactionTypeSchema,
+          ...(mode === "rich"
+            ? { description: "Recurring transaction type" }
+            : {}),
+        },
+      },
+      required: ["action"],
     },
   };
 }
