@@ -36,6 +36,44 @@ export async function markPlaidConnectionRemovalPending(params: {
   }
 }
 
+async function enqueuePlaidRemovalRetry(params: {
+  supabase: {
+    from: (table: string) => any;
+  };
+  connection: PlaidRemovableConnection;
+  removalReason: string;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+}): Promise<void> {
+  if (!params.connection.user_id) {
+    return;
+  }
+
+  const { error: jobError } = await params.supabase
+    .from("plaid_offboarding_jobs")
+    .insert({
+      user_id: params.connection.user_id,
+      connection_id: params.connection.id,
+      access_token_encrypted:
+        params.connection.access_token_encrypted ?? null,
+      plaid_access_token_encrypted:
+        params.connection.plaid_access_token_encrypted ?? null,
+      reason: params.removalReason,
+    });
+
+  if (jobError && jobError.code !== "23505") {
+    throw jobError;
+  }
+
+  await markPlaidConnectionRemovalPending({
+    supabase: params.supabase,
+    connectionId: params.connection.id,
+    errorCode: params.errorCode || "PLAID_REMOVE_RETRY_PENDING",
+    errorMessage: params.errorMessage ||
+      "Plaid item removal is queued for retry.",
+  });
+}
+
 export async function removePlaidConnection(params: {
   supabase: {
     from: (table: string) => any;
@@ -59,32 +97,15 @@ export async function removePlaidConnection(params: {
       );
     } catch (error) {
       if (!(error instanceof PlaidError && error.code === "ITEM_NOT_FOUND")) {
-        if (params.connection.user_id) {
-          const { error: jobError } = await params.supabase
-            .from("plaid_offboarding_jobs")
-            .insert({
-              user_id: params.connection.user_id,
-              connection_id: params.connection.id,
-              access_token_encrypted:
-                params.connection.access_token_encrypted ?? null,
-              plaid_access_token_encrypted:
-                params.connection.plaid_access_token_encrypted ?? null,
-              reason: params.removalReason,
-            });
-
-          if (jobError && jobError.code !== "23505") {
-            throw jobError;
-          }
-
-          await markPlaidConnectionRemovalPending({
-            supabase: params.supabase,
-            connectionId: params.connection.id,
-            errorCode: error instanceof PlaidError
-              ? error.code
-              : "PLAID_REMOVE_RETRY_PENDING",
-            errorMessage: error instanceof Error ? error.message : null,
-          });
-        }
+        await enqueuePlaidRemovalRetry({
+          supabase: params.supabase,
+          connection: params.connection,
+          removalReason: params.removalReason,
+          errorCode: error instanceof PlaidError
+            ? error.code
+            : "PLAID_REMOVE_RETRY_PENDING",
+          errorMessage: error instanceof Error ? error.message : null,
+        });
         throw error;
       }
 
@@ -98,11 +119,24 @@ export async function removePlaidConnection(params: {
     }
   }
 
-  await cleanupRemovedPlaidConnection({
-    supabase: params.supabase,
-    connectionId: params.connection.id,
-    removalReason: params.removalReason,
-  });
+  try {
+    await cleanupRemovedPlaidConnection({
+      supabase: params.supabase,
+      connectionId: params.connection.id,
+      removalReason: params.removalReason,
+    });
+  } catch (error) {
+    await enqueuePlaidRemovalRetry({
+      supabase: params.supabase,
+      connection: params.connection,
+      removalReason: params.removalReason,
+      errorCode: "LOCAL_CLEANUP_RETRY_PENDING",
+      errorMessage: error instanceof Error
+        ? error.message
+        : "Local bank cleanup is queued for retry.",
+    });
+    throw error;
+  }
 }
 
 export async function cleanupRemovedPlaidConnection(params: {

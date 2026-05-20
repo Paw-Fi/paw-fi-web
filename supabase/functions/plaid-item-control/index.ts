@@ -55,6 +55,9 @@ function isSupportedAction(value: unknown): value is PlaidItemAction {
 }
 
 Deno.serve(async (req) => {
+  const debugId = crypto.randomUUID();
+  let body: PlaidItemControlBody = {};
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -79,7 +82,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = (await req.json().catch(() => ({}))) as PlaidItemControlBody;
+    body = (await req.json().catch(() => ({}))) as PlaidItemControlBody;
 
     if (!isSupportedAction(body.action)) {
       return new Response(
@@ -151,6 +154,22 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "remove_item") {
+      console.log(
+        "[plaid-item-control] remove_item started",
+        JSON.stringify({
+          debugId,
+          connectionId: connection.id,
+          userId: authResult.userId,
+          itemStatus: connection.item_status ?? null,
+          itemHealthState: connection.item_health_state ?? null,
+          removedAt: connection.removed_at ?? null,
+          hasAccessToken: Boolean(
+            connection.access_token_encrypted ||
+              connection.plaid_access_token_encrypted,
+          ),
+        }),
+      );
+
       if (connection.removed_at) {
         return new Response(
           JSON.stringify({
@@ -165,11 +184,68 @@ Deno.serve(async (req) => {
         );
       }
 
-      await removePlaidConnection({
-        supabase,
-        connection,
-        removalReason: body.reason || "manual_remove",
-      });
+      try {
+        await removePlaidConnection({
+          supabase,
+          connection,
+          removalReason: body.reason || "manual_remove",
+        });
+      } catch (error) {
+        console.error(
+          "[plaid-item-control] Plaid item removal failed",
+          JSON.stringify({
+            debugId,
+            connectionId: connection.id,
+            action: body.action,
+            ...serializeErrorForLog(error),
+          }),
+        );
+
+        const { data: removalState, error: removalStateError } = await supabase
+          .from("bank_connections")
+          .select(
+            "item_status, item_health_state, scheduled_removal_at, error_code",
+          )
+          .eq("id", connection.id)
+          .maybeSingle();
+
+        if (removalStateError) {
+          console.error(
+            "[plaid-item-control] Failed to load removal state",
+            JSON.stringify({
+              debugId,
+              connectionId: connection.id,
+              ...serializeErrorForLog(removalStateError),
+            }),
+          );
+          throw removalStateError;
+        }
+
+        if (
+          removalState?.item_status === "pending_removal" ||
+          removalState?.item_health_state === "removal_pending"
+        ) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              action: body.action,
+              status: "pending_removal",
+              retryable: true,
+              debugId,
+              scheduledRemovalAt: removalState.scheduled_removal_at ?? null,
+              errorCode: removalState.error_code ?? "PLAID_REMOVE_RETRY_PENDING",
+              message:
+                "Bank disconnect is queued. Moneko will retry removing Plaid access automatically.",
+            }),
+            {
+              status: 202,
+              headers: { ...headers, "Content-Type": "application/json" },
+            },
+          );
+        }
+
+        throw error;
+      }
 
       return new Response(
         JSON.stringify({
@@ -652,13 +728,30 @@ Deno.serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error("[plaid-item-control] Unexpected error", error);
+    console.error(
+      "[plaid-item-control] Unexpected error",
+      JSON.stringify({
+        debugId,
+        action: body.action ?? null,
+        connectionId: body.connectionId ?? null,
+        ...serializeErrorForLog(error),
+      }),
+    );
     await reportEdgeFunctionError({
       functionName: "plaid-item-control",
       error,
+      context: {
+        debug_id: debugId,
+        action: body.action ?? null,
+        connection_id: body.connectionId ?? null,
+      },
     });
     return new Response(
-      JSON.stringify({ error: "Failed to execute Plaid item action" }),
+      JSON.stringify({
+        error: "Failed to execute Plaid item action",
+        errorCode: "plaid_item_control_failed",
+        debugId,
+      }),
       {
         status: 500,
         headers: { ...headers, "Content-Type": "application/json" },
@@ -666,3 +759,36 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+function serializeErrorForLog(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    const maybePlaidError = error as Error & {
+      code?: unknown;
+      requestId?: unknown;
+      errorType?: unknown;
+      status?: unknown;
+    };
+    return {
+      name: error.name,
+      message: error.message,
+      code: maybePlaidError.code ?? null,
+      requestId: maybePlaidError.requestId ?? null,
+      errorType: maybePlaidError.errorType ?? null,
+      status: maybePlaidError.status ?? null,
+    };
+  }
+
+  if (error && typeof error === "object") {
+    try {
+      return JSON.parse(JSON.stringify(error)) as Record<string, unknown>;
+    } catch {
+      return {
+        message: String(error),
+      };
+    }
+  }
+
+  return {
+    message: String(error),
+  };
+}
