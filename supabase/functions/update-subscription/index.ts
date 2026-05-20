@@ -4,6 +4,7 @@ import Stripe from "https://esm.sh/stripe@13.10.0";
 import { corsHeaders } from "../shared/cors.ts";
 import { SUBSCRIPTION_PRICES } from "../shared/stripe-subscription-prices.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { canGrantPaywallReturnTrial } from "../shared/paywall-return-trial-eligibility.ts";
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -662,29 +663,20 @@ serve(async (req) => {
           now.getTime() + returnTrialDurationMinutes * 60 * 1000,
         );
 
-        const isPeriodStillActive = (periodEnd: string | null | undefined) => {
-          if (!periodEnd) return false;
-          const endMs = new Date(periodEnd).getTime();
-          if (Number.isNaN(endMs)) return false;
-          return endMs > now.getTime();
-        };
-
-        const hasActiveAccess = Boolean(
-          subscription &&
-            ((subscription.status === "active" &&
-              subscription.plan === "lifetime") ||
-              ((subscription.status === "active" ||
-                subscription.status === "trialing") &&
-                isPeriodStillActive(subscription.current_period_end))),
-        );
-
-        if (hasActiveAccess) {
+        if (!canGrantPaywallReturnTrial(subscription)) {
+          console.log(
+            `[PaywallReturnTrial] grant_blocked_existing_subscription user=${userId} subscription_id=${
+              subscription?.id ?? "unknown"
+            } status=${subscription?.status ?? "null"} plan=${
+              subscription?.plan ?? "null"
+            }`,
+          );
           return new Response(
             JSON.stringify({
-              error: "User already has active subscription access",
+              error: "Subscription already exists. Trial was not granted.",
             }),
             {
-              status: 400,
+              status: 409,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
             },
           );
@@ -796,63 +788,7 @@ serve(async (req) => {
         const trialPlan = "plus";
         const trialBillingInterval = "yearly";
 
-        if (subscription?.id) {
-          const { data: updatedSubscriptionRow, error: updateError } =
-            await supabase
-              .from("subscriptions")
-              .update({
-                plan: trialPlan,
-                status: "trialing",
-                billing_interval: trialBillingInterval,
-                current_period_end: trialEndAt.toISOString(),
-                trial_start: now.toISOString(),
-                trial_end: trialEndAt.toISOString(),
-                cancel_at_period_end: false,
-                provider: "stripe",
-                store_product_id: null,
-                stripe_subscription_id: null,
-                stripe_customer_id: null,
-                bound_to_user_id: null,
-                bound_to_household_id: null,
-                updated_at: now.toISOString(),
-              })
-              .eq("id", subscription.id)
-              .or(
-                `status.is.null,status.in.(canceled,inactive,past_due,unpaid,incomplete_expired),and(status.eq.active,current_period_end.lte.${now.toISOString()}),and(status.eq.active,current_period_end.is.null),and(status.eq.trialing,current_period_end.lte.${now.toISOString()}),and(status.eq.trialing,current_period_end.is.null)`,
-              )
-              .select("id")
-              .maybeSingle();
-
-          if (updateError) {
-            console.error(
-              "Error updating return trial subscription:",
-              updateError,
-            );
-            const response = new Response(
-              JSON.stringify({ error: "Failed to grant return trial" }),
-              {
-                status: 500,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-            await rollbackGrantMarker();
-            return response;
-          }
-
-          if (!updatedSubscriptionRow) {
-            const response = new Response(
-              JSON.stringify({
-                error: "Subscription state changed. Trial was not granted.",
-              }),
-              {
-                status: 409,
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-              },
-            );
-            await rollbackGrantMarker();
-            return response;
-          }
-        } else {
+        {
           const { error: insertError } = await supabase
             .from("subscriptions")
             .insert({
