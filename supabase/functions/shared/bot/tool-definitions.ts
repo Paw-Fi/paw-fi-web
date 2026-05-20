@@ -49,7 +49,7 @@ const splitTypeSchema = {
 };
 const ownerTypeSchema = {
   type: "STRING",
-  enum: ["me", "partner", "household"],
+  enum: ["me", "partner", "space"],
 };
 const privacyScopeSchema = {
   type: "STRING",
@@ -63,20 +63,19 @@ function buildMemberSplitsSchema(
     type: "ARRAY",
     ...(mode === "rich"
       ? {
-          description:
-            "Shared space only: per-member split instructions (by name/email).",
-        }
+        description:
+          "Shared space only: per-member split instructions (by name/email).",
+      }
       : {}),
     items: {
       type: "OBJECT",
       properties: {
-        member_name:
-          mode === "rich"
-            ? {
-                type: "STRING",
-                description: "Member name/email reference",
-              }
-            : stringSchema,
+        member_name: mode === "rich"
+          ? {
+            type: "STRING",
+            description: "Member name/email reference",
+          }
+          : stringSchema,
         amount: numberSchema,
         percentage: numberSchema,
         shares: numberSchema,
@@ -92,121 +91,119 @@ function buildTransactionProperties(
   const mode = options.descriptionMode ?? "rich";
   return {
     type: transactionTypeSchema,
-    amount:
-      mode === "rich"
-        ? {
-            type: "NUMBER",
-            description: "Amount in major units (e.g. 10.50)",
-          }
-        : numberSchema,
-    category:
-      mode === "rich"
-        ? { type: "STRING", description: "Category name" }
-        : stringSchema,
-    description:
-      mode === "rich"
-        ? { type: "STRING", description: "Description/Note" }
-        : stringSchema,
+    amount: mode === "rich"
+      ? {
+        type: "NUMBER",
+        description: "Amount in major units (e.g. 10.50)",
+      }
+      : numberSchema,
+    category: mode === "rich"
+      ? { type: "STRING", description: "Category name" }
+      : stringSchema,
+    description: mode === "rich"
+      ? { type: "STRING", description: "Description/Note" }
+      : stringSchema,
     ...(options.includeMerchant
       ? {
-          merchant:
-            mode === "rich"
-              ? {
-                  type: "STRING",
-                  description: "Optional merchant/store/payee name",
-                }
-              : stringSchema,
-        }
+        merchant: mode === "rich"
+          ? {
+            type: "STRING",
+            description: "Optional merchant/store/payee name",
+          }
+          : stringSchema,
+      }
       : {}),
-    date:
-      mode === "rich"
-        ? { type: "STRING", description: "YYYY-MM-DD" }
-        : stringSchema,
-    currency:
-      mode === "rich"
-        ? { type: "STRING", description: "ISO Currency Code" }
-        : stringSchema,
-    household_id:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description: "Optional: Space ID if it is a shared transaction",
-          }
-        : stringSchema,
-    household_name:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description: "Optional: Space name if user provided it",
-          }
-        : stringSchema,
-    is_portfolio:
-      mode === "rich"
-        ? {
-            type: "BOOLEAN",
-            description: "Optional: Whether the target space is a portfolio",
-          }
-        : booleanSchema,
-    wallet_name:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description:
-              "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
-          }
-        : stringSchema,
-    payer_name:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description:
-              "Shared space only: who paid (member name/email). Example: 'paid by B'.",
-          }
-        : stringSchema,
-    split_type:
-      mode === "rich"
-        ? {
-            ...splitTypeSchema,
-            description:
-              "Shared space only: how to split. If omitted, infer from member_splits fields.",
-          }
-        : splitTypeSchema,
+    date: mode === "rich"
+      ? { type: "STRING", description: "YYYY-MM-DD" }
+      : stringSchema,
+    currency: mode === "rich"
+      ? { type: "STRING", description: "ISO Currency Code" }
+      : stringSchema,
+    space_id: mode === "rich"
+      ? {
+        type: "STRING",
+        description: "Optional: Space ID if it is a shared transaction",
+      }
+      : stringSchema,
+    space_name: mode === "rich"
+      ? {
+        type: "STRING",
+        description: "Optional: Space name if user provided it",
+      }
+      : stringSchema,
+    space_type: mode === "rich"
+      ? {
+        type: "STRING",
+        enum: ["private_space", "shared_space"],
+        description: "Optional: private_space or shared_space.",
+      }
+      : stringSchema,
+    wallet_name: mode === "rich"
+      ? {
+        type: "STRING",
+        description:
+          "Optional: Wallet name within the selected scope. Example: 'Spending' or 'Savings'.",
+      }
+      : stringSchema,
+    payer_name: mode === "rich"
+      ? {
+        type: "STRING",
+        description:
+          "Shared space only: who paid (member name/email). Example: 'paid by B'.",
+      }
+      : stringSchema,
+    split_type: mode === "rich"
+      ? {
+        ...splitTypeSchema,
+        description:
+          "Shared space only: how to split. If omitted, infer from member_splits fields.",
+      }
+      : splitTypeSchema,
     member_splits: buildMemberSplitsSchema(mode),
-    owner_type:
-      mode === "rich"
-        ? {
-            ...ownerTypeSchema,
-            description: "Income only: owner type",
-          }
-        : ownerTypeSchema,
-    privacy_scope:
-      mode === "rich"
-        ? {
-            ...privacyScopeSchema,
-            description: "Income only: privacy scope",
-          }
-        : privacyScopeSchema,
-    source:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description: "Income only: source label",
-          }
-        : stringSchema,
-    is_recurring:
-      mode === "rich"
-        ? {
-            type: "BOOLEAN",
-            description: "True if this is a recurring transaction",
-          }
-        : booleanSchema,
-    frequency:
-      mode === "rich"
-        ? {
-            type: "STRING",
-            description: "Frequency for recurring (monthly, weekly, etc.)",
-          }
-        : stringSchema,
+    owner_type: mode === "rich"
+      ? {
+        ...ownerTypeSchema,
+        description: "Income only: owner type",
+      }
+      : ownerTypeSchema,
+    privacy_scope: mode === "rich"
+      ? {
+        ...privacyScopeSchema,
+        description: "Income only: privacy scope",
+      }
+      : privacyScopeSchema,
+    source: mode === "rich"
+      ? {
+        type: "STRING",
+        description: "Income only: source label",
+      }
+      : stringSchema,
+    is_recurring: mode === "rich"
+      ? {
+        type: "BOOLEAN",
+        description: "True if this is a recurring transaction",
+      }
+      : booleanSchema,
+    frequency: mode === "rich"
+      ? {
+        type: "STRING",
+        description: "Frequency for recurring (monthly, weekly, etc.)",
+      }
+      : stringSchema,
+    interval: numberSchema,
+    anchor_date: mode === "rich"
+      ? { type: "STRING", description: "Recurring anchor date, YYYY-MM-DD" }
+      : stringSchema,
+    end_date: mode === "rich"
+      ? {
+        type: "STRING",
+        description: "Optional recurring end date, YYYY-MM-DD",
+      }
+      : stringSchema,
+    reminder_value: numberSchema,
+    reminder_unit: mode === "rich"
+      ? { type: "STRING", enum: ["days", "hours"] }
+      : stringSchema,
     recurrence_rule: {
       type: "OBJECT",
       description: "Optional explicit recurrence rule payload",
@@ -252,36 +249,31 @@ export function buildAddTransactionsBatchTool(
 ): BotToolDeclaration {
   return {
     name: "add_transactions_batch",
-    description:
-      (options.descriptionMode ?? "rich") === "rich"
-        ? "Add multiple transactions at once. Use this when the user uploads a receipt/statement with multiple transactions or explicitly lists several transactions to save. More efficient than calling add_transaction multiple times."
-        : "Add multiple transactions at once.",
+    description: (options.descriptionMode ?? "rich") === "rich"
+      ? "Add multiple transactions at once. Use this when the user uploads a receipt/statement with multiple transactions or explicitly lists several transactions to save. More efficient than calling add_transaction multiple times."
+      : "Add multiple transactions at once.",
     parameters: {
       type: "OBJECT",
       properties: {
-        household_id:
-          (options.descriptionMode ?? "rich") === "rich"
-            ? {
-                type: "STRING",
-                description:
-                  "Optional: Space ID if these are shared transactions",
-              }
-            : stringSchema,
-        household_name:
-          (options.descriptionMode ?? "rich") === "rich"
-            ? {
-                type: "STRING",
-                description: "Optional: Space name if user provided it",
-              }
-            : stringSchema,
-        is_portfolio:
-          (options.descriptionMode ?? "rich") === "rich"
-            ? {
-                type: "BOOLEAN",
-                description:
-                  "Optional: Whether the target space is a portfolio",
-              }
-            : booleanSchema,
+        space_id: (options.descriptionMode ?? "rich") === "rich"
+          ? {
+            type: "STRING",
+            description: "Optional: Space ID if these are shared transactions",
+          }
+          : stringSchema,
+        space_name: (options.descriptionMode ?? "rich") === "rich"
+          ? {
+            type: "STRING",
+            description: "Optional: Space name if user provided it",
+          }
+          : stringSchema,
+        space_type: (options.descriptionMode ?? "rich") === "rich"
+          ? {
+            type: "STRING",
+            enum: ["private_space", "shared_space"],
+            description: "Optional: private_space or shared_space.",
+          }
+          : stringSchema,
         transactions: {
           type: "ARRAY",
           ...((options.descriptionMode ?? "rich") === "rich"
@@ -302,9 +294,9 @@ export function buildAddTransactionsBatchTool(
 function buildSelectionIndexSchema(mode: DescriptionMode): BotToolDeclaration {
   return mode === "rich"
     ? {
-        type: "NUMBER",
-        description: "1-based index into the last listed transactions",
-      }
+      type: "NUMBER",
+      description: "1-based index into the last listed transactions",
+    }
     : numberSchema;
 }
 
@@ -330,15 +322,14 @@ export function buildListWalletsTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "list_wallets",
-    description:
-      mode === "rich"
-        ? "List wallets in personal scope or in a selected space, including current balances and which one is the default."
-        : "List wallets in personal scope or in a selected space, including balances and the default wallet.",
+    description: mode === "rich"
+      ? "List wallets in personal scope or in a selected space, including current balances and which one is the default."
+      : "List wallets in personal scope or in a selected space, including balances and the default wallet.",
     parameters: {
       type: "OBJECT",
       properties: {
-        household_id: stringSchema,
-        household_name: stringSchema,
+        space_id: stringSchema,
+        space_name: stringSchema,
         include_archived: booleanSchema,
       },
     },
@@ -354,8 +345,8 @@ export function buildCreateWalletTool(): BotToolDeclaration {
       type: "OBJECT",
       properties: {
         name: stringSchema,
-        household_id: stringSchema,
-        household_name: stringSchema,
+        space_id: stringSchema,
+        space_name: stringSchema,
         icon: stringSchema,
         color: stringSchema,
         opening_balance: numberSchema,
@@ -376,11 +367,12 @@ export function buildUpdateWalletTool(): BotToolDeclaration {
       type: "OBJECT",
       properties: {
         wallet_name: stringSchema,
-        household_id: stringSchema,
-        household_name: stringSchema,
+        space_id: stringSchema,
+        space_name: stringSchema,
         new_name: stringSchema,
         icon: stringSchema,
         color: stringSchema,
+        opening_balance: numberSchema,
         goal_amount: numberSchema,
         is_default: booleanSchema,
       },
@@ -403,15 +395,84 @@ export function buildCreateWalletTransferTool(
         to_wallet_name: stringSchema,
         amount: numberSchema,
         currency: stringSchema,
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
         note: stringSchema,
-        household_id: stringSchema,
-        household_name: stringSchema,
+        space_id: stringSchema,
+        space_name: stringSchema,
       },
       required: ["from_wallet_name", "to_wallet_name", "amount"],
+    },
+  };
+}
+
+export function buildCreateSpaceTool(): BotToolDeclaration {
+  return {
+    name: "create_space",
+    description: "Create a private space or shared space.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        name: stringSchema,
+        space_type: {
+          type: "STRING",
+          enum: ["shared", "shared_space", "private", "private_space"],
+        },
+        currency: stringSchema,
+        cover_image_url: stringSchema,
+        theme_color: stringSchema,
+        ai_use_default_split: booleanSchema,
+        ai_default_split_config: {
+          type: "OBJECT",
+          description:
+            "Optional default split config with splitType and memberSplits.",
+        },
+      },
+      required: ["name"],
+    },
+  };
+}
+
+export function buildGetSpaceInfoTool(): BotToolDeclaration {
+  return {
+    name: "get_space_info",
+    description:
+      "Get a space's settings plus all members. Use space_name unless the ID is already known internally.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        space_id: stringSchema,
+        space_name: stringSchema,
+      },
+    },
+  };
+}
+
+export function buildUpdateSpaceSettingsTool(): BotToolDeclaration {
+  return {
+    name: "update_space_settings",
+    description:
+      "Update a space's name, visibility/private-vs-shared setting, cover, theme, or AI auto-split settings.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        space_id: stringSchema,
+        space_name: stringSchema,
+        name: stringSchema,
+        space_type: {
+          type: "STRING",
+          enum: ["shared", "shared_space", "private", "private_space"],
+        },
+        cover_image_url: stringSchema,
+        theme_color: stringSchema,
+        ai_use_default_split: booleanSchema,
+        ai_default_split_config: {
+          type: "OBJECT",
+          description:
+            "Optional default split config with splitType and memberSplits.",
+        },
+      },
     },
   };
 }
@@ -437,9 +498,58 @@ export function buildUpdateTransactionTool(
             ...(options.includeMerchant ? { merchant: stringSchema } : {}),
             date: { type: "STRING", description: "YYYY-MM-DD" },
             currency: stringSchema,
+            space_id: mode === "rich"
+              ? {
+                type: "STRING",
+                description:
+                  "Optional target space ID when moving the transaction to a space.",
+              }
+              : stringSchema,
+            space_name: mode === "rich"
+              ? {
+                type: "STRING",
+                description:
+                  "Optional target space name when moving the transaction to a space.",
+              }
+              : stringSchema,
+            space_type: mode === "rich"
+              ? {
+                type: "STRING",
+                enum: ["private_space", "shared_space"],
+                description: "Optional: private_space or shared_space.",
+              }
+              : stringSchema,
+            wallet_id: mode === "rich"
+              ? {
+                type: "STRING",
+                description:
+                  "Optional exact wallet ID. Prefer wallet_name unless already known internally.",
+              }
+              : stringSchema,
+            wallet_name: mode === "rich"
+              ? {
+                type: "STRING",
+                description:
+                  "Optional wallet name inside the selected target scope.",
+              }
+              : stringSchema,
+            payer_name: mode === "rich"
+              ? {
+                type: "STRING",
+                description:
+                  "Shared space only: member name/email for who paid.",
+              }
+              : stringSchema,
+            split_type: splitTypeSchema,
+            member_splits: buildMemberSplitsSchema(mode),
             source: stringSchema,
             is_recurring: booleanSchema,
             frequency: stringSchema,
+            interval: numberSchema,
+            anchor_date: { type: "STRING", description: "YYYY-MM-DD" },
+            end_date: { type: "STRING", description: "YYYY-MM-DD" },
+            reminder_value: numberSchema,
+            reminder_unit: { type: "STRING", enum: ["days", "hours"] },
             recurrence_rule: {
               type: "OBJECT",
               description: "Optional explicit recurrence rule payload",
@@ -480,46 +590,40 @@ export function buildListExpensesTool(
       type: "OBJECT",
       properties: {
         type: transactionTypeSchema,
-        currency:
-          mode === "rich"
-            ? { type: "STRING", description: "Optional: filter by currency" }
-            : stringSchema,
+        currency: mode === "rich"
+          ? { type: "STRING", description: "Optional: filter by currency" }
+          : stringSchema,
         limit: numberSchema,
         start_date: stringSchema,
         end_date: stringSchema,
-        household_id:
-          mode === "rich"
-            ? { type: "STRING", description: "Optional: Filter by space" }
-            : stringSchema,
-        household_name:
-          mode === "rich"
-            ? { type: "STRING", description: "Optional: Space name filter" }
-            : stringSchema,
-        is_portfolio:
-          mode === "rich"
-            ? {
-                type: "BOOLEAN",
-                description:
-                  "Optional: Whether the target space is a portfolio",
-              }
-            : booleanSchema,
+        space_id: mode === "rich"
+          ? { type: "STRING", description: "Optional: Filter by space" }
+          : stringSchema,
+        space_name: mode === "rich"
+          ? { type: "STRING", description: "Optional: Space name filter" }
+          : stringSchema,
+        space_type: mode === "rich"
+          ? {
+            type: "STRING",
+            enum: ["private_space", "shared_space"],
+            description: "Optional: private_space or shared_space.",
+          }
+          : stringSchema,
         ...(options.includeSpaceScope
           ? {
-              space_scope: {
-                type: "STRING",
-                enum: [
-                  "personal",
-                  "personal_account",
-                  "portfolio",
-                  "private_space",
-                  "shared",
-                  "shared_space",
-                  "household",
-                ],
-                description:
-                  "Optional high-level scope hint: personal (household_id null), portfolio/private space, or shared household.",
-              },
-            }
+            space_scope: {
+              type: "STRING",
+              enum: [
+                "personal",
+                "personal_account",
+                "private_space",
+                "shared",
+                "shared_space",
+              ],
+              description:
+                "Optional high-level scope hint: personal, private space, or shared space.",
+            },
+          }
           : {}),
       },
     },
@@ -532,10 +636,9 @@ export function buildGenerateChartUrlTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "generate_chart_url",
-    description:
-      mode === "rich"
-        ? "Generate a URL for a chart (bar/pie/donut/radar) to visualize expenses."
-        : "Generate a URL for a chart.",
+    description: mode === "rich"
+      ? "Generate a URL for a chart (bar/pie/donut/radar) to visualize expenses."
+      : "Generate a URL for a chart.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -555,17 +658,15 @@ export function buildFinancialInsightTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "financial_insight",
-    description:
-      mode === "rich"
-        ? "Generate a financial health snapshot with verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Use when the user asks about financial situation/health/status."
-        : "Generate a financial health snapshot.",
+    description: mode === "rich"
+      ? "Generate a financial health snapshot with verdict, income vs spending, net, top categories, budget status, upcoming recurring, and 1–2 actions. Use when the user asks about financial situation/health/status."
+      : "Generate a financial health snapshot.",
     parameters: {
       type: "OBJECT",
       properties: {
-        scope:
-          mode === "rich"
-            ? { type: "STRING", description: "Optional scope (e.g., month)" }
-            : stringSchema,
+        scope: mode === "rich"
+          ? { type: "STRING", description: "Optional scope (e.g., month)" }
+          : stringSchema,
       },
     },
   };
@@ -573,21 +674,19 @@ export function buildFinancialInsightTool(
 
 function buildScopeProperties(mode: DescriptionMode): Record<string, unknown> {
   return {
-    household_id:
-      mode === "rich"
-        ? { type: "STRING", description: "Optional: space scope" }
-        : stringSchema,
-    household_name:
-      mode === "rich"
-        ? { type: "STRING", description: "Optional: space name" }
-        : stringSchema,
-    is_portfolio:
-      mode === "rich"
-        ? {
-            type: "BOOLEAN",
-            description: "Optional: Whether the target space is a portfolio",
-          }
-        : booleanSchema,
+    space_id: mode === "rich"
+      ? { type: "STRING", description: "Optional: space scope" }
+      : stringSchema,
+    space_name: mode === "rich"
+      ? { type: "STRING", description: "Optional: space name" }
+      : stringSchema,
+    space_type: mode === "rich"
+      ? {
+        type: "STRING",
+        enum: ["private_space", "shared_space"],
+        description: "Optional: private_space or shared_space.",
+      }
+      : stringSchema,
   };
 }
 
@@ -613,9 +712,9 @@ function buildBudgetPocketsSchema(
     },
     ...(mode === "rich"
       ? {
-          description:
-            "Optional: envelope splits with percentages and categories",
-        }
+        description:
+          "Optional: envelope splits with percentages and categories",
+      }
       : {}),
   };
 }
@@ -626,33 +725,28 @@ export function buildGetBudgetTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "get_budget",
-    description:
-      mode === "rich"
-        ? "Get budget status for the current month (includes envelopes/pockets)."
-        : "Get current budget status.",
+    description: mode === "rich"
+      ? "Get budget status for the current month (includes envelopes/pockets)."
+      : "Get current budget status.",
     parameters: {
       type: "OBJECT",
       properties: {
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
-        household_id:
-          mode === "rich"
-            ? { type: "STRING", description: "Optional: Check space budget" }
-            : stringSchema,
-        household_name:
-          mode === "rich"
-            ? { type: "STRING", description: "Optional: Space name" }
-            : stringSchema,
-        is_portfolio:
-          mode === "rich"
-            ? {
-                type: "BOOLEAN",
-                description:
-                  "Optional: Whether the target space is a portfolio",
-              }
-            : booleanSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
+        space_id: mode === "rich"
+          ? { type: "STRING", description: "Optional: Check space budget" }
+          : stringSchema,
+        space_name: mode === "rich"
+          ? { type: "STRING", description: "Optional: Space name" }
+          : stringSchema,
+        space_type: mode === "rich"
+          ? {
+            type: "STRING",
+            enum: ["private_space", "shared_space"],
+            description: "Optional: private_space or shared_space.",
+          }
+          : stringSchema,
       },
     },
   };
@@ -664,18 +758,16 @@ export function buildDraftBudgetTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "draft_budget",
-    description:
-      mode === "rich"
-        ? "Draft a budget proposal (amount and pockets) and store it for confirmation."
-        : "Draft a budget proposal for confirmation.",
+    description: mode === "rich"
+      ? "Draft a budget proposal (amount and pockets) and store it for confirmation."
+      : "Draft a budget proposal for confirmation.",
     parameters: {
       type: "OBJECT",
       properties: {
         amount: numberSchema,
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
         ...buildScopeProperties(mode),
         pockets: buildBudgetPocketsSchema(options),
       },
@@ -690,22 +782,19 @@ export function buildConfirmBudgetTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "confirm_budget",
-    description:
-      mode === "rich"
-        ? "Confirm and apply the last drafted budget (can include overrides)."
-        : "Confirm and apply a budget draft.",
+    description: mode === "rich"
+      ? "Confirm and apply the last drafted budget (can include overrides)."
+      : "Confirm and apply a budget draft.",
     parameters: {
       type: "OBJECT",
       properties: {
-        confirm:
-          mode === "rich"
-            ? { type: "BOOLEAN", description: "Set true to confirm" }
-            : booleanSchema,
+        confirm: mode === "rich"
+          ? { type: "BOOLEAN", description: "Set true to confirm" }
+          : booleanSchema,
         amount: numberSchema,
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
         ...buildScopeProperties(mode),
         pockets: buildBudgetPocketsSchema(options),
       },
@@ -719,18 +808,16 @@ export function buildSetBudgetTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "set_budget",
-    description:
-      mode === "rich"
-        ? "Set the budget amount for the month (supports pockets/envelopes split)."
-        : "Set budget amount for a month.",
+    description: mode === "rich"
+      ? "Set the budget amount for the month (supports pockets/envelopes split)."
+      : "Set budget amount for a month.",
     parameters: {
       type: "OBJECT",
       properties: {
         amount: numberSchema,
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
         ...buildScopeProperties(mode),
         pockets: buildBudgetPocketsSchema(options),
       },
@@ -745,38 +832,34 @@ export function buildSetPocketTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "set_pocket",
-    description:
-      mode === "rich"
-        ? "Create or update a pocket/envelope for the current budget."
-        : "Create or update a budget pocket.",
+    description: mode === "rich"
+      ? "Create or update a pocket/envelope for the current budget."
+      : "Create or update a budget pocket.",
     parameters: {
       type: "OBJECT",
       properties: {
-        name:
-          mode === "rich"
-            ? { type: "STRING", description: "Pocket name to create/update" }
-            : stringSchema,
+        name: mode === "rich"
+          ? { type: "STRING", description: "Pocket name to create/update" }
+          : stringSchema,
         ...(options.includeNewName
           ? { new_name: { type: "STRING", description: "Optional new name" } }
           : {}),
-        percentage:
-          mode === "rich"
-            ? { type: "NUMBER", description: "Allocation percentage (0-100)" }
-            : numberSchema,
+        percentage: mode === "rich"
+          ? { type: "NUMBER", description: "Allocation percentage (0-100)" }
+          : numberSchema,
         categories: { type: "ARRAY", items: stringSchema },
         ...(options.includeColorIcon
           ? {
-              color: {
-                type: "STRING",
-                description: "Hex color (e.g. #FF0000)",
-              },
-              icon: { type: "STRING", description: "Material icon name" },
-            }
+            color: {
+              type: "STRING",
+              description: "Hex color (e.g. #FF0000)",
+            },
+            icon: { type: "STRING", description: "Material icon name" },
+          }
           : {}),
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
         ...buildScopeProperties(mode),
       },
       required: ["name"],
@@ -790,21 +873,18 @@ export function buildDeletePocketTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "delete_pocket",
-    description:
-      mode === "rich"
-        ? "Delete a pocket/envelope by name."
-        : "Delete a budget pocket by name.",
+    description: mode === "rich"
+      ? "Delete a pocket/envelope by name."
+      : "Delete a budget pocket by name.",
     parameters: {
       type: "OBJECT",
       properties: {
-        name:
-          mode === "rich"
-            ? { type: "STRING", description: "Pocket name to delete" }
-            : stringSchema,
-        date:
-          mode === "rich"
-            ? { type: "STRING", description: "YYYY-MM-DD" }
-            : stringSchema,
+        name: mode === "rich"
+          ? { type: "STRING", description: "Pocket name to delete" }
+          : stringSchema,
+        date: mode === "rich"
+          ? { type: "STRING", description: "YYYY-MM-DD" }
+          : stringSchema,
         ...buildScopeProperties(mode),
       },
       required: ["name"],
@@ -818,20 +898,18 @@ export function buildSetCurrencyTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "set_currency",
-    description:
-      mode === "rich"
-        ? "Update the user's preferred currency (user_contacts.preferred_currency)."
-        : "Update preferred currency.",
+    description: mode === "rich"
+      ? "Update the user's preferred currency (user_contacts.preferred_currency)."
+      : "Update preferred currency.",
     parameters: {
       type: "OBJECT",
       properties: {
-        currency:
-          mode === "rich"
-            ? {
-                type: "STRING",
-                description: "ISO currency code, e.g. USD, EUR, GBP",
-              }
-            : stringSchema,
+        currency: mode === "rich"
+          ? {
+            type: "STRING",
+            description: "ISO currency code, e.g. USD, EUR, GBP",
+          }
+          : stringSchema,
       },
       required: ["currency"],
     },
@@ -844,21 +922,19 @@ export function buildSetLanguageTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "set_language",
-    description:
-      mode === "rich"
-        ? "Update the user's preferred language (user_contacts.preferred_language). Use this when the user asks you to speak in a specific language in the future."
-        : "Update preferred language.",
+    description: mode === "rich"
+      ? "Update the user's preferred language (user_contacts.preferred_language). Use this when the user asks you to speak in a specific language in the future."
+      : "Update preferred language.",
     parameters: {
       type: "OBJECT",
       properties: {
-        language:
-          mode === "rich"
-            ? {
-                type: "STRING",
-                description:
-                  "Language code or language name, e.g. en, es, English, Spanish, zh, Chinese",
-              }
-            : stringSchema,
+        language: mode === "rich"
+          ? {
+            type: "STRING",
+            description:
+              "Language code or language name, e.g. en, es, English, Spanish, zh, Chinese",
+          }
+          : stringSchema,
       },
       required: ["language"],
     },
@@ -871,22 +947,20 @@ export function buildManageRecurringTool(
   const mode = options.descriptionMode ?? "rich";
   return {
     name: "manage_recurring",
-    description:
-      mode === "rich"
-        ? "Add or modify a recurring transaction."
-        : "Add, update, or delete recurring transactions.",
+    description: mode === "rich"
+      ? "Add or modify a recurring transaction."
+      : "Add, update, or delete recurring transactions.",
     parameters: {
       type: "OBJECT",
       properties: {
         action: { type: "STRING", enum: ["add", "update", "delete"] },
-        expense_id:
-          mode === "rich"
-            ? {
-                type: "STRING",
-                description:
-                  "Optional: internal transaction id (avoid asking user; prefer selection_index/match)",
-              }
-            : stringSchema,
+        expense_id: mode === "rich"
+          ? {
+            type: "STRING",
+            description:
+              "Optional: internal transaction id (avoid asking user; prefer selection_index/match)",
+          }
+          : stringSchema,
         selection_index: buildSelectionIndexSchema(mode),
         match: buildTransactionMatchSchema(mode),
         amount: numberSchema,
@@ -895,36 +969,37 @@ export function buildManageRecurringTool(
         description: stringSchema,
         merchant: stringSchema,
         ...(options.includeDateField ? { date: stringSchema } : {}),
-        source:
-          mode === "rich"
-            ? { type: "STRING", description: "Income only: source" }
-            : stringSchema,
-        frequency:
-          mode === "rich"
-            ? { type: "STRING", enum: ["weekly", "monthly", "yearly"] }
-            : stringSchema,
+        source: mode === "rich"
+          ? { type: "STRING", description: "Income only: source" }
+          : stringSchema,
+        frequency: mode === "rich"
+          ? { type: "STRING", enum: ["weekly", "monthly", "yearly"] }
+          : stringSchema,
         ...(options.includeRecurrenceRule
           ? {
-              recurrence_rule: {
-                type: "OBJECT",
-                description: "Optional explicit recurrence rule payload",
-              },
-            }
+            recurrence_rule: {
+              type: "OBJECT",
+              description: "Optional explicit recurrence rule payload",
+            },
+          }
           : {}),
         ...(options.includeScheduleFields
           ? {
-              interval: numberSchema,
-              anchor_date: { type: "STRING", description: "YYYY-MM-DD" },
-              end_date: { type: "STRING", description: "YYYY-MM-DD" },
-              reminder_value: numberSchema,
-              reminder_unit: { type: "STRING", enum: ["days", "hours"] },
-            }
+            interval: numberSchema,
+            anchor_date: { type: "STRING", description: "YYYY-MM-DD" },
+            end_date: { type: "STRING", description: "YYYY-MM-DD" },
+            reminder_value: numberSchema,
+            reminder_unit: { type: "STRING", enum: ["days", "hours"] },
+          }
           : {}),
         owner_type: ownerTypeSchema,
         privacy_scope: privacyScopeSchema,
-        household_id: stringSchema,
-        household_name: stringSchema,
-        is_portfolio: booleanSchema,
+        space_id: stringSchema,
+        space_name: stringSchema,
+        space_type: {
+          type: "STRING",
+          enum: ["private_space", "shared_space"],
+        },
         payer_name: stringSchema,
         split_type: splitTypeSchema,
         member_splits: buildMemberSplitsSchema(mode),

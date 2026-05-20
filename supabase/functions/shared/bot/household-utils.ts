@@ -19,8 +19,17 @@ export function resolveBotSpaceScope(
   args: Record<string, unknown> | null | undefined,
   spaceMap: Map<string, BotSpaceMeta>,
 ): { householdId: string | null; spaceMeta?: BotSpaceMeta } {
-  let householdId = (args?.household_id || null) as string | null;
-  const householdName = (args?.household_name || args?.householdName || "")
+  let householdId = (args?.space_id ||
+    args?.spaceId ||
+    args?.household_id ||
+    null) as string | null;
+  const householdName = (
+    args?.space_name ||
+    args?.spaceName ||
+    args?.household_name ||
+    args?.householdName ||
+    ""
+  )
     .toString()
     .toLowerCase();
   let spaceMeta = householdId ? spaceMap.get(householdId) : undefined;
@@ -146,8 +155,9 @@ export async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount =
-        typeof split?.amount === "number" ? Math.max(0, split.amount) : null;
+      const amount = typeof split?.amount === "number"
+        ? Math.max(0, split.amount)
+        : null;
       if (amount == null) missing.push(id);
       else specifiedSum += amount;
     }
@@ -155,10 +165,9 @@ export async function resolveHouseholdSplitConfig(
     const perMissing = missing.length ? remaining / missing.length : 0;
     for (const id of memberIds) {
       const split = byId.get(id);
-      const amount =
-        typeof split?.amount === "number"
-          ? Math.max(0, split.amount)
-          : perMissing;
+      const amount = typeof split?.amount === "number"
+        ? Math.max(0, split.amount)
+        : perMissing;
       fullSplits.push({ userId: id, amount });
     }
     const sum = fullSplits.reduce((acc, split) => acc + (split.amount || 0), 0);
@@ -174,10 +183,9 @@ export async function resolveHouseholdSplitConfig(
     const missing: string[] = [];
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage =
-        typeof split?.percentage === "number"
-          ? Math.max(0, Math.min(100, split.percentage))
-          : null;
+      const percentage = typeof split?.percentage === "number"
+        ? Math.max(0, Math.min(100, split.percentage))
+        : null;
       if (percentage == null) missing.push(id);
       else specifiedSum += percentage;
     }
@@ -185,10 +193,9 @@ export async function resolveHouseholdSplitConfig(
     const perMissing = missing.length ? remaining / missing.length : 0;
     for (const id of memberIds) {
       const split = byId.get(id);
-      const percentage =
-        typeof split?.percentage === "number"
-          ? Math.max(0, Math.min(100, split.percentage))
-          : perMissing;
+      const percentage = typeof split?.percentage === "number"
+        ? Math.max(0, Math.min(100, split.percentage))
+        : perMissing;
       fullSplits.push({ userId: id, percentage });
     }
     const sum = fullSplits.reduce(
@@ -205,10 +212,9 @@ export async function resolveHouseholdSplitConfig(
   } else if (inferredType === "shares") {
     for (const id of memberIds) {
       const split = byId.get(id);
-      const shares =
-        typeof split?.shares === "number"
-          ? Math.max(1, Math.trunc(split.shares))
-          : 1;
+      const shares = typeof split?.shares === "number"
+        ? Math.max(1, Math.trunc(split.shares))
+        : 1;
       fullSplits.push({ userId: id, shares });
     }
   }

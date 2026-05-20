@@ -93,8 +93,9 @@ function isValidYMD(y: number, m: number, d: number): boolean {
 
 function normalizeYear(year: number, lang: string): number {
   // Handle Thai Buddhist Era years ~256x → Gregorian
-  if (year > 2200 && (lang.startsWith("th") || lang === "th"))
+  if (year > 2200 && (lang.startsWith("th") || lang === "th")) {
     return year - 543;
+  }
   if (year < 100) return 2000 + year; // assume near future
   return year;
 }
@@ -116,7 +117,9 @@ function parseLocalizedDate(
     const mo = parseInt(m[2], 10);
     const da = parseInt(m[3], 10);
     if (isValidYMD(y, mo, da)) {
-      const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(2, "0")}`;
+      const iso = `${y}-${String(mo).padStart(2, "0")}-${
+        String(da).padStart(2, "0")
+      }`;
       return { date: new Date(iso), iso };
     }
   }
@@ -131,7 +134,9 @@ function parseLocalizedDate(
     // DMY vs MDY
     const [dd, mm] = order === "MDY" ? [b, a] : [a, b];
     if (isValidYMD(y, mm, dd)) {
-      const iso = `${y}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+      const iso = `${y}-${String(mm).padStart(2, "0")}-${
+        String(dd).padStart(2, "0")
+      }`;
       return { date: new Date(iso), iso };
     }
   }
@@ -148,7 +153,9 @@ function parseLocalizedDate(
       const mo = parseInt(raw.slice(4, 6), 10);
       const da = parseInt(raw.slice(6, 8), 10);
       if (isValidYMD(y, mo, da)) {
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(2, "0")}`;
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${
+          String(da).padStart(2, "0")
+        }`;
         return { date: new Date(iso), iso };
       }
     }
@@ -158,7 +165,9 @@ function parseLocalizedDate(
       const da = parseInt(raw.slice(2, 4), 10);
       const y = normalizeYear(parseInt(raw.slice(4, 8), 10), lang);
       if (isValidYMD(y, mo, da)) {
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(2, "0")}`;
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${
+          String(da).padStart(2, "0")
+        }`;
         return { date: new Date(iso), iso };
       }
     } else {
@@ -166,7 +175,9 @@ function parseLocalizedDate(
       const mo = parseInt(raw.slice(2, 4), 10);
       const y = normalizeYear(parseInt(raw.slice(4, 8), 10), lang);
       if (isValidYMD(y, mo, da)) {
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(2, "0")}`;
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${
+          String(da).padStart(2, "0")
+        }`;
         return { date: new Date(iso), iso };
       }
     }
@@ -221,10 +232,12 @@ serve(async (req: Request): Promise<Response> => {
     const currencyRaw = (body.currency || "").trim();
     const currency = currencyRaw || "USD";
     const currencySymbol = getCurrencySymbol(currency);
-    const mode: "personal" | "household" =
-      body.mode === "household" ? "household" : "personal";
-    const householdId =
-      mode === "household" ? (body.householdId || "").trim() : "";
+    const mode: "personal" | "household" = body.mode === "household"
+      ? "household"
+      : "personal";
+    const householdId = mode === "household"
+      ? (body.householdId || "").trim()
+      : "";
 
     // Accept non-English and various word orders; only require non-empty content
     if (!question) {
@@ -281,8 +294,12 @@ serve(async (req: Request): Promise<Response> => {
       today.getMonth() - 6,
       today.getDate(),
     );
-    const fromStr = `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
-    const toStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const fromStr = `${fromDate.getFullYear()}-${
+      String(fromDate.getMonth() + 1).padStart(2, "0")
+    }-${String(fromDate.getDate()).padStart(2, "0")}`;
+    const toStr = `${today.getFullYear()}-${
+      String(today.getMonth() + 1).padStart(2, "0")
+    }-${String(today.getDate()).padStart(2, "0")}`;
 
     // Build base queries for expenses and budgets (select only fields actually used)
     let expensesQuery = supabaseClient
@@ -316,22 +333,14 @@ serve(async (req: Request): Promise<Response> => {
         .is("household_id", null);
     }
 
-    // Run expenses, budgets, goals, and financial profiles queries in parallel
+    // Run active financial data and financial profiles queries in parallel.
     const [
       { data: expenses, error: expensesError },
       { data: budgets, error: budgetsError },
-      { data: goals },
       { data: finProfiles },
     ] = await Promise.all([
       expensesQuery.order("date", { ascending: true }),
       budgetsQuery.order("period_month", { ascending: true }),
-      supabaseClient
-        .from("financial_goals")
-        .select(
-          "id, name, target_amount, current_amount, start_date, target_date, is_on_track",
-        )
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false }),
       supabaseClient
         .from("financial_health_profiles")
         .select("*")
@@ -340,10 +349,12 @@ serve(async (req: Request): Promise<Response> => {
         .limit(1),
     ]);
 
-    if (expensesError)
+    if (expensesError) {
       console.warn("Expenses fetch error:", expensesError.message);
-    if (budgetsError)
+    }
+    if (budgetsError) {
       console.warn("Budgets fetch error:", budgetsError.message);
+    }
 
     // Aggregate stats
     function centsToAmount(x?: number | null) {
@@ -413,7 +424,9 @@ serve(async (req: Request): Promise<Response> => {
       const perDay = monthlyBudgetTotals[ym] / daysInMonth;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${
+          String(day).padStart(2, "0")
+        }`;
         if (dateStr < fromStr || dateStr > toStr) continue;
         daily[dateStr] ??= { spent: 0, budget: 0 };
         daily[dateStr].budget += perDay;
@@ -445,18 +458,22 @@ serve(async (req: Request): Promise<Response> => {
 
     for (const e of expenses || []) {
       const dt = new Date(e.date as string);
-      const ym = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+      const ym = `${dt.getFullYear()}-${
+        String(dt.getMonth() + 1).padStart(2, "0")
+      }`;
       monthly[ym] ??= { spent: 0, budget: 0, net: 0 };
       const amt = centsToAmount(e.amount_cents as number);
       monthly[ym].spent += amt;
       if (e.category) {
         const key = String(e.category).toLowerCase();
-        if (dt >= ninetyDaysAgo)
+        if (dt >= ninetyDaysAgo) {
           categoryTotals[key] = (categoryTotals[key] || 0) + amt;
+        }
       }
     }
-    for (const k in monthly)
+    for (const k in monthly) {
       monthly[k].net = monthly[k].budget - monthly[k].spent;
+    }
 
     const topCategories = Object.entries(categoryTotals)
       .sort((a, b) => b[1] - a[1])
@@ -482,20 +499,19 @@ serve(async (req: Request): Promise<Response> => {
     const projectedNoScenario = running + avgNetPerDay * daysUntilTarget;
 
     // Prepare prompt for Gemini
-    const perspective =
-      mode === "household"
-        ? "their household's shared finances"
-        : "their personal finances";
+    const perspective = mode === "household"
+      ? "their household's shared finances"
+      : "their personal finances";
     const actorLabel = mode === "household" ? "A household" : "A user";
-    const householdMembersSummary =
-      mode === "household"
-        ? {
-            byUserId: memberTotalsByUser,
-            byOwnerType: ownerTypeTotals,
-          }
-        : null;
+    const householdMembersSummary = mode === "household"
+      ? {
+        byUserId: memberTotalsByUser,
+        byOwnerType: ownerTypeTotals,
+      }
+      : null;
 
-    const advisoryPrompt = `You are a "Zero-Based Budgeting" Coach for Moneko. Your job is to tell the user the brutal truth about their affordability based ONLY on the provided data.
+    const advisoryPrompt =
+      `You are a "Zero-Based Budgeting" Coach for Moneko. Your job is to tell the user the brutal truth about their affordability based ONLY on the provided data.
 
 SCOPE:
 - "we/our/family" -> use Household data.
@@ -529,20 +545,34 @@ USER_QUESTION: ${question}
 TARGET_DATE: ${targetDateStr || "Not specified"}
 
 USER_DATA:
-- Context: ${JSON.stringify({ userId, mode, householdId: mode === "household" ? householdId : null, currency: currencySymbol })}
-- Trends: ${JSON.stringify({
-      daysAnalyzed: days,
-      totalSpentInPeriod: totalSpent,
-      avgDailySpend: avgDailySpent,
-      avgDailyNetSurplus: avgNetPerDay, // Critical for "Time to Recover"
-      currentCash: running,
-      projectedBalanceAtTarget: projectedNoScenario,
-    })}
+- Context: ${
+        JSON.stringify({
+          userId,
+          mode,
+          householdId: mode === "household" ? householdId : null,
+          currency: currencySymbol,
+        })
+      }
+- Trends: ${
+        JSON.stringify({
+          daysAnalyzed: days,
+          totalSpentInPeriod: totalSpent,
+          avgDailySpend: avgDailySpent,
+          avgDailyNetSurplus: avgNetPerDay, // Critical for "Time to Recover"
+          currentCash: running,
+          projectedBalanceAtTarget: projectedNoScenario,
+        })
+      }
 - Monthly: ${JSON.stringify(monthly)}
 - TopSpendCategories: ${JSON.stringify(topCategories)}
-- Goals: ${JSON.stringify(goals || [])}
-- FinancialHealthProfile: ${JSON.stringify((finProfiles && finProfiles[0]) || null)}
-${mode === "household" ? `- HouseholdMembers: ${JSON.stringify(householdMembersSummary)}` : ""}
+- FinancialHealthProfile: ${
+        JSON.stringify((finProfiles && finProfiles[0]) || null)
+      }
+${
+        mode === "household"
+          ? `- HouseholdMembers: ${JSON.stringify(householdMembersSummary)}`
+          : ""
+      }
 
 LANGUAGE:
 - Response MUST be in ${language}.
@@ -624,8 +654,9 @@ LANGUAGE:
       },
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown internal server error";
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Unknown internal server error";
     console.error("Scenario planner error:", errorMessage);
     if (error instanceof Error && error.stack) console.error(error.stack);
     return new Response(
