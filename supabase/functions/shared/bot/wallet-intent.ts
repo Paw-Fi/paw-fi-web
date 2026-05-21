@@ -1,41 +1,40 @@
 export const WALLET_LIST_PROMPT_RULE =
   'For questions like "what wallets do I have?", "list my wallets", or "show wallets", call `list_wallets`. Do NOT call `list_expenses`.';
 
-export const WALLET_LIST_MISROUTE_ERROR =
-  "This is a wallet request. Use list_wallets, not list_expenses.";
+export async function routeWalletMutationToolCall(params: {
+  chat: { sendMessage: (message: unknown, options?: unknown) => Promise<any> };
+  response: any;
+  functionCalls: any[] | null | undefined;
+}): Promise<{
+  response: any;
+  functionCalls: any[] | null | undefined;
+  routed: boolean;
+  routeMethod?: "model";
+  reason?: "wallet_mutation_misroute" | "wallet_mutation_without_function_call";
+  allowedToolNames?: string[];
+}> {
+  return {
+    response: params.response,
+    functionCalls: params.functionCalls,
+    routed: false,
+  };
+}
 
-export function isWalletListRequest(text: unknown): boolean {
-  if (typeof text !== "string") return false;
-  const normalized = text.trim();
-  if (!normalized) return false;
-
-  if (
-    /\b(transaction|transactions|expense|expenses|spending|spend|spent|income|incomes)\b/i
-      .test(
-        normalized,
-      )
-  ) {
-    return false;
-  }
-
+export function shouldBlockUnsafeWalletMutationClaim(params: {
+  responseText: string;
+  writeMutationSucceeded: boolean;
+}): boolean {
+  if (params.writeMutationSucceeded) return false;
+  const responseText = String(params.responseText || "").trim();
+  if (!responseText) return false;
   return (
-    /\b(wallet|wallets)\b/i.test(normalized) &&
-    (/\b(what|which|show|list|see|available)\b/i.test(normalized) ||
-      /\bdo\s+i\s+have\b/i.test(normalized))
+    /\bwallets?\b/i.test(responseText) &&
+    /\b(?:successfully\s+)?(?:created|updated|renamed|changed|moved|transferred)\b/i.test(
+      responseText,
+    )
   );
 }
 
-export function buildWalletListToolCall(): { name: "list_wallets"; args: {} } {
-  return { name: "list_wallets", args: {} };
-}
-
-export function shouldBlockWalletListMisroute(
-  text: unknown,
-  toolName: unknown,
-): boolean {
-  return toolName === "list_expenses" && isWalletListRequest(text);
-}
-
-export function buildWalletListMisrouteResult(): { error: string } {
-  return { error: WALLET_LIST_MISROUTE_ERROR };
+export function buildUnsafeWalletMutationClaimFallback(): string {
+  return "I couldn't complete that wallet action yet because the wallet tool did not confirm success. Please try again.";
 }

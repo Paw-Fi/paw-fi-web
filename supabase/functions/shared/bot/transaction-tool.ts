@@ -85,9 +85,9 @@ export function normalizeTransactionToolArgs(
 ):
   | { ok: true; transaction: NormalizedTransactionToolArgs }
   | {
-    ok: false;
-    error: string;
-  } {
+      ok: false;
+      error: string;
+    } {
   const input = args && typeof args === "object" ? args : {};
 
   const typeResult = normalizeAiToolTransactionType(input.type);
@@ -139,9 +139,8 @@ export function normalizeTransactionToolArgs(
     merchant = trimmedMerchant || undefined;
   }
 
-  const rawCurrency = typeof input.currency === "string"
-    ? input.currency.trim()
-    : "";
+  const rawCurrency =
+    typeof input.currency === "string" ? input.currency.trim() : "";
   const currency = rawCurrency || fallback.currency;
 
   return {
@@ -229,28 +228,29 @@ export async function invokeTransactionSave(
     householdId: normalizedHouseholdId,
     isPortfolio: params.isPortfolio === true,
     isRecurring: params.isRecurring === true,
-    recurrence_rule: params.isRecurring === true
-      ? params.recurrence_rule || null
-      : undefined,
+    recurrence_rule:
+      params.isRecurring === true ? params.recurrence_rule || null : undefined,
     clientCreatedAt: new Date().toISOString(),
   };
 
-  const body = type === "income"
-    ? {
-      ...commonBody,
-      source: params.source,
-      ownerType: params.ownerType === "space"
-        ? "household"
-        : params.ownerType || "me",
-      privacyScope: params.privacyScope || "full",
-      payerUserId: params.payerUserId,
-      customSplits: params.customSplits,
-    }
-    : {
-      ...commonBody,
-      payerUserId: params.payerUserId,
-      customSplits: params.customSplits,
-    };
+  const body =
+    type === "income"
+      ? {
+          ...commonBody,
+          source: params.source,
+          ownerType:
+            params.ownerType === "space"
+              ? "household"
+              : params.ownerType || "me",
+          privacyScope: params.privacyScope || "full",
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
+        }
+      : {
+          ...commonBody,
+          payerUserId: params.payerUserId,
+          customSplits: params.customSplits,
+        };
 
   return await supabase.functions.invoke(
     type === "income" ? "save-income" : "save-expense",
@@ -301,6 +301,12 @@ export function buildTransactionMutationFailureText(
   }
   if (toolName === "add_transactions_batch") {
     return "I couldn't save those transactions right now. Please try again in a moment.";
+  }
+  if (toolName === "update_transaction") {
+    return `I couldn't update that transaction. ${error}`;
+  }
+  if (toolName === "delete_transaction") {
+    return `I couldn't delete that transaction. ${error}`;
   }
   if (toolName === "manage_recurring") {
     return "I couldn't save that recurring transaction right now. Please try again in a moment.";

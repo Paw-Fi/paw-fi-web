@@ -50,8 +50,6 @@ export async function createBotSpace(params: {
 
   const coverImageUrl = readString(params.args.cover_image_url);
   if (coverImageUrl) payload.cover_image_url = coverImageUrl;
-  const themeColor = readString(params.args.theme_color);
-  if (themeColor) payload.theme_color = themeColor;
   const autoSplit = readBoolean(params.args.ai_use_default_split);
   if (autoSplit !== undefined) payload.ai_use_default_split = autoSplit;
   const splitConfig = normalizeSplitConfig(params.args.ai_default_split_config);
@@ -77,21 +75,21 @@ export async function getBotSpaceInfo(params: {
 }) {
   const { householdId } = resolveBotSpaceScope(params.args, params.spaceMap);
   if (!householdId) return { error: "Select a space first." };
-  const isMember = await ensureHouseholdMember(
-    params.supabase,
-    householdId,
-    params.userId,
-  );
-  if (!isMember) return { error: "You do not have access to that space." };
 
   const { data: space, error: spaceError } = await params.supabase
     .from("households")
     .select(
-      "id, name, currency, cover_image_url, theme_color, is_portfolio, ai_use_default_split, ai_default_split_config, owner_id",
+      "id, name, currency, cover_image_url, is_portfolio, ai_use_default_split, ai_default_split_config, owner_id",
     )
     .eq("id", householdId)
     .maybeSingle();
   if (spaceError || !space) return { error: spaceError || "Space not found." };
+
+  const isOwner = (space as any).owner_id === params.userId;
+  const isMember =
+    isOwner ||
+    (await ensureHouseholdMember(params.supabase, householdId, params.userId));
+  if (!isMember) return { error: "You do not have access to that space." };
 
   const { data: members, error: membersError } = await params.supabase
     .from("household_members")
@@ -111,18 +109,26 @@ export async function updateBotSpaceSettings(params: {
   const { householdId } = resolveBotSpaceScope(params.args, params.spaceMap);
   if (!householdId) return { error: "Select a space first." };
 
+  const { data: space, error: spaceError } = await params.supabase
+    .from("households")
+    .select("owner_id")
+    .eq("id", householdId)
+    .maybeSingle();
+  if (spaceError || !space) return { error: spaceError || "Space not found." };
+  const isOwner = (space as any).owner_id === params.userId;
+
   const { data: membership, error: membershipError } = await params.supabase
     .from("household_members")
     .select("role")
     .eq("household_id", householdId)
     .eq("user_id", params.userId)
     .maybeSingle();
-  if (membershipError || !membership) {
+  if (!isOwner && (membershipError || !membership)) {
     return { error: "You do not have access to that space." };
   }
 
   const role = String((membership as any).role || "").toLowerCase();
-  if (!["owner", "admin"].includes(role)) {
+  if (!isOwner && !["owner", "admin"].includes(role)) {
     return { error: "Only space owners or admins can update settings." };
   }
 
@@ -133,9 +139,6 @@ export async function updateBotSpaceSettings(params: {
   if (name) updates.name = name;
   if (params.args.cover_image_url !== undefined) {
     updates.cover_image_url = readString(params.args.cover_image_url) || null;
-  }
-  if (params.args.theme_color !== undefined) {
-    updates.theme_color = readString(params.args.theme_color) || null;
   }
   if (
     params.args.is_portfolio !== undefined ||
@@ -159,7 +162,7 @@ export async function updateBotSpaceSettings(params: {
     .update(updates)
     .eq("id", householdId)
     .select(
-      "id, name, currency, cover_image_url, theme_color, is_portfolio, ai_use_default_split, ai_default_split_config",
+      "id, name, currency, cover_image_url, is_portfolio, ai_use_default_split, ai_default_split_config",
     )
     .single();
 

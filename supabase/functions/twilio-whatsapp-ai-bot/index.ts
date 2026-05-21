@@ -96,6 +96,7 @@ import {
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
+import { resolveBotTransactionSelection } from "../shared/bot/transaction-selection.ts";
 import {
   buildAddTransactionsBatchTool,
   buildAddTransactionTool,
@@ -125,16 +126,16 @@ import {
 } from "../shared/bot/tool-definitions.ts";
 import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
+  buildWalletMutationFailureText,
   createBotWallet,
   createBotWalletTransfer,
   listBotWallets,
   updateBotWallet,
 } from "../shared/bot/wallet-tools.ts";
 import {
-  buildWalletListMisrouteResult,
-  buildWalletListToolCall,
-  isWalletListRequest,
-  shouldBlockWalletListMisroute,
+  buildUnsafeWalletMutationClaimFallback,
+  routeWalletMutationToolCall,
+  shouldBlockUnsafeWalletMutationClaim,
 } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
@@ -143,10 +144,12 @@ import {
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
+  buildGenericMutationFailureText,
   buildUnsafeMutationClaimFallback,
-  detectWriteIntentFromUserText,
+  buildUnsafeGenericMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
   isWriteMutationToolName,
+  shouldBlockUnsafeGenericMutationClaim,
   shouldBlockUnsafeTransactionMutationClaim,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
@@ -193,7 +196,7 @@ const SYSTEM_INSTRUCTION = buildBotSystemInstruction({
   bulkImportRule:
     "When the user uploads a receipt, bank statement, or file with multiple transactions, use 'add_transactions_batch' to save them all at once (more efficient than multiple add_transaction calls). Present a summary of all items for confirmation before saving.",
   financialSnapshotRule:
-    'For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.',
+    'For asks like "current financial situation/health/status": provide one concise snapshot for the current month/pay-period: verdict, income vs spending (or say income not tracked), net, top 3–5 categories with % of spend, budget status (remaining/over/under + days left), upcoming recurring (next ~7 days), and 1–2 actions. Only treat "status" as financial when the user explicitly mentions finances, money, budget, spending, income, or health. For bot status checks or greetings, answer directly without tools or charts. If you send a chart, prefer a radar or donut of spending by category (not gauges). Always include the text summary; the chart is optional/secondary.',
   messageFormattingRules: `MESSAGE FORMATTING (WhatsApp-specific):
 - WhatsApp renders these formatting symbols natively — use them:
   • *bold* (wrap with asterisks) — use for key amounts, confirmations, category names.
@@ -647,7 +650,11 @@ function buildMutationFailureText(
   toolName: string | null,
   toolResult: unknown,
 ): string | null {
-  return buildTransactionMutationFailureText(toolName, toolResult);
+  return (
+    buildTransactionMutationFailureText(toolName, toolResult) ||
+    buildWalletMutationFailureText(toolName, toolResult) ||
+    buildGenericMutationFailureText(toolName, toolResult)
+  );
 }
 
 function fingerprintSecret(secret: string): string {
@@ -1287,9 +1294,6 @@ Deno.serve(async (req: Request) => {
       );
       response = await result.response;
       functionCalls = (response.functionCalls() as any[]) || [];
-      if (isWalletListRequest(messageText) && functionCalls.length === 0) {
-        functionCalls = [buildWalletListToolCall() as any];
-      }
       finalResponseText = response.text();
     } catch (error) {
       console.error(
@@ -1351,71 +1355,65 @@ Deno.serve(async (req: Request) => {
               );
             }
           } else if (call.name === "list_expenses") {
-            if (shouldBlockWalletListMisroute(messageText, call.name)) {
-              toolResult = buildWalletListMisrouteResult();
+            const { data, error } = await fetchExpensesDirect(
+              supabase,
+              contactId,
+              {
+                limit: call.args.limit || 50,
+                startDate: call.args.start_date,
+                endDate: call.args.end_date,
+                householdId:
+                  call.args.space_id || call.args.household_id || null,
+                portfolioHouseholdIds:
+                  call.args.space_id || call.args.household_id
+                    ? undefined
+                    : portfolioSpaceIds,
+                currency: call.args.currency || undefined,
+                type: call.args.type || undefined,
+              },
+            );
+            if (error) {
+              toolResult = { error };
             } else {
-              const { data, error } = await fetchExpensesDirect(
+              const memoryItems = (data || [])
+                .map((row: any) => normalizeLastListedTransactionFromRow(row))
+                .filter(Boolean) as LastListedTransaction[];
+
+              let state = await loadSessionState(
                 supabase,
-                contactId,
-                {
-                  limit: call.args.limit || 50,
-                  startDate: call.args.start_date,
-                  endDate: call.args.end_date,
-                  householdId:
-                    call.args.space_id || call.args.household_id || null,
-                  portfolioHouseholdIds:
-                    call.args.space_id || call.args.household_id
-                      ? undefined
-                      : portfolioSpaceIds,
-                  currency: call.args.currency || undefined,
-                  type: call.args.type || undefined,
-                },
+                String(session.id),
+                debugNotes,
+                WHATSAPP_DEBUG,
               );
-              if (error) {
-                toolResult = { error };
-              } else {
-                const memoryItems = (data || [])
-                  .map((row: any) => normalizeLastListedTransactionFromRow(row))
-                  .filter(Boolean) as LastListedTransaction[];
+              state = setLastListedTransactions(state, memoryItems);
+              await saveSessionState(
+                supabase,
+                String(session.id),
+                state,
+                debugNotes,
+                WHATSAPP_DEBUG,
+              );
 
-                let state = await loadSessionState(
-                  supabase,
-                  String(session.id),
-                  debugNotes,
-                  WHATSAPP_DEBUG,
-                );
-                state = setLastListedTransactions(state, memoryItems);
-                await saveSessionState(
-                  supabase,
-                  String(session.id),
-                  state,
-                  debugNotes,
-                  WHATSAPP_DEBUG,
-                );
-
-                const normalized = normalizeExpensesForTool(
-                  data || [],
-                  userCurrency,
-                );
-                const chartUrl = buildCategoryChart(normalized);
-                if (chartUrl) mediaUrl = chartUrl;
-                const safeExpenses = memoryItems
-                  .slice(0, 25)
-                  .map((item, i) => ({
-                    index: i + 1,
-                    amountMajor: item.amountMajor,
-                    currency: item.currency,
-                    date: item.date,
-                    category: item.category,
-                    description: item.description,
-                    type: item.type || "expense",
-                  }));
-                toolResult = {
-                  expenses: safeExpenses,
-                  chart_url: chartUrl,
-                  has_selection_memory: true,
-                };
-              }
+              const normalized = normalizeExpensesForTool(
+                data || [],
+                userCurrency,
+              );
+              const chartUrl = buildCategoryChart(normalized);
+              if (chartUrl) mediaUrl = chartUrl;
+              const safeExpenses = memoryItems.slice(0, 25).map((item, i) => ({
+                index: i + 1,
+                amountMajor: item.amountMajor,
+                currency: item.currency,
+                date: item.date,
+                category: item.category,
+                description: item.description,
+                type: item.type || "expense",
+              }));
+              toolResult = {
+                expenses: safeExpenses,
+                chart_url: chartUrl,
+                has_selection_memory: true,
+              };
             }
           } else if (call.name === "create_space") {
             toolResult = await createBotSpace({
@@ -2988,11 +2986,31 @@ Deno.serve(async (req: Request) => {
     let functionCalls: any[] | null = response
       ? (response.functionCalls() as any[])
       : null;
-    if (
-      isWalletListRequest(caption) &&
-      (!functionCalls || functionCalls.length === 0)
-    ) {
-      functionCalls = [buildWalletListToolCall() as any];
+    try {
+      const walletRouting = await routeWalletMutationToolCall({
+        chat: activeChat as any,
+        response,
+        functionCalls,
+      });
+      response = walletRouting.response;
+      functionCalls = walletRouting.functionCalls || [];
+      if (walletRouting.routed && functionCalls && functionCalls.length > 0) {
+        finalResponseText = "";
+        debugLog(WHATSAPP_DEBUG, "wallet mutation tool routed", {
+          routeMethod: walletRouting.routeMethod,
+          reason: walletRouting.reason,
+          allowedToolNames: walletRouting.allowedToolNames,
+          functionCalls: functionCalls.map((call: any) => call?.name),
+        });
+      }
+    } catch (error) {
+      console.error(
+        "[twilio-whatsapp-ai-bot] wallet tool routing failed:",
+        error,
+      );
+      if (WHATSAPP_DEBUG) {
+        debugNotes.push(`wallet-routing-error: ${String(error)}`);
+      }
     }
     let persistedContent: string | undefined;
 
@@ -3017,22 +3035,16 @@ Deno.serve(async (req: Request) => {
       // model draft.
       finalResponseText = "";
     } else {
-      // Layered defense against AI hallucinating a save without calling a tool.
-      // Layer 1: deterministic write-intent detection on the raw user message
-      //          (e.g. "20 for kfc").
-      // Layer 2: regex guard on the model's response detecting assertive
-      //          first-person "I've added/saved/logged" claims.
-      // Layer 3: if either fires, force a tool call via toolConfig.
-      const writeIntentDetected = detectWriteIntentFromUserText(body);
+      // Defense against AI hallucinating a save without calling a tool.
+      // Intent stays model-driven; only an unsafe model claim can trigger repair.
       const claimDiag = diagnoseUnsafeTransactionMutationClaim({
         responseText: finalResponseText,
         writeMutationSucceeded: writeMutationSucceededAny,
       });
-      const shouldForceToolCall = claimDiag.blocked || writeIntentDetected;
+      const shouldForceToolCall = claimDiag.blocked;
 
       console.log("[twilio-whatsapp-ai-bot] initial-response tool-call guard", {
         userMessage: body,
-        writeIntentDetected,
         claimBlocked: claimDiag.blocked,
         claimReason: claimDiag.reason,
         hasFunctionCalls: false,
@@ -3829,11 +3841,13 @@ Deno.serve(async (req: Request) => {
               ) =>
                 householdId ? spaceMap.get(householdId)?.name || null : null;
 
-              const resolved = resolveLastListedSelection(
-                lastRead.items || [],
-                call.args,
+              const resolved = await resolveBotTransactionSelection({
+                supabase,
+                userId,
+                args: call.args,
+                items: lastRead.items || [],
                 spaceNameByHouseholdId,
-              );
+              });
 
               if ("needs_disambiguation" in resolved) {
                 toolResult = resolved;
@@ -4192,13 +4206,6 @@ Deno.serve(async (req: Request) => {
               }
             }
           } else if (call.name === "list_expenses") {
-            if (shouldBlockWalletListMisroute(caption, call.name)) {
-              toolResult = buildWalletListMisrouteResult();
-              toolResponses.push({
-                functionResponse: { name: call.name, response: toolResult },
-              });
-              continue;
-            }
             const { householdId, spaceMeta } = resolveBotSpaceScope(
               call.args,
               spaceMap,
@@ -5363,10 +5370,14 @@ Deno.serve(async (req: Request) => {
       finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
     }
     {
-      const finalDiag = diagnoseUnsafeTransactionMutationClaim({
-        responseText: finalResponseText,
-        writeMutationSucceeded: writeMutationSucceededAny,
-      });
+      const shouldCheckTransactionClaim =
+        isWriteMutationToolName(lastToolCallName);
+      const finalDiag = shouldCheckTransactionClaim
+        ? diagnoseUnsafeTransactionMutationClaim({
+            responseText: finalResponseText,
+            writeMutationSucceeded: writeMutationSucceededAny,
+          })
+        : { blocked: false, reason: "ok" as const };
       if (finalDiag.blocked) {
         console.log(
           "[twilio-whatsapp-ai-bot] final-response mutation-claim blocked",
@@ -5378,6 +5389,40 @@ Deno.serve(async (req: Request) => {
           },
         );
         finalResponseText = buildUnsafeMutationClaimFallback();
+      }
+      if (
+        isWriteMutationToolName(lastToolCallName) &&
+        shouldBlockUnsafeWalletMutationClaim({
+          responseText: finalResponseText,
+          writeMutationSucceeded: writeMutationSucceededAny,
+        })
+      ) {
+        console.log(
+          "[twilio-whatsapp-ai-bot] final-response wallet mutation-claim blocked",
+          {
+            lastToolCallName,
+            writeMutationSucceededAny,
+            responseTextPreview: finalResponseText.slice(0, 200),
+          },
+        );
+        finalResponseText = buildUnsafeWalletMutationClaimFallback();
+      }
+      if (
+        isWriteMutationToolName(lastToolCallName) &&
+        shouldBlockUnsafeGenericMutationClaim({
+          responseText: finalResponseText,
+          writeMutationSucceeded: writeMutationSucceededAny,
+        })
+      ) {
+        console.log(
+          "[twilio-whatsapp-ai-bot] final-response generic mutation-claim blocked",
+          {
+            lastToolCallName,
+            writeMutationSucceededAny,
+            responseTextPreview: finalResponseText.slice(0, 200),
+          },
+        );
+        finalResponseText = buildUnsafeGenericMutationClaimFallback();
       }
     }
     if (!finalResponseText || !finalResponseText.trim()) {

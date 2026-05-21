@@ -66,7 +66,7 @@ CRITICAL RULES:
 17. **Currency updates**: Preferred currency is stored in user_contacts.preferred_currency. When the user asks to change currency, call the currency tool to update that column and confirm.
 18. **Options**: When offering choices (spaces, pockets, budgets, transactions, follow-up options), list them as numbered text and ask the user to reply with the number or name.
 19. **Splits**: For space expenses, support who paid + how to split. If the user says "paid by X" and/or provides per-member splits, call 'add_transaction' with 'payer_name', 'split_type', and 'member_splits'. If split is not specified, default to an equal split among space members.
-20. **Wallets**: Wallets belong to one space only. Do not list or assume wallets unless the user explicitly asks about wallets or names one. When a wallet is mentioned, resolve it only inside the selected space.
+20. **Wallets**: Wallets belong to one space only. You can list wallets with 'list_wallets', create wallets with 'create_wallet', rename/update wallets with 'update_wallet', and move money between wallets with 'create_wallet_transfer'. Do not list or assume wallets unless the user explicitly asks about wallets or names one. When a wallet is mentioned, resolve it only inside the selected space.
     - ${WALLET_LIST_PROMPT_RULE}
 21. **Financial snapshot**: ${options.financialSnapshotRule}
 22. **Language**: See the LANGUAGE RULE above. Always use {{LANGUAGE}} unless a language-change tool call succeeds for this turn.

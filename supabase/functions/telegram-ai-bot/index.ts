@@ -98,6 +98,7 @@ import {
   invokeTransactionSave,
   normalizeTransactionToolArgs,
 } from "../shared/bot/transaction-tool.ts";
+import { resolveBotTransactionSelection } from "../shared/bot/transaction-selection.ts";
 import {
   buildAddTransactionsBatchTool,
   buildAddTransactionTool,
@@ -127,16 +128,16 @@ import {
 } from "../shared/bot/tool-definitions.ts";
 import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
+  buildWalletMutationFailureText,
   createBotWallet,
   createBotWalletTransfer,
   listBotWallets,
   updateBotWallet,
 } from "../shared/bot/wallet-tools.ts";
 import {
-  buildWalletListMisrouteResult,
-  buildWalletListToolCall,
-  isWalletListRequest,
-  shouldBlockWalletListMisroute,
+  buildUnsafeWalletMutationClaimFallback,
+  routeWalletMutationToolCall,
+  shouldBlockUnsafeWalletMutationClaim,
 } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
@@ -145,10 +146,12 @@ import {
   updateBotSpaceSettings,
 } from "../shared/bot/space-tools.ts";
 import {
+  buildGenericMutationFailureText,
   buildUnsafeMutationClaimFallback,
-  detectWriteIntentFromUserText,
+  buildUnsafeGenericMutationClaimFallback,
   diagnoseUnsafeTransactionMutationClaim,
   isWriteMutationToolName,
+  shouldBlockUnsafeGenericMutationClaim,
   WRITE_MUTATION_FORCED_FUNCTION_CALLING_CONFIG,
 } from "../shared/bot/mutation-claim-guard.ts";
 import {
@@ -587,132 +590,21 @@ function resolveTextFromCallbackChoice(
   return `${option.index}. ${option.label}`;
 }
 
-function detectListTypeFromText(
-  text: string,
-): "expense" | "income" | undefined {
-  const normalized = normalizeMatchString(text);
-  const hasIncome =
-    /\b(income|incomes|earning|earnings|salary|salaries)\b/.test(normalized);
-  const hasExpense =
-    /\b(expense|expenses|spending|spend|spent|purchase|purchases)\b/.test(
-      normalized,
-    );
-  if (hasIncome && !hasExpense) return "income";
-  if (hasExpense && !hasIncome) return "expense";
-  return undefined;
-}
-
-function parseListLimitFromText(text: string): number | undefined {
-  const normalized = normalizeMatchString(text);
-  const candidates = [
-    normalized.match(
-      /\b(?:latest|recent|last)\s+(\d{1,3})\s+(?:transactions?|expenses?|incomes?)\b/,
-    ),
-    normalized.match(/\b(\d{1,3})\s+(?:transactions?|expenses?|incomes?)\b/),
-  ];
-  for (const match of candidates) {
-    const raw = Number(match?.[1] || NaN);
-    if (!Number.isFinite(raw)) continue;
-    const value = Math.trunc(raw);
-    if (value >= 1) return Math.min(50, value);
-  }
-  return undefined;
-}
-
-function inferListExpensesArgsFromText(text: string): Record<string, unknown> {
-  const args: Record<string, unknown> = {};
-  const limit = parseListLimitFromText(text);
-  if (typeof limit === "number") args.limit = limit;
-  const type = detectListTypeFromText(text);
-  if (type) args.type = type;
-  const scope = detectSpaceScopeFromText(text);
-  if (scope) args.space_scope = scope;
-  return args;
-}
-
 function normalizeSpaceScope(
   value: unknown,
 ): "personal" | "private" | "shared" | null {
   const normalized = normalizeMatchString(value).replace(/\s+/g, "_");
   if (!normalized) return null;
-  if (
-    normalized === "personal" ||
-    normalized === "personal_account" ||
-    normalized === "own_account" ||
-    normalized === "me"
-  ) {
+  if (normalized === "personal" || normalized === "personal_account") {
     return "personal";
   }
-  if (
-    normalized === "portfolio" ||
-    normalized === "private" ||
-    normalized === "private_space" ||
-    normalized === "private_account" ||
-    normalized === "portfolio_space"
-  ) {
+  if (normalized === "private" || normalized === "private_space") {
     return "private";
   }
-  if (
-    normalized === "shared" ||
-    normalized === "shared_space" ||
-    normalized === "household" ||
-    normalized === "family_space" ||
-    normalized === "joint" ||
-    normalized === "roommate"
-  ) {
+  if (normalized === "shared" || normalized === "shared_space") {
     return "shared";
   }
   return null;
-}
-
-function detectSpaceScopeFromText(
-  text: string,
-): "personal" | "private" | "shared" | undefined {
-  const normalized = normalizeMatchString(text);
-  if (!normalized) return undefined;
-  if (
-    /\b(personal account|personal-only|my personal|my own account)\b/.test(
-      normalized,
-    )
-  ) {
-    return "personal";
-  }
-  if (
-    /\b(portfolio|private space|private account|investment account|investing space)\b/.test(
-      normalized,
-    )
-  ) {
-    return "private";
-  }
-  if (
-    /\b(shared|household|family space|roommate|joint account)\b/.test(
-      normalized,
-    )
-  ) {
-    return "shared";
-  }
-  return undefined;
-}
-
-function shouldForceListExpensesCall(text: string): boolean {
-  const normalized = normalizeMatchString(text);
-  if (!normalized) return false;
-
-  const hasTransactionNoun =
-    /\b(transaction|transactions|expense|expenses|income|incomes|spending|spend|spent|earning|earnings)\b/.test(
-      normalized,
-    );
-  if (!hasTransactionNoun) return false;
-
-  const hasListIntent =
-    /\b(show|list|display|get|fetch|view|see)\b/.test(normalized) ||
-    /\b(latest|recent|last)\b/.test(normalized);
-  if (!hasListIntent) return false;
-
-  const hasMutationIntent = /\b(update|edit|change|delete|remove|set)\b/.test(
-    normalized,
-  );
-  return !hasMutationIntent;
 }
 
 async function reportTelegramToolInvokeFailure(params: {
@@ -735,6 +627,10 @@ function buildMutationFailureText(
 ): string | null {
   const sharedText = buildTransactionMutationFailureText(toolName, toolResult);
   if (sharedText) return sharedText;
+  const walletText = buildWalletMutationFailureText(toolName, toolResult);
+  if (walletText) return walletText;
+  const genericText = buildGenericMutationFailureText(toolName, toolResult);
+  if (genericText) return genericText;
   if (toolName === "delete_transaction") {
     return "I couldn't delete that transaction right now. Please try again in a moment.";
   }
@@ -1434,55 +1330,44 @@ Deno.serve(async (req: Request) => {
             : buildProcessingFailureMessage(replyLanguage);
         }
 
-        if (
-          isWalletListRequest(incomingText) &&
-          (!functionCalls || functionCalls.length === 0)
-        ) {
-          functionCalls = [buildWalletListToolCall() as any];
-          debugNotes.push(
-            "forced list_wallets call for wallet inventory intent",
-          );
-          console.log("[telegram-ai-bot] forced tool call", {
-            traceId,
-            name: "list_wallets",
-            args: {},
-            reason: "wallet_inventory_intent_without_function_call",
+        try {
+          const walletRouting = await routeWalletMutationToolCall({
+            chat: activeChat as any,
+            response,
+            functionCalls,
           });
-        } else if (
-          shouldForceListExpensesCall(incomingText) &&
-          (!functionCalls || functionCalls.length === 0)
-        ) {
-          const forcedArgs = inferListExpensesArgsFromText(incomingText);
-          functionCalls = [{ name: "list_expenses", args: forcedArgs } as any];
-          debugNotes.push(
-            `forced list_expenses call for list intent (args: ${JSON.stringify(
-              forcedArgs,
-            )})`,
-          );
-          console.log("[telegram-ai-bot] forced tool call", {
-            traceId,
-            name: "list_expenses",
-            args: forcedArgs,
-            reason: "list_intent_without_function_call",
-          });
+          response = walletRouting.response;
+          functionCalls = walletRouting.functionCalls || [];
+          if (walletRouting.routed && functionCalls.length > 0) {
+            finalResponseText = "";
+            debugNotes.push(
+              `forced wallet mutation tool call (${walletRouting.routeMethod})`,
+            );
+            console.log("[telegram-ai-bot] wallet mutation tool routed", {
+              traceId,
+              routeMethod: walletRouting.routeMethod,
+              allowedToolNames: walletRouting.allowedToolNames,
+              functionCalls: functionCalls.map((c: any) => c?.name),
+              reason: walletRouting.reason,
+            });
+          }
+        } catch (error) {
+          console.error("[telegram-ai-bot] wallet tool routing failed:", error);
+          debugNotes.push(`wallet-routing-error: ${String(error)}`);
         }
 
-        // Layered defense against AI hallucinating a save without a tool call.
-        // Same strategy as twilio-whatsapp-ai-bot.
+        // Defense against AI hallucinating a save without a tool call.
+        // Intent stays model-driven; only an unsafe model claim can trigger repair.
         if (!functionCalls || functionCalls.length === 0) {
-          const writeIntentDetected =
-            detectWriteIntentFromUserText(incomingText);
           const claimDiag = diagnoseUnsafeTransactionMutationClaim({
             responseText: finalResponseText,
             writeMutationSucceeded: false,
           });
-          const shouldForceWriteToolCall =
-            claimDiag.blocked || writeIntentDetected;
+          const shouldForceWriteToolCall = claimDiag.blocked;
 
           console.log("[telegram-ai-bot] initial-response tool-call guard", {
             traceId,
             userMessage: incomingText,
-            writeIntentDetected,
             claimBlocked: claimDiag.blocked,
             claimReason: claimDiag.reason,
             willForceToolCall: shouldForceWriteToolCall,
@@ -1783,17 +1668,6 @@ Deno.serve(async (req: Request) => {
                   }
                 }
               } else if (call.name === "list_expenses") {
-                if (shouldBlockWalletListMisroute(incomingText, call.name)) {
-                  toolResult = buildWalletListMisrouteResult();
-                  lastToolResult = toolResult;
-                  toolResponses.push({
-                    functionResponse: {
-                      name: call.name,
-                      response: toolResult,
-                    },
-                  });
-                  continue;
-                }
                 const { householdId, spaceMeta } = resolveBotSpaceScope(
                   call.args,
                   spaceMap,
@@ -2532,11 +2406,13 @@ Deno.serve(async (req: Request) => {
                 const currency = (call.args.currency || "")
                   .toString()
                   .toUpperCase();
-                toolResult = (await setBotPreferredCurrency({
-                  supabase,
-                  contactId: contact.id,
-                  currency,
-                })).result;
+                toolResult = (
+                  await setBotPreferredCurrency({
+                    supabase,
+                    contactId: contact.id,
+                    currency,
+                  })
+                ).result;
               } else if (call.name === "set_language") {
                 const language = (call.args.language || "").toString().trim();
                 const preferenceResult = await setBotPreferredLanguage({
@@ -2550,7 +2426,8 @@ Deno.serve(async (req: Request) => {
                   await reportTelegramToolInvokeFailure({
                     traceId,
                     toolName: "set_language",
-                    targetFunction: preferenceResult.failure.targetFunction ||
+                    targetFunction:
+                      preferenceResult.failure.targetFunction ||
                       "update-preferred-language",
                     formatted: preferenceResult.failure.formatted,
                     error: preferenceResult.failure.error,
@@ -2712,11 +2589,13 @@ Deno.serve(async (req: Request) => {
                     continue;
                   }
 
-                  const resolved = resolveLastListedSelection(
-                    lastRead.items || [],
-                    call.args,
+                  const resolved = await resolveBotTransactionSelection({
+                    supabase,
+                    userId,
+                    args: call.args,
+                    items: lastRead.items || [],
                     spaceNameByHouseholdId,
-                  );
+                  });
                   if ("needs_disambiguation" in resolved) {
                     const truncateLabel = (value: string, maxLen = 60) => {
                       const cleaned = String(value || "")
@@ -3950,10 +3829,14 @@ Deno.serve(async (req: Request) => {
           finalResponseText = `I couldn't update that transaction. ${errorSnippet}`;
         }
         {
-          const finalDiag = diagnoseUnsafeTransactionMutationClaim({
-            responseText: finalResponseText,
-            writeMutationSucceeded: writeMutationSucceededAny,
-          });
+          const shouldCheckTransactionClaim =
+            isWriteMutationToolName(lastToolCallName);
+          const finalDiag = shouldCheckTransactionClaim
+            ? diagnoseUnsafeTransactionMutationClaim({
+                responseText: finalResponseText,
+                writeMutationSucceeded: writeMutationSucceededAny,
+              })
+            : { blocked: false, reason: "ok" as const };
           if (finalDiag.blocked) {
             console.log(
               "[telegram-ai-bot] final-response mutation-claim blocked",
@@ -3966,6 +3849,42 @@ Deno.serve(async (req: Request) => {
               },
             );
             finalResponseText = buildUnsafeMutationClaimFallback();
+          }
+          if (
+            isWriteMutationToolName(lastToolCallName) &&
+            shouldBlockUnsafeWalletMutationClaim({
+              responseText: finalResponseText,
+              writeMutationSucceeded: writeMutationSucceededAny,
+            })
+          ) {
+            console.log(
+              "[telegram-ai-bot] final-response wallet mutation-claim blocked",
+              {
+                traceId,
+                lastToolCallName,
+                writeMutationSucceededAny,
+                responseTextPreview: finalResponseText.slice(0, 200),
+              },
+            );
+            finalResponseText = buildUnsafeWalletMutationClaimFallback();
+          }
+          if (
+            isWriteMutationToolName(lastToolCallName) &&
+            shouldBlockUnsafeGenericMutationClaim({
+              responseText: finalResponseText,
+              writeMutationSucceeded: writeMutationSucceededAny,
+            })
+          ) {
+            console.log(
+              "[telegram-ai-bot] final-response generic mutation-claim blocked",
+              {
+                traceId,
+                lastToolCallName,
+                writeMutationSucceededAny,
+                responseTextPreview: finalResponseText.slice(0, 200),
+              },
+            );
+            finalResponseText = buildUnsafeGenericMutationClaimFallback();
           }
         }
         if (!finalResponseText || !finalResponseText.trim()) {
