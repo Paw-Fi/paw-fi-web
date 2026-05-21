@@ -167,15 +167,6 @@ async function downgradeOwnerSubscriptionToFree(params: {
     throw new Error(`failed to downgrade subscription: ${updateError.message}`);
   }
 
-  await offboardPlaidItemsForInactiveSubscription({
-    userId: params.userId,
-    eventId: params.eventId,
-    reason:
-      params.status === "unpaid"
-        ? "subscription_unpaid"
-        : "subscription_canceled",
-  });
-
   try {
     const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
       "cascade_subscription_cancellation",
@@ -189,7 +180,9 @@ async function downgradeOwnerSubscriptionToFree(params: {
         userId: params.userId,
         error: cascadeError,
       });
-      return;
+      throw new Error(
+        `failed to cascade subscription downgrade: ${cascadeError.message}`,
+      );
     }
 
     if (cascadeResult && cascadeResult > 0) {
@@ -205,7 +198,17 @@ async function downgradeOwnerSubscriptionToFree(params: {
       userId: params.userId,
       error,
     });
+    throw error;
   }
+
+  await offboardPlaidItemsForInactiveSubscription({
+    userId: params.userId,
+    eventId: params.eventId,
+    reason:
+      params.status === "unpaid"
+        ? "subscription_unpaid"
+        : "subscription_canceled",
+  });
 }
 
 async function offboardPlaidItemsForInactiveSubscription(params: {

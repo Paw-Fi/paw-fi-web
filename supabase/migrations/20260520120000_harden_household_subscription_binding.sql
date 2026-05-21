@@ -234,6 +234,56 @@ begin
     where (
             public.subscriptions.bound_to_user_id is not null
             or coalesce(public.subscriptions.plan, 'free') = 'free'
+            or (
+                coalesce(public.subscriptions.plan, 'free') <> 'free'
+                and not (
+                    (
+                        public.subscriptions.plan = 'lifetime'
+                        and public.subscriptions.status = 'active'
+                    )
+                    or (
+                        public.subscriptions.plan <> 'free'
+                        and public.subscriptions.status = 'active'
+                        and (
+                            public.subscriptions.plan = 'lifetime'
+                            or (
+                                coalesce(
+                                    public.subscriptions.current_period_end,
+                                    public.subscriptions.trial_end
+                                ) is not null
+                                and coalesce(
+                                    public.subscriptions.current_period_end,
+                                    public.subscriptions.trial_end
+                                ) > now()
+                            )
+                        )
+                    )
+                    or (
+                        public.subscriptions.plan <> 'free'
+                        and public.subscriptions.status = 'trialing'
+                        and coalesce(
+                            public.subscriptions.current_period_end,
+                            public.subscriptions.trial_end
+                        ) is not null
+                        and coalesce(
+                            public.subscriptions.current_period_end,
+                            public.subscriptions.trial_end
+                        ) > now()
+                    )
+                    or (
+                        public.subscriptions.plan <> 'free'
+                        and public.subscriptions.status = 'past_due'
+                        and coalesce(
+                            public.subscriptions.current_period_end,
+                            public.subscriptions.trial_end
+                        ) is not null
+                        and coalesce(
+                            public.subscriptions.current_period_end,
+                            public.subscriptions.trial_end
+                        ) > now()
+                    )
+                )
+            )
         )
       and public.subscriptions.stripe_subscription_id is null
       and public.subscriptions.store_product_id is null

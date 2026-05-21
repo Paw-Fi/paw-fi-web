@@ -1531,19 +1531,6 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    if (status === "canceled") {
-      await offboardPlaidItemsForInactiveSubscription({
-        userId: resolvedUserId,
-        reason: "app_store_subscription_canceled",
-        context: {
-          storeProductId,
-          originalTransactionId,
-          transactionId,
-          environment: resolvedEnvironment,
-        },
-      });
-    }
-
     try {
       const rpcName = status === "canceled"
         ? "cascade_subscription_cancellation"
@@ -1573,6 +1560,9 @@ serve(async (req: Request): Promise<Response> => {
             environment: resolvedEnvironment,
           }),
         });
+        throw new Error(
+          `Failed to cascade App Store subscription update: ${cascadeError.message}`,
+        );
       } else if (cascadeResult && cascadeResult > 0) {
         console.log(
           `[app-store-notifications] cascaded subscription update to ${cascadeResult} household members`,
@@ -1590,14 +1580,28 @@ serve(async (req: Request): Promise<Response> => {
         context: getAppStoreDiagnosticsContext({
           phase: "cascade_household_subscription_update_unexpected",
           userId: resolvedUserId,
+          storeProductId,
           originalTransactionId,
           transactionId,
           environment: resolvedEnvironment,
         }),
       });
+      throw cascadeError;
     }
 
+    if (status === "canceled") {
+      await offboardPlaidItemsForInactiveSubscription({
+        userId: resolvedUserId,
+        reason: "app_store_subscription_canceled",
+        context: {
           storeProductId,
+          originalTransactionId,
+          transactionId,
+          environment: resolvedEnvironment,
+        },
+      });
+    }
+
     return new Response(JSON.stringify({ status: "ok" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
