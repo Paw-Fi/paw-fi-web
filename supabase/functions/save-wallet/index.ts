@@ -6,6 +6,7 @@ import {
   resolveDefaultAccountId,
   sanitizeUuid,
 } from "../shared/accounts.ts";
+import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
 
 interface RequestBody {
   householdId?: string;
@@ -117,14 +118,139 @@ Deno.serve(async (req: Request) => {
     }
 
     const linkedBankAccountId = sanitizeUuid(body.linkedBankAccountId ?? null);
+    let linkedBankProvider: string | null = null;
+    if (linkedBankAccountId != null) {
+      const { data: bankAccount, error: bankAccountError } = await supabase
+        .from("bank_accounts")
+        .select("id, user_id, bank_connection_id")
+        .eq("id", linkedBankAccountId)
+        .maybeSingle();
+
+      if (bankAccountError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to load linked bank account",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      if (!bankAccount || bankAccount.user_id !== userId) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Linked bank account not found",
+            code: "VALIDATION_ERROR",
+          },
+          404,
+        );
+      }
+
+      const { data: bankConnection, error: bankConnectionError } =
+        await supabase
+          .from("bank_connections")
+          .select("id, user_id, household_id, provider, removed_at, status")
+          .eq("id", bankAccount.bank_connection_id)
+          .maybeSingle();
+
+      if (bankConnectionError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to load bank connection",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      const connectionHouseholdId = bankConnection?.household_id ?? null;
+      if (
+        !bankConnection ||
+        bankConnection.user_id !== userId ||
+        bankConnection.removed_at != null ||
+        bankConnection.status === "disabled" ||
+        connectionHouseholdId !== householdId
+      ) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Linked bank account belongs to a different wallet space",
+            code: "VALIDATION_ERROR",
+          },
+          409,
+        );
+      }
+      linkedBankProvider = String(bankConnection.provider || "plaid");
+    }
     const openingBalanceCents = Number.isFinite(body.openingBalanceCents)
       ? Math.round(Number(body.openingBalanceCents))
       : 0;
-    const goalAmountCents = body.goalAmountCents == null
-      ? null
-      : Math.round(Number(body.goalAmountCents));
+    const goalAmountCents =
+      body.goalAmountCents == null
+        ? null
+        : Math.round(Number(body.goalAmountCents));
 
     const shouldSetDefault = body.isDefault === true;
+
+    if (linkedBankAccountId != null) {
+      let existingLinkedQuery = supabase
+        .from("accounts")
+        .select()
+        .eq("linked_bank_account_id", linkedBankAccountId)
+        .eq("is_archived", false)
+        .limit(1);
+
+      if (householdId) {
+        existingLinkedQuery = existingLinkedQuery.eq(
+          "household_id",
+          householdId,
+        );
+      } else {
+        existingLinkedQuery = existingLinkedQuery
+          .eq("user_id", userId)
+          .is("household_id", null);
+      }
+
+      const { data: existingLinkedWallet, error: existingLinkedError } =
+        await existingLinkedQuery.maybeSingle();
+
+      if (existingLinkedError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to load linked wallet",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+
+      if (existingLinkedWallet != null) {
+        const rebindResult = await rebindBankAccountExpensesToWallet({
+          supabase,
+          userId,
+          bankAccountId: linkedBankAccountId,
+          walletId: existingLinkedWallet.id,
+          householdId: existingLinkedWallet.household_id ?? null,
+          provider: linkedBankProvider ?? "plaid",
+        });
+        if (rebindResult.updated > 0) {
+          console.log(
+            "[save-account] rebound bank expenses to existing linked wallet",
+            JSON.stringify({
+              provider: linkedBankProvider ?? "plaid",
+              bankAccountId: linkedBankAccountId,
+              walletId: existingLinkedWallet.id,
+              updated: rebindResult.updated,
+            }),
+          );
+        }
+        return jsonResponse({ success: true, data: existingLinkedWallet });
+      }
+    }
 
     if (shouldSetDefault) {
       let resetQuery = supabase
@@ -190,6 +316,28 @@ Deno.serve(async (req: Request) => {
         .update({ is_default: true })
         .eq("id", data.id);
       data.is_default = true;
+    }
+
+    if (linkedBankAccountId != null) {
+      const rebindResult = await rebindBankAccountExpensesToWallet({
+        supabase,
+        userId,
+        bankAccountId: linkedBankAccountId,
+        walletId: data.id,
+        householdId: data.household_id ?? null,
+        provider: linkedBankProvider ?? "plaid",
+      });
+      if (rebindResult.updated > 0) {
+        console.log(
+          "[save-account] rebound bank expenses to linked wallet",
+          JSON.stringify({
+            provider: linkedBankProvider ?? "plaid",
+            bankAccountId: linkedBankAccountId,
+            walletId: data.id,
+            updated: rebindResult.updated,
+          }),
+        );
+      }
     }
 
     return jsonResponse({ success: true, data });

@@ -1,10 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
+import { mergePlaidSyncStatusMetadata } from "../shared/plaid-sync-status.ts";
 import {
-  verifyPlaidWebhook,
-  generateWebhookEventId,
-} from "../shared/webhook-verification.ts";
+  classifyPlaidItemWebhook,
+  PLAID_NEW_ACCOUNTS_RELINK_STATE,
+} from "../shared/plaid-update-mode.ts";
+import { verifyPlaidWebhook } from "../shared/webhook-verification.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -24,24 +28,13 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("Supabase credentials missing for plaid-webhook");
 }
 
-const SYNC_EVENT_CODES = new Set([
-  "SYNC_UPDATES_AVAILABLE",
-  "DEFAULT_UPDATE",
-  "INITIAL_UPDATE",
-  "HISTORICAL_UPDATE",
-  "TRANSACTIONS_REMOVED",
-]);
-
-// Event codes that indicate the user needs to re-authenticate
-const REAUTH_EVENT_CODES = new Set([
-  "PENDING_EXPIRATION",
-  "USER_PERMISSION_REVOKED",
-]);
-
 interface PlaidWebhookPayload {
   webhook_type?: string;
   webhook_code?: string;
   item_id?: string;
+  account_id?: string;
+  initial_update_complete?: boolean;
+  historical_update_complete?: boolean;
   error?: {
     error_code?: string;
     error_type?: string;
@@ -75,10 +68,10 @@ Deno.serve(async (req) => {
 
   // Get raw body for signature verification
   const rawBody = await req.text();
+  const plaidVerificationHeader = req.headers.get("Plaid-Verification");
 
   // Verify webhook signature (required by default, can be disabled via SKIP_WEBHOOK_VERIFICATION=true)
   if (!SKIP_WEBHOOK_VERIFICATION) {
-    const plaidVerificationHeader = req.headers.get("Plaid-Verification");
     const verificationResult = await verifyPlaidWebhook(
       rawBody,
       plaidVerificationHeader,
@@ -126,111 +119,55 @@ Deno.serve(async (req) => {
     // Look up the connection
     const { data: connection } = await supabase
       .from("bank_connections")
-      .select("id, status")
+      .select(
+        "id, status, metadata, provider_item_id, cursor_generation, last_webhook_received_at",
+      )
       .eq("provider", PLAID_PROVIDER)
       .eq("provider_item_id", payload.item_id)
       .maybeSingle();
 
-    // Log the webhook event
-    await supabase.from("bank_webhook_events").insert({
-      provider: PLAID_PROVIDER,
-      event_type: payload.webhook_type || null,
-      event_code: payload.webhook_code || null,
-      provider_item_id: payload.item_id,
-      bank_connection_id: connection?.id || null,
-      payload,
-    });
-
-    // Handle ITEM webhook type (for reauth and error scenarios)
-    if (payload.webhook_type === "ITEM") {
-      if (
-        payload.webhook_code === "ERROR" &&
-        payload.error?.error_code === "ITEM_LOGIN_REQUIRED"
-      ) {
-        // Mark connection as needs_reauth
-        if (connection?.id) {
-          await supabase
-            .from("bank_connections")
-            .update({
-              status: "needs_reauth",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", connection.id);
-          console.log(
-            `[plaid-webhook] Marked connection ${connection.id} as needs_reauth (ITEM_LOGIN_REQUIRED)`,
-          );
-        }
-      } else if (
-        payload.webhook_code &&
-        REAUTH_EVENT_CODES.has(payload.webhook_code)
-      ) {
-        // Mark connection as needs_reauth for other reauth-related events
-        if (connection?.id) {
-          await supabase
-            .from("bank_connections")
-            .update({
-              status: "needs_reauth",
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", connection.id);
-          console.log(
-            `[plaid-webhook] Marked connection ${connection.id} as needs_reauth (${payload.webhook_code})`,
-          );
-        }
-      }
+    if (!connection?.id && payload.webhook_type === "TRANSACTIONS") {
+      console.warn(
+        `[plaid-webhook] No bank connection mapping for item ${payload.item_id}. Webhook will be logged but no sync job will be enqueued.`,
+      );
     }
 
-    // Handle TRANSACTIONS webhook type - create sync job
-    if (
-      connection?.id &&
-      payload.webhook_type === "TRANSACTIONS" &&
-      payload.webhook_code &&
-      SYNC_EVENT_CODES.has(payload.webhook_code)
-    ) {
-      // Generate idempotency key for webhook (async - uses content hash)
-      const webhookEventId = await generateWebhookEventId(
-        "plaid",
-        payload as Record<string, unknown>,
-      );
+    const verificationReplayKey = await sha256Hex(
+      `${plaidVerificationHeader || "no-verification-header"}.${rawBody}`,
+    );
 
-      // Check idempotency using database function
-      const { data: isDuplicate } = await supabase.rpc(
-        "check_webhook_idempotency",
-        {
-          p_webhook_event_id: webhookEventId,
-        },
-      );
-
-      if (isDuplicate) {
-        console.log(
-          `[plaid-webhook] Duplicate webhook detected, skipping: ${webhookEventId}`,
-        );
-        return new Response(
-          JSON.stringify({ received: true, duplicate: true }),
-          {
-            status: 200,
-            headers: { ...headers, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      // Create sync job with webhook_event_id for idempotency
-      const { error: insertError } = await supabase
-        .from("bank_sync_jobs")
+    let webhookEventId: string | null = null;
+    const { data: insertedWebhookEvent, error: webhookInsertError } =
+      await supabase
+        .from("bank_webhook_events")
         .insert({
-          bank_connection_id: connection.id,
           provider: PLAID_PROVIDER,
-          trigger_source: "webhook",
-          webhook_event_id: webhookEventId,
+          event_type: payload.webhook_type || null,
+          event_code: payload.webhook_code || null,
+          provider_item_id: payload.item_id,
+          bank_connection_id: connection?.id || null,
           payload,
-        });
+          verification_replay_key: verificationReplayKey,
+          processing_error: null,
+        })
+        .select("id, processed_at")
+        .single();
 
-      if (insertError) {
-        // If it's a unique constraint violation, it's a duplicate
-        if (insertError.code === "23505") {
-          console.log(
-            `[plaid-webhook] Duplicate sync job detected via constraint: ${webhookEventId}`,
-          );
+    if (webhookInsertError) {
+      if (webhookInsertError.code === "23505") {
+        const { data: existingWebhookEvent, error: existingWebhookError } =
+          await supabase
+            .from("bank_webhook_events")
+            .select("id, processed_at")
+            .eq("provider", PLAID_PROVIDER)
+            .eq("verification_replay_key", verificationReplayKey)
+            .maybeSingle();
+
+        if (existingWebhookError) {
+          throw existingWebhookError;
+        }
+
+        if (existingWebhookEvent?.processed_at) {
           return new Response(
             JSON.stringify({ received: true, duplicate: true }),
             {
@@ -239,15 +176,128 @@ Deno.serve(async (req) => {
             },
           );
         }
-        console.error(
-          "[plaid-webhook] Failed to create sync job:",
-          insertError,
-        );
+
+        webhookEventId = existingWebhookEvent?.id || null;
       } else {
-        console.log(
-          `[plaid-webhook] Created sync job for connection ${connection.id}, event: ${webhookEventId}`,
-        );
+        throw webhookInsertError;
       }
+    } else {
+      webhookEventId = insertedWebhookEvent?.id || null;
+    }
+
+    if (connection?.id && payload.webhook_type === "TRANSACTIONS") {
+      await supabase
+        .from("bank_connections")
+        .update({
+          metadata: mergePlaidSyncStatusMetadata(connection.metadata, {
+            webhookCode: payload.webhook_code,
+            initialUpdateComplete: payload.initial_update_complete,
+            historicalUpdateComplete: payload.historical_update_complete,
+          }),
+          last_webhook_received_at: new Date().toISOString(),
+          item_health_state: "healthy",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", connection.id);
+
+      const enqueueResult = await enqueuePlaidSyncJob({
+        supabase,
+        connectionId: connection.id,
+        triggerSource: "plaid_transactions_webhook",
+        payload: {
+          webhookCode: payload.webhook_code || null,
+          initialUpdateComplete: payload.initial_update_complete ?? null,
+          historicalUpdateComplete: payload.historical_update_complete ?? null,
+        },
+        webhookEventId,
+      });
+
+      console.log(
+        "[plaid-webhook] Queued transactions sync",
+        JSON.stringify({
+          connectionId: connection.id,
+          duplicate: enqueueResult.duplicate,
+          enqueued: enqueueResult.enqueued,
+          itemId: payload.item_id || null,
+          webhookCode: payload.webhook_code || null,
+          webhookEventId,
+        }),
+      );
+    }
+
+    if (payload.webhook_type === "ITEM") {
+      if (
+        payload.webhook_code === "USER_ACCOUNT_REVOKED" &&
+        connection?.id
+      ) {
+        await applyPlaidAccountRevokedWebhook({
+          supabase,
+          connection,
+          accountId: payload.account_id || null,
+        });
+      }
+
+      const action = classifyPlaidItemWebhook({
+        webhookCode: payload.webhook_code,
+        errorCode: payload.error?.error_code,
+      });
+
+      if (action && connection?.id) {
+        const { error: updateError } = await supabase
+          .from("bank_connections")
+          .update({
+            status: action.status,
+            item_status: action.itemStatus,
+            item_health_state: action.itemHealthState,
+            relink_state: action.relinkState,
+            error_code: action.relinkState == null
+              ? null
+              : payload.error?.error_code || payload.webhook_code || null,
+            error_message: action.relinkState == null
+              ? null
+              : payload.error?.error_message || null,
+            last_webhook_received_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", connection.id);
+
+        if (updateError) {
+          throw updateError;
+        }
+
+        console.log(
+          "[plaid-webhook] Applied item webhook action",
+          JSON.stringify({
+            connectionId: connection.id,
+            itemId: payload.item_id || null,
+            relinkState: action.relinkState,
+            status: action.status,
+            webhookCode: payload.webhook_code || null,
+          }),
+        );
+
+        if (action.shouldEnqueueSync) {
+          await enqueuePlaidSyncJob({
+            supabase,
+            connectionId: connection.id,
+            triggerSource: "plaid_item_webhook",
+            payload: {
+              webhookCode: payload.webhook_code || null,
+            },
+            webhookEventId,
+          });
+        }
+      }
+    }
+
+    if (webhookEventId) {
+      await supabase
+        .from("bank_webhook_events")
+        .update({
+          processed_at: new Date().toISOString(),
+          processing_error: null,
+        })
+        .eq("id", webhookEventId);
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -256,6 +306,52 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("[plaid-webhook] Failed to handle webhook", error);
+    try {
+      const parsed = JSON.parse(rawBody) as PlaidWebhookPayload;
+      const replayKey = await sha256Hex(
+        `${
+          req.headers.get("Plaid-Verification") || "no-verification-header"
+        }.${rawBody}`,
+      );
+      if (parsed.item_id) {
+        const supabase = createClient(
+          SUPABASE_URL!,
+          SUPABASE_SERVICE_ROLE_KEY!,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+              detectSessionInUrl: false,
+            },
+          },
+        );
+        await supabase
+          .from("bank_webhook_events")
+          .update({
+            processing_error: error instanceof Error
+              ? error.message
+              : String(error),
+          })
+          .eq("provider", PLAID_PROVIDER)
+          .eq("verification_replay_key", replayKey);
+      }
+    } catch {
+      // Best-effort failure annotation only.
+    }
+    await reportEdgeFunctionError({
+      functionName: "plaid-webhook",
+      error,
+      context: {
+        provider_item_id: (() => {
+          try {
+            const parsed = JSON.parse(rawBody) as PlaidWebhookPayload;
+            return parsed.item_id ?? null;
+          } catch {
+            return null;
+          }
+        })(),
+      },
+    });
     return new Response(
       JSON.stringify({ error: "Failed to process webhook" }),
       {
@@ -265,3 +361,125 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+async function applyPlaidAccountRevokedWebhook(params: {
+  supabase: {
+    from: (table: string) => any;
+  };
+  connection: {
+    id: string;
+    metadata?: unknown;
+  };
+  accountId?: string | null;
+}): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const accountId = String(params.accountId || "").trim();
+  const metadata = params.connection.metadata &&
+      typeof params.connection.metadata === "object"
+    ? params.connection.metadata as Record<string, unknown>
+    : {};
+  const revokedAccountIds = Array.isArray(metadata.plaid_revoked_account_ids)
+    ? metadata.plaid_revoked_account_ids
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+    : [];
+  const nextRevokedAccountIds = accountId
+    ? Array.from(new Set([...revokedAccountIds, accountId])).sort()
+    : revokedAccountIds;
+
+  if (accountId) {
+    const bankAccountIds = new Set<string>();
+    for (
+      const matchColumn of ["provider_account_id", "plaid_account_id"] as const
+    ) {
+      const { data: accounts, error: accountsError } = await params.supabase
+        .from("bank_accounts")
+        .select("id")
+        .eq("bank_connection_id", params.connection.id)
+        .eq("provider", PLAID_PROVIDER)
+        .eq(matchColumn, accountId);
+
+      if (accountsError) {
+        throw accountsError;
+      }
+
+      for (const account of (accounts || []) as { id?: string | null }[]) {
+        if (account.id) {
+          bankAccountIds.add(account.id);
+        }
+      }
+    }
+
+    const matchedBankAccountIds = Array.from(bankAccountIds);
+    if (matchedBankAccountIds.length > 0) {
+      const { error: accountUpdateError } = await params.supabase
+        .from("bank_accounts")
+        .update({
+          status: "disabled",
+          updated_at: nowIso,
+        })
+        .in("id", matchedBankAccountIds);
+
+      if (accountUpdateError) {
+        throw accountUpdateError;
+      }
+
+      const { error: rawDeleteError } = await params.supabase
+        .from("bank_transaction_raw")
+        .delete()
+        .in("bank_account_id", matchedBankAccountIds);
+
+      if (rawDeleteError) {
+        throw rawDeleteError;
+      }
+
+      const { error: expenseUpdateError } = await params.supabase
+        .from("expenses")
+        .update({
+          bank_account_id: null,
+          raw_provider_payload: null,
+          updated_at: nowIso,
+        })
+        .eq("provider", PLAID_PROVIDER)
+        .in("bank_account_id", matchedBankAccountIds);
+
+      if (expenseUpdateError) {
+        throw expenseUpdateError;
+      }
+    }
+  }
+
+  const { error: connectionUpdateError } = await params.supabase
+    .from("bank_connections")
+    .update({
+      status: "active",
+      item_status: "account_revoked",
+      item_health_state: "degraded",
+      relink_state: PLAID_NEW_ACCOUNTS_RELINK_STATE,
+      error_code: "USER_ACCOUNT_REVOKED",
+      error_message: accountId
+        ? "Plaid account access was revoked by the user."
+        : "Plaid account access was revoked by the user, but no account id was supplied.",
+      metadata: {
+        ...metadata,
+        plaid_revoked_account_ids: nextRevokedAccountIds,
+      },
+      last_webhook_received_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq("id", params.connection.id);
+
+  if (connectionUpdateError) {
+    throw connectionUpdateError;
+  }
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}

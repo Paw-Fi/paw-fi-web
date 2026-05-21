@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import {
   createTinkLinkUrl,
   createTinkUserAuthorizationCode,
@@ -9,6 +10,7 @@ import {
   listTinkCredentials,
   TINK_PROVIDER,
 } from "../shared/tink-client.ts";
+import { sanitizeOptionalUuid } from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -20,6 +22,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 interface CreateLinkRequest {
   countryCode?: string;
   locale?: string;
+  targetHouseholdId?: string;
   // Optional: force using an existing connection (reconnect flow)
   connectionId?: string;
   // add: always create new credential
@@ -78,6 +81,30 @@ Deno.serve(async (req) => {
     const market = body.countryCode || config.defaultMarket;
     const marketSuffix = market.toLowerCase();
     const externalUserId = `${authResult.userId}-${marketSuffix}`;
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    if (body.targetHouseholdId && !targetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      targetHouseholdId &&
+      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
+    const expectedProviderItemId = targetHouseholdId
+      ? `tink_${externalUserId}_${targetHouseholdId}`
+      : `tink_${externalUserId}`;
 
     const intent = body.intent || "auto";
 
@@ -114,7 +141,6 @@ Deno.serve(async (req) => {
         if (!existingCredentialsId) {
           // Prefer exact provider_item_id match (stable: tink_{external_user_id}).
           // This works even if country_code wasn't persisted on older rows.
-          const expectedProviderItemId = `tink_${externalUserId}`;
           const { data: byProviderItem } = await supabase
             .from("bank_connections")
             .select("id, status, country_code, metadata")
@@ -155,13 +181,19 @@ Deno.serve(async (req) => {
         }
 
         if (!existingCredentialsId) {
-          const { data: latest } = await supabase
+          let latestQuery = supabase
             .from("bank_connections")
             .select("id, status, country_code, metadata")
             .eq("user_id", authResult.userId)
             .eq("provider", TINK_PROVIDER)
             .eq("country_code", market.toUpperCase())
-            .neq("status", "disabled")
+            .neq("status", "disabled");
+
+          latestQuery = targetHouseholdId
+            ? latestQuery.eq("household_id", targetHouseholdId)
+            : latestQuery.is("household_id", null);
+
+          const { data: latest } = await latestQuery
             .order("updated_at", { ascending: false })
             .limit(1);
 
@@ -317,6 +349,7 @@ Deno.serve(async (req) => {
         user_id: authResult.userId,
         external_user_id: externalUserId,
         market: market.toUpperCase(),
+        target_household_id: targetHouseholdId,
         expires_at: expiresAtState,
       });
 

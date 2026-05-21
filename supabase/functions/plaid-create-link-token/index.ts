@@ -1,10 +1,21 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUser } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+import { loadPlaidUserAccessState } from "../shared/plaid-access.ts";
+import { derivePlaidLinkProducts } from "../shared/plaid-lifecycle.ts";
+import { resolvePlaidCountryCode } from "../shared/plaid-country.ts";
+import { sanitizeOptionalUuid } from "../shared/bank-sync.ts";
 import {
   createPlaidLinkToken,
+  getPlaidConfig,
   PLAID_PROVIDER,
 } from "../shared/plaid-client.ts";
+import {
+  PLAID_NEW_ACCOUNTS_RELINK_STATE,
+  shouldEnablePlaidAccountSelection,
+} from "../shared/plaid-update-mode.ts";
 import { decryptSecret } from "../shared/token-encryption.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -19,6 +30,10 @@ interface CreateLinkTokenRequest {
   transactionsDaysRequested?: number;
   countryCode?: string;
   platform?: string;
+  institutionId?: string;
+  targetHouseholdId?: string;
+  updateReason?: string;
+  mode?: "new" | "update" | "reconnect" | "duplicate_blocked";
 }
 
 Deno.serve(async (req) => {
@@ -69,14 +84,109 @@ Deno.serve(async (req) => {
       );
     }
 
+    const accessState = await loadPlaidUserAccessState(
+      supabase,
+      authResult.userId,
+    );
+    const targetHouseholdId = sanitizeOptionalUuid(body.targetHouseholdId);
+    if (body.targetHouseholdId && !targetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      targetHouseholdId &&
+      !(await assertScopeAccess(supabase, authResult.userId, targetHouseholdId))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
     let accessToken: string | undefined;
-    if (body.connectionId) {
+    let connectionCountryCode: string | undefined;
+    let resolvedConnectionId = body.connectionId?.trim() || undefined;
+    let modeUsed =
+      body.mode ?? (resolvedConnectionId != null ? "update" : "new");
+    let relinkState = body.updateReason?.trim() || undefined;
+
+    const requestedInstitutionId = body.institutionId?.trim();
+    if (!resolvedConnectionId && (requestedInstitutionId?.length ?? 0) > 0) {
+      let duplicateQuery = supabase
+        .from("bank_connections")
+        .select(
+          "id, user_id, provider, status, relink_state, country_code, access_token_encrypted, plaid_access_token_encrypted",
+        )
+        .eq("user_id", authResult.userId)
+        .eq("provider", PLAID_PROVIDER)
+        .eq("metadata->>institution_id", requestedInstitutionId!)
+        .is("removed_at", null)
+        .in("status", ["active", "needs_reauth"]);
+
+      duplicateQuery = targetHouseholdId
+        ? duplicateQuery.eq("household_id", targetHouseholdId)
+        : duplicateQuery.is("household_id", null);
+
+      const { data: duplicateConnection, error: duplicateError } =
+        await duplicateQuery
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (duplicateError) {
+        throw duplicateError;
+      }
+
+      if (duplicateConnection?.id) {
+        resolvedConnectionId = duplicateConnection.id;
+        relinkState = duplicateConnection.relink_state?.trim() || relinkState;
+        modeUsed =
+          duplicateConnection.status === "needs_reauth"
+            ? "reconnect"
+            : "update";
+      }
+    }
+
+    if (!resolvedConnectionId && !accessState.isConvertedPaidUser) {
+      const { count, error: connectionCountError } = await supabase
+        .from("bank_connections")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", authResult.userId)
+        .eq("provider", PLAID_PROVIDER)
+        .is("removed_at", null)
+        .in("status", ["pending", "active", "needs_reauth", "error"]);
+
+      if (connectionCountError) {
+        throw connectionCountError;
+      }
+
+      if ((count ?? 0) >= 1) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Trial and free users can only keep one active bank connection. Reconnect the existing bank instead.",
+          }),
+          {
+            status: 403,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
+    if (resolvedConnectionId) {
       const { data: connection, error: connectionError } = await supabase
         .from("bank_connections")
         .select(
-          "id, user_id, provider, access_token_encrypted, plaid_access_token_encrypted",
+          "id, user_id, provider, household_id, country_code, relink_state, access_token_encrypted, plaid_access_token_encrypted",
         )
-        .eq("id", body.connectionId)
+        .eq("id", resolvedConnectionId)
         .eq("provider", PLAID_PROVIDER)
         .maybeSingle();
 
@@ -101,27 +211,91 @@ Deno.serve(async (req) => {
         });
       }
 
+      if (
+        body.targetHouseholdId &&
+        targetHouseholdId !== (connection.household_id ?? null)
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "Bank connection belongs to a different wallet space",
+            errorCode: "connection_scope_mismatch",
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       const encryptedToken =
         connection.access_token_encrypted ||
         connection.plaid_access_token_encrypted;
       if (encryptedToken) {
         accessToken = await decryptSecret(encryptedToken);
       }
+
+      connectionCountryCode =
+        connection.country_code?.trim().toUpperCase() || undefined;
+      relinkState = connection.relink_state?.trim() || relinkState;
     }
+
+    const products = derivePlaidLinkProducts(getPlaidConfig().products, {
+      isConvertedPaidUser: accessState.isConvertedPaidUser,
+      enableRecurringTransactionsProduct:
+        Deno.env.get("PLAID_ENABLE_RECURRING_FOR_PAID")?.toLowerCase() ===
+        "true",
+    });
+
+    const countryCode = resolvePlaidCountryCode({
+      requestedCountryCode: body.countryCode,
+      connectionCountryCode,
+    });
+    const accountSelectionEnabled = shouldEnablePlaidAccountSelection({
+      countryCode,
+      relinkState,
+    });
 
     const response = await createPlaidLinkToken({
       userId: authResult.userId,
       accessToken,
+      products,
       transactionsDaysRequested: body.transactionsDaysRequested,
-      countryCodes: body.countryCode ? [body.countryCode] : undefined,
+      countryCodes: countryCode ? [countryCode] : undefined,
       platform: body.platform,
+      omitProducts: accessToken != null,
+      omitTransactions: accessToken != null,
+      update: {
+        accountSelectionEnabled,
+      },
     });
+
+    const linkCompletionNonce = crypto.randomUUID();
+    const { error: sessionError } = await supabase
+      .from("plaid_link_update_sessions")
+      .insert({
+        user_id: authResult.userId,
+        connection_id: resolvedConnectionId ?? null,
+        nonce: linkCompletionNonce,
+        mode: modeUsed,
+        expires_at: response.expiration,
+      });
+
+    if (sessionError) {
+      throw sessionError;
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         linkToken: response.link_token,
         expiration: response.expiration,
+        requestId: response.request_id || null,
+        connectionId: resolvedConnectionId,
+        updateReason: relinkState || null,
+        modeUsed,
+        linkCompletionNonce,
+        updateCompletionNonce:
+          accessToken && resolvedConnectionId ? linkCompletionNonce : null,
       }),
       {
         status: 200,
@@ -130,10 +304,13 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("[plaid-create-link-token] Unexpected error", error);
+    await reportEdgeFunctionError({
+      functionName: "plaid-create-link-token",
+      error,
+    });
     return new Response(
       JSON.stringify({
         error: "Failed to create link token",
-        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,

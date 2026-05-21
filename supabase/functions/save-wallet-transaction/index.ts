@@ -1543,12 +1543,21 @@ Deno.serve(async (req: Request) => {
       ? normalizeCalendarDateString(rawDate)
       : null;
     if (rawDate && !normalizedProvidedDate) {
-      logWalletCaptureValidationFailure("invalid_date", requestDebugContext, {
-        receivedDate: rawDate,
-      });
-      return errorResponse(
-        "transaction.date must be a valid calendar date",
-        400,
+      logWalletCaptureValidationFailure(
+        "invalid_date_using_fallback",
+        requestDebugContext,
+        {
+          receivedDate: rawDate,
+          fallbackDateSource: body.clientCreatedAt ? "clientCreatedAt" : "now",
+        },
+      );
+    } else if (rawDate && rawDate.trim().startsWith("00")) {
+      console.log(
+        "[save-wallet-transaction] Coerced short-year transaction date",
+        {
+          rawDate,
+          normalizedDate: normalizedProvidedDate,
+        },
       );
     }
 

@@ -39,6 +39,7 @@ interface PlaidWebhookVerificationKeyResponse {
 // Cache JWKs for 24 hours to reduce API calls
 const jwkCache = new Map<string, PlaidJWKCache>();
 const JWK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const PLAID_MAX_WEBHOOK_AGE_SECONDS = 5 * 60;
 
 /**
  * Fetches the JWK for a given key ID from Plaid.
@@ -177,6 +178,54 @@ export interface PlaidWebhookVerificationResult {
   keyId?: string;
 }
 
+export interface PlaidWebhookClaimsValidationParams {
+  body: string;
+  payload: {
+    iat?: number;
+    request_body_sha256?: string;
+  };
+  nowSeconds?: number;
+}
+
+export async function validatePlaidWebhookClaims(
+  params: PlaidWebhookClaimsValidationParams,
+): Promise<PlaidWebhookVerificationResult> {
+  const { payload } = params;
+  const nowSeconds = params.nowSeconds ?? Math.floor(Date.now() / 1000);
+
+  if (!Number.isFinite(payload.iat)) {
+    return { valid: false, error: "Missing iat in JWT payload" };
+  }
+
+  const issuedAt = payload.iat!;
+  if (issuedAt > nowSeconds) {
+    return { valid: false, error: "Token issued in the future" };
+  }
+
+  if (issuedAt < nowSeconds - PLAID_MAX_WEBHOOK_AGE_SECONDS) {
+    return { valid: false, error: "Token expired (iat too old)" };
+  }
+
+  if (!payload.request_body_sha256) {
+    return {
+      valid: false,
+      error: "Missing request_body_sha256 in JWT payload",
+    };
+  }
+
+  const bodyBytes = new TextEncoder().encode(params.body);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bodyBytes);
+  const computedHash = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+  if (!constantTimeCompare(computedHash, payload.request_body_sha256)) {
+    return { valid: false, error: "Body hash mismatch" };
+  }
+
+  return { valid: true };
+}
+
 /**
  * Verifies a Plaid webhook signature.
  *
@@ -269,37 +318,16 @@ export async function verifyPlaidWebhook(
       request_body_sha256?: string;
     };
 
-    // Verify iat (issued at) - reject if older than 15 minutes
-    // Extended from 5 minutes to handle delayed deliveries during provider outages/retries
-    if (payload.iat) {
-      const fifteenMinutesAgo = Math.floor(Date.now() / 1000) - 900;
-      if (payload.iat < fifteenMinutesAgo) {
-        return {
-          valid: false,
-          error: "Token expired (iat too old)",
-          keyId: header.kid,
-        };
-      }
-    }
-
-    // Verify body hash
-    if (payload.request_body_sha256) {
-      const bodyBytes = new TextEncoder().encode(body);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", bodyBytes);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const computedHash = hashArray
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      if (computedHash !== payload.request_body_sha256) {
-        return { valid: false, error: "Body hash mismatch", keyId: header.kid };
-      }
+    const claimsResult = await validatePlaidWebhookClaims({ body, payload });
+    if (!claimsResult.valid) {
+      return { ...claimsResult, keyId: header.kid };
     }
 
     return { valid: true, keyId: header.kid };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown verification error";
+    const message = error instanceof Error
+      ? error.message
+      : "Unknown verification error";
     return { valid: false, error: message };
   }
 }
@@ -548,12 +576,12 @@ export async function generateWebhookEventId(
     const context = payload.context as
       | { userId?: string; externalUserId?: string }
       | undefined;
-    const externalUserId =
-      context?.externalUserId || context?.userId || "unknown";
+    const externalUserId = context?.externalUserId || context?.userId ||
+      "unknown";
     const content = payload.content as
       | {
-          credentialsId?: string;
-        }
+        credentialsId?: string;
+      }
       | undefined;
     const credentialsId = content?.credentialsId || "";
 

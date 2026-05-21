@@ -43,6 +43,34 @@ Deno.test("authenticateInternalSecret re-reads env on each call", async () => {
 });
 
 Deno.test(
+  "authenticateInternalSecret accepts legacy X-Internal-Service-Secret header",
+  async () => {
+    const originalSecretApiKey = Deno.env.get(
+      "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+    );
+
+    try {
+      Deno.env.set("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", "legacy-secret");
+
+      const { authenticateInternalSecret } = await import(
+        `../shared/auth.ts?test=${crypto.randomUUID()}`
+      );
+
+      const result = await authenticateInternalSecret(
+        new Request("http://localhost", {
+          headers: { "X-Internal-Service-Secret": "legacy-secret" },
+        }),
+      );
+
+      assertEquals(result.success, true);
+      assertEquals(result.isInternalService, true);
+    } finally {
+      restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
+    }
+  },
+);
+
+Deno.test(
   "resolveInternalFunctionKey prefers SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
   async () => {
     const originalSecretApiKey = Deno.env.get(
@@ -90,6 +118,32 @@ Deno.test(
       assertEquals(second.key, "");
     } finally {
       restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
+    }
+  },
+);
+
+Deno.test(
+  "resolveAnyInternalFunctionKey falls back to INTERNAL_SERVICE_SECRET",
+  async () => {
+    const originalSecretApiKey = Deno.env.get(
+      "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
+    );
+    const originalInternalServiceSecret = Deno.env.get(
+      "INTERNAL_SERVICE_SECRET",
+    );
+
+    try {
+      Deno.env.delete("SECRET_SUPABASE_SERVICE_ROLE_API_KEY");
+      Deno.env.set("INTERNAL_SERVICE_SECRET", "internal-service-secret");
+
+      const { resolveAnyInternalFunctionKey } = await import(
+        `../shared/auth.ts?test=${crypto.randomUUID()}`
+      );
+
+      assertEquals(resolveAnyInternalFunctionKey(), "internal-service-secret");
+    } finally {
+      restoreEnv("SECRET_SUPABASE_SERVICE_ROLE_API_KEY", originalSecretApiKey);
+      restoreEnv("INTERNAL_SERVICE_SECRET", originalInternalServiceSecret);
     }
   },
 );

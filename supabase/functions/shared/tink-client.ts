@@ -683,6 +683,7 @@ export function mapTinkTransactionToExpense(input: MapTinkTransactionInput) {
     type: isIncome ? "income" : ("expense" as const),
     category: normalizedCategory,
     raw_text: description,
+    merchant: txn.merchantName || description || null,
     source: txn.merchantName || null,
     raw_provider_payload: txn,
     is_recurring: false,

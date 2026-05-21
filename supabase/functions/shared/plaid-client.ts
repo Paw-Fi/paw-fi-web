@@ -25,6 +25,7 @@ interface PlaidConfig {
 }
 
 let cachedConfig: PlaidConfig | null = null;
+const MAX_TRANSACTIONS_DAYS_REQUESTED = 730;
 
 export function getPlaidConfig(): PlaidConfig {
   if (cachedConfig) return cachedConfig;
@@ -74,6 +75,7 @@ export class PlaidError extends Error {
     public code?: string,
     public type?: string,
     public details?: unknown,
+    public requestId?: string,
   ) {
     super(message);
     this.name = "PlaidError";
@@ -102,6 +104,7 @@ async function plaidRequest<T>(
       payload?.error_code,
       payload?.error_type,
       payload,
+      payload?.request_id,
     );
   }
   return payload as T;
@@ -115,23 +118,28 @@ export interface CreateLinkTokenParams {
   countryCodes?: string[];
   transactionsDaysRequested?: number;
   platform?: "android" | "ios" | string;
+  omitProducts?: boolean;
+  omitTransactions?: boolean;
+  update?: {
+    accountSelectionEnabled?: boolean;
+  };
 }
 
 export interface CreateLinkTokenResponse {
   link_token: string;
   expiration: string;
+  request_id?: string;
 }
 
 export async function createPlaidLinkToken(
   params: CreateLinkTokenParams,
 ): Promise<CreateLinkTokenResponse> {
   const config = getPlaidConfig();
-  const countryCodes =
-    params.countryCodes && params.countryCodes.length > 0
-      ? params.countryCodes
-          .map((code) => code.trim().toUpperCase())
-          .filter(Boolean)
-      : config.countryCodes;
+  const countryCodes = params.countryCodes && params.countryCodes.length > 0
+    ? params.countryCodes
+      .map((code) => code.trim().toUpperCase())
+      .filter(Boolean)
+    : config.countryCodes;
 
   const platform = params.platform?.toLowerCase();
   const request: Record<string, unknown> = {
@@ -139,11 +147,13 @@ export async function createPlaidLinkToken(
     client_name: config.clientName,
     country_codes: countryCodes,
     language: params.language || "en",
-    products:
-      params.products && params.products.length > 0
-        ? params.products
-        : config.products,
   };
+
+  if (!params.omitProducts) {
+    request.products = params.products && params.products.length > 0
+      ? params.products
+      : config.products;
+  }
 
   if (platform === "android") {
     request.android_package_name = config.androidPackageName;
@@ -153,19 +163,42 @@ export async function createPlaidLinkToken(
 
   const webhookUrl = getDefaultPlaidWebhookUrl();
   if (webhookUrl) request.webhook = webhookUrl;
-  if (config.linkCustomizationName)
+  if (config.linkCustomizationName) {
     request.link_customization_name = config.linkCustomizationName;
+  }
   if (params.accessToken) request.access_token = params.accessToken;
-  if (typeof params.transactionsDaysRequested === "number") {
-    request.transactions = { days_requested: params.transactionsDaysRequested };
+  if (params.update?.accountSelectionEnabled) {
+    request.update = { account_selection_enabled: true };
+  }
+  const transactionsDaysRequested = normalizeTransactionsDaysRequested(
+    params.transactionsDaysRequested,
+  );
+  if (!params.omitTransactions && transactionsDaysRequested != null) {
+    request.transactions = { days_requested: transactionsDaysRequested };
   }
 
   return plaidRequest<CreateLinkTokenResponse>("/link/token/create", request);
 }
 
+function normalizeTransactionsDaysRequested(
+  value?: number,
+): number | undefined {
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+
+  const roundedValue = Math.round(value!);
+  if (roundedValue < 1) {
+    return undefined;
+  }
+
+  return Math.min(roundedValue, MAX_TRANSACTIONS_DAYS_REQUESTED);
+}
+
 export interface ExchangePublicTokenResponse {
   access_token: string;
   item_id: string;
+  request_id?: string;
 }
 
 export async function exchangePublicToken(
@@ -195,6 +228,7 @@ export interface PlaidAccount {
 
 interface AccountsGetResponse {
   accounts: PlaidAccount[];
+  request_id?: string;
 }
 
 export async function getPlaidAccounts(
@@ -240,6 +274,16 @@ interface PlaidSyncResponse {
   removed: { transaction_id: string }[];
   has_more: boolean;
   next_cursor: string;
+  request_id?: string;
+}
+
+interface PlaidTransactionsRefreshResponse {
+  request_id: string;
+}
+
+interface PlaidItemRemoveResponse {
+  removed: boolean;
+  request_id: string;
 }
 
 export async function syncPlaidTransactions(
@@ -249,7 +293,27 @@ export async function syncPlaidTransactions(
   return plaidRequest<PlaidSyncResponse>("/transactions/sync", {
     access_token: accessToken,
     cursor: cursor || undefined,
+    count: 500,
     options: { include_personal_finance_category: true },
+  });
+}
+
+export async function requestPlaidTransactionsRefresh(
+  accessToken: string,
+): Promise<PlaidTransactionsRefreshResponse> {
+  return plaidRequest<PlaidTransactionsRefreshResponse>(
+    "/transactions/refresh",
+    {
+      access_token: accessToken,
+    },
+  );
+}
+
+export async function removePlaidItem(
+  accessToken: string,
+): Promise<PlaidItemRemoveResponse> {
+  return plaidRequest<PlaidItemRemoveResponse>("/item/remove", {
+    access_token: accessToken,
   });
 }
 
@@ -264,11 +328,13 @@ export interface ExpenseUpsertInput {
   type: "expense" | "income";
   category: string | null;
   raw_text: string | null;
+  merchant: string | null;
   source: string | null;
   raw_provider_payload: unknown;
   is_recurring: boolean;
   recurrence_rule: Record<string, unknown> | null;
   household_id: string | null;
+  account_id?: string | null;
   contact_id: string | null;
   normalized_amount_cents: number;
   base_currency: string | null;
@@ -294,15 +360,13 @@ export function mapPlaidTransactionToExpense(
   params: MapPlaidTransactionInput,
 ): ExpenseUpsertInput {
   const txn = params.transaction;
-  const categoryName =
-    txn.personal_finance_category?.detailed ||
+  const categoryName = txn.personal_finance_category?.detailed ||
     txn.personal_finance_category?.primary ||
     null;
   const normalizedCategory = categoryName
     ? normalizeCategory(categoryName)
     : null;
-  const currency =
-    txn.iso_currency_code ||
+  const currency = txn.iso_currency_code ||
     txn.unofficial_currency_code ||
     params.defaultCurrency ||
     "USD";
@@ -312,7 +376,8 @@ export function mapPlaidTransactionToExpense(
   const personalPrimary = txn.personal_finance_category?.primary || "";
   const isIncome = amount < 0 || personalPrimary.toUpperCase() === "INCOME";
   const transactionType = isIncome ? "income" : "expense";
-  const description = txn.merchant_name || txn.name;
+  const merchantLabel = txn.merchant_name || txn.payment_meta?.payee || null;
+  const description = txn.name || txn.merchant_name || null;
   const { isRecurring, recurrenceRule } = detectRecurring(txn);
 
   return {
@@ -322,12 +387,13 @@ export function mapPlaidTransactionToExpense(
     provider_transaction_id: txn.transaction_id,
     amount_cents: amountCents,
     currency,
-    date:
-      txn.date || txn.authorized_date || new Date().toISOString().slice(0, 10),
+    date: txn.date || txn.authorized_date ||
+      new Date().toISOString().slice(0, 10),
     type: transactionType,
     category: normalizedCategory,
     raw_text: description,
-    source: txn.merchant_name || txn.payment_meta?.payee || null,
+    merchant: merchantLabel || txn.name || null,
+    source: merchantLabel || txn.name || null,
     raw_provider_payload: txn,
     is_recurring: isRecurring,
     recurrence_rule: recurrenceRule,
@@ -346,11 +412,12 @@ function detectRecurring(transaction: PlaidTransaction): {
   const detailed =
     transaction.personal_finance_category?.detailed?.toUpperCase() || "";
   const keywords = ["SUBSCRIPTION", "PAYROLL", "RENT", "MORTGAGE", "UTILITIES"];
-  const description =
-    `${transaction.name || ""} ${transaction.merchant_name || ""}`.toLowerCase();
+  const description = `${transaction.name || ""} ${
+    transaction.merchant_name || ""
+  }`.toLowerCase();
   const keywordMatch = keywords.some((keyword) => detailed.includes(keyword));
-  const nameMatch =
-    description.includes("subscription") || description.includes("monthly");
+  const nameMatch = description.includes("subscription") ||
+    description.includes("monthly");
   const isRecurring = Boolean(keywordMatch || nameMatch);
   if (!isRecurring) {
     return { isRecurring: false, recurrenceRule: null };

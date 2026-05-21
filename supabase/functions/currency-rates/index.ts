@@ -1,0 +1,330 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { corsHeaders } from "../shared/cors.ts";
+import {
+  normalizeExchangeRatePayload,
+  shouldRefreshCurrencyRates,
+} from "../shared/currency-rates.ts";
+import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
+
+const RATE_BASE_CURRENCY = "USD"; 
+const RATE_TTL_HOURS = 12;
+const PROVIDER_URL = "https://open.er-api.com/v6/latest/USD";
+const SOURCE = "open.er-api.com";
+
+/* 
+Sample API Response:
+{
+  "result": "success",
+  "provider": "https://www.exchangerate-api.com",
+  "documentation": "https://www.exchangerate-api.com/docs/free",
+  "terms_of_use": "https://www.exchangerate-api.com/terms",
+  "time_last_update_unix": 1779062551,
+  "time_last_update_utc": "Mon, 18 May 2026 00:02:31 +0000",
+  "time_next_update_unix": 1779150221,
+  "time_next_update_utc": "Tue, 19 May 2026 00:23:41 +0000",
+  "time_eol_unix": 0,
+  "base_code": "USD",
+  "rates": {
+    "USD": 1,
+    "AED": 3.6725,
+    "AFN": 63.344938,
+    "ALL": 82.125291,
+    "AMD": 368.228568,
+    "ANG": 1.79,
+    "AOA": 925.0001,
+    "ARS": 1395.3478,
+    "AUD": 1.400909,
+    "AWG": 1.79,
+    "AZN": 1.700686,
+    "BAM": 1.683123,
+    "BBD": 2,
+    "BDT": 122.890602,
+    "BGN": 1.683123,
+    "BHD": 0.376,
+    "BIF": 2979.882494,
+    "BMD": 1,
+    "BND": 1.280194,
+    "BOB": 6.91728,
+    "BRL": 5.048609,
+    "BSD": 1,
+    "BTN": 96.105062,
+    "BWP": 14.190592,
+    "BYN": 2.783493,
+    "BZD": 2,
+    "CAD": 1.375326,
+    "CDF": 2281.151826,
+    "CHF": 0.787074,
+    "CLF": 0.022777,
+    "CLP": 900.340103,
+    "CNH": 6.814161,
+    "CNY": 6.81799,
+    "COP": 3787.378681,
+    "CRC": 455.219615,
+    "CUP": 24,
+    "CVE": 94.890446,
+    "CZK": 20.928641,
+    "DJF": 177.721,
+    "DKK": 6.419702,
+    "DOP": 59.622592,
+    "DZD": 132.519808,
+    "EGP": 53.138882,
+    "ERN": 15,
+    "ETB": 156.154534,
+    "EUR": 0.860568,
+    "FJD": 2.197842,
+    "FKP": 0.750628,
+    "FOK": 6.419446,
+    "GBP": 0.750629,
+    "GEL": 2.673336,
+    "GGP": 0.750628,
+    "GHS": 11.424559,
+    "GIP": 0.750628,
+    "GMD": 74.172729,
+    "GNF": 8766.263824,
+    "GTQ": 7.631714,
+    "GYD": 209.128057,
+    "HKD": 7.830792,
+    "HNL": 26.64601,
+    "HRK": 6.483944,
+    "HTG": 130.797103,
+    "HUF": 310.750515,
+    "IDR": 17555.953676,
+    "ILS": 2.919929,
+    "IMP": 0.750628,
+    "INR": 96.105328,
+    "IQD": 1310.94352,
+    "IRR": 1117879.406107,
+    "ISK": 123.503288,
+    "JEP": 0.750628,
+    "JMD": 158.524256,
+    "JOD": 0.709,
+    "JPY": 158.758311,
+    "KES": 129.289822,
+    "KGS": 87.488256,
+    "KHR": 4034.85744,
+    "KID": 1.400144,
+    "KMF": 423.371325,
+    "KRW": 1497.530574,
+    "KWD": 0.30779,
+    "KYD": 0.833333,
+    "KZT": 469.815452,
+    "LAK": 21928.633652,
+    "LBP": 89500,
+    "LKR": 325.888746,
+    "LRD": 183.399348,
+    "LSL": 16.69783,
+    "LYD": 6.324491,
+    "MAD": 9.232696,
+    "MDL": 17.278117,
+    "MGA": 4198.482764,
+    "MKD": 52.963606,
+    "MMK": 2101.219796,
+    "MNT": 3567.894145,
+    "MOP": 8.065716,
+    "MRU": 40.007974,
+    "MUR": 47.153315,
+    "MVR": 15.437493,
+    "MWK": 1735.847588,
+    "MXN": 17.347004,
+    "MYR": 3.950719,
+    "MZN": 63.824583,
+    "NAD": 16.69783,
+    "NGN": 1370.471801,
+    "NIO": 36.827965,
+    "NOK": 9.317203,
+    "NPR": 153.768099,
+    "NZD": 1.713003,
+    "OMR": 0.384497,
+    "PAB": 1,
+    "PEN": 3.432359,
+    "PGK": 4.306862,
+    "PHP": 61.65603,
+    "PKR": 278.809489,
+    "PLN": 3.654356,
+    "PYG": 6127.577391,
+    "QAR": 3.64,
+    "RON": 4.482236,
+    "RSD": 100.997281,
+    "RUB": 73.15523,
+    "RWF": 1463.384887,
+    "SAR": 3.75,
+    "SBD": 7.935837,
+    "SCR": 14.15335,
+    "SDG": 458.746102,
+    "SEK": 9.440511,
+    "SGD": 1.280523,
+    "SHP": 0.750628,
+    "SLE": 24.573845,
+    "SLL": 24573.844927,
+    "SOS": 571.30117,
+    "SRD": 37.193356,
+    "SSP": 4701.287476,
+    "STN": 21.083897,
+    "SYP": 112.447371,
+    "SZL": 16.69783,
+    "THB": 32.684139,
+    "TJS": 9.336634,
+    "TMT": 3.499319,
+    "TND": 2.907593,
+    "TOP": 2.362976,
+    "TRY": 45.554678,
+    "TTD": 6.7913,
+    "TVD": 1.400144,
+    "TWD": 31.616946,
+    "TZS": 2601.654694,
+    "UAH": 44.117131,
+    "UGX": 3733.240256,
+    "UYU": 40.082785,
+    "UZS": 12191.107758,
+    "VES": 517.9619,
+    "VND": 26197.809395,
+    "VUV": 117.327517,
+    "WST": 2.674781,
+    "XAF": 564.4951,
+    "XCD": 2.7,
+    "XCG": 1.79,
+    "XDR": 0.731579,
+    "XOF": 564.4951,
+    "XPF": 102.693209,
+    "YER": 238.729402,
+    "ZAR": 16.69789,
+    "ZMW": 18.968406,
+    "ZWG": 25.8135,
+    "ZWL": 25.8135
+  }
+}
+*/
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function errorResponse(message: string, status = 400) {
+  return jsonResponse({ ok: false, error: message }, status);
+}
+
+function toClientPayload(row: Record<string, unknown>, isStale = false) {
+  return {
+    ok: true,
+    baseCurrency: row.base_currency ?? RATE_BASE_CURRENCY,
+    rates: row.rates ?? {},
+    source: row.source ?? SOURCE,
+    sourceUpdatedAt: row.source_updated_at ?? null,
+    fetchedAt: row.fetched_at ?? null,
+    expiresAt: row.expires_at ?? null,
+    isStale,
+  };
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "GET" && req.method !== "POST") {
+    return errorResponse("Method not allowed", 405);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return errorResponse("Server not configured", 500);
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: { "X-Client-Info": "moneko-currency-rates" },
+    },
+  });
+
+  const now = new Date();
+  const { data: existing, error: selectError } = await supabase
+    .from("currency_rate_snapshots")
+    .select(
+      "base_currency,rates,source,source_updated_at,fetched_at,expires_at",
+    )
+    .eq("base_currency", RATE_BASE_CURRENCY)
+    .maybeSingle();
+
+  if (selectError) {
+    await reportEdgeFunctionError({
+      functionName: "currency-rates",
+      error: selectError,
+      context: { operation: "currency_rate_snapshots.select" },
+    });
+    return errorResponse("Failed to load currency rates", 500);
+  }
+
+  const fetchedAt = existing?.fetched_at
+    ? new Date(existing.fetched_at as string)
+    : null;
+  const shouldRefresh = shouldRefreshCurrencyRates({
+    fetchedAt,
+    now,
+    ttlHours: RATE_TTL_HOURS,
+  });
+
+  if (existing && !shouldRefresh) {
+    return jsonResponse(toClientPayload(existing));
+  }
+
+  try {
+    const providerResponse = await fetch(PROVIDER_URL, {
+      headers: { Accept: "application/json" },
+    });
+    if (!providerResponse.ok) {
+      throw new Error(`Provider request failed (${providerResponse.status})`);
+    }
+
+    const snapshot = normalizeExchangeRatePayload(
+      await providerResponse.json(),
+    );
+    const fetchedAtIso = now.toISOString();
+    const expiresAtIso = new Date(
+      now.getTime() + RATE_TTL_HOURS * 60 * 60 * 1000,
+    ).toISOString();
+
+    const row = {
+      base_currency: snapshot.baseCurrency,
+      rates: snapshot.rates,
+      source: SOURCE,
+      source_updated_at: snapshot.sourceUpdatedAt,
+      fetched_at: fetchedAtIso,
+      expires_at: expiresAtIso,
+      updated_at: fetchedAtIso,
+    };
+
+    const { data: saved, error: upsertError } = await supabase
+      .from("currency_rate_snapshots")
+      .upsert(row, { onConflict: "base_currency" })
+      .select(
+        "base_currency,rates,source,source_updated_at,fetched_at,expires_at",
+      )
+      .single();
+
+    if (upsertError) {
+      throw upsertError;
+    }
+
+    return jsonResponse(toClientPayload(saved));
+  } catch (error) {
+    await reportEdgeFunctionError({
+      functionName: "currency-rates",
+      error,
+      context: { operation: "currency_rates.refresh" },
+    });
+
+    if (existing) {
+      return jsonResponse(toClientPayload(existing, true));
+    }
+
+    return errorResponse("Failed to refresh currency rates", 502);
+  }
+});

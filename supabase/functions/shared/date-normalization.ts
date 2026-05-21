@@ -2,6 +2,20 @@ function pad2(value: number): string {
   return String(value).padStart(2, "0");
 }
 
+function resolveTwoDigitYear(year: number): number {
+  const currentYear = new Date().getUTCFullYear();
+  const currentCentury = currentYear - (currentYear % 100);
+  let resolvedYear = currentCentury + year;
+
+  // Keep inferred years close to "now" to avoid mapping recent transactions
+  // into far-future dates (e.g. 99 -> 2099).
+  if (resolvedYear > currentYear + 10) {
+    resolvedYear -= 100;
+  }
+
+  return resolvedYear;
+}
+
 function isValidYyyyMmDd(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
@@ -34,6 +48,15 @@ export function normalizeCalendarDateString(value: unknown): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
+  // 0. Short-year variants from notification payloads.
+  // `0026-04-17` should be interpreted as `2026-04-17`.
+  const shortYearYmd = /^00(\d{2})-(\d{2})-(\d{2})(?:[Tt\s].*)?$/.exec(trimmed);
+  if (shortYearYmd) {
+    const year = resolveTwoDigitYear(Number(shortYearYmd[1]));
+    const candidate = `${year}-${shortYearYmd[2]}-${shortYearYmd[3]}`;
+    if (isValidYyyyMmDd(candidate)) return candidate;
+  }
+
   // 1. Already YYYY-MM-DD (optionally with time suffix)
   const ymdPrefixMatch = /^(\d{4})-(\d{2})-(\d{2})(?:[Tt\s].*)?$/.exec(trimmed);
   if (ymdPrefixMatch) {
@@ -57,6 +80,18 @@ export function normalizeCalendarDateString(value: unknown): string | null {
     const swapped = `${y}-${pad2(d)}-${pad2(m)}`;
     if (isValidYyyyMmDd(swapped)) return swapped;
     return null;
+  }
+
+  // 2b. DD/MM/YY or DD-MM-YY or DD.MM.YY
+  const dmyShortYear = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2})$/.exec(trimmed);
+  if (dmyShortYear) {
+    const d = Number(dmyShortYear[1]);
+    const m = Number(dmyShortYear[2]);
+    const y = resolveTwoDigitYear(Number(dmyShortYear[3]));
+    const candidate = `${y}-${pad2(m)}-${pad2(d)}`;
+    if (isValidYyyyMmDd(candidate)) return candidate;
+    const swapped = `${y}-${pad2(d)}-${pad2(m)}`;
+    if (isValidYyyyMmDd(swapped)) return swapped;
   }
 
   // 3. YYYY/MM/DD or YYYY.MM.DD

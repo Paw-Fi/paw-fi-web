@@ -7,7 +7,11 @@ import {
   getTinkAccounts,
   TINK_PROVIDER,
 } from "../shared/tink-client.ts";
-import { upsertTinkAccounts } from "../shared/bank-sync.ts";
+import {
+  sanitizeOptionalUuid,
+  upsertBankConnection,
+  upsertTinkAccounts,
+} from "../shared/bank-sync.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -99,7 +103,7 @@ Deno.serve(async (req) => {
       .eq("state", body.state)
       .eq("user_id", authResult.userId)
       .gt("expires_at", new Date().toISOString())
-      .select("state, external_user_id, market")
+      .select("state, external_user_id, market, target_household_id")
       .maybeSingle();
 
     if (stateError) {
@@ -178,65 +182,76 @@ Deno.serve(async (req) => {
     const stateExternalUserId = (
       stateRecord as { external_user_id?: string | null } | null
     )?.external_user_id;
+    const targetHouseholdId = sanitizeOptionalUuid(
+      (stateRecord as { target_household_id?: string | null } | null)
+        ?.target_household_id ?? null,
+    );
     const providerItemId = stateExternalUserId
-      ? `tink_${stateExternalUserId}`
+      ? targetHouseholdId
+        ? `tink_${stateExternalUserId}_${targetHouseholdId}`
+        : `tink_${stateExternalUserId}`
       : (() => {
-        // SECURITY: Never use access token material as an identifier.
-        // Prefer: user_id from token response > id_hint > credentialsId from callback > random UUID
-        const itemId = tokenResponse.user_id ||
-          tokenResponse.id_hint ||
-          body.credentialsId ||
-          crypto.randomUUID();
-        return itemId.startsWith("tink_") ? itemId : `tink_${itemId}`;
-      })();
+          // SECURITY: Never use access token material as an identifier.
+          // Prefer: user_id from token response > id_hint > credentialsId from callback > random UUID
+          const itemId =
+            tokenResponse.user_id ||
+            tokenResponse.id_hint ||
+            body.credentialsId ||
+            crypto.randomUUID();
+          return itemId.startsWith("tink_") ? itemId : `tink_${itemId}`;
+        })();
 
-    // Use atomic RPC to create/update connection with household
-    // This prevents race conditions where concurrent requests create duplicate households
-    const { data: upsertResult, error: upsertError } = await supabase.rpc(
-      "upsert_bank_connection_with_household",
-      {
-        p_user_id: authResult.userId,
-        p_provider: TINK_PROVIDER,
-        p_provider_item_id: providerItemId,
-        p_access_token_encrypted: encryptedAccess,
-        p_refresh_token_encrypted: encryptedRefresh,
-        p_expires_at: expiresAt,
-        p_country_code:
+    let upsertResult;
+    try {
+      upsertResult = await upsertBankConnection({
+        supabase,
+        userId: authResult.userId,
+        provider: TINK_PROVIDER,
+        providerItemId,
+        accessTokenEncrypted: encryptedAccess,
+        refreshTokenEncrypted: encryptedRefresh,
+        expiresAt,
+        countryCode:
           (stateRecord as { market?: string | null } | null)?.market ||
           body.countryCode?.toUpperCase() ||
           null,
-        p_idempotency_key: body.idempotencyKey || null,
-        p_institution_name: body.institutionName || "Bank Account",
-        p_institution_logo: body.institutionLogo || null,
-        p_metadata: {
+        idempotencyKey: body.idempotencyKey || null,
+        householdId: targetHouseholdId,
+        metadata: {
           scope: tokenResponse.scope || null,
           institution_name: body.institutionName || null,
           institution_logo: body.institutionLogo || null,
           credentials_id: body.credentialsId || null,
           external_user_id: stateExternalUserId || null,
         },
-      },
-    );
-
-    if (upsertError || !upsertResult || upsertResult.length === 0) {
+      });
+    } catch (upsertError) {
+      const upsertMessage =
+        upsertError instanceof Error
+          ? upsertError.message
+          : String(upsertError);
+      const isScopeMismatch = upsertMessage.includes("different space");
       console.error(
         "[tink-exchange-auth-code] Failed to upsert connection",
         upsertError,
       );
       return new Response(
-        JSON.stringify({ error: "Failed to save connection" }),
+        JSON.stringify({
+          error: isScopeMismatch
+            ? "Bank connection belongs to a different wallet space"
+            : "Failed to save connection",
+          details: upsertMessage,
+        }),
         {
-          status: 500,
+          status: isScopeMismatch ? 409 : 500,
           headers: { ...headers, "Content-Type": "application/json" },
         },
       );
     }
 
-    const {
-      connection_id: connectionId,
-      household_id: householdId,
-      is_new_connection: isNewConnection,
-    } = upsertResult[0];
+    const connectionId = upsertResult.connectionId;
+    const isNewConnection = upsertResult.isNewConnection;
+    const householdId = targetHouseholdId;
 
     if (isNewConnection) {
       console.log(

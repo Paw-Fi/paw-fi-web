@@ -1,11 +1,15 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternal } from "../shared/auth.ts";
+import { assertScopeAccess } from "../shared/accounts.ts";
 import { decryptSecret, encryptSecret } from "../shared/token-encryption.ts";
 import {
   type ExpensePreview,
+  loadLinkedWalletsForBankAccounts,
   persistTinkTransactions,
+  sanitizeOptionalUuid,
   stageTinkTransactions,
+  upsertBankConnection,
   upsertTinkAccounts,
 } from "../shared/bank-sync.ts";
 import {
@@ -34,6 +38,8 @@ interface SyncRequest {
   deletedTransactionIds?: string[];
   credentialsId?: string;
   state?: string;
+  prepareOnly?: boolean;
+  targetHouseholdId?: string;
 }
 
 interface SyncSummary {
@@ -99,6 +105,34 @@ Deno.serve(async (req) => {
       );
     }
 
+    let resolvedTargetHouseholdId = sanitizeOptionalUuid(
+      body.targetHouseholdId,
+    );
+    if (body.targetHouseholdId && !resolvedTargetHouseholdId) {
+      return new Response(
+        JSON.stringify({ error: "Invalid targetHouseholdId" }),
+        {
+          status: 400,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (
+      resolvedTargetHouseholdId &&
+      !authResult.isInternalService &&
+      !(await assertScopeAccess(
+        supabase,
+        authResult.userId,
+        resolvedTargetHouseholdId,
+      ))
+    ) {
+      return new Response(JSON.stringify({ error: "Forbidden scope" }), {
+        status: 403,
+        headers: { ...headers, "Content-Type": "application/json" },
+      });
+    }
+
     // Handle credentialsId from Tink Link callback
     // When user completes bank connection in Tink Link, we receive credentialsId and state
     // Now we need to: 1) Validate state, 2) Get user access token, 3) Create connection, 4) Sync
@@ -110,7 +144,7 @@ Deno.serve(async (req) => {
         .eq("state", body.state)
         .eq("user_id", authResult.userId)
         .gt("expires_at", new Date().toISOString())
-        .select("external_user_id, market")
+        .select("external_user_id, market, target_household_id")
         .maybeSingle();
 
       if (stateError) {
@@ -143,6 +177,29 @@ Deno.serve(async (req) => {
       console.log(
         `[tink-sync] Validated callback for user ${stateRecord.external_user_id} in market ${stateRecord.market}`,
       );
+
+      const stateTargetHouseholdId =
+        stateRecord.target_household_id == null
+          ? null
+          : String(stateRecord.target_household_id);
+      const resolvedStateHouseholdId = sanitizeOptionalUuid(
+        stateTargetHouseholdId,
+      );
+      if (
+        resolvedTargetHouseholdId &&
+        resolvedStateHouseholdId !== resolvedTargetHouseholdId
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "Bank link state belongs to a different wallet space",
+          }),
+          {
+            status: 409,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
+      resolvedTargetHouseholdId = resolvedStateHouseholdId;
 
       // Persist credentialsId immediately (even if token exchange fails later).
       // This prevents the user from being forced into ADD mode (duplicate credentials) on retry.
@@ -245,44 +302,39 @@ Deno.serve(async (req) => {
         ? new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString()
         : null;
 
-      // Use external_user_id as provider_item_id for stable identifier
-      // This ensures reconnections UPDATE the same connection instead of creating duplicates
-      // Format: tink_4f42e85a-4637-41fb-8fc5-f81933c83861-ie
-      const providerItemId = `tink_${stateRecord.external_user_id}`;
+      const providerItemId = resolvedTargetHouseholdId
+        ? `tink_${stateRecord.external_user_id}_${resolvedTargetHouseholdId}`
+        : `tink_${stateRecord.external_user_id}`;
 
-      // Create/update bank connection with household using atomic RPC
-      // The RPC will find existing connection by provider_item_id and update it
-      const { data: upsertResult, error: upsertError } = await supabase.rpc(
-        "upsert_bank_connection_with_household",
-        {
-          p_user_id: authResult.userId,
-          p_provider: TINK_PROVIDER,
-          p_provider_item_id: providerItemId,
-          p_access_token_encrypted: encryptedAccess,
-          p_refresh_token_encrypted: encryptedRefresh,
-          p_expires_at: expiresAt,
-          p_country_code: stateRecord.market,
-          p_idempotency_key: null,
-          p_institution_name: institutionName,
-          p_institution_logo: institutionLogo,
-          p_metadata: {
+      let upsertResult;
+      try {
+        upsertResult = await upsertBankConnection({
+          supabase: supabase as any,
+          userId: authResult.userId,
+          provider: TINK_PROVIDER,
+          providerItemId,
+          accessTokenEncrypted: encryptedAccess,
+          refreshTokenEncrypted: encryptedRefresh,
+          expiresAt,
+          countryCode: stateRecord.market,
+          idempotencyKey: null,
+          householdId: resolvedTargetHouseholdId,
+          metadata: {
             scope: tokenResponse.scope || null,
             credentials_id: body.credentialsId,
             external_user_id: stateRecord.external_user_id,
             institution_name: institutionName,
             institution_logo: institutionLogo,
           },
-        },
-      );
-
-      if (upsertError || !upsertResult || upsertResult.length === 0) {
+        });
+      } catch (upsertError) {
+        const upsertMessage =
+          upsertError instanceof Error
+            ? upsertError.message
+            : String(upsertError);
+        const isScopeMismatch = upsertMessage.includes("different space");
         console.error("[tink-sync] Failed to create connection", {
           error: upsertError,
-          errorMessage: upsertError?.message,
-          errorCode: upsertError?.code,
-          errorDetails: upsertError?.details,
-          errorHint: upsertError?.hint,
-          result: upsertResult,
           params: {
             userId: authResult.userId,
             provider: TINK_PROVIDER,
@@ -292,26 +344,24 @@ Deno.serve(async (req) => {
         });
         return new Response(
           JSON.stringify({
-            error: "Failed to create bank connection",
-            details: upsertError?.message || "RPC returned empty result",
+            error: isScopeMismatch
+              ? "Bank connection belongs to a different wallet space"
+              : "Failed to create bank connection",
+            details: upsertMessage,
           }),
           {
-            status: 500,
+            status: isScopeMismatch ? 409 : 500,
             headers: { ...headers, "Content-Type": "application/json" },
           },
         );
       }
 
-      const {
-        connection_id: connectionId,
-        household_id: householdId,
-        is_new_connection: isNewConnection,
-      } = upsertResult[0];
+      const { connectionId, isNewConnection } = upsertResult;
 
       console.log(
         `[tink-sync] ${
           isNewConnection ? "Created" : "Updated"
-        } connection ${connectionId} with household ${householdId}`,
+        } connection ${connectionId}`,
       );
 
       // Store tokens in bank_connection_tokens table
@@ -339,7 +389,7 @@ Deno.serve(async (req) => {
 
       // Fetch and store accounts
       const accounts = await getTinkAccounts(tokenResponse.access_token);
-      await upsertTinkAccounts({
+      const upsertAccountsResult = await upsertTinkAccounts({
         supabase,
         userId: authResult.userId,
         bankConnectionId: connectionId,
@@ -349,6 +399,34 @@ Deno.serve(async (req) => {
       console.log(
         `[tink-sync] Upserted ${accounts.length} accounts for connection ${connectionId}`,
       );
+
+      if (body.prepareOnly === true) {
+        const linkedWallets = await loadLinkedWalletsForBankAccounts({
+          supabase: supabase as any,
+          userId: authResult.userId,
+          targetHouseholdId: resolvedTargetHouseholdId,
+          bankAccountIds: upsertAccountsResult.records.map(
+            (record) => record.id,
+          ),
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            provider: TINK_PROVIDER,
+            connectionId,
+            targetHouseholdId: resolvedTargetHouseholdId,
+            accounts: upsertAccountsResult.records.map((record) => ({
+              ...record,
+              linkedWallet: linkedWallets.get(record.id) || null,
+            })),
+          }),
+          {
+            status: 200,
+            headers: { ...headers, "Content-Type": "application/json" },
+          },
+        );
+      }
 
       // Now continue with transaction sync using the newly created connection
       body.connectionId = connectionId;
@@ -461,11 +539,12 @@ Deno.serve(async (req) => {
       const summary = await syncConnection({
         connection,
         accountMap,
-        supabase,
+        supabase: supabase as any,
         userId: authResult.userId,
         accountFilter,
         cursorOverride: body.cursorOverride,
         deletedTransactionIds: body.deletedTransactionIds,
+        targetHouseholdId: resolvedTargetHouseholdId,
       });
       summaries.push(summary);
       totalInserted += summary.inserted;
@@ -529,6 +608,7 @@ async function syncConnection(params: {
   accountFilter: BankAccountRow | null;
   cursorOverride?: string;
   deletedTransactionIds?: string[];
+  targetHouseholdId?: string | null;
 }): Promise<SyncSummary> {
   const summary: SyncSummary = {
     connectionId: params.connection.id,
@@ -699,62 +779,6 @@ async function syncConnection(params: {
       }
     }
 
-    let householdId = params.connection.household_id || null;
-    if (!householdId) {
-      const providerItemId = params.connection.provider_item_id;
-      if (!providerItemId) {
-        console.warn(
-          "[tink-sync] Missing provider_item_id; skipping household ensure",
-        );
-      } else {
-        const rawMeta = params.connection.metadata;
-        const connectionMeta =
-          typeof rawMeta === "object" && rawMeta !== null
-            ? (rawMeta as Record<string, unknown>)
-            : {};
-        const institutionName =
-          (connectionMeta["institution_name"] as string | undefined) ||
-          "Bank Account";
-        const institutionLogo =
-          (connectionMeta["institution_logo"] as string | undefined) || null;
-        const ensureMeta = {
-          ...connectionMeta,
-          institution_name: institutionName,
-          institution_logo: institutionLogo,
-        };
-        const { data: ensureResult, error: ensureError } =
-          await params.supabase.rpc("upsert_bank_connection_with_household", {
-            p_user_id: params.userId,
-            p_provider: TINK_PROVIDER,
-            p_provider_item_id: providerItemId,
-            p_access_token_encrypted: accessTokenEncryptedRaw,
-            p_refresh_token_encrypted:
-              params.connection.refresh_token_encrypted,
-            p_expires_at: params.connection.expires_at,
-            p_country_code: params.connection.country_code || null,
-            p_idempotency_key: null,
-            p_institution_name: institutionName,
-            p_institution_logo: institutionLogo,
-            p_metadata: ensureMeta,
-          });
-
-        if (ensureError) {
-          console.error("[tink-sync] Failed to ensure household", ensureError);
-        } else if (ensureResult && ensureResult.length) {
-          householdId = ensureResult[0].household_id || null;
-          console.log(
-            "[tink-sync] Ensured household for connection",
-            params.connection.id,
-            householdId,
-          );
-        }
-      }
-    }
-
-    if (!householdId) {
-      throw new Error("Missing household_id for bank connection");
-    }
-
     // Refresh accounts before syncing to keep account list in sync with Tink
     const freshAccounts = await getTinkAccounts(accessToken);
     if (freshAccounts?.length) {
@@ -787,6 +811,29 @@ async function syncConnection(params: {
     const processedAccounts = new Set<string>();
     let nextPage = cursor;
     let didLogSample = false;
+    const connectionHouseholdId = params.connection.household_id ?? null;
+    if (
+      params.targetHouseholdId &&
+      params.targetHouseholdId !== connectionHouseholdId
+    ) {
+      throw new Error("Bank connection belongs to a different space");
+    }
+    const effectiveTargetHouseholdId = connectionHouseholdId;
+    const connectionBankAccountIds = Array.from(params.accountMap.values())
+      .filter(
+        (account) =>
+          account.bank_connection_id === params.connection.id &&
+          (!params.accountFilter || params.accountFilter.id === account.id),
+      )
+      .map((account) => account.id);
+    const linkedWalletsByBankAccountId = await loadLinkedWalletsForBankAccounts(
+      {
+        supabase: params.supabase,
+        userId: params.userId,
+        targetHouseholdId: effectiveTargetHouseholdId,
+        bankAccountIds: connectionBankAccountIds,
+      },
+    );
 
     do {
       const response = await syncTinkTransactions(accessToken, nextPage);
@@ -815,6 +862,21 @@ async function syncConnection(params: {
           continue;
         }
 
+        const linkedWallet = linkedWalletsByBankAccountId.get(account.id);
+        const resolvedHouseholdId =
+          linkedWallet?.household_id ?? effectiveTargetHouseholdId;
+
+        await params.supabase
+          .from("expenses")
+          .update({
+            household_id: resolvedHouseholdId,
+            account_id: linkedWallet?.id ?? null,
+          })
+          .eq("provider", TINK_PROVIDER)
+          .eq("user_id", params.userId)
+          .eq("bank_account_id", account.id)
+          .is("deleted_at", null);
+
         await stageTinkTransactions({
           supabase: params.supabase,
           bankConnectionId: params.connection.id,
@@ -826,7 +888,8 @@ async function syncConnection(params: {
           supabase: params.supabase,
           userId: params.userId,
           bankAccountId: account.id,
-          householdId,
+          householdId: resolvedHouseholdId,
+          accountId: linkedWallet?.id ?? null,
           accountCurrency: account.currency,
           transactions,
         });

@@ -66,10 +66,11 @@ export function mergeAllowedCategories(params: {
 
   const expenseSet = new Set<string>(baseExpense);
   const incomeSet = new Set<string>(baseIncome);
+  const customExpenseOrder: string[] = [];
+  const customIncomeOrder: string[] = [];
 
   for (const row of params.customCategories) {
-    const name =
-      sanitizeCategoryName(row?.name ?? null) ??
+    const name = sanitizeCategoryName(row?.name ?? null) ??
       normalizeCategoryForStorage(row?.name ?? null);
     if (!name || RESERVED_CUSTOM_CATEGORY_NAMES.has(name)) {
       continue;
@@ -77,18 +78,19 @@ export function mergeAllowedCategories(params: {
 
     if (row.transaction_type === "expense") {
       expenseSet.add(name);
+      customExpenseOrder.push(name);
       continue;
     }
 
     if (row.transaction_type === "income") {
       incomeSet.add(name);
+      customIncomeOrder.push(name);
       continue;
     }
   }
 
   for (const row of params.hiddenCategories ?? []) {
-    const name =
-      sanitizeCategoryName(row?.category_name ?? null) ??
+    const name = sanitizeCategoryName(row?.category_name ?? null) ??
       normalizeCategoryForStorage(row?.category_name ?? null);
     if (!name || name === "other" || name === "uncategorized") {
       continue;
@@ -110,8 +112,28 @@ export function mergeAllowedCategories(params: {
   expenseSet.add("uncategorized");
   incomeSet.add("other");
 
-  const expenseCategories = Array.from(expenseSet).sort();
-  const incomeCategories = Array.from(incomeSet).sort();
+  const orderWithCustomPriority = (
+    categorySet: Set<string>,
+    customOrder: string[],
+  ) => {
+    const customSet = new Set(customOrder);
+    const customCategories = Array.from(customSet)
+      .filter((category) => categorySet.has(category))
+      .sort();
+    const baseCategories = Array.from(categorySet)
+      .filter((category) => !customSet.has(category))
+      .sort();
+    return [...customCategories, ...baseCategories];
+  };
+
+  const expenseCategories = orderWithCustomPriority(
+    expenseSet,
+    customExpenseOrder,
+  );
+  const incomeCategories = orderWithCustomPriority(
+    incomeSet,
+    customIncomeOrder,
+  );
 
   return {
     expenseCategories,
@@ -137,15 +159,13 @@ export async function fetchUserCustomCategories(params: {
 
   return data
     .map((row: any) => ({
-      name:
-        typeof row?.name === "string"
-          ? (sanitizeCategoryName(row.name) ?? row.name)
-          : "",
-      transaction_type:
-        row?.transaction_type === "income" ||
-        row?.transaction_type === "expense"
-          ? (row.transaction_type as CategoryTransactionType)
-          : "expense",
+      name: typeof row?.name === "string"
+        ? (sanitizeCategoryName(row.name) ?? row.name)
+        : "",
+      transaction_type: row?.transaction_type === "income" ||
+          row?.transaction_type === "expense"
+        ? (row.transaction_type as CategoryTransactionType)
+        : "expense",
     }))
     .filter((row: UserCategoryRow) => row.name.trim().length > 0);
 }
@@ -166,15 +186,13 @@ export async function fetchUserHiddenCategories(params: {
 
   return data
     .map((row: any) => ({
-      category_name:
-        typeof row?.category_name === "string"
-          ? (sanitizeCategoryName(row.category_name) ?? row.category_name)
-          : "",
-      transaction_type:
-        row?.transaction_type === "income" ||
-        row?.transaction_type === "expense"
-          ? (row.transaction_type as CategoryTransactionType)
-          : "expense",
+      category_name: typeof row?.category_name === "string"
+        ? (sanitizeCategoryName(row.category_name) ?? row.category_name)
+        : "",
+      transaction_type: row?.transaction_type === "income" ||
+          row?.transaction_type === "expense"
+        ? (row.transaction_type as CategoryTransactionType)
+        : "expense",
     }))
     .filter(
       (row: UserHiddenCategoryRow) => row.category_name.trim().length > 0,
@@ -205,14 +223,17 @@ export async function fetchUserCategoryPreferences(params: {
   return data
     .map(
       (row: any): UserCategoryPreferenceRow => ({
-        transaction_type:
-          row?.transaction_type === "income" ? "income" : "expense",
+        transaction_type: row?.transaction_type === "income"
+          ? "income"
+          : "expense",
         match_key: typeof row?.match_key === "string" ? row.match_key : "",
-        category_name:
-          typeof row?.category_name === "string" ? row.category_name : "other",
+        category_name: typeof row?.category_name === "string"
+          ? row.category_name
+          : "other",
         use_count: typeof row?.use_count === "number" ? row.use_count : 0,
-        last_used_at:
-          typeof row?.last_used_at === "string" ? row.last_used_at : null,
+        last_used_at: typeof row?.last_used_at === "string"
+          ? row.last_used_at
+          : null,
       }),
     )
     .filter(
@@ -245,17 +266,19 @@ export async function fetchUserCategoryRemaps(params: {
   return data
     .map(
       (row: any): UserCategoryRemapRow => ({
-        transaction_type:
-          row?.transaction_type === "income" ? "income" : "expense",
-        from_category_name:
-          typeof row?.from_category_name === "string"
-            ? row.from_category_name
-            : "",
-        to_category_name:
-          typeof row?.to_category_name === "string" ? row.to_category_name : "",
+        transaction_type: row?.transaction_type === "income"
+          ? "income"
+          : "expense",
+        from_category_name: typeof row?.from_category_name === "string"
+          ? row.from_category_name
+          : "",
+        to_category_name: typeof row?.to_category_name === "string"
+          ? row.to_category_name
+          : "",
         use_count: typeof row?.use_count === "number" ? row.use_count : 0,
-        last_used_at:
-          typeof row?.last_used_at === "string" ? row.last_used_at : null,
+        last_used_at: typeof row?.last_used_at === "string"
+          ? row.last_used_at
+          : null,
       }),
     )
     .filter(
@@ -271,15 +294,13 @@ export async function ensureUserCategory(params: {
   categoryName: string;
   transactionType: "expense" | "income";
 }): Promise<void> {
-  const category =
-    sanitizeCategoryName(params.categoryName) ??
+  const category = sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
   if (!category || category === "other") return;
 
   // Don't store canonical defaults as custom rows.
   // We consider a category to be canonical if it exists in either built-in list.
-  const isCanonical =
-    getExpenseCategories().includes(category) ||
+  const isCanonical = getExpenseCategories().includes(category) ||
     getIncomeCategories().includes(category);
   if (isCanonical) return;
 
@@ -315,8 +336,9 @@ export async function upsertUserCustomCategory(params: {
   iconKey?: string | null;
 }): Promise<{ name: string; transactionType: "expense" | "income" }> {
   const name = sanitizeCategoryName(params.categoryName);
-  const transactionType =
-    params.transactionType === "income" ? "income" : "expense";
+  const transactionType = params.transactionType === "income"
+    ? "income"
+    : "expense";
 
   if (!name || RESERVED_CUSTOM_CATEGORY_NAMES.has(name)) {
     throw new Error("Invalid category name");
@@ -358,8 +380,7 @@ export async function learnUserCategoryPreference(params: {
   sourceText?: string | null;
   descriptionText?: string | null;
 }): Promise<void> {
-  const category =
-    sanitizeCategoryName(params.categoryName) ??
+  const category = sanitizeCategoryName(params.categoryName) ??
     normalizeCategoryForStorage(params.categoryName);
   if (!category || category === "other") return;
 
@@ -376,10 +397,9 @@ export async function learnUserCategoryPreference(params: {
     .eq("match_key", matchKey)
     .maybeSingle();
 
-  const nextCount =
-    existing.error || !existing.data
-      ? 1
-      : Math.max(1, Number(existing.data.use_count || 0) + 1);
+  const nextCount = existing.error || !existing.data
+    ? 1
+    : Math.max(1, Number(existing.data.use_count || 0) + 1);
 
   const now = new Date().toISOString();
 

@@ -221,3 +221,153 @@ Deno.test(
     assertStringIncludes(source, "shouldProcessInboundToConfiguredInboxes");
   },
 );
+
+Deno.test(
+  "import contract: Plaid processor is enabled unless explicitly disabled",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../bank-sync-processor/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(
+      source,
+      'Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false"',
+    );
+  },
+);
+
+Deno.test(
+  "import contract: Plaid maintenance cleans abandoned Link update sessions",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../plaid-maintenance/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, 'from("plaid_link_update_sessions")');
+    assertStringIncludes(source, "completed_at");
+    assertStringIncludes(source, "expires_at");
+    assertStringIncludes(source, "processing_started_at");
+  },
+);
+
+Deno.test(
+  "import contract: Plaid webhook persists event then enqueues transaction sync",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../plaid-webhook/index.ts", import.meta.url),
+    );
+    const insertIndex = source.indexOf('from("bank_webhook_events")');
+    const enqueueIndex = source.indexOf("enqueuePlaidSyncJob", insertIndex);
+
+    assertEquals(insertIndex >= 0, true);
+    assertEquals(enqueueIndex > insertIndex, true);
+    assertStringIncludes(source, 'triggerSource: "plaid_transactions_webhook"');
+    assertStringIncludes(source, "webhookEventId");
+  },
+);
+
+Deno.test(
+  "import contract: Plaid account revocation webhook disables the affected account",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../plaid-webhook/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "USER_ACCOUNT_REVOKED");
+    assertStringIncludes(source, "applyPlaidAccountRevokedWebhook");
+    assertStringIncludes(source, "plaid_revoked_account_ids");
+    assertStringIncludes(source, "bank_transaction_raw");
+    assertStringIncludes(
+      source,
+      "relink_state: PLAID_NEW_ACCOUNTS_RELINK_STATE",
+    );
+  },
+);
+
+Deno.test(
+  "import contract: mobile Plaid reads mark paid financial activity",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL(
+        "../../migrations/20260519103000_plaid_financial_activity_tracking.sql",
+        import.meta.url,
+      ),
+    );
+
+    assertStringIncludes(
+      source,
+      "create or replace function public.mark_mobile_plaid_financial_feature_used()",
+    );
+    assertStringIncludes(source, "last_financial_feature_used_at = now()");
+    assertStringIncludes(source, "billing_keep_reason = 'active_paid_use'");
+    assertStringIncludes(
+      source,
+      "perform public.mark_mobile_plaid_financial_feature_used();",
+    );
+    assertStringIncludes(source, "s.status = 'active'");
+    assertStringIncludes(source, "s.current_period_end > now()");
+  },
+);
+
+Deno.test(
+  "import contract: Plaid sync ignores removed and removal-pending bank connections",
+  async () => {
+    const syncSource = await Deno.readTextFile(
+      new URL("../plaid-sync-transactions/index.ts", import.meta.url),
+    );
+    const processorSource = await Deno.readTextFile(
+      new URL("../bank-sync-processor/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(syncSource, '.is("removed_at", null)');
+    assertStringIncludes(
+      syncSource,
+      "item_status.is.null,item_status.neq.pending_removal",
+    );
+    assertStringIncludes(processorSource, "connection.removed_at != null");
+    assertStringIncludes(processorSource, 'connection.status === "disabled"');
+    assertStringIncludes(
+      processorSource,
+      'connection.item_status === "pending_removal"',
+    );
+    assertStringIncludes(
+      processorSource,
+      "Skipping inactive bank connection for job",
+    );
+  },
+);
+
+Deno.test(
+  "import contract: Plaid offboarding retries complete local cleanup after remote removal",
+  async () => {
+    const removeSource = await Deno.readTextFile(
+      new URL("../shared/plaid-remove.ts", import.meta.url),
+    );
+    const cleanupSource = await Deno.readTextFile(
+      new URL("../plaid-user-offboarding-cleanup/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(removeSource, "cleanupRemovedPlaidConnection");
+    assertStringIncludes(removeSource, "markPlaidConnectionRemovalPending");
+    assertStringIncludes(removeSource, 'item_status: "pending_removal"');
+    assertStringIncludes(
+      cleanupSource,
+      "import { cleanupRemovedPlaidConnection }",
+    );
+    assertStringIncludes(cleanupSource, "cleanupRemovedPlaidConnection({");
+    assertStringIncludes(cleanupSource, 'status: "completed"');
+  },
+);
+
+Deno.test(
+  "import contract: Plaid processor does not retry user-action handoff errors",
+  async () => {
+    const source = await Deno.readTextFile(
+      new URL("../bank-sync-processor/index.ts", import.meta.url),
+    );
+
+    assertStringIncludes(source, "isPlaidSyncTerminalHandoffError");
+    assertStringIncludes(source, 'errorCode === "ITEM_LOGIN_REQUIRED"');
+    assertStringIncludes(source, 'errorCode === "INVALID_CURSOR"');
+  },
+);

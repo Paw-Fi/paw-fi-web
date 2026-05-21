@@ -62,7 +62,7 @@ Deno.test(
     const allowed = new Set(["groceries", "rent"]);
     assertEquals(
       withSilencedConsoleWarn(() =>
-        coerceCategoryToAllowed("my custom", allowed),
+        coerceCategoryToAllowed("my custom", allowed)
       ),
       "other",
     );
@@ -98,6 +98,21 @@ Deno.test(
     assert(!merged.incomeCategories.includes("chores"));
 
     assert(merged.incomeCategories.includes("allowance"));
+  },
+);
+
+Deno.test(
+  "user-categories: mergeAllowedCategories places custom categories before defaults",
+  () => {
+    const merged = mergeAllowedCategories({
+      customCategories: [
+        { name: "Pet Insurance", transaction_type: "expense" },
+        { name: "Side Hustle", transaction_type: "income" },
+      ],
+    });
+
+    assertEquals(merged.expenseCategories[0], "pet insurance");
+    assertEquals(merged.incomeCategories[0], "side hustle");
   },
 );
 

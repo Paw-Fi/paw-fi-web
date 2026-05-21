@@ -1,6 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders, getCorsHeaders } from "../shared/cors.ts";
+import {
+  authenticateInternalSecret,
+  buildInternalInvokeHeaders,
+  resolveAnyInternalFunctionKey,
+} from "../shared/auth.ts";
+import { buildBankSyncJobFailureUpdate } from "../shared/bank-sync-job-retry.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
+import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { TINK_PROVIDER } from "../shared/tink-client.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
@@ -8,6 +15,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const INTERNAL_FUNCTION_KEY = Deno.env.get(
   "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
 );
+const RESOLVED_INTERNAL_FUNCTION_KEY = INTERNAL_FUNCTION_KEY ||
+  resolveAnyInternalFunctionKey();
+const AUTO_BANK_SYNC_ENABLED =
+  Deno.env.get("AUTO_BANK_SYNC_ENABLED")?.toLowerCase() !== "false";
 
 // Fixed batch size to prevent DoS attacks
 const BATCH_SIZE = 10;
@@ -21,7 +32,9 @@ interface BankSyncJob {
   bank_connection_id: string;
   provider: string;
   trigger_source: string;
+  job_type?: string;
   status: string;
+  attempt_count?: number;
   payload: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -31,6 +44,10 @@ interface BankConnection {
   id: string;
   user_id: string;
   provider: string;
+  needs_resync?: boolean;
+  removed_at?: string | null;
+  status?: string | null;
+  item_status?: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -47,11 +64,9 @@ Deno.serve(async (req) => {
     });
   }
 
-  // CRITICAL: Authenticate internal service calls only
-  // This endpoint should NOT be publicly accessible
-  if (!INTERNAL_FUNCTION_KEY) {
+  if (!RESOLVED_INTERNAL_FUNCTION_KEY) {
     console.error(
-      "[bank-sync-processor] SECRET_SUPABASE_SERVICE_ROLE_API_KEY not configured",
+      "[bank-sync-processor] Internal invoke secret not configured",
     );
     return new Response(
       JSON.stringify({ error: "Server configuration error" }),
@@ -62,14 +77,11 @@ Deno.serve(async (req) => {
     );
   }
 
-  const providedSecret = req.headers.get("X-Moneko-Internal-Key");
-  if (
-    !providedSecret ||
-    !constantTimeCompare(providedSecret, INTERNAL_FUNCTION_KEY)
-  ) {
+  const internalAuth = await authenticateInternalSecret(req);
+  if (!internalAuth.success) {
     console.warn("[bank-sync-processor] Unauthorized access attempt");
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
+      status: internalAuth.statusCode || 401,
       headers: { ...headers, "Content-Type": "application/json" },
     });
   }
@@ -85,6 +97,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    if (!AUTO_BANK_SYNC_ENABLED) {
+      console.log(
+        "[bank-sync-processor] Auto bank sync disabled; skipping job processing",
+      );
+      return new Response(
+        JSON.stringify({
+          success: true,
+          processed: 0,
+          message: "Auto bank sync is disabled",
+        }),
+        {
+          status: 200,
+          headers: { ...headers, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,
@@ -94,11 +123,11 @@ Deno.serve(async (req) => {
       global: { headers: { "X-Client-Info": "moneko-bank-sync-processor" } },
     });
 
-    // Release stuck jobs before fetching new ones (TTL: 15 minutes)
+    // Release stuck jobs before fetching new ones (TTL: 60 minutes)
     // Must match or exceed sync endpoint lock durations to avoid requeueing in-flight jobs
     const { data: releasedCount, error: releaseError } = await supabase.rpc(
       "release_stuck_sync_jobs",
-      { p_ttl_minutes: 15 },
+      { p_ttl_minutes: 60 },
     );
 
     if (releaseError) {
@@ -161,7 +190,9 @@ Deno.serve(async (req) => {
         // Load bank connection
         const { data: connection, error: connectionError } = await supabase
           .from("bank_connections")
-          .select("id, user_id, provider")
+          .select(
+            "id, user_id, provider, needs_resync, removed_at, status, item_status",
+          )
           .eq("id", job.bank_connection_id)
           .maybeSingle();
 
@@ -169,6 +200,43 @@ Deno.serve(async (req) => {
           throw new Error(
             `Bank connection not found: ${job.bank_connection_id}`,
           );
+        }
+
+        if (
+          connection.removed_at != null ||
+          connection.status === "disabled" ||
+          connection.status === "disconnected" ||
+          connection.item_status === "pending_removal"
+        ) {
+          console.log(
+            `[bank-sync-processor] Skipping inactive bank connection for job ${job.id}`,
+          );
+          const { data: skippedRows, error: skipCompleteError } = await supabase
+            .from("bank_sync_jobs")
+            .update({
+              status: "completed",
+              processing_started_at: null,
+              updated_at: new Date().toISOString(),
+              processed_at: new Date().toISOString(),
+              last_error_code: null,
+              last_error_at: null,
+            })
+            .eq("id", job.id)
+            .eq("status", "processing")
+            .contains("payload", { processor_id: processorId })
+            .select("id");
+
+          if (skipCompleteError) {
+            throw skipCompleteError;
+          }
+
+          if (!skippedRows?.length) {
+            throw new Error("Lost sync job ownership before skip completion");
+          }
+
+          results.succeeded++;
+          results.processed++;
+          continue;
         }
 
         // Process based on provider
@@ -188,37 +256,78 @@ Deno.serve(async (req) => {
           throw new Error(`Unknown provider: ${connection.provider}`);
         }
 
+        if (
+          connection.provider === PLAID_PROVIDER &&
+          (connection as BankConnection).needs_resync === true
+        ) {
+          await supabase
+            .from("bank_connections")
+            .update({
+              needs_resync: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", connection.id);
+
+          await enqueuePlaidSyncJob({
+            supabase,
+            connectionId: connection.id,
+            triggerSource: "post_processing_resync",
+          });
+        }
+
         // Mark job as completed (clear processing_started_at)
-        await supabase
+        const { data: completedRows, error: completeError } = await supabase
           .from("bank_sync_jobs")
           .update({
             status: "completed",
             processing_started_at: null,
             updated_at: new Date().toISOString(),
             processed_at: new Date().toISOString(),
+            last_error_code: null,
+            last_error_at: null,
           })
-          .eq("id", job.id);
+          .eq("id", job.id)
+          .eq("status", "processing")
+          .contains("payload", { processor_id: processorId })
+          .select("id");
+
+        if (completeError) {
+          throw completeError;
+        }
+
+        if (!completedRows?.length) {
+          throw new Error("Lost sync job ownership before completion update");
+        }
 
         results.succeeded++;
       } catch (error) {
         console.error(`[bank-sync-processor] Job ${job.id} failed`, error);
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error
+          ? error.message
+          : String(error);
+        const failureUpdate = buildBankSyncJobFailureUpdate({
+          attemptCount: job.attempt_count ?? 0,
+          errorMessage,
+        });
 
-        // Mark job as failed (clear processing_started_at)
-        await supabase
+        const { data: failedRows, error: failureUpdateError } = await supabase
           .from("bank_sync_jobs")
-          .update({
-            status: "failed",
-            processing_started_at: null,
-            updated_at: new Date().toISOString(),
-            processed_at: new Date().toISOString(),
-            payload: {
-              ...job.payload,
-              error: errorMessage,
-            },
-          })
-          .eq("id", job.id);
+          .update(failureUpdate)
+          .eq("id", job.id)
+          .eq("status", "processing")
+          .contains("payload", { processor_id: processorId })
+          .select("id");
+
+        if (failureUpdateError) {
+          console.error(
+            `[bank-sync-processor] Failed to update retry state for job ${job.id}`,
+            failureUpdateError,
+          );
+        } else if (!failedRows?.length) {
+          console.warn(
+            `[bank-sync-processor] Skipped retry update for job ${job.id}; processor ownership was lost`,
+          );
+        }
 
         results.failed++;
         results.errors.push({ jobId: job.id, error: errorMessage });
@@ -251,6 +360,10 @@ async function processTinkJob(
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
+  const internalHeaders = buildInternalInvokeHeaders(
+    RESOLVED_INTERNAL_FUNCTION_KEY,
+  );
+
   const payload = job.payload as Record<string, unknown> | null;
   const event = payload?.event as string | undefined;
 
@@ -290,7 +403,7 @@ async function processTinkJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY!,
+        ...internalHeaders,
       },
       body: JSON.stringify({
         connectionId: connection.id,
@@ -309,6 +422,11 @@ async function processPlaidJob(
   job: BankSyncJob,
   connection: BankConnection,
 ): Promise<void> {
+  const internalHeaders = buildInternalInvokeHeaders(
+    RESOLVED_INTERNAL_FUNCTION_KEY,
+  );
+  const jobPayload = (job.payload || {}) as Record<string, unknown>;
+
   // Call plaid-sync-transactions
   console.log(`[bank-sync-processor] Triggering Plaid sync for job ${job.id}`);
   const response = await fetch(
@@ -317,32 +435,72 @@ async function processPlaidJob(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Moneko-Internal-Key": INTERNAL_FUNCTION_KEY!,
+        ...internalHeaders,
       },
       body: JSON.stringify({
         connectionId: connection.id,
+        cursorOverride: jobPayload.cursorOverride,
+        targetHouseholdId: jobPayload.targetHouseholdId,
       }),
     },
+  );
+
+  console.log(
+    `[bank-sync-processor] Plaid sync response status for job ${job.id}: ${response.status}`,
   );
 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`Plaid sync failed: ${response.status} ${errorText}`);
   }
+
+  const syncPayload = (await response.json().catch(() => null)) as {
+    status?: string;
+    connections?: {
+      connectionId: string;
+      status: string;
+      error?: string;
+      errorCode?: string;
+    }[];
+  } | null;
+
+  console.log(
+    "[bank-sync-processor] Plaid sync response payload",
+    JSON.stringify({
+      jobId: job.id,
+      connectionId: connection.id,
+      payload: syncPayload,
+    }),
+  );
+
+  if (
+    syncPayload?.status === "partial_error" ||
+    syncPayload?.connections?.some((item) => item.status !== "succeeded")
+  ) {
+    const failedConnection = syncPayload?.connections?.find(
+      (item) =>
+        item.connectionId === connection.id && item.status !== "succeeded",
+    );
+    if (
+      failedConnection?.errorCode &&
+      isPlaidSyncTerminalHandoffError(failedConnection.errorCode)
+    ) {
+      console.log(
+        `[bank-sync-processor] Plaid sync handed off terminal state for job ${job.id}`,
+        JSON.stringify({
+          connectionId: connection.id,
+          errorCode: failedConnection.errorCode,
+        }),
+      );
+      return;
+    }
+
+    throw new Error(
+      failedConnection?.error || "Plaid sync completed with an error summary",
+    );
+  }
 }
 
-/**
- * Constant-time string comparison to prevent timing attacks.
- */
-function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-
-  return result === 0;
+function isPlaidSyncTerminalHandoffError(errorCode: string): boolean {
+  return errorCode === "ITEM_LOGIN_REQUIRED" || errorCode === "INVALID_CURSOR";
 }
