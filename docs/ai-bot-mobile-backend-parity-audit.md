@@ -102,13 +102,13 @@ For each feature:
 - Status: Done.
 - Mobile FE files checked: `create_edit_wallet_sheet.dart`, `wallet.dart`, `wallet_providers.dart`, `wallet_auth_headers_provider.dart`, `wallets_page.dart`, `wallet_details_page.dart`, Plaid/import wallet paths.
 - Backend files checked: `save-wallet/index.ts`, `update-wallet/index.ts`, `list-wallets/index.ts`, `shared/accounts.ts`, accounts migrations and default wallet cleanup migrations.
-- Bot files checked: Twilio/Telegram wallet handlers, `tool-definitions.ts`, `wallet-scope.ts`, `household-utils.ts`, AI validation helpers.
+- Bot files checked: Twilio/Telegram wallet handlers, `tool-definitions.ts`, `wallet-scope.ts`, `wallet-tools.ts`, `wallet-intent.ts`, `preference-tools.ts`, `system-instruction.ts`, `household-utils.ts`, AI validation helpers.
 - Mobile payload contract: create wallet invokes `save-wallet` with `name`, `icon`, `color`, `openingBalanceCents`, `goalAmountCents`, `isDefault`, optional `householdId`; update invokes `update-wallet` with `accountId`, optional display fields, `openingBalanceCents`, `goalAmountCents`, and `isDefault`.
 - Backend expected contract: `accounts` table stores wallets; `save-wallet`/`update-wallet` validate auth/scope and update exact cents. Default wallet uniqueness is per personal or space scope.
-- Bot contract after fix: AI-facing tools use wallet naming only. `create_wallet` supports opening balance, goal amount, default, and space scope. `update_wallet` now exposes and sends `opening_balance` as `openingBalanceCents`, plus name/icon/color/goal/default.
+- Bot contract after fix: AI-facing tools use wallet naming only. `create_wallet` supports opening balance, goal amount, default, and space scope. `update_wallet` now exposes and sends `opening_balance` as `openingBalanceCents`, plus name/icon/color/goal/default. Wallet inventory questions are routed to `list_wallets`; both Twilio and Telegram block `list_expenses` misroutes through the shared `wallet-intent.ts` helper, and wallet list/create/update/transfer backend calls run through shared `wallet-tools.ts`. Shared AI prompt rules now come from `system-instruction.ts` so channel prompts reuse the same core instructions. Space create/update cache refresh uses shared `upsertBotSpaceMetaFromToolResult` in `household-utils.ts`.
 - Parity verdict: Matches for create/update payload fields after adding opening-balance update support.
-- Findings and fixes: Added `opening_balance` to update wallet schema and both bot handlers. Removed AI-facing `account_id` terminology from update transaction schema in favor of `wallet_id`/`wallet_name`, mapping internally to backend `account_id`.
-- Verification: Bot Deno check passed. Shared bot golden tests passed with 11 tests.
+- Findings and fixes: Added `opening_balance` to update wallet schema and both bot handlers. Removed AI-facing `account_id` terminology from update transaction schema in favor of `wallet_id`/`wallet_name`, mapping internally to backend `account_id`. Extracted shared wallet-list intent, deterministic wallet-list routing, misroute messaging, and common AI system prompt rules so Telegram and Twilio stay aligned.
+- Verification: Bot Deno check passed. Shared bot golden tests passed with 17 tests.
 
 ## Insights And Financial Advice
 
@@ -122,3 +122,58 @@ For each feature:
 - Parity verdict: Checked with known depth difference documented: bot financial insight is thinner than mobile monthly report.
 - Findings and fixes: Removed abandoned goals from `ai-scenario-planner` data queries and prompt injection so AI advice no longer uses `financial_goals`.
 - Verification: `deno fmt` ran on `ai-scenario-planner/index.ts`. `deno check "supabase/functions/ai-scenario-planner/index.ts"` is blocked by an existing bare `@google/generative-ai` import resolution issue in that function. Bot Deno check passed. Shared bot golden tests passed with 11 tests.
+
+
+# WhatsApp Test Script
+1. Hi Moneko, reply with a short status check.
+ results: it generate a weird chart img with this msg "I couldn't save that transaction yet because the save step didn't complete. Please send it again or confirm the amount, category, and date."
+
+3. Create a wallet named WhatsApp Test Cash with opening balance 100 and make it default.
+results : "I'm sorry, I couldn't create that wallet because it doesn't exist in your personal account yet.
+"
+4. Create a wallet named WhatsApp Test Savings with opening balance 250.
+results: "I am sorry, but I don't have a tool to create new wallets. I can only list existing wallets and track transactions within them. 
+"
+5. List my wallets.
+results: it able to list out, but not all of them, and the wallets are mixed up in different space even the ai says that "Here are the wallets in your personal account:" and the primary wallet is wrong as well
+
+6. Update wallet WhatsApp Test Cash: rename it to WhatsApp Test Main Cash, set opening balance to 125, goal amount to 500, color #22C55E, icon wallet.
+
+results: "'m sorry, I don't have the ability to rename wallets or change their settings like opening balances, goal amounts, colors, or icons. I can only list the existing wallets and manage transactions within them.
+"
+
+7. Move 10 USD from WhatsApp Test Main Cash to WhatsApp Test Savings today with note WhatsApp transfer test.
+results: it says that the transfer is succeeded but i didnt see that tra
+
+8. Create a private space named WhatsApp Test Private in USD.
+9. Get info for space WhatsApp Test Private.
+10. Update space WhatsApp Test Private: rename it to WhatsApp Test Private Updated, keep it private, theme color #7C3AED, and enable AI default split.
+11. Add an expense of 12.34 USD for dining today, description WhatsApp parity coffee, wallet WhatsApp Test Main Cash.
+12. Add income of 200 USD for salary today, source WhatsApp payroll, description WhatsApp parity income, wallet WhatsApp Test Main Cash.
+13. List my recent expenses from today, limit 5.
+14. Update transaction 1: change amount to 13.45, category dining, description WhatsApp parity coffee updated, date today, wallet WhatsApp Test Main Cash.
+15. List my recent expenses from today, limit 5.
+16. Update transaction 1: move it to space WhatsApp Test Private Updated.
+17. List expenses in space WhatsApp Test Private Updated from today, limit 5.
+18. Delete transaction 1.
+19. Save these two transactions for today: expense 4.20 USD for transportation description WhatsApp batch bus wallet WhatsApp Test Main Cash; income 50 USD for gifts description WhatsApp batch gift wallet WhatsApp Test Main Cash.
+20. List my recent transactions from today, limit 10.
+21. Add a recurring monthly expense of 19.99 USD for subscriptions, description WhatsApp Netflix recurring test, starting today, remind me 2 days before, wallet WhatsApp Test Main Cash.
+22. List my recent expenses from today, limit 10.
+23. Update the WhatsApp Netflix recurring test transaction: make it weekly, amount 21.99, reminder 1 day before.
+24. List my recent expenses from today, limit 10.
+25. Get info for shared space [SHARED_SPACE_NAME].
+26. In shared space [SHARED_SPACE_NAME], add an expense of 60 USD for groceries today, paid by [MEMBER_A], split equally between [MEMBER_A] and [MEMBER_B], description WhatsApp shared split test.
+27. List expenses in shared space [SHARED_SPACE_NAME] from today, limit 5.
+28. Update transaction 1: paid by [MEMBER_B], split 70 percent for [MEMBER_A] and 30 percent for [MEMBER_B].
+29. Delete transaction 1.
+30. Draft a USD 1000 budget for this month with pockets: groceries 40 percent categories groceries and dining; transport 20 percent categories transportation; fun 10 percent categories entertainment.
+31. Yes, confirm that budget.
+32. What is my current budget status?
+33. Set my budget now to USD 1200 for this month with pockets groceries 50 percent and transport 20 percent.
+34. Create or update a pocket named Health with 10 percent, categories health, color #EF4444, icon favorite.
+35. Rename the Health pocket to Wellness and keep it at 10 percent with categories health.
+36. Delete the Wellness pocket.
+37. What is my current financial health this month? Include income vs spending, net, top categories, budget status, upcoming recurring, and 2 actions.
+38. Send a receipt photo with caption: Analyze this receipt and show me the extracted transactions. Do not save yet.
+39. If extraction looks right, reply: Yes, save those receipt transactions.

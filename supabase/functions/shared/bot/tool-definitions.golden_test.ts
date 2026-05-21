@@ -1,4 +1,5 @@
 import {
+  type BotToolDeclaration,
   buildAddTransactionsBatchTool,
   buildAddTransactionTool,
   buildConfirmBudgetTool,
@@ -21,7 +22,6 @@ import {
   buildUpdateTransactionTool,
   buildUpdateWalletTool,
   cloneBotToolDeclarations,
-  type BotToolDeclaration,
 } from "./tool-definitions.ts";
 
 function assertEquals(actual: unknown, expected: unknown, message?: string) {
@@ -29,7 +29,9 @@ function assertEquals(actual: unknown, expected: unknown, message?: string) {
   const expectedJson = JSON.stringify(expected);
   if (actualJson !== expectedJson) {
     throw new Error(
-      `${message ?? "assertEquals failed"}\nactual: ${actualJson}\nexpected: ${expectedJson}`,
+      `${
+        message ?? "assertEquals failed"
+      }\nactual: ${actualJson}\nexpected: ${expectedJson}`,
     );
   }
 }
@@ -74,6 +76,7 @@ function twilioWhatsAppTools(): BotToolDeclaration[] {
     buildCreateCustomCategoryTool(),
     buildAddTransactionTool(),
     buildAddTransactionsBatchTool(),
+    buildListWalletsTool(),
     buildUpdateTransactionTool(),
     buildDeleteTransactionTool(),
     buildListExpensesTool(),
@@ -156,6 +159,7 @@ Deno.test("golden bot tool order and counts are stable", () => {
     "create_custom_category",
     "add_transaction",
     "add_transactions_batch",
+    "list_wallets",
     "update_transaction",
     "delete_transaction",
     "list_expenses",
@@ -219,7 +223,7 @@ Deno.test("golden platform-specific schema differences are explicit", () => {
   );
 
   const telegramList = telegramTools()[10];
-  const twilioWhatsAppList = twilioWhatsAppTools()[6];
+  const twilioWhatsAppList = twilioWhatsAppTools()[7];
   assert(
     "space_scope" in properties(telegramList),
     "Telegram list_expenses has space_scope",
@@ -230,7 +234,7 @@ Deno.test("golden platform-specific schema differences are explicit", () => {
   );
 
   const telegramRecurring = telegramTools()[21];
-  const twilioRecurring = twilioWhatsAppTools()[17];
+  const twilioRecurring = twilioWhatsAppTools()[18];
   assert(
     "date" in properties(telegramRecurring),
     "Telegram recurring exposes date",

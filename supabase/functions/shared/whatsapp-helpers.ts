@@ -106,44 +106,64 @@ export async function sendWhatsAppMessage(
   body: string,
   mediaUrl?: string,
 ): Promise<{ success: boolean; messageSid?: string; error?: string }> {
-  try {
-    const fromNumber = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
-    const toNumber = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
+  const fromNumber = from.startsWith("whatsapp:") ? from : `whatsapp:${from}`;
+  const toNumber = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
+  const url =
+    `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
+  const maxAttempts = 3;
 
-    const formData = new URLSearchParams();
-    formData.append("From", fromNumber);
-    formData.append("To", toNumber);
-    formData.append("Body", body);
-    if (mediaUrl) {
-      formData.append("MediaUrl", mediaUrl);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const formData = new URLSearchParams();
+      formData.append("From", fromNumber);
+      formData.append("To", toNumber);
+      formData.append("Body", body);
+      if (mediaUrl) {
+        formData.append("MediaUrl", mediaUrl);
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData.toString(),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const shouldRetry = response.status === 429 ||
+          (response.status >= 500 && response.status < 600);
+        console.error("[sendWhatsAppMessage] Twilio API error:", errorText);
+        if (shouldRetry && attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+          continue;
+        }
+        return {
+          success: false,
+          error: `Twilio API error: ${response.status}`,
+        };
+      }
+
+      const result = await response.json();
+      console.log(
+        "[sendWhatsAppMessage] Message sent successfully:",
+        result.sid,
+      );
+      return { success: true, messageSid: result.sid };
+    } catch (error) {
+      console.error("[sendWhatsAppMessage] Error:", error);
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+        continue;
+      }
+      return { success: false, error: String(error) };
     }
-
-    const url =
-      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-    const authHeader = "Basic " + btoa(`${accountSid}:${authToken}`);
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[sendWhatsAppMessage] Twilio API error:", errorText);
-      return { success: false, error: `Twilio API error: ${response.status}` };
-    }
-
-    const result = await response.json();
-    console.log("[sendWhatsAppMessage] Message sent successfully:", result.sid);
-    return { success: true, messageSid: result.sid };
-  } catch (error) {
-    console.error("[sendWhatsAppMessage] Error:", error);
-    return { success: false, error: String(error) };
   }
+
+  return { success: false, error: "Twilio API send failed" };
 }
 
 /**
