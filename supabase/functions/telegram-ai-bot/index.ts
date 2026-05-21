@@ -21,7 +21,6 @@ import { fetchExpensesDirect } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
-  resolvePocketPercentageForUpsert,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
@@ -93,6 +92,7 @@ import {
   setBotPreferredCurrency,
   setBotPreferredLanguage,
 } from "../shared/bot/preference-tools.ts";
+import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
   buildTransactionMutationFailureText,
   invokeTransactionSave,
@@ -104,9 +104,8 @@ import {
   buildAddTransactionTool,
   buildConfirmBudgetTool,
   buildCreateCustomCategoryTool,
+  buildCreateSpaceInviteTool,
   buildCreateSpaceTool,
-  buildCreateWalletTool,
-  buildCreateWalletTransferTool,
   buildDeletePocketTool,
   buildDeleteTransactionTool,
   buildDraftBudgetTool,
@@ -115,7 +114,6 @@ import {
   buildGetBudgetTool,
   buildGetSpaceInfoTool,
   buildListExpensesTool,
-  buildListWalletsTool,
   buildManageRecurringTool,
   buildSetBudgetTool,
   buildSetCurrencyTool,
@@ -123,13 +121,13 @@ import {
   buildSetPocketTool,
   buildUpdateSpaceSettingsTool,
   buildUpdateTransactionTool,
-  buildUpdateWalletTool,
+  buildWalletTools,
   cloneBotToolDeclarations,
 } from "../shared/bot/tool-definitions.ts";
 import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
   buildWalletMutationFailureText,
-  createBotWallet,
+  createBotWalletFromToolCall,
   createBotWalletTransfer,
   listBotWallets,
   updateBotWallet,
@@ -141,6 +139,7 @@ import {
 } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
+  createBotSpaceInvite,
   createBotSpace,
   getBotSpaceInfo,
   updateBotSpaceSettings,
@@ -1203,12 +1202,10 @@ Deno.serve(async (req: Request) => {
             includeMerchant: true,
           }),
           buildCreateSpaceTool(),
+          buildCreateSpaceInviteTool({ descriptionMode: "minimal" }),
           buildGetSpaceInfoTool(),
           buildUpdateSpaceSettingsTool(),
-          buildListWalletsTool({ descriptionMode: "minimal" }),
-          buildCreateWalletTool(),
-          buildUpdateWalletTool(),
-          buildCreateWalletTransferTool({ descriptionMode: "minimal" }),
+          ...buildWalletTools({ descriptionMode: "minimal" }),
           buildUpdateTransactionTool({
             descriptionMode: "minimal",
             includeMerchant: true,
@@ -1224,7 +1221,11 @@ Deno.serve(async (req: Request) => {
           buildDraftBudgetTool({ descriptionMode: "minimal" }),
           buildConfirmBudgetTool({ descriptionMode: "minimal" }),
           buildSetBudgetTool({ descriptionMode: "minimal" }),
-          buildSetPocketTool({ descriptionMode: "minimal" }),
+          buildSetPocketTool({
+            descriptionMode: "minimal",
+            includeNewName: true,
+            includeColorIcon: true,
+          }),
           buildDeletePocketTool({ descriptionMode: "minimal" }),
           buildSetCurrencyTool({ descriptionMode: "minimal" }),
           buildSetLanguageTool({ descriptionMode: "minimal" }),
@@ -2088,55 +2089,16 @@ Deno.serve(async (req: Request) => {
                   });
                 }
               } else if (call.name === "create_wallet") {
-                const walletNameResult = normalizeRequiredAiToolString(
-                  call.args.name,
-                  "wallet name",
-                );
-                const openingBalanceResult = normalizeAiToolMoneyCents(
-                  call.args.opening_balance,
-                  "opening_balance",
-                );
-                const goalAmountResult = normalizeAiToolMoneyCents(
-                  call.args.goal_amount,
-                  "goal_amount",
-                  { allowNegative: false },
-                );
-                if (!walletNameResult.ok) {
-                  toolResult = { error: walletNameResult.error };
-                  toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
-                  });
-                  continue;
-                }
-                if (!openingBalanceResult.ok) {
-                  toolResult = { error: openingBalanceResult.error };
-                  toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
-                  });
-                  continue;
-                }
-                if (!goalAmountResult.ok) {
-                  toolResult = { error: goalAmountResult.error };
-                  toolResponses.push({
-                    functionResponse: { name: call.name, response: toolResult },
-                  });
-                  continue;
-                }
                 const { householdId } = resolveBotSpaceScope(
                   call.args,
                   spaceMap,
                 );
-                const walletResult = await createBotWallet({
+                const walletResult = await createBotWalletFromToolCall({
                   supabase,
                   internalFunctionKey,
                   userId,
                   householdId,
-                  name: walletNameResult.value,
-                  icon: call.args.icon,
-                  color: call.args.color,
-                  openingBalanceCents: openingBalanceResult.cents,
-                  goalAmountCents: goalAmountResult.cents,
-                  isDefault: call.args.is_default === true,
+                  args: call.args,
                 });
                 toolResult = walletResult.result;
                 if (walletResult.failure) {
@@ -2397,7 +2359,7 @@ Deno.serve(async (req: Request) => {
                     ? { error: res.error }
                     : {
                         budget: res.budget,
-                        envelopes: res.envelopes,
+                        pockets: res.envelopes,
                         totals: res.totals,
                         chart: res.chart,
                       };
@@ -2442,6 +2404,13 @@ Deno.serve(async (req: Request) => {
                   defaultCurrency: userCurrency,
                 });
                 upsertBotSpaceMetaFromToolResult(toolResult, spaceMap);
+              } else if (call.name === "create_space_invite") {
+                toolResult = await createBotSpaceInvite({
+                  supabase,
+                  userId,
+                  args: call.args || {},
+                  spaceMap,
+                });
               } else if (call.name === "get_space_info") {
                 toolResult = await getBotSpaceInfo({
                   supabase,
@@ -3082,7 +3051,7 @@ Deno.serve(async (req: Request) => {
                         const pockets = Array.isArray(call.args.pockets)
                           ? call.args.pockets
                           : [];
-                        const envelopes: any[] = [];
+                        const savedPockets: any[] = [];
                         const updatedPockets: Array<{
                           name: string;
                           percentage: number;
@@ -3119,11 +3088,12 @@ Deno.serve(async (req: Request) => {
                             clampedPct,
                             userCurrency,
                             budgetRes.data.total_budget_cents,
+                            { color: pocket?.color, icon: pocket?.icon },
                           );
                           if (envRes.error || !envRes.data?.id) {
                             continue;
                           }
-                          envelopes.push(envRes.data);
+                          savedPockets.push(envRes.data);
                           await upsertEnvelopeAllocation(
                             supabase,
                             envRes.data.id,
@@ -3149,7 +3119,7 @@ Deno.serve(async (req: Request) => {
                           : {
                               success: true,
                               budget: budgetRes.data,
-                              envelopes,
+                              pockets: savedPockets,
                               updated_pockets: updatedPockets,
                             };
                       }
@@ -3157,142 +3127,17 @@ Deno.serve(async (req: Request) => {
                   }
                 }
               } else if (call.name === "set_pocket") {
-                const name = (call.args.name || "").toString().trim();
-                if (!name) {
-                  toolResult = { error: "Pocket name is required" };
-                } else {
-                  const dateStr = (
-                    call.args.date || formatDateInTimeZone(userTimezone)
-                  ).slice(0, 10);
-                  const periodMonth = `${dateStr.slice(0, 7)}-01`;
-                  let householdId = call.args.household_id || null;
-                  const householdName = (call.args.household_name || "")
-                    .toString()
-                    .toLowerCase();
-                  let spaceMeta = householdId
-                    ? spaceMap.get(householdId)
-                    : undefined;
-                  if (
-                    !spaceMeta &&
-                    householdName &&
-                    spaceMap.has(householdName)
-                  ) {
-                    spaceMeta = spaceMap.get(householdName);
-                    householdId = spaceMeta?.id ?? null;
-                  }
-                  if (
-                    householdId &&
-                    !(await ensureHouseholdMember(
-                      supabase,
-                      householdId,
-                      userId,
-                    ))
-                  ) {
-                    toolResult = {
-                      error: "You do not have access to that space",
-                    };
-                    toolResponses.push({
-                      functionResponse: {
-                        name: call.name,
-                        response: toolResult,
-                      },
-                    });
-                    continue;
-                  }
-                  const budgetRes = await getBudgetStatusDirect(
-                    supabase,
-                    userId,
-                    householdId,
-                    periodMonth,
-                    userCurrency,
-                    spaceMeta?.isPortfolio ?? call.args.is_portfolio === true,
-                    contact.id,
-                  );
-                  const budgetId = (budgetRes as any)?.budget?.id;
-                  if (!budgetId) {
-                    toolResult = {
-                      error: "Please set a budget first for this month",
-                    };
-                  } else {
-                    const envelopeNameMap =
-                      await consolidateDuplicateEnvelopesForBudget(
-                        supabase,
-                        budgetId,
-                        periodMonth,
-                        debugNotes,
-                      );
-                    const canonical = envelopeNameMap.get(
-                      normalizeEnvelopeName(name),
-                    );
-                    const nameToUse = canonical?.name || name;
-                    const hasPercentageArg =
-                      Object.prototype.hasOwnProperty.call(
-                        call.args || {},
-                        "percentage",
-                      );
-                    const resolvedPercentage = resolvePocketPercentageForUpsert(
-                      {
-                        hasPercentageArg,
-                        providedPercentage: call.args.percentage,
-                        existingPercentage: canonical?.budget_percentage,
-                      },
-                    );
-                    if (
-                      resolvedPercentage.error ||
-                      resolvedPercentage.percentage == null
-                    ) {
-                      toolResult = {
-                        error:
-                          resolvedPercentage.error || "percentage is required",
-                      };
-                      toolResponses.push({
-                        functionResponse: {
-                          name: call.name,
-                          response: toolResult,
-                        },
-                      });
-                      continue;
-                    }
-                    const percentage = resolvedPercentage.percentage;
-                    const envRes = await upsertEnvelope(
-                      supabase,
-                      budgetId,
-                      userId,
-                      householdId,
-                      nameToUse,
-                      percentage,
-                      userCurrency,
-                      (budgetRes as any).budget?.total_budget_cents,
-                    );
-                    if (envRes.error || !envRes.data?.id) {
-                      toolResult = {
-                        error: envRes.error || "Failed to save pocket",
-                      };
-                    } else {
-                      await upsertEnvelopeAllocation(
-                        supabase,
-                        envRes.data.id,
-                        periodMonth,
-                        Math.round(
-                          (percentage / 100) *
-                            ((budgetRes as any).budget?.total_budget_cents ||
-                              0),
-                        ),
-                      );
-                      const categories = Array.isArray(call.args.categories)
-                        ? call.args.categories
-                        : [];
-                      for (const category of categories) {
-                        await upsertEnvelopeCategoryLink(
-                          supabase,
-                          envRes.data.id,
-                          String(category),
-                        );
-                      }
-                      toolResult = { success: true, pocket: envRes.data };
-                    }
-                  }
-                }
+                const pocketResult = await setBotPocketFromToolCall({
+                  supabase,
+                  userId,
+                  contactId: contact.id,
+                  userCurrency,
+                  currentDate: formatDateInTimeZone(userTimezone),
+                  args: call.args,
+                  spaceMap,
+                  debugNotes,
+                });
+                toolResult = pocketResult.result;
               } else if (call.name === "delete_pocket") {
                 const name = (call.args.name || "").toString().trim();
                 if (!name) {

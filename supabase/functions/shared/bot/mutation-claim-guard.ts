@@ -8,6 +8,7 @@ const WRITE_MUTATION_TOOL_NAMES = new Set([
   "update_wallet",
   "create_wallet_transfer",
   "create_space",
+  "create_space_invite",
   "update_space_settings",
   "set_budget",
   "draft_budget",
@@ -142,6 +143,8 @@ export function buildGenericMutationFailureText(
 
   if (toolName === "create_space")
     return `I couldn't create that space. ${error}`;
+  if (toolName === "create_space_invite")
+    return `I couldn't create that invitation link. ${error}`;
   if (toolName === "get_space_info")
     return `I couldn't get that space info. ${error}`;
   if (toolName === "update_space_settings")

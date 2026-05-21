@@ -435,6 +435,17 @@ export function buildCreateWalletTransferTool(
   };
 }
 
+export function buildWalletTools(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration[] {
+  return [
+    buildListWalletsTool(options),
+    buildCreateWalletTool(),
+    buildUpdateWalletTool(),
+    buildCreateWalletTransferTool(options),
+  ];
+}
+
 export function buildCreateSpaceTool(): BotToolDeclaration {
   return {
     name: "create_space",
@@ -461,11 +472,47 @@ export function buildCreateSpaceTool(): BotToolDeclaration {
   };
 }
 
+export function buildCreateSpaceInviteTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "create_space_invite",
+    description:
+      mode === "rich"
+        ? "Create an invitation link for a shared space invite email. Use this after creating a shared space or when the user asks to invite someone to a space. Return the invite_url to the user."
+        : "Create a shared space invitation link.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        space_id: stringSchema,
+        space_name: stringSchema,
+        invited_email:
+          mode === "rich"
+            ? {
+                type: "STRING",
+                description: "Email address to invite to the shared space.",
+              }
+            : stringSchema,
+        personal_message: stringSchema,
+        expires_in_days:
+          mode === "rich"
+            ? {
+                type: "NUMBER",
+                description: "Invite expiry in days. Use 7 by default, 0 for no expiry.",
+              }
+            : numberSchema,
+      },
+      required: ["invited_email"],
+    },
+  };
+}
+
 export function buildGetSpaceInfoTool(): BotToolDeclaration {
   return {
     name: "get_space_info",
     description:
-      "Get a space's settings plus all members. Use space_name unless the ID is already known internally.",
+      "Get a space's settings and member list. Use this when the user asks who is in a space, list members, list admins/owners, or show space details. Use space_name unless the ID is already known internally.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -755,7 +802,7 @@ function buildBudgetPocketsSchema(
     ...(mode === "rich"
       ? {
           description:
-            "Optional: envelope splits with percentages and categories",
+            "Optional: pocket splits with percentages and categories",
         }
       : {}),
   };
@@ -769,7 +816,7 @@ export function buildGetBudgetTool(
     name: "get_budget",
     description:
       mode === "rich"
-        ? "Get budget status for the current month (includes envelopes/pockets)."
+        ? "Get budget status for the current month (includes pockets)."
         : "Get current budget status.",
     parameters: {
       type: "OBJECT",
@@ -862,7 +909,7 @@ export function buildSetBudgetTool(
     name: "set_budget",
     description:
       mode === "rich"
-        ? "Set the budget amount for the month (supports pockets/envelopes split)."
+        ? "Set the budget amount for the month (supports pocket splits)."
         : "Set budget amount for a month.",
     parameters: {
       type: "OBJECT",
@@ -888,8 +935,8 @@ export function buildSetPocketTool(
     name: "set_pocket",
     description:
       mode === "rich"
-        ? "Create or update a pocket/envelope for the current budget."
-        : "Create or update a budget pocket.",
+        ? "Create or update a pocket for the current budget. Categories are optional; use them only when the user provides category links."
+        : "Create or update a budget pocket. Categories are optional.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -904,7 +951,14 @@ export function buildSetPocketTool(
           mode === "rich"
             ? { type: "NUMBER", description: "Allocation percentage (0-100)" }
             : numberSchema,
-        categories: { type: "ARRAY", items: stringSchema },
+        categories:
+          mode === "rich"
+            ? {
+                type: "ARRAY",
+                items: stringSchema,
+                description: "Optional transaction categories to link to this pocket",
+              }
+            : { type: "ARRAY", items: stringSchema },
         ...(options.includeColorIcon
           ? {
               color: {
@@ -933,7 +987,7 @@ export function buildDeletePocketTool(
     name: "delete_pocket",
     description:
       mode === "rich"
-        ? "Delete a pocket/envelope by name."
+        ? "Delete a pocket by name."
         : "Delete a budget pocket by name.",
     parameters: {
       type: "OBJECT",

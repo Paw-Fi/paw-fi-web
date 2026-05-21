@@ -20,7 +20,6 @@ import type { CustomSplits } from "../shared/expenses-helpers.ts";
 import {
   createOrUpdateBudget,
   getBudgetStatusDirect,
-  resolvePocketPercentageForUpsert,
   upsertEnvelope,
   upsertEnvelopeAllocation,
   upsertEnvelopeCategoryLink,
@@ -91,6 +90,7 @@ import {
   setBotPreferredCurrency,
   setBotPreferredLanguage,
 } from "../shared/bot/preference-tools.ts";
+import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
   buildTransactionMutationFailureText,
   invokeTransactionSave,
@@ -102,9 +102,8 @@ import {
   buildAddTransactionTool,
   buildConfirmBudgetTool,
   buildCreateCustomCategoryTool,
+  buildCreateSpaceInviteTool,
   buildCreateSpaceTool,
-  buildCreateWalletTool,
-  buildCreateWalletTransferTool,
   buildDeletePocketTool,
   buildDeleteTransactionTool,
   buildDraftBudgetTool,
@@ -113,7 +112,6 @@ import {
   buildGetBudgetTool,
   buildGetSpaceInfoTool,
   buildListExpensesTool,
-  buildListWalletsTool,
   buildManageRecurringTool,
   buildSetBudgetTool,
   buildSetCurrencyTool,
@@ -121,13 +119,13 @@ import {
   buildSetPocketTool,
   buildUpdateSpaceSettingsTool,
   buildUpdateTransactionTool,
-  buildUpdateWalletTool,
+  buildWalletTools,
   cloneBotToolDeclarations,
 } from "../shared/bot/tool-definitions.ts";
 import { resolveWalletIdInScope } from "../shared/bot/wallet-scope.ts";
 import {
   buildWalletMutationFailureText,
-  createBotWallet,
+  createBotWalletFromToolCall,
   createBotWalletTransfer,
   listBotWallets,
   updateBotWallet,
@@ -139,6 +137,7 @@ import {
 } from "../shared/bot/wallet-intent.ts";
 import { buildBotSystemInstruction } from "../shared/bot/system-instruction.ts";
 import {
+  createBotSpaceInvite,
   createBotSpace,
   getBotSpaceInfo,
   updateBotSpaceSettings,
@@ -598,39 +597,6 @@ async function resolveEnvelopeByName(
       typeof row?.name === "string" && row.name.toLowerCase() === normalized,
   );
   return { data: found ?? null, error: null } as const;
-}
-
-function rebalancePocketPercentages(
-  desiredPct: number,
-  others: Array<{ id: string; percentage: number }>,
-): Record<string, number> {
-  const precision = 4;
-  const roundedDesired = Number(desiredPct.toFixed(precision));
-  const totalOther = others.reduce((sum, p) => sum + (p.percentage || 0), 0);
-  const currentTotal = roundedDesired + totalOther;
-  const updated: Record<string, number> = {};
-
-  if (currentTotal > 100 + 0.0001) {
-    const available = Math.max(0, 100 - roundedDesired);
-    if (totalOther <= 0 || available <= 0) {
-      return updated;
-    }
-    const factor = available / totalOther;
-    let remaining = available;
-    for (let i = 0; i < others.length; i++) {
-      const raw = Math.max(0, (others[i].percentage || 0) * factor);
-      const pct =
-        i === others.length - 1 ? remaining : Number(raw.toFixed(precision));
-      remaining -= pct;
-      updated[others[i].id] = Number(pct.toFixed(precision));
-    }
-  } else {
-    for (const p of others) {
-      updated[p.id] = Number((p.percentage || 0).toFixed(precision));
-    }
-  }
-
-  return updated;
 }
 
 async function reportTwilioToolInvokeFailure(params: {
@@ -1237,12 +1203,10 @@ Deno.serve(async (req: Request) => {
       buildAddTransactionTool({ includeMerchant: true }),
       buildAddTransactionsBatchTool({ includeMerchant: true }),
       buildCreateSpaceTool(),
+      buildCreateSpaceInviteTool(),
       buildGetSpaceInfoTool(),
       buildUpdateSpaceSettingsTool(),
-      buildListWalletsTool(),
-      buildCreateWalletTool(),
-      buildUpdateWalletTool(),
-      buildCreateWalletTransferTool(),
+      ...buildWalletTools(),
       buildUpdateTransactionTool({ includeMerchant: true }),
       buildDeleteTransactionTool(),
       buildListExpensesTool(),
@@ -1423,6 +1387,13 @@ Deno.serve(async (req: Request) => {
               defaultCurrency: userCurrency,
             });
             upsertBotSpaceMetaFromToolResult(toolResult, spaceMap);
+          } else if (call.name === "create_space_invite") {
+            toolResult = await createBotSpaceInvite({
+              supabase,
+              userId,
+              args: call.args || {},
+              spaceMap,
+            });
           } else if (call.name === "get_space_info") {
             toolResult = await getBotSpaceInfo({
               supabase,
@@ -2032,6 +2003,25 @@ Deno.serve(async (req: Request) => {
                 includeArchived: call.args.include_archived === true,
               })
             ).result;
+          } else if (call.name === "create_wallet") {
+            const { householdId } = resolveBotSpaceScope(call.args, spaceMap);
+            const walletResult = await createBotWalletFromToolCall({
+              supabase,
+              internalFunctionKey: INTERNAL_FUNCTION_KEY,
+              userId,
+              householdId,
+              args: call.args,
+            });
+            toolResult = walletResult.result;
+            if (walletResult.failure) {
+              await reportTwilioToolInvokeFailure({
+                toolName: "create_wallet",
+                targetFunction: walletResult.failure.targetFunction,
+                formatted: walletResult.failure.formatted,
+                error: walletResult.failure.error,
+                context: walletResult.failure.context,
+              });
+            }
           } else {
             toolResult = { error: "Tool not supported in app mode" };
           }
@@ -2813,7 +2803,7 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
-      return { budgetRow, envelopes: created };
+      return { budgetRow, pockets: created };
     };
 
     const { data: history } = await supabase
@@ -2876,8 +2866,9 @@ Deno.serve(async (req: Request) => {
       buildCreateCustomCategoryTool(),
       buildAddTransactionTool(),
       buildAddTransactionsBatchTool(),
-      buildListWalletsTool(),
+      ...buildWalletTools(),
       buildCreateSpaceTool(),
+      buildCreateSpaceInviteTool(),
       buildGetSpaceInfoTool(),
       buildUpdateSpaceSettingsTool(),
       buildUpdateTransactionTool(),
@@ -3657,21 +3648,12 @@ Deno.serve(async (req: Request) => {
             }
           } else if (call.name === "create_wallet") {
             const { householdId } = resolveBotSpaceScope(call.args, spaceMap);
-            const walletResult = await createBotWallet({
+            const walletResult = await createBotWalletFromToolCall({
               supabase,
               internalFunctionKey: INTERNAL_FUNCTION_KEY,
               userId,
               householdId,
-              name: call.args.name,
-              icon: call.args.icon,
-              color: call.args.color,
-              openingBalanceCents: Number.isFinite(call.args.opening_balance)
-                ? Math.round(Number(call.args.opening_balance) * 100)
-                : undefined,
-              goalAmountCents: Number.isFinite(call.args.goal_amount)
-                ? Math.round(Number(call.args.goal_amount) * 100)
-                : undefined,
-              isDefault: call.args.is_default === true,
+              args: call.args,
             });
             toolResult = walletResult.result;
             if (walletResult.failure) {
@@ -3799,6 +3781,13 @@ Deno.serve(async (req: Request) => {
               defaultCurrency: userCurrency,
             });
             upsertBotSpaceMetaFromToolResult(toolResult, spaceMap);
+          } else if (call.name === "create_space_invite") {
+            toolResult = await createBotSpaceInvite({
+              supabase,
+              userId,
+              args: call.args || {},
+              spaceMap,
+            });
           } else if (call.name === "get_space_info") {
             toolResult = await getBotSpaceInfo({
               supabase,
@@ -4331,7 +4320,7 @@ Deno.serve(async (req: Request) => {
               } else {
                 toolResult = {
                   budget: res.budget,
-                  envelopes: res.envelopes,
+                  pockets: res.envelopes,
                   totals: res.totals,
                   chart: res.chart,
                 };
@@ -4433,7 +4422,7 @@ Deno.serve(async (req: Request) => {
                   toolResult = {
                     success: true,
                     budget: res.budgetRow,
-                    envelopes: res.envelopes,
+                    pockets: res.pockets,
                   };
                   sessionState = clearPendingBudget(sessionState);
                   await saveSessionState(
@@ -4471,7 +4460,7 @@ Deno.serve(async (req: Request) => {
                 toolResult = {
                   success: true,
                   budget: res.budgetRow,
-                  envelopes: res.envelopes,
+                  pockets: res.pockets,
                 };
                 sessionState = clearPendingBudget(sessionState);
                 await saveSessionState(
@@ -4484,229 +4473,18 @@ Deno.serve(async (req: Request) => {
               }
             }
           } else if (call.name === "set_pocket") {
-            const dateStr = normalizeDateInput(
-              call.args.date,
-              formatDateInTimeZone(userTimezone),
-            );
-            const period_month = dateStr.slice(0, 7) + "-01";
-            const { householdId, isPortfolio } = resolveBudgetScope(call.args);
-            if (
-              householdId &&
-              !(await ensureHouseholdMember(supabase, householdId, userId))
-            ) {
-              toolResult = { error: "You do not have access to that space" };
-            } else {
-              const { data: budgetRow, error: budgetErr } =
-                await resolveBudgetForScope(
-                  supabase,
-                  userId,
-                  householdId,
-                  period_month,
-                  userCurrency,
-                  isPortfolio,
-                );
-              if (budgetErr || !budgetRow) {
-                toolResult = {
-                  error: "Please set a budget first for this month",
-                };
-              } else {
-                const name = (call.args.name || "").toString().trim();
-                if (!name) {
-                  toolResult = { error: "Pocket name is required" };
-                } else {
-                  const { data: envelope } = await resolveEnvelopeByName(
-                    supabase,
-                    budgetRow.id,
-                    name,
-                  );
-                  const newName = (call.args.new_name || "").toString().trim();
-                  const hasPercentageArg = Object.prototype.hasOwnProperty.call(
-                    call.args || {},
-                    "percentage",
-                  );
-                  const pctInput = coerceNumber(call.args.percentage);
-                  const rawCategories = normalizeCategories(
-                    call.args.categories,
-                  );
-                  const categories = rawCategories.map((c) => c.toLowerCase());
-                  const color =
-                    typeof call.args.color === "string"
-                      ? call.args.color.trim()
-                      : undefined;
-                  const icon =
-                    typeof call.args.icon === "string"
-                      ? call.args.icon.trim()
-                      : undefined;
-
-                  if (!envelope && pctInput == null) {
-                    toolResult = { error: "Pocket percentage is required" };
-                  } else if (!envelope && categories.length === 0) {
-                    toolResult = {
-                      error: "Please provide at least one category",
-                    };
-                  } else {
-                    const { data: envelopes } = await supabase
-                      .from("budget_envelopes")
-                      .select(
-                        "id, name, budget_percentage, budget_amount_cents",
-                      )
-                      .eq("budget_id", budgetRow.id);
-                    const resolvedPercentage = resolvePocketPercentageForUpsert(
-                      {
-                        hasPercentageArg,
-                        providedPercentage: call.args.percentage,
-                        existingPercentage: envelope?.budget_percentage,
-                      },
-                    );
-                    if (
-                      resolvedPercentage.error ||
-                      resolvedPercentage.percentage == null
-                    ) {
-                      toolResult = {
-                        error:
-                          resolvedPercentage.error ||
-                          "Pocket percentage is required",
-                      };
-                      lastToolResult = toolResult;
-                      toolResponses.push({
-                        functionResponse: {
-                          name: call.name,
-                          response: toolResult,
-                        },
-                      });
-                      continue;
-                    }
-                    const desiredPct = Number(
-                      resolvedPercentage.percentage.toFixed(4),
-                    );
-                    const others = (envelopes || [])
-                      .filter((p: any) => p.id !== envelope?.id)
-                      .map((p: any) => ({
-                        id: p.id as string,
-                        percentage: Number(p.budget_percentage) || 0,
-                      }));
-                    const adjustedOthers = hasPercentageArg
-                      ? rebalancePocketPercentages(desiredPct, others)
-                      : {};
-
-                    // Compute budget_amount_cents from percentage and total budget
-                    const totalBudgetCents = budgetRow.total_budget_cents || 0;
-                    const desiredAmountCents = Math.round(
-                      (desiredPct / 100) * totalBudgetCents,
-                    );
-
-                    let envelopeId = envelope?.id as string | undefined;
-                    if (envelopeId) {
-                      await supabase
-                        .from("budget_envelopes")
-                        .update({
-                          name: newName || name,
-                          budget_id: budgetRow.id,
-                          budget_percentage: desiredPct,
-                          budget_amount_cents: desiredAmountCents,
-                          updated_at: new Date().toISOString(),
-                          ...(color ? { color } : {}),
-                          ...(icon ? { icon } : {}),
-                          household_id: householdId,
-                          currency: userCurrency,
-                        })
-                        .eq("id", envelopeId);
-                    } else {
-                      const { data: insertRes } = await supabase
-                        .from("budget_envelopes")
-                        .insert({
-                          user_id: userId,
-                          budget_id: budgetRow.id,
-                          name: newName || name,
-                          budget_percentage: desiredPct,
-                          budget_amount_cents: desiredAmountCents,
-                          household_id: householdId,
-                          currency: userCurrency,
-                          color: color ?? null,
-                          icon: icon ?? null,
-                        })
-                        .select("id")
-                        .maybeSingle();
-                      envelopeId = insertRes?.id as string | undefined;
-                    }
-
-                    if (!envelopeId) {
-                      toolResult = { error: "Failed to save pocket" };
-                    } else {
-                      if (categories.length > 0) {
-                        await supabase
-                          .from("envelope_category_links")
-                          .delete()
-                          .eq("envelope_id", envelopeId);
-                        await supabase.from("envelope_category_links").insert(
-                          categories.map((category) => ({
-                            envelope_id: envelopeId,
-                            category,
-                          })),
-                        );
-                      }
-
-                      // Upsert envelope_allocation for the edited pocket (mobile reads allocations first)
-                      await upsertEnvelopeAllocation(
-                        supabase,
-                        envelopeId,
-                        period_month,
-                        desiredAmountCents,
-                      );
-
-                      if (hasPercentageArg) {
-                        if (desiredPct >= 100 && others.length > 0) {
-                          for (const other of others) {
-                            await supabase
-                              .from("budget_envelopes")
-                              .update({
-                                budget_percentage: 0,
-                                budget_amount_cents: 0,
-                                updated_at: new Date().toISOString(),
-                              })
-                              .eq("id", other.id);
-                            // Also upsert allocation for rebalanced pocket
-                            await upsertEnvelopeAllocation(
-                              supabase,
-                              other.id,
-                              period_month,
-                              0,
-                            );
-                          }
-                        } else {
-                          for (const entry of Object.entries(adjustedOthers)) {
-                            const adjustedPct = entry[1] as number;
-                            const adjustedAmountCents = Math.round(
-                              (adjustedPct / 100) * totalBudgetCents,
-                            );
-                            await supabase
-                              .from("budget_envelopes")
-                              .update({
-                                budget_percentage: adjustedPct,
-                                budget_amount_cents: adjustedAmountCents,
-                                updated_at: new Date().toISOString(),
-                              })
-                              .eq("id", entry[0]);
-                            // Also upsert allocation for rebalanced pocket
-                            await upsertEnvelopeAllocation(
-                              supabase,
-                              entry[0],
-                              period_month,
-                              adjustedAmountCents,
-                            );
-                          }
-                        }
-                      }
-
-                      toolResult = {
-                        success: true,
-                        pocket: { id: envelopeId, name: newName || name },
-                      };
-                    }
-                  }
-                }
-              }
-            }
+            const pocketResult = await setBotPocketFromToolCall({
+              supabase,
+              userId,
+              contactId,
+              userCurrency,
+              currentDate: formatDateInTimeZone(userTimezone),
+              args: call.args,
+              spaceMap,
+              debugNotes,
+              debugEnabled: WHATSAPP_DEBUG,
+            });
+            toolResult = pocketResult.result;
           } else if (call.name === "delete_pocket") {
             const dateStr = normalizeDateInput(
               call.args.date,
@@ -5269,8 +5047,8 @@ Deno.serve(async (req: Request) => {
             writeMutationSucceededAny = true;
           }
           if (call.name === "confirm_budget" || call.name === "set_budget") {
-            const pocketsRaw = Array.isArray((toolResult as any)?.envelopes)
-              ? ((toolResult as any).envelopes as any[])
+            const pocketsRaw = Array.isArray((toolResult as any)?.pockets)
+              ? ((toolResult as any).pockets as any[])
               : [];
             lastBudgetPockets = pocketsRaw.map((p) => ({
               name: String(p?.name || "").trim(),

@@ -177,12 +177,21 @@ export async function upsertEnvelope(
   percentage: number,
   currency: string,
   totalBudgetCents?: number | null,
+  options: { color?: unknown; icon?: unknown } = {},
 ) {
   // Compute budget_amount_cents if total is known
   // This ensures the canonical amount is set, not just derived by trigger
   const budgetAmountCents =
     totalBudgetCents != null && Number.isFinite(totalBudgetCents)
       ? Math.round((percentage / 100) * totalBudgetCents)
+      : undefined;
+  const color =
+    typeof options.color === "string" && options.color.trim()
+      ? options.color.trim()
+      : undefined;
+  const icon =
+    typeof options.icon === "string" && options.icon.trim()
+      ? options.icon.trim()
       : undefined;
 
   const payload: any = {
@@ -193,6 +202,8 @@ export async function upsertEnvelope(
     budget_percentage: percentage,
     currency,
     updated_at: new Date().toISOString(),
+    ...(color ? { color } : {}),
+    ...(icon ? { icon } : {}),
     // Only include budget_amount_cents if we have a valid value
     ...(budgetAmountCents !== undefined
       ? { budget_amount_cents: budgetAmountCents }

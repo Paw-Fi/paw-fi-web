@@ -1,5 +1,9 @@
 import { buildInternalInvokeHeaders } from "../auth.ts";
 import { formatInvokeError } from "../formatting-helpers.ts";
+import {
+  normalizeAiToolMoneyCents,
+  normalizeRequiredAiToolString,
+} from "./ai-tool-validation.ts";
 
 type SupabaseFunctionInvoker = {
   functions: {
@@ -105,6 +109,52 @@ export async function createBotWallet(params: {
       context: { householdId: params.householdId, name: params.name },
     },
   };
+}
+
+export async function createBotWalletFromToolCall(params: {
+  supabase: SupabaseFunctionInvoker;
+  internalFunctionKey: string;
+  userId: string;
+  householdId: string | null;
+  args?: Record<string, unknown> | null;
+}): Promise<BotWalletToolResult> {
+  const args = params.args ?? {};
+  const walletNameResult = normalizeRequiredAiToolString(
+    args.name,
+    "wallet name",
+  );
+  const openingBalanceResult = normalizeAiToolMoneyCents(
+    args.opening_balance,
+    "opening_balance",
+  );
+  const goalAmountResult = normalizeAiToolMoneyCents(
+    args.goal_amount,
+    "goal_amount",
+    { allowNegative: false },
+  );
+
+  if (!walletNameResult.ok) {
+    return { result: { error: walletNameResult.error } };
+  }
+  if (!openingBalanceResult.ok) {
+    return { result: { error: openingBalanceResult.error } };
+  }
+  if (!goalAmountResult.ok) {
+    return { result: { error: goalAmountResult.error } };
+  }
+
+  return createBotWallet({
+    supabase: params.supabase,
+    internalFunctionKey: params.internalFunctionKey,
+    userId: params.userId,
+    householdId: params.householdId,
+    name: walletNameResult.value,
+    icon: args.icon,
+    color: args.color,
+    openingBalanceCents: openingBalanceResult.cents,
+    goalAmountCents: goalAmountResult.cents,
+    isDefault: args.is_default === true,
+  });
 }
 
 export async function updateBotWallet(params: {
