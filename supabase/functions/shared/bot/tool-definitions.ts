@@ -148,6 +148,15 @@ function buildTransactionProperties(
             description: "Optional: private_space or shared_space.",
           }
         : stringSchema,
+    space_scope:
+      mode === "rich"
+        ? {
+            type: "STRING",
+            enum: ["personal", "personal_account"],
+            description:
+              "Use only when the user explicitly says this transaction is for the personal account, overriding any default AI bot space.",
+          }
+        : stringSchema,
     wallet_name:
       mode === "rich"
         ? {
@@ -298,6 +307,15 @@ export function buildAddTransactionsBatchTool(
                 type: "STRING",
                 enum: ["private_space", "shared_space"],
                 description: "Optional: private_space or shared_space.",
+              }
+            : stringSchema,
+        space_scope:
+          (options.descriptionMode ?? "rich") === "rich"
+            ? {
+                type: "STRING",
+                enum: ["personal", "personal_account"],
+                description:
+                  "Use only when the user explicitly says these transactions are for the personal account, overriding any default AI bot space.",
               }
             : stringSchema,
         transactions: {
@@ -1056,6 +1074,30 @@ export function buildSetLanguageTool(
             : stringSchema,
       },
       required: ["language"],
+    },
+  };
+}
+
+export function buildSetDefaultSpaceTool(
+  options: ToolDescriptionOptions = {},
+): BotToolDeclaration {
+  const mode = options.descriptionMode ?? "rich";
+  return {
+    name: "set_default_space",
+    description:
+      mode === "rich"
+        ? "Set or clear the user's default AI bot space for future saves. Use only when the user explicitly asks to always/default/future save or log records to a named space. Use space_scope=personal to clear it back to the personal account."
+        : "Set or clear the default AI bot space.",
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        space_id: stringSchema,
+        space_name: stringSchema,
+        space_scope: {
+          type: "STRING",
+          enum: ["personal", "personal_account"],
+        },
+      },
     },
   };
 }

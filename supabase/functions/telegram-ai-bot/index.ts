@@ -89,8 +89,10 @@ import {
   uint8ToBase64,
 } from "../shared/bot/media-utils.ts";
 import {
+  loadBotPreferredSpaceId,
   setBotPreferredCurrency,
   setBotPreferredLanguage,
+  setBotPreferredSpace,
 } from "../shared/bot/preference-tools.ts";
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
@@ -117,6 +119,7 @@ import {
   buildManageRecurringTool,
   buildSetBudgetTool,
   buildSetCurrencyTool,
+  buildSetDefaultSpaceTool,
   buildSetLanguageTool,
   buildSetPocketTool,
   buildUpdateSpaceSettingsTool,
@@ -159,6 +162,7 @@ import {
   normalizeEnvelopeName,
 } from "../shared/bot/budget-utils.ts";
 import {
+  applyPreferredSpaceDefaultToToolCall,
   ensureHouseholdMember,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
@@ -1061,6 +1065,12 @@ Deno.serve(async (req: Request) => {
           space_type:
             h?.is_portfolio === true ? "private_space" : "shared_space",
         }));
+        let preferredSpaceId = await loadBotPreferredSpaceId({
+          supabase,
+          userId,
+          contactId: contact.id as string,
+          spaceMap,
+        });
 
         const sessionIdValue = `telegram:${chatId}`;
         let session = contextData?.chat_session_id
@@ -1229,6 +1239,7 @@ Deno.serve(async (req: Request) => {
           buildDeletePocketTool({ descriptionMode: "minimal" }),
           buildSetCurrencyTool({ descriptionMode: "minimal" }),
           buildSetLanguageTool({ descriptionMode: "minimal" }),
+          buildSetDefaultSpaceTool({ descriptionMode: "minimal" }),
           buildManageRecurringTool({
             descriptionMode: "minimal",
             includeDateField: true,
@@ -1441,6 +1452,7 @@ Deno.serve(async (req: Request) => {
           const toolResponses: any[] = [];
           for (const call of functionCalls) {
             let toolResult: any = {};
+            applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
 
             console.log("[telegram-ai-bot] tool call", {
               traceId,
@@ -2395,6 +2407,20 @@ Deno.serve(async (req: Request) => {
                     error: preferenceResult.failure.error,
                     context: preferenceResult.failure.context,
                   });
+                }
+              } else if (call.name === "set_default_space") {
+                const preferenceResult = await setBotPreferredSpace({
+                  supabase,
+                  userId,
+                  contactId: contact.id as string,
+                  args: call.args || {},
+                  spaceMap,
+                });
+                toolResult = preferenceResult.result;
+                if ((toolResult as any)?.success) {
+                  preferredSpaceId =
+                    ((toolResult as any).preferred_space_id as string | null) ||
+                    null;
                 }
               } else if (call.name === "create_space") {
                 toolResult = await createBotSpace({

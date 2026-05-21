@@ -57,6 +57,78 @@ export function resolveBotSpaceScope(
   return { householdId, spaceMeta };
 }
 
+function normalizeToolSpaceScope(value: unknown): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+export function isExplicitPersonalScope(
+  args: Record<string, unknown> | null | undefined,
+): boolean {
+  const scope = normalizeToolSpaceScope(args?.space_scope || args?.scope);
+  return scope === "personal" || scope === "personal_account";
+}
+
+export function hasExplicitBotSpaceScope(
+  args: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!args) return false;
+  return !!(
+    args.space_id ||
+    args.spaceId ||
+    args.household_id ||
+    args.space_name ||
+    args.spaceName ||
+    args.household_name ||
+    args.householdName ||
+    args.space_scope ||
+    args.scope
+  );
+}
+
+export function shouldApplyPreferredSpaceDefault(
+  toolName: string | null | undefined,
+): boolean {
+  return !!toolName &&
+    [
+      "add_transaction",
+      "add_transactions_batch",
+      "list_expenses",
+      "generate_chart_url",
+      "financial_insight",
+      "manage_recurring",
+      "get_budget",
+      "draft_budget",
+      "confirm_budget",
+      "set_budget",
+      "set_pocket",
+      "delete_pocket",
+      "list_wallets",
+      "create_wallet",
+      "update_wallet",
+      "create_wallet_transfer",
+    ].includes(toolName);
+}
+
+export function applyPreferredSpaceDefaultToToolCall(
+  call: { name?: string | null; args?: Record<string, unknown> | null },
+  preferredSpaceId: string | null | undefined,
+): void {
+  if (!preferredSpaceId || !shouldApplyPreferredSpaceDefault(call.name)) return;
+  const args = call.args && typeof call.args === "object" ? call.args : {};
+  if (hasExplicitBotSpaceScope(args) || isExplicitPersonalScope(args)) {
+    call.args = args;
+    return;
+  }
+  call.args = {
+    ...args,
+    space_id: preferredSpaceId,
+    preferred_space_applied: true,
+  };
+}
+
 export function normalizeNameForMatch(value: string): string {
   return (value || "")
     .toLowerCase()

@@ -87,8 +87,10 @@ import {
   uint8ToBase64,
 } from "../shared/bot/media-utils.ts";
 import {
+  loadBotPreferredSpaceId,
   setBotPreferredCurrency,
   setBotPreferredLanguage,
+  setBotPreferredSpace,
 } from "../shared/bot/preference-tools.ts";
 import { setBotPocketFromToolCall } from "../shared/bot/pocket-tools.ts";
 import {
@@ -115,6 +117,7 @@ import {
   buildManageRecurringTool,
   buildSetBudgetTool,
   buildSetCurrencyTool,
+  buildSetDefaultSpaceTool,
   buildSetLanguageTool,
   buildSetPocketTool,
   buildUpdateSpaceSettingsTool,
@@ -159,6 +162,7 @@ import {
   normalizePeriodMonth,
 } from "../shared/bot/budget-utils.ts";
 import {
+  applyPreferredSpaceDefaultToToolCall,
   ensureHouseholdMember,
   resolveBotSpaceScope,
   resolveHouseholdSplitConfig,
@@ -1075,6 +1079,13 @@ Deno.serve(async (req: Request) => {
       // best-effort
     }
 
+    let preferredSpaceId = await loadBotPreferredSpaceId({
+      supabase,
+      userId,
+      contactId,
+      spaceMap,
+    });
+
     const resolveAppRequestedWalletId = async (
       walletName: unknown,
       householdId: string | null,
@@ -1211,6 +1222,7 @@ Deno.serve(async (req: Request) => {
       buildDeleteTransactionTool(),
       buildListExpensesTool(),
       buildGenerateChartUrlTool(),
+      buildSetDefaultSpaceTool(),
       buildFinancialInsightTool(),
     ];
 
@@ -1288,6 +1300,7 @@ Deno.serve(async (req: Request) => {
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
+        applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
         try {
           if (call.name === "analyze_expense") {
             const text =
@@ -1387,6 +1400,20 @@ Deno.serve(async (req: Request) => {
               defaultCurrency: userCurrency,
             });
             upsertBotSpaceMetaFromToolResult(toolResult, spaceMap);
+          } else if (call.name === "set_default_space") {
+            const preferenceResult = await setBotPreferredSpace({
+              supabase,
+              userId,
+              contactId,
+              args: call.args || {},
+              spaceMap,
+            });
+            toolResult = preferenceResult.result;
+            if ((toolResult as any)?.success) {
+              preferredSpaceId =
+                ((toolResult as any).preferred_space_id as string | null) ||
+                null;
+            }
           } else if (call.name === "create_space_invite") {
             toolResult = await createBotSpaceInvite({
               supabase,
@@ -2620,6 +2647,13 @@ Deno.serve(async (req: Request) => {
       }
     });
 
+    let preferredSpaceId = await loadBotPreferredSpaceId({
+      supabase,
+      userId,
+      contactId,
+      spaceMap,
+    });
+
     const resolveRequestedAccountId = async (
       walletName: unknown,
       householdId: string | null,
@@ -2882,6 +2916,7 @@ Deno.serve(async (req: Request) => {
       buildDeletePocketTool(),
       buildSetCurrencyTool(),
       buildSetLanguageTool(),
+      buildSetDefaultSpaceTool(),
       buildGenerateChartUrlTool(),
       buildFinancialInsightTool(),
       buildManageRecurringTool({ includeScheduleFields: true }),
@@ -3099,6 +3134,7 @@ Deno.serve(async (req: Request) => {
       const toolResponses: any[] = [];
       for (const call of functionCalls) {
         let toolResult = {};
+        applyPreferredSpaceDefaultToToolCall(call, preferredSpaceId);
         debugLog(WHATSAPP_DEBUG, "tool call", {
           name: call.name,
           args: call.args,
@@ -4366,6 +4402,20 @@ Deno.serve(async (req: Request) => {
                 error: preferenceResult.failure.error,
                 formatted: preferenceResult.failure.formatted,
               });
+            }
+          } else if (call.name === "set_default_space") {
+            const preferenceResult = await setBotPreferredSpace({
+              supabase,
+              userId,
+              contactId,
+              args: call.args || {},
+              spaceMap,
+            });
+            toolResult = preferenceResult.result;
+            if ((toolResult as any)?.success) {
+              preferredSpaceId =
+                ((toolResult as any).preferred_space_id as string | null) ||
+                null;
             }
           } else if (call.name === "draft_budget") {
             const { draft, error } = buildBudgetDraftFromArgs(call.args);
