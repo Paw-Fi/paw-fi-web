@@ -252,7 +252,7 @@ function InviteePage() {
             {/* Header */}
             <motion.div className="mb-12 text-center">
               <h1 className="text-foreground mb-4 text-5xl leading-tight font-bold tracking-tight sm:text-6xl lg:text-7xl">
-                Join Moneko Premium
+                Join Moneko Plus
               </h1>
               <p className="text-muted-foreground mx-auto mb-6 max-w-2xl text-lg leading-relaxed">
                 Accept your invitation to get 50% off the lifetime plan. Your
