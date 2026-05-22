@@ -28,7 +28,6 @@ import {
   type AppStoreCandidateUserSource,
   shouldReportMissingCandidateUser,
 } from "../shared/app-store-user-resolution.ts";
-import { removePlaidConnection } from "../shared/plaid-remove.ts";
 
 type AppStoreEnvironment = "sandbox" | "production";
 
@@ -52,7 +51,6 @@ const appStorePrivateKeyRaw = Deno.env.get("APPLE_APP_STORE_PRIVATE_KEY") || "";
 const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
 const appStoreNotificationsRuntimeRevision = "2026-03-26-webcrypto-manual-v2";
 const appStoreAuthStrategy = "webcrypto_manual_es256";
-const PLAID_PROVIDER = "plaid";
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error("Missing required SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY");
@@ -468,58 +466,6 @@ async function cancelStripeSubscriptionIfPresent(
       },
     );
   }
-}
-
-async function offboardPlaidItemsForInactiveSubscription(params: {
-  userId: string;
-  reason: string;
-  context: Record<string, unknown>;
-}): Promise<void> {
-  const { data: plaidConnections, error: fetchError } = await supabase
-    .from("bank_connections")
-    .select("id, user_id, access_token_encrypted, plaid_access_token_encrypted")
-    .eq("user_id", params.userId)
-    .eq("provider", PLAID_PROVIDER)
-    .is("removed_at", null)
-    .neq("status", "disabled");
-
-  if (fetchError) {
-    throw new Error(
-      `Failed to load Plaid connections for offboarding: ${
-        fetchError.message ?? String(fetchError)
-      }`,
-    );
-  }
-
-  const connections =
-    (plaidConnections as Array<{
-      id: string;
-      user_id?: string | null;
-      access_token_encrypted?: string | null;
-      plaid_access_token_encrypted?: string | null;
-    }> | null) ?? [];
-
-  if (connections.length === 0) {
-    return;
-  }
-
-  for (const connection of connections) {
-    await removePlaidConnection({
-      supabase,
-      connection,
-      removalReason: params.reason,
-    });
-  }
-
-  console.log(
-    "[app-store-notifications] offboarded Plaid connections for inactive subscription",
-    {
-      userId: params.userId,
-      removedCount: connections.length,
-      reason: params.reason,
-      ...params.context,
-    },
-  );
 }
 
 interface ResolvedNotificationUser {
@@ -1532,16 +1478,18 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     try {
-      const rpcName = status === "canceled"
-        ? "cascade_subscription_cancellation"
-        : "cascade_subscription_upgrade";
-      const rpcParams = status === "canceled"
-        ? { p_owner_user_id: resolvedUserId }
-        : {
-          p_owner_user_id: resolvedUserId,
-          p_new_plan: catalogProduct.plan,
-          p_new_status: status,
-        };
+      const rpcName =
+        status === "canceled"
+          ? "cascade_subscription_cancellation"
+          : "cascade_subscription_upgrade";
+      const rpcParams =
+        status === "canceled"
+          ? { p_owner_user_id: resolvedUserId }
+          : {
+              p_owner_user_id: resolvedUserId,
+              p_new_plan: catalogProduct.plan,
+              p_new_status: status,
+            };
       const { data: cascadeResult, error: cascadeError } = await supabase.rpc(
         rpcName,
         rpcParams,
@@ -1587,19 +1535,6 @@ serve(async (req: Request): Promise<Response> => {
         }),
       });
       throw cascadeError;
-    }
-
-    if (status === "canceled") {
-      await offboardPlaidItemsForInactiveSubscription({
-        userId: resolvedUserId,
-        reason: "app_store_subscription_canceled",
-        context: {
-          storeProductId,
-          originalTransactionId,
-          transactionId,
-          environment: resolvedEnvironment,
-        },
-      });
     }
 
     return new Response(JSON.stringify({ status: "ok" }), {

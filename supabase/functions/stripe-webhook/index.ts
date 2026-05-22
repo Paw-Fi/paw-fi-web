@@ -31,9 +31,6 @@ import { getPlanFromPriceId } from "../shared/stripe-subscription-prices.ts";
 import { resolveStripeCurrentPeriodEnd } from "../shared/stripe-subscription-period.ts";
 import { resolveStripeSubscriptionUserCandidate } from "../shared/stripe-subscription-user.ts";
 import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
-import { removePlaidConnection } from "../shared/plaid-remove.ts";
-
-const PLAID_PROVIDER = "plaid";
 
 interface EmailTemplate {
   html: string;
@@ -200,67 +197,6 @@ async function downgradeOwnerSubscriptionToFree(params: {
     });
     throw error;
   }
-
-  await offboardPlaidItemsForInactiveSubscription({
-    userId: params.userId,
-    eventId: params.eventId,
-    reason:
-      params.status === "unpaid"
-        ? "subscription_unpaid"
-        : "subscription_canceled",
-  });
-}
-
-async function offboardPlaidItemsForInactiveSubscription(params: {
-  userId: string;
-  eventId: string;
-  reason: string;
-}): Promise<void> {
-  const { data: plaidConnections, error: fetchError } = await supabase
-    .from("bank_connections")
-    .select("id, user_id, access_token_encrypted, plaid_access_token_encrypted")
-    .eq("user_id", params.userId)
-    .eq("provider", PLAID_PROVIDER)
-    .is("removed_at", null)
-    .neq("status", "disabled");
-
-  if (fetchError) {
-    throw new Error(
-      `failed to load plaid connections for offboarding: ${fetchError.message}`,
-    );
-  }
-
-  const connections =
-    (plaidConnections as Array<{
-      id: string;
-      user_id?: string | null;
-      access_token_encrypted?: string | null;
-      plaid_access_token_encrypted?: string | null;
-    }> | null) ?? [];
-
-  if (connections.length === 0) {
-    console.log("No active Plaid connections to offboard", {
-      userId: redactUserId(params.userId),
-      eventId: params.eventId,
-    });
-    return;
-  }
-
-  let removedCount = 0;
-  for (const connection of connections) {
-    await removePlaidConnection({
-      supabase,
-      connection,
-      removalReason: params.reason,
-    });
-    removedCount += 1;
-  }
-
-  console.log("Offboarded Plaid connections for inactive subscription", {
-    userId: redactUserId(params.userId),
-    eventId: params.eventId,
-    removedCount,
-  });
 }
 
 // Validate environment on startup - FAIL FAST if misconfigured
@@ -1213,12 +1149,6 @@ async function handleSubscriptionUpdated(
 
     const userId = user.id;
     const status = subscription.status;
-    const subscriptionPeriodEnd = subscription.current_period_end;
-    const currentPeriodEnd =
-      typeof subscriptionPeriodEnd === "number" &&
-      !Number.isNaN(subscriptionPeriodEnd)
-        ? new Date(subscriptionPeriodEnd * 1000).toISOString()
-        : null;
     const cancelAtPeriodEnd = subscription.cancel_at_period_end;
 
     const { data: previousSub } = await supabase

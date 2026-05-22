@@ -4,6 +4,8 @@ import { reportEdgeFunctionError } from "../shared/edge-error-alert.ts";
 import { PLAID_PROVIDER } from "../shared/plaid-client.ts";
 import { enqueuePlaidSyncJob } from "../shared/plaid-sync-jobs.ts";
 import { removePlaidConnection } from "../shared/plaid-remove.ts";
+import { sendUserEmail } from "../shared/email-service.ts";
+import { notificationTemplate } from "../shared/email-templates.ts";
 import {
   isPlaidSubscriptionPastGrace,
   shouldKeepPlaidItemBeyondSecondMonth,
@@ -16,6 +18,7 @@ const INTERNAL_SERVICE_SECRET = Deno.env.get("INTERNAL_SERVICE_SECRET");
 const LEGACY_INTERNAL_SECRET = Deno.env.get(
   "SECRET_SUPABASE_SERVICE_ROLE_API_KEY",
 );
+const APP_URL = Deno.env.get("APP_URL") || "https://moneko.io";
 
 type PlaidMaintenanceAction =
   | "reconcile_stale"
@@ -52,7 +55,14 @@ interface SubscriptionRow {
   plan: string | null;
   status: string | null;
   current_period_end?: string | null;
+  ended_at?: string | null;
   created_at: string | null;
+}
+
+interface UserContactRow {
+  id: string;
+  email: string | null;
+  full_name: string | null;
 }
 
 const SUBSCRIPTION_PLAID_GRACE_DAYS = Number.parseInt(
@@ -139,6 +149,128 @@ function pickLatestSubscriptions(rows: SubscriptionRow[]) {
   return byUser;
 }
 
+function getSubscriptionGraceAnchor(
+  subscription: SubscriptionRow | undefined,
+): string | null {
+  return subscription?.current_period_end ?? subscription?.ended_at ?? null;
+}
+
+function getSubscriptionGraceDeadline(params: {
+  subscription: SubscriptionRow | undefined;
+  graceAnchor: string | null;
+  now: Date;
+}): Date | null {
+  if (!params.graceAnchor || params.subscription?.status === "active") {
+    return null;
+  }
+
+  const periodEnd = new Date(params.graceAnchor);
+  if (Number.isNaN(periodEnd.getTime()) || periodEnd > params.now) {
+    return null;
+  }
+
+  const graceDays = Number.isFinite(SUBSCRIPTION_PLAID_GRACE_DAYS)
+    ? Math.max(0, SUBSCRIPTION_PLAID_GRACE_DAYS)
+    : 7;
+  const deadline = new Date(
+    periodEnd.getTime() + graceDays * 24 * 60 * 60 * 1000,
+  );
+
+  return deadline > params.now ? deadline : null;
+}
+
+function hasWarningAtOrAfter(params: {
+  warningSentAt: string | null | undefined;
+  anchor: string | null;
+}): boolean {
+  if (!params.warningSentAt || !params.anchor) {
+    return false;
+  }
+
+  const warningDate = new Date(params.warningSentAt);
+  const anchorDate = new Date(params.anchor);
+  if (
+    Number.isNaN(warningDate.getTime()) ||
+    Number.isNaN(anchorDate.getTime())
+  ) {
+    return false;
+  }
+
+  return warningDate.getTime() >= anchorDate.getTime();
+}
+
+function formatReminderDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
+function buildPlaidRemovalReminderEmail(params: {
+  name: string;
+  removalDate: Date;
+}): { subject: string; html: string; text: string } {
+  const removalDate = formatReminderDate(params.removalDate);
+  const membershipUrl = `${APP_URL}/dashboard/user-settings/membership`;
+
+  return notificationTemplate({
+    name: params.name || "there",
+    title: "Reminder: keep your bank connection active",
+    message: `Your Moneko subscription is no longer active, so your linked bank connection is scheduled to be disconnected on ${removalDate}. This helps prevent additional Plaid charges for inactive accounts. If you want to keep automatic bank syncing, renew your membership before that date.`,
+    actionUrl: membershipUrl,
+    actionText: "Manage Membership",
+    priority: "high",
+  });
+}
+
+async function sendPlaidRemovalReminderEmail(params: {
+  user: UserContactRow | undefined;
+  userId: string;
+  removalDate: Date;
+  sentUserIds: Set<string>;
+}): Promise<boolean> {
+  if (params.sentUserIds.has(params.userId)) {
+    return true;
+  }
+
+  if (!params.user?.email) {
+    console.warn(
+      "[plaid-maintenance] Skipping Plaid removal reminder without user email",
+      {
+        userId: params.userId,
+      },
+    );
+    params.sentUserIds.add(params.userId);
+    return true;
+  }
+
+  const email = buildPlaidRemovalReminderEmail({
+    name: params.user.full_name || "",
+    removalDate: params.removalDate,
+  });
+  const result = await sendUserEmail(
+    params.user.email,
+    params.user.full_name || "",
+    email,
+  );
+
+  if (!result.success) {
+    await reportEdgeFunctionError({
+      functionName: "plaid-maintenance",
+      error: new Error(result.error || "Failed to send Plaid removal reminder"),
+      context: {
+        phase: "send_plaid_removal_reminder",
+        userId: params.userId,
+      },
+    });
+    return false;
+  }
+
+  params.sentUserIds.add(params.userId);
+  return true;
+}
+
 async function reconcileStaleItems(
   supabase: ReturnType<typeof createServiceClient>,
 ) {
@@ -158,7 +290,8 @@ async function reconcileStaleItems(
 
   let enqueued = 0;
   for (const connection of connections || []) {
-    const shouldEnqueue = connection.needs_resync === true ||
+    const shouldEnqueue =
+      connection.needs_resync === true ||
       !connection.last_successful_sync_at ||
       connection.last_successful_sync_at < staleBefore ||
       !connection.last_webhook_received_at ||
@@ -210,9 +343,11 @@ async function enforceLifecyclePolicies(
   );
   const { data: subscriptionRows, error: subscriptionError } = userIds.length
     ? await supabase
-      .from("subscriptions")
-      .select("user_id, plan, status, current_period_end, created_at")
-      .in("user_id", userIds)
+        .from("subscriptions")
+        .select(
+          "user_id, plan, status, current_period_end, ended_at, created_at",
+        )
+        .in("user_id", userIds)
     : { data: [], error: null };
 
   if (subscriptionError) {
@@ -222,11 +357,26 @@ async function enforceLifecyclePolicies(
   const subscriptionsByUserId = pickLatestSubscriptions(
     (subscriptionRows || []) as SubscriptionRow[],
   );
+  const { data: userRows, error: userError } = userIds.length
+    ? await supabase
+        .from("users")
+        .select("id, email, full_name")
+        .in("id", userIds)
+    : { data: [], error: null };
+
+  if (userError) {
+    throw userError;
+  }
+
+  const usersById = new Map(
+    ((userRows || []) as UserContactRow[]).map((row) => [row.id, row]),
+  );
   const now = new Date();
   const warningBefore = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const trialInactivityThreshold = new Date(
     now.getTime() - 7 * 24 * 60 * 60 * 1000,
   );
+  const reminderEmailsSentForUsers = new Set<string>();
 
   let removed = 0;
   let warned = 0;
@@ -235,6 +385,7 @@ async function enforceLifecyclePolicies(
   for (const connection of (connections || []) as PlaidConnectionRow[]) {
     try {
       const subscription = subscriptionsByUserId.get(connection.user_id);
+      const subscriptionGraceAnchor = getSubscriptionGraceAnchor(subscription);
       const keepBeyondSecondMonth = shouldKeepPlaidItemBeyondSecondMonth({
         subscriptionStatus: subscription?.status ?? null,
         subscriptionPlan: subscription?.plan ?? null,
@@ -253,7 +404,7 @@ async function enforceLifecyclePolicies(
       const shouldRemoveForTrialInactivity =
         shouldRemovePlaidItemForNonPayingInactivity({
           subscriptionStatus: subscription?.status ?? null,
-          currentPeriodEnd: subscription?.current_period_end ?? null,
+          currentPeriodEnd: subscriptionGraceAnchor,
           lastFinancialFeatureUsedAt: connection.last_financial_feature_used_at,
           inactivityDays: 7,
           now,
@@ -262,13 +413,19 @@ async function enforceLifecyclePolicies(
         connection.status === "needs_reauth" &&
         updatedAt != null &&
         updatedAt.getTime() < trialInactivityThreshold.getTime();
-      const shouldRemoveForBilling = scheduledRemovalAt != null &&
+      const shouldRemoveForBilling =
+        scheduledRemovalAt != null &&
         scheduledRemovalAt.getTime() <= now.getTime() &&
         !keepBeyondSecondMonth;
       const shouldRemoveForExpiredSubscription = isPlaidSubscriptionPastGrace({
         subscriptionStatus: subscription?.status ?? null,
-        currentPeriodEnd: subscription?.current_period_end ?? null,
+        currentPeriodEnd: subscriptionGraceAnchor,
         graceDays: SUBSCRIPTION_PLAID_GRACE_DAYS,
+        now,
+      });
+      const subscriptionGraceDeadline = getSubscriptionGraceDeadline({
+        subscription,
+        graceAnchor: subscriptionGraceAnchor,
         now,
       });
 
@@ -284,30 +441,51 @@ async function enforceLifecyclePolicies(
           removalReason: shouldRemoveForExpiredSubscription
             ? "subscription_grace_expired"
             : shouldRemoveForBilling
-            ? "billing_deadline"
-            : shouldRemoveForRelinkTimeout
-            ? "relink_timeout"
-            : "trial_inactive",
+              ? "billing_deadline"
+              : shouldRemoveForRelinkTimeout
+                ? "relink_timeout"
+                : "trial_inactive",
         });
         removed += 1;
         continue;
       }
 
-      if (
+      const shouldWarnForScheduledRemoval =
         scheduledRemovalAt != null &&
         scheduledRemovalAt.getTime() <= warningBefore.getTime() &&
         !connection.warning_sent_at &&
-        !keepBeyondSecondMonth
+        !keepBeyondSecondMonth;
+      const shouldWarnForSubscriptionGrace =
+        subscriptionGraceDeadline != null &&
+        !hasWarningAtOrAfter({
+          warningSentAt: connection.warning_sent_at,
+          anchor: subscriptionGraceAnchor,
+        });
+      const reminderRemovalDate =
+        subscriptionGraceDeadline ?? scheduledRemovalAt;
+
+      if (
+        reminderRemovalDate != null &&
+        (shouldWarnForScheduledRemoval || shouldWarnForSubscriptionGrace)
       ) {
-        await supabase
-          .from("bank_connections")
-          .update({
-            warning_sent_at: now.toISOString(),
-            item_status: "pending_removal",
-            updated_at: now.toISOString(),
-          })
-          .eq("id", connection.id);
-        warned += 1;
+        const reminderSent = await sendPlaidRemovalReminderEmail({
+          user: usersById.get(connection.user_id),
+          userId: connection.user_id,
+          removalDate: reminderRemovalDate,
+          sentUserIds: reminderEmailsSentForUsers,
+        });
+
+        if (reminderSent) {
+          await supabase
+            .from("bank_connections")
+            .update({
+              warning_sent_at: now.toISOString(),
+              item_status: "pending_removal",
+              updated_at: now.toISOString(),
+            })
+            .eq("id", connection.id);
+          warned += 1;
+        }
       }
     } catch (error) {
       failed += 1;
