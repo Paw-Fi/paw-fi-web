@@ -154,8 +154,8 @@ Deno.serve(async (req: Request) => {
 
     // Avoid logging full body as it may contain sensitive user data.
     console.log("[save-income] isRecurring:", body.isRecurring);
-    const legacyRecurrenceRule = body.recurrence_rule ??
-      (body as any).recurrenceRule;
+    const legacyRecurrenceRule =
+      body.recurrence_rule ?? (body as any).recurrenceRule;
     if (legacyRecurrenceRule && !body.recurrence_rule) {
       body.recurrence_rule =
         legacyRecurrenceRule as RequestBody["recurrence_rule"];
@@ -165,8 +165,8 @@ Deno.serve(async (req: Request) => {
 
     const rawCategory = String(body.category ?? "");
     const sanitizedCategory = sanitizeCategoryName(rawCategory);
-    const resolvedCategory = sanitizedCategory ??
-      normalizeCategoryForStorage(body.category);
+    const resolvedCategory =
+      sanitizedCategory ?? normalizeCategoryForStorage(body.category);
     let effectiveCategory = resolvedCategory;
     if (!sanitizedCategory && rawCategory.trim().length > 0) {
       await reportEdgeFunctionError({
@@ -293,9 +293,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedEndDate = body.recurrence_rule.end_date == null
-        ? undefined
-        : normalizeCalendarDateString(body.recurrence_rule.end_date);
+      const normalizedEndDate =
+        body.recurrence_rule.end_date == null
+          ? undefined
+          : normalizeCalendarDateString(body.recurrence_rule.end_date);
 
       if (body.recurrence_rule.end_date != null && !normalizedEndDate) {
         return errorResponse(
@@ -434,6 +435,7 @@ Deno.serve(async (req: Request) => {
       const isInScope = await assertAccountInScope(supabase, body.accountId, {
         userId,
         householdId: resolvedHouseholdId,
+        currency,
       });
       if (!isInScope) {
         if (resolvedHouseholdId != null) {
@@ -447,6 +449,7 @@ Deno.serve(async (req: Request) => {
           accountId = await resolveDefaultAccountId(supabase, {
             userId,
             householdId: resolvedHouseholdId,
+            currency,
           });
         } else {
           return errorResponse(
@@ -462,6 +465,7 @@ Deno.serve(async (req: Request) => {
       accountId = await resolveDefaultAccountId(supabase, {
         userId,
         householdId: resolvedHouseholdId,
+        currency,
       });
     }
 
@@ -578,8 +582,8 @@ Deno.serve(async (req: Request) => {
         responseIncome = splitResult.transaction;
       } else if (splitResult.kind === "skipped") {
         splitSkipped = true;
-        warningMessage = warningMessage ??
-          "Income saved to household without split lines";
+        warningMessage =
+          warningMessage ?? "Income saved to household without split lines";
       } else if (splitResult.kind === "invalid") {
         console.warn("[save-income] Invalid household split payload:", {
           code: splitResult.code,
@@ -591,8 +595,8 @@ Deno.serve(async (req: Request) => {
           "[save-income] Failed to create household split:",
           splitResult.error,
         );
-        warningMessage = warningMessage ??
-          "Income saved but split group creation failed";
+        warningMessage =
+          warningMessage ?? "Income saved but split group creation failed";
       }
     }
 

@@ -48,6 +48,7 @@ export interface LinkedWalletRecord {
   name: string;
   icon: string;
   color: string;
+  currency: string;
   opening_balance_cents: number;
   goal_amount_cents: number | null;
   is_default: boolean;
@@ -343,7 +344,7 @@ export async function loadLinkedWalletsForBankAccounts(params: {
   let query = params.supabase
     .from("accounts")
     .select(
-      "id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, linked_bank_account_id",
+      "id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, linked_bank_account_id",
     )
     .eq("is_archived", false)
     .in("linked_bank_account_id", bankAccountIds);

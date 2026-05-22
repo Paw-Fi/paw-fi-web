@@ -396,6 +396,7 @@ export async function saveTransactionsBatchInternal(
 
   async function resolveAccountForImportRow(
     requestedAccountId: string | null,
+    currency: string,
     index: number,
   ): Promise<string | null | typeof invalidAccountSentinel> {
     const householdScopeId = scopeHouseholdId ?? null;
@@ -404,7 +405,7 @@ export async function saveTransactionsBatchInternal(
       uniqueRequestedAccountIds.add(requestedAccountId);
     }
 
-    const cacheKey = `${scopeHouseholdId ?? "personal"}:${
+    const cacheKey = `${scopeHouseholdId ?? "personal"}:${currency}:${
       requestedAccountId ?? "__default__"
     }`;
     if (accountResolutionCache.has(cacheKey)) {
@@ -419,6 +420,7 @@ export async function saveTransactionsBatchInternal(
         {
           userId: resolvedUserId,
           householdId: householdScopeId,
+          currency,
         },
       );
       if (!accountInScope) {
@@ -435,6 +437,7 @@ export async function saveTransactionsBatchInternal(
           resolvedAccountId = await resolveDefaultAccountId(supabase, {
             userId: resolvedUserId,
             householdId: householdScopeId,
+            currency,
           });
         } else {
           resolvedAccountId = invalidAccountSentinel;
@@ -446,6 +449,7 @@ export async function saveTransactionsBatchInternal(
       resolvedAccountId = await resolveDefaultAccountId(supabase, {
         userId: resolvedUserId,
         householdId: householdScopeId,
+        currency,
       });
     }
 
@@ -678,6 +682,7 @@ export async function saveTransactionsBatchInternal(
     const requestedAccountId = sanitizeUuid(tx.accountId ?? null);
     const resolvedAccountId = await resolveAccountForImportRow(
       requestedAccountId,
+      currency,
       i,
     );
     if (resolvedAccountId === invalidAccountSentinel) {

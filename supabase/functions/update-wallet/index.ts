@@ -9,6 +9,7 @@ interface RequestBody {
   name?: string;
   icon?: string;
   color?: string;
+  currency?: string;
   openingBalanceCents?: number;
   goalAmountCents?: number | null;
   isDefault?: boolean;
@@ -44,6 +45,11 @@ function extractDatabaseError(error: unknown): DatabaseErrorPayload {
   return {
     message: "Failed to update account",
   };
+}
+
+function normalizeCurrency(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -186,6 +192,20 @@ Deno.serve(async (req: Request) => {
     }
     if (typeof body.color === "string" && body.color.trim().length > 0) {
       updates.color = body.color.trim();
+    }
+    if (body.currency != null) {
+      const currency = normalizeCurrency(body.currency);
+      if (!currency) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Valid currency is required",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
+      updates.currency = currency;
     }
     if (Number.isFinite(body.openingBalanceCents)) {
       updates.opening_balance_cents = Math.round(

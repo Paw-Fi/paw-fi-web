@@ -134,22 +134,29 @@ Deno.serve(async (req: Request) => {
 
     const { data: expenseRows } = await supabase
       .from("expenses")
-      .select("amount_cents, type")
+      .select("amount_cents, type, currency")
       .eq("account_id", accountId)
       .is("deleted_at", null);
 
     const { data: transferOutRows } = await supabase
       .from("account_transfers")
-      .select("amount_cents")
+      .select("amount_cents, currency")
       .eq("from_account_id", accountId);
     const { data: transferInRows } = await supabase
       .from("account_transfers")
-      .select("amount_cents")
+      .select("amount_cents, currency")
       .eq("to_account_id", accountId);
 
     let incomeIn = 0;
     let expenseOut = 0;
+    const accountCurrency = String(account.currency ?? "USD")
+      .trim()
+      .toUpperCase();
     for (const row of (expenseRows ?? []) as any[]) {
+      const rowCurrency = String(row.currency ?? "")
+        .trim()
+        .toUpperCase();
+      if (rowCurrency !== accountCurrency) continue;
       const cents = Number(row.amount_cents || 0);
       if (String(row.type ?? "expense").toLowerCase() === "income") {
         incomeIn += cents;
@@ -159,22 +166,35 @@ Deno.serve(async (req: Request) => {
     }
 
     const transferOut = (transferOutRows ?? []).reduce(
-      (sum: number, row: any) => sum + Number(row.amount_cents || 0),
+      (sum: number, row: any) => {
+        const rowCurrency = String(row.currency ?? "")
+          .trim()
+          .toUpperCase();
+        if (rowCurrency !== accountCurrency) return sum;
+        return sum + Number(row.amount_cents || 0);
+      },
       0,
     );
     const transferIn = (transferInRows ?? []).reduce(
-      (sum: number, row: any) => sum + Number(row.amount_cents || 0),
+      (sum: number, row: any) => {
+        const rowCurrency = String(row.currency ?? "")
+          .trim()
+          .toUpperCase();
+        if (rowCurrency !== accountCurrency) return sum;
+        return sum + Number(row.amount_cents || 0);
+      },
       0,
     );
 
-    const currentBalanceCents = Number(account.opening_balance_cents || 0) +
+    const currentBalanceCents =
+      Number(account.opening_balance_cents || 0) +
       incomeIn -
       expenseOut +
       transferIn -
       transferOut;
     const delta = targetBalanceCents - currentBalanceCents;
-    const newOpeningBalanceCents = Number(account.opening_balance_cents || 0) +
-      delta;
+    const newOpeningBalanceCents =
+      Number(account.opening_balance_cents || 0) + delta;
 
     const { data, error } = await supabase
       .from("accounts")

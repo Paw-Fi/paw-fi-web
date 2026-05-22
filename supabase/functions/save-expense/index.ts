@@ -408,6 +408,7 @@ Deno.serve(async (req: Request) => {
         const isInScope = await assertAccountInScope(supabase, body.accountId, {
           userId: userId as string,
           householdId: scopeHouseholdId,
+          currency,
         });
         if (!isInScope) {
           throw new Error("ACCOUNT_SCOPE_MISMATCH");
@@ -418,6 +419,7 @@ Deno.serve(async (req: Request) => {
       return await resolveDefaultAccountId(supabase, {
         userId: userId as string,
         householdId: scopeHouseholdId,
+        currency,
       });
     }
 
@@ -468,6 +470,7 @@ Deno.serve(async (req: Request) => {
           preliminaryAccountId = await resolveDefaultAccountId(supabase, {
             userId: userId as string,
             householdId: insertScopeHouseholdId,
+            currency,
           });
         } else {
           return errorResponse(
@@ -849,6 +852,7 @@ Deno.serve(async (req: Request) => {
         {
           userId,
           householdId: body.householdId,
+          currency,
         },
       );
 
@@ -859,6 +863,7 @@ Deno.serve(async (req: Request) => {
           {
             userId,
             householdId: body.householdId,
+            currency,
           },
         );
         if (isInSharedScope) {
