@@ -9,15 +9,10 @@ interface RequestBody {
   name?: string;
   icon?: string;
   color?: string;
+  currency?: string;
   openingBalanceCents?: number;
   goalAmountCents?: number | null;
   isDefault?: boolean;
-}
-
-interface DatabaseErrorPayload {
-  message: string;
-  code?: string;
-  status?: number;
 }
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -27,23 +22,9 @@ function jsonResponse(payload: unknown, status = 200) {
   });
 }
 
-function extractDatabaseError(error: unknown): DatabaseErrorPayload {
-  if (error && typeof error === "object") {
-    const source = error as Record<string, unknown>;
-    const message =
-      typeof source.message === "string"
-        ? source.message
-        : "Failed to update account";
-    const code = typeof source.code === "string" ? source.code : undefined;
-    const status =
-      typeof source.status === "number" ? source.status : undefined;
-
-    return { message, code, status };
-  }
-
-  return {
-    message: "Failed to update account",
-  };
+function normalizeCurrency(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -187,6 +168,75 @@ Deno.serve(async (req: Request) => {
     if (typeof body.color === "string" && body.color.trim().length > 0) {
       updates.color = body.color.trim();
     }
+    if (body.currency != null) {
+      const currency = normalizeCurrency(body.currency);
+      if (!currency) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Valid currency is required",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
+      const currentCurrency = normalizeCurrency(String(account.currency ?? ""));
+      if (currency !== currentCurrency) {
+        if (account.is_system || account.linked_bank_account_id != null) {
+          return jsonResponse(
+            {
+              success: false,
+              error: "Wallet currency cannot be changed for this wallet",
+              code: "VALIDATION_ERROR",
+            },
+            400,
+          );
+        }
+
+        const [
+          { data: expenseRows, error: expenseError },
+          { data: transferRows, error: transferError },
+        ] = await Promise.all([
+          supabase
+            .from("expenses")
+            .select("id")
+            .eq("account_id", accountId)
+            .limit(1),
+          supabase
+            .from("account_transfers")
+            .select("id")
+            .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+            .limit(1),
+        ]);
+
+        if (expenseError || transferError) {
+          console.error("[update-account] activity check", {
+            expenseError,
+            transferError,
+          });
+          return jsonResponse(
+            {
+              success: false,
+              error: "Failed to verify wallet activity",
+              code: "SERVER_ERROR",
+            },
+            500,
+          );
+        }
+
+        if ((expenseRows?.length ?? 0) > 0 || (transferRows?.length ?? 0) > 0) {
+          return jsonResponse(
+            {
+              success: false,
+              error: "Wallet currency cannot be changed after activity exists",
+              code: "VALIDATION_ERROR",
+            },
+            400,
+          );
+        }
+      }
+      updates.currency = currency;
+    }
     if (Number.isFinite(body.openingBalanceCents)) {
       updates.opening_balance_cents = Math.round(
         Number(body.openingBalanceCents),
@@ -213,24 +263,17 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (error || !data) {
-      const databaseError = extractDatabaseError(error);
-      const status =
-        databaseError.status != null &&
-        databaseError.status >= 400 &&
-        databaseError.status < 600
-          ? databaseError.status
-          : error == null
-            ? 500
-            : 400;
-      console.error("[update-account]", databaseError);
+      console.error("[update-account]", error);
       return jsonResponse(
         {
           success: false,
-          error: databaseError.message,
-          code: databaseError.code ?? "VALIDATION_ERROR",
-          status,
+          error:
+            error == null
+              ? "Failed to update account"
+              : "Wallet update is not allowed for the current state",
+          code: error == null ? "SERVER_ERROR" : "VALIDATION_ERROR",
         },
-        status,
+        error == null ? 500 : 400,
       );
     }
 

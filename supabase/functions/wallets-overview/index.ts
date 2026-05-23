@@ -20,6 +20,7 @@ interface WalletRow {
   color: string;
   opening_balance_cents: number;
   goal_amount_cents: number | null;
+  currency: string;
   is_default: boolean;
   is_system: boolean;
   is_archived: boolean;
@@ -670,7 +671,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
+        "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
       )
       .eq("is_archived", false)
       .order("is_default", { ascending: false })
@@ -684,6 +685,8 @@ Deno.serve(async (req: Request) => {
         .eq("user_id", userId)
         .is("household_id", null);
     }
+
+    accountsQuery = accountsQuery.eq("currency", selectedCurrency);
 
     const { data: accounts, error: accountsError } = await accountsQuery;
     if (accountsError) {

@@ -22,6 +22,11 @@ function jsonResponse(payload: unknown, status = 200) {
   });
 }
 
+function normalizeCurrency(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -83,6 +88,17 @@ Deno.serve(async (req: Request) => {
     if (!normalizedDate) {
       return jsonResponse(
         { success: false, error: "Invalid date", code: "VALIDATION_ERROR" },
+        400,
+      );
+    }
+    const currency = normalizeCurrency(body.currency);
+    if (!currency) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Invalid currency",
+          code: "VALIDATION_ERROR",
+        },
         400,
       );
     }
@@ -191,6 +207,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const fromCurrency = String(fromAccount.currency ?? "")
+      .trim()
+      .toUpperCase();
+    const toCurrency = String(toAccount.currency ?? "")
+      .trim()
+      .toUpperCase();
+    if (fromCurrency !== currency || toCurrency !== currency) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Transfer currency must match both wallet currencies",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
     if (fromAccount.household_id != null) {
       const { data: membership } = await supabase
         .from("household_members")
@@ -212,7 +245,7 @@ Deno.serve(async (req: Request) => {
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         amount_cents: amountCents,
-        currency: String(body.currency ?? "USD").toUpperCase(),
+        currency,
         date: normalizedDate,
         note: body.note?.trim() || null,
       })

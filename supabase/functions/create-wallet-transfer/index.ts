@@ -21,6 +21,11 @@ function jsonResponse(payload: unknown, status = 200) {
   });
 }
 
+function normalizeCurrency(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -79,6 +84,17 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
+    const currency = normalizeCurrency(body.currency);
+    if (!currency) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Invalid currency",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
@@ -131,9 +147,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const sameScope = (fromAccount.household_id == null &&
-      toAccount.household_id == null &&
-      fromAccount.user_id === toAccount.user_id) ||
+    const sameScope =
+      (fromAccount.household_id == null &&
+        toAccount.household_id == null &&
+        fromAccount.user_id === toAccount.user_id) ||
       (fromAccount.household_id != null &&
         fromAccount.household_id === toAccount.household_id);
 
@@ -142,6 +159,23 @@ Deno.serve(async (req: Request) => {
         {
           success: false,
           error: "Cross-scope transfers are not allowed",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
+    const fromCurrency = String(fromAccount.currency ?? "")
+      .trim()
+      .toUpperCase();
+    const toCurrency = String(toAccount.currency ?? "")
+      .trim()
+      .toUpperCase();
+    if (fromCurrency !== currency || toCurrency !== currency) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Transfer currency must match both wallet currencies",
           code: "VALIDATION_ERROR",
         },
         400,
@@ -177,7 +211,7 @@ Deno.serve(async (req: Request) => {
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         amount_cents: amountCents,
-        currency: String(body.currency ?? "USD").toUpperCase(),
+        currency,
         date: normalizedDate,
         note: body.note?.trim() || null,
         created_by_user_id: userId,

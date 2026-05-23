@@ -1,11 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 import { corsHeaders } from "../shared/cors.ts";
 import { authenticateUserOrInternalSecret } from "../shared/auth.ts";
-import {
-  assertScopeAccess,
-  resolveDefaultAccountId,
-  sanitizeUuid,
-} from "../shared/accounts.ts";
+import { assertScopeAccess, sanitizeUuid } from "../shared/accounts.ts";
 import { rebindBankAccountExpensesToWallet } from "../shared/bank-wallet-binding.ts";
 
 interface RequestBody {
@@ -14,6 +10,7 @@ interface RequestBody {
   name: string;
   icon?: string;
   color?: string;
+  currency?: string;
   goalAmountCents?: number | null;
   openingBalanceCents?: number;
   isDefault?: boolean;
@@ -25,6 +22,11 @@ function jsonResponse(payload: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function normalizeCurrency(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -74,6 +76,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const requestedCurrency = normalizeCurrency(body.currency);
+    if (body.currency != null && !requestedCurrency) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Valid currency is required",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,
@@ -117,12 +131,32 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    let currency = requestedCurrency;
+    if (!currency) {
+      const { data: resolvedCurrency, error: currencyError } =
+        await supabase.rpc("resolve_account_currency", {
+          p_user_id: userId,
+          p_household_id: householdId,
+        });
+      if (currencyError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to resolve wallet currency",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
+      currency = normalizeCurrency(String(resolvedCurrency ?? "")) ?? "USD";
+    }
+
     const linkedBankAccountId = sanitizeUuid(body.linkedBankAccountId ?? null);
     let linkedBankProvider: string | null = null;
     if (linkedBankAccountId != null) {
       const { data: bankAccount, error: bankAccountError } = await supabase
         .from("bank_accounts")
-        .select("id, user_id, bank_connection_id")
+        .select("id, user_id, bank_connection_id, currency")
         .eq("id", linkedBankAccountId)
         .maybeSingle();
 
@@ -145,6 +179,20 @@ Deno.serve(async (req: Request) => {
             code: "VALIDATION_ERROR",
           },
           404,
+        );
+      }
+
+      const bankCurrency = normalizeCurrency(
+        String(bankAccount.currency ?? ""),
+      );
+      if (!bankCurrency || bankCurrency !== currency) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Linked bank account currency must match wallet currency",
+            code: "VALIDATION_ERROR",
+          },
+          400,
         );
       }
 
@@ -229,6 +277,21 @@ Deno.serve(async (req: Request) => {
       }
 
       if (existingLinkedWallet != null) {
+        const existingLinkedCurrency = normalizeCurrency(
+          String(existingLinkedWallet.currency ?? ""),
+        );
+        if (!existingLinkedCurrency || existingLinkedCurrency !== currency) {
+          return jsonResponse(
+            {
+              success: false,
+              error:
+                "Existing linked wallet currency does not match bank account currency",
+              code: "VALIDATION_ERROR",
+            },
+            409,
+          );
+        }
+
         const rebindResult = await rebindBankAccountExpensesToWallet({
           supabase,
           userId,
@@ -236,6 +299,7 @@ Deno.serve(async (req: Request) => {
           walletId: existingLinkedWallet.id,
           householdId: existingLinkedWallet.household_id ?? null,
           provider: linkedBankProvider ?? "plaid",
+          walletCurrency: String(existingLinkedWallet.currency ?? currency),
         });
         if (rebindResult.updated > 0) {
           console.log(
@@ -285,6 +349,7 @@ Deno.serve(async (req: Request) => {
         name,
         icon: String(body.icon ?? "wallet"),
         color: String(body.color ?? "#6B7280"),
+        currency,
         opening_balance_cents: openingBalanceCents,
         goal_amount_cents: goalAmountCents,
         is_default: shouldSetDefault,
@@ -305,10 +370,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const fallbackDefault = await resolveDefaultAccountId(supabase, {
-      userId,
-      householdId,
-    });
+    let fallbackDefaultQuery = supabase
+      .from("accounts")
+      .select("id")
+      .eq("is_archived", false)
+      .eq("is_default", true)
+      .limit(1);
+
+    fallbackDefaultQuery = householdId
+      ? fallbackDefaultQuery.eq("household_id", householdId)
+      : fallbackDefaultQuery.eq("user_id", userId).is("household_id", null);
+
+    const { data: fallbackDefault } = await fallbackDefaultQuery.maybeSingle();
 
     if (!fallbackDefault) {
       await supabase
@@ -326,6 +399,7 @@ Deno.serve(async (req: Request) => {
         walletId: data.id,
         householdId: data.household_id ?? null,
         provider: linkedBankProvider ?? "plaid",
+        walletCurrency: String(data.currency ?? currency),
       });
       if (rebindResult.updated > 0) {
         console.log(

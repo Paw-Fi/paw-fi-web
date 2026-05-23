@@ -8,6 +8,7 @@ interface RequestBody {
   userId?: string;
   includeArchived?: boolean;
   currency?: string;
+  currencies?: string[];
   monthStart?: string;
   currentMonthStart?: string;
 }
@@ -29,6 +30,19 @@ function toMap(rows: Array<{ account_id: string; amount_cents: number }>) {
 
 function normalizeCurrency(value?: string | null): string | null {
   const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeCurrencies(values?: string[] | null): string[] | null {
+  if (values == null) return null;
+  if (values.length > 20) return null;
+
+  const currencies = values.map((value) => normalizeCurrency(value));
+  if (currencies.some((value) => value == null)) return null;
+
+  const normalized = Array.from(
+    new Set(currencies.filter((value): value is string => value != null)),
+  ).sort();
   return normalized.length > 0 ? normalized : null;
 }
 
@@ -85,6 +99,16 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = (await req.json()) as RequestBody;
+    if (body.currencies != null && !Array.isArray(body.currencies)) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "currencies must be an array",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
     const householdId = sanitizeUuid(body.householdId ?? null);
     if (body.householdId && !householdId) {
       return jsonResponse(
@@ -97,6 +121,32 @@ Deno.serve(async (req: Request) => {
       );
     }
     const selectedCurrency = normalizeCurrency(body.currency);
+    const selectedCurrencies =
+      normalizeCurrencies(body.currencies) ??
+      (selectedCurrency ? [selectedCurrency] : null);
+    if (body.currency && !selectedCurrency) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "Invalid currency",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
+    if (body.currencies != null && selectedCurrencies == null) {
+      return jsonResponse(
+        {
+          success: false,
+          error:
+            body.currencies.length > 20
+              ? "Too many currencies"
+              : "Invalid currencies",
+          code: "VALIDATION_ERROR",
+        },
+        400,
+      );
+    }
     const snapshotMonthStart = normalizeDate(
       body.monthStart ?? body.currentMonthStart,
     );
@@ -159,7 +209,7 @@ Deno.serve(async (req: Request) => {
     let accountsQuery = supabase
       .from("accounts")
       .select(
-        "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
+        "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id, created_at, updated_at",
       )
       .order("is_default", { ascending: false })
       .order("is_system", { ascending: false })
@@ -177,6 +227,10 @@ Deno.serve(async (req: Request) => {
         .is("household_id", null);
     }
 
+    if (selectedCurrencies != null) {
+      accountsQuery = accountsQuery.in("currency", selectedCurrencies);
+    }
+
     const { data: accounts, error: accountsError } = await accountsQuery;
     if (accountsError) {
       return jsonResponse(
@@ -190,6 +244,15 @@ Deno.serve(async (req: Request) => {
     }
 
     const accountIds = (accounts ?? []).map((row: any) => row.id as string);
+    const accountCurrencyById = new Map<string, string>();
+    for (const row of (accounts ?? []) as any[]) {
+      accountCurrencyById.set(
+        row.id as string,
+        String(row.currency ?? selectedCurrency ?? "USD")
+          .trim()
+          .toUpperCase(),
+      );
+    }
     if (accountIds.length === 0) {
       return jsonResponse({ success: true, data: [] });
     }
@@ -199,6 +262,7 @@ Deno.serve(async (req: Request) => {
     if (
       snapshotMonthStart &&
       selectedCurrency &&
+      (selectedCurrencies?.length ?? 0) <= 1 &&
       !auth.isInternalService &&
       authHeader?.startsWith("Bearer ")
     ) {
@@ -243,7 +307,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: expenseRows } = await supabase
       .from("expenses")
-      .select("account_id, amount_cents, type, is_recurring")
+      .select("account_id, amount_cents, type, is_recurring, currency")
       .in("account_id", accountIds)
       .is("deleted_at", null);
 
@@ -252,6 +316,11 @@ Deno.serve(async (req: Request) => {
     for (const row of (expenseRows ?? []) as any[]) {
       if (row.is_recurring === true) continue;
       const accountId = row.account_id as string;
+      const walletCurrency = accountCurrencyById.get(accountId);
+      const rowCurrency = String(row.currency ?? "")
+        .trim()
+        .toUpperCase();
+      if (walletCurrency && rowCurrency !== walletCurrency) continue;
       const amount = Number(row.amount_cents || 0);
       const type = String(row.type ?? "expense").toLowerCase();
       if (type === "income") {
@@ -263,16 +332,21 @@ Deno.serve(async (req: Request) => {
 
     const { data: transferOutRows } = await supabase
       .from("account_transfers")
-      .select("from_account_id, amount_cents")
+      .select("from_account_id, amount_cents, currency")
       .in("from_account_id", accountIds);
     const { data: transferInRows } = await supabase
       .from("account_transfers")
-      .select("to_account_id, amount_cents")
+      .select("to_account_id, amount_cents, currency")
       .in("to_account_id", accountIds);
 
     const transferOut: Record<string, number> = {};
     for (const row of (transferOutRows ?? []) as any[]) {
       const key = row.from_account_id as string;
+      const walletCurrency = accountCurrencyById.get(key);
+      const rowCurrency = String(row.currency ?? "")
+        .trim()
+        .toUpperCase();
+      if (walletCurrency && rowCurrency !== walletCurrency) continue;
       transferOut[key] =
         (transferOut[key] ?? 0) + Number(row.amount_cents || 0);
     }
@@ -280,6 +354,11 @@ Deno.serve(async (req: Request) => {
     const transferIn: Record<string, number> = {};
     for (const row of (transferInRows ?? []) as any[]) {
       const key = row.to_account_id as string;
+      const walletCurrency = accountCurrencyById.get(key);
+      const rowCurrency = String(row.currency ?? "")
+        .trim()
+        .toUpperCase();
+      if (walletCurrency && rowCurrency !== walletCurrency) continue;
       transferIn[key] = (transferIn[key] ?? 0) + Number(row.amount_cents || 0);
     }
 

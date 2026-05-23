@@ -608,11 +608,11 @@ async function syncConnection(params: {
         last_successful_sync_at: new Date().toISOString(),
         last_synced_at: new Date().toISOString(),
         status: "active",
-        item_status: cooldownExemptItemStatuses.has(
-            params.connection.item_status ?? "",
-          ) || params.connection.item_status === "pending_relink"
-          ? "active"
-          : (params.connection.item_status ?? "active"),
+        item_status:
+          cooldownExemptItemStatuses.has(params.connection.item_status ?? "") ||
+          params.connection.item_status === "pending_relink"
+            ? "active"
+            : (params.connection.item_status ?? "active"),
         item_health_state: "healthy",
         relink_state:
           params.connection.relink_state === PLAID_REQUIRED_RELINK_STATE
@@ -841,9 +841,10 @@ async function rebindLinkedPlaidExpensesForConnection(params: {
   connectionId: string;
   linkedWalletsByBankAccountId: Map<string, LinkedWalletRecord>;
 }) {
-  for (
-    const [bankAccountId, linkedWallet] of params.linkedWalletsByBankAccountId
-  ) {
+  for (const [
+    bankAccountId,
+    linkedWallet,
+  ] of params.linkedWalletsByBankAccountId) {
     const result = await rebindBankAccountExpensesToWallet({
       supabase: params.supabase,
       userId: params.userId,
@@ -851,6 +852,7 @@ async function rebindLinkedPlaidExpensesForConnection(params: {
       walletId: linkedWallet.id,
       householdId: linkedWallet.household_id ?? null,
       provider: PLAID_PROVIDER,
+      walletCurrency: linkedWallet.currency,
     });
     if (result.updated > 0) {
       console.log(

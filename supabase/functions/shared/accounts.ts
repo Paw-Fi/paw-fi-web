@@ -12,6 +12,12 @@ export function sanitizeUuid(value?: string | null): string | null {
 export interface ScopeContext {
   userId: string | null;
   householdId: string | null;
+  currency?: string | null;
+}
+
+function normalizeCurrency(value?: string | null): string | null {
+  const normalized = (value ?? "").trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : null;
 }
 
 export async function assertScopeAccess(
@@ -47,6 +53,7 @@ export async function resolveDefaultAccountId(
   const { data, error } = await supabase.rpc("resolve_default_account", {
     p_user_id: userId,
     p_household_id: householdId,
+    p_currency: context.currency ?? null,
   });
 
   if (error) {
@@ -65,7 +72,7 @@ export async function assertAccountInScope(
   if (!context.userId) return false;
   const { data, error } = await supabase
     .from("accounts")
-    .select("id, user_id, household_id, is_archived")
+    .select("id, user_id, household_id, currency, is_archived")
     .eq("id", accountId)
     .maybeSingle();
 
@@ -77,11 +84,20 @@ export async function assertAccountInScope(
     return false;
   }
 
+  const expectedCurrency = normalizeCurrency(context.currency);
+  if (context.currency != null && data.currency !== expectedCurrency) {
+    return false;
+  }
+
   if (context.householdId == null) {
     return data.household_id == null && data.user_id === context.userId;
   }
 
-  return data.household_id === context.householdId;
+  if (data.household_id !== context.householdId) {
+    return false;
+  }
+
+  return await assertScopeAccess(supabase, context.userId, context.householdId);
 }
 
 export async function getAccountOrNull(
@@ -91,7 +107,7 @@ export async function getAccountOrNull(
   const { data, error } = await supabase
     .from("accounts")
     .select(
-      "id, user_id, household_id, name, icon, color, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
+      "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id",
     )
     .eq("id", accountId)
     .maybeSingle();

@@ -16,6 +16,7 @@ export interface RebindBankAccountExpensesParams {
   walletId: string;
   householdId?: string | null;
   provider: string;
+  walletCurrency: string;
 }
 
 export interface RebindBankAccountExpensesResult {
@@ -89,6 +90,7 @@ export async function rebindBankAccountExpensesToWallet(
     .eq("user_id", params.userId)
     .eq("provider", params.provider)
     .eq("bank_account_id", params.bankAccountId)
+    .eq("currency", params.walletCurrency)
     .is("deleted_at", null)
     .or(needsBindingFilter)
     .limit(1);
@@ -109,6 +111,7 @@ export async function rebindBankAccountExpensesToWallet(
       .eq("user_id", params.userId)
       .eq("provider", params.provider)
       .eq("bank_account_id", params.bankAccountId)
+      .eq("currency", params.walletCurrency)
       .is("deleted_at", null)
       .order("id", { ascending: true })
       .range(offset, offset + REBIND_BATCH_SIZE - 1);
@@ -162,6 +165,7 @@ async function rebindBankRecurringTemplatesToWallet(
     .eq("user_id", params.userId)
     .is("provider", null)
     .is("bank_account_id", null)
+    .eq("currency", params.walletCurrency)
     .like(
       "idempotency_key",
       `bank-recurring:v1:${params.provider}:${params.bankAccountId}:%`,

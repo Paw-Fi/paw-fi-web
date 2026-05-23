@@ -73,6 +73,7 @@ export async function createBotWallet(params: {
   name: unknown;
   icon: unknown;
   color: unknown;
+  currency: unknown;
   openingBalanceCents: number | undefined;
   goalAmountCents: number | undefined;
   isDefault: boolean;
@@ -86,6 +87,7 @@ export async function createBotWallet(params: {
         name: params.name,
         icon: params.icon,
         color: params.color,
+        currency: normalizeBotCurrency(params.currency),
         openingBalanceCents: params.openingBalanceCents,
         goalAmountCents: params.goalAmountCents,
         isDefault: params.isDefault,
@@ -151,6 +153,7 @@ export async function createBotWalletFromToolCall(params: {
     name: walletNameResult.value,
     icon: args.icon,
     color: args.color,
+    currency: args.currency,
     openingBalanceCents: openingBalanceResult.cents,
     goalAmountCents: goalAmountResult.cents,
     isDefault: args.is_default === true,
@@ -206,6 +209,12 @@ export async function updateBotWallet(params: {
       },
     },
   };
+}
+
+function normalizeBotCurrency(value: unknown): string {
+  const normalized =
+    typeof value === "string" ? value.trim().toUpperCase() : "";
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : "USD";
 }
 
 export async function createBotWalletTransfer(params: {
