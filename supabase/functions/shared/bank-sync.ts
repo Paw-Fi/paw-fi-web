@@ -341,6 +341,28 @@ export async function loadLinkedWalletsForBankAccounts(params: {
     return new Map<string, LinkedWalletRecord>();
   }
 
+  const { data: bankAccountRows, error: bankAccountError } =
+    await params.supabase
+      .from("bank_accounts")
+      .select("id, currency")
+      .in("id", bankAccountIds);
+
+  if (bankAccountError) {
+    throw bankAccountError;
+  }
+
+  const bankCurrencyById = new Map<string, string>();
+  for (const row of (bankAccountRows || []) as Array<{
+    id?: string | null;
+    currency?: string | null;
+  }>) {
+    const id = row.id?.trim();
+    const currency = row.currency?.trim().toUpperCase();
+    if (id && currency) {
+      bankCurrencyById.set(id, currency);
+    }
+  }
+
   let query = params.supabase
     .from("accounts")
     .select(
@@ -363,6 +385,8 @@ export async function loadLinkedWalletsForBankAccounts(params: {
   const linkedWallets = new Map<string, LinkedWalletRecord>();
   for (const row of (data || []) as LinkedWalletRecord[]) {
     if (!row.linked_bank_account_id) continue;
+    const bankCurrency = bankCurrencyById.get(row.linked_bank_account_id);
+    if (bankCurrency !== row.currency.trim().toUpperCase()) continue;
     linkedWallets.set(row.linked_bank_account_id, row);
   }
 
@@ -393,6 +417,7 @@ function normalizeCurrency(
   return {
     record: {
       ...record,
+      account_id: null,
       base_currency: accountCurrency,
       fx_rate: record.fx_rate ?? 1,
       normalized_amount_cents: record.amount_cents,

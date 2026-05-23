@@ -93,7 +93,11 @@ export async function assertAccountInScope(
     return data.household_id == null && data.user_id === context.userId;
   }
 
-  return data.household_id === context.householdId;
+  if (data.household_id !== context.householdId) {
+    return false;
+  }
+
+  return await assertScopeAccess(supabase, context.userId, context.householdId);
 }
 
 export async function getAccountOrNull(
@@ -103,7 +107,7 @@ export async function getAccountOrNull(
   const { data, error } = await supabase
     .from("accounts")
     .select(
-      "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived",
+      "id, user_id, household_id, name, icon, color, currency, opening_balance_cents, goal_amount_cents, is_default, is_system, is_archived, linked_bank_account_id",
     )
     .eq("id", accountId)
     .maybeSingle();

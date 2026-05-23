@@ -246,6 +246,15 @@ begin
     end if;
   end if;
 
+  if p_household_id is not null and not exists (
+    select 1
+    from public.household_members hm
+    where hm.household_id = p_household_id
+      and hm.user_id = p_user_id
+  ) then
+    return null;
+  end if;
+
   v_currency := coalesce(
     upper(nullif(trim(p_currency), '')),
     public.resolve_account_currency(p_user_id, p_household_id),
@@ -336,6 +345,9 @@ begin
   return v_account_id;
 end;
 $$;
+
+revoke execute on function public.ensure_personal_spending_account(uuid) from public, anon, authenticated;
+grant execute on function public.ensure_personal_spending_account(uuid) to service_role;
 
 create or replace function public.create_default_spending_account_for_new_user()
 returns trigger
@@ -590,6 +602,7 @@ declare
   v_currency text;
   v_from public.accounts%rowtype;
   v_to public.accounts%rowtype;
+  v_household_id uuid;
 begin
   v_currency := upper(nullif(trim(new.currency), ''));
   if v_currency is null or v_currency !~ '^[A-Z]{3}$' then
@@ -616,9 +629,32 @@ begin
       using errcode = '23514';
   end if;
 
+  v_household_id := v_from.household_id;
+  if new.household_id is distinct from v_household_id then
+    raise exception 'Transfer household scope must match wallet scope'
+      using errcode = '23514';
+  end if;
+
   if v_from.household_id is null and v_from.user_id <> v_to.user_id then
     raise exception 'Transfers cannot cross personal wallet owners'
       using errcode = '23514';
+  end if;
+
+  if auth.uid() is not null then
+    if v_household_id is null then
+      if v_from.user_id <> auth.uid() or v_to.user_id <> auth.uid() then
+        raise exception 'Transfer wallet is outside the authenticated personal scope'
+          using errcode = '42501';
+      end if;
+    elsif not exists (
+      select 1
+      from public.household_members hm
+      where hm.household_id = v_household_id
+        and hm.user_id = auth.uid()
+    ) then
+      raise exception 'Transfer wallet is outside the authenticated household scope'
+        using errcode = '42501';
+    end if;
   end if;
 
   return new;
@@ -628,7 +664,7 @@ $$;
 drop trigger if exists trigger_ensure_account_transfer_currency on public.account_transfers;
 
 create trigger trigger_ensure_account_transfer_currency
-before insert or update of from_account_id, to_account_id, currency on public.account_transfers
+before insert or update of from_account_id, to_account_id, currency, household_id on public.account_transfers
 for each row execute function public.ensure_account_transfer_currency();
 
 create or replace function public.prevent_system_account_mutation()
@@ -691,23 +727,31 @@ begin
     return new;
   end if;
 
+  if old.is_system then
+    raise exception 'System wallet currency cannot be changed'
+      using errcode = '23514';
+  end if;
+
+  if old.linked_bank_account_id is not null then
+    raise exception 'Linked bank wallet currency cannot be changed'
+      using errcode = '23514';
+  end if;
+
   if exists (
     select 1
     from public.expenses e
-    where e.account_id = new.id
-      and upper(nullif(trim(coalesce(e.currency, '')), '')) <> new.currency
+    where e.account_id = old.id
   ) then
-    raise exception 'Cannot change wallet currency while transactions use another currency'
+    raise exception 'Cannot change wallet currency after transactions exist'
       using errcode = '23514';
   end if;
 
   if exists (
     select 1
     from public.account_transfers t
-    where (t.from_account_id = new.id or t.to_account_id = new.id)
-      and upper(nullif(trim(coalesce(t.currency, '')), '')) <> new.currency
+    where t.from_account_id = old.id or t.to_account_id = old.id
   ) then
-    raise exception 'Cannot change wallet currency while transfers use another currency'
+    raise exception 'Cannot change wallet currency after transfers exist'
       using errcode = '23514';
   end if;
 
@@ -720,3 +764,151 @@ drop trigger if exists trigger_prevent_account_currency_conflicts on public.acco
 create trigger trigger_prevent_account_currency_conflicts
 before update of currency on public.accounts
 for each row execute function public.prevent_account_currency_conflicts();
+
+update public.accounts a
+set
+  linked_bank_account_id = null,
+  updated_at = now()
+from public.bank_accounts ba
+join public.bank_connections bc on bc.id = ba.bank_connection_id
+where a.linked_bank_account_id = ba.id
+  and (
+    upper(nullif(trim(ba.currency), '')) is distinct from a.currency
+    or ba.user_id is distinct from a.user_id
+    or bc.household_id is distinct from a.household_id
+  );
+
+create or replace function public.ensure_linked_bank_wallet_currency()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_bank_currency text;
+  v_bank_user_id uuid;
+  v_bank_household_id uuid;
+begin
+  if new.linked_bank_account_id is null then
+    return new;
+  end if;
+
+  new.currency := coalesce(
+    upper(nullif(trim(new.currency), '')),
+    public.resolve_account_currency(new.user_id, new.household_id),
+    'USD'
+  );
+
+  select
+    upper(nullif(trim(ba.currency), '')),
+    ba.user_id,
+    bc.household_id
+  into v_bank_currency, v_bank_user_id, v_bank_household_id
+  from public.bank_accounts ba
+  join public.bank_connections bc on bc.id = ba.bank_connection_id
+  where ba.id = new.linked_bank_account_id
+  limit 1;
+
+  if v_bank_currency is null then
+    raise exception 'Linked bank account is not available'
+      using errcode = '23503';
+  end if;
+
+  if v_bank_currency <> new.currency then
+    raise exception 'Linked bank account currency must match wallet currency'
+      using errcode = '23514';
+  end if;
+
+  if v_bank_user_id <> new.user_id
+     or v_bank_household_id is distinct from new.household_id then
+    raise exception 'Linked bank account scope must match wallet scope'
+      using errcode = '23503';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists trigger_ensure_linked_bank_wallet_currency on public.accounts;
+
+create trigger trigger_ensure_linked_bank_wallet_currency
+before insert or update of linked_bank_account_id, currency, user_id, household_id on public.accounts
+for each row execute function public.ensure_linked_bank_wallet_currency();
+
+create or replace function public.rebind_bank_account_expenses_to_wallet(
+  p_user_id uuid,
+  p_provider text,
+  p_bank_account_id uuid,
+  p_wallet_id uuid,
+  p_household_id uuid default null
+) returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_updated integer := 0;
+  v_wallet_currency text;
+begin
+  select a.currency into v_wallet_currency
+  from public.accounts a
+  join public.bank_accounts ba on ba.id = p_bank_account_id
+  where a.id = p_wallet_id
+    and a.user_id = p_user_id
+    and a.household_id is not distinct from p_household_id
+    and a.linked_bank_account_id = p_bank_account_id
+    and upper(nullif(trim(ba.currency), '')) = a.currency
+    and a.is_archived = false
+  limit 1;
+
+  if v_wallet_currency is null then
+    return 0;
+  end if;
+
+  update public.expenses e
+  set
+    account_id = p_wallet_id,
+    household_id = p_household_id,
+    updated_at = now()
+  where e.user_id = p_user_id
+    and e.provider = p_provider
+    and e.bank_account_id = p_bank_account_id
+    and upper(nullif(trim(coalesce(e.currency, '')), '')) = v_wallet_currency
+    and e.deleted_at is null
+    and not coalesce(e.user_overrides ? 'account_id', false)
+    and (
+      e.account_id is distinct from p_wallet_id
+      or e.household_id is distinct from p_household_id
+    );
+
+  get diagnostics v_updated = row_count;
+  return v_updated;
+end;
+$$;
+
+revoke execute on function public.rebind_bank_account_expenses_to_wallet(uuid, text, uuid, uuid, uuid) from public, anon, authenticated;
+grant execute on function public.rebind_bank_account_expenses_to_wallet(uuid, text, uuid, uuid, uuid) to service_role;
+
+revoke execute on function public.normalize_account_currency() from public, anon, authenticated;
+revoke execute on function public.ensure_expense_account_id() from public, anon, authenticated;
+revoke execute on function public.ensure_account_transfer_currency() from public, anon, authenticated;
+revoke execute on function public.prevent_system_account_mutation() from public, anon, authenticated;
+revoke execute on function public.prevent_account_currency_conflicts() from public, anon, authenticated;
+revoke execute on function public.ensure_linked_bank_wallet_currency() from public, anon, authenticated;
+grant execute on function public.normalize_account_currency() to service_role;
+grant execute on function public.ensure_expense_account_id() to service_role;
+grant execute on function public.ensure_account_transfer_currency() to service_role;
+grant execute on function public.prevent_system_account_mutation() to service_role;
+grant execute on function public.prevent_account_currency_conflicts() to service_role;
+grant execute on function public.ensure_linked_bank_wallet_currency() to service_role;
+
+revoke execute on function public.bind_user_to_household_subscription(uuid, uuid) from public, anon, authenticated;
+revoke execute on function public.remove_household_subscription_binding(uuid, uuid) from public, anon, authenticated;
+revoke execute on function public.cascade_subscription_cancellation(uuid) from public, anon, authenticated;
+revoke execute on function public.cascade_subscription_upgrade(uuid, text, text) from public, anon, authenticated;
+revoke execute on function public.upsert_bank_connection_with_household(uuid, text, text, text, text, timestamptz, text, text, text, text, jsonb) from public, anon, authenticated;
+grant execute on function public.bind_user_to_household_subscription(uuid, uuid) to service_role;
+grant execute on function public.remove_household_subscription_binding(uuid, uuid) to service_role;
+grant execute on function public.cascade_subscription_cancellation(uuid) to service_role;
+grant execute on function public.cascade_subscription_upgrade(uuid, text, text) to service_role;
+grant execute on function public.upsert_bank_connection_with_household(uuid, text, text, text, text, timestamptz, text, text, text, text, jsonb) to service_role;

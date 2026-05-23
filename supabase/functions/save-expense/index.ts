@@ -424,7 +424,7 @@ Deno.serve(async (req: Request) => {
     }
 
     let resolvedSharedHouseholdId: string | null = null;
-    if (requestedHouseholdId && !isPortfolio) {
+    if (requestedHouseholdId) {
       const { data: membership, error: membershipError } = await supabase
         .from("household_members")
         .select("id")
@@ -441,7 +441,11 @@ Deno.serve(async (req: Request) => {
       }
 
       if (membership) {
-        resolvedSharedHouseholdId = requestedHouseholdId;
+        if (!isPortfolio) {
+          resolvedSharedHouseholdId = requestedHouseholdId;
+        }
+      } else if (isPortfolio) {
+        return errorResponse("Forbidden household scope", 403, "UNAUTHORIZED");
       }
     }
 

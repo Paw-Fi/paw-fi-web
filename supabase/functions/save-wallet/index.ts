@@ -156,7 +156,7 @@ Deno.serve(async (req: Request) => {
     if (linkedBankAccountId != null) {
       const { data: bankAccount, error: bankAccountError } = await supabase
         .from("bank_accounts")
-        .select("id, user_id, bank_connection_id")
+        .select("id, user_id, bank_connection_id, currency")
         .eq("id", linkedBankAccountId)
         .maybeSingle();
 
@@ -179,6 +179,20 @@ Deno.serve(async (req: Request) => {
             code: "VALIDATION_ERROR",
           },
           404,
+        );
+      }
+
+      const bankCurrency = normalizeCurrency(
+        String(bankAccount.currency ?? ""),
+      );
+      if (!bankCurrency || bankCurrency !== currency) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Linked bank account currency must match wallet currency",
+            code: "VALIDATION_ERROR",
+          },
+          400,
         );
       }
 
@@ -263,6 +277,21 @@ Deno.serve(async (req: Request) => {
       }
 
       if (existingLinkedWallet != null) {
+        const existingLinkedCurrency = normalizeCurrency(
+          String(existingLinkedWallet.currency ?? ""),
+        );
+        if (!existingLinkedCurrency || existingLinkedCurrency !== currency) {
+          return jsonResponse(
+            {
+              success: false,
+              error:
+                "Existing linked wallet currency does not match bank account currency",
+              code: "VALIDATION_ERROR",
+            },
+            409,
+          );
+        }
+
         const rebindResult = await rebindBankAccountExpensesToWallet({
           supabase,
           userId,
@@ -270,6 +299,7 @@ Deno.serve(async (req: Request) => {
           walletId: existingLinkedWallet.id,
           householdId: existingLinkedWallet.household_id ?? null,
           provider: linkedBankProvider ?? "plaid",
+          walletCurrency: String(existingLinkedWallet.currency ?? currency),
         });
         if (rebindResult.updated > 0) {
           console.log(
@@ -369,6 +399,7 @@ Deno.serve(async (req: Request) => {
         walletId: data.id,
         householdId: data.household_id ?? null,
         provider: linkedBankProvider ?? "plaid",
+        walletCurrency: String(data.currency ?? currency),
       });
       if (rebindResult.updated > 0) {
         console.log(

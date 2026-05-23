@@ -459,6 +459,32 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const allowedUpdateKeys = new Set([
+      "amount_cents",
+      "category",
+      "raw_text",
+      "merchant",
+      "date",
+      "currency",
+      "payer_user_id",
+      "payerUserId",
+      "is_recurring",
+      "recurrence_rule",
+      "source",
+      "household_id",
+      "householdId",
+      "account_id",
+      "accountId",
+    ]);
+    for (const key of Object.keys(updates)) {
+      if (!allowedUpdateKeys.has(key)) {
+        return errorResponse(
+          `Unsupported update field: ${key}`,
+          "VALIDATION_ERROR",
+        );
+      }
+    }
+
     // Validate individual fields if provided
     if (updates.amount_cents !== undefined) {
       if (
@@ -1222,6 +1248,31 @@ Deno.serve(async (req: Request) => {
     const targetHouseholdId = updatesHasHouseholdId
       ? (updatesHouseholdId ?? null)
       : expenseHouseholdId;
+    if (targetHouseholdId != null) {
+      const { data: targetMembership, error: targetMembershipError } =
+        await supabase
+          .from("household_members")
+          .select("id")
+          .eq("household_id", targetHouseholdId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+      if (targetMembershipError) {
+        console.error(
+          "[update-expense] Failed to verify target household membership:",
+          targetMembershipError,
+        );
+        return errorResponse(
+          "Failed to verify target household",
+          "SERVER_ERROR",
+          500,
+        );
+      }
+
+      if (!targetMembership) {
+        return errorResponse("Forbidden target household", "UNAUTHORIZED", 403);
+      }
+    }
     const targetCurrency =
       typeof (updates as any).currency === "string"
         ? (updates as any).currency
@@ -1881,6 +1932,40 @@ Deno.serve(async (req: Request) => {
     const targetSplitGroupId =
       createdSplitGroupId ?? (sameHouseholdScope ? existingSplitGroupId : null);
     if (normalizedPayerUserId && targetSplitGroupId) {
+      if (!targetHouseholdId) {
+        return errorResponse(
+          "Payer can only be set for household expenses",
+          "VALIDATION_ERROR",
+        );
+      }
+
+      const { data: payerMembership, error: payerMembershipError } =
+        await supabase
+          .from("household_members")
+          .select("id")
+          .eq("household_id", targetHouseholdId)
+          .eq("user_id", normalizedPayerUserId)
+          .maybeSingle();
+
+      if (payerMembershipError) {
+        console.error(
+          "[update-expense] Failed to verify payer membership:",
+          payerMembershipError,
+        );
+        return errorResponse(
+          "Failed to verify expense payer",
+          "SERVER_ERROR",
+          500,
+        );
+      }
+
+      if (!payerMembership) {
+        return errorResponse(
+          "Payer must be a household member",
+          "VALIDATION_ERROR",
+        );
+      }
+
       const { error: payerUpdateError } = await supabase
         .from("expense_split_groups")
         .update({ payer_user_id: normalizedPayerUserId })
@@ -1900,9 +1985,27 @@ Deno.serve(async (req: Request) => {
 
     const expenseRecord = expense as Record<string, unknown>;
     const updatePayload: Record<string, unknown> = {
-      ...updates,
       updated_at: new Date().toISOString(),
     };
+    const allowedExpenseColumns = [
+      "amount_cents",
+      "category",
+      "raw_text",
+      "merchant",
+      "date",
+      "currency",
+      "is_recurring",
+      "recurrence_rule",
+      "source",
+      "household_id",
+      "account_id",
+      "split_group_id",
+    ];
+    for (const key of allowedExpenseColumns) {
+      if (Object.prototype.hasOwnProperty.call(updates, key)) {
+        updatePayload[key] = updates[key];
+      }
+    }
 
     const isProviderManagedExpense =
       typeof expenseRecord["provider"] === "string" &&

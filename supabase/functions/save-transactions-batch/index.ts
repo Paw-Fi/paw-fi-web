@@ -361,15 +361,34 @@ export async function saveTransactionsBatchInternal(
     defaultConfig: null,
   };
 
-  if (requestedHouseholdId && !isPortfolio) {
-    const { data: membership } = await supabase
+  if (requestedHouseholdId) {
+    const { data: membership, error: membershipError } = await supabase
       .from("household_members")
       .select("id")
       .eq("household_id", requestedHouseholdId)
       .eq("user_id", resolvedUserId)
       .maybeSingle();
 
-    if (membership) {
+    if (membershipError) {
+      console.error(
+        "[save-transactions-batch] Failed to verify household membership:",
+        membershipError,
+      );
+      throw new SaveTransactionsBatchError(
+        "Failed to verify household membership",
+        500,
+      );
+    }
+
+    if (!membership && isPortfolio) {
+      throw new SaveTransactionsBatchError(
+        "Forbidden household scope",
+        403,
+        "UNAUTHORIZED",
+      );
+    }
+
+    if (membership && !isPortfolio) {
       resolvedHouseholdId = requestedHouseholdId;
 
       const { data: members } = await supabase
