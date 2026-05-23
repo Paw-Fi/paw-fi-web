@@ -10,13 +10,13 @@ set -euo pipefail  # Exit on error, unset vars, and pipe fails
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-DEFAULT_PROJECT_REF="pbopcsmrcykdzbilpilf"
+DEFAULT_PROJECT_REF="qbuynyxyemigtnvdujts"
 PROJECT_REF="${1:-${PROJECT_REF:-$DEFAULT_PROJECT_REF}}"
 
 echo "════════════════════════════════════════════════════════════"
 echo "  🚀 Deploying Budgeting Functions to Supabase"
 echo "  Project: $PROJECT_REF"
-echo "════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════   ═════════════════"
 echo ""
 
 # Step 2: Deploy finance-update
