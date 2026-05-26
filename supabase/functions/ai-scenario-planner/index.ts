@@ -178,9 +178,10 @@ function parseLocalizedDate(
     const mo = parseInt(m[2], 10);
     const da = parseInt(m[3], 10);
     if (isValidYMD(y, mo, da)) {
-      const iso = `${y}-${String(mo).padStart(2, "0")}-${
-        String(da).padStart(2, "0")
-      }`;
+      const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(
+        2,
+        "0",
+      )}`;
       return { date: new Date(iso), iso };
     }
   }
@@ -195,9 +196,10 @@ function parseLocalizedDate(
     // DMY vs MDY
     const [dd, mm] = order === "MDY" ? [b, a] : [a, b];
     if (isValidYMD(y, mm, dd)) {
-      const iso = `${y}-${String(mm).padStart(2, "0")}-${
-        String(dd).padStart(2, "0")
-      }`;
+      const iso = `${y}-${String(mm).padStart(2, "0")}-${String(dd).padStart(
+        2,
+        "0",
+      )}`;
       return { date: new Date(iso), iso };
     }
   }
@@ -214,9 +216,10 @@ function parseLocalizedDate(
       const mo = parseInt(raw.slice(4, 6), 10);
       const da = parseInt(raw.slice(6, 8), 10);
       if (isValidYMD(y, mo, da)) {
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${
-          String(da).padStart(2, "0")
-        }`;
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(
+          2,
+          "0",
+        )}`;
         return { date: new Date(iso), iso };
       }
     }
@@ -226,9 +229,10 @@ function parseLocalizedDate(
       const da = parseInt(raw.slice(2, 4), 10);
       const y = normalizeYear(parseInt(raw.slice(4, 8), 10), lang);
       if (isValidYMD(y, mo, da)) {
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${
-          String(da).padStart(2, "0")
-        }`;
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(
+          2,
+          "0",
+        )}`;
         return { date: new Date(iso), iso };
       }
     } else {
@@ -236,9 +240,10 @@ function parseLocalizedDate(
       const mo = parseInt(raw.slice(2, 4), 10);
       const y = normalizeYear(parseInt(raw.slice(4, 8), 10), lang);
       if (isValidYMD(y, mo, da)) {
-        const iso = `${y}-${String(mo).padStart(2, "0")}-${
-          String(da).padStart(2, "0")
-        }`;
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(da).padStart(
+          2,
+          "0",
+        )}`;
         return { date: new Date(iso), iso };
       }
     }
@@ -374,12 +379,12 @@ serve(async (req: Request): Promise<Response> => {
       today.getMonth() - 12,
       today.getDate(),
     );
-    const fromStr = `${fromDate.getFullYear()}-${
-      String(fromDate.getMonth() + 1).padStart(2, "0")
-    }-${String(fromDate.getDate()).padStart(2, "0")}`;
-    const toStr = `${today.getFullYear()}-${
-      String(today.getMonth() + 1).padStart(2, "0")
-    }-${String(today.getDate()).padStart(2, "0")}`;
+    const fromStr = `${fromDate.getFullYear()}-${String(
+      fromDate.getMonth() + 1,
+    ).padStart(2, "0")}-${String(fromDate.getDate()).padStart(2, "0")}`;
+    const toStr = `${today.getFullYear()}-${String(
+      today.getMonth() + 1,
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
     // Build base queries for expenses and budgets (select only fields actually used)
     let expensesQuery = supabaseClient
@@ -387,7 +392,8 @@ serve(async (req: Request): Promise<Response> => {
       .select("user_id,date,amount_cents,currency,category,owner_type,type")
       .gte("date", fromStr)
       .lte("date", toStr)
-      .in("type", ["expense", "income"]);
+      .in("type", ["expense", "income"])
+      .in("currency", selectedCurrencies);
 
     if (mode === "household") {
       expensesQuery = expensesQuery.eq("household_id", householdId);
@@ -402,7 +408,8 @@ serve(async (req: Request): Promise<Response> => {
       .from("budgets")
       .select("period_month,total_budget_cents,currency")
       .gte("period_month", fromStr)
-      .lte("period_month", toStr);
+      .lte("period_month", toStr)
+      .in("currency", selectedCurrencies);
 
     const { data: rateSnapshot } = await supabaseClient
       .from("currency_rate_snapshots")
@@ -424,8 +431,9 @@ serve(async (req: Request): Promise<Response> => {
 
     let accountsQuery = supabaseClient
       .from("accounts")
-      .select("name, opening_balance_cents, is_default, is_system")
-      .eq("is_archived", false);
+      .select("name, opening_balance_cents, currency, is_default, is_system")
+      .eq("is_archived", false)
+      .in("currency", selectedCurrencies);
     if (mode === "household") {
       accountsQuery = accountsQuery.eq("household_id", householdId);
     } else {
@@ -581,9 +589,9 @@ serve(async (req: Request): Promise<Response> => {
       const perDay = monthlyBudgetTotals[ym] / daysInMonth;
 
       for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = `${year}-${String(month).padStart(2, "0")}-${
-          String(day).padStart(2, "0")
-        }`;
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(
+          day,
+        ).padStart(2, "0")}`;
         if (dateStr < fromStr || dateStr > toStr) continue;
         ensureDaily(dateStr).budget += perDay;
       }
@@ -647,9 +655,10 @@ serve(async (req: Request): Promise<Response> => {
       netCashflowToDate + avgDailyNetCashflow * daysUntilTarget;
 
     // Prepare prompt for Gemini
-    const perspective = mode === "household"
-      ? "their household's shared finances"
-      : "their personal finances";
+    const perspective =
+      mode === "household"
+        ? "their household's shared finances"
+        : "their personal finances";
     const actorLabel = mode === "household" ? "A household" : "A user";
     const householdMembersSummary =
       mode === "household"
@@ -668,7 +677,7 @@ serve(async (req: Request): Promise<Response> => {
     const accountsForPrompt = (accounts || []).map((account) => ({
       name: account.name ?? null,
       openingBalance: centsToAmount(account.opening_balance_cents as number),
-      assumedCurrency: displayCurrency,
+      currency: normalizeCurrencyCode(account.currency) || displayCurrency,
       isDefault: account.is_default === true,
       isSystem: account.is_system === true,
     }));
@@ -834,9 +843,8 @@ LANGUAGE:
       },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error
-      ? error.message
-      : "Unknown internal server error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown internal server error";
     console.error("Scenario planner error:", errorMessage);
     if (error instanceof Error && error.stack) console.error(error.stack);
     return new Response(

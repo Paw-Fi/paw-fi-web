@@ -1726,13 +1726,10 @@ Deno.serve(async (req: Request) => {
       if (isAccountInScope) {
         accountId = requestedAccountId;
       } else {
-        console.warn(
-          "[save-wallet-transaction] Ignoring out-of-scope accountId",
-          {
-            requestedAccountId,
-            userId,
-            householdId,
-          },
+        return errorResponse(
+          "Provided accountId does not belong to this scope or currency",
+          400,
+          "VALIDATION_ERROR",
         );
       }
     }
@@ -1831,16 +1828,11 @@ Deno.serve(async (req: Request) => {
         { userId, householdId, currency },
       );
       if (!isAccountCurrencyInScope) {
-        console.warn(
-          "[save-wallet-transaction] Ignoring accountId with mismatched currency",
-          {
-            requestedAccountId: accountId,
-            userId,
-            householdId,
-            currency,
-          },
+        return errorResponse(
+          "Provided accountId does not belong to this scope or currency",
+          400,
+          "VALIDATION_ERROR",
         );
-        accountId = null;
       }
     }
 
