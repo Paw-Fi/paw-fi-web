@@ -55,6 +55,10 @@ import * as XLSX from "https://esm.sh/xlsx@0.18.5?no-dts";
 import { validateCurrency } from "./currency-validator.ts";
 import { normalizeCurrencyCode } from "./currency-normalize.ts";
 import {
+  resolveCurrencyFromOCR,
+  resolveSingleStrongCurrencyEvidenceFromOCRText,
+} from "./ocr-currency-resolver.ts";
+import {
   coerceCategoryToAllowed,
   getExpenseCategories,
   getIncomeCategories,
@@ -650,7 +654,10 @@ function extractCurrencyCodesFromText(text: string): string[] {
 }
 
 function detectCurrencyFromText(line: string, callerCurrency: string): string {
-  return extractCurrencyCodesFromText(line)[0] || callerCurrency;
+  return resolveCurrencyFromOCR({
+    rawOcrText: line,
+    userPreferredCurrency: callerCurrency,
+  }).finalCurrencyCode;
 }
 
 export function inferAttachmentFallbackCurrency(params: {
@@ -674,8 +681,15 @@ export function inferAttachmentFallbackCurrency(params: {
     }
   }
 
+  const resolvedFromText = resolveCurrencyFromOCR({
+    rawOcrText: params.rawText || "",
+    userPreferredCurrency: callerCurrency,
+  });
   const detectedFromText = new Set(
-    extractCurrencyCodesFromText(params.rawText || ""),
+    resolvedFromText.reason === "explicit_currency_code_found" ||
+      resolvedFromText.reason === "explicit_localized_symbol_found"
+      ? [resolvedFromText.finalCurrencyCode]
+      : [],
   );
   if (explicitItemCurrencies.size === 1) {
     const itemCurrency = explicitItemCurrencies.values().next().value as string;
@@ -687,6 +701,9 @@ export function inferAttachmentFallbackCurrency(params: {
         return textCurrency;
       }
       return itemCurrency;
+    }
+    if (itemCurrency !== callerCurrency) {
+      return callerCurrency;
     }
     return itemCurrency;
   }
@@ -1932,8 +1949,10 @@ function buildTransactionSystemInstruction(
     "- For money received from relatives or friends, choose the closest gift/transfer-like income category from the provided list. For salary/payroll, choose the closest salary-like income category. For card/bank returns, choose the closest refund/return-like category from the list.",
 
     "### 3. CURRENCY & DATE",
-    "- Detect explicit currency symbol/code; else use Caller Currency.",
-    "- If text clearly indicates a different currency, use that currency (no conversion).",
+    "- Use Caller Currency for ambiguous symbols such as $, £, ¥/￥, ₨, kr, or Fr unless the text includes strong evidence for another currency.",
+    "- Strong currency evidence means an explicit ISO code (USD, CAD, AUD, SGD, NZD, HKD, MXN, EUR, GBP, JPY, CNY), a localized symbol (US$, C$, CA$, A$, AU$, S$, SG$, HK$, NZ$), or wording like 'Amount in USD' / 'Total CAD'.",
+    "- If you use a currency different from Caller Currency, include the exact text/symbol evidence in currencyEvidence.",
+    "- Set merchantCountry only when the source text visibly includes a merchant country/location; do not infer it from merchant name alone.",
     "- Date parsing: Look for ANY date reference (absolute or relative like 'yesterday').",
     "- Convert relative dates to YYYY-MM-DD based on Caller Date.",
     "- Only use Caller Date if NO date is mentioned.",
@@ -2870,6 +2889,7 @@ export function parseTransactionsJsonToItems(
   jsonText: string,
   callerCurrency: string,
   callerDate: string,
+  rawOcrText?: string,
 ): ExpenseItem[] {
   const parsed = extractJsonObject(jsonText) as any;
   const items = Array.isArray(parsed?.transactions) ? parsed.transactions : [];
@@ -2897,10 +2917,17 @@ export function parseTransactionsJsonToItems(
     const amount = Math.abs(Number(item?.amount));
     if (!Number.isFinite(amount) || amount <= 0) continue;
 
-    const currency =
-      typeof item?.currency === "string" && item.currency.trim()
-        ? item.currency.trim()
-        : callerCurrency;
+    const currencyResolution = resolveCurrencyFromOCR({
+      detectedCurrencyCode:
+        typeof item?.currency === "string" ? item.currency : null,
+      detectedCurrencySymbol:
+        typeof item?.currencySymbol === "string" ? item.currencySymbol : null,
+      rawOcrText: rawOcrText || `${description} ${merchant}`,
+      userPreferredCurrency: callerCurrency,
+      merchantCountry:
+        typeof item?.merchantCountry === "string" ? item.merchantCountry : null,
+    });
+    const currency = currencyResolution.finalCurrencyCode;
     const normalizedDateAndDescription = normalizeTransactionDateAndDescription(
       item?.date,
       description,
@@ -3317,6 +3344,7 @@ async function analyzeFromQuickText(
           callerDate,
           householdContext,
           "QuickText",
+          bodyText,
         ),
         { skipTotalSumHeuristic: true },
       );
@@ -3465,6 +3493,7 @@ Do NOT summarize - extract every single transaction.
       callerDate,
       householdContext,
       `Text-chunk${chunkIndex + 1}`,
+      chunk,
     );
 
     // For text items, use original text as description if not provided
@@ -3495,10 +3524,13 @@ function processRawItems(
   callerDate: string,
   householdContext: ReturnType<typeof resolveHouseholdContext> | null,
   logPrefix: string,
+  sourceText?: string,
 ): ExpenseItem[] {
+  const shouldUseSourceText = rawItems.length === 1;
+  const sourceTextHasSingleStrongCurrency =
+    !!resolveSingleStrongCurrencyEvidenceFromOCRText(sourceText);
   return rawItems
     .map((it) => {
-      const itemCurrency = it.currency || callerCurrency;
       const rawCategory = it.category || "other";
       const normalizedCategory = normalizeCategoryForStorage(rawCategory);
       const merchant =
@@ -3520,6 +3552,29 @@ function processRawItems(
       const resolvedType =
         txType === "income" || txType === "expense" ? txType : undefined;
       const amount = Math.abs(Number(it.amount));
+      const currencyEvidenceText = [
+        typeof it?.currencyEvidence === "string" ? it.currencyEvidence : "",
+        typeof it?.rawOcrText === "string" ? it.rawOcrText : "",
+        typeof it?.rawText === "string" ? it.rawText : "",
+        normalizedDateAndDescription.description,
+        merchant,
+        shouldUseSourceText || sourceTextHasSingleStrongCurrency
+          ? sourceText || ""
+          : "",
+      ]
+        .filter((entry) => entry && entry.trim().length > 0)
+        .join("\n");
+      const currencyResolution = resolveCurrencyFromOCR({
+        detectedCurrencyCode:
+          typeof it?.currency === "string" ? it.currency : null,
+        detectedCurrencySymbol:
+          typeof it?.currencySymbol === "string" ? it.currencySymbol : null,
+        rawOcrText: currencyEvidenceText,
+        userPreferredCurrency: callerCurrency,
+        merchantCountry:
+          typeof it?.merchantCountry === "string" ? it.merchantCountry : null,
+      });
+      const itemCurrency = currencyResolution.finalCurrencyCode;
       const itemCurrencySymbol = getCurrencySymbol(itemCurrency);
 
       const isHouseholdTransaction =
@@ -4841,6 +4896,21 @@ export async function runAnalyzeExpense(
                         type: "string",
                         description: "ISO 4217 code.",
                       },
+                      currencySymbol: {
+                        type: "string",
+                        description:
+                          "Exact currency symbol as seen, e.g. $, C$, US$, A$, AU$, €, £, ¥. Omit when unavailable.",
+                      },
+                      currencyEvidence: {
+                        type: "string",
+                        description:
+                          "Exact receipt text that proves a non-caller currency, e.g. USD, US$, Total CAD, Amount in AUD. Omit for ambiguous symbols alone.",
+                      },
+                      merchantCountry: {
+                        type: "string",
+                        description:
+                          "ISO 3166 country code only when the receipt visibly shows a merchant country/location, e.g. US, CA, AU, SG. Do not infer from merchant name alone.",
+                      },
                       date: { type: "string", description: "YYYY-MM-DD." },
                       description: {
                         type: "string",
@@ -4934,6 +5004,9 @@ export async function runAnalyzeExpense(
                       amount: { type: "number" },
                       category: { type: "string" },
                       currency: { type: "string" },
+                      currencySymbol: { type: "string" },
+                      currencyEvidence: { type: "string" },
+                      merchantCountry: { type: "string" },
                       date: { type: "string" },
                       description: { type: "string" },
                       merchant: {
@@ -5238,6 +5311,7 @@ export async function runAnalyzeExpense(
               transactionJson,
               attachmentFallbackCurrency,
               callerDate,
+              syntheticText,
             );
             if (parsedItems.length > 0) {
               items = parsedItems;
@@ -5477,7 +5551,9 @@ export async function runAnalyzeExpense(
         "- Only include merchant when the merchant/source is available with reasonable confidence; omit it otherwise.",
         "- Clean up raw text (e.g., 'Uber *Trip 4920' -> 'Uber') and do not put card numbers, reference IDs, dates, or amounts in merchant.",
         "- **Date**: Parse absolute dates or relative ('Yesterday'). Default to Caller Date if not found.",
-        "- **Currency**: Trust symbol in image ($/€/£) over Caller Currency. Defaults to Caller Currency.",
+        "- **Currency**: Caller Currency is the default. Treat ambiguous symbols such as $, £, ¥/￥, ₨, kr, or Fr as non-final signals and keep Caller Currency unless there is strong evidence for another currency.",
+        "- **Strong currency evidence**: explicit ISO code (USD, CAD, AUD, SGD, NZD, HKD, MXN, EUR, GBP, JPY, CNY), localized symbol (US$, C$, CA$, A$, AU$, S$, SG$, HK$, NZ$), or wording like 'Amount in USD' / 'Total CAD'. If present, set currency and copy the exact evidence into currencyEvidence.",
+        "- **Merchant location evidence**: set merchantCountry only when a country/location is visibly printed on the receipt (for example US, CA, AU, SG). Do not infer country from merchant name alone.",
         "- **Noise**: Ignore loyalty points, barcodes, IDs, tax numbers unless needed for context.",
 
         "### 4. DESCRIPTION & LANGUAGE",

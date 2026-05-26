@@ -191,3 +191,16 @@ Deno.test(
     assertEquals(inferred, "EUR");
   },
 );
+
+Deno.test(
+  "analyze-core: attachment fallback ignores AI-guessed USD for bare dollar text",
+  () => {
+    const inferred = inferAttachmentFallbackCurrency({
+      callerCurrency: "CAD",
+      rawText: "Subtotal $10.00\nTax $2.50\nTotal $12.50",
+      parsedItems: [{ currency: "USD" }],
+    });
+
+    assertEquals(inferred, "CAD");
+  },
+);
