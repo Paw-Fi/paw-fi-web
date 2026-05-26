@@ -288,7 +288,7 @@ Deno.serve(async (req: Request) => {
     const quietEnd = Number.isFinite(Number(body.quietEnd))
       ? Number(body.quietEnd)
       : 8;
-    const minHoursBetween = Number(body.minHoursBetween ?? 24);
+    const minHoursBetween = Number(body.minHoursBetween ?? 168);
     const slotMins = Math.min(60, Math.max(1, Number(body.slotMins ?? 60))); // 60 = top-of-hour, set 15/30 if cron supports
     const slotCount = Math.max(1, Math.floor(60 / slotMins));
 
@@ -338,6 +338,7 @@ Deno.serve(async (req: Request) => {
     const statsLookbackDays = 30;
     const softPauseAfter = 4;
     const softPauseDays = 7;
+    const hardPauseAfter = 6;
     const statsSinceIso = new Date(
       now.getTime() - statsLookbackDays * 24 * 60 * 60 * 1000,
     ).toISOString();
@@ -649,6 +650,11 @@ Deno.serve(async (req: Request) => {
         const hasPostReminderExpense =
           lastExpenseTs !== null && lastExpenseTs > lastReminderTs;
         if (!hasPostReminderExpense) {
+          // Stop sending entirely after repeated ignored reminders.
+          if (reminderStats.count >= hardPauseAfter) {
+            softPauseSkipped++;
+            continue;
+          }
           const daysSinceLastReminder =
             (now.getTime() - lastReminderTs) / (1000 * 60 * 60 * 24);
           if (daysSinceLastReminder < softPauseDays) {
@@ -686,18 +692,16 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Cadence: <=3 days daily; 4-14 days every 2nd day; >14 every 3rd day; never-logged every 3rd day
+      // Weekly cadence only:
+      // - never-logged users: weekly (day-of-month pivot)
+      // - logged users: every 7th inactivity day
       let shouldSend = false;
       if (!lastExpenseAt) {
-        // Never logged: every 3rd day (use day-of-month pivot)
+        // Never logged: weekly (use day-of-month pivot)
         const dom = getLocalDayOfMonth(tz, now);
-        shouldSend = dom % 3 === 0;
-      } else if (inactivityDays <= 3) {
-        shouldSend = true;
-      } else if (inactivityDays <= 14) {
-        shouldSend = inactivityDays % 2 === 0;
+        shouldSend = dom % 7 === 0;
       } else {
-        shouldSend = inactivityDays % 3 === 0;
+        shouldSend = inactivityDays % 7 === 0;
       }
 
       if (!shouldSend) {
