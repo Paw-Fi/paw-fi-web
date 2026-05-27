@@ -53,9 +53,15 @@ export function normalizeCurrencyCode(input?: string | null): string | null {
     "CA$": "CAD",
     "S$": "SGD",
     "HK$": "HKD",
+    "MOP$": "MOP",
+    "MO$": "MOP",
     "NZ$": "NZD",
     "MX$": "MXN",
     "R$": "BRL",
+
+    // Macanese Pataca
+    "PATACA": "MOP",
+    "PATACAS": "MOP",
 
     // Jamaica Dollar
     "J$": "JMD",

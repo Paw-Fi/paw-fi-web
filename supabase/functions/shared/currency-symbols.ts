@@ -32,6 +32,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   'KES': 'KSh',
   'KRW': '₩',
   'LKR': 'Rs',
+  'MOP': 'MOP$',
   'MXN': 'MX\$',
   'MYR': 'RM',
   'MWK': 'MK',

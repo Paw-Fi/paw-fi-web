@@ -384,6 +384,7 @@ const TIMEZONE_DATA: Record<string, TimezonePoint> = {
   "Asia/Urumqi":                     { countryCode: "CN", lat:  43.8256, lon:   87.6168 },
   "Asia/Hong_Kong":                  { countryCode: "HK", lat:  22.3193, lon:  114.1694 },
   "Asia/Macau":                      { countryCode: "MO", lat:  22.1987, lon:  113.5439 },
+  "Asia/Macao":                      { countryCode: "MO", lat:  22.1987, lon:  113.5439 }, // alias
   "Asia/Taipei":                     { countryCode: "TW", lat:  25.0330, lon:  121.5654 },
   "Asia/Seoul":                      { countryCode: "KR", lat:  37.5665, lon:  126.9780 },
   "Asia/Pyongyang":                  { countryCode: "KP", lat:  39.0392, lon:  125.7625 },
