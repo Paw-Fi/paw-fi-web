@@ -17,7 +17,7 @@ Deno.test("reportVertexAiFailure forwards provider and phase metadata", async ()
     functionName: "twilio-whatsapp-ai-bot",
     error: new Error("Vertex timed out"),
     phase: "final_ai_response",
-    modelName: "gemini-3.1-flash-lite-preview",
+    modelName: "gemini-3.1-flash-lite",
     context: {
       toolIterations: 2,
       lastToolCalls: 1,
@@ -36,7 +36,7 @@ Deno.test("reportVertexAiFailure forwards provider and phase metadata", async ()
   assertEquals(captured?.context, {
     provider: "vertex-ai",
     phase: "final_ai_response",
-    modelName: "gemini-3.1-flash-lite-preview",
+    modelName: "gemini-3.1-flash-lite",
     toolIterations: 2,
     lastToolCalls: 1,
   });
@@ -49,7 +49,7 @@ Deno.test("reportVertexAiFailure swallows reporter failures and logs them", asyn
     functionName: "telegram-ai-bot",
     error: new Error("Vertex 503"),
     phase: "initial_ai_response",
-    modelName: "gemini-3.1-flash-lite-preview",
+    modelName: "gemini-3.1-flash-lite",
     reportImpl: async () => {
       throw new Error("reporting unavailable");
     },

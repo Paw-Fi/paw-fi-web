@@ -174,7 +174,7 @@ export async function processFreeFormTextExpense(params: {
   ];
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite-preview",
+    model: "gemini-3.1-flash-lite",
     tools,
   });
   const systemInstruction =
@@ -467,7 +467,7 @@ export async function processReceiptImage(params: {
   ];
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-3.1-flash-lite-preview",
+    model: "gemini-3.1-flash-lite",
     tools: toolsForVision,
   });
 

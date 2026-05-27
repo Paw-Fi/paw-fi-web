@@ -162,7 +162,7 @@ const DEBUG_LOGS = (() => {
   try {
     return Deno.env.get("ANALYZE_EXPENSE_DEBUG") === "true";
   } catch {
-    return false;
+   gemini-3.1-flash-lite
   }
 })();
 const GEMINI_FALLBACK_MODEL_NAMES = [

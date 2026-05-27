@@ -43,9 +43,9 @@ function getProviderFingerprint(): string {
     if (configuredModels) {
       return `vertex:${configuredModels}|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
     }
-    return `vertex:gemini-3.1-flash-lite-preview,gemini-2.5-flash,gemini-2.5-pro|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
+    return `vertex:gemini-3.1-flash-lite,gemini-2.5-flash,gemini-2.5-pro|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
   } catch {
-    return `vertex:gemini-3.1-flash-lite-preview,gemini-2.5-flash,gemini-2.5-pro|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
+    return `vertex:gemini-3.1-flash-lite,gemini-2.5-flash,gemini-2.5-pro|pipeline:${PDF_ANALYSIS_CACHE_VERSION}`;
   }
 }
 

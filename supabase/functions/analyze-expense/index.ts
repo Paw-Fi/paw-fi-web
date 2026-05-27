@@ -55,7 +55,7 @@ const categoryRemapsCache = new Map<
   }
 >();
 
-const ANALYZE_PRIMARY_MODEL_NAME = "gemini-3.1-flash-lite-preview";
+const ANALYZE_PRIMARY_MODEL_NAME = "gemini-3.1-flash-lite";
 const ANALYZE_FALLBACK_MODEL_NAME = "gemini-2.5-flash";
 
 /**

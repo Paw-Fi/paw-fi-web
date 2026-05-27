@@ -44,9 +44,9 @@ function getGeminiModelNames(): string[] {
       if (models.length > 0) return models;
     }
 
-    return ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-2.5-pro"];
+    return ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"];
   } catch {
-    return ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-2.5-pro"];
+    return ["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"];
   }
 }
 

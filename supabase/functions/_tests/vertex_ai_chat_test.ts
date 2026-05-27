@@ -244,7 +244,7 @@ Deno.test("createVertexChatSession preserves thoughtSignature on function-call h
   let requestCount = 0;
 
   const chat = createVertexChatSession({
-    model: "gemini-3.1-flash-lite-preview",
+    model: "gemini-3.1-flash-lite",
     vertex: {
       project: "moneko-prod",
       location: "global",
@@ -344,7 +344,7 @@ Deno.test("createVertexBotChatSession defaults request timeout to 60 seconds", a
     };
 
     const chat = createVertexBotChatSession({
-      modelName: "gemini-3.1-flash-lite-preview",
+      modelName: "gemini-3.1-flash-lite",
       systemInstruction: "Bot system prompt",
       history: [],
       tools: [],
@@ -407,7 +407,7 @@ Deno.test("createVertexBotChatSession maps bot-style inputs onto the shared adap
   const fetchCalls: Array<{ input: string; init?: RequestInit }> = [];
 
   const chat = createVertexBotChatSession({
-    modelName: "gemini-3.1-flash-lite-preview",
+    modelName: "gemini-3.1-flash-lite",
     systemInstruction: "Bot system prompt",
     history: [{ role: "user", parts: [{ text: "Previous turn" }] }],
     tools: [{ function_declarations: [{ name: "noop" }] }],
