@@ -1,6 +1,11 @@
+import { resolveCurrencyFromOCR } from "./ocr-currency-resolver.ts";
+
 export interface WalletTransactionLike {
   currency?: string | null;
   currencyCode?: string | null;
+  merchantName?: string | null;
+  rawMerchant?: string | null;
+  note?: string | null;
   date?: string | null;
   transactionDate?: string | null;
   packageName?: string | null;
@@ -47,6 +52,36 @@ export function resolveWalletTransactionCurrency(
   return value || null;
 }
 
+export function resolveWalletCaptureCurrency(params: {
+  tx: WalletTransactionLike;
+  preferredCurrency?: string | null;
+  captureSource?: string | null;
+}): string | null {
+  const payloadCurrency = resolveWalletTransactionCurrency(params.tx);
+  const preferredCurrency = (params.preferredCurrency || "").trim() || null;
+  const captureSource = normalizeWalletCaptureSource(params.captureSource);
+
+  if (captureSource !== "android_notification_listener") {
+    return payloadCurrency || preferredCurrency;
+  }
+
+  const rawOcrText = [
+    params.tx.note,
+    params.tx.rawMerchant,
+    params.tx.merchantName,
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .join("\n");
+
+  return resolveCurrencyFromOCR({
+    detectedCurrencyCode: payloadCurrency,
+    rawOcrText,
+    userPreferredCurrency: preferredCurrency || payloadCurrency || "USD",
+  }).finalCurrencyCode;
+}
+
 export function resolveWalletTransactionDate(
   tx: WalletTransactionLike,
 ): string | null {
@@ -61,16 +96,13 @@ export function resolveWalletTransactionPackageName(
   return value || null;
 }
 
-function parseUtcOffsetMinutes(
-  timeZone: string,
-): number | null {
+function parseUtcOffsetMinutes(timeZone: string): number | null {
   const normalized = timeZone.trim().toUpperCase();
   if (normalized === "UTC" || normalized === "GMT") {
     return 0;
   }
 
-  const match =
-    /^(?:UTC|GMT)([+-])(\d{1,2})(?::?(\d{2}))?$/.exec(normalized);
+  const match = /^(?:UTC|GMT)([+-])(\d{1,2})(?::?(\d{2}))?$/.exec(normalized);
   if (!match) return null;
 
   const [, sign, hoursRaw, minutesRaw] = match;
@@ -86,7 +118,7 @@ function parseUtcOffsetMinutes(
   }
 
   const direction = sign === "-" ? -1 : 1;
-  return direction * ((hours * 60) + minutes);
+  return direction * (hours * 60 + minutes);
 }
 
 export function getLocalYyyyMmDdInTimeZone(
@@ -96,7 +128,7 @@ export function getLocalYyyyMmDdInTimeZone(
   const normalizedTimeZone = (timeZone || "UTC").trim();
   const offsetMinutes = parseUtcOffsetMinutes(normalizedTimeZone);
   if (offsetMinutes !== null) {
-    return new Date(date.getTime() + (offsetMinutes * 60_000))
+    return new Date(date.getTime() + offsetMinutes * 60_000)
       .toISOString()
       .slice(0, 10);
   }
@@ -147,9 +179,8 @@ export function buildWalletCaptureIdempotencyKey(params: {
   const scopeKey = params.householdId
     ? `${params.householdId}:${params.isPortfolio ? "portfolio" : "household"}`
     : "personal";
-  const normalizedTransactionType = params.transactionType === "income"
-    ? "income"
-    : "expense";
+  const normalizedTransactionType =
+    params.transactionType === "income" ? "income" : "expense";
   const normalizedMerchant = normalizeMerchantForDedup(params.merchantName);
   const normalizedCard = (params.cardLabel ?? "").trim().toLowerCase();
   const normalizedPackage = (params.packageName ?? "").trim().toLowerCase();

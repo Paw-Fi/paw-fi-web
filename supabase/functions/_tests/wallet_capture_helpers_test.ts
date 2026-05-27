@@ -7,6 +7,7 @@ import {
   getLocalYyyyMmDdInTimeZone,
   isWalletCaptureIdempotencyClaimStale,
   normalizeWalletCaptureSource,
+  resolveWalletCaptureCurrency,
   resolveWalletCaptureScope,
   resolveWalletTransactionCurrency,
   resolveWalletTransactionDate,
@@ -38,6 +39,54 @@ Deno.test(
     assertEquals(
       resolveWalletTransactionPackageName({ sourcePackage: "com.wallet" }),
       "com.wallet",
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture currency uses preferred currency for Android bare dollar notifications",
+  () => {
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "android_notification_listener",
+        preferredCurrency: "CAD",
+        tx: {
+          currency: "USD",
+          note: "RBC Visa purchase at Coffee Shop $12.50",
+        },
+      }),
+      "CAD",
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture currency keeps explicit USD evidence in Android notifications",
+  () => {
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "android_notification_listener",
+        preferredCurrency: "CAD",
+        tx: {
+          currency: "USD",
+          note: "Card debited USD 14.50 for your ride payment",
+        },
+      }),
+      "USD",
+    );
+  },
+);
+
+Deno.test(
+  "wallet capture currency keeps non-Android explicit payload behavior",
+  () => {
+    assertEquals(
+      resolveWalletCaptureCurrency({
+        captureSource: "ios_wallet_shortcut",
+        preferredCurrency: "CAD",
+        tx: { currency: "USD" },
+      }),
+      "USD",
     );
   },
 );
@@ -189,12 +238,6 @@ Deno.test(
 Deno.test("wallet capture local date supports UTC offset strings", () => {
   const baseDate = new Date("2026-04-15T18:30:00.000Z");
 
-  assertEquals(
-    getLocalYyyyMmDdInTimeZone("UTC+08:00", baseDate),
-    "2026-04-16",
-  );
-  assertEquals(
-    getLocalYyyyMmDdInTimeZone("UTC-05:30", baseDate),
-    "2026-04-15",
-  );
+  assertEquals(getLocalYyyyMmDdInTimeZone("UTC+08:00", baseDate), "2026-04-16");
+  assertEquals(getLocalYyyyMmDdInTimeZone("UTC-05:30", baseDate), "2026-04-15");
 });
