@@ -463,26 +463,11 @@ Deno.serve(async (req: Request) => {
         error instanceof Error &&
         error.message === "ACCOUNT_SCOPE_MISMATCH"
       ) {
-        if (insertScopeHouseholdId != null) {
-          console.warn(
-            "[save-expense] Ignoring out-of-scope accountId and falling back to default scoped account",
-            {
-              requestedAccountId: body.accountId,
-              insertScopeHouseholdId,
-            },
-          );
-          preliminaryAccountId = await resolveDefaultAccountId(supabase, {
-            userId: userId as string,
-            householdId: insertScopeHouseholdId,
-            currency,
-          });
-        } else {
-          return errorResponse(
-            "Provided accountId does not belong to this scope",
-            400,
-            "VALIDATION_ERROR",
-          );
-        }
+        return errorResponse(
+          "Provided accountId does not belong to this scope or currency",
+          400,
+          "VALIDATION_ERROR",
+        );
       } else {
         throw error;
       }
@@ -872,6 +857,12 @@ Deno.serve(async (req: Request) => {
         );
         if (isInSharedScope) {
           sharedScopeAccountId = body.accountId;
+        } else {
+          return errorResponse(
+            "Provided accountId does not belong to this scope or currency",
+            400,
+            "VALIDATION_ERROR",
+          );
         }
       }
 

@@ -1727,13 +1727,10 @@ Deno.serve(async (req: Request) => {
       if (isAccountInScope) {
         accountId = requestedAccountId;
       } else {
-        console.warn(
-          "[save-wallet-transaction] Ignoring out-of-scope accountId",
-          {
-            requestedAccountId,
-            userId,
-            householdId,
-          },
+        return errorResponse(
+          "Provided accountId does not belong to this scope or currency",
+          400,
+          "VALIDATION_ERROR",
         );
       }
     }
@@ -1827,6 +1824,21 @@ Deno.serve(async (req: Request) => {
       captureSource,
     });
     const currency = validateCurrency(resolvedCaptureCurrency ?? "USD");
+
+    if (accountId) {
+      const isAccountCurrencyInScope = await assertAccountInScope(
+        supabase,
+        accountId,
+        { userId, householdId, currency },
+      );
+      if (!isAccountCurrencyInScope) {
+        return errorResponse(
+          "Provided accountId does not belong to this scope or currency",
+          400,
+          "VALIDATION_ERROR",
+        );
+      }
+    }
 
     const clientCreatedAtPrefix = extractCalendarDatePrefix(
       body.clientCreatedAt,

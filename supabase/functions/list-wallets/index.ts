@@ -54,23 +54,6 @@ function normalizeDate(value?: string | null): string | null {
   return trimmed;
 }
 
-function walletBalancesFromSnapshot(payload: unknown): Record<string, number> {
-  const balances: Record<string, number> = {};
-  const rows = (payload as { wallet_balances?: unknown })?.wallet_balances;
-  if (!Array.isArray(rows)) return balances;
-
-  for (const row of rows) {
-    if (!row || typeof row !== "object") continue;
-    const walletId = String((row as { wallet_id?: unknown }).wallet_id ?? "");
-    if (!walletId) continue;
-    balances[walletId] = Number(
-      (row as { balance_cents?: unknown }).balance_cents ?? 0,
-    );
-  }
-
-  return balances;
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -85,7 +68,6 @@ Deno.serve(async (req: Request) => {
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse(
       {
@@ -147,18 +129,20 @@ Deno.serve(async (req: Request) => {
         400,
       );
     }
-    const snapshotMonthStart = normalizeDate(
-      body.monthStart ?? body.currentMonthStart,
-    );
-    if ((body.monthStart || body.currentMonthStart) && !snapshotMonthStart) {
-      return jsonResponse(
-        {
-          success: false,
-          error: "Invalid monthStart",
-          code: "VALIDATION_ERROR",
-        },
-        400,
+    if (body.monthStart || body.currentMonthStart) {
+      const normalizedMonthStart = normalizeDate(
+        body.monthStart ?? body.currentMonthStart,
       );
+      if (!normalizedMonthStart) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Invalid monthStart",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -257,54 +241,6 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: true, data: [] });
     }
 
-    let snapshotBalances: Record<string, number> = {};
-    const authHeader = req.headers.get("Authorization");
-    if (
-      snapshotMonthStart &&
-      selectedCurrency &&
-      (selectedCurrencies?.length ?? 0) <= 1 &&
-      !auth.isInternalService &&
-      authHeader?.startsWith("Bearer ")
-    ) {
-      const rpcSupabase = createClient(
-        SUPABASE_URL,
-        SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY,
-        {
-          auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-            detectSessionInUrl: false,
-          },
-          global: {
-            headers: {
-              Authorization: authHeader,
-              "X-Client-Info": "moneko-list-accounts-snapshot",
-            },
-          },
-        },
-      );
-      const { data: snapshotPayload, error: snapshotError } =
-        await rpcSupabase.rpc("get_wallets_month_snapshot_v2", {
-          p_user_id: userId,
-          p_household_id: householdId,
-          p_currency: selectedCurrency,
-          p_month_start: snapshotMonthStart,
-          p_include_archived: includeArchived,
-        });
-
-      if (snapshotError) {
-        console.warn("[list-accounts] snapshot balance fallback", {
-          error: snapshotError.message,
-          userId,
-          householdId,
-          selectedCurrency,
-          snapshotMonthStart,
-        });
-      } else {
-        snapshotBalances = walletBalancesFromSnapshot(snapshotPayload);
-      }
-    }
-
     const { data: expenseRows } = await supabase
       .from("expenses")
       .select("account_id, amount_cents, type, is_recurring, currency")
@@ -371,8 +307,7 @@ Deno.serve(async (req: Request) => {
         (expenseOut[accountId] ?? 0) +
         (transferIn[accountId] ?? 0) -
         (transferOut[accountId] ?? 0);
-      const currentBalanceCents =
-        snapshotBalances[accountId] ?? fallbackBalanceCents;
+      const currentBalanceCents = fallbackBalanceCents;
 
       return {
         ...row,

@@ -217,6 +217,114 @@ begin
 end;
 $$;
 
+create or replace function public.ensure_transfer_repair_account_for_currency(
+  p_user_id uuid,
+  p_household_id uuid default null,
+  p_currency text default null,
+  p_excluded_account_id uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_currency text;
+  v_account_id uuid;
+begin
+  v_user_id := p_user_id;
+  if p_household_id is not null then
+    select h.owner_id into v_user_id
+    from public.households h
+    where h.id = p_household_id
+    limit 1;
+  end if;
+
+  if v_user_id is null then
+    return null;
+  end if;
+
+  v_currency := coalesce(
+    upper(nullif(trim(p_currency), '')),
+    public.resolve_account_currency(v_user_id, p_household_id),
+    'USD'
+  );
+
+  if v_currency !~ '^[A-Z]{3}$' then
+    raise exception 'Invalid account currency: %', v_currency
+      using errcode = '23514';
+  end if;
+
+  select a.id into v_account_id
+  from public.accounts a
+  where a.currency = v_currency
+    and a.is_archived = false
+    and a.is_system = true
+    and a.id is distinct from p_excluded_account_id
+    and lower(trim(a.name)) = 'spending'
+    and (
+      (p_household_id is null and a.user_id = v_user_id and a.household_id is null)
+      or (p_household_id is not null and a.household_id = p_household_id)
+    )
+  order by a.created_at asc
+  limit 1;
+
+  if v_account_id is not null then
+    return v_account_id;
+  end if;
+
+  select a.id into v_account_id
+  from public.accounts a
+  where a.currency = v_currency
+    and a.is_archived = false
+    and a.is_system = true
+    and a.id is distinct from p_excluded_account_id
+    and lower(trim(a.name)) = 'transfer repair'
+    and (
+      (p_household_id is null and a.user_id = v_user_id and a.household_id is null)
+      or (p_household_id is not null and a.household_id = p_household_id)
+    )
+  order by a.created_at asc
+  limit 1;
+
+  if v_account_id is not null then
+    return v_account_id;
+  end if;
+
+  v_account_id := gen_random_uuid();
+
+  insert into public.accounts (
+    id,
+    user_id,
+    household_id,
+    name,
+    icon,
+    color,
+    currency,
+    opening_balance_cents,
+    is_default,
+    is_system,
+    is_archived
+  )
+  values (
+    v_account_id,
+    v_user_id,
+    p_household_id,
+    'Transfer Repair',
+    'wallet',
+    '#6B7280',
+    v_currency,
+    0,
+    false,
+    true,
+    false
+  );
+
+  return v_account_id;
+end;
+$$;
+
 create or replace function public.resolve_default_account(
   p_user_id uuid,
   p_household_id uuid,
@@ -490,6 +598,78 @@ set
 where e.account_id is null
   and upper(nullif(trim(coalesce(e.currency, '')), '')) ~ '^[A-Z]{3}$';
 
+update public.account_transfers
+set
+  currency = upper(trim(currency)),
+  updated_at = now()
+where upper(nullif(trim(coalesce(currency, '')), '')) ~ '^[A-Z]{3}$'
+  and currency is distinct from upper(trim(currency));
+
+update public.account_transfers t
+set
+  from_account_id = public.ensure_transfer_repair_account_for_currency(
+    t.created_by_user_id,
+    t.household_id,
+    t.currency,
+    t.to_account_id
+  ),
+  updated_at = now()
+from public.accounts from_account
+cross join public.accounts to_account
+where from_account.id = t.from_account_id
+  and to_account.id = t.to_account_id
+  and upper(nullif(trim(coalesce(t.currency, '')), '')) ~ '^[A-Z]{3}$'
+  and from_account.currency <> upper(trim(t.currency))
+  and to_account.currency = upper(trim(t.currency));
+
+update public.account_transfers t
+set
+  to_account_id = public.ensure_transfer_repair_account_for_currency(
+    t.created_by_user_id,
+    t.household_id,
+    t.currency,
+    t.from_account_id
+  ),
+  updated_at = now()
+from public.accounts from_account
+cross join public.accounts to_account
+where from_account.id = t.from_account_id
+  and to_account.id = t.to_account_id
+  and upper(nullif(trim(coalesce(t.currency, '')), '')) ~ '^[A-Z]{3}$'
+  and from_account.currency = upper(trim(t.currency))
+  and to_account.currency <> upper(trim(t.currency));
+
+update public.account_transfers t
+set
+  from_account_id = public.ensure_transfer_repair_account_for_currency(
+    t.created_by_user_id,
+    t.household_id,
+    t.currency,
+    t.to_account_id
+  ),
+  updated_at = now()
+from public.accounts from_account
+cross join public.accounts to_account
+where from_account.id = t.from_account_id
+  and to_account.id = t.to_account_id
+  and upper(nullif(trim(coalesce(t.currency, '')), '')) ~ '^[A-Z]{3}$'
+  and from_account.currency <> upper(trim(t.currency))
+  and to_account.currency <> upper(trim(t.currency));
+
+update public.account_transfers t
+set
+  to_account_id = public.ensure_transfer_repair_account_for_currency(
+    t.created_by_user_id,
+    t.household_id,
+    t.currency,
+    t.from_account_id
+  ),
+  updated_at = now()
+from public.accounts to_account
+where to_account.id = t.to_account_id
+  and upper(nullif(trim(coalesce(t.currency, '')), '')) ~ '^[A-Z]{3}$'
+  and to_account.currency <> upper(trim(t.currency));
+
 do $$
 declare
   v_mismatched_transfer_count integer;
@@ -509,6 +689,8 @@ begin
       using errcode = '23514';
   end if;
 end $$;
+
+drop function if exists public.ensure_transfer_repair_account_for_currency(uuid, uuid, text, uuid);
 
 create or replace function public.ensure_expense_account_id()
 returns trigger

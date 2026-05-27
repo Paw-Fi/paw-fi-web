@@ -132,29 +132,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (body.isDefault === true) {
-      let resetQuery = supabase
-        .from("accounts")
-        .update({ is_default: false })
-        .eq("is_archived", false);
-      if (householdId) {
-        resetQuery = resetQuery.eq("household_id", householdId);
-      } else {
-        resetQuery = resetQuery.eq("user_id", userId).is("household_id", null);
-      }
-      const { error: resetError } = await resetQuery;
-      if (resetError) {
-        return jsonResponse(
-          {
-            success: false,
-            error: "Failed to update default",
-            code: "SERVER_ERROR",
-          },
-          500,
-        );
-      }
-    }
-
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -182,58 +159,14 @@ Deno.serve(async (req: Request) => {
       }
       const currentCurrency = normalizeCurrency(String(account.currency ?? ""));
       if (currency !== currentCurrency) {
-        if (account.is_system || account.linked_bank_account_id != null) {
-          return jsonResponse(
-            {
-              success: false,
-              error: "Wallet currency cannot be changed for this wallet",
-              code: "VALIDATION_ERROR",
-            },
-            400,
-          );
-        }
-
-        const [
-          { data: expenseRows, error: expenseError },
-          { data: transferRows, error: transferError },
-        ] = await Promise.all([
-          supabase
-            .from("expenses")
-            .select("id")
-            .eq("account_id", accountId)
-            .limit(1),
-          supabase
-            .from("account_transfers")
-            .select("id")
-            .or(`from_account_id.eq.${accountId},to_account_id.eq.${accountId}`)
-            .limit(1),
-        ]);
-
-        if (expenseError || transferError) {
-          console.error("[update-account] activity check", {
-            expenseError,
-            transferError,
-          });
-          return jsonResponse(
-            {
-              success: false,
-              error: "Failed to verify wallet activity",
-              code: "SERVER_ERROR",
-            },
-            500,
-          );
-        }
-
-        if ((expenseRows?.length ?? 0) > 0 || (transferRows?.length ?? 0) > 0) {
-          return jsonResponse(
-            {
-              success: false,
-              error: "Wallet currency cannot be changed after activity exists",
-              code: "VALIDATION_ERROR",
-            },
-            400,
-          );
-        }
+        return jsonResponse(
+          {
+            success: false,
+            error: "Wallet currency cannot be changed after creation",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
       }
       updates.currency = currency;
     }
@@ -253,6 +186,29 @@ Deno.serve(async (req: Request) => {
     }
     if (typeof body.isDefault === "boolean") {
       updates.is_default = body.isDefault;
+    }
+
+    if (body.isDefault === true) {
+      let resetQuery = supabase
+        .from("accounts")
+        .update({ is_default: false })
+        .eq("is_archived", false);
+      if (householdId) {
+        resetQuery = resetQuery.eq("household_id", householdId);
+      } else {
+        resetQuery = resetQuery.eq("user_id", userId).is("household_id", null);
+      }
+      const { error: resetError } = await resetQuery;
+      if (resetError) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Failed to update default",
+            code: "SERVER_ERROR",
+          },
+          500,
+        );
+      }
     }
 
     const { data, error } = await supabase
