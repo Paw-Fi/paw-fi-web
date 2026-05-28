@@ -189,10 +189,22 @@ Deno.serve(async (req: Request) => {
     }
 
     if (body.isDefault === true) {
+      const accountCurrency = normalizeCurrency(String(account.currency ?? ""));
+      if (!accountCurrency) {
+        return jsonResponse(
+          {
+            success: false,
+            error: "Wallet currency is invalid",
+            code: "VALIDATION_ERROR",
+          },
+          400,
+        );
+      }
       let resetQuery = supabase
         .from("accounts")
         .update({ is_default: false })
-        .eq("is_archived", false);
+        .eq("is_archived", false)
+        .eq("currency", accountCurrency);
       if (householdId) {
         resetQuery = resetQuery.eq("household_id", householdId);
       } else {

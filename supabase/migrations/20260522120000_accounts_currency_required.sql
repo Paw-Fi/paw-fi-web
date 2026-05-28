@@ -557,6 +557,8 @@ begin
 end;
 $$;
 
+drop trigger if exists expenses_account_id_defaults on public.expenses;
+
 update public.expenses e
 set
   account_id = public.ensure_spending_account_for_currency(

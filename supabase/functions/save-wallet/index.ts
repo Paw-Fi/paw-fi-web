@@ -320,7 +320,8 @@ Deno.serve(async (req: Request) => {
       let resetQuery = supabase
         .from("accounts")
         .update({ is_default: false })
-        .eq("is_archived", false);
+        .eq("is_archived", false)
+        .eq("currency", currency);
 
       if (householdId) {
         resetQuery = resetQuery.eq("household_id", householdId);
@@ -375,6 +376,7 @@ Deno.serve(async (req: Request) => {
       .select("id")
       .eq("is_archived", false)
       .eq("is_default", true)
+      .eq("currency", currency)
       .limit(1);
 
     fallbackDefaultQuery = householdId

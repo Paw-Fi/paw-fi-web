@@ -10,7 +10,7 @@ set -euo pipefail  # Exit on error, unset vars, and pipe fails
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-DEFAULT_PROJECT_REF="qbuynyxyemigtnvdujts"
+DEFAULT_PROJECT_REF="pbopcsmrcykdzbilpilf"
 PROJECT_REF="${1:-${PROJECT_REF:-$DEFAULT_PROJECT_REF}}"
 
 echo "════════════════════════════════════════════════════════════"
