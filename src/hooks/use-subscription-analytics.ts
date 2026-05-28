@@ -28,7 +28,7 @@ export interface SubscriptionAnalytics {
 }
 
 interface DailyTrendRow {
-  date: string;
+  metric_date: string;
   metric: string;
   provider: string;
   count: number;
@@ -159,7 +159,7 @@ export function useSubscriptionAnalytics(refreshKey = 0): SubscriptionAnalytics 
             dailyMap.set(row.metric, new Map());
           }
           const metricMap = dailyMap.get(row.metric)!;
-          metricMap.set(row.date, (metricMap.get(row.date) || 0) + row.count);
+          metricMap.set(row.metric_date, (metricMap.get(row.metric_date) || 0) + row.count);
         }
 
         const monthlyTrend = buildTrend(dailyMap, 'monthly_active', 29, 0);

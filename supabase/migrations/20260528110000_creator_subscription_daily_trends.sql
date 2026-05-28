@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION public.get_creator_subscription_daily_trends(
     p_end_date TEXT
 )
 RETURNS TABLE (
-    date TEXT,
+    metric_date TEXT,
     metric TEXT,
     provider TEXT,
     count BIGINT
@@ -28,9 +28,34 @@ BEGIN
     END IF;
 
     RETURN QUERY
+    WITH cancelled_combined AS (
+        -- Status changes to cancelled states
+        SELECT
+            DATE(se.created_at)::TEXT AS c_date,
+            s.provider::TEXT AS provider,
+            se.subscription_id AS sub_id
+        FROM subscription_events se
+        JOIN subscriptions s ON se.subscription_id = s.id
+        WHERE se.new_status IN ('canceled', 'cancelled', 'unpaid', 'incomplete_expired', 'inactive')
+          AND se.created_at >= p_start_date::date
+          AND se.created_at < (p_end_date::date + interval '1 day')
+
+        UNION
+
+        -- Direct cancellations via canceled_at (deduplicated by UNION with event rows)
+        SELECT
+            DATE(s.canceled_at)::TEXT AS c_date,
+            s.provider::TEXT AS provider,
+            s.id AS sub_id
+        FROM subscriptions s
+        WHERE s.canceled_at IS NOT NULL
+          AND s.provider IN ('stripe', 'app_store')
+          AND s.canceled_at >= p_start_date::date
+          AND s.canceled_at < (p_end_date::date + interval '1 day')
+    )
     -- 1. New monthly subscriptions by creation date
     SELECT
-        DATE(s.created_at)::TEXT AS date,
+        DATE(s.created_at)::TEXT AS metric_date,
         'monthly_active'::TEXT AS metric,
         s.provider::TEXT AS provider,
         COUNT(*)::BIGINT AS count
@@ -46,7 +71,7 @@ BEGIN
 
     -- 2. New yearly subscriptions by creation date
     SELECT
-        DATE(s.created_at)::TEXT AS date,
+        DATE(s.created_at)::TEXT AS metric_date,
         'yearly_active'::TEXT AS metric,
         s.provider::TEXT AS provider,
         COUNT(*)::BIGINT AS count
@@ -62,7 +87,7 @@ BEGIN
 
     -- 3. New lifetime subscriptions by creation date
     SELECT
-        DATE(s.created_at)::TEXT AS date,
+        DATE(s.created_at)::TEXT AS metric_date,
         'lifetime_active'::TEXT AS metric,
         s.provider::TEXT AS provider,
         COUNT(*)::BIGINT AS count
@@ -76,44 +101,19 @@ BEGIN
     UNION ALL
 
     -- 4. Cancellations from subscription_events status changes + subscriptions.canceled_at fallback
-    WITH cancelled_combined AS (
-        -- Status changes to cancelled states
-        SELECT
-            DATE(se.created_at)::TEXT AS date,
-            s.provider::TEXT AS provider,
-            se.subscription_id AS sub_id
-        FROM subscription_events se
-        JOIN subscriptions s ON se.subscription_id = s.id
-        WHERE se.new_status IN ('canceled', 'cancelled', 'unpaid', 'incomplete_expired', 'inactive')
-          AND se.created_at >= p_start_date::date
-          AND se.created_at < (p_end_date::date + interval '1 day')
-
-        UNION
-
-        -- Direct cancellations via canceled_at (deduplicated by UNION with event rows)
-        SELECT
-            DATE(s.canceled_at)::TEXT AS date,
-            s.provider::TEXT AS provider,
-            s.id AS sub_id
-        FROM subscriptions s
-        WHERE s.canceled_at IS NOT NULL
-          AND s.provider IN ('stripe', 'app_store')
-          AND s.canceled_at >= p_start_date::date
-          AND s.canceled_at < (p_end_date::date + interval '1 day')
-    )
     SELECT
-        date,
+        c_date AS metric_date,
         'cancelled'::TEXT AS metric,
         provider,
         COUNT(*)::BIGINT AS count
     FROM cancelled_combined
-    GROUP BY date, provider
+    GROUP BY c_date, provider
 
     UNION ALL
 
     -- 5. Trial-to-active conversions from subscription_events
     SELECT
-        DATE(se.created_at)::TEXT AS date,
+        DATE(se.created_at)::TEXT AS metric_date,
         'trial_to_active'::TEXT AS metric,
         s.provider::TEXT AS provider,
         COUNT(*)::BIGINT AS count
@@ -125,7 +125,7 @@ BEGIN
       AND se.created_at < (p_end_date::date + interval '1 day')
     GROUP BY DATE(se.created_at), s.provider
 
-    ORDER BY date, metric, provider;
+    ORDER BY metric_date, metric, provider;
 END;
 $$;
 

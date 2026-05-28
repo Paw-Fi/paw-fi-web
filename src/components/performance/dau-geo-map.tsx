@@ -103,7 +103,7 @@ export function DAUGeoMap({ data }: DAUGeoMapProps) {
         className="relative w-full overflow-hidden rounded-lg border"
         style={{ aspectRatio: "2/1" }}
       >
-        <div className="to-background absolute inset-0 bg-radial from-transparent to-200%" />
+        <div className="to-background pointer-events-none absolute inset-0 bg-radial from-transparent to-200%" />
 
         <DottedMap<DAUMarker>
           width={150}
